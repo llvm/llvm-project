@@ -1331,11 +1331,10 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(ptr addrspace(1) %out, [
 ; GFX8-LABEL: test_div_fmas_f32_i1_phi_vcc:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x28
-; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s1
-; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v1, v3
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, s0, v1
 ; GFX8-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
 ; GFX8-NEXT:    flat_load_dwordx3 v[1:3], v[1:2]
 ; GFX8-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0

@@ -29,11 +29,11 @@ define amdgpu_ps void @global_load_lds_dword_volatile(ptr addrspace(1) inreg %gp
 ;
 ; GFX942-GISEL-LABEL: global_load_lds_dword_volatile:
 ; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX942-GISEL-NEXT:    s_mov_b32 m0, s2
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off sc0 sc1
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off offset:512
@@ -75,11 +75,11 @@ define amdgpu_ps void @global_load_lds_dword_nontemporal(ptr addrspace(1) inreg 
 ;
 ; GFX942-GISEL-LABEL: global_load_lds_dword_nontemporal:
 ; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX942-GISEL-NEXT:    s_mov_b32 m0, s2
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off nt
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off offset:512
 ; GFX942-GISEL-NEXT:    s_endpgm
@@ -123,11 +123,11 @@ define amdgpu_ps void @global_load_lds_dword_volatile_nontemporal(ptr addrspace(
 ;
 ; GFX942-GISEL-LABEL: global_load_lds_dword_volatile_nontemporal:
 ; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX942-GISEL-NEXT:    s_mov_b32 m0, s2
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off sc0 sc1
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off offset:512
@@ -173,11 +173,11 @@ define amdgpu_ps void @load_to_lds_p1_dword_volatile(ptr addrspace(1) inreg %gpt
 ;
 ; GFX942-GISEL-LABEL: load_to_lds_p1_dword_volatile:
 ; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX942-GISEL-NEXT:    s_mov_b32 m0, s2
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off sc0 sc1
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off offset:512
@@ -219,11 +219,11 @@ define amdgpu_ps void @load_to_lds_p1_dword_nontemporal(ptr addrspace(1) inreg %
 ;
 ; GFX942-GISEL-LABEL: load_to_lds_p1_dword_nontemporal:
 ; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX942-GISEL-NEXT:    s_mov_b32 m0, s2
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off nt
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off offset:512
 ; GFX942-GISEL-NEXT:    s_endpgm
@@ -267,11 +267,11 @@ define amdgpu_ps void @load_to_lds_p1_dword_volatile_nontemporal(ptr addrspace(1
 ;
 ; GFX942-GISEL-LABEL: load_to_lds_p1_dword_volatile_nontemporal:
 ; GFX942-GISEL:       ; %bb.0:
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, s1
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX942-GISEL-NEXT:    s_mov_b32 m0, s2
 ; GFX942-GISEL-NEXT:    s_nop 0
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off sc0 sc1
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off offset:512

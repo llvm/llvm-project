@@ -197,10 +197,10 @@ define amdgpu_ps <2 x float> @s_floor_f64(double inreg %x) {
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
+; GFX6-NEXT:    v_mov_b32_e32 v2, s2
+; GFX6-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-NEXT:    v_add_f64 v[0:1], s[2:3], -v[0:1]
+; GFX6-NEXT:    v_add_f64 v[0:1], v[2:3], -s[0:1]
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
@@ -231,10 +231,10 @@ define amdgpu_ps <2 x float> @s_floor_f64_fneg(double inreg %x) {
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
+; GFX6-NEXT:    v_mov_b32_e32 v2, s2
+; GFX6-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-NEXT:    v_add_f64 v[0:1], -s[2:3], -v[0:1]
+; GFX6-NEXT:    v_add_f64 v[0:1], -v[2:3], -s[0:1]
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
@@ -266,10 +266,10 @@ define amdgpu_ps <2 x float> @s_floor_f64_fabs(double inreg %x) {
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
+; GFX6-NEXT:    v_mov_b32_e32 v2, s2
+; GFX6-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-NEXT:    v_add_f64 v[0:1], |s[2:3]|, -v[0:1]
+; GFX6-NEXT:    v_add_f64 v[0:1], |v[2:3]|, -s[0:1]
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
@@ -301,10 +301,10 @@ define amdgpu_ps <2 x float> @s_floor_f64_fneg_fabs(double inreg %x) {
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
+; GFX6-NEXT:    v_mov_b32_e32 v2, s2
+; GFX6-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX6-NEXT:    s_cselect_b64 s[0:1], s[2:3], s[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-NEXT:    v_add_f64 v[0:1], -|s[2:3]|, -v[0:1]
+; GFX6-NEXT:    v_add_f64 v[0:1], -|v[2:3]|, -s[0:1]
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0

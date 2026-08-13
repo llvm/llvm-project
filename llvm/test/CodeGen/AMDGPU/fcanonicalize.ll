@@ -7424,11 +7424,11 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX6-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX6-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX6-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX6-GISEL-NEXT:    v_mov_b32_e32 v5, s1
-; GFX6-GISEL-NEXT:    v_add_i32_e32 v0, vcc, v4, v0
+; GFX6-GISEL-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GFX6-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
 ; GFX6-GISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX6-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
@@ -7463,11 +7463,11 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX8-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX8-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v5, s1
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v4, v0
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v5, vcc
 ; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX8-GISEL-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]

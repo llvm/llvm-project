@@ -36,8 +36,8 @@ define amdgpu_ps void @flat_xchg_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset,
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -82,8 +82,8 @@ define amdgpu_ps void @flat_xchg_saddr_i32_nortn_offset_2047(ptr inreg %sbase, i
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i32_nortn_offset_2047:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -132,10 +132,10 @@ define amdgpu_ps void @flat_xchg_saddr_i32_nortn_offset_neg2048(ptr inreg %sbase
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i32_nortn_offset_neg2048:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xfffff800, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -181,8 +181,8 @@ define amdgpu_ps float @flat_xchg_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -227,8 +227,8 @@ define amdgpu_ps float @flat_xchg_saddr_i32_rtn_2048(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i32_rtn_2048:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -277,10 +277,10 @@ define amdgpu_ps float @flat_xchg_saddr_i32_rtn_neg2048(ptr inreg %sbase, i32 %v
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i32_rtn_neg2048:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xfffff800, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -676,10 +676,9 @@ define amdgpu_ps <2 x float> @flat_xchg_saddr_i64_rtn(ptr inreg %sbase, i32 %vof
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -761,13 +760,13 @@ define amdgpu_ps <2 x float> @flat_xchg_saddr_i64_rtn(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -866,10 +865,9 @@ define amdgpu_ps <2 x float> @flat_xchg_saddr_i64_rtn_neg128(ptr inreg %sbase, i
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -957,12 +955,12 @@ define amdgpu_ps <2 x float> @flat_xchg_saddr_i64_rtn_neg128(ptr inreg %sbase, i
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -1055,12 +1053,10 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -1124,12 +1120,13 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -1211,12 +1208,10 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1286,14 +1281,14 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ;
 ; GFX950-GISEL-LABEL: flat_xchg_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -1361,8 +1356,8 @@ define amdgpu_ps float @flat_add_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_add_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -1410,10 +1405,10 @@ define amdgpu_ps float @flat_add_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_add_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -1460,8 +1455,8 @@ define amdgpu_ps void @flat_add_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_add_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -1508,10 +1503,10 @@ define amdgpu_ps void @flat_add_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_add_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -1584,10 +1579,9 @@ define amdgpu_ps <2 x float> @flat_add_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -1670,13 +1664,13 @@ define amdgpu_ps <2 x float> @flat_add_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_add_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -1778,10 +1772,9 @@ define amdgpu_ps <2 x float> @flat_add_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -1870,12 +1863,12 @@ define amdgpu_ps <2 x float> @flat_add_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ;
 ; GFX950-GISEL-LABEL: flat_add_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -1974,12 +1967,10 @@ define amdgpu_ps void @flat_add_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -2049,12 +2040,13 @@ define amdgpu_ps void @flat_add_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_add_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -2144,12 +2136,10 @@ define amdgpu_ps void @flat_add_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -2225,14 +2215,14 @@ define amdgpu_ps void @flat_add_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_add_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -2305,8 +2295,8 @@ define amdgpu_ps float @flat_sub_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_sub_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -2354,10 +2344,10 @@ define amdgpu_ps float @flat_sub_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_sub_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -2404,8 +2394,8 @@ define amdgpu_ps void @flat_sub_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_sub_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -2452,10 +2442,10 @@ define amdgpu_ps void @flat_sub_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_sub_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -2528,10 +2518,9 @@ define amdgpu_ps <2 x float> @flat_sub_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -2616,13 +2605,13 @@ define amdgpu_ps <2 x float> @flat_sub_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_sub_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -2724,10 +2713,9 @@ define amdgpu_ps <2 x float> @flat_sub_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -2818,12 +2806,12 @@ define amdgpu_ps <2 x float> @flat_sub_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ;
 ; GFX950-GISEL-LABEL: flat_sub_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -2922,12 +2910,10 @@ define amdgpu_ps void @flat_sub_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -2999,12 +2985,13 @@ define amdgpu_ps void @flat_sub_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_sub_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -3094,12 +3081,10 @@ define amdgpu_ps void @flat_sub_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -3177,14 +3162,14 @@ define amdgpu_ps void @flat_sub_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_sub_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -3257,8 +3242,8 @@ define amdgpu_ps float @flat_and_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_and_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -3306,10 +3291,10 @@ define amdgpu_ps float @flat_and_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_and_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -3356,8 +3341,8 @@ define amdgpu_ps void @flat_and_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_and_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -3404,10 +3389,10 @@ define amdgpu_ps void @flat_and_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_and_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -3481,10 +3466,9 @@ define amdgpu_ps <2 x float> @flat_and_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -3569,13 +3553,13 @@ define amdgpu_ps <2 x float> @flat_and_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_and_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -3677,10 +3661,9 @@ define amdgpu_ps <2 x float> @flat_and_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -3771,12 +3754,12 @@ define amdgpu_ps <2 x float> @flat_and_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ;
 ; GFX950-GISEL-LABEL: flat_and_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -3875,12 +3858,10 @@ define amdgpu_ps void @flat_and_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -3952,12 +3933,13 @@ define amdgpu_ps void @flat_and_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_and_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -4047,12 +4029,10 @@ define amdgpu_ps void @flat_and_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4130,14 +4110,14 @@ define amdgpu_ps void @flat_and_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_and_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -4209,8 +4189,8 @@ define amdgpu_ps float @flat_or_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i3
 ;
 ; GFX950-GISEL-LABEL: flat_or_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -4258,10 +4238,10 @@ define amdgpu_ps float @flat_or_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_or_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -4308,8 +4288,8 @@ define amdgpu_ps void @flat_or_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_or_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -4356,10 +4336,10 @@ define amdgpu_ps void @flat_or_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_or_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -4433,10 +4413,9 @@ define amdgpu_ps <2 x float> @flat_or_saddr_i64_rtn(ptr inreg %sbase, i32 %voffs
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -4521,13 +4500,13 @@ define amdgpu_ps <2 x float> @flat_or_saddr_i64_rtn(ptr inreg %sbase, i32 %voffs
 ;
 ; GFX950-GISEL-LABEL: flat_or_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -4629,10 +4608,9 @@ define amdgpu_ps <2 x float> @flat_or_saddr_i64_rtn_neg128(ptr inreg %sbase, i32
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -4723,12 +4701,12 @@ define amdgpu_ps <2 x float> @flat_or_saddr_i64_rtn_neg128(ptr inreg %sbase, i32
 ;
 ; GFX950-GISEL-LABEL: flat_or_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -4827,12 +4805,10 @@ define amdgpu_ps void @flat_or_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, i
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -4904,12 +4880,13 @@ define amdgpu_ps void @flat_or_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_or_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -4999,12 +4976,10 @@ define amdgpu_ps void @flat_or_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vof
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -5082,14 +5057,14 @@ define amdgpu_ps void @flat_or_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_or_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -5161,8 +5136,8 @@ define amdgpu_ps float @flat_xor_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_xor_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -5210,10 +5185,10 @@ define amdgpu_ps float @flat_xor_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_xor_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -5260,8 +5235,8 @@ define amdgpu_ps void @flat_xor_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_xor_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc1
@@ -5308,10 +5283,10 @@ define amdgpu_ps void @flat_xor_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_xor_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -5385,10 +5360,9 @@ define amdgpu_ps <2 x float> @flat_xor_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -5473,13 +5447,13 @@ define amdgpu_ps <2 x float> @flat_xor_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_xor_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -5581,10 +5555,9 @@ define amdgpu_ps <2 x float> @flat_xor_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -5675,12 +5648,12 @@ define amdgpu_ps <2 x float> @flat_xor_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ;
 ; GFX950-GISEL-LABEL: flat_xor_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -5779,12 +5752,10 @@ define amdgpu_ps void @flat_xor_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -5856,12 +5827,13 @@ define amdgpu_ps void @flat_xor_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_xor_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -5951,12 +5923,10 @@ define amdgpu_ps void @flat_xor_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -6034,14 +6004,14 @@ define amdgpu_ps void @flat_xor_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_xor_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -6106,8 +6076,8 @@ define amdgpu_ps float @flat_max_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_max_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_smax v0, v[2:3], v1 sc0
@@ -6145,10 +6115,10 @@ define amdgpu_ps float @flat_max_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_max_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -6185,8 +6155,8 @@ define amdgpu_ps void @flat_max_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_max_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_smax v[2:3], v1
@@ -6223,10 +6193,10 @@ define amdgpu_ps void @flat_max_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_max_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -6292,10 +6262,9 @@ define amdgpu_ps <2 x float> @flat_max_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -6375,13 +6344,13 @@ define amdgpu_ps <2 x float> @flat_max_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_max_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -6478,10 +6447,9 @@ define amdgpu_ps <2 x float> @flat_max_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -6567,12 +6535,12 @@ define amdgpu_ps <2 x float> @flat_max_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ;
 ; GFX950-GISEL-LABEL: flat_max_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -6667,12 +6635,10 @@ define amdgpu_ps void @flat_max_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -6739,12 +6705,13 @@ define amdgpu_ps void @flat_max_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_max_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -6829,12 +6796,10 @@ define amdgpu_ps void @flat_max_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -6907,14 +6872,14 @@ define amdgpu_ps void @flat_max_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_max_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -6978,8 +6943,8 @@ define amdgpu_ps float @flat_min_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_min_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_smin v0, v[2:3], v1 sc0
@@ -7017,10 +6982,10 @@ define amdgpu_ps float @flat_min_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_min_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -7057,8 +7022,8 @@ define amdgpu_ps void @flat_min_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_min_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_smin v[2:3], v1
@@ -7095,10 +7060,10 @@ define amdgpu_ps void @flat_min_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_min_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -7164,10 +7129,9 @@ define amdgpu_ps <2 x float> @flat_min_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -7247,13 +7211,13 @@ define amdgpu_ps <2 x float> @flat_min_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_min_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -7350,10 +7314,9 @@ define amdgpu_ps <2 x float> @flat_min_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -7439,12 +7402,12 @@ define amdgpu_ps <2 x float> @flat_min_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ;
 ; GFX950-GISEL-LABEL: flat_min_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -7539,12 +7502,10 @@ define amdgpu_ps void @flat_min_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -7611,12 +7572,13 @@ define amdgpu_ps void @flat_min_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_min_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -7701,12 +7663,10 @@ define amdgpu_ps void @flat_min_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -7779,14 +7739,14 @@ define amdgpu_ps void @flat_min_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_min_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -7850,8 +7810,8 @@ define amdgpu_ps float @flat_umax_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_umax_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_umax v0, v[2:3], v1 sc0
@@ -7889,10 +7849,10 @@ define amdgpu_ps float @flat_umax_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_umax_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -7929,8 +7889,8 @@ define amdgpu_ps void @flat_umax_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset,
 ;
 ; GFX950-GISEL-LABEL: flat_umax_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_umax v[2:3], v1
@@ -7967,10 +7927,10 @@ define amdgpu_ps void @flat_umax_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %v
 ;
 ; GFX950-GISEL-LABEL: flat_umax_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -8036,10 +7996,9 @@ define amdgpu_ps <2 x float> @flat_umax_saddr_i64_rtn(ptr inreg %sbase, i32 %vof
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -8119,13 +8078,13 @@ define amdgpu_ps <2 x float> @flat_umax_saddr_i64_rtn(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_umax_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -8222,10 +8181,9 @@ define amdgpu_ps <2 x float> @flat_umax_saddr_i64_rtn_neg128(ptr inreg %sbase, i
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -8311,12 +8269,12 @@ define amdgpu_ps <2 x float> @flat_umax_saddr_i64_rtn_neg128(ptr inreg %sbase, i
 ;
 ; GFX950-GISEL-LABEL: flat_umax_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -8411,12 +8369,10 @@ define amdgpu_ps void @flat_umax_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -8483,12 +8439,13 @@ define amdgpu_ps void @flat_umax_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ;
 ; GFX950-GISEL-LABEL: flat_umax_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -8573,12 +8530,10 @@ define amdgpu_ps void @flat_umax_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -8651,14 +8606,14 @@ define amdgpu_ps void @flat_umax_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ;
 ; GFX950-GISEL-LABEL: flat_umax_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -8722,8 +8677,8 @@ define amdgpu_ps float @flat_umin_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_umin_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_umin v0, v[2:3], v1 sc0
@@ -8761,10 +8716,10 @@ define amdgpu_ps float @flat_umin_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_umin_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -8801,8 +8756,8 @@ define amdgpu_ps void @flat_umin_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset,
 ;
 ; GFX950-GISEL-LABEL: flat_umin_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_umin v[2:3], v1
@@ -8839,10 +8794,10 @@ define amdgpu_ps void @flat_umin_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %v
 ;
 ; GFX950-GISEL-LABEL: flat_umin_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -8908,10 +8863,9 @@ define amdgpu_ps <2 x float> @flat_umin_saddr_i64_rtn(ptr inreg %sbase, i32 %vof
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -8991,13 +8945,13 @@ define amdgpu_ps <2 x float> @flat_umin_saddr_i64_rtn(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_umin_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -9094,10 +9048,9 @@ define amdgpu_ps <2 x float> @flat_umin_saddr_i64_rtn_neg128(ptr inreg %sbase, i
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -9183,12 +9136,12 @@ define amdgpu_ps <2 x float> @flat_umin_saddr_i64_rtn_neg128(ptr inreg %sbase, i
 ;
 ; GFX950-GISEL-LABEL: flat_umin_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -9283,12 +9236,10 @@ define amdgpu_ps void @flat_umin_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -9355,12 +9306,13 @@ define amdgpu_ps void @flat_umin_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ;
 ; GFX950-GISEL-LABEL: flat_umin_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -9445,12 +9397,10 @@ define amdgpu_ps void @flat_umin_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -9523,14 +9473,14 @@ define amdgpu_ps void @flat_umin_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ;
 ; GFX950-GISEL-LABEL: flat_umin_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -9602,11 +9552,11 @@ define amdgpu_ps float @flat_cmpxchg_saddr_i32_rtn(ptr inreg %sbase, i32 %voffse
 ;
 ; GFX950-GISEL-LABEL: flat_cmpxchg_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v4, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v5, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    s_nop 1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    flat_atomic_cmpswap v0, v[0:1], v[2:3] sc0 sc1
@@ -9654,11 +9604,11 @@ define amdgpu_ps float @flat_cmpxchg_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 
 ;
 ; GFX950-GISEL-LABEL: flat_cmpxchg_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v4, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v5, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    s_nop 1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
@@ -9707,11 +9657,11 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i32_nortn(ptr inreg %sbase, i32 %voffs
 ;
 ; GFX950-GISEL-LABEL: flat_cmpxchg_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v4, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v5, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    s_nop 1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    flat_atomic_cmpswap v[0:1], v[2:3] sc1
@@ -9757,11 +9707,11 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i32_nortn_neg128(ptr inreg %sbase, i32
 ;
 ; GFX950-GISEL-LABEL: flat_cmpxchg_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v4, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v5, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    s_nop 1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
@@ -9836,11 +9786,10 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn(ptr inreg %sbase, i32 %
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v8, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v6, v3
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v5
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v5
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v7, v4 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v3 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -9929,14 +9878,13 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn(ptr inreg %sbase, i32 %
 ;
 ; GFX950-GISEL-LABEL: flat_cmpxchg_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v9, v2
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
-; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v8, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v9, v2
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, v3
+; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v7, v4
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
@@ -10043,11 +9991,10 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn_neg128(ptr inreg %sbase
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v8, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v6, v3
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v5
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v5
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v1, vcc_lo
@@ -10142,16 +10089,15 @@ define amdgpu_ps <2 x float> @flat_cmpxchg_saddr_i64_rtn_neg128(ptr inreg %sbase
 ;
 ; GFX950-GISEL-LABEL: flat_cmpxchg_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v9, v2
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v8, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v9, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v7, v4
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
@@ -10252,14 +10198,12 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffs
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v1 :: v_dual_mov_b32 v9, v2
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-GISEL-NEXT:    s_cbranch_execnz .LBB92_3
@@ -10334,13 +10278,14 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffs
 ;
 ; GFX950-GISEL-LABEL: flat_cmpxchg_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v8, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v9, v2
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v8, v1
-; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v7, v4
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -10434,17 +10379,15 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v1 :: v_dual_mov_b32 v9, v2
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
+; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-GISEL-NEXT:    s_cbranch_execnz .LBB93_3
@@ -10522,17 +10465,17 @@ define amdgpu_ps void @flat_cmpxchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32
 ;
 ; GFX950-GISEL-LABEL: flat_cmpxchg_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v9, v2
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v8, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v9, v2
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v7, v4
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -10598,8 +10541,8 @@ define amdgpu_ps float @flat_inc_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_inc_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_inc v0, v[2:3], v1 sc0
@@ -10637,10 +10580,10 @@ define amdgpu_ps float @flat_inc_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_inc_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -10675,8 +10618,8 @@ define amdgpu_ps void @flat_inc_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_inc_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_inc v[2:3], v1
@@ -10710,10 +10653,10 @@ define amdgpu_ps void @flat_inc_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_inc_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -10782,10 +10725,9 @@ define amdgpu_ps <2 x float> @flat_inc_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -10872,13 +10814,13 @@ define amdgpu_ps <2 x float> @flat_inc_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_inc_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -10982,10 +10924,9 @@ define amdgpu_ps <2 x float> @flat_inc_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -11078,12 +11019,12 @@ define amdgpu_ps <2 x float> @flat_inc_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ;
 ; GFX950-GISEL-LABEL: flat_inc_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -11182,12 +11123,10 @@ define amdgpu_ps void @flat_inc_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -11257,12 +11196,13 @@ define amdgpu_ps void @flat_inc_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_inc_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -11350,12 +11290,10 @@ define amdgpu_ps void @flat_inc_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -11431,14 +11369,14 @@ define amdgpu_ps void @flat_inc_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_inc_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
@@ -11505,8 +11443,8 @@ define amdgpu_ps float @flat_dec_saddr_i32_rtn(ptr inreg %sbase, i32 %voffset, i
 ;
 ; GFX950-GISEL-LABEL: flat_dec_saddr_i32_rtn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_dec v0, v[2:3], v1 sc0
@@ -11544,10 +11482,10 @@ define amdgpu_ps float @flat_dec_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 %vof
 ;
 ; GFX950-GISEL-LABEL: flat_dec_saddr_i32_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -11582,8 +11520,8 @@ define amdgpu_ps void @flat_dec_saddr_i32_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_dec_saddr_i32_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX950-GISEL-NEXT:    flat_atomic_dec v[2:3], v1
@@ -11617,10 +11555,10 @@ define amdgpu_ps void @flat_dec_saddr_i32_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_dec_saddr_i32_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v3, vcc
@@ -11691,10 +11629,9 @@ define amdgpu_ps <2 x float> @flat_dec_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_bitop2_b32 v0, src_flat_scratch_base_hi, v7 bitop3:0x14
 ; GFX1250-GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
@@ -11784,13 +11721,13 @@ define amdgpu_ps <2 x float> @flat_dec_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ;
 ; GFX950-GISEL-LABEL: flat_dec_saddr_i64_rtn:
 ; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v3
 ; GFX950-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -11897,10 +11834,9 @@ define amdgpu_ps <2 x float> @flat_dec_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v1
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, s0, s2, v3
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0xffffff80, v0
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, -1, v1, vcc_lo
@@ -11996,12 +11932,12 @@ define amdgpu_ps <2 x float> @flat_dec_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ;
 ; GFX950-GISEL-LABEL: flat_dec_saddr_i64_rtn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0xffffff80, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX950-GISEL-NEXT:    s_nop 0
@@ -12103,12 +12039,10 @@ define amdgpu_ps void @flat_dec_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, src_flat_scratch_base_hi, v3
 ; GFX1250-GISEL-NEXT:    v_cmpx_le_u32_e32 0x4000000, v1
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -12181,12 +12115,13 @@ define amdgpu_ps void @flat_dec_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ;
 ; GFX950-GISEL-LABEL: flat_dec_saddr_i64_nortn:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX950-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX950-GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -12277,12 +12212,10 @@ define amdgpu_ps void @flat_dec_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, s0, s2, v0
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s0
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, exec_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, 0xffffff80, v1
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, -1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -12361,14 +12294,14 @@ define amdgpu_ps void @flat_dec_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ;
 ; GFX950-GISEL-LABEL: flat_dec_saddr_i64_nortn_neg128:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v1
-; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
 ; GFX950-GISEL-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff80, v0
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1

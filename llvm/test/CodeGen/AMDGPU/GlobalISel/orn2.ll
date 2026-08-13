@@ -291,28 +291,16 @@ define amdgpu_ps <2 x float> @v_orn2_i64_vs(i64 %src0, i64 inreg %src1) {
 ; GCN-LABEL: v_orn2_i64_vs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_not_b64 s[0:1], s[2:3]
-; GCN-NEXT:    v_mov_b32_e32 v3, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v2
-; GCN-NEXT:    v_or_b32_e32 v1, v1, v3
+; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
+; GCN-NEXT:    v_or_b32_e32 v1, s1, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: v_orn2_i64_vs:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_not_b64 s[0:1], s[2:3]
-; GFX10-NEXT:    v_mov_b32_e32 v3, s1
-; GFX10-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX10-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: v_orn2_i64_vs:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_not_b64 s[0:1], s[2:3]
-; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
-; GFX11-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX11-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: v_orn2_i64_vs:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_not_b64 s[0:1], s[2:3]
+; GFX10PLUS-NEXT:    v_or_b32_e32 v0, s0, v0
+; GFX10PLUS-NEXT:    v_or_b32_e32 v1, s1, v1
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i64 %src1, -1
   %or = or i64 %src0, %not.src1
   %cast = bitcast i64 %or to <2 x float>

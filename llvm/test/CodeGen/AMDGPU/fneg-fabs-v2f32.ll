@@ -158,10 +158,8 @@ define <2 x float> @fneg_v2f32_s(<2 x float> inreg %first) {
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX1250-GISEL-NEXT:    v_xor_b32_e64 v0, 0x80000000, s0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e64 v1, 0x80000000, s1
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 bb:
   %neg = fneg <2 x float> %first
@@ -217,10 +215,8 @@ define <2 x float> @fabs_v2f32_s(<2 x float> inreg %first) {
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; GFX1250-GISEL-NEXT:    v_and_b32_e64 v0, 0x7fffffff, s0
+; GFX1250-GISEL-NEXT:    v_and_b32_e64 v1, 0x7fffffff, s1
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 bb:
   %abs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %first)
@@ -286,10 +282,8 @@ define <2 x float> @fneg_fabs_v2f32_s(<2 x float> inreg %first) {
 ; GFX1250-GISEL:       ; %bb.0: ; %bb
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; GFX1250-GISEL-NEXT:    v_and_b32_e64 v0, 0x7fffffff, s0
+; GFX1250-GISEL-NEXT:    v_and_b32_e64 v1, 0x7fffffff, s1
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1

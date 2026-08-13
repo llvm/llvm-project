@@ -187,7 +187,6 @@ define amdgpu_kernel void @test_mfma_i32_32x32x8i8(ptr addrspace(1) %arg) #0 {
 ; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v1, 2
-; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -209,28 +208,13 @@ define amdgpu_kernel void @test_mfma_i32_32x32x8i8(ptr addrspace(1) %arg) #0 {
 ; GFX90A-GISEL-NEXT:    v_accvgpr_write_b32 a15, s15
 ; GFX90A-GISEL-NEXT:    s_nop 1
 ; GFX90A-GISEL-NEXT:    v_mfma_i32_32x32x8i8 a[0:15], v0, v1, a[0:15] cbsz:1 abid:2 blgp:3
+; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-GISEL-NEXT:    s_nop 15
-; GFX90A-GISEL-NEXT:    s_nop 2
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v0, a0
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v2, a2
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v3, a3
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v4, a4
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v5, a5
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v6, a6
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v7, a7
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v8, a8
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v9, a9
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v10, a10
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v11, a11
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v12, a12
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v13, a13
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v14, a14
-; GFX90A-GISEL-NEXT:    v_accvgpr_read_b32 v15, a15
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[16:17] offset:16
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[16:17] offset:32
-; GFX90A-GISEL-NEXT:    global_store_dwordx4 v16, v[12:15], s[16:17] offset:48
+; GFX90A-GISEL-NEXT:    s_nop 1
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v0, a[0:3], s[16:17]
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v0, a[4:7], s[16:17] offset:16
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v0, a[8:11], s[16:17] offset:32
+; GFX90A-GISEL-NEXT:    global_store_dwordx4 v0, a[12:15], s[16:17] offset:48
 ; GFX90A-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-VGPR-SDAG-LABEL: test_mfma_i32_32x32x8i8:

@@ -71,8 +71,8 @@ define amdgpu_ps float @fma_sss(float inreg %src) {
 define amdgpu_ps float @fma_ss_s(float inreg %src01, float inreg %src2) {
 ; GFX9-LABEL: fma_ss_s:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s3
-; GFX9-NEXT:    v_fma_f32 v0, s2, s2, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    v_fma_f32 v0, v0, v0, s3
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: fma_ss_s:
@@ -103,8 +103,8 @@ define amdgpu_ps float @fma_s_ss(float inreg %src0, float inreg %src12) {
 define amdgpu_ps float @fma_ss_s_same_outer(float inreg %src02, float inreg %src1) {
 ; GFX9-LABEL: fma_ss_s_same_outer:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s3
-; GFX9-NEXT:    v_fma_f32 v0, s2, v0, s2
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    v_fma_f32 v0, v0, s3, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: fma_ss_s_same_outer:
@@ -223,8 +223,8 @@ define amdgpu_ps float @class_s_s(float inreg %src0, i32 inreg %src1) {
 define amdgpu_ps float @div_scale_s_s_true(float inreg %src0, float inreg %src1) {
 ; GFX9-LABEL: div_scale_s_s_true:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s3
-; GFX9-NEXT:    v_div_scale_f32 v0, s[0:1], s2, v0, s2
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    v_div_scale_f32 v0, s[0:1], v0, s3, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: div_scale_s_s_true:

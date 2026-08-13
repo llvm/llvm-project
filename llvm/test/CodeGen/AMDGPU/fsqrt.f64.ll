@@ -877,13 +877,14 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX6-GISEL-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; GFX6-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GFX6-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX6-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX6-GISEL-NEXT:    s_lshl_b32 s3, s3, 8
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; GFX6-GISEL-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; GFX6-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GFX6-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX6-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX6-GISEL-NEXT:    s_lshl_b32 s1, s1, 8
+; GFX6-GISEL-NEXT:    v_ldexp_f64 v[0:1], v[0:1], s1
+; GFX6-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX6-GISEL-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; GFX6-GISEL-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; GFX6-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
@@ -911,13 +912,14 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-GISEL-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX8-GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX8-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX8-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX8-GISEL-NEXT:    s_lshl_b32 s3, s3, 8
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; GFX8-GISEL-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX8-GISEL-NEXT:    s_lshl_b32 s1, s1, 8
+; GFX8-GISEL-NEXT:    v_ldexp_f64 v[0:1], v[0:1], s1
+; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX8-GISEL-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; GFX8-GISEL-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
@@ -1012,13 +1014,14 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_ninf(double inreg %x) {
 ; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX6-GISEL-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX6-GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; GFX6-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GFX6-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX6-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX6-GISEL-NEXT:    s_lshl_b32 s3, s3, 8
-; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; GFX6-GISEL-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; GFX6-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
+; GFX6-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX6-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX6-GISEL-NEXT:    s_lshl_b32 s1, s1, 8
+; GFX6-GISEL-NEXT:    v_ldexp_f64 v[0:1], v[0:1], s1
+; GFX6-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX6-GISEL-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; GFX6-GISEL-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; GFX6-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc, 0, v[0:1]
@@ -1045,13 +1048,14 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_ninf(double inreg %x) {
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-GISEL-NEXT:    v_bfrev_b32_e32 v1, 8
 ; GFX8-GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX8-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; GFX8-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX8-GISEL-NEXT:    s_lshl_b32 s3, s3, 8
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; GFX8-GISEL-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
+; GFX8-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX8-GISEL-NEXT:    s_lshl_b32 s1, s1, 8
+; GFX8-GISEL-NEXT:    v_ldexp_f64 v[0:1], v[0:1], s1
+; GFX8-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX8-GISEL-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; GFX8-GISEL-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; GFX8-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc, 0, v[0:1]
