@@ -17,6 +17,7 @@
 #include <atomic>
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -91,6 +92,7 @@ struct TestInt {
       std::allocator<int> alloc;
       int* data = alloc.allocate(n);
       int* last = data + n;
+      std::memset(data, 0xFF, n * sizeof(int));
 
       std::uninitialized_value_construct(policy, Iter(data), Iter(last));
       for (int i = 0; i != n; ++i) {
