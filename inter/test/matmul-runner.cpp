@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
   for (int64_t index = 0; index < m * n; ++index) {
     float error = std::abs(c[index] - reference[index]);
     maxError = std::max(maxError, error);
-    if (error != 0.0f) {
+    if (!std::isfinite(c[index]) || error != 0.0f) {
       fprintf(stderr,
               "FAIL: C[%ld,%ld] = %.9g, expected %.9g (error %.9g)\n",
               index / n, index % n, c[index], reference[index], error);

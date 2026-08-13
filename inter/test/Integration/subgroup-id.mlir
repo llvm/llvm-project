@@ -9,6 +9,7 @@ module {
       xemachine.kernel_args = [
         #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "write_only", size = 8, alignment = 8, offset = 24>
       ],
+      xw.required_work_group_size = [256 : i32, 1 : i32, 1 : i32],
       xw.simd_width = 32 : i32} {
     %id = xw.subgroup_id : i32
     %values = xw.splat %id : i32 -> !xw.simd<i32, 32>

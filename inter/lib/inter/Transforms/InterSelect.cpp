@@ -11,6 +11,8 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 
+#include "llvm/Support/MathExtras.h"
+
 #include <array>
 #include <optional>
 
@@ -70,6 +72,7 @@ private:
   SmallVector<Value> payloadTail;
   std::array<Value, 3> localIds;
   std::array<bool, 3> usedIdAxes{};
+  std::array<bool, 3> subgroupIdAxes{};
   int64_t simdWidth = 0;
   bool prologueEmitted = false;
 
@@ -383,6 +386,7 @@ private:
     payloadTail.clear();
     localIds.fill(Value());
     usedIdAxes.fill(false);
+    subgroupIdAxes.fill(false);
     prologueEmitted = false;
     kernelArguments = kernel->getAttrOfType<ArrayAttr>(kKernelArgsAttrName);
     if (!kernelArguments && kernel->hasAttr("xw.kernel")) {
@@ -403,6 +407,17 @@ private:
     simdWidth = width.getInt();
 
     WalkResult idWalk = kernel.walk([&](Operation *operation) {
+      if (isa<xw::SubgroupIdOp>(operation)) {
+        subgroupIdAxes.fill(true);
+        if (ArrayAttr workGroupSize = kernel->getAttrOfType<ArrayAttr>(
+                "xw.required_work_group_size")) {
+          subgroupIdAxes[1] = cast<IntegerAttr>(workGroupSize[1]).getInt() != 1;
+          subgroupIdAxes[2] = cast<IntegerAttr>(workGroupSize[2]).getInt() != 1;
+        }
+        for (unsigned axis = 0; axis < subgroupIdAxes.size(); ++axis)
+          usedIdAxes[axis] |= subgroupIdAxes[axis];
+        return WalkResult::advance();
+      }
       if (!isa<xw::GlobalIdOp, xw::LocalIdOp>(operation))
         return WalkResult::advance();
       int64_t dim = cast<IntegerAttr>(operation->getAttr("dim")).getInt();
@@ -2845,12 +2860,58 @@ private:
       return failure();
     if (shape->cardinality != 1 || !shape->elementType.isInteger(32))
       return operation.emitOpError("subgroup ID must be a bare i32 value");
+    if (failed(emitPrologue()))
+      return failure();
+    Value inlineData = getInlineDataRegister();
+    auto readLocalId = [&](int64_t axis) {
+      return MovOp::create(*builder, *location, reg(1), i32(), 1,
+                           canonicalDestination(), uniformRegion(),
+                           IntegerAttr(), IntegerAttr(), typeAttr(i16()), true,
+                           0, localIds[axis])
+          .getResult();
+    };
+    auto readLocalSize = [&](int64_t axis) {
+      return MovOp::create(*builder, *location, reg(1), i32(), 1,
+                           canonicalDestination(), uniformRegion(),
+                           IntegerAttr(), builder->getI32IntegerAttr(axis),
+                           typeAttr(i32()), true, 0, inlineData)
+          .getResult();
+    };
+    auto multiply = [&](Value lhs, Value rhs) {
+      Value product =
+          MulOp::create(*builder, *location,
+                        ARFType::get(context, ARFFile::acc, 1, 0), i32(), 1,
+                        canonicalDestination(), uniformRegion(),
+                        uniformRegion(), IntegerAttr(), IntegerAttr(),
+                        IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, lhs,
+                        rhs)
+              .getResult();
+      return emitMove(reg(1), i32(), 1, product, uniformRegion(), true);
+    };
+    auto add = [&](Value lhs, Value rhs) {
+      return AddOp::create(*builder, *location, reg(1), i32(), 1,
+                           canonicalDestination(), uniformRegion(),
+                           uniformRegion(), IntegerAttr(), IntegerAttr(),
+                           IntegerAttr(), TypeAttr(), TypeAttr(), true, 0, lhs,
+                           rhs)
+          .getResult();
+    };
+    Value linear = readLocalId(0);
+    if (subgroupIdAxes[1] || subgroupIdAxes[2]) {
+      Value localSizeX = readLocalSize(0);
+      if (subgroupIdAxes[1])
+        linear = add(linear, multiply(readLocalId(1), localSizeX));
+      if (subgroupIdAxes[2]) {
+        Value localPlane = multiply(localSizeX, readLocalSize(1));
+        linear = add(linear, multiply(readLocalId(2), localPlane));
+      }
+    }
     values[operation.getResult()] =
-        AndOp::create(*builder, *location, reg(*footprint), i32(), 1,
+        ShrOp::create(*builder, *location, reg(*footprint), i32(), 1,
                       canonicalDestination(), uniformRegion(), RegionAttr(),
-                      IntegerAttr(), builder->getI32IntegerAttr(2),
-                      IntegerAttr(), TypeAttr(), TypeAttr(), true, 0,
-                      architecturalRegister(0), immediate(0xff, i32()))
+                      IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
+                      TypeAttr(), true, 0, linear,
+                      immediate(llvm::Log2_64(simdWidth), i16()))
             .getResult();
     return success();
   }
