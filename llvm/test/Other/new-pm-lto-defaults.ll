@@ -128,8 +128,6 @@
 ; CHECK-O23-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-O23-NEXT: Running pass: LoopVectorizePass on foo
 ; CHECK-O23-NEXT: Running analysis: DemandedBitsAnalysis on foo
-; CHECK-O23-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; CHECK-O23-NEXT: Running analysis: BranchProbabilityAnalysis on foo
 ; CHECK-O23-NEXT: Running pass: DropUnnecessaryAssumesPass on foo
 ; CHECK-O23-NEXT: Running pass: InferAlignmentPass on foo
 ; CHECK-O23-NEXT: Running pass: LoopUnrollPass on foo

@@ -245,9 +245,6 @@
 ; CHECK-O-NEXT: Running analysis: LoopAccessAnalysis on foo
 ; CHECK-O-NEXT: Running pass: InjectTLIMappings
 ; CHECK-O-NEXT: Running pass: LoopVectorizePass
-; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis
-; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis
-; CHECK-O1-NEXT: Running analysis: CycleAnalysis
 ; CHECK-DEFAULT-NEXT: Running pass: DropUnnecessaryAssumesPass
 ; CHECK-O-NEXT: Running pass: InferAlignmentPass
 ; CHECK-O-NEXT: Running pass: LoopLoadEliminationPass
