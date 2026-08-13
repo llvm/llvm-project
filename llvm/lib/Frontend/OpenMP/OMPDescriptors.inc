@@ -1,6 +1,81 @@
 // clang-format off
 #ifdef GEN_OMP_CLAUSE_DESCRIPTORS
   {
+    Clause::OMPC_absent,
+    descriptor::Clause(
+      "absent",
+      {
+        {51, {{{Property::Unique}}, "absent", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "absent", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "absent", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "absent", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_acq_rel,
+    descriptor::Clause(
+      "acq_rel",
+      {
+        {50, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_acquire,
+    descriptor::Clause(
+      "acquire",
+      {
+        {50, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_adjust_args,
+    descriptor::Clause(
+      "adjust_args",
+      {
+        {51, {{{Property::DispatchCompliant}}, "adjust_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AdjustOp}}},
+        {52, {{{Property::DispatchCompliant}}, "adjust_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AdjustOp}}},
+        {60, {{{Property::DispatchCompliant}}, "adjust_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AdjustOp, Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DispatchCompliant}}, "adjust_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_affinity,
+    descriptor::Clause(
+      "affinity",
+      {
+        {50, {{{}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}}},
+        {51, {{{}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}}},
+        {52, {{{Property::Unique}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}}},
+        {60, {{{Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}}},
+        {61, {{{Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_align,
+    descriptor::Clause(
+      "align",
+      {
+        {51, {{{Property::Unique}}, "align", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "align", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "align", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "align", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_aligned,
     descriptor::Clause(
       "aligned",
@@ -11,6 +86,92 @@
         {52, {{{Property::DataEnvironmentAttribute, Property::PostModified}}, "aligned", {Directive::OMPD_declare_simd, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Alignment}}},
         {60, {{{Property::DataEnvironmentAttribute, Property::PostModified}}, "aligned", {Directive::OMPD_declare_simd, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Alignment, Modifier::DirectiveNameModifier}}},
         {61, {{{Property::DataEnvironmentAttribute, Property::PostModified}}, "aligned", {Directive::OMPD_declare_simd, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Alignment, Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_allocate,
+    descriptor::Clause(
+      "allocate",
+      {
+        {50, {{{Property::AllPrivatizing}}, "allocate", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AllocatorSimpleModifier}}},
+        {51, {{{Property::AllPrivatizing}}, "allocate", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlignModifier, Modifier::AllocatorSimpleModifier}}},
+        {52, {{{Property::AllPrivatizing}}, "allocate", {Directive::OMPD_allocators, Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlignModifier, Modifier::AllocatorComplexModifier, Modifier::AllocatorSimpleModifier}}},
+        {60, {{{Property::AllPrivatizing}}, "allocate", {Directive::OMPD_allocators, Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlignModifier, Modifier::AllocatorComplexModifier, Modifier::AllocatorSimpleModifier, Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::AllPrivatizing, Property::TargetConsistent}}, "allocate", {Directive::OMPD_allocators, Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlignModifier, Modifier::AllocatorComplexModifier, Modifier::AllocatorSimpleModifier, Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_allocator,
+    descriptor::Clause(
+      "allocator",
+      {
+        {50, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_append_args,
+    descriptor::Clause(
+      "append_args",
+      {
+        {51, {{{Property::DispatchCompliant, Property::Unique}}, "append_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::DispatchCompliant, Property::Unique}}, "append_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::DispatchCompliant, Property::Unique}}, "append_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DispatchCompliant, Property::Unique}}, "append_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_apply,
+    descriptor::Clause(
+      "apply",
+      {
+        {60, {{{}}, "apply", {Directive::OMPD_fuse, Directive::OMPD_interchange, Directive::OMPD_nothing, Directive::OMPD_reverse, Directive::OMPD_split, Directive::OMPD_stripe, Directive::OMPD_tile, Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::LoopModifier}}},
+        {61, {{{}}, "apply", {Directive::OMPD_flatten, Directive::OMPD_fuse, Directive::OMPD_interchange, Directive::OMPD_nothing, Directive::OMPD_reverse, Directive::OMPD_split, Directive::OMPD_stripe, Directive::OMPD_tile, Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::LoopModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_at,
+    descriptor::Clause(
+      "at",
+      {
+        {51, {{{Property::Unique}}, "at", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "at", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "at", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "at", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_atomic_default_mem_order,
+    descriptor::Clause(
+      "atomic_default_mem_order",
+      {
+        {50, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_bind,
+    descriptor::Clause(
+      "bind",
+      {
+        {50, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -43,6 +204,50 @@
     ),
   },
   {
+    Clause::OMPC_collector,
+    descriptor::Clause(
+      "collector",
+      {
+        {60, {{{Property::Required, Property::Unique}}, "collector", {Directive::OMPD_declare_induction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Required, Property::Unique}}, "collector", {Directive::OMPD_declare_induction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_combiner,
+    descriptor::Clause(
+      "combiner",
+      {
+        {60, {{{Property::Required, Property::Unique}}, "combiner", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Required, Property::Unique}}, "combiner", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_compare,
+    descriptor::Clause(
+      "compare",
+      {
+        {51, {{{Property::InnermostLeaf, Property::Unique}}, "compare", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::InnermostLeaf, Property::Unique}}, "compare", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::InnermostLeaf, Property::Unique}}, "compare", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::InnermostLeaf, Property::Unique}}, "compare", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_contains,
+    descriptor::Clause(
+      "contains",
+      {
+        {51, {{{Property::Unique}}, "contains", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "contains", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "contains", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "contains", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_copyin,
     descriptor::Clause(
       "copyin",
@@ -71,6 +276,16 @@
     ),
   },
   {
+    Clause::OMPC_counts,
+    descriptor::Clause(
+      "counts",
+      {
+        {60, {{{Property::Required, Property::Unique}}, "counts", {Directive::OMPD_split}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Required, Property::Unique}}, "counts", {Directive::OMPD_split}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_default,
     descriptor::Clause(
       "default",
@@ -81,6 +296,16 @@
         {52, {{{Property::DefaultAttribute, Property::PostModified, Property::Unique}}, "default", {Directive::OMPD_parallel, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::VariableCategory}}},
         {60, {{{Property::DefaultAttribute, Property::PostModified, Property::Unique}}, "default", {Directive::OMPD_parallel, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::VariableCategory}}},
         {61, {{{Property::DefaultAttribute, Property::PostModified}}, "default", {Directive::OMPD_parallel, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_default_variant,
+    descriptor::Clause(
+      "default-variant",
+      {
+        {50, {{{Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
       }
     ),
   },
@@ -113,6 +338,41 @@
     ),
   },
   {
+    Clause::OMPC_depth,
+    descriptor::Clause(
+      "depth",
+      {
+        {61, {{{Property::Unique}}, "depth", {Directive::OMPD_flatten, Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_destroy,
+    descriptor::Clause(
+      "destroy",
+      {
+        {50, {{{}}, "destroy", {Directive::OMPD_depobj}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{}}, "destroy", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{}}, "destroy", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{}}, "destroy", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{}}, "destroy", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_detach,
+    descriptor::Clause(
+      "detach",
+      {
+        {50, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_device,
     descriptor::Clause(
       "device",
@@ -127,6 +387,29 @@
     ),
   },
   {
+    Clause::OMPC_device_safesync,
+    descriptor::Clause(
+      "device_safesync",
+      {
+        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "device_safesync", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "device_safesync", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_device_type,
+    descriptor::Clause(
+      "device_type",
+      {
+        {50, {{{Property::Unique}}, "device_type", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "device_type", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "device_type", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "device_type", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target, Directive::OMPD_groupprivate, Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "device_type", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target, Directive::OMPD_groupprivate, Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_dist_schedule,
     descriptor::Clause(
       "dist_schedule",
@@ -137,6 +420,87 @@
         {52, {{{Property::ScheduleSpecification, Property::Unique}}, "dist_schedule", {Directive::OMPD_distribute}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {60, {{{Property::ScheduleSpecification, Property::Unique}}, "dist_schedule", {Directive::OMPD_distribute}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::ScheduleSpecification, Property::Unique}}, "dist_schedule", {Directive::OMPD_distribute}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_doacross,
+    descriptor::Clause(
+      "doacross",
+      {
+        {52, {{{Property::Required}}, "doacross", {Directive::OMPD_ordered_standalone}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType}}},
+        {60, {{{Property::Required}}, "doacross", {Directive::OMPD_ordered_standalone}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType, Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Required}}, "doacross", {Directive::OMPD_ordered_standalone}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType, Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_dyn_groupprivate,
+    descriptor::Clause(
+      "dyn_groupprivate",
+      {
+        {61, {{{Property::TargetConsistent}}, "dyn_groupprivate", {Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AccessGroup, Modifier::DirectiveNameModifier, Modifier::FallbackModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_dynamic_allocators,
+    descriptor::Clause(
+      "dynamic_allocators",
+      {
+        {50, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_enter,
+    descriptor::Clause(
+      "enter",
+      {
+        {52, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "enter", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "enter", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AutomapModifier, Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "enter", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AutomapModifier, Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_exclusive,
+    descriptor::Clause(
+      "exclusive",
+      {
+        {50, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_fail,
+    descriptor::Clause(
+      "fail",
+      {
+        {51, {{{Property::InnermostLeaf, Property::Unique}}, "fail", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::InnermostLeaf, Property::Unique}}, "fail", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::InnermostLeaf, Property::Unique}}, "fail", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::InnermostLeaf, Property::Unique}}, "fail", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_filter,
+    descriptor::Clause(
+      "filter",
+      {
+        {51, {{{Property::Unique}}, "filter", {Directive::OMPD_masked}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "filter", {Directive::OMPD_masked}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "filter", {Directive::OMPD_masked}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "filter", {Directive::OMPD_masked}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -183,6 +547,18 @@
     ),
   },
   {
+    Clause::OMPC_full,
+    descriptor::Clause(
+      "full",
+      {
+        {51, {{{Property::Unique}}, "full", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "full", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "full", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "full", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_grainsize,
     descriptor::Clause(
       "grainsize",
@@ -193,6 +569,38 @@
         {52, {{{Property::Unique}}, "grainsize", {Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Prescriptiveness}}},
         {60, {{{Property::TaskgraphAltering, Property::Unique}}, "grainsize", {Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Prescriptiveness}}},
         {61, {{{Property::TaskgraphAltering, Property::Unique}}, "grainsize", {Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Prescriptiveness}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_graph_id,
+    descriptor::Clause(
+      "graph_id",
+      {
+        {60, {{{Property::Unique}}, "graph_id", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {61, {{{Property::Unique}}, "graph_id", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_graph_reset,
+    descriptor::Clause(
+      "graph_reset",
+      {
+        {60, {{{Property::Unique}}, "graph_reset", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {61, {{{Property::Unique}}, "graph_reset", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_has_device_addr,
+    descriptor::Clause(
+      "has_device_addr",
+      {
+        {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::OutermostLeaf}}, "has_device_addr", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::OutermostLeaf}}, "has_device_addr", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::DispatchRequirement, Property::OutermostLeaf}}, "has_device_addr", {Directive::OMPD_dispatch, Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::DispatchRequirement, Property::OutermostLeaf}}, "has_device_addr", {Directive::OMPD_dispatch, Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -211,6 +619,18 @@
     ),
   },
   {
+    Clause::OMPC_holds,
+    descriptor::Clause(
+      "holds",
+      {
+        {51, {{{Property::Unique}}, "holds", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "holds", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "holds", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "holds", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_if,
     descriptor::Clause(
       "if",
@@ -225,6 +645,19 @@
     ),
   },
   {
+    Clause::OMPC_in_reduction,
+    descriptor::Clause(
+      "in_reduction",
+      {
+        {50, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
+        {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
+        {52, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
+        {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::ReductionIdentifier}}},
+        {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::ReductionIdentifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_inbranch,
     descriptor::Clause(
       "inbranch",
@@ -235,6 +668,96 @@
         {52, {{{Property::Unique}}, "inbranch", {Directive::OMPD_declare_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {60, {{{Property::Unique}}, "inbranch", {Directive::OMPD_declare_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::Unique}}, "inbranch", {Directive::OMPD_declare_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_inclusive,
+    descriptor::Clause(
+      "inclusive",
+      {
+        {50, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_indirect,
+    descriptor::Clause(
+      "indirect",
+      {
+        {51, {{{Property::Unique}}, "indirect", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "indirect", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "indirect", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "indirect", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_induction,
+    descriptor::Clause(
+      "induction",
+      {
+        {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization}}, "induction", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::InductionIdentifier, Modifier::InductionModifier, Modifier::StepModifier}}},
+        {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization}}, "induction", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::InductionIdentifier, Modifier::InductionModifier, Modifier::StepModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_inductor,
+    descriptor::Clause(
+      "inductor",
+      {
+        {60, {{{Property::Required, Property::Unique}}, "inductor", {Directive::OMPD_declare_induction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Required, Property::Unique}}, "inductor", {Directive::OMPD_declare_induction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_init,
+    descriptor::Clause(
+      "init",
+      {
+        {51, {{{Property::InnermostLeaf}}, "init", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::InteropType}}},
+        {52, {{{Property::InnermostLeaf}}, "init", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::InteropType}}},
+        {60, {{{Property::InnermostLeaf}}, "init", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DepinfoModifier, Modifier::DirectiveNameModifier, Modifier::InteropType, Modifier::PreferType}}},
+        {61, {{{Property::InnermostLeaf}}, "init", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DepinfoModifier, Modifier::DirectiveNameModifier, Modifier::PreferType}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_init_complete,
+    descriptor::Clause(
+      "init_complete",
+      {
+        {60, {{{Property::InnermostLeaf, Property::Unique}}, "init_complete", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::InnermostLeaf, Property::Unique}}, "init_complete", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_initializer,
+    descriptor::Clause(
+      "initializer",
+      {
+        {50, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_interop,
+    descriptor::Clause(
+      "interop",
+      {
+        {60, {{{Property::DispatchRequirement, Property::Unique}}, "interop", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DispatchRequirement, Property::Unique}}, "interop", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -271,7 +794,7 @@
     descriptor::Clause(
       "linear",
       {
-        {45, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::InnermostLeaf, Property::PostModified, Property::Privatization}}, "linear", {Directive::OMPD_declare_simd, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::LinearStep}}},
+        {45, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::InnermostLeaf, Property::PostModified, Property::Privatization}}, "linear", {Directive::OMPD_declare_simd, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::LinearModifier, Modifier::LinearStep}}},
         {50, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::InnermostLeaf, Property::PostModified, Property::Privatization}}, "linear", {Directive::OMPD_declare_simd, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::LinearModifier, Modifier::LinearStep}}},
         {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::InnermostLeaf, Property::PostModified, Property::Privatization}}, "linear", {Directive::OMPD_declare_simd, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::LinearModifier, Modifier::LinearStep}}},
         {52, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::InnermostLeaf, Property::PostModified, Property::Privatization}}, "linear", {Directive::OMPD_declare_simd, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::LinearModifier, Modifier::StepComplexModifier, Modifier::StepSimpleModifier}}},
@@ -295,6 +818,26 @@
     ),
   },
   {
+    Clause::OMPC_local,
+    descriptor::Clause(
+      "local",
+      {
+        {60, {{{Property::DataEnvironmentAttribute}}, "local", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DataEnvironmentAttribute}}, "local", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_looprange,
+    descriptor::Clause(
+      "looprange",
+      {
+        {60, {{{Property::Unique}}, "looprange", {Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {61, {{{Property::Unique}}, "looprange", {Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_map,
     descriptor::Clause(
       "map",
@@ -305,6 +848,29 @@
         {52, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "map", {Directive::OMPD_declare_mapper, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator, Modifier::MapType, Modifier::MapTypeModifier, Modifier::Mapper, Modifier::OmpxHoldModifier}}},
         {60, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "map", {Directive::OMPD_declare_mapper, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlwaysModifier, Modifier::CloseModifier, Modifier::DeleteModifier, Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::MapType, Modifier::Mapper, Modifier::OmpxHoldModifier, Modifier::PresentModifier, Modifier::RefModifier, Modifier::SelfModifier}}},
         {61, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "map", {Directive::OMPD_declare_mapper, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AttachModifier, Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::MapType, Modifier::Mapper, Modifier::OmpxHoldModifier, Modifier::RefModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_match,
+    descriptor::Clause(
+      "match",
+      {
+        {50, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_begin_declare_variant, Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_begin_declare_variant, Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_begin_declare_variant, Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_begin_declare_variant, Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_memscope,
+    descriptor::Clause(
+      "memscope",
+      {
+        {60, {{{Property::Unique}}, "memscope", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "memscope", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -323,6 +889,76 @@
     ),
   },
   {
+    Clause::OMPC_message,
+    descriptor::Clause(
+      "message",
+      {
+        {51, {{{Property::Unique}}, "message", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "message", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "message", {Directive::OMPD_error, Directive::OMPD_parallel}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "message", {Directive::OMPD_error, Directive::OMPD_parallel, Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_no_openmp,
+    descriptor::Clause(
+      "no_openmp",
+      {
+        {51, {{{Property::Unique}}, "no_openmp", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "no_openmp", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "no_openmp", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "no_openmp", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_no_openmp_constructs,
+    descriptor::Clause(
+      "no_openmp_constructs",
+      {
+        {60, {{{Property::Unique}}, "no_openmp_constructs", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "no_openmp_constructs", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_no_openmp_routines,
+    descriptor::Clause(
+      "no_openmp_routines",
+      {
+        {51, {{{Property::Unique}}, "no_openmp_routines", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "no_openmp_routines", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "no_openmp_routines", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "no_openmp_routines", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_no_parallelism,
+    descriptor::Clause(
+      "no_parallelism",
+      {
+        {51, {{{Property::Unique}}, "no_parallelism", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "no_parallelism", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "no_parallelism", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "no_parallelism", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_nocontext,
+    descriptor::Clause(
+      "nocontext",
+      {
+        {51, {{{Property::Unique}}, "nocontext", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "nocontext", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "nocontext", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "nocontext", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_nogroup,
     descriptor::Clause(
       "nogroup",
@@ -337,6 +973,19 @@
     ),
   },
   {
+    Clause::OMPC_nontemporal,
+    descriptor::Clause(
+      "nontemporal",
+      {
+        {50, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_notinbranch,
     descriptor::Clause(
       "notinbranch",
@@ -347,6 +996,18 @@
         {52, {{{Property::Unique}}, "notinbranch", {Directive::OMPD_declare_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {60, {{{Property::Unique}}, "notinbranch", {Directive::OMPD_declare_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::Unique}}, "notinbranch", {Directive::OMPD_declare_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_novariants,
+    descriptor::Clause(
+      "novariants",
+      {
+        {51, {{{Property::Unique}}, "novariants", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "novariants", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "novariants", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "novariants", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -407,6 +1068,19 @@
     ),
   },
   {
+    Clause::OMPC_order,
+    descriptor::Clause(
+      "order",
+      {
+        {50, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::OrderModifier}}},
+        {52, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::OrderModifier}}},
+        {60, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::OrderModifier}}},
+        {61, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::OrderModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_ordered,
     descriptor::Clause(
       "ordered",
@@ -417,6 +1091,39 @@
         {52, {{{Property::OnceForAllConstituents, Property::Unique}}, "ordered", {Directive::OMPD_do, Directive::OMPD_for}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {60, {{{Property::OnceForAllConstituents, Property::Unique}}, "ordered", {Directive::OMPD_do, Directive::OMPD_for}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::OnceForAllConstituents, Property::Unique}}, "ordered", {Directive::OMPD_do, Directive::OMPD_for}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_otherwise,
+    descriptor::Clause(
+      "otherwise",
+      {
+        {52, {{{Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_partial,
+    descriptor::Clause(
+      "partial",
+      {
+        {51, {{{Property::Unique}}, "partial", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "partial", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "partial", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "partial", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_permutation,
+    descriptor::Clause(
+      "permutation",
+      {
+        {60, {{{Property::Unique}}, "permutation", {Directive::OMPD_interchange}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "permutation", {Directive::OMPD_interchange}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -491,6 +1198,55 @@
     ),
   },
   {
+    Clause::OMPC_relaxed,
+    descriptor::Clause(
+      "relaxed",
+      {
+        {50, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_release,
+    descriptor::Clause(
+      "release",
+      {
+        {50, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_replayable,
+    descriptor::Clause(
+      "replayable",
+      {
+        {60, {{{}}, "replayable", {Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "replayable", {Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_reverse_offload,
+    descriptor::Clause(
+      "reverse_offload",
+      {
+        {50, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_safelen,
     descriptor::Clause(
       "safelen",
@@ -501,6 +1257,16 @@
         {52, {{{Property::Unique}}, "safelen", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {60, {{{Property::Unique}}, "safelen", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::Unique}}, "safelen", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_safesync,
+    descriptor::Clause(
+      "safesync",
+      {
+        {60, {{{Property::Unique}}, "safesync", {Directive::OMPD_parallel}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "safesync", {Directive::OMPD_parallel}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -519,6 +1285,16 @@
     ),
   },
   {
+    Clause::OMPC_self_maps,
+    descriptor::Clause(
+      "self_maps",
+      {
+        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "self_maps", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "self_maps", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_seq_cst,
     descriptor::Clause(
       "seq_cst",
@@ -529,6 +1305,18 @@
         {52, {{{Property::Unique}}, "seq_cst", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {60, {{{Property::Unique}}, "seq_cst", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::Unique}}, "seq_cst", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_severity,
+    descriptor::Clause(
+      "severity",
+      {
+        {51, {{{Property::Unique}}, "severity", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Unique}}, "severity", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "severity", {Directive::OMPD_error, Directive::OMPD_parallel}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "severity", {Directive::OMPD_error, Directive::OMPD_parallel, Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -575,6 +1363,31 @@
     ),
   },
   {
+    Clause::OMPC_sizes,
+    descriptor::Clause(
+      "sizes",
+      {
+        {51, {{{Property::Required, Property::Unique}}, "sizes", {Directive::OMPD_tile}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::Required, Property::Unique}}, "sizes", {Directive::OMPD_tile}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Required, Property::Unique}}, "sizes", {Directive::OMPD_stripe, Directive::OMPD_tile}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Required, Property::Unique}}, "sizes", {Directive::OMPD_stripe, Directive::OMPD_tile}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::SizesSelector}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_task_reduction,
+    descriptor::Clause(
+      "task_reduction",
+      {
+        {50, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
+        {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
+        {52, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
+        {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::ReductionIdentifier}}},
+        {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::ReductionIdentifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_thread_limit,
     descriptor::Clause(
       "thread_limit",
@@ -603,6 +1416,16 @@
     ),
   },
   {
+    Clause::OMPC_threadset,
+    descriptor::Clause(
+      "threadset",
+      {
+        {60, {{{Property::Unique}}, "threadset", {Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "threadset", {Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_to,
     descriptor::Clause(
       "to",
@@ -613,6 +1436,42 @@
         {52, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Expectation, Modifier::Iterator, Modifier::Mapper}}},
         {60, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::Mapper, Modifier::PresentModifier}}},
         {61, {{{Property::DataMotionAttribute}}, "to", {Directive::OMPD_target_update}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::Mapper, Modifier::PresentModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_transparent,
+    descriptor::Clause(
+      "transparent",
+      {
+        {60, {{{Property::Unique}}, "transparent", {Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::Unique}}, "transparent", {Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_unified_address,
+    descriptor::Clause(
+      "unified_address",
+      {
+        {50, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_unified_shared_memory,
+    descriptor::Clause(
+      "unified_shared_memory",
+      {
+        {50, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -659,356 +1518,6 @@
     ),
   },
   {
-    Clause::OMPC_use_device_ptr,
-    descriptor::Clause(
-      "use_device_ptr",
-      {
-        {45, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {50, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Fallback}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_write,
-    descriptor::Clause(
-      "write",
-      {
-        {45, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {50, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_acq_rel,
-    descriptor::Clause(
-      "acq_rel",
-      {
-        {50, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "acq_rel", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_acquire,
-    descriptor::Clause(
-      "acquire",
-      {
-        {50, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "acquire", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_affinity,
-    descriptor::Clause(
-      "affinity",
-      {
-        {50, {{{}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}}},
-        {51, {{{}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}}},
-        {52, {{{Property::Unique}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}}},
-        {60, {{{Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}}},
-        {61, {{{Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_allocate,
-    descriptor::Clause(
-      "allocate",
-      {
-        {50, {{{Property::AllPrivatizing}}, "allocate", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AllocatorSimpleModifier}}},
-        {51, {{{Property::AllPrivatizing}}, "allocate", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlignModifier, Modifier::AllocatorSimpleModifier}}},
-        {52, {{{Property::AllPrivatizing}}, "allocate", {Directive::OMPD_allocators, Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlignModifier, Modifier::AllocatorComplexModifier, Modifier::AllocatorSimpleModifier}}},
-        {60, {{{Property::AllPrivatizing}}, "allocate", {Directive::OMPD_allocators, Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlignModifier, Modifier::AllocatorComplexModifier, Modifier::AllocatorSimpleModifier, Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::AllPrivatizing, Property::TargetConsistent}}, "allocate", {Directive::OMPD_allocators, Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_parallel, Directive::OMPD_scope, Directive::OMPD_sections, Directive::OMPD_single, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskgroup, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AlignModifier, Modifier::AllocatorComplexModifier, Modifier::AllocatorSimpleModifier, Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_allocator,
-    descriptor::Clause(
-      "allocator",
-      {
-        {50, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::IcvDefaulted, Property::Unique}}, "allocator", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_atomic_default_mem_order,
-    descriptor::Clause(
-      "atomic_default_mem_order",
-      {
-        {50, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "atomic_default_mem_order", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_bind,
-    descriptor::Clause(
-      "bind",
-      {
-        {50, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "bind", {Directive::OMPD_loop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_default_variant,
-    descriptor::Clause(
-      "default-variant",
-      {
-        {50, {{{Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_destroy,
-    descriptor::Clause(
-      "destroy",
-      {
-        {50, {{{}}, "destroy", {Directive::OMPD_depobj}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{}}, "destroy", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{}}, "destroy", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{}}, "destroy", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{}}, "destroy", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_detach,
-    descriptor::Clause(
-      "detach",
-      {
-        {50, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DataSharingAttribute, Property::InnermostLeaf, Property::Privatization, Property::Unique}}, "detach", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_device_type,
-    descriptor::Clause(
-      "device_type",
-      {
-        {50, {{{Property::Unique}}, "device_type", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "device_type", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "device_type", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "device_type", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target, Directive::OMPD_groupprivate, Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "device_type", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target, Directive::OMPD_groupprivate, Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_dynamic_allocators,
-    descriptor::Clause(
-      "dynamic_allocators",
-      {
-        {50, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "dynamic_allocators", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_exclusive,
-    descriptor::Clause(
-      "exclusive",
-      {
-        {50, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::InnermostLeaf, Property::Unique}}, "exclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_in_reduction,
-    descriptor::Clause(
-      "in_reduction",
-      {
-        {50, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
-        {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
-        {52, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
-        {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::ReductionIdentifier}}},
-        {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::Privatization, Property::ReductionParticipating}}, "in_reduction", {Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::ReductionIdentifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_inclusive,
-    descriptor::Clause(
-      "inclusive",
-      {
-        {50, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::InnermostLeaf, Property::Unique}}, "inclusive", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_initializer,
-    descriptor::Clause(
-      "initializer",
-      {
-        {50, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_match,
-    descriptor::Clause(
-      "match",
-      {
-        {50, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_begin_declare_variant, Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_begin_declare_variant, Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_begin_declare_variant, Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Required, Property::Unique}}, "match", {Directive::OMPD_begin_declare_variant, Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_nontemporal,
-    descriptor::Clause(
-      "nontemporal",
-      {
-        {50, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{}}, "nontemporal", {Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_order,
-    descriptor::Clause(
-      "order",
-      {
-        {50, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::OrderModifier}}},
-        {52, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::OrderModifier}}},
-        {60, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::OrderModifier}}},
-        {61, {{{Property::ScheduleSpecification, Property::Unique}}, "order", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_loop, Directive::OMPD_simd}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::OrderModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_relaxed,
-    descriptor::Clause(
-      "relaxed",
-      {
-        {50, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "relaxed", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_release,
-    descriptor::Clause(
-      "release",
-      {
-        {50, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "release", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_reverse_offload,
-    descriptor::Clause(
-      "reverse_offload",
-      {
-        {50, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "reverse_offload", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_task_reduction,
-    descriptor::Clause(
-      "task_reduction",
-      {
-        {50, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
-        {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
-        {52, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ReductionIdentifier}}},
-        {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::ReductionIdentifier}}},
-        {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization, Property::ReductionScoping}}, "task_reduction", {Directive::OMPD_taskgroup}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::ReductionIdentifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_unified_address,
-    descriptor::Clause(
-      "unified_address",
-      {
-        {50, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_address", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_unified_shared_memory,
-    descriptor::Clause(
-      "unified_shared_memory",
-      {
-        {50, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {51, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "unified_shared_memory", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
     Clause::OMPC_update_depend_objects,
     descriptor::Clause(
       "update-depend_objects",
@@ -1018,6 +1527,18 @@
         {52, {{{Property::InnermostLeaf, Property::Unique}}, "update", {Directive::OMPD_depobj}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {60, {{{Property::InnermostLeaf, Property::Unique}}, "update", {Directive::OMPD_depobj}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::TaskDependenceType}}},
         {61, {{{Property::InnermostLeaf, Property::Unique}}, "update", {Directive::OMPD_depobj}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::TaskDependenceType}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_use,
+    descriptor::Clause(
+      "use",
+      {
+        {51, {{{}}, "use", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{}}, "use", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{}}, "use", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{}}, "use", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -1035,15 +1556,41 @@
     ),
   },
   {
+    Clause::OMPC_use_device_ptr,
+    descriptor::Clause(
+      "use_device_ptr",
+      {
+        {45, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {50, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::AllDataEnvironments, Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::Privatization}}, "use_device_ptr", {Directive::OMPD_target_data}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Fallback}}},
+      }
+    ),
+  },
+  {
     Clause::OMPC_uses_allocators,
     descriptor::Clause(
       "uses_allocators",
       {
-        {50, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute}}, "uses_allocators", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::TraitsArray}}},
-        {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute}}, "uses_allocators", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::MemSpace, Modifier::TraitsArray}}},
+        {50, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute}}, "uses_allocators", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute}}, "uses_allocators", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
         {52, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute}}, "uses_allocators", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::MemSpace, Modifier::TraitsArray}}},
         {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute}}, "uses_allocators", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::MemSpace, Modifier::TraitsArray}}},
         {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute}}, "uses_allocators", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::MemSpace, Modifier::TraitsArray}}},
+      }
+    ),
+  },
+  {
+    Clause::OMPC_weak,
+    descriptor::Clause(
+      "weak",
+      {
+        {51, {{{Property::InnermostLeaf, Property::Unique}}, "weak", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::InnermostLeaf, Property::Unique}}, "weak", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::InnermostLeaf, Property::Unique}}, "weak", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::InnermostLeaf, Property::Unique}}, "weak", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
@@ -1061,568 +1608,53 @@
     ),
   },
   {
-    Clause::OMPC_absent,
+    Clause::OMPC_write,
     descriptor::Clause(
-      "absent",
+      "write",
       {
-        {51, {{{Property::Unique}}, "absent", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "absent", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "absent", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "absent", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_adjust_args,
-    descriptor::Clause(
-      "adjust_args",
-      {
-        {51, {{{Property::DispatchCompliant}}, "adjust_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AdjustOp}}},
-        {52, {{{Property::DispatchCompliant}}, "adjust_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AdjustOp}}},
-        {60, {{{Property::DispatchCompliant}}, "adjust_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AdjustOp, Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DispatchCompliant}}, "adjust_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_align,
-    descriptor::Clause(
-      "align",
-      {
-        {51, {{{Property::Unique}}, "align", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "align", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "align", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "align", {Directive::OMPD_allocate}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_append_args,
-    descriptor::Clause(
-      "append_args",
-      {
-        {51, {{{Property::DispatchCompliant, Property::Unique}}, "append_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::DispatchCompliant, Property::Unique}}, "append_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::DispatchCompliant, Property::Unique}}, "append_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DispatchCompliant, Property::Unique}}, "append_args", {Directive::OMPD_declare_variant}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_at,
-    descriptor::Clause(
-      "at",
-      {
-        {51, {{{Property::Unique}}, "at", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "at", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "at", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "at", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_compare,
-    descriptor::Clause(
-      "compare",
-      {
-        {51, {{{Property::InnermostLeaf, Property::Unique}}, "compare", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::InnermostLeaf, Property::Unique}}, "compare", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::InnermostLeaf, Property::Unique}}, "compare", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::InnermostLeaf, Property::Unique}}, "compare", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_contains,
-    descriptor::Clause(
-      "contains",
-      {
-        {51, {{{Property::Unique}}, "contains", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "contains", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "contains", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "contains", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_fail,
-    descriptor::Clause(
-      "fail",
-      {
-        {51, {{{Property::InnermostLeaf, Property::Unique}}, "fail", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::InnermostLeaf, Property::Unique}}, "fail", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::InnermostLeaf, Property::Unique}}, "fail", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::InnermostLeaf, Property::Unique}}, "fail", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_filter,
-    descriptor::Clause(
-      "filter",
-      {
-        {51, {{{Property::Unique}}, "filter", {Directive::OMPD_masked}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "filter", {Directive::OMPD_masked}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "filter", {Directive::OMPD_masked}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "filter", {Directive::OMPD_masked}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_full,
-    descriptor::Clause(
-      "full",
-      {
-        {51, {{{Property::Unique}}, "full", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "full", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "full", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "full", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_has_device_addr,
-    descriptor::Clause(
-      "has_device_addr",
-      {
-        {51, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::OutermostLeaf}}, "has_device_addr", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::OutermostLeaf}}, "has_device_addr", {Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::DispatchRequirement, Property::OutermostLeaf}}, "has_device_addr", {Directive::OMPD_dispatch, Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::DeviceAssociated, Property::DispatchRequirement, Property::OutermostLeaf}}, "has_device_addr", {Directive::OMPD_dispatch, Directive::OMPD_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_holds,
-    descriptor::Clause(
-      "holds",
-      {
-        {51, {{{Property::Unique}}, "holds", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "holds", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "holds", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "holds", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_indirect,
-    descriptor::Clause(
-      "indirect",
-      {
-        {51, {{{Property::Unique}}, "indirect", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "indirect", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "indirect", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "indirect", {Directive::OMPD_begin_declare_target, Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_init,
-    descriptor::Clause(
-      "init",
-      {
-        {51, {{{Property::InnermostLeaf}}, "init", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::InteropType}}},
-        {52, {{{Property::InnermostLeaf}}, "init", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::InteropType}}},
-        {60, {{{Property::InnermostLeaf}}, "init", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DepinfoModifier, Modifier::DirectiveNameModifier, Modifier::InteropType, Modifier::PreferType}}},
-        {61, {{{Property::InnermostLeaf}}, "init", {Directive::OMPD_depobj, Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DepinfoModifier, Modifier::DirectiveNameModifier, Modifier::PreferType}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_message,
-    descriptor::Clause(
-      "message",
-      {
-        {51, {{{Property::Unique}}, "message", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "message", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "message", {Directive::OMPD_error, Directive::OMPD_parallel}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "message", {Directive::OMPD_error, Directive::OMPD_parallel, Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_no_openmp,
-    descriptor::Clause(
-      "no_openmp",
-      {
-        {51, {{{Property::Unique}}, "no_openmp", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "no_openmp", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "no_openmp", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "no_openmp", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_no_openmp_routines,
-    descriptor::Clause(
-      "no_openmp_routines",
-      {
-        {51, {{{Property::Unique}}, "no_openmp_routines", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "no_openmp_routines", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "no_openmp_routines", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "no_openmp_routines", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_no_parallelism,
-    descriptor::Clause(
-      "no_parallelism",
-      {
-        {51, {{{Property::Unique}}, "no_parallelism", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "no_parallelism", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "no_parallelism", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "no_parallelism", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_nocontext,
-    descriptor::Clause(
-      "nocontext",
-      {
-        {51, {{{Property::Unique}}, "nocontext", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "nocontext", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "nocontext", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "nocontext", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_novariants,
-    descriptor::Clause(
-      "novariants",
-      {
-        {51, {{{Property::Unique}}, "novariants", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "novariants", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "novariants", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "novariants", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_partial,
-    descriptor::Clause(
-      "partial",
-      {
-        {51, {{{Property::Unique}}, "partial", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "partial", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "partial", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "partial", {Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_severity,
-    descriptor::Clause(
-      "severity",
-      {
-        {51, {{{Property::Unique}}, "severity", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Unique}}, "severity", {Directive::OMPD_error}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Unique}}, "severity", {Directive::OMPD_error, Directive::OMPD_parallel}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "severity", {Directive::OMPD_error, Directive::OMPD_parallel, Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_sizes,
-    descriptor::Clause(
-      "sizes",
-      {
-        {51, {{{Property::Required, Property::Unique}}, "sizes", {Directive::OMPD_tile}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::Required, Property::Unique}}, "sizes", {Directive::OMPD_tile}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Required, Property::Unique}}, "sizes", {Directive::OMPD_stripe, Directive::OMPD_tile}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Required, Property::Unique}}, "sizes", {Directive::OMPD_stripe, Directive::OMPD_tile}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::SizesSelector}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_use,
-    descriptor::Clause(
-      "use",
-      {
-        {51, {{{}}, "use", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{}}, "use", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{}}, "use", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{}}, "use", {Directive::OMPD_interop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_weak,
-    descriptor::Clause(
-      "weak",
-      {
-        {51, {{{Property::InnermostLeaf, Property::Unique}}, "weak", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {52, {{{Property::InnermostLeaf, Property::Unique}}, "weak", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::InnermostLeaf, Property::Unique}}, "weak", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::InnermostLeaf, Property::Unique}}, "weak", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_doacross,
-    descriptor::Clause(
-      "doacross",
-      {
-        {52, {{{Property::Required}}, "doacross", {Directive::OMPD_ordered_standalone}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType}}},
-        {60, {{{Property::Required}}, "doacross", {Directive::OMPD_ordered_standalone}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType, Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Required}}, "doacross", {Directive::OMPD_ordered_standalone}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType, Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_enter,
-    descriptor::Clause(
-      "enter",
-      {
-        {52, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "enter", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "enter", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AutomapModifier, Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DataEnvironmentAttribute, Property::DataMappingAttribute}}, "enter", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AutomapModifier, Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_otherwise,
-    descriptor::Clause(
-      "otherwise",
-      {
-        {52, {{{Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {60, {{{Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_apply,
-    descriptor::Clause(
-      "apply",
-      {
-        {60, {{{}}, "apply", {Directive::OMPD_fuse, Directive::OMPD_interchange, Directive::OMPD_nothing, Directive::OMPD_reverse, Directive::OMPD_split, Directive::OMPD_stripe, Directive::OMPD_tile, Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::LoopModifier}}},
-        {61, {{{}}, "apply", {Directive::OMPD_flatten, Directive::OMPD_fuse, Directive::OMPD_interchange, Directive::OMPD_nothing, Directive::OMPD_reverse, Directive::OMPD_split, Directive::OMPD_stripe, Directive::OMPD_tile, Directive::OMPD_unroll}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::LoopModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_collector,
-    descriptor::Clause(
-      "collector",
-      {
-        {60, {{{Property::Required, Property::Unique}}, "collector", {Directive::OMPD_declare_induction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Required, Property::Unique}}, "collector", {Directive::OMPD_declare_induction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_combiner,
-    descriptor::Clause(
-      "combiner",
-      {
-        {60, {{{Property::Required, Property::Unique}}, "combiner", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Required, Property::Unique}}, "combiner", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_counts,
-    descriptor::Clause(
-      "counts",
-      {
-        {60, {{{Property::Required, Property::Unique}}, "counts", {Directive::OMPD_split}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Required, Property::Unique}}, "counts", {Directive::OMPD_split}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_device_safesync,
-    descriptor::Clause(
-      "device_safesync",
-      {
-        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "device_safesync", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "device_safesync", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_graph_id,
-    descriptor::Clause(
-      "graph_id",
-      {
-        {60, {{{Property::Unique}}, "graph_id", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {61, {{{Property::Unique}}, "graph_id", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_graph_reset,
-    descriptor::Clause(
-      "graph_reset",
-      {
-        {60, {{{Property::Unique}}, "graph_reset", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {61, {{{Property::Unique}}, "graph_reset", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_induction,
-    descriptor::Clause(
-      "induction",
-      {
-        {60, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization}}, "induction", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::InductionIdentifier, Modifier::InductionModifier, Modifier::StepModifier}}},
-        {61, {{{Property::DataEnvironmentAttribute, Property::DataSharingAttribute, Property::OriginalListItemUpdating, Property::Privatization}}, "induction", {Directive::OMPD_distribute, Directive::OMPD_do, Directive::OMPD_for, Directive::OMPD_simd, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::InductionIdentifier, Modifier::InductionModifier, Modifier::StepModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_inductor,
-    descriptor::Clause(
-      "inductor",
-      {
-        {60, {{{Property::Required, Property::Unique}}, "inductor", {Directive::OMPD_declare_induction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Required, Property::Unique}}, "inductor", {Directive::OMPD_declare_induction}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_init_complete,
-    descriptor::Clause(
-      "init_complete",
-      {
-        {60, {{{Property::InnermostLeaf, Property::Unique}}, "init_complete", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::InnermostLeaf, Property::Unique}}, "init_complete", {Directive::OMPD_scan}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_interop,
-    descriptor::Clause(
-      "interop",
-      {
-        {60, {{{Property::DispatchRequirement, Property::Unique}}, "interop", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DispatchRequirement, Property::Unique}}, "interop", {Directive::OMPD_dispatch}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_local,
-    descriptor::Clause(
-      "local",
-      {
-        {60, {{{Property::DataEnvironmentAttribute}}, "local", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DataEnvironmentAttribute}}, "local", {Directive::OMPD_declare_target}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_looprange,
-    descriptor::Clause(
-      "looprange",
-      {
-        {60, {{{Property::Unique}}, "looprange", {Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
-        {61, {{{Property::Unique}}, "looprange", {Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_memscope,
-    descriptor::Clause(
-      "memscope",
-      {
-        {60, {{{Property::Unique}}, "memscope", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "memscope", {Directive::OMPD_atomic, Directive::OMPD_flush}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_no_openmp_constructs,
-    descriptor::Clause(
-      "no_openmp_constructs",
-      {
-        {60, {{{Property::Unique}}, "no_openmp_constructs", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "no_openmp_constructs", {Directive::OMPD_assume, Directive::OMPD_assumes, Directive::OMPD_begin_assumes}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_permutation,
-    descriptor::Clause(
-      "permutation",
-      {
-        {60, {{{Property::Unique}}, "permutation", {Directive::OMPD_interchange}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "permutation", {Directive::OMPD_interchange}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_replayable,
-    descriptor::Clause(
-      "replayable",
-      {
-        {60, {{{}}, "replayable", {Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "replayable", {Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_safesync,
-    descriptor::Clause(
-      "safesync",
-      {
-        {60, {{{Property::Unique}}, "safesync", {Directive::OMPD_parallel}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "safesync", {Directive::OMPD_parallel}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_self_maps,
-    descriptor::Clause(
-      "self_maps",
-      {
-        {60, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "self_maps", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::DeviceGlobalRequirement, Property::Unique}}, "self_maps", {Directive::OMPD_requires}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_threadset,
-    descriptor::Clause(
-      "threadset",
-      {
-        {60, {{{Property::Unique}}, "threadset", {Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "threadset", {Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_transparent,
-    descriptor::Clause(
-      "transparent",
-      {
-        {60, {{{Property::Unique}}, "transparent", {Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-        {61, {{{Property::Unique}}, "transparent", {Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_depth,
-    descriptor::Clause(
-      "depth",
-      {
-        {61, {{{Property::Unique}}, "depth", {Directive::OMPD_flatten, Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
-      }
-    ),
-  },
-  {
-    Clause::OMPC_dyn_groupprivate,
-    descriptor::Clause(
-      "dyn_groupprivate",
-      {
-        {61, {{{Property::TargetConsistent}}, "dyn_groupprivate", {Directive::OMPD_target, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::AccessGroup, Modifier::DirectiveNameModifier, Modifier::FallbackModifier}}},
+        {45, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {50, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {51, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {52, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {61, {{{Property::InnermostLeaf, Property::Unique}}, "write", {Directive::OMPD_atomic}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
   },
 #endif // GEN_OMP_CLAUSE_DESCRIPTORS
 #ifdef GEN_OMP_MODIFIER_DESCRIPTORS
+  {
+    Modifier::AccessGroup,
+    descriptor::Modifier(
+      "access-group",
+      {
+        {61, {{{Property::Unique}}, {Clause::OMPC_dyn_groupprivate}}},
+      }
+    ),
+  },
+  {
+    Modifier::AdjustOp,
+    descriptor::Modifier(
+      "adjust-op",
+      {
+        {51, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
+        {52, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
+        {60, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
+      }
+    ),
+  },
+  {
+    Modifier::AlignModifier,
+    descriptor::Modifier(
+      "align-modifier",
+      {
+        {51, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
+      }
+    ),
+  },
   {
     Modifier::Alignment,
     descriptor::Modifier(
@@ -1634,6 +1666,59 @@
         {52, {{{Property::Positive, Property::RegionInvariant, Property::Ultimate, Property::Unique}}, {Clause::OMPC_aligned}}},
         {60, {{{Property::Constant, Property::Positive, Property::Ultimate, Property::Unique}}, {Clause::OMPC_aligned}}},
         {61, {{{Property::Constant, Property::Positive, Property::Ultimate, Property::Unique}}, {Clause::OMPC_aligned}}},
+      }
+    ),
+  },
+  {
+    Modifier::AllocatorComplexModifier,
+    descriptor::Modifier(
+      "allocator-complex-modifier",
+      {
+        {52, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
+      }
+    ),
+  },
+  {
+    Modifier::AllocatorSimpleModifier,
+    descriptor::Modifier(
+      "allocator-simple-modifier",
+      {
+        {50, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
+        {51, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
+        {52, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
+        {60, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
+        {61, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
+      }
+    ),
+  },
+  {
+    Modifier::AlwaysModifier,
+    descriptor::Modifier(
+      "always-modifier",
+      {
+        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
+    Modifier::AttachModifier,
+    descriptor::Modifier(
+      "attach-modifier",
+      {
+        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
+    Modifier::AutomapModifier,
+    descriptor::Modifier(
+      "automap-modifier",
+      {
+        {60, {{{Property::Unique}}, {Clause::OMPC_enter}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_enter}}},
       }
     ),
   },
@@ -1652,6 +1737,48 @@
     ),
   },
   {
+    Modifier::CloseModifier,
+    descriptor::Modifier(
+      "close-modifier",
+      {
+        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
+    Modifier::ContextSelector,
+    descriptor::Modifier(
+      "context-selector",
+      {
+        {50, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
+        {51, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
+        {52, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
+        {60, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
+        {61, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
+      }
+    ),
+  },
+  {
+    Modifier::DefaultModifier,
+    descriptor::Modifier(
+      "default-modifier",
+      {
+        {61, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
+      }
+    ),
+  },
+  {
+    Modifier::DeleteModifier,
+    descriptor::Modifier(
+      "delete-modifier",
+      {
+        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
     Modifier::DependenceType,
     descriptor::Modifier(
       "dependence-type",
@@ -1662,6 +1789,47 @@
         {52, {{{Property::Required}}, {Clause::OMPC_doacross}}},
         {60, {{{Property::Required}}, {Clause::OMPC_doacross}}},
         {61, {{{Property::Required}}, {Clause::OMPC_doacross}}},
+      }
+    ),
+  },
+  {
+    Modifier::DepinfoModifier,
+    descriptor::Modifier(
+      "depinfo-modifier",
+      {
+        {60, {{{Property::Complex, Property::Unique}}, {Clause::OMPC_init}}},
+        {61, {{{Property::Complex, Property::Unique}}, {Clause::OMPC_init}}},
+      }
+    ),
+  },
+  {
+    Modifier::DepobjModifier,
+    descriptor::Modifier(
+      "depobj-modifier",
+      {
+        {61, {{{Property::Unique}}, {Clause::OMPC_depend}}},
+      }
+    ),
+  },
+  {
+    Modifier::DeviceModifier,
+    descriptor::Modifier(
+      "device-modifier",
+      {
+        {50, {{{Property::Unique}}, {Clause::OMPC_device}}},
+        {51, {{{Property::Unique}}, {Clause::OMPC_device}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_device}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_device}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_device}}},
+      }
+    ),
+  },
+  {
+    Modifier::DimsModifier,
+    descriptor::Modifier(
+      "dims-modifier",
+      {
+        {61, {{{Property::Unique}}, {Clause::OMPC_num_teams, Clause::OMPC_num_threads, Clause::OMPC_thread_limit}}},
       }
     ),
   },
@@ -1680,148 +1848,69 @@
     ),
   },
   {
-    Modifier::LinearStep,
+    Modifier::Expectation,
     descriptor::Modifier(
-      "linear-step",
+      "expectation",
       {
-        {45, {{{Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
-        {50, {{{Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
-        {51, {{{Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_to}}},
       }
     ),
   },
   {
-    Modifier::MapType,
+    Modifier::Fallback,
     descriptor::Modifier(
-      "map-type",
+      "fallback",
       {
-        {45, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {50, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {51, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {52, {{{Property::Ultimate}}, {Clause::OMPC_map}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_use_device_ptr}}},
       }
     ),
   },
   {
-    Modifier::MapTypeModifier,
+    Modifier::FallbackModifier,
     descriptor::Modifier(
-      "map-type-modifier",
+      "fallback-modifier",
       {
-        {45, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
-        {50, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {51, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_dyn_groupprivate}}},
       }
     ),
   },
   {
-    Modifier::OrderingModifier,
+    Modifier::InductionIdentifier,
     descriptor::Modifier(
-      "ordering-modifier",
+      "induction-identifier",
       {
-        {45, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
-        {50, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
-        {51, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
+        {60, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_induction}}},
+        {61, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_induction}}},
       }
     ),
   },
   {
-    Modifier::ReductionIdentifier,
+    Modifier::InductionModifier,
     descriptor::Modifier(
-      "reduction-identifier",
+      "induction-modifier",
       {
-        {45, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_reduction}}},
-        {50, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
-        {51, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
-        {52, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
-        {60, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
-        {61, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_induction}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_induction}}},
       }
     ),
   },
   {
-    Modifier::TaskDependenceType,
+    Modifier::InscanModifier,
     descriptor::Modifier(
-      "task-dependence-type",
+      "inscan-modifier",
       {
-        {45, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
-        {50, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
-        {51, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
-        {52, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
       }
     ),
   },
   {
-    Modifier::VariableCategory,
+    Modifier::InteropType,
     descriptor::Modifier(
-      "variable-category",
+      "interop-type",
       {
-        {45, {{{Property::Required, Property::Unique}}, {Clause::OMPC_defaultmap}}},
-        {50, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
-        {51, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
-      }
-    ),
-  },
-  {
-    Modifier::OmpxHoldModifier,
-    descriptor::Modifier(
-      "ompx-hold-modifier",
-      {
-        {45, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {50, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {51, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
-      }
-    ),
-  },
-  {
-    Modifier::AllocatorSimpleModifier,
-    descriptor::Modifier(
-      "allocator-simple-modifier",
-      {
-        {50, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
-        {51, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
-        {52, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
-        {60, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
-        {61, {{{Property::Exclusive, Property::Unique}}, {Clause::OMPC_allocate}}},
-      }
-    ),
-  },
-  {
-    Modifier::ContextSelector,
-    descriptor::Modifier(
-      "context-selector",
-      {
-        {50, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
-        {51, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
-        {52, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
-        {60, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
-        {61, {{{Property::Required, Property::Unique}}, {Clause::OMPC_when}}},
-      }
-    ),
-  },
-  {
-    Modifier::DeviceModifier,
-    descriptor::Modifier(
-      "device-modifier",
-      {
-        {50, {{{Property::Unique}}, {Clause::OMPC_device}}},
-        {51, {{{Property::Unique}}, {Clause::OMPC_device}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_device}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_device}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_device}}},
+        {51, {{{Property::Required}}, {Clause::OMPC_init}}},
+        {52, {{{Property::Required}}, {Clause::OMPC_init}}},
+        {60, {{{}}, {Clause::OMPC_init}}},
       }
     ),
   },
@@ -1856,11 +1945,42 @@
     descriptor::Modifier(
       "linear-modifier",
       {
+        {45, {{{Property::Unique}}, {Clause::OMPC_linear}}},
         {50, {{{Property::Unique}}, {Clause::OMPC_linear}}},
         {51, {{{Property::Unique}}, {Clause::OMPC_linear}}},
         {52, {{{Property::Unique}}, {Clause::OMPC_linear}}},
         {60, {{{Property::Unique}}, {Clause::OMPC_linear}}},
         {61, {{{Property::Unique}}, {Clause::OMPC_linear}}},
+      }
+    ),
+  },
+  {
+    Modifier::LinearStep,
+    descriptor::Modifier(
+      "linear-step",
+      {
+        {45, {{{Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
+        {50, {{{Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
+        {51, {{{Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
+      }
+    ),
+  },
+  {
+    Modifier::LocModifier,
+    descriptor::Modifier(
+      "loc-modifier",
+      {
+        {61, {{{Property::Unique}}, {Clause::OMPC_depend}}},
+      }
+    ),
+  },
+  {
+    Modifier::LoopModifier,
+    descriptor::Modifier(
+      "loop-modifier",
+      {
+        {60, {{{Property::Optional}}, {Clause::OMPC_apply}}},
+        {61, {{{Property::Optional}}, {Clause::OMPC_apply}}},
       }
     ),
   },
@@ -1878,6 +1998,32 @@
     ),
   },
   {
+    Modifier::MapType,
+    descriptor::Modifier(
+      "map-type",
+      {
+        {45, {{{Property::Ultimate, Property::Unique}}, {Clause::OMPC_map}}},
+        {50, {{{Property::Ultimate, Property::Unique}}, {Clause::OMPC_map}}},
+        {51, {{{Property::Ultimate, Property::Unique}}, {Clause::OMPC_map}}},
+        {52, {{{Property::Ultimate, Property::Unique}}, {Clause::OMPC_map}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
+    Modifier::MapTypeModifier,
+    descriptor::Modifier(
+      "map-type-modifier",
+      {
+        {45, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
+        {50, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
+        {51, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
+        {52, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
     Modifier::Mapper,
     descriptor::Modifier(
       "mapper",
@@ -1891,63 +2037,6 @@
     ),
   },
   {
-    Modifier::ReductionModifier,
-    descriptor::Modifier(
-      "reduction-modifier",
-      {
-        {50, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
-        {51, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
-      }
-    ),
-  },
-  {
-    Modifier::TraitsArray,
-    descriptor::Modifier(
-      "traits-array",
-      {
-        {52, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
-      }
-    ),
-  },
-  {
-    Modifier::AdjustOp,
-    descriptor::Modifier(
-      "adjust-op",
-      {
-        {51, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
-        {52, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
-        {60, {{{Property::Required}}, {Clause::OMPC_adjust_args}}},
-      }
-    ),
-  },
-  {
-    Modifier::AlignModifier,
-    descriptor::Modifier(
-      "align-modifier",
-      {
-        {51, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
-      }
-    ),
-  },
-  {
-    Modifier::InteropType,
-    descriptor::Modifier(
-      "interop-type",
-      {
-        {51, {{{Property::Repeatable}}, {Clause::OMPC_init}}},
-        {52, {{{Property::Repeatable}}, {Clause::OMPC_init}}},
-        {60, {{{Property::Repeatable}}, {Clause::OMPC_init}}},
-      }
-    ),
-  },
-  {
     Modifier::MemSpace,
     descriptor::Modifier(
       "mem-space",
@@ -1955,305 +2044,6 @@
         {52, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
         {60, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
         {61, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
-      }
-    ),
-  },
-  {
-    Modifier::OrderModifier,
-    descriptor::Modifier(
-      "order-modifier",
-      {
-        {51, {{{Property::Unique}}, {Clause::OMPC_order}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_order}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_order}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_order}}},
-      }
-    ),
-  },
-  {
-    Modifier::Prescriptiveness,
-    descriptor::Modifier(
-      "prescriptiveness",
-      {
-        {51, {{{Property::Unique}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}}},
-        {52, {{{Property::Unique}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks, Clause::OMPC_num_threads}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}}},
-      }
-    ),
-  },
-  {
-    Modifier::PresentModifier,
-    descriptor::Modifier(
-      "present-modifier",
-      {
-        {51, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_to}}},
-        {60, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_map, Clause::OMPC_to}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_map, Clause::OMPC_to}}},
-      }
-    ),
-  },
-  {
-    Modifier::AllocatorComplexModifier,
-    descriptor::Modifier(
-      "allocator-complex-modifier",
-      {
-        {52, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_allocate}}},
-      }
-    ),
-  },
-  {
-    Modifier::Expectation,
-    descriptor::Modifier(
-      "expectation",
-      {
-        {52, {{{Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_to}}},
-      }
-    ),
-  },
-  {
-    Modifier::StepComplexModifier,
-    descriptor::Modifier(
-      "step-complex-modifier",
-      {
-        {52, {{{Property::Unique}}, {Clause::OMPC_linear}}},
-        {60, {{{Property::Unique}}, {Clause::OMPC_linear}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_linear}}},
-      }
-    ),
-  },
-  {
-    Modifier::StepModifier,
-    descriptor::Modifier(
-      "step-modifier",
-      {
-        {52, {{{Property::Required}}, {}}},
-        {60, {{{Property::Required}}, {Clause::OMPC_induction}}},
-        {61, {{{Property::Required}}, {Clause::OMPC_induction}}},
-      }
-    ),
-  },
-  {
-    Modifier::StepSimpleModifier,
-    descriptor::Modifier(
-      "step-simple-modifier",
-      {
-        {52, {{{Property::Exclusive, Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
-        {60, {{{Property::Exclusive, Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
-        {61, {{{Property::Exclusive, Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
-      }
-    ),
-  },
-  {
-    Modifier::AlwaysModifier,
-    descriptor::Modifier(
-      "always-modifier",
-      {
-        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
-      }
-    ),
-  },
-  {
-    Modifier::AutomapModifier,
-    descriptor::Modifier(
-      "automap-modifier",
-      {
-        {60, {{{Property::Unique}}, {Clause::OMPC_enter}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_enter}}},
-      }
-    ),
-  },
-  {
-    Modifier::CloseModifier,
-    descriptor::Modifier(
-      "close-modifier",
-      {
-        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
-      }
-    ),
-  },
-  {
-    Modifier::DeleteModifier,
-    descriptor::Modifier(
-      "delete-modifier",
-      {
-        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
-      }
-    ),
-  },
-  {
-    Modifier::DepinfoModifier,
-    descriptor::Modifier(
-      "depinfo-modifier",
-      {
-        {60, {{{Property::Complex, Property::Unique}}, {Clause::OMPC_init}}},
-        {61, {{{Property::Complex, Property::Unique}}, {Clause::OMPC_init}}},
-      }
-    ),
-  },
-  {
-    Modifier::InductionIdentifier,
-    descriptor::Modifier(
-      "induction-identifier",
-      {
-        {60, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_induction}}},
-        {61, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_induction}}},
-      }
-    ),
-  },
-  {
-    Modifier::InductionModifier,
-    descriptor::Modifier(
-      "induction-modifier",
-      {
-        {60, {{{Property::Unique}}, {Clause::OMPC_induction}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_induction}}},
-      }
-    ),
-  },
-  {
-    Modifier::LoopModifier,
-    descriptor::Modifier(
-      "loop-modifier",
-      {
-        {60, {{{Property::Optional}}, {Clause::OMPC_apply}}},
-        {61, {{{Property::Optional}}, {Clause::OMPC_apply}}},
-      }
-    ),
-  },
-  {
-    Modifier::OriginalSharingModifier,
-    descriptor::Modifier(
-      "original-sharing-modifier",
-      {
-        {60, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
-      }
-    ),
-  },
-  {
-    Modifier::PreferType,
-    descriptor::Modifier(
-      "prefer-type",
-      {
-        {60, {{{Property::Complex, Property::Unique}}, {Clause::OMPC_init}}},
-        {61, {{{Property::Complex, Property::Unique}}, {Clause::OMPC_init}}},
-      }
-    ),
-  },
-  {
-    Modifier::RefModifier,
-    descriptor::Modifier(
-      "ref-modifier",
-      {
-        {60, {{{Property::Unique}}, {Clause::OMPC_map}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
-      }
-    ),
-  },
-  {
-    Modifier::Saved,
-    descriptor::Modifier(
-      "saved",
-      {
-        {60, {{{Property::Unique}}, {Clause::OMPC_firstprivate}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_firstprivate}}},
-      }
-    ),
-  },
-  {
-    Modifier::SelfModifier,
-    descriptor::Modifier(
-      "self-modifier",
-      {
-        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
-        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
-      }
-    ),
-  },
-  {
-    Modifier::AccessGroup,
-    descriptor::Modifier(
-      "access-group",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_dyn_groupprivate}}},
-      }
-    ),
-  },
-  {
-    Modifier::AttachModifier,
-    descriptor::Modifier(
-      "attach-modifier",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
-      }
-    ),
-  },
-  {
-    Modifier::DefaultModifier,
-    descriptor::Modifier(
-      "default-modifier",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
-      }
-    ),
-  },
-  {
-    Modifier::DepobjModifier,
-    descriptor::Modifier(
-      "depobj-modifier",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_depend}}},
-      }
-    ),
-  },
-  {
-    Modifier::DimsModifier,
-    descriptor::Modifier(
-      "dims-modifier",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_num_teams, Clause::OMPC_num_threads, Clause::OMPC_thread_limit}}},
-      }
-    ),
-  },
-  {
-    Modifier::Fallback,
-    descriptor::Modifier(
-      "fallback",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_use_device_ptr}}},
-      }
-    ),
-  },
-  {
-    Modifier::FallbackModifier,
-    descriptor::Modifier(
-      "fallback-modifier",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_dyn_groupprivate}}},
-      }
-    ),
-  },
-  {
-    Modifier::InscanModifier,
-    descriptor::Modifier(
-      "inscan-modifier",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
-      }
-    ),
-  },
-  {
-    Modifier::LocModifier,
-    descriptor::Modifier(
-      "loc-modifier",
-      {
-        {61, {{{Property::Unique}}, {Clause::OMPC_depend}}},
       }
     ),
   },
@@ -2294,11 +2084,61 @@
     ),
   },
   {
+    Modifier::OmpxHoldModifier,
+    descriptor::Modifier(
+      "ompx-hold-modifier",
+      {
+        {45, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {50, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {51, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
     Modifier::OptionalModifier,
     descriptor::Modifier(
       "optional-modifier",
       {
         {61, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
+      }
+    ),
+  },
+  {
+    Modifier::OrderModifier,
+    descriptor::Modifier(
+      "order-modifier",
+      {
+        {51, {{{Property::Unique}}, {Clause::OMPC_order}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_order}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_order}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_order}}},
+      }
+    ),
+  },
+  {
+    Modifier::OrderingModifier,
+    descriptor::Modifier(
+      "ordering-modifier",
+      {
+        {45, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
+        {50, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
+        {51, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_schedule}}},
+      }
+    ),
+  },
+  {
+    Modifier::OriginalSharingModifier,
+    descriptor::Modifier(
+      "original-sharing-modifier",
+      {
+        {60, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
       }
     ),
   },
@@ -2312,11 +2152,90 @@
     ),
   },
   {
+    Modifier::PreferType,
+    descriptor::Modifier(
+      "prefer-type",
+      {
+        {60, {{{Property::Complex, Property::Unique}}, {Clause::OMPC_init}}},
+        {61, {{{Property::Complex, Property::Unique}}, {Clause::OMPC_init}}},
+      }
+    ),
+  },
+  {
+    Modifier::Prescriptiveness,
+    descriptor::Modifier(
+      "prescriptiveness",
+      {
+        {51, {{{Property::Unique}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks, Clause::OMPC_num_threads}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_grainsize, Clause::OMPC_num_tasks}}},
+      }
+    ),
+  },
+  {
     Modifier::PrescriptivenessModifier,
     descriptor::Modifier(
       "prescriptiveness-modifier",
       {
         {61, {{{Property::Unique}}, {Clause::OMPC_num_threads, Clause::OMPC_thread_limit}}},
+      }
+    ),
+  },
+  {
+    Modifier::PresentModifier,
+    descriptor::Modifier(
+      "present-modifier",
+      {
+        {51, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_to}}},
+        {60, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_map, Clause::OMPC_to}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_from, Clause::OMPC_map, Clause::OMPC_to}}},
+      }
+    ),
+  },
+  {
+    Modifier::ReductionIdentifier,
+    descriptor::Modifier(
+      "reduction-identifier",
+      {
+        {45, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_reduction}}},
+        {50, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {51, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {52, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {60, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+        {61, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_in_reduction, Clause::OMPC_reduction, Clause::OMPC_task_reduction}}},
+      }
+    ),
+  },
+  {
+    Modifier::ReductionModifier,
+    descriptor::Modifier(
+      "reduction-modifier",
+      {
+        {50, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
+        {51, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
+      }
+    ),
+  },
+  {
+    Modifier::RefModifier,
+    descriptor::Modifier(
+      "ref-modifier",
+      {
+        {60, {{{Property::Unique}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
+    Modifier::Saved,
+    descriptor::Modifier(
+      "saved",
+      {
+        {60, {{{Property::Unique}}, {Clause::OMPC_firstprivate}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_firstprivate}}},
       }
     ),
   },
@@ -2330,11 +2249,54 @@
     ),
   },
   {
+    Modifier::SelfModifier,
+    descriptor::Modifier(
+      "self-modifier",
+      {
+        {60, {{{Property::MapTypeModifying}}, {Clause::OMPC_map}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_map}}},
+      }
+    ),
+  },
+  {
     Modifier::SizesSelector,
     descriptor::Modifier(
       "sizes-selector",
       {
         {61, {{{Property::Unique}}, {Clause::OMPC_sizes}}},
+      }
+    ),
+  },
+  {
+    Modifier::StepComplexModifier,
+    descriptor::Modifier(
+      "step-complex-modifier",
+      {
+        {52, {{{Property::Unique}}, {Clause::OMPC_linear}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_linear}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_linear}}},
+      }
+    ),
+  },
+  {
+    Modifier::StepModifier,
+    descriptor::Modifier(
+      "step-modifier",
+      {
+        {52, {{{Property::Required}}, {}}},
+        {60, {{{Property::Required}}, {Clause::OMPC_induction}}},
+        {61, {{{Property::Required}}, {Clause::OMPC_induction}}},
+      }
+    ),
+  },
+  {
+    Modifier::StepSimpleModifier,
+    descriptor::Modifier(
+      "step-simple-modifier",
+      {
+        {52, {{{Property::Exclusive, Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
+        {60, {{{Property::Exclusive, Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
+        {61, {{{Property::Exclusive, Property::RegionInvariant, Property::Unique}}, {Clause::OMPC_linear}}},
       }
     ),
   },
@@ -2357,11 +2319,50 @@
     ),
   },
   {
+    Modifier::TaskDependenceType,
+    descriptor::Modifier(
+      "task-dependence-type",
+      {
+        {45, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
+        {50, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
+        {51, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
+        {52, {{{Property::Required, Property::Ultimate}}, {Clause::OMPC_depend}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}}},
+      }
+    ),
+  },
+  {
     Modifier::TaskModifier,
     descriptor::Modifier(
       "task-modifier",
       {
         {61, {{{Property::Unique}}, {Clause::OMPC_reduction}}},
+      }
+    ),
+  },
+  {
+    Modifier::TraitsArray,
+    descriptor::Modifier(
+      "traits-array",
+      {
+        {52, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_uses_allocators}}},
+      }
+    ),
+  },
+  {
+    Modifier::VariableCategory,
+    descriptor::Modifier(
+      "variable-category",
+      {
+        {45, {{{Property::Required, Property::Unique}}, {Clause::OMPC_defaultmap}}},
+        {50, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
+        {51, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
+        {52, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
+        {60, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
+        {61, {{{Property::Unique}}, {Clause::OMPC_default, Clause::OMPC_defaultmap}}},
       }
     ),
   },
