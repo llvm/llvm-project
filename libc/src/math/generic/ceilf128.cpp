@@ -9,10 +9,6 @@
 #include "src/math/ceilf128.h"
 #include "src/__support/math/ceilf128.h"
 
-#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
-using float128 = LIBC_NAMESPACE::fputil::Float128;
-#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, ceilf128, (float128 x)) {

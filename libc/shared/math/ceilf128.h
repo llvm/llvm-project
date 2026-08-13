@@ -10,10 +10,7 @@
 #define LLVM_LIBC_SHARED_MATH_CEILF128_H
 
 #include "shared/libc_common.h"
-#include "src/__support/FPUtil/float128.h"
 #include "src/__support/math/ceilf128.h"
-
-using LIBC_NAMESPACE::fputil::Float128;
 
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {

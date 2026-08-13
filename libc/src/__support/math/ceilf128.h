@@ -13,11 +13,9 @@
 #include "src/__support/FPUtil/float128.h"
 #include "src/__support/macros/config.h"
 
-using LIBC_NAMESPACE::fputil::Float128;
-
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
-
+using LIBC_NAMESPACE::fputil::Float128;
 LIBC_INLINE constexpr Float128 ceilf128(Float128 x) { return fputil::ceil(x); }
 
 } // namespace math

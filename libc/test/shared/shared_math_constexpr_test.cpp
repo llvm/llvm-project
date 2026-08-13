@@ -201,7 +201,7 @@ static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addf(1.0f, 2.0f));
 
 // TODO: make available after long double problem is fixed
 #if 0
-static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addl(1.0L, 2.0L));
+LIBC_TYPES_HAS_FLOAT128AMESPACE::shared::f16addl(1.0L, 2.0L));
 #endif
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 static_assert(3.0f16 ==
@@ -377,13 +377,13 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 #endif
 
 //===----------------------------------------------------------------------===//
-//                       Emulated Float128 Tests
-//===----------------------------------------------------------------------===//
+//                       Emulated Float128
+//                       TeLIBC_TYPES_HAS_FLOAT128-------------------------------------------------===//
 
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
 
 //===----------------------------------------------------------------------===//
-//                       Built-In Float128 Tests
+//                       Native Float128 Tests
 //===----------------------------------------------------------------------===//
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
@@ -501,13 +501,13 @@ static_assert(float128(0.0) == LIBC_NAMESPACE::shared::rintf128(float128(0.0)));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf128(float128(0.0)));
 static_assert(0 == LIBC_NAMESPACE::shared::isnanf128(float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf128(float128(0.0)));
-static_assert(1 == [] {
-  const char arg{};
-  return LIBC_NAMESPACE::fputil::FPBits<float128>(
-             LIBC_NAMESPACE::shared::nanf128(&arg))
-      .is_nan();
-}());
-static_assert(float128(0.0) ==
+static_assert(1 ==
+              [] {
+                const char arg{};
+                return LIBC_NAMESPACE::fputil::FPBits<float128>(
+                           LIBC_NAMESPACE::shared::nanf128(&arg))
+                    .is_nan();
+              }() LIBC_TYPES_HAS_FLOAT128 ==
               LIBC_NAMESPACE::shared::roundf128(float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::roundevenf128(float128(0.0)));
