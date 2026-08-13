@@ -1557,7 +1557,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_ATOMIC_HEADER
+#if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 #  include <__memory/atomic_shared_ptr.h>
 #endif
 
