@@ -75,8 +75,9 @@ Error GOFFDumper::dumpHeader(ArrayRef<uint8_t> Data) {
 
 Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
   GOFFYAML::ESDRecord Sym;
-  // Flattened data contains PTV header (bytes 0-2) + bytes 3-72 (prefix) + name data
-  // Use DataExtractor to read fields with correct endianness (big-endian for GOFF)
+  // Flattened data contains PTV header (bytes 0-2) + bytes 3-72 (prefix) + name
+  // data Use DataExtractor to read fields with correct endianness (big-endian
+  // for GOFF)
   DataExtractor DE(Data, false); // false = big-endian
   DataExtractor::Cursor C(0);
 
@@ -198,8 +199,10 @@ Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
     // Name data starts at byte 72
     size_t NameOffset = 72;
     if (Data.size() > NameOffset) {
-      ArrayRef<uint8_t> NameData = Data.slice(NameOffset, std::min((size_t)NameLength, Data.size() - NameOffset));
-      StringRef NameStr(reinterpret_cast<const char*>(NameData.data()), NameData.size());
+      ArrayRef<uint8_t> NameData = Data.slice(
+          NameOffset, std::min((size_t)NameLength, Data.size() - NameOffset));
+      StringRef NameStr(reinterpret_cast<const char *>(NameData.data()),
+                        NameData.size());
       SmallString<256> UTF8Name;
       ConverterEBCDIC::convertToUTF8(NameStr, UTF8Name);
       Sym.Name = std::string(UTF8Name.str());

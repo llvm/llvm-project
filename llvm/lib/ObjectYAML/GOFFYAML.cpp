@@ -183,8 +183,8 @@ void MappingTraits<GOFFYAML::FileHeader>::mapping(
                  FileHdr.TargetSoftwareEnvironment);
 }
 
-void MappingTraits<GOFFYAML::ESDRecord>::mapping(
-    IO &IO, GOFFYAML::ESDRecord &Record) {
+void MappingTraits<GOFFYAML::ESDRecord>::mapping(IO &IO,
+                                                 GOFFYAML::ESDRecord &Record) {
   IO.mapRequired("SymbolType", Record.SymbolType);
   IO.mapRequired("ESDID", Record.ESDID);
   IO.mapOptional("ParentESDID", Record.ParentESDID);
