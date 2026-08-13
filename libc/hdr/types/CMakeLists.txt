@@ -50,6 +50,22 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_link_map
+  HDRS
+    struct_link_map.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_link_map
+)
+
+add_proxy_header_library(
+  struct_r_debug
+  HDRS
+    struct_r_debug.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_r_debug
+)
+
+add_proxy_header_library(
   ldiv_t
   HDRS
     ldiv_t.h
