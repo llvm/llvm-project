@@ -213,32 +213,33 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
             if (LRU.available(DefinedRegClass.getRegisters()[i]))
               break;
 
-          //Actually rename the register
+          // Actually rename the register
+          Register old_reg = RIt->getOperand(0).getReg();
           if (i < DefinedRegClass.getRegisters().size() &&
               i * DefinedRegClass.getSizeInBits() / 32 < occupancy_budget) {
             for (unsigned op = 0; op < RIt->getNumOperands(); op++)
               if (RIt->getOperand(op).isReg() && RIt->getOperand(op).isDef() &&
-                  RIt->getOperand(op).getReg() == RIt->getOperand(0).getReg())
+                  RIt->getOperand(op).getReg() == old_reg)
                 RIt->getOperand(op).setReg(DefinedRegClass.getRegisters()[i]);
             for (MachineBasicBlock::iterator RenameIt =
                      std::next(RIt->getIterator());
                  RenameIt != KillerIns; ++RenameIt)
               for (unsigned op = 0; op < RenameIt->getNumOperands(); op++)
                 if (RenameIt->getOperand(op).isReg() &&
-                    RenameIt->getOperand(op).getReg() == RIt->getOperand(0).getReg())
+                    RenameIt->getOperand(op).getReg() == old_reg)
                   RenameIt->getOperand(op).setReg(DefinedRegClass.getRegisters()[i]);
             for (unsigned op = 0; op < KillerIns->getNumOperands(); op++)
               if (KillerIns->getOperand(op).isReg() &&
                   KillerIns->getOperand(op).isUse() &&
                   KillerIns->getOperand(op).getReg() ==
-                      RIt->getOperand(0).getReg())
+                      old_reg)
                 KillerIns->getOperand(op).setReg(DefinedRegClass.getRegisters()[i]);
 
             // Delete the conflict reg and all other conflicting registers we
             // just handled
             Register overlapping_reg = conflict_reg;
             while (
-                TRI->regsOverlap(RIt->getOperand(0).getReg(), overlapping_reg))
+                TRI->regsOverlap(old_reg, overlapping_reg))
               war_conflicts[overlapping_reg++] = false;
           }
 
