@@ -2104,12 +2104,11 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
-  if (getDynTlsRefs()) {
+  if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
-      return emitOpError(
-          "cannot have both static local and dynamic tls references");
-    if (!getTlsModel() || getTlsModel() != TLS_Model::GeneralDynamic)
-      return emitOpError("'dyn_tls_refs' only valid for dynamic tls");
+      return emitOpError("cannot have both static local and tls references");
+    if (!getTlsModel())
+      return emitOpError("'tls_refs' only valid for tls");
   }
 
   if (getAliasee().has_value()) {
