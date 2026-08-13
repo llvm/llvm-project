@@ -18,6 +18,21 @@
 PYTHON ?= python3
 
 SWIFTC ?= $(shell $(PYTHON) "$(VPATH)/$(LEVEL)/find-swift.py")
+
+# The bare path to the Swift compiler, for use where a filename is expected.
+# $(SWIFTC) itself is a shell word from here on and may carry quotes.
+SWIFTC_PATH := $(SWIFTC)
+
+# swiftc and swift are both symlinks to the driver, which is not rebuilt when
+# the frontend is. Track the frontend too, so that test binaries are rebuilt
+# when the compiler that actually produced them changes.
+SWIFT_FRONTEND_PATH := $(dir $(SWIFTC_PATH))swift-frontend
+
+ifeq "$(HOST_OS)" "Windows_NT"
+       # Quote the path so it survives being passed through 'sh', as for $(CXX).
+       override SWIFTC := $(QUOTE)$(SWIFTC)$(QUOTE)
+endif
+
 ifeq "$(SDKROOT)" ""
 	SWIFTSDKROOT = $(shell $(PYTHON) "$(VPATH)/$(LEVEL)/find-swift.py" -s)
 else
@@ -276,8 +291,9 @@ endif
 # The Swift object files are named .swift.o so they don't conflict
 # with the wrapped Swift module $(MODULENAME).o
 $(SWIFT_OBJECTS): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES) \
-                  $(call tool_prereq,$(SWIFTC)) \
-                  $(call tool_prereq,$(SWIFT))
+                  $(call tool_prereq,$(SWIFTC_PATH)) \
+                  $(call tool_prereq,$(SWIFT)) \
+                  $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 ifneq "$(SWIFT_WMO)" "1"
 	@echo "### Generating output file map"
 	$(PYTHON) $(THIS_FILE_DIR)/gen-output-map.py $(filter %.swift,$^) $(patsubst %,$(BUILDDIR)/%,$(SWIFT_OBJECTS)) >$(BUILDDIR)/$(MODULENAME)-output-file-map.json
@@ -309,7 +325,7 @@ else
 SWIFTMODULE =
 LD_SWIFTFLAGS =
 endif
-$(EXE): $(OBJECTS) $(call tool_prereq,$(SWIFTC))
+$(EXE): $(OBJECTS) $(call tool_prereq,$(SWIFTC_PATH))
 	@echo "### Linking" $(EXE)
 	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(OBJECTS) $(SWIFT_LINK_FLAGS) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
@@ -323,7 +339,7 @@ ifeq "$(HIDE_SWIFTMODULE)" ""
 WRAPPED_SWIFTMODULE = $(MODULENAME).o
 endif
 
-$(EXE): $(OBJECTS) $(call tool_prereq,$(SWIFTC))
+$(EXE): $(OBJECTS) $(call tool_prereq,$(SWIFTC_PATH))
 	@echo "### Linking" $(EXE)
 	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $(OBJECTS) $(SWIFT_LINK_FLAGS) -o "$(EXE)"
 ifneq "$(HIDE_SWIFTMODULE)" ""
@@ -350,7 +366,7 @@ endif
 endif # Darwin
 
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS) $(MODULE_INTERFACE) \
-                    $(call tool_prereq,$(SWIFTC)) \
+                    $(call tool_prereq,$(SWIFTC_PATH)) \
                     $(call tool_prereq,$(DS))
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
 ifneq "$(FRAMEWORK)" ""
