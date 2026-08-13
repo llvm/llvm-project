@@ -52,10 +52,11 @@ struct TestCounted {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     {
-      std::atomic_int(&counters)[1073] = Counted::counters;
-      Counted*& pool                   = Counted::pool;
+      // Alias the static member variables
+      auto& counters = Counted::counters;
+      Counted*& pool = Counted::pool;
 
-      // initialize all Counted counters to 0
+      // Initialize all Counted counters to 0
       std::fill_n(std::begin(counters), std::size(counters), 0);
 
       // Allocate memory for the Counted objects
