@@ -39,6 +39,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -53,6 +54,7 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -64,6 +66,8 @@ namespace llvm {
 class DWARFUnit;
 
 namespace bolt {
+
+class BranchLivenessInfo;
 
 using InputOffsetToAddressMapTy = std::unordered_multimap<uint64_t, uint64_t>;
 
@@ -299,6 +303,12 @@ private:
   /// Offsets of indirect branches with unknown destinations.
   std::set<uint64_t> UnknownIndirectBranchOffsets;
 
+  /// Offsets of instructions that begin or end a DWARF lexical scope
+  /// (inlined_subroutine / lexical_block low_pc/high_pc and DW_AT_ranges).
+  /// Populated before disassembly and cleared once disassembly of this
+  /// function is done.
+  SparseBitVector<> DebugScopeBoundaryOffsets;
+
   /// A set of local and global symbols corresponding to secondary entry points.
   /// Each additional function entry point has a corresponding entry in the map.
   /// The key is a local symbol corresponding to a basic block and the value
@@ -396,11 +406,15 @@ private:
   /// to avoid redundant processing.
   bool NeedBranchValidation{true};
 
-  /// Name for the section this function code should reside in.
-  std::string CodeSectionName;
+  /// Name for the section this function code should reside in. When unset, the
+  /// default name is derived on demand from the function's name (see
+  /// getMainSectionName()). Deferring this avoids eagerly storing a copy of the
+  /// (potentially large, mangled) function name for every function, which is a
+  /// significant source of memory use on large binaries.
+  std::optional<std::string> CodeSectionName;
 
-  /// Name for the corresponding cold code section.
-  std::string ColdCodeSectionName;
+  /// Name for the corresponding cold code section. See CodeSectionName.
+  std::optional<std::string> ColdCodeSectionName;
 
   /// Parent function fragment for split function fragments.
   using FragmentsSetTy = SmallPtrSet<BinaryFunction *, 1>;
@@ -740,12 +754,24 @@ private:
   static std::string buildColdCodeSectionName(StringRef Name,
                                               const BinaryContext &BC);
 
+  /// Return the name of the main code section, using the default derived from
+  /// the function's name when no name has been explicitly assigned.
+  std::string getMainSectionName() const {
+    return CodeSectionName ? *CodeSectionName
+                           : buildCodeSectionName(getOneName(), BC);
+  }
+
+  /// Return the name of the cold code section, using the default derived from
+  /// the function's name when no name has been explicitly assigned.
+  std::string getColdSectionName() const {
+    return ColdCodeSectionName ? *ColdCodeSectionName
+                               : buildColdCodeSectionName(getOneName(), BC);
+  }
+
   /// Creation should be handled by RewriteInstance or BinaryContext
   BinaryFunction(const std::string &Name, BinarySection &Section,
                  uint64_t Address, uint64_t Size, BinaryContext &BC)
       : OriginSection(&Section), Address(Address), Size(Size), BC(BC),
-        CodeSectionName(buildCodeSectionName(Name, BC)),
-        ColdCodeSectionName(buildColdCodeSectionName(Name, BC)),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
@@ -1363,6 +1389,23 @@ public:
     return InternalRefDataRelocations;
   }
 
+  /// Add function-relative \p Offset as a DWARF lexical-scope boundary.
+  void addDebugScopeBoundaryOffset(uint32_t Offset) {
+    DebugScopeBoundaryOffsets.set(Offset);
+  }
+
+  /// Return true if function-relative \p Offset begins/ends a DWARF scope.
+  bool isDebugScopeBoundaryOffset(uint32_t Offset) {
+    return DebugScopeBoundaryOffsets.test(Offset);
+  }
+
+  /// Return true if an "Offset" annotation should be kept for instruction
+  /// \p Inst located at function-relative \p Offset. Offsets are kept for
+  /// control-flow instructions (profile matching) and for instructions that
+  /// begin/end a DWARF lexical scope (needed to translate scope ranges
+  /// precisely; see DebugScopeBoundaryOffsets).
+  bool keepOffsetForInstruction(const MCInst &Inst, uint32_t Offset);
+
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {
     if (!OriginSection)
@@ -1374,12 +1417,12 @@ public:
   SmallString<32>
   getCodeSectionName(const FragmentNum Fragment = FragmentNum::main()) const {
     if (Fragment == FragmentNum::main())
-      return SmallString<32>(CodeSectionName);
+      return SmallString<32>(getMainSectionName());
     if (Fragment == FragmentNum::cold())
-      return SmallString<32>(ColdCodeSectionName);
+      return SmallString<32>(getColdSectionName());
     if (BC.HasWarmSection && Fragment == FragmentNum::warm())
       return SmallString<32>(BC.getWarmCodeSectionName());
-    return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
+    return formatv("{0}.{1}", getColdSectionName(), Fragment.get() - 1);
   }
 
   /// Assign a code section name to the function.
@@ -2454,14 +2497,16 @@ public:
   /// is corrupted. If it is unable to fix it, it returns false.
   bool finalizeCFIState();
 
-  /// Return true if this function needs an address-translation table after
-  /// its code emission.
-  bool requiresAddressTranslation() const;
-
   /// Return true if the linker needs to generate an address map for this
   /// function. Used for keeping track of the mapping from input to out
   /// addresses of basic blocks.
   bool requiresAddressMap() const;
+
+  /// Return true if this function needs an address-translation table after
+  /// its code emission, or to update any metadata accurately (debug info,
+  /// SDT probes). This is gated since it incurs extra cost for the linker
+  /// to keep track of more addresses.
+  bool requiresPreciseAddressMap() const;
 
   /// Adjust branch instructions to match the CFG.
   ///
@@ -2478,7 +2523,7 @@ public:
   /// while the second successor - false/fall-through branch.
   ///
   /// When we reverse the branch condition, the CFG is updated accordingly.
-  void fixBranches();
+  void fixBranches(const BranchLivenessInfo *BLI = nullptr);
 
   /// Mark function as finalized. No further optimizations are permitted.
   void setFinalized() { CurrentState = State::CFG_Finalized; }

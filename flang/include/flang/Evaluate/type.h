@@ -507,6 +507,10 @@ bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringTypeParameters(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+// Like AreSameDerivedType, but length type parameters may differ; kind type
+// parameters must still match.
+bool AreSameDerivedTypeIgnoringLengthParameters(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringSequence(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 

@@ -5,14 +5,21 @@ include_directories(${MLIR_TABLEGEN_OUTPUT_DIR})
 
 add_distinct_clang_unittest(CIRUnitTests
   CallOpTest.cpp
+  CIRDiagnosticHandlerTest.cpp
   ControlFlowTest.cpp
+  FenvOpTest.cpp
+  GetFloatingPointTypeTest.cpp
+  IntTypeABIAlignTest.cpp
   PointerLikeTest.cpp
   RecordTypeMetadataTest.cpp
   UnionTypeSizeTest.cpp
+  VectorTypeABIAlignTest.cpp
   LLVM_COMPONENTS
   Core
 
   LINK_LIBS
+  clangBasic
+  clangCIRFrontendAction
   MLIRCIR
   CIROpenACCSupport
   MLIRIR

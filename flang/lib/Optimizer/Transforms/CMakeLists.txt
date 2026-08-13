@@ -5,9 +5,8 @@ add_flang_library(FIRTransforms
   AffineDemotion.cpp
   AffinePromotion.cpp
   AlgebraicSimplification.cpp
+  AllocationPlacement.cpp
   AnnotateConstant.cpp
-  ArrayValueCopy.cpp
-  ArrayValueCopy.cpp
   AssumedRankOpConversion.cpp
   CUDA/CUFAddConstructor.cpp
   CUDA/CUFAllocationConversion.cpp
@@ -45,6 +44,7 @@ add_flang_library(FIRTransforms
   GenRuntimeCallsForTest.cpp
   LoopInvariantCodeMotion.cpp
   LoopVersioning.cpp
+  SelectOpsConversion.cpp
   MIFOpConversion.cpp
   MemRefDataFlowOpt.cpp
   MemoryAllocation.cpp
@@ -91,7 +91,6 @@ add_flang_library(FIRTransforms
   MLIRMathTransforms
   MLIRNVVMDialect
   MLIROpenACCDialect
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
   MLIRTransformUtils
 )

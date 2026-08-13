@@ -2,10 +2,15 @@
 # part of the GN build.
 group("CIRUnitTests") {
   sources = [
+    "CIRDiagnosticHandlerTest.cpp",
     "CallOpTest.cpp",
     "ControlFlowTest.cpp",
+    "FenvOpTest.cpp",
+    "GetFloatingPointTypeTest.cpp",
+    "IntTypeABIAlignTest.cpp",
     "PointerLikeTest.cpp",
     "RecordTypeMetadataTest.cpp",
     "UnionTypeSizeTest.cpp",
+    "VectorTypeABIAlignTest.cpp",
   ]
 }

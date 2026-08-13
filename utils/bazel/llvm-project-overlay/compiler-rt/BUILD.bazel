@@ -11,18 +11,24 @@ package(
 
 licenses(["notice"])
 
+POSIX_PROFILE_DEFINES = [
+    "COMPILER_RT_HAS_ATOMICS=1",
+    "COMPILER_RT_HAS_FCNTL_LCK=1",
+    "COMPILER_RT_HAS_UNAME=1",
+]
+
 cc_library(
     name = "config",
     defines = select({
-        "@platforms//os:linux": [
-            "COMPILER_RT_HAS_ATOMICS=1",
-            "COMPILER_RT_HAS_FCNTL_LCK=1",
-            "COMPILER_RT_HAS_UNAME=1",
-        ],
+        "@platforms//os:ios": POSIX_PROFILE_DEFINES,
+        "@platforms//os:linux": POSIX_PROFILE_DEFINES,
+        "@platforms//os:macos": POSIX_PROFILE_DEFINES,
         # Will raise error unless supported platforms.
     }),
     target_compatible_with = select({
+        "@platforms//os:ios": [],
         "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
@@ -472,7 +478,28 @@ filegroup(
 
 BUILTINS_LIBC_MATH_EXCLUDES = [
     # Sources requiring COMPILER_RT_USE_LIBC_MATH (e.g. LIBC_NAMESPACE::shared::*).
+    "lib/builtins/adddf3.cpp",
     "lib/builtins/addtf3.cpp",
+    "lib/builtins/addsf3.cpp",
+    "lib/builtins/divdf3.cpp",
+    "lib/builtins/divsf3.cpp",
+    "lib/builtins/divtf3.cpp",
+    "lib/builtins/extenddftf2.cpp",
+    "lib/builtins/extendsfdf2.cpp",
+    "lib/builtins/extendsftf2.cpp",
+    "lib/builtins/extendxftf2.cpp",
+    "lib/builtins/muldf3.cpp",
+    "lib/builtins/mulsf3.cpp",
+    "lib/builtins/multf3.cpp",
+    "lib/builtins/negdf2.cpp",
+    "lib/builtins/negsf2.cpp",
+    "lib/builtins/subdf3.cpp",
+    "lib/builtins/subsf3.cpp",
+    "lib/builtins/subtf3.cpp",
+    "lib/builtins/truncdfsf2.cpp",
+    "lib/builtins/trunctfdf2.cpp",
+    "lib/builtins/trunctfsf2.cpp",
+    "lib/builtins/trunctfxf2.cpp",
 ]
 
 # Source files for portable components of the compiler builtins library.
