@@ -150,7 +150,7 @@ flattenFileChanges(const clang::replace::FileToChangesMap &Changes) {
     // Sort within a file by (offset, length, text) so per-file order is
     // deterministic regardless of input order.
     llvm::sort(Bucket, [](const clang::tooling::Replacement &A,
-                         const clang::tooling::Replacement &B) {
+                          const clang::tooling::Replacement &B) {
       if (A.getOffset() != B.getOffset())
         return A.getOffset() < B.getOffset();
       if (A.getLength() != B.getLength())
@@ -276,8 +276,9 @@ void emitConflictClusterLines(
     const std::vector<std::vector<ReplacementKey>> &Clusters) {
   for (const auto &Cluster : Clusters) {
     llvm::errs() << "conflict: skipped " << Cluster.size()
-                 << " overlapping replacement(s) at " << Cluster.front().FilePath
-                 << ":" << Cluster.front().Offset << "\n";
+                 << " overlapping replacement(s) at "
+                 << Cluster.front().FilePath << ":" << Cluster.front().Offset
+                 << "\n";
   }
 }
 
@@ -317,9 +318,9 @@ std::string canonicalizeToFileUri(llvm::StringRef FilePath) {
 /// Even when `Clusters` is empty, this writes a well-formed SARIF
 /// document with `runs[0].results: []`. The file's presence is the
 /// "merger ran with conflict reporting requested" signal.
-llvm::Error emitConflictSarif(
-    llvm::StringRef Path,
-    llvm::ArrayRef<std::vector<ReplacementKey>> Clusters) {
+llvm::Error
+emitConflictSarif(llvm::StringRef Path,
+                  llvm::ArrayRef<std::vector<ReplacementKey>> Clusters) {
   llvm::json::Array Results;
   Results.reserve(Clusters.size());
 
@@ -345,13 +346,12 @@ llvm::Error emitConflictSarif(
           {"physicalLocation",
            llvm::json::Object{
                {"artifactLocation", llvm::json::Object{{"uri", Uri}}},
-               {"region", llvm::json::Object{
-                              {"byteOffset", static_cast<int64_t>(K.Offset)},
-                              {"byteLength",
-                               static_cast<int64_t>(K.Length)}}}}},
-          {"message",
-           llvm::json::Object{
-               {"text", ("candidate edit: \"" + K.Text + "\"")}}}});
+               {"region",
+                llvm::json::Object{
+                    {"byteOffset", static_cast<int64_t>(K.Offset)},
+                    {"byteLength", static_cast<int64_t>(K.Length)}}}}},
+          {"message", llvm::json::Object{
+                          {"text", ("candidate edit: \"" + K.Text + "\"")}}}});
     }
 
     std::string MessageText =
@@ -371,8 +371,7 @@ llvm::Error emitConflictSarif(
                   {"artifactLocation", llvm::json::Object{{"uri", Uri}}},
                   {"region",
                    llvm::json::Object{
-                       {"byteOffset",
-                        static_cast<int64_t>(Min.Offset)}}}}}}}},
+                       {"byteOffset", static_cast<int64_t>(Min.Offset)}}}}}}}},
         {"relatedLocations", std::move(RelatedLocations)}});
   }
 
@@ -381,10 +380,11 @@ llvm::Error emitConflictSarif(
       {"$schema", "https://json.schemastore.org/sarif-2.1.0.json"},
       {"runs",
        llvm::json::Array{llvm::json::Object{
-           {"tool", llvm::json::Object{
-                        {"driver", llvm::json::Object{
-                                       {"name", "clang-ssaf-src-edit-merge"},
-                                       {"version", CLANG_VERSION_STRING}}}}},
+           {"tool",
+            llvm::json::Object{
+                {"driver",
+                 llvm::json::Object{{"name", "clang-ssaf-src-edit-merge"},
+                                    {"version", CLANG_VERSION_STRING}}}}},
            {"results", std::move(Results)}}}}};
 
   std::error_code EC;
