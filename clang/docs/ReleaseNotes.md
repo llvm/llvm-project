@@ -535,6 +535,9 @@ features cannot lower the translation-unit ABI level;
 
 #### RISC-V Support
 
+- Fixed a bug where the `interrupt` attribute did not accept `machine` together
+  with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
+
 #### CUDA/HIP Language Changes
 
 - HIP compilations now add the `include/libhipcxx` directory from the selected

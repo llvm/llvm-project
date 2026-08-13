@@ -1618,7 +1618,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   // - Must be a function.
   // - Must have no parameters.
   // - Must have the 'void' return type.
-  // - The attribute itself must have at most 2 arguments
+  // - The attribute itself must have at most 3 arguments
   // - The attribute arguments must be string literals, and valid choices.
   // - The attribute arguments must be a valid combination
   // - The current target must support the right extensions for the combination.
@@ -1641,13 +1641,13 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (!AL.checkAtMostNumArgs(SemaRef, 2))
+  if (!AL.checkAtMostNumArgs(SemaRef, 3))
     return;
 
   bool HasSiFiveCLICType = false;
   bool HasUnaryType = false;
 
-  SmallSet<RISCVInterruptAttr::InterruptType, 2> Types;
+  SmallSet<RISCVInterruptAttr::InterruptType, 3> Types;
   for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
     RISCVInterruptAttr::InterruptType Type;
     StringRef TypeString;
@@ -1684,6 +1684,15 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     }
 
     Types.insert(Type);
+  }
+
+  const bool IsSiFiveCLICTriple =
+      Types.size() == 3 && Types.contains(RISCVInterruptAttr::machine) &&
+      Types.contains(RISCVInterruptAttr::SiFiveCLICPreemptible) &&
+      Types.contains(RISCVInterruptAttr::SiFiveCLICStackSwap);
+  if (AL.getNumArgs() == 3 && !IsSiFiveCLICTriple) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
+    return;
   }
 
   if (HasUnaryType && Types.size() > 1) {
@@ -1745,7 +1754,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  SmallVector<RISCVInterruptAttr::InterruptType, 2> TypesVec(Types.begin(),
+  SmallVector<RISCVInterruptAttr::InterruptType, 3> TypesVec(Types.begin(),
                                                              Types.end());
 
   D->addAttr(::new (getASTContext()) RISCVInterruptAttr(
