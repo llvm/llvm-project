@@ -9272,42 +9272,27 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportRecursiveFieldInitializer1) {
   // EXPECT_TRUE(ToA->field_begin()->getInClassInitializer());
 }
 
+// Check that we are able to import a global variable of class type that
+// is initialized with a lambda that captures a reference to the variable itself,
+// and that the class's constructor template names a variable template specialization
+// whose (dependent) argument is the lambda's own closure type.
+// The lambda's call operator is looked up during the import of its own body
+// (through a chain of decls). This is problematic if we do not link function decls
+// to the context before importing their bodies.
 TEST_P(ASTImporterOptionSpecificTestBase,
        ImportSelfReferencingGlobalWithLambdaInTemplateArg) {
-  // A global variable of class type is initialized with a lambda that
-  // captures a reference to the variable itself. The class's constructor
-  // template names a variable template specialization whose (dependent)
-  // argument is the lambda's own closure type, which is reached again as a
-  // class template argument.
-  //
-  // Importing the variable's declared type forces the import of the entire
-  // class definition before the VarDecl itself is registered.
-  // Resolving the "ns::" qualifier inside the constructor pulls in
-  // the entire namespace, including the concrete specialization that
-  // refers back to the lambda's closure type. When that closure is
-  // force-imported, the process reaches the lambda's call operator body,
-  // which references the same self-referencing global variable again.
-  // Because the variable isn't mapped yet, the importer revisits it and
-  // rebuilds a second, independent LambdaExpr for the same closure while
-  // its call operator is still being imported into it.
-  //
-  // Finally, the sequence LambdaExpr::Create() ->
-  // CXXRecordDecl::getLambdaCallOperator() performs a name lookup on the
-  // lambda closure that is currently being constructed.
-  const char *Code =
-      R"(
-      namespace ns {
-      template <typename> constexpr bool always_false = false;
+  TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+    namespace ns {
+    template <typename> constexpr bool always_false = false;
+    }
+    class SelfReferencingWrapper {
+    public:
+      template <class Callback> SelfReferencingWrapper(Callback callback) {
+        ns::always_false<Callback>;
       }
-      class SelfReferencingWrapper {
-      public:
-        template <class Callback> SelfReferencingWrapper(Callback callback) {
-          ns::always_false<Callback>;
-        }
-      } selfRef { []{ (void)selfRef; } };
-      void trigger() { selfRef; }
-      )";
-  Decl *FromTU = getTuDecl(Code, Lang_CXX20);
+    } selfRef { []{ (void)selfRef; } };
+    void trigger() { selfRef; }
+    )", Lang_CXX20);
   auto *FromFunc = FirstDeclMatcher<FunctionDecl>().match(
       FromTU, functionDecl(hasName("trigger")));
   auto *ToFunc = Import(FromFunc, Lang_CXX20);
