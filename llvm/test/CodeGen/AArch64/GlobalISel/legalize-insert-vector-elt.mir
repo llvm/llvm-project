@@ -228,6 +228,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $w3
+  ; CHECK-NEXT:   {{%[0-9]+}}:_(i64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i8) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 0
   ; CHECK-NEXT: {{  $}}

@@ -1547,6 +1547,54 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   verify(*ST.getInstrInfo());
 }
 
+static bool isP0(LLT Ty) { return Ty.isPointer() && Ty.getAddressSpace() == 0; }
+
+static bool isKnownLegalScalarOrP0(LLT Ty) {
+  if (isP0(Ty))
+    return true;
+  if (!Ty.isScalar())
+    return false;
+  switch (Ty.getSizeInBits()) {
+  default:
+    return false;
+  case 8:
+  case 16:
+  case 32:
+  case 64:
+    return true;
+  }
+}
+
+bool AArch64LegalizerInfo::isKnownLegal(const MachineInstr &MI,
+                                        const MachineRegisterInfo &MRI) const {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case TargetOpcode::G_BR:
+    return true;
+  case TargetOpcode::G_PTR_ADD:
+    return isP0(MRI.getType(MI.getOperand(0).getReg())) &&
+           MRI.getType(MI.getOperand(2).getReg()) == LLT::scalar(64);
+  case TargetOpcode::G_FRAME_INDEX:
+    return MRI.getType(MI.getOperand(0).getReg()).getAddressSpace() == 0;
+  case TargetOpcode::G_CONSTANT:
+    return isKnownLegalScalarOrP0(MRI.getType(MI.getOperand(0).getReg()));
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    LLT ValTy = MRI.getType(MI.getOperand(0).getReg());
+    LLT PtrTy = MRI.getType(MI.getOperand(1).getReg());
+    const MachineMemOperand &MMO = **MI.memoperands_begin();
+    if (!isP0(PtrTy) || MMO.isAtomic())
+      return false;
+
+    LLT MemTy = MMO.getMemoryType();
+    if (!isKnownLegalScalarOrP0(ValTy) && ValTy != LLT::scalar(128))
+      return false;
+    return ValTy.getSizeInBits() == MemTy.getSizeInBits();
+  }
+  }
+}
+
 bool AArch64LegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {

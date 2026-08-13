@@ -203,6 +203,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i8) = G_CONSTANT i8 10
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
@@ -237,6 +238,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i8) = G_CONSTANT i8 8
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
@@ -308,6 +310,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i16) = G_CONSTANT i16 20
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
@@ -342,6 +345,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i16) = G_CONSTANT i16 16
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
@@ -379,6 +383,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i32) = G_CONSTANT i32 9
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 23
     ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(i32) = G_FSHR [[COPY]], [[COPY1]], [[C]](i64)
     ; CHECK-NEXT: $w0 = COPY [[FSHR]](i32)
@@ -405,6 +410,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i32) = G_CONSTANT i32 42
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 22
     ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(i32) = G_FSHR [[COPY]], [[COPY1]], [[C]](i64)
     ; CHECK-NEXT: $w0 = COPY [[FSHR]](i32)
@@ -431,6 +437,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i32) = G_CONSTANT i32 32
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i64)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
@@ -462,6 +469,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i64) = G_CONSTANT i64 41
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 23
     ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(i64) = G_FSHR [[COPY]], [[COPY1]], [[C]](i64)
     ; CHECK-NEXT: $x0 = COPY [[FSHR]](i64)
@@ -488,6 +496,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i64) = G_CONSTANT i64 72
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 56
     ; CHECK-NEXT: [[FSHR:%[0-9]+]]:_(i64) = G_FSHR [[COPY]], [[COPY1]], [[C]](i64)
     ; CHECK-NEXT: $x0 = COPY [[FSHR]](i64)
@@ -514,6 +523,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i64) = G_CONSTANT i64 64
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 63
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 1

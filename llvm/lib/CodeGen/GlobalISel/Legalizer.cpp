@@ -199,7 +199,7 @@ Legalizer::MFResult Legalizer::legalizeMachineFunction(
         continue;
       if (isArtifact(MI))
         ArtifactList.deferred_insert(&MI);
-      else
+      else if (!LI.isKnownLegal(MI, MRI))
         InstList.deferred_insert(&MI);
     }
   }
@@ -234,6 +234,10 @@ Legalizer::MFResult Legalizer::legalizeMachineFunction(
         eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
+
+      // We can skip known-legal instructions created during legalization.
+      if (LI.isKnownLegal(MI, MRI))
+        continue;
 
       // Do the legalization for this instruction.
       auto Res = Helper.legalizeInstrStep(MI, LocObserver);

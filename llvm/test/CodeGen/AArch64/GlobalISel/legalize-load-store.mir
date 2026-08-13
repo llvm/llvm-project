@@ -20,6 +20,7 @@ body: |
     ; CHECK-NEXT: [[LOAD2:%[0-9]+]]:_(i16) = G_LOAD [[COPY]](p0) :: (load (i16))
     ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(i32) = G_ANYEXT [[LOAD2]](i16)
     ; CHECK-NEXT: $w0 = COPY [[ANYEXT2]](i32)
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i32) = G_LOAD [[COPY]](p0) :: (load (i32))
     ; CHECK-NEXT: $w0 = COPY [[ANYEXT1]](i32)
     ; CHECK-NEXT: [[LOAD3:%[0-9]+]]:_(i64) = G_LOAD [[COPY]](p0) :: (load (i64))
     ; CHECK-NEXT: $x0 = COPY [[LOAD3]](i64)

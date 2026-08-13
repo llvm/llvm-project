@@ -13,6 +13,8 @@ define void @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   {{%[0-9]+}}:_(p0) = G_FRAME_INDEX %stack.0.exn.slot
+  ; CHECK-NEXT:   {{%[0-9]+}}:_(p0) = G_FRAME_INDEX %stack.1.ehselector.slot
   ; CHECK-NEXT:   G_INVOKE_REGION_START
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp

@@ -227,6 +227,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY]], [[C]](i64)
     ; CHECK-NEXT: $w0 = COPY [[SHL]](i32)
@@ -248,6 +249,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[COPY]], [[C]](i64)
     ; CHECK-NEXT: $w0 = COPY [[LSHR]](i32)
@@ -269,6 +271,7 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: {{%[0-9]+}}:_(i32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[COPY]], [[C]](i64)
     ; CHECK-NEXT: $w0 = COPY [[ASHR]](i32)

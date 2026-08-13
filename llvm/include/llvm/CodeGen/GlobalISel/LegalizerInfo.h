@@ -1400,6 +1400,14 @@ public:
   bool isLegalOrCustom(const MachineInstr &MI,
                        const MachineRegisterInfo &MRI) const;
 
+  /// Return true if \p MI is known to be legal without consulting the
+  /// legalization rules. This is intended as a fast path for the most common
+  /// operations.
+  virtual bool isKnownLegal(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI) const {
+    return false;
+  }
+
   /// Called for instructions with the Custom LegalizationAction.
   virtual bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
                               LostDebugLocObserver &LocObserver) const {

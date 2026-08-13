@@ -36,6 +36,8 @@ body:             |
     ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(<2 x p0>) = G_PTR_ADD [[BUILD_VECTOR1]], [[BUILD_VECTOR3]](<2 x i64>)
     ; CHECK-NEXT: %zero:_(i64) = G_CONSTANT i64 0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %two:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: %three:_(i64) = G_CONSTANT i64 3
     ; CHECK-NEXT: %extract0:_(p0) = G_EXTRACT_VECTOR_ELT [[PTR_ADD]](<2 x p0>), %zero(i64)
     ; CHECK-NEXT: %extract1:_(p0) = G_EXTRACT_VECTOR_ELT [[PTR_ADD]](<2 x p0>), %one(i64)
     ; CHECK-NEXT: %extract2:_(p0) = G_EXTRACT_VECTOR_ELT [[PTR_ADD1]](<2 x p0>), %zero(i64)

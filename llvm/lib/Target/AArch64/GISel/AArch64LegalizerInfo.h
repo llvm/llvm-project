@@ -33,6 +33,9 @@ public:
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
 
+  bool isKnownLegal(const MachineInstr &MI,
+                    const MachineRegisterInfo &MRI) const override;
+
 private:
   bool legalizeVaArg(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &MIRBuilder) const;
