@@ -17,9 +17,14 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-peephole"
@@ -30,7 +35,7 @@ static cl::opt<bool> DisableWebAssemblyFallthroughReturnOpt(
     cl::init(false));
 
 namespace {
-class WebAssemblyPeephole final : public MachineFunctionPass {
+class WebAssemblyPeepholeLegacy final : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly late peephole optimizer";
   }
@@ -46,16 +51,16 @@ class WebAssemblyPeephole final : public MachineFunctionPass {
 
 public:
   static char ID;
-  WebAssemblyPeephole() : MachineFunctionPass(ID) {}
+  WebAssemblyPeepholeLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyPeephole::ID = 0;
-INITIALIZE_PASS(WebAssemblyPeephole, DEBUG_TYPE,
+char WebAssemblyPeepholeLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyPeepholeLegacy, DEBUG_TYPE,
                 "WebAssembly peephole optimizations", false, false)
 
-FunctionPass *llvm::createWebAssemblyPeephole() {
-  return new WebAssemblyPeephole();
+FunctionPass *llvm::createWebAssemblyPeepholeLegacyPass() {
+  return new WebAssemblyPeepholeLegacy();
 }
 
 /// If desirable, rewrite NewReg to a drop register.
@@ -110,7 +115,8 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
   return true;
 }
 
-bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
+static bool peephole(MachineFunction &MF, TargetLibraryInfo &LibInfo,
+                     const LibcallLoweringInfo &LibcallLowering) {
   LLVM_DEBUG({
     dbgs() << "********** Peephole **********\n"
            << "********** Function: " << MF.getName() << '\n';
@@ -121,12 +127,6 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
   const WebAssemblySubtarget &Subtarget =
       MF.getSubtarget<WebAssemblySubtarget>();
   const auto &TII = *Subtarget.getInstrInfo();
-  auto &LibInfo =
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
-
-  const LibcallLoweringInfo &LibcallLowering =
-      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
-          *MF.getFunction().getParent(), Subtarget);
 
   RTLIB::LibcallImpl MemcpyImpl = LibcallLowering.getLibcallImpl(RTLIB::MEMCPY);
   RTLIB::LibcallImpl MemmoveImpl =
@@ -178,4 +178,35 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
       }
 
   return Changed;
+}
+
+bool WebAssemblyPeepholeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  TargetLibraryInfo &LibInfo =
+      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const LibcallLoweringInfo &LibcallLowering =
+      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+          *MF.getFunction().getParent(), Subtarget);
+  return peephole(MF, LibInfo, LibcallLowering);
+}
+
+PreservedAnalyses
+WebAssemblyPeepholePass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  TargetLibraryInfo &LibInfo =
+      MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+          .getManager()
+          .getResult<TargetLibraryAnalysis>(MF.getFunction());
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const LibcallLoweringInfo &LibcallLowering =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<LibcallLoweringModuleAnalysis>(
+              *MF.getFunction().getParent())
+          ->getLibcallLowering(Subtarget);
+  return peephole(MF, LibInfo, LibcallLowering)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

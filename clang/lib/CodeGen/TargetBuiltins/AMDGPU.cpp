@@ -34,17 +34,16 @@ namespace {
 static Value *emitAMDGPUSBufferLoadBuiltin(CodeGenFunction &CGF,
                                            const CallExpr *E) {
   llvm::Type *RetTy = CGF.ConvertType(E->getType());
-  Function *F = CGF.CGM.getIntrinsic(Intrinsic::amdgcn_s_buffer_load, RetTy);
+  Function *F =
+      CGF.CGM.getIntrinsic(Intrinsic::amdgcn_ptr_s_buffer_load, RetTy);
 
   Value *RsrcPtr = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Type *I128Ty = llvm::IntegerType::get(CGF.getLLVMContext(), 128);
-  llvm::Type *RsrcVecTy =
-      llvm::FixedVectorType::get(CGF.Builder.getInt32Ty(), 4);
-  Value *RsrcInt = CGF.Builder.CreatePtrToInt(RsrcPtr, I128Ty);
-  Value *Rsrc = CGF.Builder.CreateBitCast(RsrcInt, RsrcVecTy);
-
-  return CGF.Builder.CreateCall(F, {Rsrc, CGF.EmitScalarExpr(E->getArg(1)),
-                                    CGF.EmitScalarExpr(E->getArg(2))});
+  CallInst *Call =
+      CGF.Builder.CreateCall(F, {RsrcPtr, CGF.EmitScalarExpr(E->getArg(1)),
+                                 CGF.EmitScalarExpr(E->getArg(2))});
+  Call->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                    llvm::MDNode::get(CGF.Builder.getContext(), {}));
+  return Call;
 }
 
 // Has second type mangled argument.
@@ -275,13 +274,21 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
 
 // Generates the IR for __builtin_read_exec_*.
 // Lowers the builtin to amdgcn_ballot intrinsic.
+//
+// The ballot must be taken at the wavefront width: a ballot narrower than the
+// wave size cannot represent one bit per lane and fails to select. Request the
+// mask at the wave width and narrow it afterwards for the _lo and _hi halves.
 static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
                                       llvm::Type *RegisterType,
                                       llvm::Type *ValueType, bool isExecHi) {
   CodeGen::CGBuilderTy &Builder = CGF.Builder;
   CodeGen::CodeGenModule &CGM = CGF.CGM;
 
-  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {RegisterType});
+  unsigned WaveSize = CGF.getTarget().getGridValue().GV_Warp_Size;
+  unsigned BallotSize = std::max(WaveSize, RegisterType->getIntegerBitWidth());
+  llvm::Type *BallotType = Builder.getIntNTy(BallotSize);
+
+  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {BallotType});
   llvm::Value *Call = Builder.CreateCall(F, {Builder.getInt1(true)});
 
   if (isExecHi) {
@@ -290,7 +297,7 @@ static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
     return Rt2;
   }
 
-  return Call;
+  return Builder.CreateTrunc(Call, ValueType);
 }
 
 static llvm::Value *loadTextureDescPtorAsVec8I32(CodeGenFunction &CGF,
@@ -471,6 +478,14 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   }
 
   MMRAMetadata::appendTags(*Inst, MMRAs);
+}
+
+void CodeGenFunction::AddAMDGPUAvailableVisibleMMRA(llvm::Instruction *Inst) {
+  if (AMDGPUAvailableVisibleMode.empty())
+    return;
+
+  constexpr const char *Tag = "amdgcn-av";
+  MMRAMetadata::appendTags(*Inst, {{Tag, AMDGPUAvailableVisibleMode}});
 }
 
 static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
@@ -1905,6 +1920,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     FenceInst *Fence = Builder.CreateFence(AO, SSID);
     if (E->getNumArgs() > 2)
       AddAMDGPUFenceAddressSpaceMMRA(Fence, E);
+    getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
     return Fence;
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -2017,6 +2033,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
     if (Volatile)
       RMW->setVolatile(true);
+    AddAMDGPUAvailableVisibleMMRA(RMW);
 
     unsigned AddrSpace = Ptr.getType()->getAddressSpace();
     if (AddrSpace != llvm::AMDGPUAS::LOCAL_ADDRESS) {
@@ -2197,6 +2214,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);
+  case AMDGPU::BI__builtin_amdgcn_s_prefetch_inst:
+    return emitBuiltinWithOneOverloadedType<2>(
+        *this, E, Intrinsic::amdgcn_s_prefetch_inst);
   case Builtin::BIlogbf:
   case Builtin::BI__builtin_logbf: {
     Value *Src0 = EmitScalarExpr(E->getArg(0));

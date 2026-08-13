@@ -157,6 +157,10 @@ def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mli
     that device code can reference them.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
+  let options = [
+    Option<"cudaUnified", "cuda-unified", "bool", "false",
+           "Emit declaration-only device globals for CUDA unified memory.">
+  ];
 }
 
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
@@ -205,6 +209,14 @@ def ACCEmitRemarksPrivate
     carries.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
+def ACCEmitRemarksData : Pass<"acc-emit-remarks-data", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC data-mapping remarks";
+  let description = [{
+    This pass emits remarks describing the data clauses associated
+    with OpenACC data constructs and unstructured data directives.
+  }];
 }
 
 def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
@@ -506,9 +518,8 @@ def ACCRoutineLowering : Pass<"acc-routine-lowering", "mlir::ModuleOp"> {
     expressed by one acc.par_width derived from the routine's clauses (seq,
     vector, worker, gang). The pass does not use acc.kernel_environment. It
     sets acc.specialized_routine on the new function and updates the
-    acc.routine's func_name to point to it. For nohost routines, all uses of
-    the host symbol are replaced with the device symbol and the host function
-    is erased. Routines with bind(name) and external functions are skipped.
+    acc.routine's func_name to point to it. Routines with bind(name) and
+    external functions are skipped.
   }];
   let dependentDialects = [
     "mlir::acc::OpenACCDialect",
