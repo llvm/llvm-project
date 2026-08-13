@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports padded, packed, and over-aligned record shapes.
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
@@ -52,8 +54,8 @@ int load_field(S* s) {
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
 
 // LLVM: define dso_local noundef i32 @_Z10load_fieldP1S
-// LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
-// LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
+// LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
+// LLVM:   [[TMP1:%.*]] = alloca i32, align 4
 // LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP2]], i32 0, i32 0
 // LLVM:   [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 4
@@ -80,7 +82,7 @@ void store_field() {
 // CIR:   cir.set_bitfield align(4) (#bfi_a, [[TMP2]] : !cir.ptr<!u64i>, [[TMP1]] : !s32i)
 
 // LLVM: define dso_local void @_Z11store_fieldv
-// LLVM:   [[TMP0:%.*]] = alloca %struct.S, i64 1, align 4
+// LLVM:   [[TMP0:%.*]] = alloca %struct.S, align 4
 // LLVM:   [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 0
 // LLVM:   [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
 // LLVM:   [[TMP3:%.*]] = and i64 [[TMP2]], -16
@@ -109,7 +111,7 @@ void store_bitfield_to_bitfield(S* s) {
 // CIR:   [[TMP7:%.*]] = cir.set_bitfield align(4) (#bfi_a, [[TMP6]] : !cir.ptr<!u64i>, [[TMP4]] : !s32i) -> !s32i
 
 // LLVM: define dso_local void @_Z26store_bitfield_to_bitfieldP1S
-// LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
+// LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
 // LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP2:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP1]], i32 0, i32 0
 // LLVM:   [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 4

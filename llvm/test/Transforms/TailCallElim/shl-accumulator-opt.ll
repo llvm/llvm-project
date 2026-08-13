@@ -186,3 +186,56 @@ if.end:
   %shl = shl i32 %tmp, 1
   br label %common.ret
 }
+
+; Negative test: a second, non-eliminable return computed from a recursive call
+; must not be rewritten to return the accumulator.
+; int f6(int x) {
+;   if (x == 0) return 1;
+;   if (x == 5) return f6(x-1) - 3; // neither associative nor unary-composable
+;   return f6(x-1) << 1;
+; }
+define i32 @test_neg_other_recursive_ret(i32 %x) {
+; CHECK-LABEL: define i32 @test_neg_other_recursive_ret(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[BASE:.*]], label %[[IF_END:.*]]
+; CHECK:       [[BASE]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[X]], 5
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[OTHER:.*]], label %[[REC:.*]]
+; CHECK:       [[REC]]:
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @test_neg_other_recursive_ret(i32 [[SUB]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CALL]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+; CHECK:       [[OTHER]]:
+; CHECK-NEXT:    [[SUB2:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @test_neg_other_recursive_ret(i32 [[SUB2]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i32 [[CALL2]], 3
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 0
+  br i1 %cmp, label %base, label %if.end
+
+base:
+  ret i32 1
+
+if.end:
+  %cmp2 = icmp eq i32 %x, 5
+  br i1 %cmp2, label %other, label %rec
+
+rec:
+  %sub = add nsw i32 %x, -1
+  %call = tail call i32 @test_neg_other_recursive_ret(i32 %sub)
+  %shl = shl i32 %call, 1
+  ret i32 %shl
+
+other:
+  %sub2 = add nsw i32 %x, -1
+  %call2 = tail call i32 @test_neg_other_recursive_ret(i32 %sub2)
+  %res = sub i32 %call2, 3
+  ret i32 %res
+}
