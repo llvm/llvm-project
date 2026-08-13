@@ -213,6 +213,40 @@ public:
   /// @}
 };
 
+/// Return the ABI tag that a function using a standard calling convention
+/// variant has to append to its name, or an empty string if the function does
+/// not use such a variant.
+static StringRef getCallingConvAbiTag(const NamedDecl *ND) {
+  const auto *FD = dyn_cast<FunctionDecl>(ND);
+  if (!FD)
+    return {};
+
+  const auto *FT = FD->getType()->getAs<FunctionType>();
+  if (!FT)
+    return {};
+
+  switch (FT->getCallConv()) {
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    return "riscv_vls_cc_" #ABI_VLEN;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+  default:
+    return {};
+  }
+}
+
 /// Manage the mangling of a single name.
 class CXXNameMangler {
   ItaniumMangleContextImpl &Context;
@@ -314,6 +348,11 @@ class CXXNameMangler {
       if (const auto *AbiTag = ND->getAttr<AbiTagAttr>()) {
         llvm::append_range(UsedAbiTags, AbiTag->tags());
         llvm::append_range(TagList, AbiTag->tags());
+      }
+
+      if (StringRef CCTag = getCallingConvAbiTag(ND); !CCTag.empty()) {
+        UsedAbiTags.push_back(CCTag);
+        TagList.push_back(CCTag);
       }
 
       llvm::append_range(UsedAbiTags, AdditionalAbiTags);
