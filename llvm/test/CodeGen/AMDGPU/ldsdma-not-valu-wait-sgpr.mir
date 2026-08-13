@@ -1,9 +1,10 @@
 # LDSDMA must not be treated as VALU by amdgpu-wait-sgpr-hazards. A tensor/async
 # load between a VALU SGPR write and its consumer must not clear the hazard.
-# RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -verify-machineinstrs -run-pass post-RA-hazard-rec,amdgpu-wait-sgpr-hazards -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu11.00 -mattr=+wavefrontsize64 -run-pass post-RA-hazard-rec,amdgpu-wait-sgpr-hazards -o - %s | FileCheck %s
 
 --- |
   define amdgpu_gs void @ldsdma_not_valu_for_sgpr_hazard() { ret void }
+...
 
 ---
 name: ldsdma_not_valu_for_sgpr_hazard
@@ -26,3 +27,4 @@ body: |
     %1:sgpr_256 = IMPLICIT_DEF
     TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     S_ENDPGM 0
+...

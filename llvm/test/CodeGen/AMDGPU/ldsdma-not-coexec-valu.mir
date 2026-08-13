@@ -18,3 +18,4 @@ body: |
     TENSOR_LOAD_TO_LDS_d2_gfx1250 $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     $vgpr24 = V_ADD_F32_e32 $vgpr24, $vgpr16, implicit $mode, implicit $exec
     S_ENDPGM 0
+...
