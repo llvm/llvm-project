@@ -25,25 +25,25 @@ define void @rgb_to_rgba(ptr %d, ptr %s, i64 %n, i64 %bpp) {
 ; CHECK-NEXT:            Member: {(1 + %d)<nuw>,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%d,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %s High: (2 + %n + %s))
-; CHECK-NEXT:            Member: {(2 + %s)<nuw>,+,1}<nw><%loop>
-; CHECK-NEXT:            Member: {(1 + %s)<nuw>,+,1}<nw><%loop>
-; CHECK-NEXT:            Member: {%s,+,1}<nw><%loop>
+; CHECK-NEXT:          (Low: %s High: ((3 * %n) + %s))
+; CHECK-NEXT:            Member: {(2 + %s)<nuw>,+,3}<nw><%loop>
+; CHECK-NEXT:            Member: {(1 + %s)<nuw>,+,3}<nw><%loop>
+; CHECK-NEXT:            Member: {%s,+,3}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      Equal predicate: %bpp == 1
+; CHECK-NEXT:      Equal predicate: %bpp == 3
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %p = phi ptr [ %s, %entry ], [ %p.next, %loop ]:
 ; CHECK-NEXT:        {%s,+,%bpp}<nw><%loop>
-; CHECK-NEXT:        --> {%s,+,1}<nw><%loop>
+; CHECK-NEXT:        --> {%s,+,3}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %p1 = getelementptr inbounds i8, ptr %p, i64 1:
 ; CHECK-NEXT:        {(1 + %s)<nuw>,+,%bpp}<nw><%loop>
-; CHECK-NEXT:        --> {(1 + %s)<nuw>,+,1}<nw><%loop>
+; CHECK-NEXT:        --> {(1 + %s)<nuw>,+,3}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %p2 = getelementptr inbounds i8, ptr %p, i64 2:
 ; CHECK-NEXT:        {(2 + %s)<nuw>,+,%bpp}<nw><%loop>
-; CHECK-NEXT:        --> {(2 + %s)<nuw>,+,1}<nw><%loop>
+; CHECK-NEXT:        --> {(2 + %s)<nuw>,+,3}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -92,25 +92,25 @@ define void @xyz_to_xyzw(ptr %d, ptr %s, i64 %n, i64 %bpp) {
 ; CHECK-NEXT:            Member: {(4 + %d)<nuw>,+,16}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%d,+,16}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %s High: (11 + %n + %s))
-; CHECK-NEXT:            Member: {(8 + %s)<nuw>,+,1}<nw><%loop>
-; CHECK-NEXT:            Member: {(4 + %s)<nuw>,+,1}<nw><%loop>
-; CHECK-NEXT:            Member: {%s,+,1}<nw><%loop>
+; CHECK-NEXT:          (Low: %s High: ((12 * %n) + %s))
+; CHECK-NEXT:            Member: {(8 + %s)<nuw>,+,12}<nw><%loop>
+; CHECK-NEXT:            Member: {(4 + %s)<nuw>,+,12}<nw><%loop>
+; CHECK-NEXT:            Member: {%s,+,12}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      Equal predicate: %bpp == 1
+; CHECK-NEXT:      Equal predicate: %bpp == 12
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %p = phi ptr [ %s, %entry ], [ %p.next, %loop ]:
 ; CHECK-NEXT:        {%s,+,%bpp}<nw><%loop>
-; CHECK-NEXT:        --> {%s,+,1}<nw><%loop>
+; CHECK-NEXT:        --> {%s,+,12}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %p1 = getelementptr inbounds i8, ptr %p, i64 4:
 ; CHECK-NEXT:        {(4 + %s)<nuw>,+,%bpp}<nw><%loop>
-; CHECK-NEXT:        --> {(4 + %s)<nuw>,+,1}<nw><%loop>
+; CHECK-NEXT:        --> {(4 + %s)<nuw>,+,12}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %p2 = getelementptr inbounds i8, ptr %p, i64 8:
 ; CHECK-NEXT:        {(8 + %s)<nuw>,+,%bpp}<nw><%loop>
-; CHECK-NEXT:        --> {(8 + %s)<nuw>,+,1}<nw><%loop>
+; CHECK-NEXT:        --> {(8 + %s)<nuw>,+,12}<nw><%loop>
 ;
 entry:
   br label %loop

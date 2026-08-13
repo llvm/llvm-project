@@ -2696,6 +2696,9 @@ public:
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }
 
+  /// Returns the loop this instance is analyzing.
+  const Loop &getLoop() const { return L; }
+
   /// We need to explicitly define the copy constructor due to the ownership of
   /// the SCEVUnionPredicate Preds.
   LLVM_ABI PredicatedScalarEvolution(const PredicatedScalarEvolution &);

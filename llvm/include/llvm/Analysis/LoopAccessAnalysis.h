@@ -869,8 +869,20 @@ private:
   SymbolicStrideMap SymbolicStrides;
 };
 
+/// Return the constant that makes the symbolic stride \p Stride an interleaved
+/// group in \p L, or std::nullopt when \p L holds no such group. Integral casts
+/// on \p Stride are ignored.
+///
+/// Based on a loop's access analysis, when the pointer induction stepping
+/// by that stride is gap-free, a more educated guess can be made in order
+/// to turn the run into a dense interleaved group which can potentially
+/// vectorize the loop.
+LLVM_ABI std::optional<unsigned>
+getSpeculatedInterleaveStride(const Loop &L, ScalarEvolution &SE,
+                              const SCEV *Stride);
+
 /// Return the SCEV corresponding to a pointer with the symbolic stride
-/// replaced with constant one, assuming the SCEV predicate associated with
+/// replaced with a constant, assuming the SCEV predicate associated with
 /// \p PSE is true.
 ///
 /// If necessary this method will version the stride of the pointer according
