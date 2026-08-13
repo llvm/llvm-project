@@ -17476,9 +17476,9 @@ SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
 }
 
 // Collect the ultimate src of each of the mul node's operands, and confirm
-// each operand is 8 bytes.
+// each operand is 8 bits.
 static std::optional<ByteProvider<SDValue>>
-handleMulOperand(const SDValue &MulOperand) {
+handleMulOperand(const SDValue &MulOperand, SelectionDAG &DAG) {
   auto Byte0 = calculateByteProvider(MulOperand, 0, 0);
   if (!Byte0 || Byte0->isConstantZero()) {
     return std::nullopt;
@@ -17487,6 +17487,9 @@ handleMulOperand(const SDValue &MulOperand) {
   if (Byte1 && !Byte1->isConstantZero()) {
     return std::nullopt;
   }
+  if (AMDGPUTargetLowering::numBitsUnsigned(MulOperand, DAG) > 8 &&
+      AMDGPUTargetLowering::numBitsSigned(MulOperand, DAG) > 8)
+    return std::nullopt;
   return Byte0;
 }
 
@@ -17772,10 +17775,12 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       auto MulIdx = isMul(LHS) ? 0 : isMul(RHS) ? 1 : -1;
       if (MulIdx == -1)
         break;
-      auto Src0 = handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(0));
+      auto Src0 =
+          handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(0), DAG);
       if (!Src0)
         break;
-      auto Src1 = handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(1));
+      auto Src1 =
+          handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(1), DAG);
       if (!Src1)
         break;
 
@@ -17796,11 +17801,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       if (I == 2 && isMul(TempNode->getOperand(AddIdx))) {
         Src2s.push_back(TempNode->getOperand(AddIdx));
         auto Src0 =
-            handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(0));
+            handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(0), DAG);
         if (!Src0)
           break;
         auto Src1 =
-            handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(1));
+            handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(1), DAG);
         if (!Src1)
           break;
         auto IterIsSigned = checkDot4MulSignedness(
