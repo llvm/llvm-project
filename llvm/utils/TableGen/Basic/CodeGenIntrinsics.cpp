@@ -616,8 +616,9 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
 
     for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
       if (RangeSet.ArgNo == ParamNo)
-        PrintFatalError(R->getLoc(),
-                        "duplicate RangeSet for the same argument index");
+        PrintFatalError(
+            R->getLoc(),
+            formatv("RangeSet for argument {} already specified", ParamNo));
 
     for (const Init *Range : RangeList->getElements())
       appendHalfOpenRange(
