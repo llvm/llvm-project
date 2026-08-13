@@ -276,6 +276,20 @@ static llvm::cl::opt<bool> initGlobalZero(
     llvm::cl::desc("Zero initialize globals without default initialization"),
     llvm::cl::init(true));
 
+static llvm::cl::opt<std::string>
+    initLocalMode("finit-local",
+                  llvm::cl::desc("Initialize local variables without explicit "
+                                 "or default initialization. "
+                                 "Accepts: zero, nan, snan, or 0x<hex-byte>."),
+                  llvm::cl::init(""));
+
+static llvm::cl::opt<bool> initLocalZero(
+    "finit-local-zero",
+    llvm::cl::desc(
+        "Zero-initialize local variables without explicit or default "
+        "initialization (alias for -finit-local=zero)"),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool>
     reallocateLHS("frealloc-lhs",
                   llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
@@ -506,6 +520,31 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
+  // -finit-local-zero (alias for -finit-local=zero)
+  if (initLocalZero)
+    loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+
+  // -finit-local=
+  if (!initLocalMode.empty()) {
+    llvm::StringRef val = initLocalMode;
+    if (val == "zero") {
+      loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+    } else if (val == "nan") {
+      loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::QNaN);
+    } else if (val == "snan") {
+      loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::SNaN);
+    } else if (val.starts_with("0x") || val.starts_with("0X")) {
+      unsigned long long hexVal = 0;
+      if (!val.drop_front(2).getAsInteger(16, hexVal) && hexVal <= 0xFF) {
+        loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Hex);
+        loweringOptions.setInitLocalPattern(static_cast<uint8_t>(hexVal));
+      } else {
+        llvm::errs() << "bbc: invalid -finit-local= value: " << val << "\n";
+      }
+    } else {
+      llvm::errs() << "bbc: invalid -finit-local= value: " << val << "\n";
+    }
+  }
   loweringOptions.setReallocateLHS(reallocateLHS);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);

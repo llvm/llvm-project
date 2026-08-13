@@ -17,8 +17,19 @@
 
 #include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Support/MathOptionsBase.h"
+#include <cstdint>
 
 namespace Fortran::lower {
+
+/// Initialization mode for automatic (local) variables without explicit
+/// or default initialization, selected via -finit-local=.
+enum class InitLocalKind {
+  Off,  ///< No initialization (default)
+  Zero, ///< Fill with 0x00 bytes
+  Hex,  ///< Fill with a user-supplied byte pattern
+  QNaN, ///< Quiet NaN for FP; 0xAA byte-splat for non-FP types
+  SNaN, ///< Signalling NaN for FP; 0xAA byte-splat for non-FP types
+};
 
 class LoweringOptionsBase {
 public:
@@ -52,7 +63,18 @@ public:
 
   Fortran::common::MathOptionsBase &getMathOptions() { return MathOptions; }
 
+  /// Returns the byte pattern used for -finit-local=0x<hex>.
+  uint8_t getInitLocalPattern() const { return InitLocalPattern; }
+  LoweringOptions &setInitLocalPattern(uint8_t V) {
+    InitLocalPattern = V;
+    return *this;
+  }
+
 private:
+  /// Byte pattern for -finit-local=0x<hex>. Only meaningful when
+  /// getInitLocalMode() == InitLocalKind::Hex.
+  uint8_t InitLocalPattern = 0;
+
   /// Options for handling/optimizing mathematical computations.
   Fortran::common::MathOptionsBase MathOptions;
 };
