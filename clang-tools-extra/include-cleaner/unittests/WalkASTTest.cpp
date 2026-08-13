@@ -1250,6 +1250,7 @@ TEST(WalkAST, ObjCTollFreeBridgeCStyleCast) {
            {"-x", "objective-c"});
 }
 
+
 TEST(WalkAST, ObjCBridgedCastExprToProtocol) {
   // Note this test case is handled by TraverseObjCProtocolLoc instead of
   // VisitCastExpr.
@@ -1540,6 +1541,78 @@ TEST(WalkAST, ObjCEncodeExpr) {
            R"objc(
     void test() {
       const char *enc = @encode(struct ^MyStruct);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCBoxedExprInt) {
+  testWalk(R"objc(
+    @interface $implicit^NSNumber
+    + (id)numberWithInt:(int)val;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id x = ^@42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+
+TEST(WalkAST, ObjCBoxedExprCategory) {
+  testWalk(R"objc(
+    @interface $implicit^NSNumber
+    @end
+    @interface $explicit^NSNumber (CustomCategory)
+    + (id)numberWithInt:(int)val;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id x = ^@42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCArrayLiteral) {
+  testWalk(R"objc(
+    @interface $implicit^NSArray
+    + (id)arrayWithObjects:(const id *)objects count:(unsigned long)cnt;
+    @end
+  )objc",
+           R"objc(
+    void test(id a, id b) {
+      id arr = ^@[a, b];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCDictionaryLiteral) {
+  testWalk(R"objc(
+    @interface $implicit^NSDictionary
+    + (id)dictionaryWithObjects:(const id *)objects forKeys:(const id *)keys count:(unsigned long)cnt;
+    @end
+  )objc",
+           R"objc(
+    void test(id k, id v) {
+      id dict = ^@{k: v};
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCStringLiteral) {
+  testWalk(R"objc(
+    @interface $implicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id s = ^@"hello";
     }
   )objc",
            {"-x", "objective-c"});

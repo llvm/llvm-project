@@ -622,6 +622,34 @@ public:
     }
     return true;
   }
+
+  void ReportObjCMethodDecl(SourceLocation Loc, ObjCMethodDecl *Method) {
+    if (!Method)
+      return;
+    report(Loc, Method->getClassInterface(), RefType::Implicit);
+    report(Loc, dyn_cast<ObjCCategoryDecl>(Method->getDeclContext()));
+  }
+
+  bool VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
+    ReportObjCMethodDecl(E->getBeginLoc(), E->getBoxingMethod());
+    return true;
+  }
+
+  bool VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
+    ReportObjCMethodDecl(E->getBeginLoc(), E->getArrayWithObjectsMethod());
+    return true;
+  }
+
+  bool VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
+    ReportObjCMethodDecl(E->getBeginLoc(), E->getDictWithObjectsMethod());
+    return true;
+  }
+
+  bool VisitObjCStringLiteral(ObjCStringLiteral *E) {
+    if (const auto *ObjCPtr = E->getType()->getAs<ObjCObjectPointerType>())
+      report(E->getBeginLoc(), ObjCPtr->getInterfaceDecl(), RefType::Implicit);
+    return true;
+  }
 };
 
 } // namespace
