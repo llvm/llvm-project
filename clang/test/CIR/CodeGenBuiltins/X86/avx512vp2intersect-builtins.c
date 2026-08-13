@@ -16,8 +16,8 @@
 #include <immintrin.h>
 
 
-// CIR: !rec_anon_struct = !cir.struct<{!cir.vector<16 x !cir.int<s, 1>>, !cir.vector<16 x !cir.int<s, 1>>}>
-// CIR: !rec_anon_struct1 = !cir.struct<{!cir.vector<8 x !cir.int<s, 1>>, !cir.vector<8 x !cir.int<s, 1>>}>
+// CIR: !rec_anon_struct = !cir.struct<{data !cir.vector<16 x !cir.int<s, 1>>, data !cir.vector<16 x !cir.int<s, 1>>}>
+// CIR: !rec_anon_struct1 = !cir.struct<{data !cir.vector<8 x !cir.int<s, 1>>, data !cir.vector<8 x !cir.int<s, 1>>}>
 void test_mm512_2intersect_epi32(__m512i a, __m512i b, __mmask16 *m0, __mmask16 *m1) {
   // CIR-LABEL: mm512_2intersect_epi32
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.vp2intersect.d.512" %{{.*}}, %{{.*}} : (!cir.vector<16 x !s32i>, !cir.vector<16 x !s32i>) -> !rec_anon_struct

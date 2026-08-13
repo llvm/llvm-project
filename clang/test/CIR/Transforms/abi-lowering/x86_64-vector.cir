@@ -3,9 +3,9 @@
 // RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
-!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
-!rec_F3 = !cir.struct<"F3" {!cir.float, !cir.float, !cir.float}>
-!rec_UFloats = !cir.union<"UFloats" {!cir.array<!cir.float x 2>, !cir.array<!cir.float x 2>}>
+!rec_FF = !cir.struct<"FF" {data !cir.float, data !cir.float}>
+!rec_F3 = !cir.struct<"F3" {data !cir.float, data !cir.float, data !cir.float}>
+!rec_UFloats = !cir.union<"UFloats" {data !cir.array<!cir.float x 2>, data !cir.array<!cir.float x 2>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<

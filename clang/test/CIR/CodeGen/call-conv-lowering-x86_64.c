@@ -7,10 +7,10 @@
 
 // Anonymous record aliases are numbered in the order they are printed, so
 // capture each one rather than naming it.
-// CIR-DAG: ![[X87PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.f80, !cir.f80}>
-// CIR-DAG: ![[I64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!u64i, !u64i}>
-// CIR-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.double, !cir.double}>
-// CIR-DAG: ![[F32X2PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>}>
+// CIR-DAG: ![[X87PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.f80, data !cir.f80}>
+// CIR-DAG: ![[I64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !u64i}>
+// CIR-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.double, data !cir.double}>
+// CIR-DAG: ![[F32X2PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.vector<2 x !cir.float>, data !cir.vector<2 x !cir.float>}>
 
 typedef struct { int x; int y; } Pair2;
 typedef struct { long a; long b; } Pair16;
