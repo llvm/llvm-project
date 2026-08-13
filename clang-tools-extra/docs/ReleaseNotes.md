@@ -121,6 +121,9 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
+  
+- Improved {doc}`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
 - Improved {doc}`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by fixing false positives
@@ -137,6 +140,15 @@ infrastructure are described first, followed by tool-specific sections.
   rewrite the return value when the constructed type has a
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
+
+- Improved {doc}`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check:
+
+  - Fixed a crash when checking forward-declared classes with
+    {option}`DefaultHungarianPrefix` enabled.
+
+  - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
+    invalid option.
 
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring

@@ -74,7 +74,7 @@ struct LocaleSelector {
 
 std::mutex LocaleSelector::mutex;
 
-static void BM_Istream_numbers(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_Istream_numbers(benchmark::State& state) {
   LocaleSelector sel(state);
   double i = 0;
   while (state.KeepRunning())
@@ -82,7 +82,7 @@ static void BM_Istream_numbers(benchmark::State& state) {
 }
 BENCHMARK(BM_Istream_numbers)->DenseRange(0, 3);
 
-static void BM_Ostream_number(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_Ostream_number(benchmark::State& state) {
   LocaleSelector sel(state);
   while (state.KeepRunning()) {
     std::ostringstream ss;
