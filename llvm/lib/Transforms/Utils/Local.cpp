@@ -2143,7 +2143,7 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
       // unreasonably large number of values.
       DVR->setKillLocation();
     }
-    LLVM_DEBUG(dbgs() << "SALVAGE: " << DVR << '\n');
+    LLVM_DEBUG(dbgs() << "SALVAGE: " << *DVR << '\n');
     Salvaged = true;
   }
 

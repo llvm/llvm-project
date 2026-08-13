@@ -26,8 +26,7 @@
 using LlvmLibcPutwcTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcPutwcTest, WriteASCII) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("putwc_ascii.test"));
+  const auto FILENAME = libc_make_test_file_path("putwc_ascii.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -57,8 +56,7 @@ TEST_F(LlvmLibcPutwcTest, WriteASCII) {
 }
 
 TEST_F(LlvmLibcPutwcTest, WriteUtf8) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("putwc_utf8.test"));
+  const auto FILENAME = libc_make_test_file_path("putwc_utf8.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -110,8 +108,7 @@ TEST_F(LlvmLibcPutwcTest, WriteUtf8) {
 }
 
 TEST_F(LlvmLibcPutwcTest, InvalidStream) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("putwc_invalid.test"));
+  const auto FILENAME = libc_make_test_file_path("putwc_invalid.test");
 
   // Create file
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -131,8 +128,7 @@ TEST_F(LlvmLibcPutwcTest, InvalidStream) {
 }
 
 TEST_F(LlvmLibcPutwcTest, ByteModeFailure) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("putwc_bytemode.test"));
+  const auto FILENAME = libc_make_test_file_path("putwc_bytemode.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 
