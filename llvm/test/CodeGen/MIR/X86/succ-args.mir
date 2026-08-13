@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=none -o - %s | FileCheck %s
+# Round-trip test for the SUCC_ARGS pseudo-instruction.
+
+# A single forwarded value.
+---
+name: one_value
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: one_value
+  ; CHECK: SUCC_ARGS %bb.1, %0
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 7
+    SUCC_ARGS %bb.1, %0
+    JMP_1 %bb.1
+
+  bb.1:
+    %1:gr32 = COPY %0
+    RET64
+...
+
+# Multiple forwarded values on one edge.
+---
+name: many_values
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: many_values
+  ; CHECK: SUCC_ARGS %bb.1, %0, %1, %2
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 1
+    %1:gr32 = MOV32ri 2
+    %2:gr32 = MOV32ri 3
+    SUCC_ARGS %bb.1, %0, %1, %2
+    JMP_1 %bb.1
+
+  bb.1:
+    %3:gr32 = COPY %0
+    RET64
+...

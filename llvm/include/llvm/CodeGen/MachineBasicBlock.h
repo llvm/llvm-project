@@ -403,6 +403,15 @@ public:
     return make_range(getFirstTerminator(), end());
   }
 
+  /// Returns a range that iterates over the SUCC_ARGS instructions clustered
+  /// immediately before the terminators of this block.
+  inline iterator_range<iterator> succ_args() {
+    return make_range(getFirstSuccArgs(), getFirstTerminator());
+  }
+  inline iterator_range<const_iterator> succ_args() const {
+    return const_cast<MachineBasicBlock *>(this)->succ_args();
+  }
+
   /// Returns a range that iterates over the phis in the basic block.
   inline iterator_range<iterator> phis() {
     return make_range(begin(), getFirstNonPHI());
@@ -924,6 +933,23 @@ public:
   const_iterator getFirstTerminator() const {
     return const_cast<MachineBasicBlock *>(this)->getFirstTerminator();
   }
+
+  /// Returns an iterator to the first SUCC_ARGS instruction of this basic
+  /// block. SUCC_ARGS instructions are clustered immediately before the
+  /// terminators, mirroring how PHIs are clustered at the top of a block. If
+  /// there are none, this returns getFirstTerminator().
+  LLVM_ABI iterator getFirstSuccArgs();
+  const_iterator getFirstSuccArgs() const {
+    return const_cast<MachineBasicBlock *>(this)->getFirstSuccArgs();
+  }
+
+  /// Returns the insertion point for instructions that must go at the end of
+  /// this block, before the SUCC_ARGS cluster and terminators. This is the
+  /// end-of-block analogue of SkipPHIsAndLabels: anything spliced or built
+  /// here stays clear of the SUCC_ARGS cluster, which must remain adjacent to
+  /// the terminators. Equivalent to getFirstSuccArgs().
+  iterator getBlockEndInsertPt() { return getFirstSuccArgs(); }
+  const_iterator getBlockEndInsertPt() const { return getFirstSuccArgs(); }
 
   /// Same getFirstTerminator but it ignores bundles and return an
   /// instr_iterator instead.

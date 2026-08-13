@@ -1,0 +1,19 @@
+# RUN: not --crash llc %s -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %s
+
+# SUCC_ARGS instructions must be clustered contiguously immediately before the
+# terminators. A non-terminator instruction after a SUCC_ARGS is malformed.
+# CHECK: *** Bad machine code: Non-terminator instruction after SUCC_ARGS ***
+---
+name: succ_args_not_clustered
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 7
+    SUCC_ARGS %bb.1, %0
+    %1:gr32 = MOV32ri 8
+    JMP_1 %bb.1
+
+  bb.1:
+    RET64
+...

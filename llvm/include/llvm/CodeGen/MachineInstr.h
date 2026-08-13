@@ -1425,6 +1425,7 @@ public:
     return getOpcode() == TargetOpcode::PHI ||
            getOpcode() == TargetOpcode::G_PHI;
   }
+  bool isSuccArgs() const { return getOpcode() == TargetOpcode::SUCC_ARGS; }
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
   bool isInlineAsm() const {
