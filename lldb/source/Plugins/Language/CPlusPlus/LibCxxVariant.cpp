@@ -162,7 +162,7 @@ bool LibcxxVariantSummaryProvider(ValueObject &valobj, Stream &stream,
     return false;
 
   if (validity == LibcxxVariantIndexValidity::NPos) {
-    stream.Printf(" No Value");
+    stream.PutCString(" No Value");
     return true;
   }
 

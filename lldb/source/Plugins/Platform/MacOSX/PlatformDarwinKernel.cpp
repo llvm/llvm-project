@@ -243,21 +243,21 @@ PlatformDarwinKernel::~PlatformDarwinKernel() = default;
 void PlatformDarwinKernel::GetStatus(Stream &strm) {
   UpdateKextandKernelsLocalScan();
   Platform::GetStatus(strm);
-  strm.Printf(" Debug session type: ");
+  strm.PutCString(" Debug session type: ");
   if (m_ios_debug_session == eLazyBoolYes)
-    strm.Printf("iOS kernel debugging\n");
+    strm.PutCString("iOS kernel debugging\n");
   else if (m_ios_debug_session == eLazyBoolNo)
-    strm.Printf("Mac OS X kernel debugging\n");
+    strm.PutCString("Mac OS X kernel debugging\n");
   else
-    strm.Printf("unknown kernel debugging\n");
+    strm.PutCString("unknown kernel debugging\n");
 
-  strm.Printf("Directories searched recursively:\n");
+  strm.PutCString("Directories searched recursively:\n");
   const uint32_t num_kext_dirs = m_search_directories.size();
   for (uint32_t i = 0; i < num_kext_dirs; ++i) {
     strm.Printf("[%d] %s\n", i, m_search_directories[i].GetPath().c_str());
   }
 
-  strm.Printf("Directories not searched recursively:\n");
+  strm.PutCString("Directories not searched recursively:\n");
   const uint32_t num_kext_dirs_no_recursion =
       m_search_directories_no_recursing.size();
   for (uint32_t i = 0; i < num_kext_dirs_no_recursion; i++) {

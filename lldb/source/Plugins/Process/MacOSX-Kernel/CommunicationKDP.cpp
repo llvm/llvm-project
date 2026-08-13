@@ -876,7 +876,7 @@ void CommunicationKDP::DumpPacket(Stream &s, const DataExtractor &packet) {
         } break;
 
         default:
-          s.Printf(" (add support for dumping this packet reply!!!");
+          s.PutCString(" (add support for dumping this packet reply!!!");
           break;
         }
       } else {

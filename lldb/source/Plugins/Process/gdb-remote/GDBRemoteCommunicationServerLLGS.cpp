@@ -1812,7 +1812,7 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_vCont_actions(
     StringExtractorGDBRemote &packet) {
   StreamString response;
-  response.Printf("vCont;c;C;s;S;t");
+  response.PutCString("vCont;c;C;s;S;t");
 
   return SendPacketNoLock(response.GetString());
 }
@@ -3401,7 +3401,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       response.Printf("\" ");
     }
 
-    response.Printf("/>\n");
+    response.PutCString("/>\n");
   }
 
   if (registers_count)
@@ -3457,7 +3457,7 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
       response.Printf("l_addr=\"0x%" PRIx64 "\" ", library.base_addr);
       response.Printf("l_ld=\"0x%" PRIx64 "\" />", library.ld_addr);
     }
-    response.Printf("</library-list-svr4>");
+    response.PutCString("</library-list-svr4>");
     return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
   }
 
@@ -3467,15 +3467,15 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
       return library_list.takeError();
 
     StreamString response;
-    response.Printf("<library-list>");
+    response.PutCString("<library-list>");
     for (auto const &library : *library_list) {
       response.Printf("<library name=\"%s\">",
                       XMLEncodeAttributeValue(library.name.c_str()).c_str());
       response.Printf("<section address=\"0x%" PRIx64 "\"/>",
                       library.base_addr);
-      response.Printf("</library>");
+      response.PutCString("</library>");
     }
-    response.Printf("</library-list>");
+    response.PutCString("</library-list>");
     return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
   }
 
@@ -3933,7 +3933,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qWatchpointSupportInfo(
 
   StreamGDBRemote response;
   if (hw_debug_cap == std::nullopt)
-    response.Printf("num:0;");
+    response.PutCString("num:0;");
   else
     response.Printf("num:%d;", hw_debug_cap->second);
 

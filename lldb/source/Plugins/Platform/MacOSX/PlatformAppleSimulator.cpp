@@ -103,7 +103,7 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
           developer_dir.c_str());
   const size_t num_devices = devices.GetNumDevices();
   if (num_devices) {
-    strm.Printf("Available devices:\n");
+    strm.PutCString("Available devices:\n");
     for (size_t i = 0; i < num_devices; ++i) {
       CoreSimulatorSupport::Device device = devices.GetDeviceAtIndex(i);
       strm << "   " << device.GetUDID() << ": " << device.GetName() << "\n";

@@ -480,7 +480,7 @@ bool formatters::LibStdcppVariantSummaryProvider(
   auto npos_value = LibStdcppVariantNposValue(*index_bytes_or_err);
   auto index = index_obj->GetValueAsUnsigned(0);
   if (index == npos_value) {
-    stream.Printf(" No Value");
+    stream.PutCString(" No Value");
     return true;
   }
 
@@ -489,7 +489,7 @@ bool formatters::LibStdcppVariantSummaryProvider(
   if (!variant_type)
     return false;
   if (index >= variant_type.GetNumTemplateArguments(true)) {
-    stream.Printf(" <Invalid>");
+    stream.PutCString(" <Invalid>");
     return true;
   }
 

@@ -865,15 +865,15 @@ public:
     Stream &s = result.GetOutputStream();
     MinidumpParser &minidump = *process->m_minidump_parser;
     if (DumpDirectory()) {
-      s.Printf("RVA        SIZE       TYPE       StreamType\n");
-      s.Printf("---------- ---------- ---------- --------------------------\n");
+      s.PutCString("RVA        SIZE       TYPE       StreamType\n");
+      s.PutCString("---------- ---------- ---------- --------------------------\n");
       for (const auto &stream_desc : minidump.GetMinidumpFile().streams())
         s.Printf(
             "0x%8.8x 0x%8.8x 0x%8.8x %s\n", (uint32_t)stream_desc.Location.RVA,
             (uint32_t)stream_desc.Location.DataSize,
             (unsigned)(StreamType)stream_desc.Type,
             MinidumpParser::GetStreamTypeAsString(stream_desc.Type).data());
-      s.Printf("\n");
+      s.PutCString("\n");
     }
     auto DumpTextStream = [&](StreamType stream_type,
                               llvm::StringRef label) -> void {
@@ -895,7 +895,7 @@ public:
                            process->GetAddressByteSize());
         DumpDataExtractor(data, &s, 0, lldb::eFormatBytesWithASCII, 1,
                           bytes.size(), 16, 0, 0, 0);
-        s.Printf("\n\n");
+        s.PutCString("\n\n");
       }
     };
 
@@ -929,9 +929,9 @@ public:
                            process->GetAddressByteSize());
         lldb::offset_t offset = 0;
         uint32_t build_id = data.GetU32(&offset);
-        s.Printf("Facebook Build ID:\n");
+        s.PutCString("Facebook Build ID:\n");
         s.Printf("%u\n", build_id);
-        s.Printf("\n");
+        s.PutCString("\n");
       }
     }
     if (DumpFacebookVersionName())

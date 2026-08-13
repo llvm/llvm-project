@@ -1075,7 +1075,7 @@ protected:
             std_out.Printf(" superclass = %s",
                            superclass->GetClassName().AsCString("<unknown>"));
           }
-          std_out.Printf("\n");
+          std_out.PutCString("\n");
           if (m_options.m_verbose) {
             for (size_t i = 0; i < iterator->second->GetNumIVars(); i++) {
               auto ivar = iterator->second->GetIVarAtIndex(i);

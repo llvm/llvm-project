@@ -362,7 +362,7 @@ bool formatters::MsvcStlTreeIterSummaryProvider(
 
   MapEntry entry(node_sp.get());
   if (entry.is_nil()) {
-    stream.Printf("end");
+    stream.PutCString("end");
     return true;
   }
 

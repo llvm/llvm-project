@@ -898,9 +898,9 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
   StreamString ss;
 
   if (decl_name.isObjCZeroArgSelector()) {
-    ss.Printf("%s", decl_name.getAsString().c_str());
+    ss.PutCString(decl_name.getAsString().c_str());
   } else if (decl_name.isObjCOneArgSelector()) {
-    ss.Printf("%s", decl_name.getAsString().c_str());
+    ss.PutCString(decl_name.getAsString().c_str());
   } else {
     clang::Selector sel = decl_name.getObjCSelector();
 

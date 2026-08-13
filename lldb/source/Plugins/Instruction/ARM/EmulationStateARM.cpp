@@ -245,11 +245,11 @@ bool EmulationStateARM::CompareState(EmulationStateARM &other_state,
   // other_state is the expected state. If it has memory, check it.
   if (!other_state.m_memory.empty() && m_memory != other_state.m_memory) {
     match = false;
-    out_stream.Printf("memory does not match\n");
-    out_stream.Printf("got memory:\n");
+    out_stream.PutCString("memory does not match\n");
+    out_stream.PutCString("got memory:\n");
     for (auto p : m_memory)
       out_stream.Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
-    out_stream.Printf("expected memory:\n");
+    out_stream.PutCString("expected memory:\n");
     for (auto p : other_state.m_memory)
       out_stream.Printf("0x%08" PRIx64 ": 0x%08x\n", p.first, p.second);
   }

@@ -53,17 +53,17 @@ bool lldb_private::formatters::CMTimeSummaryProvider(
   const unsigned int FlagIndefinite = 16;
 
   if (flags.AnySet(FlagIndefinite)) {
-    stream.Printf("indefinite");
+    stream.PutCString("indefinite");
     return true;
   }
 
   if (flags.AnySet(FlagPositiveInf)) {
-    stream.Printf("+oo");
+    stream.PutCString("+oo");
     return true;
   }
 
   if (flags.AnySet(FlagNegativeInf)) {
-    stream.Printf("-oo");
+    stream.PutCString("-oo");
     return true;
   }
 

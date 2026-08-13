@@ -108,14 +108,14 @@ bool lldb_private::formatters::NSException_SummaryProvider(
     return false;
 
   if (!reason_sp) {
-    stream.Printf("No reason");
+    stream.PutCString("No reason");
     return false;
   }
 
   StreamString reason_str_summary;
   if (NSStringSummaryProvider(*reason_sp, reason_str_summary, options) &&
       !reason_str_summary.Empty()) {
-    stream.Printf("%s", reason_str_summary.GetData());
+    stream.PutCString(reason_str_summary.GetData());
     return true;
   } else
     return false;

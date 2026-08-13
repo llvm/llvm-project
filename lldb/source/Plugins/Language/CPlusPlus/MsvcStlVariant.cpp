@@ -110,7 +110,7 @@ bool formatters::MsvcStlVariantSummaryProvider(
     return false;
 
   if (*index < 0) {
-    stream.Printf(" No Value");
+    stream.PutCString(" No Value");
     return true;
   }
 
