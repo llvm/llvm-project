@@ -4,8 +4,8 @@
 
 // RUN: export HOME=%t
 // RUN: mkdir -p %t
-// RUN: echo 'br set -f main.c -l 123' > ~/.lldbinit
-// RUN: echo 'br set -f swift-repl.c -l 456' > ~/.lldbinit-swift-repl
+// RUN: echo 'br set -f main.c -l 123' > %t/.lldbinit
+// RUN: echo 'br set -f swift-repl.c -l 456' > %t/.lldbinit-swift-repl
 // RUN: %lldb-init --repl < %s 2>&1 | FileCheck %s
 
 :br list
