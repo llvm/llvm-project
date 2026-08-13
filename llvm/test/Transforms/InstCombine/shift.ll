@@ -2107,6 +2107,46 @@ define i32 @shl2_cttz(i32 %x) {
   ret i32 %shl
 }
 
+; C=4: different constant, should also fold
+define i32 @shl4_cttz(i32 %x) {
+; CHECK-LABEL: @shl4_cttz(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 2
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl i32 4, %tz
+  ret i32 %shl
+}
+
+; negative test: cttz has multiple uses, should not fold
+define i32 @shl2_cttz_multiuse(i32 %x) {
+; CHECK-LABEL: @shl2_cttz_multiuse(
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    call void @use_i32(i32 [[TZ]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TZ]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  call void @use_i32(i32 %tz)
+  %shl = shl i32 2, %tz
+  ret i32 %shl
+}
+
+; negative test: is_zero_poison = false, should not fold
+define i32 @shl2_cttz_zero_poison_false(i32 %x) {
+; CHECK-LABEL: @shl2_cttz_zero_poison_false(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %shl = shl i32 2, %tz
+  ret i32 %shl
+}
+
 ; shift (X, amt | bitwidth - 1) -> shift (X, bitwidth - 1)
 define i6 @shl_or7_eq_shl7(i6 %x, i6 %c) {
 ; CHECK-LABEL: @shl_or7_eq_shl7(
