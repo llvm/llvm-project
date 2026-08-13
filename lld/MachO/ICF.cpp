@@ -100,11 +100,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
   // We can only fold within the same OutputSection.
   if (ia->parent != ib->parent)
     return false;
-  if (ia->data.size() != ib->data.size())
-    return false;
   if (ia->data != ib->data)
-    return false;
-  if (ia->relocs.size() != ib->relocs.size())
     return false;
   auto f = [](const Relocation &ra, const Relocation &rb) {
     if (ra.type != rb.type)
@@ -337,6 +333,8 @@ void ICF::applySafeThunksToRange(size_t begin, size_t end) {
 
     ConcatInputSection *thunk =
         makeSyntheticInputSection(isec->getSegName(), isec->getName());
+    // A thunk-folded cold function has a cold thunk.
+    thunk->isCold = isec->isCold;
     addInputSection(thunk);
 
     target->initICFSafeThunkBody(thunk, masterSym);
@@ -413,13 +411,13 @@ void ICF::run() {
       isec->icfEqClass[(icfPass + 1) % 2] = hash | (1ull << 31);
     });
   }
-
+  const bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
   llvm::stable_sort(
-      icfInputs, [](const ConcatInputSection *a, const ConcatInputSection *b) {
+      icfInputs, [&](const ConcatInputSection *a, const ConcatInputSection *b) {
         // When using safe_thunks, ensure that we first sort by icfEqClass and
         // then by keepUnique (descending). This guarantees that within an
         // equivalence class, the keepUnique inputs are always first.
-        if (config->icfLevel == ICFLevel::safe_thunks)
+        if (useSafeThunks)
           if (a->icfEqClass[0] == b->icfEqClass[0])
             return a->keepUnique > b->keepUnique;
         return a->icfEqClass[0] < b->icfEqClass[0];
@@ -444,7 +442,7 @@ void ICF::run() {
   // When using safe_thunks, we need to create thunks for all keepUnique
   // functions that can be deduplicated. Since we're creating / adding new
   // InputSections, we can't paralellize this.
-  if (config->icfLevel == ICFLevel::safe_thunks)
+  if (useSafeThunks)
     forEachClassRange(0, icfInputs.size(), [&](size_t begin, size_t end) {
       applySafeThunksToRange(begin, end);
     });
@@ -453,15 +451,14 @@ void ICF::run() {
   forEachClass([&](size_t begin, size_t end) {
     if (end - begin < 2)
       return;
-    bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
-
     // For ICF level safe_thunks, replace keepUnique function bodies with
-    // thunks. For all other ICF levles, directly merge the functions.
+    // thunks. For all other ICF levels, directly merge the functions.
 
     ConcatInputSection *beginIsec = icfInputs[begin];
     for (size_t i = begin + 1; i < end; ++i) {
       // Skip keepUnique inputs when using safe_thunks (already handled above)
-      if (useSafeThunks && icfInputs[i]->keepUnique) {
+      if (useSafeThunks && isCodeSection(beginIsec) &&
+          icfInputs[i]->keepUnique) {
         // Assert keepUnique sections are either small or replaced with thunks.
         assert(!icfInputs[i]->live ||
                icfInputs[i]->data.size() <= target->getICFSafeThunkSize());
@@ -471,6 +468,9 @@ void ICF::run() {
         continue;
       }
       beginIsec->foldIdentical(icfInputs[i]);
+      // Make sure we don't fold hot code into cold regions.
+      if (!icfInputs[i]->isCold)
+        beginIsec->isCold = false;
     }
   });
 }
@@ -583,19 +583,30 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
 
     bool isCodeSec = isCodeSection(isec);
 
-    // When keepUnique is true, the section is not foldable. Unless we are at
-    // icf level safe_thunks, in which case we still want to fold code sections.
-    // When using safe_thunks we'll apply the safe_thunks logic at merge time
-    // based on the 'keepUnique' flag.
-    bool noUniqueRequirement =
-        !isec->keepUnique ||
-        ((config->icfLevel == ICFLevel::safe_thunks) && isCodeSec);
+    // Determine whether keepUnique forbids folding this section.
+    //   - __cfstring / __objc_classrefs / __objc_selrefs always fold
+    //     regardless of keepUnique. Compilers currently emit over-broad
+    //     __llvm_addrsig entries that can cover non-address-significant data
+    //     symbols in these sections; ld64 coalesces them unconditionally, and
+    //     we match that behavior.
+    //   - Under safe_thunks, keepUnique code sections still fold; the
+    //     safe_thunks logic is applied later at merge time based on the
+    //     keepUnique flag.
+    //   - Otherwise, keepUnique sections are not foldable.
+    // Happens to match isFoldableWithAddendsRemoved today, but expresses a
+    // different intent (ld64's coalescing semantics, not addend stripping),
+    // so the two may diverge as either list grows.
+    bool isUnconditionallyCoalescedData = isFoldableWithAddendsRemoved;
+    bool isSafeThunksCode =
+        config->icfLevel == ICFLevel::safe_thunks && isCodeSec;
+    bool keepUniqueAllowsFolding =
+        !isec->keepUnique || isUnconditionallyCoalescedData || isSafeThunksCode;
 
     // FIXME: consider non-code __text sections as foldable?
     bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&
                       (isCodeSec || isFoldableWithAddendsRemoved ||
                        isGccExceptTabSection(isec)) &&
-                      noUniqueRequirement && !isec->hasAltEntry &&
+                      keepUniqueAllowsFolding && !isec->hasAltEntry &&
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
     if (isFoldable) {
       foldable.push_back(isec);

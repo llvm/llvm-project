@@ -97,6 +97,14 @@ private:
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
+  llvm::SetVector<const semantics::Symbol *> conditionalLastPrivatizedSymbols;
+  // When true, conditional-lastprivate list items get an ordinary private copy
+  // (their in-loop working value) plus a separate reduction struct as the
+  // conditional-last accumulator.  Used by worksharing loops, where a
+  // nonmonotonic schedule can execute chunks out of order.  When false the list
+  // item is bound directly to the reduction struct (used by sections, which are
+  // lexically ordered and never need the private copy).
+  bool conditionalLpUsesPrivateCopy = false;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
@@ -105,6 +113,7 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
+  bool forceHeapAllocationForPrivateDynamicArrays = false;
   llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
@@ -179,6 +188,10 @@ public:
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
 
+  void setForceHeapAllocationForPrivateDynamicArrays(bool value = true) {
+    forceHeapAllocationForPrivateDynamicArrays = value;
+  }
+
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {
     return allPrivatizedSymbols;
@@ -193,6 +206,15 @@ public:
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
                        mlir::omp::PrivateClauseOps *clauseOps,
                        std::optional<llvm::omp::Directive> dir = std::nullopt);
+
+  const llvm::SetVector<const semantics::Symbol *> &
+  getConditionalLastprivateSymbols() const {
+    return conditionalLastPrivatizedSymbols;
+  }
+
+  void setConditionalLpUsesPrivateCopy(bool v) {
+    conditionalLpUsesPrivateCopy = v;
+  }
 };
 
 } // namespace omp

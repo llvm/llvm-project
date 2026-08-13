@@ -239,14 +239,6 @@ const CallInst *BasicBlock::getTerminatingMustTailCall() const {
   if (Value *RV = RI->getReturnValue()) {
     if (RV != Prev)
       return nullptr;
-
-    // Look through the optional bitcast.
-    if (auto *BI = dyn_cast<BitCastInst>(Prev)) {
-      RV = BI->getOperand(0);
-      Prev = BI->getPrevNode();
-      if (!Prev || RV != Prev)
-        return nullptr;
-    }
   }
 
   if (auto *CI = dyn_cast<CallInst>(Prev)) {
@@ -288,20 +280,6 @@ const Instruction *BasicBlock::getFirstMayFaultInst() const {
     return nullptr;
   for (const Instruction &I : *this)
     if (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallBase>(I))
-      return &I;
-  return nullptr;
-}
-
-const Instruction* BasicBlock::getFirstNonPHI() const {
-  for (const Instruction &I : *this)
-    if (!isa<PHINode>(I))
-      return &I;
-  return nullptr;
-}
-
-Instruction *BasicBlock::getFirstNonPHI() {
-  for (Instruction &I : *this)
-    if (!isa<PHINode>(I))
       return &I;
   return nullptr;
 }

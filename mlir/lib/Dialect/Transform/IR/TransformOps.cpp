@@ -100,7 +100,7 @@ ensurePayloadIsSeparateFromTransform(transform::TransformOpInterface transform,
 
 OperandRange transform::AlternativesOp::getEntrySuccessorOperands(
     RegionSuccessor successor) {
-  if (!successor.isParent() && getOperation()->getNumOperands() == 1)
+  if (!successor.isOperation() && getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
                       getOperation()->operand_end());
@@ -118,12 +118,12 @@ void transform::AlternativesOp::getSuccessorRegions(
     regions.emplace_back(&alternative);
   }
   if (!point.isParent())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 transform::AlternativesOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getOperation()->getResults();
   return successor.getSuccessor()->getArguments();
 }
@@ -390,11 +390,6 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
   // Non-isolated case: gather the ops manually because the op-list
   // GreedyPatternRewriteDriver overload only performs a single iteration and
   // does not simplify regions. CSE is driven externally to reach a fixpoint.
-  SmallVector<Operation *> ops;
-  target->walk([&](Operation *nestedOp) {
-    if (target != nestedOp)
-      ops.push_back(nestedOp);
-  });
 
   // One or two iterations should be sufficient. Stop iterating after a certain
   // threshold to make debugging easier.
@@ -402,6 +397,12 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
   int64_t iteration = 0;
   bool cseChanged = false;
   do {
+    SmallVector<Operation *> ops;
+    target->walk([&](Operation *nestedOp) {
+      if (target != nestedOp)
+        ops.push_back(nestedOp);
+    });
+
     if (failed(applyOpPatternsGreedily(ops, frozenPatterns, config))) {
       return emitSilenceableFailure(target)
              << "greedy pattern application failed";
@@ -1711,12 +1712,12 @@ void transform::ForeachOp::getSuccessorRegions(
              &getBody() &&
          "unexpected region index");
   regions.emplace_back(bodyRegion);
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange transform::ForeachOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults())
-                              : ValueRange(getBody().getArguments());
+  return successor.isOperation() ? ValueRange(getResults())
+                                 : ValueRange(getBody().getArguments());
 }
 
 OperandRange
@@ -2966,14 +2967,14 @@ void transform::SequenceOp::getSuccessorRegions(
   assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
              &getBody() &&
          "unexpected region index");
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 transform::SequenceOp::getSuccessorInputs(RegionSuccessor successor) {
   if (getNumOperands() == 0)
     return ValueRange();
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }

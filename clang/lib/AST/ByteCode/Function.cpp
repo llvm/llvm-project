@@ -29,23 +29,29 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
     Constexpr = F->isConstexpr();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
+      ExplicitThisPointer = CD->isExplicitObjectMemberFunction();
       Kind = CD->isCopyOrMoveConstructor() ? FunctionKind::CopyOrMoveCtor
                                            : FunctionKind::Ctor;
     } else if (const auto *CD = dyn_cast<CXXDestructorDecl>(F)) {
+      ExplicitThisPointer = CD->isExplicitObjectMemberFunction();
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Dtor;
     } else if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+      ExplicitThisPointer = MD->isExplicitObjectMemberFunction();
       Virtual = MD->isVirtual();
-      if (IsLambdaStaticInvoker)
+      if (IsLambdaStaticInvoker) {
         Kind = FunctionKind::LambdaStaticInvoker;
-      else if (clang::isLambdaCallOperator(F))
+        Constexpr = true;
+      } else if (clang::isLambdaCallOperator(F))
         Kind = FunctionKind::LambdaCallOperator;
       else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
         Kind = FunctionKind::CopyOrMoveOperator;
     } else {
+      ExplicitThisPointer = false;
       Virtual = false;
     }
   } else {
+    ExplicitThisPointer = false;
     Variadic = false;
     Virtual = false;
     Immediate = false;
@@ -58,9 +64,5 @@ SourceInfo Function::getSource(CodePtr PC) const {
   assert(PC <= getCodeEnd() && "PC Does not belong to this function");
   assert(hasBody() && "Function has no body");
   unsigned Offset = PC - getCodeBegin();
-  using Elem = std::pair<unsigned, SourceInfo>;
-  auto It = llvm::lower_bound(SrcMap, Elem{Offset, {}}, llvm::less_first());
-  if (It == SrcMap.end())
-    return SrcMap.back().second;
-  return It->second;
+  return SrcMap.findSourceForOffset(Offset);
 }

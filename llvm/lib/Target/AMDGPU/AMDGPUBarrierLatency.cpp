@@ -26,6 +26,7 @@
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/TargetParser/AtomicScope.h"
 
 using namespace llvm;
 
@@ -44,15 +45,22 @@ private:
 public:
   BarrierLatency(MachineFunction *MF) {
     LLVMContext &Context = MF->getFunction().getContext();
+    const Triple &TT = MF->getSubtarget<GCNSubtarget>().getTargetTriple();
+    auto ScopeID = [&](AtomicScope Scope, bool OneAS) {
+      return Context.getOrInsertSyncScopeID(
+          *getAtomicScopeIRString(TT, Scope, OneAS));
+    };
     IgnoredScopes.insert(SyncScope::SingleThread);
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront"));
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("wavefront-one-as"));
-    IgnoredScopes.insert(Context.getOrInsertSyncScopeID("singlethread-one-as"));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Wavefront, /*OneAS=*/false));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Wavefront, /*OneAS=*/true));
+    IgnoredScopes.insert(ScopeID(AtomicScope::Single, /*OneAS=*/true));
 
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    if (!ST.requiresWaitOnWorkgroupReleaseFence()) {
+    bool TgSplit =
+        ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF->getFunction());
+    if (!ST.requiresWaitOnWorkgroupReleaseFence(TgSplit)) {
       // Prior to GFX10 workgroup scope does not normally require waitcnts
-      IgnoredScopes.insert(Context.getOrInsertSyncScopeID("workgroup"));
+      IgnoredScopes.insert(ScopeID(AtomicScope::Workgroup, /*OneAS=*/false));
     }
   }
   void apply(ScheduleDAGInstrs *DAG) override;
@@ -73,10 +81,28 @@ void addLatencyToEdge(SDep &PredDep, SUnit &SU, unsigned Latency) {
   SU.setDepthDirty();
 }
 
+void setLatencyForEdge(SDep &PredDep, SUnit &SU, unsigned Latency) {
+  SUnit *PredSU = PredDep.getSUnit();
+  SDep ForwardD = PredDep;
+  ForwardD.setSUnit(&SU);
+  for (SDep &SuccDep : PredSU->Succs) {
+    if (SuccDep == ForwardD) {
+      SuccDep.setLatency(Latency);
+      break;
+    }
+  }
+  PredDep.setLatency(Latency);
+  PredSU->setDepthDirty();
+  SU.setDepthDirty();
+}
+
 void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
   const SIInstrInfo *TII = static_cast<const SIInstrInfo *>(DAG->TII);
   constexpr unsigned FenceLatency = 2000;
   const unsigned BarrierSignalWaitLatency = BarrierSignalWaitLatencyOpt;
+  SmallVector<SUnit *, 8> RegionTDM;
+  SmallVector<SUnit *, 8> RegionAsync;
+  const TargetSchedModel *SchedModel = DAG->getSchedModel();
 
   for (SUnit &SU : DAG->SUnits) {
     const MachineInstr *MI = SU.getInstr();
@@ -98,7 +124,10 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         // Only consider memory loads
         if (!MI->mayLoad() || MI->mayStore())
           continue;
-        addLatencyToEdge(PredDep, SU, FenceLatency);
+
+        addLatencyToEdge(PredDep, SU,
+                         SchedModel ? SchedModel->computeInstrLatency(MI, false)
+                                    : FenceLatency);
       }
     } else if (Op == AMDGPU::S_BARRIER_WAIT) {
       for (SDep &PredDep : SU.Preds) {
@@ -106,6 +135,61 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         const MachineInstr *PredMI = PredSU->getInstr();
         if (TII->isBarrierStart(PredMI->getOpcode())) {
           addLatencyToEdge(PredDep, SU, BarrierSignalWaitLatency);
+        }
+      }
+    } else if (TII->isLDSDMA(*MI)) {
+      if (SIInstrFlags::usesTENSOR_CNT(*MI))
+        RegionTDM.push_back(&SU);
+      else if (SIInstrFlags::usesASYNC_CNT(*MI))
+        RegionAsync.push_back(&SU);
+    } else if (Op == AMDGPU::S_WAIT_TENSORCNT ||
+               Op == AMDGPU::S_WAIT_ASYNCCNT) {
+      auto needWaitFor = [&](SmallVectorImpl<SUnit *> &RegionLDSDMA, SUnit *SU,
+                             int64_t Count) {
+        if (RegionLDSDMA.size() <= static_cast<uint64_t>(Count)) {
+          return false;
+        }
+
+        int64_t Counter = 0;
+        auto I = RegionLDSDMA.rbegin(), E = RegionLDSDMA.rend();
+        for (; I != E; I++) {
+          if (Counter >= Count)
+            return true;
+
+          if (SU->NodeNum == (*I)->NodeNum)
+            return false;
+
+          ++Counter;
+        }
+        llvm_unreachable("Malformed RegionLDSDMA");
+      };
+
+      int64_t WaitVal = MI->getOperand(0).getImm();
+      for (SDep &PredDep : SU.Preds) {
+        if (PredDep.getKind() != SDep::Kind::Data)
+          continue;
+
+        Register DepReg = PredDep.getReg();
+        bool IsAsync = Op == AMDGPU::S_WAIT_ASYNCCNT;
+        Register LDSDMACnt = IsAsync ? AMDGPU::ASYNCcnt : AMDGPU::TENSORcnt;
+
+        if (DepReg != LDSDMACnt)
+          continue;
+
+        SUnit *PredSU = PredDep.getSUnit();
+
+        // The data dep can be carried by a non-LDSDMA SU
+        // (e.g. an intervening COPY or pseudo). Such predecessors are not
+        // tracked, so needWaitFor cannot reason about them.
+        const MachineInstr &PredMI = *PredSU->getInstr();
+        if (IsAsync ? !SIInstrFlags::usesASYNC_CNT(PredMI)
+                    : !SIInstrFlags::usesTENSOR_CNT(PredMI))
+          continue;
+
+        if (!needWaitFor(Op == AMDGPU::S_WAIT_ASYNCCNT ? RegionAsync
+                                                       : RegionTDM,
+                         PredSU, WaitVal)) {
+          setLatencyForEdge(PredDep, SU, 1);
         }
       }
     }

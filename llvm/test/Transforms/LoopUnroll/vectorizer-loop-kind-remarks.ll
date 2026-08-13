@@ -101,7 +101,7 @@ exit:
 !99 = !DISubroutineType(types: !{})
 
 !10 = distinct !{!10, !11}
-!11 = !{!"llvm.loop.vectorize.enable", i1 false}
+!11 = !{!"llvm.loop.vectorize.disable"}
 
 !100 = distinct !DISubprogram(name: "plain_loop", scope: !1, file: !1, line: 1, type: !99, isLocal: false, isDefinition: true, scopeLine: 1, unit: !0)
 !108 = !DILocation(line: 1, column: 1, scope: !100)

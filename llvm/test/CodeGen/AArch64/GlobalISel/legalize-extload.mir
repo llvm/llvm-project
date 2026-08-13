@@ -10,10 +10,10 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[LOAD]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[LOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_LOAD %0 :: (load (s8))
+    %1:_(i32) = G_LOAD %0 :: (load (i8))
     $w0 = COPY %1
 ...
 ---
@@ -26,12 +26,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK-NEXT: $x0 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (i32))
+    ; CHECK-NEXT: $x0 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s32))
-    $x0 = COPY %2(s64)
+    %2:_(i64) = G_SEXTLOAD %0(p0) :: (load (i32))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -45,12 +45,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: $x0 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (i16))
+    ; CHECK-NEXT: $x0 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s16))
-    $x0 = COPY %2(s64)
+    %2:_(i64) = G_SEXTLOAD %0(p0) :: (load (i16))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -64,12 +64,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x0 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $x0 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s8))
-    $x0 = COPY %2(s64)
+    %2:_(i64) = G_SEXTLOAD %0(p0) :: (load (i8))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -83,12 +83,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (i32))
+    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s32))
-    $x0 = COPY %2(s64)
+    %2:_(i64) = G_ZEXTLOAD %0(p0) :: (load (i32))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -102,12 +102,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (i16))
+    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s16))
-    $x0 = COPY %2(s64)
+    %2:_(i64) = G_ZEXTLOAD %0(p0) :: (load (i16))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -121,12 +121,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(p0) = COPY $x0
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    $x0 = COPY %2(s64)
+    %2:_(i64) = G_ZEXTLOAD %0(p0) :: (load (i8))
+    $x0 = COPY %2(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -139,13 +139,13 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
-    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD %ptr(p0) :: (load (i8))
+    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %load:_(s88) = G_ZEXTLOAD %ptr(p0) :: (load (s8))
-    %trunc:_(s64) = G_TRUNC %load
-    $x0 = COPY %trunc(s64)
+    %load:_(i88) = G_ZEXTLOAD %ptr(p0) :: (load (i8))
+    %trunc:_(i64) = G_TRUNC %load
+    $x0 = COPY %trunc(i64)
     RET_ReallyLR implicit $x0
 ...
 ...
@@ -158,12 +158,12 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD %ptr(p0) :: (load (s8))
-    ; CHECK-NEXT: $x0 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD %ptr(p0) :: (load (i8))
+    ; CHECK-NEXT: $x0 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %ptr:_(p0) = COPY $x0
-    %load:_(s88) = G_SEXTLOAD %ptr(p0) :: (load (s8))
-    %trunc:_(s64) = G_TRUNC %load
-    $x0 = COPY %trunc(s64)
+    %load:_(i88) = G_SEXTLOAD %ptr(p0) :: (load (i8))
+    %trunc:_(i64) = G_TRUNC %load
+    $x0 = COPY %trunc(i64)
     RET_ReallyLR implicit $x0
 ...

@@ -87,9 +87,9 @@ struct LoweringPreparePass
 
   void runOnOp(mlir::Operation *op);
   void lowerCastOp(cir::CastOp op);
+  void lowerComplexConjOp(cir::ComplexConjOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
-  void lowerUnaryOp(cir::UnaryOpInterface op);
   void lowerGetGlobalOp(cir::GetGlobalOp op);
   void lowerGlobalOp(cir::GlobalOp op);
   void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
@@ -98,6 +98,7 @@ struct LoweringPreparePass
   void lowerTrivialCopyCall(cir::CallOp op);
   void lowerStoreOfConstAggregate(cir::StoreOp op);
   void lowerLocalInitOp(cir::LocalInitOp op);
+  void lowerStdOp(cir::StdOpInterface op);
 
   /// Return the FuncOp called by `callOp`.  Uses the cached `symbolTables`
   /// member to avoid the O(M) module-wide scan that the static
@@ -359,8 +360,9 @@ struct LoweringPreparePass
     cir::PointerType voidPtrTy = builder.getVoidPtrTy();
     cir::PointerType voidFnPtrTy = builder.getVoidFnPtrTy({voidPtrTy});
     cir::PointerType handlePtrTy = builder.getPointerTo(handle.getSymType());
+    IntType intTy = builder.getSIntNTy(32);
     auto fnAtExitType =
-        builder.getVoidFnTy({voidFnPtrTy, voidPtrTy, handlePtrTy});
+        cir::FuncType::get({voidFnPtrTy, voidPtrTy, handlePtrTy}, intTy);
 
     llvm::StringLiteral nameAtExit = "__cxa_atexit";
     if (tls)
@@ -1028,35 +1030,22 @@ void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
   op.erase();
 }
 
-void LoweringPreparePass::lowerUnaryOp(cir::UnaryOpInterface op) {
-  if (!mlir::isa<cir::ComplexType>(op.getResult().getType()))
-    return;
-
-  mlir::Location loc = op->getLoc();
+void LoweringPreparePass::lowerComplexConjOp(cir::ComplexConjOp op) {
+  mlir::Location loc = op.getLoc();
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
 
-  mlir::Value operand = op.getInput();
+  mlir::Value operand = op.getOperand();
   mlir::Value operandReal = builder.createComplexReal(loc, operand);
   mlir::Value operandImag = builder.createComplexImag(loc, operand);
 
-  mlir::Value resultReal = operandReal;
-  mlir::Value resultImag = operandImag;
+  // The complex conjugate is formed by negating the imaginary component.
+  const bool isFP = cir::isFPOrVectorOfFPType(operandReal.getType());
+  mlir::Value resultImag = isFP ? builder.createFNeg(loc, operandImag)
+                                : builder.createMinus(loc, operandImag);
 
-  llvm::TypeSwitch<mlir::Operation *>(op)
-      .Case<cir::IncOp>(
-          [&](auto) { resultReal = builder.createInc(loc, operandReal); })
-      .Case<cir::DecOp>(
-          [&](auto) { resultReal = builder.createDec(loc, operandReal); })
-      .Case<cir::MinusOp>([&](auto) {
-        resultReal = builder.createMinus(loc, operandReal);
-        resultImag = builder.createMinus(loc, operandImag);
-      })
-      .Case<cir::NotOp>(
-          [&](auto) { resultImag = builder.createMinus(loc, operandImag); })
-      .Default([](auto) { llvm_unreachable("unhandled unary complex op"); });
-
-  mlir::Value result = builder.createComplexCreate(loc, resultReal, resultImag);
+  mlir::Value result =
+      builder.createComplexCreate(loc, operandReal, resultImag);
   op->replaceAllUsesWith(mlir::ValueRange{result});
   op->erase();
 }
@@ -1183,6 +1172,15 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   auto fnType = cir::FuncType::get({}, voidTy);
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage);
+
+  // Forward the constrained floating-point marker recorded on the global by
+  // CodeGen onto the generated initializer function. The marker on the global
+  // is no longer meaningful once its regions have been moved out, so clear it.
+  if (op.getStrictfp()) {
+    f->setAttr(cir::CIRDialect::getStrictFPAttrName(),
+               mlir::UnitAttr::get(&getContext()));
+    op.setStrictfp(false);
+  }
 
   // Move over the initialization code of the ctor region.
   // The ctor region may have multiple blocks when exception handling
@@ -1956,9 +1954,9 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
 
-  mlir::Value tmpAddr = builder.createAlloca(
-      loc, /*addr type*/ builder.getPointerTo(eltTy),
-      /*var type*/ eltTy, "__array_idx", builder.getAlignmentAttr(1));
+  mlir::Value tmpAddr =
+      builder.createAlloca(loc, /*addr type*/ builder.getPointerTo(eltTy),
+                           "__array_idx", builder.getAlignmentAttr(1));
   builder.createStore(loc, start, tmpAddr);
 
   mlir::Block *bodyBlock = &op->getRegion(0).front();
@@ -2263,13 +2261,37 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
     constOp.erase();
 }
 
+// Every raised operation carries the original callee, the operands, and the
+// attributes of the call, so this one function lowers any of them back to an
+// equivalent plain call.
+void LoweringPreparePass::lowerStdOp(cir::StdOpInterface typedOp) {
+  mlir::Operation *op = typedOp.getOperation();
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+  mlir::Type resultType;
+  if (op->getNumResults())
+    resultType = op->getResult(0).getType();
+  cir::CallOp call = builder.createCallOp(
+      op->getLoc(), typedOp.getOriginalFnAttr(), resultType, op->getOperands());
+  for (mlir::NamedAttribute attr : op->getAttrs())
+    if (attr.getName() != typedOp.getOriginalFnAttrName())
+      call->setAttr(attr.getName(), attr.getValue());
+
+  op->replaceAllUsesWith(call);
+  op->erase();
+}
+
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
   } else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op)) {
     lowerArrayDtor(arrayDtor);
+  } else if (auto stdOp = mlir::dyn_cast<cir::StdOpInterface>(op)) {
+    lowerStdOp(stdOp);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
+  } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
+    lowerComplexConjOp(complexConj);
   } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op)) {
     lowerComplexDivOp(complexDiv);
   } else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op)) {
@@ -2281,8 +2303,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       cudaDeviceVars.emplace_back(glob, regAttr);
   } else if (auto getGlob = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
     lowerGetGlobalOp(getGlob);
-  } else if (auto unaryOp = mlir::dyn_cast<cir::UnaryOpInterface>(op)) {
-    lowerUnaryOp(unaryOp);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
@@ -2403,7 +2423,13 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   GlobalOp fatbinStr = GlobalOp::create(builder, loc, fatbinStrName, fatbinType,
                                         /*isConstant=*/true, {},
                                         GlobalLinkageKind::PrivateLinkage);
-  fatbinStr.setAlignment(8);
+  if (isHIP) {
+    const unsigned HIPCodeObjectAlign = 4096;
+    fatbinStr.setAlignment(HIPCodeObjectAlign);
+  } else {
+    fatbinStr.setAlignment(8);
+  }
+
   fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
       fatbinType, StringAttr::get(gpuBinary->getBuffer(), fatbinType)));
   fatbinStr.setSection(fatbinConstName);
@@ -2411,9 +2437,11 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // Create the fatbin wrapper struct:
   //    struct { int magic; int version; void *fatbin; void *unused; };
+  mlir::Type fatbinWrapperMembers[] = {intTy, intTy, voidPtrTy, voidPtrTy};
   auto fatbinWrapperType = cir::StructType::get(
-      &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
-      /*packed=*/false, /*padded=*/false, /*is_class=*/false);
+      &getContext(), fatbinWrapperMembers, /*packed=*/false, /*padded=*/false,
+      /*is_class=*/false,
+      cir::RecordType::getAllDataKinds(fatbinWrapperMembers));
   std::string fatbinWrapperName =
       addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
   GlobalOp fatbinWrapper = GlobalOp::create(
@@ -2903,10 +2931,11 @@ void LoweringPreparePass::runOnOperation() {
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
-                  cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
-                  cir::MinusOp, cir::NotOp, cir::LocalInitOp>(op))
+                  cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
+                  cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
+                  cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
+                  cir::CmpThreeWayOp, cir::LocalInitOp, cir::StdOpInterface>(
+            op))
       opsToTransform.push_back(op);
   });
 

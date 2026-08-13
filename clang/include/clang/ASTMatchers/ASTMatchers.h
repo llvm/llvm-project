@@ -74,13 +74,13 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/ASTMatchers/LowLevelHelpers.h"
 #include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -5753,11 +5753,6 @@ AST_MATCHER_P(IfStmt, hasElse, internal::Matcher<Stmt>, InnerMatcher) {
   return (Else != nullptr && InnerMatcher.matches(*Else, Finder, Builder));
 }
 
-/// Matches a declaration if it declares the same entity as the node.
-AST_MATCHER_P(Decl, declaresSameEntityAsNode, const Decl *, Other) {
-  return clang::declaresSameEntity(&Node, Other);
-}
-
 /// Matches if a node equals a previously bound node.
 ///
 /// Matches a node if it equals the node previously bound to \p ID.
@@ -8372,9 +8367,9 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
 ///   matches the initializer for v1, v2, v3, cp, and ip. Does not match the
 ///   initializer for i.
 AST_MATCHER_FUNCTION(internal::Matcher<Expr>, nullPointerConstant) {
-  return anyOf(
-      gnuNullExpr(), cxxNullPtrLiteralExpr(),
-      integerLiteral(equals(0), hasParent(expr(hasType(pointerType())))));
+  return anyOf(gnuNullExpr(), cxxNullPtrLiteralExpr(),
+               integerLiteral(equals(0), hasParent(castExpr(
+                                             hasCastKind(CK_NullToPointer)))));
 }
 
 /// Matches the DecompositionDecl the binding belongs to.
@@ -8657,8 +8652,8 @@ AST_MATCHER_P(CXXNewExpr, hasAnyPlacementArg, internal::Matcher<Expr>,
 /// cxxNewExpr(hasArraySize(integerLiteral(equals(10))))
 ///   matches the expression 'new MyClass[10]'.
 AST_MATCHER_P(CXXNewExpr, hasArraySize, internal::Matcher<Expr>, InnerMatcher) {
-  return Node.isArray() && *Node.getArraySize() &&
-         InnerMatcher.matches(**Node.getArraySize(), Finder, Builder);
+  const std::optional<const Expr *> ArraySize = Node.getArraySize();
+  return ArraySize && InnerMatcher.matches(**ArraySize, Finder, Builder);
 }
 
 /// Matches a class declaration that is defined.

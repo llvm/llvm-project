@@ -18,6 +18,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "perf-reader"
@@ -218,7 +219,7 @@ void VirtualUnwinder::collectSamplesFromFrame(UnwindState::ProfiledFrame *Cur,
   std::shared_ptr<ContextKey> Key = Stack.getContextKey();
   if (Key == nullptr)
     return;
-  auto Ret = CtxCounterMap->emplace(Hashable<ContextKey>(Key), SampleCounter());
+  auto Ret = CtxCounterMap->try_emplace(Hashable<ContextKey>(Key));
   SampleCounter &SCounter = Ret.first->second;
   for (auto &I : Cur->RangeSamples)
     SCounter.recordRangeCount(std::get<0>(I), std::get<1>(I), std::get<2>(I));
@@ -466,7 +467,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   if (!PerfExecutable) {
     exitWithError("Perf not found.");
   }
-  std::string PerfPath = *PerfExecutable;
+  std::string PerfExecutablePath = *PerfExecutable;
   SmallString<128> PerfTraceFile;
   sys::fs::createUniquePath("perf-script-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%.tmp",
                             PerfTraceFile, /*MakeAbsolute=*/true);
@@ -477,21 +478,62 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   PerfScriptReader::TempFileCleanups.emplace_back(PerfTraceFile);
   PerfScriptReader::TempFileCleanups.emplace_back(ErrorFile);
 
+  auto RunPerfScript = [&](ArrayRef<StringRef> Args) {
+    // ExecuteAndWait does not truncate redirected output files on Unix. Remove
+    // both files so a shorter invocation cannot retain output from the
+    // previous perf script invocation.
+    for (StringRef Path : {StringRef(PerfTraceFile), StringRef(ErrorFile)}) {
+      if (std::error_code EC = sys::fs::remove(Path))
+        exitWithError(EC, Path);
+    }
+
+    std::string ExecutionError;
+    bool ExecutionFailed = false;
+    int ExitCode =
+        sys::ExecuteAndWait(PerfExecutablePath, Args, std::nullopt, Redirects,
+                            /*SecondsToWait=*/0, /*MemoryLimit=*/0,
+                            &ExecutionError, &ExecutionFailed);
+    if (!ExecutionFailed && ExitCode == 0)
+      return;
+
+    std::string Message;
+    raw_string_ostream OS(Message);
+    if (ExecutionFailed || ExitCode == -1)
+      OS << "Failed to execute perf script";
+    else if (ExitCode == -2)
+      OS << "Perf script terminated abnormally";
+    else
+      OS << "Perf script failed with exit code " << ExitCode;
+    if (!ExecutionError.empty())
+      OS << ": " << ExecutionError;
+
+    if (auto ErrorBuffer = MemoryBuffer::getFile(ErrorFile)) {
+      StringRef Stderr = ErrorBuffer.get()->getBuffer().trim();
+      if (!Stderr.empty())
+        OS << "\n" << Stderr;
+    }
+    exitWithError(OS.str());
+  };
+
   std::string PIDs;
   if (!SkipPID) {
-    StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
-                                  "-F",     "comm,pid", "-i",
+    StringRef ScriptMMapArgs[] = {PerfExecutablePath,
+                                  "script",
+                                  "--show-mmap-events",
+                                  "-F",
+                                  "comm,pid",
+                                  "-i",
                                   PerfData};
-    sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, std::nullopt, Redirects);
+    RunPerfScript(ScriptMMapArgs);
 
     // Collect the PIDs
     TraceStream TraceIt(PerfTraceFile);
-    std::unordered_set<int32_t> PIDSet;
+    DenseSet<int32_t> PIDSet;
     while (!TraceIt.isAtEoF()) {
       MMapEvent MMap;
       if (isMMapEvent(TraceIt.getCurrentLine()) &&
           extractMMapEventForBinary(Binary, TraceIt.getCurrentLine(), MMap)) {
-        auto It = PIDSet.emplace(MMap.PID);
+        auto It = PIDSet.insert(MMap.PID);
         if (It.second && (!PIDFilter || MMap.PID == *PIDFilter)) {
           if (!PIDs.empty()) {
             PIDs.append(",");
@@ -509,7 +551,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
 
   // Run perf script again to retrieve events for PIDs collected above
   SmallVector<StringRef, 8> ScriptSampleArgs;
-  ScriptSampleArgs.push_back(PerfPath);
+  ScriptSampleArgs.push_back(PerfExecutablePath);
   ScriptSampleArgs.push_back("script");
   ScriptSampleArgs.push_back("--show-mmap-events");
   ScriptSampleArgs.push_back("-F");
@@ -520,7 +562,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
     ScriptSampleArgs.push_back("--pid");
     ScriptSampleArgs.push_back(PIDs);
   }
-  sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
+  RunPerfScript(ScriptSampleArgs);
 
   return {std::string(PerfTraceFile), InputFormat::PerfScript,
           PerfContent::UnknownContent};
@@ -996,12 +1038,11 @@ void UnsymbolizedProfileReader::readUnsymbolizedProfile(StringRef FileName) {
     // Read context stack for CS profile.
     if (Line.starts_with("[")) {
       ProfileIsCS = true;
-      auto I = ContextStrSet.insert(Line.str());
-      SampleContext::createCtxVectorFromStr(*I.first, Key->Context);
+      auto I = ContextStrSet.insert(Line);
+      SampleContext::createCtxVectorFromStr(I.first->getKey(), Key->Context);
       TraceIt.advance();
     }
-    auto Ret =
-        SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+    auto Ret = SampleCounters.try_emplace(Hashable<ContextKey>(Key));
     readSampleCounters(TraceIt, Ret.first->second);
   }
 }
@@ -1053,7 +1094,7 @@ void PerfScriptReader::generateUnsymbolizedProfile() {
          "Sample counter map should be empty before raw profile generation");
   std::shared_ptr<StringBasedCtxKey> Key =
       std::make_shared<StringBasedCtxKey>();
-  SampleCounters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+  SampleCounters.try_emplace(Hashable<ContextKey>(Key));
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
     computeCounterFromLBR(Sample, Item.second);
@@ -1180,11 +1221,12 @@ bool PerfScriptReader::isLBRSample(StringRef Line, bool CheckLineStart) {
   SmallVector<StringRef, 32> Records;
   if (!CheckLineStart)
     Line = Line.trim();
+  // Line might start with IP or only contain brstack. Check first two records
+  // and fail if no record exists.
   Line.split(Records, " ", 2, CheckLineStart);
-  if (Records.size() < 2)
-    return false;
-  if (Records[1].starts_with("0x") && Records[1].contains('/'))
-    return true;
+  for (StringRef Record : Records)
+    if (Record.starts_with("0x") && Record.contains('/'))
+      return true;
   return false;
 }
 
@@ -1265,9 +1307,7 @@ void PerfScriptReader::warnTruncatedStack() {
 }
 
 void PerfScriptReader::warnInvalidRange() {
-  std::unordered_map<std::pair<uint64_t, uint64_t>, uint64_t,
-                     pair_hash<uint64_t, uint64_t>>
-      Ranges;
+  DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> Ranges;
 
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
@@ -1466,7 +1506,7 @@ void ETMReader::parseETMTraces() {
   // Initialize the SampleCounters map with a single empty context key
   // to aggregate all instruction hits into a global bucket.
   auto Key = std::make_shared<StringBasedCtxKey>();
-  Counters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+  Counters.try_emplace(Hashable<ContextKey>(Key));
 
   // The protocol utilizes a 0x80 byte as an initial synchronization header.
   // Perform a manual search for this sync point to discard any leading
