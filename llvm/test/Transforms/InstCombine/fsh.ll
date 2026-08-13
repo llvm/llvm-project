@@ -1302,7 +1302,7 @@ define i32 @rot_fsh(i32 %x, i32 %y) {
   ret i32 %r2
 }
 
-; Fold `(shl ShVal, (X + 1) & (Width-1)) | (lshr ShVal, (X + Width-1) ^ (Width-1))` --> `fshl(ShVal, ShVal, X+1)`
+; Fold `(shl ShVal, (X + 1) & (Width-1)) | (lshr ShVal, ((X & (Width-1)) ^ (Width-1)))` --> `fshl(ShVal, ShVal, X+1)`
 
 define i8 @rot_add_xor_mask_fshl(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rot_add_xor_mask_fshl(
@@ -1313,8 +1313,8 @@ define i8 @rot_add_xor_mask_fshl(i8 %x, i8 %y) {
   %shl_amt = add i8 %y, 1
   %shl_m = and i8 %shl_amt, 7
   %shl = shl i8 %x, %shl_m
-  %lshr_amt = add i8 %y, 7
-  %lshr_m = xor i8 %lshr_amt, 7
+  %ym = and i8 %y, 7
+  %lshr_m = xor i8 %ym, 7
   %lshr = lshr i8 %x, %lshr_m
   %r = or i8 %shl, %lshr
   ret i8 %r
@@ -1329,8 +1329,8 @@ define i64 @rot_add_xor_mask_fshl_i64(i64 %x, i64 %y) {
   %shl_amt = add nuw i64 %y, 1
   %shl_m = and i64 %shl_amt, 63
   %shl = shl i64 %x, %shl_m
-  %lshr_amt = add i64 %y, 63
-  %lshr_m = xor i64 %lshr_amt, 63
+  %ym = and i64 %y, 63
+  %lshr_m = xor i64 %ym, 63
   %lshr = lshr i64 %x, %lshr_m
   %r = or i64 %shl, %lshr
   ret i64 %r
@@ -1345,8 +1345,8 @@ define i8 @rot_add_xor_mask_fshl_commute(i8 %x, i8 %y) {
   %shl_amt = add i8 %y, 1
   %shl_m = and i8 %shl_amt, 7
   %shl = shl i8 %x, %shl_m
-  %lshr_amt = add i8 %y, 7
-  %lshr_m = xor i8 %lshr_amt, 7
+  %ym = and i8 %y, 7
+  %lshr_m = xor i8 %ym, 7
   %lshr = lshr i8 %x, %lshr_m
   %r = or i8 %lshr, %shl
   ret i8 %r
@@ -1361,8 +1361,8 @@ define <2 x i8> @rot_add_xor_mask_fshl_vec(<2 x i8> %x, <2 x i8> %y) {
   %shl_amt = add <2 x i8> %y, splat (i8 1)
   %shl_m = and <2 x i8> %shl_amt, splat (i8 7)
   %shl = shl <2 x i8> %x, %shl_m
-  %lshr_amt = add <2 x i8> %y, splat (i8 7)
-  %lshr_m = xor <2 x i8> %lshr_amt, splat (i8 7)
+  %ym = and <2 x i8> %y, splat (i8 7)
+  %lshr_m = xor <2 x i8> %ym, splat (i8 7)
   %lshr = lshr <2 x i8> %x, %lshr_m
   %r = or <2 x i8> %shl, %lshr
   ret <2 x i8> %r
@@ -1377,8 +1377,8 @@ define i8 @rot_add_xor_mask_fshr(i8 %x, i8 %y) {
   %lshr_amt = add i8 %y, 1
   %lshr_m = and i8 %lshr_amt, 7
   %lshr = lshr i8 %x, %lshr_m
-  %shl_amt = add i8 %y, 7
-  %shl_m = xor i8 %shl_amt, 7
+  %ym = and i8 %y, 7
+  %shl_m = xor i8 %ym, 7
   %shl = shl i8 %x, %shl_m
   %r = or i8 %lshr, %shl
   ret i8 %r
@@ -1393,8 +1393,8 @@ define i64 @rot_add_xor_mask_fshr_i64(i64 %x, i64 %y) {
   %lshr_amt = add nuw i64 %y, 1
   %lshr_m = and i64 %lshr_amt, 63
   %lshr = lshr i64 %x, %lshr_m
-  %shl_amt = add i64 %y, 63
-  %shl_m = xor i64 %shl_amt, 63
+  %ym = and i64 %y, 63
+  %shl_m = xor i64 %ym, 63
   %shl = shl i64 %x, %shl_m
   %r = or i64 %lshr, %shl
   ret i64 %r
@@ -1409,8 +1409,8 @@ define i8 @rot_add_xor_mask_fshr_commute(i8 %x, i8 %y) {
   %lshr_amt = add i8 %y, 1
   %lshr_m = and i8 %lshr_amt, 7
   %lshr = lshr i8 %x, %lshr_m
-  %shl_amt = add i8 %y, 7
-  %shl_m = xor i8 %shl_amt, 7
+  %ym = and i8 %y, 7
+  %shl_m = xor i8 %ym, 7
   %shl = shl i8 %x, %shl_m
   %r = or i8 %shl, %lshr
   ret i8 %r
@@ -1418,13 +1418,13 @@ define i8 @rot_add_xor_mask_fshr_commute(i8 %x, i8 %y) {
 
 ;; Negative tests
 
-define i8 @rot_add_xor_mask_fshl_and_xor(i8 %x, i8 %y) {
-; CHECK-LABEL: @rot_add_xor_mask_fshl_and_xor(
+define i8 @rot_add_xor_mask_fshl_no_fold(i8 %x, i8 %y) {
+; CHECK-LABEL: @rot_add_xor_mask_fshl_no_fold(
 ; CHECK-NEXT:    [[SHL_AMT:%.*]] = add i8 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[SHL_M:%.*]] = and i8 [[SHL_AMT]], 7
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[SHL_M]]
-; CHECK-NEXT:    [[Y_M:%.*]] = and i8 [[Y]], 7
-; CHECK-NEXT:    [[LSHR_M:%.*]] = xor i8 [[Y_M]], 7
+; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add i8 [[Y]], 7
+; CHECK-NEXT:    [[LSHR_M:%.*]] = xor i8 [[LSHR_AMT]], 7
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[X]], [[LSHR_M]]
 ; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], [[LSHR]]
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -1432,8 +1432,8 @@ define i8 @rot_add_xor_mask_fshl_and_xor(i8 %x, i8 %y) {
   %shl_amt = add i8 %y, 1
   %shl_m = and i8 %shl_amt, 7
   %shl = shl i8 %x, %shl_m
-  %y_m = and i8 %y, 7
-  %lshr_m = xor i8 %y_m, 7
+  %lshr_amt = add i8 %y, 7
+  %lshr_m = xor i8 %lshr_amt, 7
   %lshr = lshr i8 %x, %lshr_m
   %r = or i8 %shl, %lshr
   ret i8 %r
