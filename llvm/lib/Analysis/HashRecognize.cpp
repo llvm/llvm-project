@@ -180,12 +180,13 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
       m_Specific(ConditionalRecurrence.Phi),
       m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(ConditionalRecurrence.Phi)),
               m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
+
   BinaryOperator *BitShift = ConditionalRecurrence.BO;
   auto MatchBitShiftXorGenPoly = match_fn(m_c_Xor(
       m_Specific(BitShift), m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
   if (!IsBigEndian && match(SI, m_Select(m_Trunc(m_Value(L)), m_Instruction(TV),
-                                         m_Instruction(FV))))
-    return match(L, MatchPred) && FV == BitShift && MatchBitShiftXorGenPoly(TV);
+                                         m_Specific(BitShift))))
+    return match(L, MatchPred) && MatchBitShiftXorGenPoly(TV);
   if (!match(SI, m_Select(m_ICmp(Pred, m_Value(L), m_APInt(R)),
                           m_Instruction(TV), m_Instruction(FV))))
     return false;
