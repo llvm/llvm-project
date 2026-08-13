@@ -1,9 +1,15 @@
-! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s \
+! RUN:   --implicit-check-not="expected 'FINAL'" \
+! RUN:   --implicit-check-not="expected 'GENERIC'" \
+! RUN:   --implicit-check-not="expected 'PROCEDURE'" \
+! RUN:   --implicit-check-not="expected 'COMPLEX'" \
+! RUN:   --implicit-check-not="expected 'INTEGER'"
 
 ! Verify that a statement appearing after CONTAINS in a derived type that is not
 ! a type-bound procedure binding gives a clear error instead of misleading
 ! "expected 'FINAL'/'GENERIC'/'PROCEDURE'" or intrinsic-type-spec keyword
-! messages.
+! messages.  The --implicit-check-not options above assert, across the whole
+! output, that none of those spurious messages reappear.
 
 module m
   implicit none
@@ -26,6 +32,7 @@ module m
    contains
    contains
 ! CHECK: error: expected a type-bound procedure binding (PROCEDURE, GENERIC, or FINAL) after CONTAINS
+! CHECK-NEXT: {{.*}}contains
   end type t2
 
   ! An IMPORT after CONTAINS is likewise not a binding.
@@ -33,21 +40,16 @@ module m
    contains
      import
 ! CHECK: error: expected a type-bound procedure binding (PROCEDURE, GENERIC, or FINAL) after CONTAINS
+! CHECK-NEXT: {{.*}}import
   end type t3
 
   ! A misplaced subprogram after CONTAINS.
   type :: t4
    contains
      subroutine s
-     end subroutine
 ! CHECK: error: expected a type-bound procedure binding (PROCEDURE, GENERIC, or FINAL) after CONTAINS
+! CHECK-NEXT: {{.*}}subroutine s
   end type t4
-
-! CHECK-NOT: expected 'FINAL'
-! CHECK-NOT: expected 'GENERIC'
-! CHECK-NOT: expected 'PROCEDURE'
-! CHECK-NOT: expected 'COMPLEX'
-! CHECK-NOT: expected 'INTEGER'
 
 contains
   subroutine init(this)
