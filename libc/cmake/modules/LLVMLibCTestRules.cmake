@@ -4,6 +4,12 @@ else()
   set(LIBC_TEST_SUBPROCESS_TESTS 0)
 endif()
 
+if(LIBC_TARGET_OS_IS_BAREMETAL AND NOT DEFINED LIBC_TEST_SKIP_DEATH_TESTS)
+  # Bare-metal targets can't reliably test for crashes, without a kernel to
+  # catch CPU exceptions and turn them into signals.
+  set(LIBC_TEST_SKIP_DEATH_TESTS 1)
+endif()
+
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
   _get_compile_options_from_config(config_flags)
@@ -30,15 +36,14 @@ function(_get_common_test_compile_options output_var c_test flags)
   libc_add_definition(compile_options
     "LIBC_TEST_SUBPROCESS_TESTS=${LIBC_TEST_SUBPROCESS_TESTS}")
 
-  if(LIBC_TEST_SUBPROCESS_TESTS)
-    # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
-    # will make those tests no-op to reduce the overall test time.
-    if(LIBC_TEST_SKIP_DEATH_TESTS)
-      if(LIBC_CMAKE_VERBOSE_LOGGING)
-        message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
-      endif()
-      list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
+  # Set LIBC_TEST_SKIP_DEATH_TESTS to skip running tests that use EXPECT_DEATH
+  # and ASSERT_DEATH. On platforms where they work, they can be slow; on
+  # bare-metal platforms it might not be possible to implement them at all.
+  if(LIBC_TEST_SKIP_DEATH_TESTS)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
     endif()
+    list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
   endif()
 
   if(CMAKE_CROSSCOMPILING_EMULATOR)

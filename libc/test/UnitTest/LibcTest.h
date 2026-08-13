@@ -494,7 +494,12 @@ CString libc_make_test_file_path_func(const char *file_name);
 ////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.
 
-#if LIBC_TEST_SUBPROCESS_TESTS
+#ifdef LIBC_TEST_SKIP_DEATH_TESTS
+
+#define EXPECT_DEATH(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG)
+
+#elif LIBC_TEST_SUBPROCESS_TESTS
 
 #define LIBC_TEST_PROCESS_(TEST_FUNC, FUNC, VALUE, RET_OR_EMPTY)               \
   LIBC_TEST_SCAFFOLDING_(                                                      \
@@ -507,19 +512,14 @@ CString libc_make_test_file_path_func(const char *file_name);
 #define ASSERT_EXITS(FUNC, EXIT)                                               \
   LIBC_TEST_PROCESS_(testProcessExits, FUNC, EXIT, return)
 
-#ifdef LIBC_TEST_SKIP_DEATH_TESTS
-
-#define EXPECT_DEATH(FUNC, SIG)
-#define ASSERT_DEATH(FUNC, SIG)
-
-#else
-
 #define EXPECT_DEATH(FUNC, SIG)                                                \
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, )
 #define ASSERT_DEATH(FUNC, SIG)                                                \
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, return)
 
-#endif // LIBC_TEST_SKIP_DEATH_TESTS
+#else // not LIBC_TEST_SKIP_DEATH_TESTS or LIBC_TEST_SUBPROCESS_TESTS
+
+#error To run death tests provide a definition of EXPECT_DEATH and ASSERT_DEATH
 
 #endif // LIBC_TEST_SUBPROCESS_TESTS
 
