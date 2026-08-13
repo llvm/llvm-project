@@ -465,7 +465,7 @@ spirv.module Logical GLSL450 attributes {
 
 // CHECK: requires #spirv.vce<v1.3, [GroupNonUniform, Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
-  spirv.target_env = #spirv.target_env
+  spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, GroupNonUniform], []>,
     #spirv.resource_limits<>>
 } {
@@ -479,4 +479,17 @@ spirv.module Logical GLSL450 attributes {
 
   spirv.EntryPoint "GLCompute" @kernel, @subgroup_id
   spirv.ExecutionMode @kernel "LocalSize", 1, 1, 1
+}
+
+// `SubgroupEqMask` requires min version v1.3. Prefer `SubgroupBallotKHR` (no
+// capability min-version) so the deduced version comes from the BuiltIn itself.
+
+// CHECK: requires #spirv.vce<v1.3, [SubgroupBallotKHR, Shader, Matrix], [SPV_KHR_shader_ballot]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, SubgroupBallotKHR], [SPV_KHR_shader_ballot]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @subgroup_eq_mask built_in("SubgroupEqMask")
+      : !spirv.ptr<vector<4xi32>, Input>
 }

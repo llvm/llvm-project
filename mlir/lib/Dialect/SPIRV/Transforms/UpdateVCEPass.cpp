@@ -102,6 +102,28 @@ static void addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
   caps.insert_range(std::move(tmp));
 }
 
+/// Updates deduced capabilities/extensions for an enum value that carries its
+/// own SPIR-V availability requirements (e.g., `LinkageType`, `BuiltIn`).
+template <typename EnumClass>
+static LogicalResult requireEnumAvailability(
+    Operation *op, const spirv::TargetEnv &targetEnv, EnumClass enumValue,
+    SetVector<spirv::Capability> &deducedCapabilities,
+    SetVector<spirv::Extension> &deducedExtensions) {
+  if (auto caps = spirv::getCapabilities(enumValue)) {
+    SmallVector<ArrayRef<spirv::Capability>, 1> capCandidates = {*caps};
+    if (failed(checkAndUpdateCapabilityRequirements(
+            op, targetEnv, capCandidates, deducedCapabilities)))
+      return failure();
+  }
+  if (auto exts = spirv::getExtensions(enumValue)) {
+    SmallVector<ArrayRef<spirv::Extension>, 1> extCandidates = {*exts};
+    if (failed(checkAndUpdateExtensionRequirements(
+            op, targetEnv, extCandidates, deducedExtensions)))
+      return failure();
+  }
+  return success();
+}
+
 void UpdateVCEPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
 
@@ -165,28 +187,6 @@ void UpdateVCEPass::runOnOperation() {
     valueTypes.append(op->operand_type_begin(), op->operand_type_end());
     valueTypes.append(op->result_type_begin(), op->result_type_end());
 
-    // Some enum values used as attributes carry their own requirements per the
-    // SPIR-V spec. Examples are the `LinkageAttributes` decoration, whose
-    // linkage type requires the `Linkage` capability and may pull in extensions
-    // (e.g., `LinkOnceODR` -> `SPV_KHR_linkonce_odr`), and the `BuiltIn`
-    // decoration, whose operand has its own entry in the BuiltIn table (e.g.,
-    // `SubgroupId` -> `GroupNonUniform` or `Kernel`).
-    auto requireEnumAvailability = [&](auto enumValue) -> LogicalResult {
-      if (auto caps = spirv::getCapabilities(enumValue)) {
-        SmallVector<ArrayRef<spirv::Capability>, 1> capCandidates = {*caps};
-        if (failed(checkAndUpdateCapabilityRequirements(
-                op, targetEnv, capCandidates, deducedCapabilities)))
-          return failure();
-      }
-      if (auto exts = spirv::getExtensions(enumValue)) {
-        SmallVector<ArrayRef<spirv::Extension>, 1> extCandidates = {*exts};
-        if (failed(checkAndUpdateExtensionRequirements(
-                op, targetEnv, extCandidates, deducedExtensions)))
-          return failure();
-      }
-      return success();
-    };
-
     // Special treatment for global variables, whose type requirements are
     // conveyed by type attributes.
     if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op)) {
@@ -212,11 +212,13 @@ void UpdateVCEPass::runOnOperation() {
         if (!builtIn)
           return globalVar.emitError("unknown 'built_in' value '")
                  << *builtInName << "'";
-        if (failed(requireEnumAvailability(*builtIn)))
+        if (failed(requireEnumAvailability(op, targetEnv, *builtIn,
+                                           deducedCapabilities,
+                                           deducedExtensions)))
           return WalkResult::interrupt();
-        // A few builtins are only available from a later version. Note that
+        // A few builtins are only available from a later version.
         // `getMinVersion` is only generated for enums that carry a version
-        // requirement, so this cannot be folded into the lambda above.
+        // requirement, so this cannot be folded into the helper above.
         if (std::optional<spirv::Version> minVersion =
                 spirv::getMinVersion(*builtIn)) {
           deducedVersion = std::max(deducedVersion, *minVersion);
@@ -229,16 +231,22 @@ void UpdateVCEPass::runOnOperation() {
         }
       }
 
+      // Per the SPIR-V spec Decoration table, the `LinkageAttributes`
+      // decoration requires the `Linkage` capability, and specific linkage
+      // types pull in additional extensions (e.g., `LinkOnceODR` ->
+      // `SPV_KHR_linkonce_odr`).
       if (auto linkage = globalVar.getLinkageAttributes())
-        if (failed(
-                requireEnumAvailability(linkage->getLinkageType().getValue())))
+        if (failed(requireEnumAvailability(
+                op, targetEnv, linkage->getLinkageType().getValue(),
+                deducedCapabilities, deducedExtensions)))
           return WalkResult::interrupt();
     }
 
     if (auto funcOp = dyn_cast<spirv::FuncOp>(op))
       if (auto linkage = funcOp.getLinkageAttributes())
-        if (failed(
-                requireEnumAvailability(linkage->getLinkageType().getValue())))
+        if (failed(requireEnumAvailability(
+                op, targetEnv, linkage->getLinkageType().getValue(),
+                deducedCapabilities, deducedExtensions)))
           return WalkResult::interrupt();
 
     // If the op is FunctionLike make sure to process input and result types.
