@@ -27,28 +27,21 @@ func.func @k() {
   return
 }
 
-// ASM: /* [0000]
-// ASM-SAME: and (1|M0)
+// ASM: L0:
+// ASM-NEXT: and (1|M0)
 // ASM-SAME: r4.0<1>:ud
 // ASM-SAME: r0.0<0;1,0>:ud
-// ASM-NEXT: /* [0010]
-// ASM-SAME: add (32|M0)
+// ASM-NEXT: add (32|M0)
 // ASM-SAME: r6.0<1>:ud
 // ASM-SAME: {I@1}
-// ASM-NEXT: /* [0020]
-// ASM-SAME: send.ugm (1|M0)
+// ASM-NEXT: send.ugm (1|M0)
 // ASM-SAME: load.ugm.d32x16t.a32.ca.cc.bti[255]
-// ASM-NEXT: /* [0030]
-// ASM-SAME: sync.allrd
-// ASM-NEXT: /* [0040]
-// ASM-SAME: send.ugm (32|M0)
+// ASM-NEXT: sync.allrd
+// ASM-NEXT: send.ugm (32|M0)
 // ASM-SAME: store.ugm.d32.a64
-// ASM-NEXT: /* [0050]
-// ASM-SAME: sync.nop
+// ASM-NEXT: sync.nop
 // ASM-SAME: {$0.dst}
-// ASM-NEXT: /* [0060]
-// ASM-SAME: sync.nop
+// ASM-NEXT: sync.nop
 // ASM-SAME: {$1.src}
-// ASM-NEXT: /* [0070]
-// ASM-SAME: send.gtwy (1|M0)
+// ASM-NEXT: send.gtwy (1|M0)
 // ASM-SAME: {EOT,$2}

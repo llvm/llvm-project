@@ -74,9 +74,7 @@ static mlir::LogicalResult emitAssembly(mlir::ModuleOp moduleOp,
                << iga_status_to_string(status),
            mlir::failure();
 
-  iga_disassemble_options_t options =
-      IGA_DISASSEMBLE_OPTIONS_INIT_NUMERIC_LABELS();
-  options.formatting_opts |= IGA_FORMATTING_OPT_PRINT_PC;
+  iga_disassemble_options_t options = IGA_DISASSEMBLE_OPTIONS_INIT();
   char *assembly = nullptr;
   status = iga_context_disassemble(context, &options, binary.data(),
                                    static_cast<uint32_t>(binary.size()),

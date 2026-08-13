@@ -28,9 +28,7 @@ func.func @loops() {
 // CHECK: pc=32 opcode=jmpi {{.*}}jip=-16 {{.*}}flag=1.0
 // CHECK-NEXT: pc=48 opcode=jmpi {{.*}}jip=-32 {{.*}}flag=0.0
 // CHECK-NEXT: pc=64 opcode=add
-// ASM: /* [0020]
-// ASM-SAME: f1.0) jmpi
-// ASM-SAME: -16
-// ASM: /* [0030]
-// ASM-SAME: f0.0) jmpi
-// ASM-SAME: -32
+// ASM: L0:
+// ASM: [[HEADER:L[0-9]+]]:
+// ASM: (W&f1.0) jmpi [[HEADER]]
+// ASM: (W&f0.0) jmpi [[HEADER]]

@@ -16,12 +16,11 @@ func.func @k(%f: !xemachine.arf<f, 2, 0>) {
   return
 }
 
-// ASM: /* [0000]
-// ASM-SAME: (~f0.0) goto (32|M0)
-// ASM-SAME: 32
-// ASM-NEXT: /* [0010]
-// ASM-SAME: goto (32|M0)
-// ASM-NEXT: /* [0020]
-// ASM-SAME: join (32|M0)
-// ASM-NEXT: /* [0030]
-// ASM-SAME: join (32|M0)
+// ASM: [[ENTRY:L[0-9]+]]:
+// ASM-NEXT: (~f0.0) goto (32|M0) [[THEN:L[0-9]+]] [[THEN]]
+// ASM-NEXT: [[ELSE:L[0-9]+]]:
+// ASM-NEXT: goto (32|M0) [[THEN]] [[EXIT:L[0-9]+]]
+// ASM-NEXT: [[THEN]]:
+// ASM-NEXT: join (32|M0) [[EXIT]]
+// ASM-NEXT: [[EXIT]]:
+// ASM-NEXT: join (32|M0) [[END:L[0-9]+]]
