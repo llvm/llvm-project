@@ -4736,7 +4736,7 @@ def HLSLControlFlowHint: StmtAttr {
   let Subjects = SubjectList<[IfStmt, SwitchStmt],
                               ErrorDiag, "'if' and 'switch' statements">;
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLControlFlowHintDocs];
 }
 
 def CapturedRecord : InheritableAttr {
@@ -5227,24 +5227,6 @@ def HLSLShader : InheritableAttr {
 }];
 }
 
-def HLSLIsArray : TypeAttr {
-  let Spellings = [CXX11<"hlsl", "is_array">];
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
-def HLSLIsMultiSampled : TypeAttr {
-  let Spellings = [CXX11<"hlsl", "is_ms">];
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
-def HLSLROV : TypeAttr {
-  let Spellings = [CXX11<"hlsl", "is_rov">];
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
 def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
   let LangOpts = [HLSL];
@@ -5253,7 +5235,7 @@ def HLSLResourceClass : TypeAttr {
       /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
       ["SRV", "UAV", "CBuffer", "Sampler"],
       /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLResourceClassDocs];
 }
 
 def HLSLResourceDimension : TypeAttr {
@@ -5264,26 +5246,44 @@ def HLSLResourceDimension : TypeAttr {
       /*is_string=*/true, ["Unknown", "1D", "2D", "3D", "Cube"],
       ["Unknown", "Dim1D", "Dim2D", "Dim3D", "Cube"],
       /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLResourceDimensionDocs];
 }
 
 def HLSLContainedType : TypeAttr {
   let Spellings = [CXX11<"hlsl", "contained_type">];
   let LangOpts = [HLSL];
   let Args = [TypeArgument<"Type", /*opt=*/0>];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLContainedTypeDocs];
 }
 
 def HLSLRawBuffer : TypeAttr {
   let Spellings = [CXX11<"hlsl", "raw_buffer">];
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLRawBufferDocs];
+}
+
+def HLSLIsArray : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsArrayDocs];
+}
+
+def HLSLIsMultiSampled : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_ms">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsMultiSampledDocs];
+}
+
+def HLSLIsROV : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_rov">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLIsROVDocs];
 }
 
 def HLSLIsCounter : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_counter">];
   let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
+  let Documentation = [HLSLIsCounterDocs];
 }
 
 def HLSLGroupSharedAddressSpace : TypeAttr {
