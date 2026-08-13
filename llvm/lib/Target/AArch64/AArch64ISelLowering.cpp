@@ -13862,13 +13862,21 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 
     unsigned Limit = OptForSize ? 1 : 2;
 
-    if (!OptForSize && Insn.size() > Limit && Subtarget->hasFuseLiterals()) {
-      // Relax the limit based on subtarget fusion capabilites
+    if (!OptForSize && Insn.size() > Limit) {
+      // Relax the limit based on subtarget fusion capabilites.
+      //
+      // The dependencies that macro-fusion requires hold by construction here.
+      // AArch64ExpandPseudoInsts writes the pseudo's dest throughout the
+      // expansion, which gives WAW, and the 2nd instruction of a fused pair is
+      // always a MOVK, whose source is tied to its dest, which gives RAW.
       for (unsigned I = 0; I + 1 < Insn.size(); ++I) {
         const AArch64_IMM::ImmInsnModel &First = Insn[I];
         const AArch64_IMM::ImmInsnModel &Second = Insn[I + 1];
-        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2, Second.Opcode,
-                                       Second.Op2)) {
+        if ((Subtarget->hasFuseLiterals() &&
+             Subtarget->fusesMOVImmPair(First.Opcode, First.Op2, Second.Opcode,
+                                        Second.Op2)) ||
+            (Subtarget->hasFuseMovzMovk() &&
+             Subtarget->fusesMovzMovkPair(First.Opcode, Second.Opcode))) {
           ++Limit;
           // An instruction can only be fused once, so the 2nd one of the pair
           // cannot start another pair and is skipped.

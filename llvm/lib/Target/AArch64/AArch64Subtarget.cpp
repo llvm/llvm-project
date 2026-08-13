@@ -698,3 +698,37 @@ bool AArch64Subtarget::fusesMOVImmPair(const MachineInstr *FirstMI,
                              FirstMI ? getMOVKShiftImm(*FirstMI) : 0,
                              SecondMI.getOpcode(), getMOVKShiftImm(SecondMI));
 }
+
+/// \p HasFirst is false when the 1st instruction is a wildcard.
+static bool fusesMovzMovkPairImpl(const AArch64Subtarget &ST, bool HasFirst,
+                                  unsigned FirstOpc, unsigned SecondOpc) {
+  assert(ST.hasFuseMovzMovk() && "the subtarget doesn't fuse MOVZ+MOVK");
+
+  switch (SecondOpc) {
+  case AArch64::MOVKWi:
+  case AArch64::MOVKXi:
+    // Assume the 1st instr to be a wildcard if it is unspecified.
+    if (!HasFirst)
+      return true;
+
+    switch (FirstOpc) {
+    case AArch64::MOVZWi:
+    case AArch64::MOVZXi:
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool AArch64Subtarget::fusesMovzMovkPair(unsigned FirstOpc,
+                                         unsigned SecondOpc) const {
+  return fusesMovzMovkPairImpl(*this, /*HasFirst=*/true, FirstOpc, SecondOpc);
+}
+
+bool AArch64Subtarget::fusesMovzMovkPair(const MachineInstr *FirstMI,
+                                         const MachineInstr &SecondMI) const {
+  return fusesMovzMovkPairImpl(*this, FirstMI != nullptr,
+                               FirstMI ? FirstMI->getOpcode() : 0,
+                               SecondMI.getOpcode());
+}

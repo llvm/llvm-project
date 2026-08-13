@@ -265,7 +265,8 @@ public:
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
            hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
            hasFuseFCmpFCSel() || hasFuseCmpCSet() || hasFuseAdrpAdd() ||
-           hasFuseLiterals() || hasFuseAppleSMECompute() || hasFuseFMinFMax();
+           hasFuseLiterals() || hasFuseMovzMovk() || hasFuseAppleSMECompute() ||
+           hasFuseFMinFMax();
   }
 
   /// Return true if the subtarget fuses this pair of move immediate
@@ -278,6 +279,22 @@ public:
   /// tells whether the 2nd one can be fused at all.
   bool fusesMOVImmPair(const MachineInstr *FirstMI,
                        const MachineInstr &SecondMI) const;
+
+  /// Return true if the subtarget fuses this opcode pair as MOVZ+MOVK
+  /// instructions.
+  ///
+  /// This checks the opcode shape only. The caller is
+  /// responsible for establishing that the pair writes the same register.
+  bool fusesMovzMovkPair(unsigned FirstOpc, unsigned SecondOpc) const;
+
+  /// Return true if the subtarget fuses this pair as MOVZ+MOVK
+  /// instructions. The 1st instruction is a wildcard when it is nullptr, which
+  /// tells whether the 2nd one can be fused at all.
+  ///
+  /// This checks the opcode shape only. The caller is
+  /// responsible for establishing that the pair writes the same register.
+  bool fusesMovzMovkPair(const MachineInstr *FirstMI,
+                         const MachineInstr &SecondMI) const;
 
   unsigned getEpilogueVectorizationMinVF() const {
     return EpilogueVectorizationMinVF;

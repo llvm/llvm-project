@@ -27,6 +27,7 @@ STATISTIC(NumFusedAES, "Number of AES fusions");
 STATISTIC(NumFusedCryptoEOR, "Number of crypto-EOR fusions");
 STATISTIC(NumFusedAdrpAdd, "Number of ADRP-ADD fusions");
 STATISTIC(NumFusedLiterals, "Number of literal-generation fusions");
+STATISTIC(NumFusedMovzMovk, "Number of MOVZ-MOVK fusions");
 STATISTIC(NumFusedAddress, "Number of address-generation load/store fusions");
 STATISTIC(NumFusedCmpCSel, "Number of compare-CSEL fusions");
 STATISTIC(NumFusedFCmpFCSel, "Number of FP-compare-FCSEL fusions");
@@ -643,6 +644,24 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
   return mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
 }
 
+// MOVZ + MOVK.
+static bool isMovzMovkPair(const MachineInstr *FirstMI,
+                           const MachineInstr &SecondMI,
+                           const TargetRegisterInfo *TRI,
+                           const AArch64Subtarget &ST) {
+  if (!ST.fusesMovzMovkPair(FirstMI, SecondMI))
+    return false;
+
+  // The opcode check above only establishes the shape of the pair. MOVZ+MOVK
+  // should be clustered only when both write the same register. Architecturally
+  // a RAW dependency between MOVZ and MOVK would already imply WAW, because
+  // both have a single register operand.
+  assert(
+      (FirstMI == nullptr || mayHaveWAWDependency(*FirstMI, SecondMI, TRI)) &&
+      "read-after-write should have implied write-after-write for MOVZ+MOVK");
+  return true;
+}
+
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
@@ -693,6 +712,10 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   }
   if (ST.hasFuseLiterals() && ST.fusesMOVImmPair(FirstMI, SecondMI)) {
     ++NumFusedLiterals;
+    return true;
+  }
+  if (ST.hasFuseMovzMovk() && isMovzMovkPair(FirstMI, SecondMI, TRI, ST)) {
+    ++NumFusedMovzMovk;
     return true;
   }
   if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI)) {
