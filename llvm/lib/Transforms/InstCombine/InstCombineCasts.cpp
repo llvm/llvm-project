@@ -318,10 +318,8 @@ public:
 
   /// Return true if we can take the specified value and return it as type Ty
   /// without inserting any new casts and without changing the value of the
-  /// common low bits. If NoSignedWrap is true then the calculation of V must
-  /// not involve arithmetic that could performed signed wrapping.
-  [[nodiscard]] static bool canEvaluateSExtd(Value *V, Type *Ty,
-                                             bool NoSignedWrap = false);
+  /// common low bits.
+  [[nodiscard]] static bool canEvaluateSExtd(Value *V, Type *Ty);
 
 private:
   /// Constants and extensions/truncates from the destination type are always
@@ -460,10 +458,8 @@ private:
                                           unsigned &BitsToClear,
                                           InstCombinerImpl &IC,
                                           Instruction *CxtI);
-  [[nodiscard]] bool canEvaluateSExtdImpl(Value *V, Type *Ty,
-                                          bool NoSignedWrap);
-  [[nodiscard]] bool canEvaluateSExtdPred(Value *V, Type *Ty,
-                                          bool NoSignedWrap);
+  [[nodiscard]] bool canEvaluateSExtdImpl(Value *V, Type *Ty);
+  [[nodiscard]] bool canEvaluateSExtdPred(Value *V, Type *Ty);
 
   /// A bookkeeping map to memorize an already made decision for a traversed
   /// value.
@@ -1606,15 +1602,14 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (SrcTy->isIntOrIntVectorTy(1) && Zext.hasNonNeg())
     return replaceInstUsesWith(Zext, Constant::getNullValue(Zext.getType()));
 
-  // zext nneg means Src is non-negative and we can treat this as an sext, and
-  // if no signed wrapping occurs we know that Src evaluated as a signed
-  // DestTy will also be non-negative. Evaluating as a signed type means that
-  // any constant operands will be sign-extended instead of zero-extended,
-  // meaning they remain in the range of a signed SrcTy so we won't need to
-  // clear any high bits.
+  // zext nneg means Src is non-negative and we can treat this as an sext.
+  // Evaluating as a signed type means that any constant operands will be
+  // sign-extended instead of zero-extended, which means that, if the
+  // expression tree contains only no-signed-wrap arithmetic, the sign bits in
+  // the final result should be enough that we avoid having to clear the high
+  // bits.
   bool EvaluateAsSigned =
-      Zext.hasNonNeg() && TypeEvaluationHelper::canEvaluateSExtd(
-                              Src, DestTy, /*NoSignedWrap=*/true);
+      Zext.hasNonNeg() && TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy);
 
   // Try to extend the entire expression tree to the wide destination type.
   unsigned BitsToClear = 0;
@@ -1629,7 +1624,6 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
                   " to avoid zero extend: "
                << Zext << '\n');
-
     Value *Res = EvaluateInDifferentType(Src, DestTy, EvaluateAsSigned);
     assert(Res->getType() == DestTy);
 
@@ -1853,35 +1847,22 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
 ///
 /// This function works on both vectors and scalars.
 ///
-bool TypeEvaluationHelper::canEvaluateSExtd(Value *V, Type *Ty,
-                                            bool NoSignedWrap) {
+bool TypeEvaluationHelper::canEvaluateSExtd(Value *V, Type *Ty) {
   TypeEvaluationHelper TYH;
-  return TYH.canEvaluateSExtdImpl(V, Ty, NoSignedWrap) &&
-         TYH.allPendingVisited();
+  return TYH.canEvaluateSExtdImpl(V, Ty) && TYH.allPendingVisited();
 }
 
-bool TypeEvaluationHelper::canEvaluateSExtdImpl(Value *V, Type *Ty,
-                                                bool NoSignedWrap) {
-  return canEvaluate(V, Ty, [this, NoSignedWrap](Value *V, Type *Ty) {
-    return canEvaluateSExtdPred(V, Ty, NoSignedWrap);
+bool TypeEvaluationHelper::canEvaluateSExtdImpl(Value *V, Type *Ty) {
+  return canEvaluate(V, Ty, [this](Value *V, Type *Ty) {
+    return canEvaluateSExtdPred(V, Ty);
   });
 }
 
-bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty,
-                                                bool NoSignedWrap) {
+bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty) {
   assert(V->getType()->getScalarSizeInBits() < Ty->getScalarSizeInBits() &&
          "Can't sign extend type to a smaller type");
 
   auto *I = cast<Instruction>(V);
-
-  // If signed wrapping is forbidden then check that all instructions that could
-  // potentially wrap have the nsw flag.
-  if (NoSignedWrap &&
-      (isa<OverflowingBinaryOperator>(I) ||
-       I->getOpcode() == Instruction::Trunc) &&
-      !I->hasNoSignedWrap())
-    return false;
-
   switch (I->getOpcode()) {
   case Instruction::SExt:  // sext(sext(x)) -> sext(x)
   case Instruction::ZExt:  // sext(zext(x)) -> zext(x)
@@ -1894,15 +1875,15 @@ bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty,
   case Instruction::Sub:
   case Instruction::Mul:
     // These operators can all arbitrarily be extended if their inputs can.
-    return canEvaluateSExtdImpl(I->getOperand(0), Ty, NoSignedWrap) &&
-           canEvaluateSExtdImpl(I->getOperand(1), Ty, NoSignedWrap);
+    return canEvaluateSExtdImpl(I->getOperand(0), Ty) &&
+           canEvaluateSExtdImpl(I->getOperand(1), Ty);
 
     // case Instruction::Shl:   TODO
     // case Instruction::LShr:  TODO
 
   case Instruction::Select:
-    return canEvaluateSExtdImpl(I->getOperand(1), Ty, NoSignedWrap) &&
-           canEvaluateSExtdImpl(I->getOperand(2), Ty, NoSignedWrap);
+    return canEvaluateSExtdImpl(I->getOperand(1), Ty) &&
+           canEvaluateSExtdImpl(I->getOperand(2), Ty);
 
   case Instruction::PHI: {
     // We can change a phi if we can change all operands.  Note that we never
@@ -1910,7 +1891,7 @@ bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty,
     // chain loops.
     PHINode *PN = cast<PHINode>(I);
     for (Value *IncValue : PN->incoming_values())
-      if (!canEvaluateSExtdImpl(IncValue, Ty, NoSignedWrap))
+      if (!canEvaluateSExtdImpl(IncValue, Ty))
         return false;
     return true;
   }
