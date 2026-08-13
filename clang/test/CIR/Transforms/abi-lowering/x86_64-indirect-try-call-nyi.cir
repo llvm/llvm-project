@@ -12,10 +12,9 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  // A narrow integer argument needs signext, so unlike @pass_through in
-  // x86_64-indirect-try-call.cir this call does not already carry its wire
-  // form.  CIRABIRewriteContext cannot rebuild a cir.try_call, so it is
-  // reported.
+  // A narrow integer argument needs signext, so this call does not already
+  // carry its wire form.  CIRABIRewriteContext cannot rebuild a cir.try_call,
+  // so it is reported.
   cir.func @needs_rewrite(%arg0: !cir.ptr<!cir.func<(!s8i) -> !s32i>>,
                           %arg1: !s8i) {
     %0 = cir.try_call %arg0(%arg1) ^bb1, ^bb2

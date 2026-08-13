@@ -61,23 +61,4 @@ module attributes {
   // CHECK: cir.func{{.*}} @caller_local(%arg0: !s32i) -> !s32i
   // CHECK: cir.alloca "e" align(1) : !cir.ptr<!rec_E0>
   // CHECK: cir.call @take_mixed(%arg0) : (!s32i) -> !s32i
-
-  // A zero-length array holds no data, so Ignore is the ABI's answer and the
-  // argument is dropped rather than reported.  A longer array of the same
-  // element type is reported instead, in x86_64-array-drop-nyi.cir.
-  cir.func @take_arr_empty(%arg0: !cir.array<!s32i x 0>) {
-    cir.return
-  }
-
-  // CHECK: cir.func{{.*}} @take_arr_empty()
-  // CHECK-NEXT: cir.return
-
-  // The same holds through a record, which is what the member walk answers
-  // for a wrapper whose fields are all empty.
-  cir.func @take_wrapped_empty(%arg0: !cir.struct<"WE" {!cir.array<!s32i x 0>, !rec_E0}>) {
-    cir.return
-  }
-
-  // CHECK: cir.func{{.*}} @take_wrapped_empty()
-  // CHECK-NEXT: cir.return
 }

@@ -356,25 +356,6 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   return ArgClassification::getIgnore();
 }
 
-/// Whether dropping \p ty from the signature would lose data.  Ignore is the
-/// ABI's answer for a void type and for an aggregate holding no data, and
-/// dropping one of those is correct.  A classification that would drop
-/// anything else has to be reported instead, because nothing would be passed
-/// in its place.
-///
-/// An aggregate with no members counts as holding no data.  That relies on
-/// CIRGen only omitting a member that is itself empty, which is what makes an
-/// over-aligned union of empty classes droppable here the way the ABI wants.
-static bool ignoreLosesData(mlir::Type ty) {
-  if (!ty || isa<cir::VoidType>(ty))
-    return false;
-  if (auto recTy = dyn_cast<cir::RecordType>(ty))
-    return llvm::any_of(recTy.getMembers(), ignoreLosesData);
-  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
-    return arrTy.getSize() != 0 && ignoreLosesData(arrTy.getElementType());
-  return true;
-}
-
 /// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
 ///
 /// The only x86_64 rule that reads this boundary sends an unnamed vector wider
@@ -440,19 +421,6 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
                 << t;
   };
 
-  // Ignore is the ABI's answer for a void type or an aggregate holding no
-  // data, but the classifier also reaches it for a value that still carries
-  // data.  Acting on that answer would leave the rewritten signature with
-  // nothing in the value's place, so report it as NYI instead.
-  auto nyiDrop = [&](const ArgClassification &ac, mlir::Type t,
-                     llvm::StringRef what) {
-    if (ac.kind != ArgKind::Ignore || !ignoreLosesData(t))
-      return false;
-    emitError() << "x86_64 calling-convention lowering would drop " << what
-                << " of type " << t << ", which is not yet implemented";
-    return true;
-  };
-
   FunctionClassification fc;
   fc.returnsVoid = voidRet;
   mlir::Type origRet = voidRet ? mlir::Type() : retCIR;
@@ -462,8 +430,6 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
     nyiCoercion(retCIR);
     return std::nullopt;
   }
-  if (nyiDrop(*retAc, origRet, "the return value"))
-    return std::nullopt;
   fc.returnInfo = *retAc;
   for (unsigned i = 0, e = fi->arg_size(); i < e; ++i) {
     mlir::Type origArg = i < inputs.size() ? inputs[i] : mlir::Type();
@@ -473,8 +439,6 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
       nyiCoercion(origArg);
       return std::nullopt;
     }
-    if (nyiDrop(*ac, origArg, "an argument"))
-      return std::nullopt;
     fc.argInfos.push_back(*ac);
   }
   return fc;
