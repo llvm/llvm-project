@@ -1642,28 +1642,16 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // (or (and X, C1), (and (or X, Y), C2)) -> (or (and X, C1|C2), (and Y, C2))
     // TODO: Use SimplifyMultipleUseDemandedBits to peek through masks.
-    if (Op0.getOpcode() == ISD::AND && Op1.getOpcode() == ISD::AND &&
-        Op0->hasOneUse() && Op1->hasOneUse()) {
-      // Attempt to match all commutations - m_c_Or would've been useful!
-      for (int I = 0; I != 2; ++I) {
-        SDValue X = Op.getOperand(I).getOperand(0);
-        SDValue C1 = Op.getOperand(I).getOperand(1);
-        SDValue Alt = Op.getOperand(1 - I).getOperand(0);
-        SDValue C2 = Op.getOperand(1 - I).getOperand(1);
-        if (Alt.getOpcode() == ISD::OR) {
-          for (int J = 0; J != 2; ++J) {
-            if (X == Alt.getOperand(J)) {
-              SDValue Y = Alt.getOperand(1 - J);
-              if (SDValue C12 = TLO.DAG.FoldConstantArithmetic(ISD::OR, dl, VT,
-                                                               {C1, C2})) {
-                SDValue MaskX = TLO.DAG.getNode(ISD::AND, dl, VT, X, C12);
-                SDValue MaskY = TLO.DAG.getNode(ISD::AND, dl, VT, Y, C2);
-                return TLO.CombineTo(
-                    Op, TLO.DAG.getNode(ISD::OR, dl, VT, MaskX, MaskY));
-              }
-            }
-          }
-        }
+    SDValue X, Y, C1, C2;
+    if (sd_match(Op, m_Or(m_OneUse(m_And(m_Value(X), m_Value(C1))),
+                          m_OneUse(m_And(m_Or(m_Deferred(X), m_Value(Y)),
+                                         m_Value(C2)))))) {
+      if (SDValue C12 =
+              TLO.DAG.FoldConstantArithmetic(ISD::OR, dl, VT, {C1, C2})) {
+        SDValue MaskX = TLO.DAG.getNode(ISD::AND, dl, VT, X, C12);
+        SDValue MaskY = TLO.DAG.getNode(ISD::AND, dl, VT, Y, C2);
+        return TLO.CombineTo(Op,
+                             TLO.DAG.getNode(ISD::OR, dl, VT, MaskX, MaskY));
       }
     }
 
@@ -13862,6 +13850,51 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
                             DAG.getZExtOrTrunc(Max, DL, StepVT));
 
   return DAG.getZExtOrTrunc(Sub, DL, VT);
+}
+
+SDValue TargetLowering::expandVectorMatch(SDNode *N, SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue Source = N->getOperand(0);
+  SDValue Needle = N->getOperand(1);
+  SDValue Mask = N->getOperand(2);
+  EVT SourceVT = Source.getValueType();
+  EVT NeedleVT = Needle.getValueType();
+  EVT ResVT = N->getValueType(0);
+  EVT CmpVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SourceVT);
+
+  assert(NeedleVT.isFixedLengthVector() && "Needle must be a fixed vector");
+
+  SDValue Ret = DAG.getConstant(0, DL, CmpVT);
+  EVT NeedleEltVT = NeedleVT.getVectorElementType();
+  for (unsigned I = 0, E = NeedleVT.getVectorNumElements(); I != E; ++I) {
+    SDValue Splat;
+    if (NeedleVT == SourceVT) {
+      // Prefer a shuffle over scalar extracts + splat for fixed vectors.
+      Splat = DAG.getVectorShuffle(
+          SourceVT, DL, Needle, DAG.getUNDEF(SourceVT),
+          SmallVector<int>(NeedleVT.getVectorNumElements(), I));
+    } else {
+      SDValue NeedleElt = DAG.getExtractVectorElt(DL, NeedleEltVT, Needle, I);
+      Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, SourceVT, NeedleElt);
+    }
+    SDValue Cmp = DAG.getSetCC(DL, CmpVT, Source, Splat, ISD::SETEQ);
+    Ret = DAG.getNode(ISD::OR, DL, CmpVT, Ret, Cmp);
+  }
+
+  EVT UseVT = ResVT;
+  // If the result is immediately truncated, only extend to that type (to avoid
+  // unnecessary sign/zero extends).
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::TRUNCATE)
+    UseVT = N->user_begin()->getValueType(0);
+
+  Mask = DAG.getBoolExtOrTrunc(Mask, DL, UseVT, Mask.getValueType());
+  Ret = DAG.getBoolExtOrTrunc(Ret, DL, UseVT, Ret.getValueType());
+
+  Ret = DAG.getNode(ISD::AND, DL, UseVT, Ret, Mask);
+  if (UseVT != ResVT)
+    Ret = DAG.getNode(ISD::ANY_EXTEND, DL, ResVT, Ret);
+  return Ret;
 }
 
 SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,

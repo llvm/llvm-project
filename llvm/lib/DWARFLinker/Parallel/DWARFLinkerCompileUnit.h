@@ -98,6 +98,9 @@ public:
   /// Returns stage of overall processing.
   Stage getStage() const { return Stage; }
 
+  /// Returns raw DW_AT_language of the input compile unit.
+  std::optional<uint16_t> getLanguage() const { return Language; }
+
   /// Set stage of overall processing.
   void setStage(Stage Stage) { this->Stage = Stage; }
 

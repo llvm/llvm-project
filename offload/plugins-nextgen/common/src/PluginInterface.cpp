@@ -1169,14 +1169,15 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr,
   return Err;
 }
 
-Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
+Error PluginContextTy::initAsyncInfo(GenericDeviceTy &Device,
+                                     __tgt_async_info **AsyncInfoPtr) {
   assert(AsyncInfoPtr && "Invalid async info");
 
   *AsyncInfoPtr = new __tgt_async_info();
 
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr);
+  AsyncInfoWrapperTy AsyncInfoWrapper(Device, *AsyncInfoPtr);
 
-  auto Err = initAsyncInfoImpl(AsyncInfoWrapper);
+  auto Err = initAsyncInfoImpl(Device, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
@@ -1813,20 +1814,6 @@ int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
 void GenericPluginTy::set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-}
-
-int32_t GenericPluginTy::init_async_info(int32_t DeviceId,
-                                         __tgt_async_info **AsyncInfoPtr) {
-  assert(AsyncInfoPtr && "Invalid async info");
-
-  auto Err = getDevice(DeviceId).initAsyncInfo(AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to initialize async info at " << *AsyncInfoPtr
-             << " on device " << DeviceId << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
 }
 
 int32_t GenericPluginTy::set_device_identifier(int32_t UserId,

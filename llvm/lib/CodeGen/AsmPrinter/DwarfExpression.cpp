@@ -394,9 +394,10 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // Record the tag offset here because addExpression won't see a consumed
   // operation.
   while (auto Op = ExprCursor.peek()) {
-    if (Op->getOp() != dwarf::DW_OP_LLVM_tag_offset)
+    auto Tag = dyn_cast<DIExpression::TagOffsetOp>(*Op);
+    if (!Tag)
       break;
-    TagOffset = Op->getArg(0);
+    TagOffset = Tag.getTagOffset();
     ExprCursor.take();
   }
 
@@ -406,30 +407,30 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   assert(!Reg.isSubRegister() && "full register expected");
 
   // Pattern-match combinations for which more efficient representations exist.
-  // [Reg, DW_OP_plus_uconst, Offset] --> [DW_OP_breg, Offset].
-  if (Op && (Op->getOp() == dwarf::DW_OP_plus_uconst)) {
-    uint64_t Offset = Op->getArg(0);
-    uint64_t IntMax = static_cast<uint64_t>(std::numeric_limits<int>::max());
-    if (Offset <= IntMax) {
-      SignedOffset = Offset;
-      ExprCursor.take();
-    }
-  }
-
-  // [Reg, DW_OP_constu, Offset, DW_OP_plus]  --> [DW_OP_breg, Offset]
-  // [Reg, DW_OP_constu, Offset, DW_OP_minus] --> [DW_OP_breg,-Offset]
-  // If Reg is a subregister we need to mask it out before subtracting.
-  if (Op && Op->getOp() == dwarf::DW_OP_constu) {
-    uint64_t Offset = Op->getArg(0);
-    uint64_t IntMax = static_cast<uint64_t>(std::numeric_limits<int>::max());
-    auto N = ExprCursor.peekNext();
-    if (N && N->getOp() == dwarf::DW_OP_plus && Offset <= IntMax) {
-      SignedOffset = Offset;
-      ExprCursor.consume(2);
-    } else if (N && N->getOp() == dwarf::DW_OP_minus &&
-               !SubRegisterSizeInBits && Offset <= IntMax + 1) {
-      SignedOffset = -static_cast<int64_t>(Offset);
-      ExprCursor.consume(2);
+  if (Op) {
+    const uint64_t IntMax =
+        static_cast<uint64_t>(std::numeric_limits<int>::max());
+    // [Reg, DW_OP_plus_uconst, Offset] --> [DW_OP_breg, Offset].
+    if (auto PlusUconst = dyn_cast<DIExpression::PlusUconstOp>(*Op)) {
+      uint64_t Offset = PlusUconst.getOffset();
+      if (Offset <= IntMax) {
+        SignedOffset = Offset;
+        ExprCursor.take();
+      }
+    } else if (auto Constant = dyn_cast<DIExpression::ConstuOp>(*Op)) {
+      // [Reg, DW_OP_constu, Offset, DW_OP_plus]  --> [DW_OP_breg, Offset]
+      // [Reg, DW_OP_constu, Offset, DW_OP_minus] --> [DW_OP_breg,-Offset]
+      // If Reg is a subregister we need to mask it out before subtracting.
+      uint64_t Offset = Constant.getValue();
+      auto N = ExprCursor.peekNext();
+      if (N && N->getOp() == dwarf::DW_OP_plus && Offset <= IntMax) {
+        SignedOffset = Offset;
+        ExprCursor.consume(2);
+      } else if (N && N->getOp() == dwarf::DW_OP_minus &&
+                 !SubRegisterSizeInBits && Offset <= IntMax + 1) {
+        SignedOffset = -static_cast<int64_t>(Offset);
+        ExprCursor.consume(2);
+      }
     }
   }
 
@@ -466,9 +467,9 @@ void DwarfExpression::beginEntryValueExpression(
     DIExpressionCursor &ExprCursor) {
   auto Op = ExprCursor.take();
   (void)Op;
-  assert(Op && Op->getOp() == dwarf::DW_OP_LLVM_entry_value);
+  assert(Op && isa<DIExpression::EntryValueOp>(*Op));
   assert(!IsEmittingEntryValue && "Already emitting entry value?");
-  assert(Op->getArg(0) == 1 &&
+  assert(cast<DIExpression::EntryValueOp>(*Op).getNumOperations() == 1 &&
          "Can currently only emit entry values covering a single operation");
 
   SavedLocationKind = LocationKind;
@@ -554,7 +555,7 @@ bool DwarfExpression::addExpression(
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
 
-  std::optional<DIExpression::ExprOperand> PrevConvertOp;
+  std::optional<DIExpression::ConvertOp> PrevConvertOp;
 
   while (ExprCursor) {
     auto Op = ExprCursor.take();
@@ -570,14 +571,15 @@ bool DwarfExpression::addExpression(
 
     switch (OpNum) {
     case dwarf::DW_OP_LLVM_arg:
-      if (!InsertArg(Op->getArg(0), ExprCursor)) {
+      if (!InsertArg(cast<DIExpression::ArgOp>(*Op).getIndex(), ExprCursor)) {
         LocationKind = Unknown;
         return false;
       }
       break;
     case dwarf::DW_OP_LLVM_fragment: {
-      unsigned SizeInBits = Op->getArg(1);
-      unsigned FragmentOffset = Op->getArg(0);
+      auto Fragment = cast<DIExpression::FragmentOp>(*Op);
+      unsigned SizeInBits = Fragment.getSizeInBits();
+      unsigned FragmentOffset = Fragment.getOffsetInBits();
       // The fragment offset must have already been adjusted by emitting an
       // empty DW_OP_piece / DW_OP_bit_piece before we emitted the base
       // location.
@@ -607,8 +609,10 @@ bool DwarfExpression::addExpression(
     }
     case dwarf::DW_OP_LLVM_extract_bits_sext:
     case dwarf::DW_OP_LLVM_extract_bits_zext: {
-      unsigned SizeInBits = Op->getArg(1);
-      unsigned BitOffset = Op->getArg(0);
+      auto Extract = cast<DIExpression::ExtractBitsOp>(*Op);
+      unsigned SizeInBits = Extract.getSizeInBits();
+      unsigned BitOffset = Extract.getOffsetInBits();
+      bool IsSigned = Extract.isSigned();
       unsigned DerefSize = 0;
       //  Operations are done in the DWARF "generic type" whose size
       // is the size of a pointer.
@@ -630,7 +634,7 @@ bool DwarfExpression::addExpression(
       // If a dereference was emitted for an unsigned value, and
       // there's no bit offset, then a bit of optimization is
       // possible.
-      if (OpNum == dwarf::DW_OP_LLVM_extract_bits_zext && BitOffset == 0) {
+      if (!IsSigned && BitOffset == 0) {
         if (8 * DerefSize == SizeInBits) {
           // The correct value is already on the stack.
         } else {
@@ -653,9 +657,7 @@ bool DwarfExpression::addExpression(
         if (RightShift) {
           emitOp(dwarf::DW_OP_constu);
           emitUnsigned(RightShift);
-          emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext
-                     ? dwarf::DW_OP_shra
-                     : dwarf::DW_OP_shr);
+          emitOp(IsSigned ? dwarf::DW_OP_shra : dwarf::DW_OP_shr);
         }
       }
 
@@ -667,7 +669,7 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_plus_uconst:
       assert(!isRegisterLocation());
       emitOp(dwarf::DW_OP_plus_uconst);
-      emitUnsigned(Op->getArg(0));
+      emitUnsigned(cast<DIExpression::PlusUconstOp>(*Op).getOffset());
       break;
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
@@ -707,7 +709,7 @@ bool DwarfExpression::addExpression(
       break;
     case dwarf::DW_OP_constu:
       assert(!isRegisterLocation());
-      emitConstu(Op->getArg(0));
+      emitConstu(cast<DIExpression::ConstuOp>(*Op).getValue());
       break;
     case dwarf::DW_OP_consts:
       assert(!isRegisterLocation());
@@ -715,8 +717,10 @@ bool DwarfExpression::addExpression(
       emitSigned(Op->getArg(0));
       break;
     case dwarf::DW_OP_LLVM_convert: {
-      unsigned BitSize = Op->getArg(0);
-      dwarf::TypeKind Encoding = static_cast<dwarf::TypeKind>(Op->getArg(1));
+      auto Convert = cast<DIExpression::ConvertOp>(*Op);
+      unsigned BitSize = Convert.getBitSize();
+      dwarf::TypeKind Encoding =
+          static_cast<dwarf::TypeKind>(Convert.getEncoding());
       if (DwarfVersion >= 5 && CU.getDwarfDebug().useOpConvert()) {
         emitOp(dwarf::DW_OP_convert);
         // If targeting a location-list; simply emit the index into the raw
@@ -727,14 +731,14 @@ bool DwarfExpression::addExpression(
         // DIE value list.
         emitBaseTypeRef(getOrCreateBaseType(BitSize, Encoding));
       } else {
-        if (PrevConvertOp && PrevConvertOp->getArg(0) < BitSize) {
+        if (PrevConvertOp && PrevConvertOp->getBitSize() < BitSize) {
           if (Encoding == dwarf::DW_ATE_signed)
-            emitLegacySExt(PrevConvertOp->getArg(0));
+            emitLegacySExt(PrevConvertOp->getBitSize());
           else if (Encoding == dwarf::DW_ATE_unsigned)
-            emitLegacyZExt(PrevConvertOp->getArg(0));
+            emitLegacyZExt(PrevConvertOp->getBitSize());
           PrevConvertOp = std::nullopt;
         } else {
-          PrevConvertOp = Op;
+          PrevConvertOp = Convert;
         }
       }
       break;
@@ -755,7 +759,7 @@ bool DwarfExpression::addExpression(
       emitData1(Op->getArg(0));
       break;
     case dwarf::DW_OP_LLVM_tag_offset:
-      TagOffset = Op->getArg(0);
+      TagOffset = cast<DIExpression::TagOffsetOp>(*Op).getTagOffset();
       break;
     case dwarf::DW_OP_regx:
       emitOp(dwarf::DW_OP_regx);

@@ -168,7 +168,7 @@ TwoInts case5(int2 TwoVals) {
 // Case 6: Initialization from a scalarized structure of different type with
 // different element types.
 // CHECK-LABEL: define hidden void @_Z5case69TwoFloats(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef align 1 dead_on_return [[TF4:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TF4:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
@@ -195,7 +195,7 @@ TwoInts case6(TwoFloats TF4) {
 // Case 7: Initialization of a complex structure, with bogus braces and element
 // conversions from a collection of scalar values, and structures.
 // CHECK-LABEL: define hidden void @_Z5case77TwoIntsS_i9TwoFloatsS0_S0_S0_(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_DOGGO:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef align 1 dead_on_return [[TI1:%.*]], ptr noundef align 1 dead_on_return [[TI2:%.*]], i32 noundef [[VAL:%.*]], ptr noundef align 1 dead_on_return [[TF1:%.*]], ptr noundef align 1 dead_on_return [[TF2:%.*]], ptr noundef align 1 dead_on_return [[TF3:%.*]], ptr noundef align 1 dead_on_return [[TF4:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_DOGGO:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TI1:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TI2:%.*]], i32 noundef [[VAL:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TF1:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TF2:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TF3:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TF4:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
@@ -274,7 +274,7 @@ Doggo case7(TwoInts TI1, TwoInts TI2, int Val, TwoFloats TF1, TwoFloats TF2,
 // Case 8: Initialization of a structure from a different structure with
 // significantly different element types and grouping.
 // CHECK-LABEL: define hidden void @_Z5case85Doggo(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_ANIMALBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef align 1 dead_on_return [[D1:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_ANIMALBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(56) [[D1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
@@ -365,7 +365,7 @@ AnimalBits case8(Doggo D1) {
 // structures from different layouts, different component groupings, with no
 // top-level bracing separation.
 // CHECK-LABEL: define hidden void @_Z5case95Doggo10AnimalBits(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_ZOO:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef align 1 dead_on_return [[D1:%.*]], ptr noundef align 1 dead_on_return [[A1:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_ZOO:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(56) [[D1:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(60) [[A1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
@@ -788,7 +788,7 @@ Zoo case9(Doggo D1, AnimalBits A1) {
 
 // Case 10: Initialize an object with a base class from two objects.
 // CHECK-LABEL: define hidden void @_Z6case109TwoFloatsS_(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef align 1 dead_on_return [[TF1:%.*]], ptr noundef align 1 dead_on_return [[TF2:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TF1:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TF2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
@@ -899,7 +899,7 @@ SlicyBits case12(int I, int J) {
 
 // Case 13: Initialize bitfield from a struct of two ints.
 // CHECK-LABEL: define hidden void @_Z6case137TwoInts(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_SLICYBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef align 1 dead_on_return [[TI:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_SLICYBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TI:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
@@ -924,7 +924,7 @@ SlicyBits case13(TwoInts TI) {
 
 // Case 14: Initialize struct of ints from struct with bitfields.
 // CHECK-LABEL: define hidden void @_Z6case149SlicyBits(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef align 1 dead_on_return [[SB:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(2) [[SB:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
@@ -949,7 +949,7 @@ TwoInts case14(SlicyBits SB) {
 
 // Case 15: Initialize struct of floats from struct with bitfields.
 // CHECK-LABEL: define hidden void @_Z6case159SlicyBits(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef align 1 dead_on_return [[SB:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(2) [[SB:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
@@ -1086,7 +1086,7 @@ void case18() {
 
 // InitList with Struct with unnamed bitfield on RHS
 // CHECK-LABEL: define hidden void @_Z6case197Unnamed(
-// CHECK-SAME: ptr noundef align 1 dead_on_return [[U:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef align 1 dead_on_return dereferenceable(5) [[U:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[U_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
@@ -1119,7 +1119,7 @@ void case20() {
 
 // InitList with Empty Struct on RHS
 // CHECK-LABEL: define hidden void @_Z6case215Empty(
-// CHECK-SAME: ptr noundef align 1 dead_on_return [[E:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef align 1 dead_on_return dereferenceable(1) [[E:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[E_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
@@ -1147,7 +1147,7 @@ void case22() {
 
 // InitList with Struct with only unnamed bitfield on RHS
 // CHECK-LABEL: define hidden void @_Z6case2311UnnamedOnly(
-// CHECK-SAME: ptr noundef align 1 dead_on_return [[UO:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef align 1 dead_on_return dereferenceable(1) [[UO:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[UO_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
@@ -1178,7 +1178,7 @@ void case24() {
 }
 
 // CHECK-LABEL: define hidden void @_Z6case2512EmptyDerived14UnnamedDerived(
-// CHECK-SAME: ptr noundef align 1 dead_on_return [[ED:%.*]], ptr noundef align 1 dead_on_return [[UD:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef align 1 dead_on_return dereferenceable(1) [[ED:%.*]], ptr nofree noundef align 1 dead_on_return dereferenceable(1) [[UD:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[ED_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
@@ -1197,7 +1197,7 @@ void case25(EmptyDerived ED, UnnamedDerived UD) {
 }
 
 // CHECK-LABEL: define hidden void @_Z6case267TwoInts(
-// CHECK-SAME: ptr noundef align 1 dead_on_return [[TI:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TI:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TI_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
@@ -1238,7 +1238,7 @@ struct CustomResource {
 };
 
 // CHECK-LABEL: define hidden void @_Z6case2714CustomResource(
-// CHECK-SAME: ptr noundef align 1 dead_on_return [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef align 1 dead_on_return dereferenceable(4) [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
@@ -1257,7 +1257,7 @@ void case27(CustomResource a) {
 // Check cases with explicit casts
 
 // CHECK-LABEL: define hidden void @_Z6case289TwoFloats(
-// CHECK-SAME: ptr noundef align 1 dead_on_return [[TF:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef align 1 dead_on_return dereferenceable(8) [[TF:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[TF_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
@@ -1291,7 +1291,7 @@ void case28(TwoFloats TF) {
 }
 
 // CHECK-LABEL: define hidden void @_Z6case2910FourFloats(
-// CHECK-SAME: ptr noundef align 1 dead_on_return [[FF:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef align 1 dead_on_return dereferenceable(16) [[FF:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[FF_INDIRECT_ADDR:%.*]] = alloca ptr, align 4

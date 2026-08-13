@@ -1,58 +1,59 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
-// RUN:   --check-prefixes=CHECK,NATIVE_HALF \
-// RUN:   -DFNATTRS="noundef nofpclass(nan inf)" -DTARGET=dx
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
-// RUN:   -DFNATTRS="noundef nofpclass(nan inf)" -DTARGET=dx
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
-// RUN:   --check-prefixes=CHECK,NATIVE_HALF \
-// RUN:   -DFNATTRS="spir_func noundef nofpclass(nan inf)" -DTARGET=spv
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF \
-// RUN:   -DFNATTRS="spir_func noundef nofpclass(nan inf)" -DTARGET=spv
+// RUN:   -emit-llvm -O1 -o - | FileCheck %s
 
-// NATIVE_HALF: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn half @llvm.[[TARGET]].lerp.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
-// NATIVE_HALF: ret half %hlsl.lerp
-// NO_HALF: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].lerp.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
-// NO_HALF: ret float %hlsl.lerp
-half test_lerp_half(half p0) { return lerp(p0, p0, p0); }
+// CHECK-LABEL: test_lerp_half
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn half [[MUL]], %{{.*}}
+// CHECK-NEXT: ret half [[ADD]]
+half test_lerp_half(half p0, half p1, half p2) { return lerp(p0, p1, p2); }
 
-// NATIVE_HALF: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.[[TARGET]].lerp.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}}, <2 x half> %{{.*}})
-// NATIVE_HALF: ret <2 x half> %hlsl.lerp
-// NO_HALF: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].lerp.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}})
-// NO_HALF: ret <2 x float> %hlsl.lerp
-half2 test_lerp_half2(half2 p0) { return lerp(p0, p0, p0); }
+// CHECK-LABEL: test_lerp_half2
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <2 x half> [[MUL]], %{{.*}}
+// CHECK-NEXT: ret <2 x half> [[ADD]]
+half2 test_lerp_half2(half2 p0, half2 p1, half2 p2) { return lerp(p0, p1, p2); }
 
-// NATIVE_HALF: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.[[TARGET]].lerp.v3f16(<3 x half> %{{.*}}, <3 x half> %{{.*}}, <3 x half> %{{.*}})
-// NATIVE_HALF: ret <3 x half> %hlsl.lerp
-// NO_HALF: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].lerp.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}}, <3 x float> %{{.*}})
-// NO_HALF: ret <3 x float> %hlsl.lerp
-half3 test_lerp_half3(half3 p0) { return lerp(p0, p0, p0); }
+// CHECK-LABEL: test_lerp_half3
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x half> %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <3 x half> [[MUL]], %{{.*}}
+// CHECK-NEXT: ret <3 x half> [[ADD]]
+half3 test_lerp_half3(half3 p0, half3 p1, half3 p2) { return lerp(p0, p1, p2); }
 
-// NATIVE_HALF: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.[[TARGET]].lerp.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, <4 x half> %{{.*}})
-// NATIVE_HALF: ret <4 x half> %hlsl.lerp
-// NO_HALF: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].lerp.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-// NO_HALF: ret <4 x float> %hlsl.lerp
-half4 test_lerp_half4(half4 p0) { return lerp(p0, p0, p0); }
+// CHECK-LABEL: test_lerp_half4
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x half> %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x half> [[MUL]], %{{.*}}
+// CHECK-NEXT: ret <4 x half> [[ADD]]
+half4 test_lerp_half4(half4 p0, half4 p1, half4 p2) { return lerp(p0, p1, p2); }
 
-// CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].lerp.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
-// CHECK: ret float %hlsl.lerp
-float test_lerp_float(float p0) { return lerp(p0, p0, p0); }
+// CHECK-LABEL: test_lerp_float
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn float %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn float %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[MUL]], %{{.*}}
+// CHECK-NEXT: ret float [[ADD]]
+float test_lerp_float(float p0, float p1, float p2) { return lerp(p0, p1, p2); }
 
-// CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].lerp.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}})
-// CHECK: ret <2 x float> %hlsl.lerp
-float2 test_lerp_float2(float2 p0) { return lerp(p0, p0, p0); }
+// CHECK-LABEL: test_lerp_float2
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x float> %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x float> %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <2 x float> [[MUL]], %{{.*}}
+// CHECK-NEXT: ret <2 x float> [[ADD]]
+float2 test_lerp_float2(float2 p0, float2 p1, float2 p2) { return lerp(p0, p1, p2); }
 
-// CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].lerp.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}}, <3 x float> %{{.*}})
-// CHECK: ret <3 x float> %hlsl.lerp
-float3 test_lerp_float3(float3 p0) { return lerp(p0, p0, p0); }
+// CHECK-LABEL: test_lerp_float3
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x float> %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x float> %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <3 x float> [[MUL]], %{{.*}}
+// CHECK-NEXT: ret <3 x float> [[ADD]]
+float3 test_lerp_float3(float3 p0, float3 p1, float3 p2) { return lerp(p0, p1, p2); }
 
-// CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].lerp.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-// CHECK: ret <4 x float> %hlsl.lerp
-float4 test_lerp_float4(float4 p0) { return lerp(p0, p0, p0); }
+// CHECK-LABEL: test_lerp_float4
+// CHECK: [[SUB:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x float> %{{.*}}, %{{.*}}
+// CHECK-NEXT: [[MUL:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x float> %{{.*}}, [[SUB]]
+// CHECK-NEXT: [[ADD:%.*]] = fadd reassoc nnan ninf nsz arcp afn <4 x float> [[MUL]], %{{.*}}
+// CHECK-NEXT: ret <4 x float> [[ADD]]
+float4 test_lerp_float4(float4 p0, float4 p1, float4 p2) { return lerp(p0, p1, p2); }

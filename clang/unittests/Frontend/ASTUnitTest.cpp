@@ -193,7 +193,7 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
       CInvok, PCHContainerOps, DiagOpts, Diags, FileMgr, false,
       CaptureDiagsKind::None, 1, TU_Complete, false, false, false);
   ASSERT_TRUE(AU);
-  auto File = AU->getFileManager().getFileRef("Textual.h", false, false);
+  auto File = AU->getFileManager().getFileRef("Textual.h");
   ASSERT_TRUE(bool(File));
   // Verify that we do not crash here.
   EXPECT_TRUE(
