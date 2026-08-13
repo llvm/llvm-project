@@ -15,13 +15,15 @@ include Makefile.rules
 # swift modules talk Objective-C to the conflicting swift module to
 # make the conflict possible.
 
-libDylib.dylib: Dylib.swift
+libDylib.dylib: Dylib.swift \
+                $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES X=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 
-libConflict.dylib: Conflict.swift
+libConflict.dylib: Conflict.swift \
+                   $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES X=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \

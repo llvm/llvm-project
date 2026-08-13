@@ -10,7 +10,8 @@ include Makefile.rules
 MOD5_FLAGS = -swift-version 5
 MOD4_FLAGS = -swift-version 4
 
-libmod%.dylib: mod%.swift
+libmod%.dylib: mod%.swift \
+               $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		SWIFTFLAGS_EXTRAS="$(MOD$*_FLAGS)" \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \

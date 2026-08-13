@@ -14,7 +14,8 @@ ifneq "$(CODESIGN)" ""
 endif
 	mv $(BOTDIR) $(USERDIR)
 
-libFoo.dylib: Foo.swift
+libFoo.dylib: Foo.swift \
+              $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call MKDIR_P,$(BOTDIR))
 	$(call CP_R,$(SRCDIR)/Foo,$(BOTDIR)/)
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \

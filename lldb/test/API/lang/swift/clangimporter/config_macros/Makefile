@@ -6,7 +6,8 @@ all: libDylib.dylib a.out
 
 include Makefile.rules
 
-libDylib.dylib: dylib.swift
+libDylib.dylib: dylib.swift \
+                $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" BASENAME=$(shell basename $< .swift) \
 		-f $(SRCDIR)/dylib.mk all
 
