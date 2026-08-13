@@ -29,33 +29,18 @@ bb2:
 }
 
 define void @extract_8xi16_br_ne_0(ptr %src, ptr %dst) nounwind {
-; LA32-LABEL: extract_8xi16_br_ne_0:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA32-NEXT:    slli.w $a0, $a0, 16
-; LA32-NEXT:    beqz $a0, .LBB1_2
-; LA32-NEXT:  # %bb.1: # %bb1
-; LA32-NEXT:    st.b $zero, $a1, 0
-; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB1_2: # %bb2
-; LA32-NEXT:    ori $a0, $zero, 1
-; LA32-NEXT:    st.b $a0, $a1, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: extract_8xi16_br_ne_0:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    slli.d $a0, $a0, 48
-; LA64-NEXT:    beqz $a0, .LBB1_2
-; LA64-NEXT:  # %bb.1: # %bb1
-; LA64-NEXT:    st.b $zero, $a1, 0
-; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB1_2: # %bb2
-; LA64-NEXT:    ori $a0, $zero, 1
-; LA64-NEXT:    st.b $a0, $a1, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: extract_8xi16_br_ne_0:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a0, 0
+; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
+; CHECK-NEXT:    beqz $a0, .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %bb1
+; CHECK-NEXT:    st.b $zero, $a1, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_2: # %bb2
+; CHECK-NEXT:    ori $a0, $zero, 1
+; CHECK-NEXT:    st.b $a0, $a1, 0
+; CHECK-NEXT:    ret
 entry:
   %0 = load volatile <8 x i16>, ptr %src
   %1 = extractelement <8 x i16> %0, i64 0
