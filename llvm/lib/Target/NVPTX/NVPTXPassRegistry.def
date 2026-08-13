@@ -62,6 +62,7 @@ MACHINE_FUNCTION_PASS("nvptx-replace-image-handles",
 MACHINE_FUNCTION_PASS("nvptx-isel", NVPTXISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("nvptx-address-folder", NVPTXAddressFolderPass())
 MACHINE_FUNCTION_PASS("nvptx-forward-params", NVPTXForwardParamsPass())
+MACHINE_FUNCTION_PASS("nvptx-prolog-epilog", NVPTXPrologEpilogPass())
 MACHINE_FUNCTION_PASS("nvptx-peephole", NVPTXPeepholePass())
 MACHINE_FUNCTION_PASS("nvptx-proxyreg-erasure", NVPTXProxyRegErasurePass())
 #undef MACHINE_FUNCTION_PASS
