@@ -37,6 +37,10 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %r8 = transform.apply_registered_pass "inter-select-to-machine" to %r7
         : (!transform.any_op) -> !transform.any_op
+    %funcs0 = transform.collect_matching @match_func in %r8
+        : (!transform.any_op) -> !transform.any_op
+    %funcs1 = transform.apply_registered_pass "inter-coalesce-tuples" to %funcs0
+        : (!transform.any_op) -> !transform.any_op
     transform.yield %r8 : !transform.any_op
   }
 

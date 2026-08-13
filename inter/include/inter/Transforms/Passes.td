@@ -67,6 +67,11 @@ def SelectToMachine : Pass<"inter-select-to-machine", "::mlir::ModuleOp"> {
   ];
 }
 
+def CoalesceTuples : Pass<"inter-coalesce-tuples", "::mlir::func::FuncOp"> {
+  let summary = "factor common XeMachine tuple updates";
+  let dependentDialects = ["inter::xemachine::XeMachineDialect"];
+}
+
 def InsertSync : Pass<"inter-insert-sync", "::mlir::func::FuncOp"> {
   let summary = "materialize machine sync operations with dense dataflow";
   let dependentDialects = ["inter::xemachine::XeMachineDialect"];
