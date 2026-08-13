@@ -404,13 +404,19 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
           }
 
           // XMC_RO, XMC_RW, and XMC_BS are non-code csects (read-only data
-          // tables, writable data, BSS)
+          // tables, writable data, BSS).
+          //
+          // Exception: vtable csects (Itanium mangled name prefix "_ZTV") are
+          // stored in XMC_RO and must retain their address so that
+          // ItaniumABIRuntime can resolve the vtable pointer to a symbol for
+          // dynamic type detection 
           if (smc == XCOFF::XMC_RO || smc == XCOFF::XMC_RW ||
               smc == XCOFF::XMC_BS) {
-            symbol.GetAddressRef() = Address();
             uint64_t csect_size = csect_aux.getSectionOrLength();
             if (csect_size > 0)
               symbol.SetByteSize(csect_size);
+            if (!symbolName.starts_with("_ZTV"))
+              symbol.GetAddressRef() = Address();
           } else if (smc == XCOFF::XMC_PR) {
             // XMC_PR is a standalone named code csect (not an entry label
             // inside a larger csect).  Set its declared size directly.
