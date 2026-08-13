@@ -7,15 +7,15 @@
 
 #include "Inputs/coroutine.h"
 
-// CIR-DAG: ![[VoidTask:.*]] = !cir.struct<"folly::coro::Task<void>" padded {!u8i}>
-// CIR-DAG: ![[IntTask:.*]] = !cir.struct<"folly::coro::Task<int>" padded {!u8i}>
-// CIR-DAG: ![[VoidPromisse:.*]] = !cir.struct<"folly::coro::Task<void>::promise_type" padded {!u8i}>
-// CIR-DAG: ![[IntPromisse:.*]] = !cir.struct<"folly::coro::Task<int>::promise_type" padded {!u8i}>
-// CIR-DAG: ![[StdString:.*]] = !cir.struct<"std::string" padded {!u8i}>
-// CIR-DAG: ![[CoroHandleVoid:.*]] = !cir.struct<"std::coroutine_handle<void>" padded {!u8i}>
-// CIR-DAG: ![[CoroHandlePromiseVoid:rec_.*]]  = !cir.struct<"std::coroutine_handle<folly::coro::Task<void>::promise_type>" padded {!u8i}>
-// CIR-DAG: ![[CoroHandlePromiseInt:rec_.*]] = !cir.struct<"std::coroutine_handle<folly::coro::Task<int>::promise_type>" padded {!u8i}>
-// CIR-DAG: ![[SuspendAlways:.*]] = !cir.struct<"std::suspend_always" padded {!u8i}>
+// CIR-DAG: ![[VoidTask:.*]] = !cir.struct<"folly::coro::Task<void>" padded {pad !u8i}>
+// CIR-DAG: ![[IntTask:.*]] = !cir.struct<"folly::coro::Task<int>" padded {pad !u8i}>
+// CIR-DAG: ![[VoidPromisse:.*]] = !cir.struct<"folly::coro::Task<void>::promise_type" padded {pad !u8i}>
+// CIR-DAG: ![[IntPromisse:.*]] = !cir.struct<"folly::coro::Task<int>::promise_type" padded {pad !u8i}>
+// CIR-DAG: ![[StdString:.*]] = !cir.struct<"std::string" padded {pad !u8i}>
+// CIR-DAG: ![[CoroHandleVoid:.*]] = !cir.struct<"std::coroutine_handle<void>" padded {pad !u8i}>
+// CIR-DAG: ![[CoroHandlePromiseVoid:rec_.*]]  = !cir.struct<"std::coroutine_handle<folly::coro::Task<void>::promise_type>" padded {pad !u8i}>
+// CIR-DAG: ![[CoroHandlePromiseInt:rec_.*]] = !cir.struct<"std::coroutine_handle<folly::coro::Task<int>::promise_type>" padded {pad !u8i}>
+// CIR-DAG: ![[SuspendAlways:.*]] = !cir.struct<"std::suspend_always" padded {pad !u8i}>
 
 // OGCG-DAG: %[[VoidPromisse:"struct.folly::coro::Task<void>::promise_type"]] = type { i8 }
 // OGCG-DAG: %[[VoidTask:"struct.folly::coro::Task"]] = type { i8 }
