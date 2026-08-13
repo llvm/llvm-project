@@ -334,13 +334,15 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
           std::string(Buf)};
 }
 
-static BugDescription describeTaintBug(StringRef RegName, StringRef OffsetName,
-                                       bool AlsoMentionUnderflow) {
+static BugDescription describeTaintBug(bounds::CheckResult Res,
+                                       StringRef RegName,
+                                       StringRef OffsetName) {
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
-          formatv("Access of {0} with a tainted {1} that may be {2}too large",
-                  RegName, OffsetName,
-                  AlsoMentionUnderflow ? "negative or " : "")};
+          formatv("Access of {0} with a tainted {1} that may be{2}{3}{4}.",
+                  RegName, OffsetName, Res.mayUnderflow() ? " negative" : "",
+                  (Res.mayUnderflow() && Res.mayOverflow()) ? " or" : "",
+                  Res.mayOverflow() ? " too large" : "")};
 }
 
 /// When the access was ambiguous (that is, mayBeInBounds() && mayBeInvalid()),
@@ -480,10 +482,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       return;
     }
 
-    // FIXME: Remove `Res.mayOverflow()` and provide diagnostics for the case
-    // when the tainted access operation cannot overflow but can underflow.
-    // (This is an NFC commit, so I cannot include this improvement.)
-    if (Res.mayOverflow() && isTainted(State, ByteOffset)) {
+    if (isTainted(State, ByteOffset)) {
       // Diagnostic detail: saying "tainted offset" is always correct, but
       // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
       // nicer to say "tainted index".
@@ -492,8 +491,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
           OffsetName = "index";
 
-      BugDescription Desc =
-          describeTaintBug(RegName, OffsetName, Res.mayUnderflow());
+      BugDescription Desc = describeTaintBug(Res, RegName, OffsetName);
       reportOOB(C, State, Desc, ByteOffset, Extent, /*IsTaintBug=*/true);
       return;
     }

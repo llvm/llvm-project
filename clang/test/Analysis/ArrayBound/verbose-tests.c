@@ -100,6 +100,23 @@ void taintedIndexNonneg(void) {
   // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be too large}}
 }
 
+void taintedIndexNonlarge(void) {
+  int index;
+  scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
+
+  // expected-note@+2 {{Assuming 'index' is < 10}}
+  // expected-note@+1 {{Taking false branch}}
+  if (index >= 10)
+    return;
+
+  TenElements[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be negative}}
+}
+
+
 void taintedIndexUnsigned(void) {
   unsigned index;
   scanf("%u", &index);
