@@ -4431,4 +4431,26 @@ define void @void_func_v16bf16(<16 x bfloat> %arg0) #0 {
   ret void
 }
 
+; A zero-sized argument produces no InputArg, so later args must still lower correctly.
+define void @void_func_empty_struct_i32({} %arg0, i32 %arg1) #0 {
+; CIGFX89-LABEL: void_func_empty_struct_i32:
+; CIGFX89:       ; %bb.0:
+; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CIGFX89-NEXT:    s_mov_b32 s7, 0xf000
+; CIGFX89-NEXT:    s_mov_b32 s6, -1
+; CIGFX89-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; CIGFX89-NEXT:    s_waitcnt vmcnt(0)
+; CIGFX89-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: void_func_empty_struct_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  store i32 %arg1, ptr addrspace(1) poison
+  ret void
+}
+
 attributes #0 = { nounwind }

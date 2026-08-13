@@ -3475,7 +3475,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
-  BitVector Skipped(Ins.size());
+  BitVector Skipped(Fn.arg_size());
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
