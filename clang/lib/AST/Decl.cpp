@@ -3275,6 +3275,61 @@ void FunctionDecl::setBody(Stmt *B) {
     EndRangeLoc = B->getEndLoc();
 }
 
+FunctionDecl::DefaultedFunctionKind
+FunctionDecl::getDefaultedFunctionKind() const {
+  if (auto *MD = dyn_cast<CXXMethodDecl>(this)) {
+    if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(this)) {
+      if (Ctor->isDefaultConstructor())
+        return CXXSpecialMemberKind::DefaultConstructor;
+
+      if (Ctor->isCopyConstructor())
+        return CXXSpecialMemberKind::CopyConstructor;
+
+      if (Ctor->isMoveConstructor())
+        return CXXSpecialMemberKind::MoveConstructor;
+    }
+
+    if (MD->isCopyAssignmentOperator())
+      return CXXSpecialMemberKind::CopyAssignment;
+
+    if (MD->isMoveAssignmentOperator())
+      return CXXSpecialMemberKind::MoveAssignment;
+
+    if (isa<CXXDestructorDecl>(this))
+      return CXXSpecialMemberKind::Destructor;
+  }
+
+  switch (getDeclName().getCXXOverloadedOperator()) {
+  case OO_EqualEqual:
+    return DefaultedComparisonKind::Equal;
+
+  case OO_ExclaimEqual:
+    return DefaultedComparisonKind::NotEqual;
+
+  case OO_Spaceship:
+    // No point in allowing this if <=> doesn't exist in the current language
+    // mode.
+    if (!getASTContext().getLangOpts().CPlusPlus20)
+      break;
+    return DefaultedComparisonKind::ThreeWay;
+
+  case OO_Less:
+  case OO_LessEqual:
+  case OO_Greater:
+  case OO_GreaterEqual:
+    // No point in allowing this if <=> doesn't exist in the current language
+    // mode.
+    if (!getASTContext().getLangOpts().CPlusPlus20)
+      break;
+    return DefaultedComparisonKind::Relational;
+  default:
+    break;
+  }
+
+  // Not defaultable.
+  return DefaultedFunctionKind();
+}
+
 void FunctionDecl::setIsPureVirtual(bool P) {
   FunctionDeclBits.IsPureVirtual = P;
   if (P)
