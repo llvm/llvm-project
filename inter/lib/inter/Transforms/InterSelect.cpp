@@ -1965,6 +1965,8 @@ private:
         getUniformCondition(condition.getCondition(), condition);
     if (failed(selectedCondition))
       return failure();
+    Value conditionSnapshot =
+        emitMove(reg(1), i32(), 1, *selectedCondition, uniformRegion(), true);
 
     if (after.getNumArguments() != condition.getArgs().size())
       return operation.emitOpError("while region argument count mismatch");
@@ -2017,7 +2019,16 @@ private:
         &executeBody.getElseRegion().emplaceBlock());
     YieldOp::create(*builder, *location, conditionArguments);
     builder->setInsertionPointAfter(executeBody);
-    ContinueIfOp::create(*builder, *location, *selectedCondition,
+    Value continueCondition =
+        CmpOp::create(*builder, *location,
+                      ARFType::get(context, ARFFile::f, 2, -1),
+                      CondModifierAttr::get(context, CondModifier::ne),
+                      typeAttr(i32()), builder->getI32IntegerAttr(1),
+                      uniformRegion(), RegionAttr(), IntegerAttr(),
+                      IntegerAttr(), TypeAttr(), TypeAttr(), conditionSnapshot,
+                      immediate(0, i32()))
+            .getFlag();
+    ContinueIfOp::create(*builder, *location, continueCondition,
                          executeBody.getResults());
     builder->setInsertionPointAfter(loop);
     for (unsigned index = 0; index < operation.getNumResults(); ++index) {

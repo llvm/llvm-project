@@ -34,5 +34,9 @@ module {
 // CHECK: xemachine.uniform_loop
 // CHECK: xemachine.continue_if
 // CHECK: xemachine.uniform_loop
-// CHECK: xemachine.uniform_if
+// CHECK: [[COND:%.*]] = xemachine.cmp
+// CHECK-NEXT: [[SNAPSHOT:%.*]] = xemachine.mov [[COND]]
+// CHECK: xemachine.uniform_if [[COND]]
+// CHECK: [[CONTINUE:%.*]] = xemachine.cmp ne [[SNAPSHOT]]
+// CHECK-NEXT: xemachine.continue_if [[CONTINUE]]
 // CHECK: xemachine.eot
