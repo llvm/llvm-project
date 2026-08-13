@@ -118,6 +118,7 @@ MACHINE_FUNCTION_ANALYSIS("amdgpu-next-use-analysis", AMDGPUNextUseAnalysisPass(
 MACHINE_FUNCTION_PASS("amdgpu-asm-printer", AMDGPUAsmPrinterPass())
 MACHINE_FUNCTION_PASS("amdgpu-global-isel-divergence-lowering",
                       AMDGPUGlobalISelDivergenceLoweringPass())
+MACHINE_FUNCTION_PASS("amdgpu-break-load-cluster-deps", GCNBreakLoadClusterDepsPass())
 MACHINE_FUNCTION_PASS("amdgpu-insert-delay-alu", AMDGPUInsertDelayAluPass())
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("amdgpu-lower-vgpr-encoding", AMDGPULowerVGPREncodingPass())
