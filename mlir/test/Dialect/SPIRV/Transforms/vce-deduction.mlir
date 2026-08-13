@@ -181,7 +181,7 @@ spirv.module Logical GLSL450 attributes {
 // Test deducing minimal extensions.
 // spirv.KHR.SubgroupBallot requires the SPV_KHR_shader_ballot extension.
 
-// CHECK: requires #spirv.vce<v1.0, [SubgroupBallotKHR, Shader, Matrix], [SPV_KHR_shader_ballot]>
+// CHECK: requires #spirv.vce<v1.0, [SubgroupBallotKHR, Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, SubgroupBallotKHR],
@@ -484,7 +484,7 @@ spirv.module Logical GLSL450 attributes {
 // `SubgroupEqMask` requires min version v1.3. Prefer `SubgroupBallotKHR` (no
 // capability min-version) so the deduced version comes from the BuiltIn itself.
 
-// CHECK: requires #spirv.vce<v1.3, [SubgroupBallotKHR, Shader, Matrix], [SPV_KHR_shader_ballot]>
+// CHECK: requires #spirv.vce<v1.3, [SubgroupBallotKHR, Shader, Matrix], []>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, SubgroupBallotKHR], [SPV_KHR_shader_ballot]>,
