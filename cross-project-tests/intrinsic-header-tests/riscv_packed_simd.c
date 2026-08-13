@@ -2820,6 +2820,39 @@ uint16x4_t test_ppairo_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
   return __riscv_ppairo_u16x4(rs1, rs2);
 }
 
+// CHECK-LABEL: test_psext_b_i16x2:
+// CHECK:       psext.h.b
+int16x2_t test_psext_b_i16x2(int16x2_t a) { return __riscv_psext_b_i16x2(a); }
+
+// CHECK-LABEL: test_pzext_b_u16x2:
+// CHECK:       pzext.h.b
+uint16x2_t test_pzext_b_u16x2(uint16x2_t a) { return __riscv_pzext_b_u16x2(a); }
+
+// CHECK-LABEL: test_psext_b_i16x4:
+// RV32:        psext.dh.b
+// RV64:        psext.h.b
+int16x4_t test_psext_b_i16x4(int16x4_t a) { return __riscv_psext_b_i16x4(a); }
+
+// CHECK-LABEL: test_psext_b_i32x2:
+// RV32:        psext.dw.b
+// RV64:        psext.w.b
+int32x2_t test_psext_b_i32x2(int32x2_t a) { return __riscv_psext_b_i32x2(a); }
+
+// CHECK-LABEL: test_psext_h_i32x2:
+// RV32:        psext.dw.h
+// RV64:        psext.w.h
+int32x2_t test_psext_h_i32x2(int32x2_t a) { return __riscv_psext_h_i32x2(a); }
+
+// CHECK-LABEL: test_pzext_b_u16x4:
+// RV32:        pzext.dh.b
+// RV64:        pzext.h.b
+uint16x4_t test_pzext_b_u16x4(uint16x4_t a) { return __riscv_pzext_b_u16x4(a); }
+
+// CHECK-LABEL: test_pzext_h_u32x2:
+// RV32:        pzext.dw.h
+// RV64:        pzext.w.h
+uint32x2_t test_pzext_h_u32x2(uint32x2_t a) { return __riscv_pzext_h_u32x2(a); }
+
 // CHECK-LABEL: test_pnzip_i8x4:
 // CHECK:       ppaire.b
 int8x4_t test_pnzip_i8x4(int16x2_t rs1, int16x2_t rs2) {

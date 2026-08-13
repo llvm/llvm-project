@@ -793,6 +793,98 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator rotate_copy(
 }
 
 template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _ForwardIterator1
+search(_ExecutionPolicy&& __policy,
+       _ForwardIterator1 __first1,
+       _ForwardIterator1 __last1,
+       _ForwardIterator2 __first2,
+       _ForwardIterator2 __last2) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "search requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "search requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__search, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      equal_to<>{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _BinaryPredicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _ForwardIterator1
+search(_ExecutionPolicy&& __policy,
+       _ForwardIterator1 __first1,
+       _ForwardIterator1 __last1,
+       _ForwardIterator2 __first2,
+       _ForwardIterator2 __last2,
+       _BinaryPredicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "search requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "search requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__search, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _Size,
+          class _Tp,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _ForwardIterator search_n(
+    _ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "search_n requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__search_n, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__count),
+      __value,
+      equal_to<>{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _Size,
+          class _Tp,
+          class _BinaryPredicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _ForwardIterator search_n(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator __first,
+    _ForwardIterator __last,
+    _Size __count,
+    const _Tp& __value,
+    _BinaryPredicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "search_n requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__search_n, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__count),
+      __value,
+      std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
           class _RandomAccessIterator,
           class _Comp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,

@@ -127,6 +127,19 @@ add_header(suseconds_t HDR suseconds_t.h)
 add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t .reclen_t)
 add_header(struct_posix_dent HDR struct_posix_dent.h DEPENDS .ino_t .off_t .reclen_t)
 add_header(struct_dl_phdr_info HDR struct_dl_phdr_info.h DEPENDS .size_t libc.include.llvm-libc-macros.link_macros)
+add_header(
+  struct_link_map
+  HDR struct_link_map.h
+  DEPENDS
+    libc.include.llvm-libc-macros.link_macros
+)
+add_header(
+  struct_r_debug
+  HDR struct_r_debug.h
+  DEPENDS
+    .struct_link_map
+    libc.include.llvm-libc-macros.link_macros
+)
 add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)

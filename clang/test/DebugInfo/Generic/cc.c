@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-cygnus -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=WINDOWS
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=LINUX32
 // RUN: %clang_cc1 -triple armv7--linux-gnueabihf -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=SPIRV
 
 //  enum CallingConv {
 //    CC_C,           // __attribute__((cdecl))
@@ -131,6 +132,14 @@ __attribute__((pcs("aapcs"))) int add_aapcs(int a, int b) {
 // ARM: !DISubprogram({{.*}}"add_aapcs_vfp", {{.*}}type: ![[FTY:[0-9]+]]
 // ARM: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_AAPCS_VFP,
 __attribute__((pcs("aapcs-vfp"))) int add_aapcs_vfp(int a, int b) {
+  return a+b;
+}
+#endif
+
+#ifdef __SPIRV__
+// SPIRV: !DISubprogram({{.*}}"add_spir", {{.*}}type: ![[FTY:[0-9]+]]
+// SPIRV: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_SpirFunction,
+int add_spir(int a, int b) {
   return a+b;
 }
 #endif

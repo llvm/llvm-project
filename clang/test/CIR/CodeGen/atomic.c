@@ -9,6 +9,8 @@ struct S1 {
   short x, y, z;
 };
 
+// CIR: !rec_anon_struct = !cir.struct<padded {data !rec_S1, pad !cir.array<!s8i x 2>}>
+
 _Atomic int g1;
 _Atomic int g2 = 42;
 // CIR: cir.global external @g2 = #cir.int<42> : !s32i {alignment = 4 : i64}

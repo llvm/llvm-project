@@ -2160,7 +2160,7 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
       continue;
     }
     auto SpecialMemberKind =
-        SemaRef.getDefaultedFunctionKind(Method).asSpecialMember();
+        Method->getDefaultedFunctionKind().asSpecialMember();
     switch (SpecialMemberKind) {
     case CXXSpecialMemberKind::CopyConstructor:
     case CXXSpecialMemberKind::MoveConstructor:
