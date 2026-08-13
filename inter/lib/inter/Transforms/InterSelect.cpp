@@ -1463,12 +1463,15 @@ private:
       Region &region =
           index == 0 ? machineIf->getRegion(0) : machineIf->getRegion(1);
       builder->setInsertionPointToStart(&region.emplaceBlock());
-      Value selected = emitMove(
-          resultType, shape->elementType, shape->cardinality, arms[index],
-          sourceRegion(index == 0 ? operation.getTrueValue()
-                                  : operation.getFalseValue(),
-                       shape->cardinality, operation));
-      YieldOp::create(*builder, *location, ValueRange{selected});
+      Value yielded = arms[index];
+      if (yielded.getType() != resultType) {
+        if (!yielded.getDefiningOp<ImmOp>())
+          return operation.emitOpError(
+              "selected branch value has incompatible machine type");
+        yielded = emitMove(resultType, shape->elementType, shape->cardinality,
+                           yielded, RegionAttr());
+      }
+      YieldOp::create(*builder, *location, ValueRange{yielded});
     }
     builder->setInsertionPointAfter(machineIf);
     values[operation.getResult()] = machineIf->getResult(0);
@@ -1555,17 +1558,21 @@ private:
         FailureOr<ValueShape> shape = getShape(source.getType(), sourceYield);
         if (failed(value) || failed(shape))
           return failure();
-        if (VectorType vector = dyn_cast<VectorType>(shape->elementType)) {
+        if (isa<VectorType>(shape->elementType)) {
           if (value->getType() != machineIf->getResult(index).getType())
             return sourceYield->emitOpError(
                 "vector packet yield register footprint mismatch");
+        }
+        if (value->getType() == machineIf->getResult(index).getType()) {
           yielded.push_back(*value);
           continue;
         }
-        yielded.push_back(
-            emitMove(machineIf->getResult(index).getType(), shape->elementType,
-                     shape->cardinality, *value,
-                     sourceRegion(source, shape->cardinality, sourceYield)));
+        if (!value->getDefiningOp<ImmOp>())
+          return sourceYield->emitOpError(
+              "yielded value has incompatible machine type");
+        yielded.push_back(emitMove(machineIf->getResult(index).getType(),
+                                   shape->elementType, shape->cardinality,
+                                   *value, RegionAttr()));
       }
       YieldOp::create(*builder, *location, yielded);
     }
@@ -2829,9 +2836,7 @@ private:
   }
 
   void emitEot() {
-    Value payload = emitMove(reg(16), i32(), 16, architecturalRegister(0),
-                             canonicalRegion(), true);
-    EotOp::create(*builder, *location, payload, memoryToken);
+    EotOp::create(*builder, *location, architecturalRegister(0), memoryToken);
   }
 
   LogicalResult lowerBlock(Block &block) {

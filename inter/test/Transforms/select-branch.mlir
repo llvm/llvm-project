@@ -1,4 +1,5 @@
-// RUN: inter-opt %s --inter-select-to-machine | FileCheck %s
+// RUN: inter-opt %s --inter-select-to-machine | FileCheck %s --check-prefix=SELECT
+// RUN: inter-opt %s --inter-select-to-machine --inter-prepare-regalloc | FileCheck %s --check-prefix=PREP
 
 module {
   func.func @control() attributes {
@@ -26,11 +27,22 @@ module {
   }
 }
 
-// CHECK-NOT: llvm
-// CHECK: xemachine.mov {{.*}}execSize = 32
-// CHECK-SAME: src0Region = #xemachine.region<1, 4, 0>
-// CHECK: xemachine.cmp {{.*}}execSize = 8
-// CHECK: xemachine.exec_if
-// CHECK: xemachine.yield
-// CHECK: xemachine.cmp {{.*}}execSize = 1
-// CHECK: xemachine.uniform_if
+// SELECT-NOT: llvm
+// SELECT: xemachine.mov {{.*}}execSize = 32
+// SELECT-SAME: src0Region = #xemachine.region<1, 4, 0>
+// SELECT: xemachine.cmp ne %[[LANES:.*]], %[[LANES]] {{.*}}execSize = 8
+// SELECT: %[[PREDICATED:.*]] = xemachine.exec_if
+// SELECT: %[[SUM:.*]] = xemachine.add
+// SELECT-NEXT: xemachine.yield %[[SUM]]
+// SELECT: otherwise {
+// SELECT-NEXT: xemachine.yield %[[LANES]]
+// SELECT: xemachine.cmp {{.*}}execSize = 1
+// SELECT: xemachine.uniform_if
+// SELECT: xemachine.yield %[[PREDICATED]]
+// SELECT: xemachine.yield %[[LANES]]
+// SELECT: %[[R0:.*]] = xemachine.archreg 0
+// SELECT-NEXT: xemachine.eot %[[R0]] : !xemachine.reg<16, 0>
+
+// PREP: xemachine.exec_if
+// PREP: xemachine.mov {{.*}}xemachine.regalloc_copy = "branch-yield"
+// PREP: xemachine.yield
