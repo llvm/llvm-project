@@ -16,8 +16,8 @@ permissions:
 
 on:
   schedule:
-    # Trigger every hour, off the hour boundary to avoid popular times.
-    - cron: '37 * * * *'
+    # Trigger every 30 minutes, off the hour boundary to avoid popular times.
+    - cron: '7,37 * * * *'
   workflow_dispatch:
     inputs:
       dry-run:
