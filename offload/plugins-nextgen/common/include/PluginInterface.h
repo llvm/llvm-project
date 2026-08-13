@@ -1794,6 +1794,9 @@ public:
   /// Remove the event from the plugin.
   void set_info_flag(uint32_t NewInfoLevel);
 
+  /// Enable or disable tracing of every plugin API call.
+  void set_api_trace(bool Enable);
+
   /// Creates an asynchronous queue for the given plugin.
   int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
 

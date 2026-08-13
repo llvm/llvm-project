@@ -47,6 +47,9 @@ void PluginManager::init() {
   } while (false);
 #include "Shared/Targets.def"
 
+  for (auto &Plugin : Plugins)
+    Plugin->set_api_trace(getInfoLevel() & OMP_INFOTYPE_API_TRACE);
+
   ODBG(ODT_Init) << "RTLs loaded!";
 }
 

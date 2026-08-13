@@ -813,6 +813,9 @@ with `-g` for full debug information. A full list of flags supported by
     * Indicate when an entry is changed in the device mapping table: ``0x08``
     * Print OpenMP kernel information from device plugins: ``0x10``
     * Indicate when data is copied to and from the device: ``0x20``
+    * Indicate when mapped data has no viable device counterpart: ``0x40``
+    * Trace every plugin API call with its arguments, result and duration:
+      ``0x80``
 
 Any combination of these flags can be used by setting the appropriate bits. For
 example, to enable printing all data active in an OpenMP target region along
