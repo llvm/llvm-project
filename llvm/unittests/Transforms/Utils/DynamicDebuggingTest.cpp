@@ -525,6 +525,9 @@ TEST(DynamicDebugging, DiscardableGlobal) {
 }
 
 TEST(DynamicDebugging, UnnamedGlobal) {
+  // Test unnamed globals (@0, @1) are given names (__unnamed[.n]) when they are
+  // promoted for dynamic debugging, which adds an external alias and preserves
+  // the global (note `llvm.compiler.used` requires named globals).
   StringRef IR = R"(
     @0 = internal global i32 1, align 4
     @1 = internal global i32 1, align 4
