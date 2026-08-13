@@ -4,6 +4,7 @@ add_mlir_library(InterTransforms
   InterImportLLVM.cpp
   InterDiscoverCacheControls.cpp
   InterCanonicalizeBlock2DABI.cpp
+  InterPrepareCountedLoops.cpp
   InterConvertLLVMToXW.cpp
   InterRefineDistribution.cpp
   InterExpandArithmetic.cpp

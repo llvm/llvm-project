@@ -45,6 +45,7 @@ module {
     %wide = llvm.sext %sum : i32 to i64
     %narrow = arith.trunci %sum overflow<nuw> : i32 to i1
     %cmp = llvm.icmp "eq" %sum, %one : i32
+    %inverted = arith.xori %cmp, %condition : i1
     %selected = llvm.select %cmp, %sum, %one : i1, i32
     llvm.cond_br %condition, ^then, ^else
   ^then:
@@ -176,6 +177,7 @@ module {
 // CHECK: xw.cast intconvert
 // CHECK: xw.cast intconvert {{.*}} overflow<nuw> : i32 -> i1
 // CHECK: xw.cmpi eq
+// CHECK: xw.binary xori
 // CHECK: xw.select
 // CHECK: scf.if
 // CHECK-NOT: llvm.

@@ -19,7 +19,11 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %r1 = transform.apply_registered_pass "lift-cf-to-scf" to %r0c
         : (!transform.any_op) -> !transform.any_op
-    %r2 = transform.apply_registered_pass "inter-verify-structured" to %r1
+    %r1a = transform.apply_registered_pass "canonicalize" to %r1
+        : (!transform.any_op) -> !transform.any_op
+    %r1b = transform.apply_registered_pass "inter-prepare-counted-loops" to %r1a
+        : (!transform.any_op) -> !transform.any_op
+    %r2 = transform.apply_registered_pass "inter-verify-structured" to %r1b
         : (!transform.any_op) -> !transform.any_op
     %r3 = transform.apply_registered_pass "inter-convert-llvm-to-xw" to %r2
         : (!transform.any_op) -> !transform.any_op

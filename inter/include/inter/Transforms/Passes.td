@@ -33,6 +33,12 @@ def VerifyStructured : Pass<"inter-verify-structured", "::mlir::ModuleOp"> {
   let summary = "reject unstructured control flow before semantic conversion";
 }
 
+def PrepareCountedLoops
+    : Pass<"inter-prepare-counted-loops", "::mlir::ModuleOp"> {
+  let summary = "normalize imported counted loops for SCF uplifting";
+  let dependentDialects = ["mlir::arith::ArithDialect"];
+}
+
 def ConvertLLVMToXW : Pass<"inter-convert-llvm-to-xw", "::mlir::ModuleOp"> {
   let summary = "perform the hard LLVM to XW semantic conversion boundary";
   let dependentDialects = ["xw::XWDialect", "mlir::func::FuncDialect",

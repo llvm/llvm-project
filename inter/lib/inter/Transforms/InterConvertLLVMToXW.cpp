@@ -1767,6 +1767,27 @@ public:
   }
 };
 
+class ConvertArithXOrI final : public OpConversionPattern<arith::XOrIOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::XOrIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> operands = unwrapOperands(adaptor.getOperands());
+    Type resultType = getTypeConverter()->convertType(op.getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(op,
+                                         "result type has no XW conversion");
+    resultType = distributeType(resultType, operands);
+    xw::BinaryOp converted = xw::BinaryOp::create(
+        rewriter, op.getLoc(), resultType, xw::BinaryKind::XOrI, operands[0],
+        operands[1]);
+    rewriter.replaceOp(op, converted.getResult());
+    return success();
+  }
+};
+
 struct ConvertLLVMToXW final
     : inter::impl::ConvertLLVMToXWBase<ConvertLLVMToXW> {
   void runOnOperation() override {
@@ -1860,8 +1881,8 @@ struct ConvertLLVMToXW final
         ConvertLLVMOneSourcePointerCast<LLVM::IntToPtrOp, xw::IntToPtrOp>,
         ConvertLLVMConstant, ConvertLLVMZero, ConvertLLVMLoad, ConvertLLVMStore,
         ConvertLLVMAtomicRMW, ConvertLLVMGEP, ConvertPoison, ConvertSCFIf,
-        ConvertFuncReturn, ConvertArithConstant, ConvertArithTruncI>(converter,
-                                                                     context);
+        ConvertFuncReturn, ConvertArithConstant, ConvertArithTruncI,
+        ConvertArithXOrI>(converter, context);
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
     scf::populateSCFStructuralTypeConversions(converter, patterns);
