@@ -12,6 +12,7 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 // UNSUPPORTED: amdgpu-amd-amdhsa-LTO
+// UNSUPPORTED: intelgpu
 
 #include <stdio.h>
 #include <stdlib.h>
