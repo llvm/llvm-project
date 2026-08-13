@@ -107,3 +107,37 @@ float fmuladd_strict(float a, float b, float c) {
 // CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
 // LLVM-STRICT-LABEL: @fmuladd_strict
 // LLVM-STRICT: call float @llvm.experimental.constrained.fmuladd.f32
+
+// Strict FP with a negated addend: the fmuladd carries the mul's fenv while
+// the fneg (which takes none) lowers to a plain fneg.
+float fmuladd_sub_strict(float a, float b, float c) {
+  return a * b - c;
+}
+// CIR-STRICT-LABEL: cir.func {{.*}}@fmuladd_sub_strict
+// CIR-STRICT: cir.fneg %{{.*}} : !cir.float
+// CIR-STRICT: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<{{.*}}strict_except = true>}
+// LLVM-STRICT-LABEL: @fmuladd_sub_strict
+// LLVM-STRICT: fneg float
+// LLVM-STRICT: call float @llvm.experimental.constrained.fmuladd.f32
+
+// Compound assignment routes through emitAdd/emitSub, so += and -= fuse too.
+float fmuladd_add_assign(float x, float a, float b) {
+  x += a * b;
+  return x;
+}
+// CIR-ON-LABEL: cir.func {{.*}}@fmuladd_add_assign
+// CIR-ON: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
+// LLVM-ON-LABEL: @fmuladd_add_assign
+// LLVM-ON: call float @llvm.fmuladd.f32
+
+// x -= a * b picks negMul off isSub with the mul on the RHS.
+float fmuladd_sub_assign(float x, float a, float b) {
+  x -= a * b;
+  return x;
+}
+// CIR-ON-LABEL: cir.func {{.*}}@fmuladd_sub_assign
+// CIR-ON: cir.fneg %{{.*}} : !cir.float
+// CIR-ON: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float
+// LLVM-ON-LABEL: @fmuladd_sub_assign
+// LLVM-ON: fneg float
+// LLVM-ON: call float @llvm.fmuladd.f32
