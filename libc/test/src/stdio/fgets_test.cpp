@@ -22,7 +22,7 @@ using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LIBC_NAMESPACE::cpp::scope_exit;
 
 TEST_F(LlvmLibcFgetsTest, WriteAndReadCharacters) {
-  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/fgets.test");
+  constexpr char FILENAME[] = "testdata/fgets.test";
   char buff[8];
   char *output;
 

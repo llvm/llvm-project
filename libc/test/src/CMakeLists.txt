@@ -1,7 +1,7 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR;NEED_MPC;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "NEED_MPFR;NEED_MPC;FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
@@ -23,16 +23,16 @@ function(add_fp_unittest name)
     endif()
   endif()
 
-  if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
-    set(test_type HERMETIC_TEST_ONLY)
-  elseif(MATH_UNITTEST_UNIT_TEST_ONLY)
-    set(test_type UNIT_TEST_ONLY)
+  if(MATH_UNITTEST_FULL_BUILD_ONLY)
+    set(test_type FULL_BUILD_ONLY)
+  elseif(MATH_UNITTEST_OVERLAY_BUILD_ONLY)
+    set(test_type OVERLAY_BUILD_ONLY)
   endif()
   if(MATH_UNITTEST_NEED_MPFR)
-    if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
-      message(FATAL_ERROR "Hermetic math test cannot require MPFR.")
+    if(MATH_UNITTEST_FULL_BUILD_ONLY)
+      message(FATAL_ERROR "Full-build math test cannot require MPFR.")
     endif()
-    set(test_type UNIT_TEST_ONLY)
+    set(test_type OVERLAY_BUILD_ONLY)
     list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
     if(NOT(LIBC_TARGET_OS_IS_DARWIN) AND NOT(LIBC_TARGET_OS_IS_FREEBSD))
       # macOS/FreeBSD does not have libatomic.
@@ -50,12 +50,12 @@ function(add_fp_unittest name)
     ${name}
     ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
-    "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
+      "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
     DEPENDS
       libc.hdr.stdint_proxy
       "${deps}"
   )
-endfunction(add_fp_unittest)
+endfunction()
 
 add_subdirectory(__support)
 add_subdirectory(arpa)

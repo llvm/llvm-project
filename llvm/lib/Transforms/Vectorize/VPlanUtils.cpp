@@ -465,13 +465,13 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   const VPRecipeBase *R = V->getDefiningRecipe();
   const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
   const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
-  if (VPBB) {
-    if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-      if (match(V->getDefiningRecipe(),
-                m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
-        return false;
-      return all_of(R->operands(), isUniformAcrossVFsAndUFs);
-    }
+  if (VPBB &&
+      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
+    if (match(R,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
+        match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
+      return false;
+    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
@@ -892,11 +892,18 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
     }
 
-    unsigned Opcode =
-        S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
-    // Iterate in reverse so that constants are emitted last.
+    bool IsAdd = isa<SCEVAddExpr>(S);
+    unsigned Opcode = IsAdd ? Instruction::Add : Instruction::Mul;
+    // Iterate in reverse so that constants are emitted last. For adds, sort
+    // non-constant-negative operands last, matching SCEVExpander's LoopCompare,
+    // so that they are accumulated into the result rather than starting it.
+    SmallVector<const SCEV *, 2> SCEVOps(reverse(NAry->operands()));
+    if (IsAdd)
+      stable_sort(SCEVOps, [](const SCEV *L, const SCEV *R) {
+        return !L->isNonConstantNegative() && R->isNonConstantNegative();
+      });
     SmallVector<VPValue *, 2> Ops;
-    for (const SCEVUse &Op : reverse(NAry->operands())) {
+    for (const SCEV *Op : SCEVOps) {
       VPValue *OpV = tryToExpand(Op);
       if (!OpV)
         return nullptr;
@@ -1015,6 +1022,11 @@ bool vputils::isDeadRecipe(VPRecipeBase &R) {
     return true;
 
   if (R.mayHaveSideEffects())
+    return false;
+
+  // Forbid removing trip-count expressions.
+  if (isa<VPExpandSCEVRecipe>(R) &&
+      R.getVPSingleValue() == R.getParent()->getPlan()->getTripCount())
     return false;
 
   // Recipe is dead if no user keeps the recipe alive.
