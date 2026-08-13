@@ -6641,6 +6641,7 @@ TEST_P(ErrorHandlingTest, ImportedTypeMappingIsInvalidatedOnFailure) {
   Expected<const Type *> ToTyOrErr = Importer->Import(FromXTy);
   // And its type should fail to import as well
   EXPECT_TRUE(ToTyOrErr.errorIsA<clang::ASTImportError>());
+  llvm::consumeError(ToTyOrErr.takeError());
 }
 
 // Check that an error propagates to the dependent AST nodes.
