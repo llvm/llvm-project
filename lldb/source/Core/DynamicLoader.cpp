@@ -280,8 +280,9 @@ PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
 static void FinishSearch(DynamicLoader::BinarySpec &bin_spec,
                          llvm::Expected<SymbolLocator::Result> located) {
   if (!located) {
-    // Only an explanation from a symbol server adds anything to the miss the
-    // caller already reports.
+    // Loading a binary that was never found already reports that, so a bare
+    // not-found error would only say it a second time. Any other error says
+    // something that report cannot.
     llvm::Error error = located.takeError();
     if (error.isA<SymbolLocator::NotFound>())
       llvm::consumeError(std::move(error));
@@ -322,8 +323,9 @@ void DynamicLoader::LocateBinaries(
   Target &target = process->GetTarget();
   const FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
 
-  // Has to happen on this thread, and before any search, so that a binary whose
-  // UUID is not known yet still joins the batch.
+  // Reading a binary's UUID out of memory has to happen on this thread, and
+  // before any search, so that a binary whose UUID is not known yet still joins
+  // the batch.
   llvm::SmallVector<BinarySpec *> to_search;
   std::vector<SymbolLocator::Request> requests;
   for (BinarySpec &bin_spec : bin_specs) {

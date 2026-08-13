@@ -6687,8 +6687,9 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
     // processing.  We're not going to call ModulesDidLoad on this in this
     // method, so notify==true.
     //
-    // Setting one up can replace the Target's platform and dynamic loader, so
-    // no image is searched for until this loop has run to the end.
+    // Setting up a platform binary can replace the Target's platform and
+    // dynamic loader, so no image is searched for until this loop has run to
+    // the end.
     if (process.GetTarget()
             .GetDebugger()
             .GetPlatformList()
