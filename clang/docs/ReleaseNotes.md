@@ -535,6 +535,11 @@ features cannot lower the translation-unit ABI level;
 
 #### RISC-V Support
 
+- Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
+  option will be treated like `-mcpu=native` if `-mcpu` is not present. If
+  `-mcpu` is present, the ISA will be selected from the host CPU and the tune
+  CPU will be selected from `-mcpu`.
+
 #### CUDA/HIP Language Changes
 
 - HIP compilations now add the `include/libhipcxx` directory from the selected
