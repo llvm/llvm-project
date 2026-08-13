@@ -366,15 +366,14 @@ public:
 
   /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
-  createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false,
-                   ze_context_handle_t UserZeCtx = nullptr);
+  createImmCmdList(uint32_t Ordinal, uint32_t Index,
+                   ze_context_handle_t UserZeCtx, bool InOrder = false);
 
   /// Create an immediate command list for computing.
   Expected<ze_command_list_handle_t>
-  createImmCmdList(bool InOrder = false,
-                   ze_context_handle_t UserZeCtx = nullptr) {
-    return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder,
-                            UserZeCtx);
+  createImmCmdList(ze_context_handle_t UserZeCtx, bool InOrder = false) {
+    return createImmCmdList(getComputeEngine(), getComputeIndex(), UserZeCtx,
+                            InOrder);
   }
 
   /// Release an immediate command list.
@@ -384,9 +383,8 @@ public:
   }
 
   Expected<L0CmdListManagerTy *>
-  getCmdListManager(bool InOrder = false,
-                    ze_context_handle_t UserZeCtx = nullptr) {
-    auto CmdListOrErr = createImmCmdList(InOrder, UserZeCtx);
+  getCmdListManager(ze_context_handle_t UserZeCtx, bool InOrder = false) {
+    auto CmdListOrErr = createImmCmdList(UserZeCtx, InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     return new L0CmdListManagerTy(*CmdListOrErr, L0Context);

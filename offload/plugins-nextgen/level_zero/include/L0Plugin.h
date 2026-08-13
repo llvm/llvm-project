@@ -48,9 +48,7 @@ public:
   }
 
   /// Return an idle queue to the cache.
-  void returnCachedQueue(L0DeviceTy *Device, L0QueueTy *Queue) {
-    QueueCache.releaseQueue(*Device, Queue);
-  }
+  void returnCachedQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
 
 private:
   ze_driver_handle_t Driver;

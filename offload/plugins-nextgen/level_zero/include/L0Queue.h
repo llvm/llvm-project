@@ -46,13 +46,15 @@ public:
       : Device(Device), CreateQueueInOrder(IsInorder) {}
   virtual ~L0QueueTy() {}
 
+  L0DeviceTy &getDevice() const { return Device; }
+
   LevelZeroPluginContextTy *getUserCtx() const { return UserCtx; }
   void setUserCtx(LevelZeroPluginContextTy *Ctx) { UserCtx = Ctx; }
 
   /// Clear data.
   void reset() { resetImpl(); }
 
-  Error init(ze_context_handle_t UserZeCtx = nullptr);
+  Error init(ze_context_handle_t UserZeCtx);
   Error deinit();
   Error synchronize() { return synchronizeImpl(); }
   Expected<bool> hasPendingWork() { return hasPendingWorkImpl(); }
@@ -285,7 +287,7 @@ class L0QueueCacheTy {
 public:
   L0QueueCacheTy(LevelZeroPluginContextTy &Ctx) : UserCtx(Ctx) {}
   Expected<L0QueueTy *> getQueue(L0DeviceTy &Device);
-  void releaseQueue(L0DeviceTy &Device, L0QueueTy *Queue);
+  void releaseQueue(L0QueueTy *Queue);
   Error deinit();
 };
 

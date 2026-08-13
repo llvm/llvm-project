@@ -258,7 +258,7 @@ Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
 void L0DeviceTy::releaseQueue(L0QueueTy *Queue) {
   if (!Queue)
     return;
-  Queue->getUserCtx()->returnCachedQueue(this, Queue);
+  Queue->getUserCtx()->returnCachedQueue(Queue);
 }
 
 Expected<L0QueueTy *>
@@ -632,7 +632,7 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
-    auto CmdListOrErr = createImmCmdList(InOrder);
+    auto CmdListOrErr = createImmCmdList(getZeContext(), InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     Ret->async_info->Queue = *CmdListOrErr;
@@ -738,8 +738,8 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 
 /// Create an immediate command list.
 Expected<ze_command_list_handle_t>
-L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder,
-                             ze_context_handle_t UserZeCtx) {
+L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index,
+                             ze_context_handle_t UserZeCtx, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
   if (getPlugin().getOptions().Flags.UseCopyOffloadHint)
     Flags |= ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
@@ -752,9 +752,8 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder,
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
-  ze_context_handle_t ZeCtx = UserZeCtx ? UserZeCtx : getZeContext();
-  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, ZeCtx, getZeDevice(), &Desc,
-                    &CmdList);
+  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, UserZeCtx, getZeDevice(),
+                    &Desc, &CmdList);
   ODBG(OLDT_Device) << "Created an immediate command list " << CmdList
                     << " (Ordinal: " << Ordinal << ", Index: " << Index
                     << ", Flags: " << Flags << ") for device " << getZeIdCStr();

@@ -25,7 +25,7 @@ namespace llvm::omp::target::plugin {
 /// common methods
 
 Error L0QueueTy::init(ze_context_handle_t UserZeCtx) {
-  auto CmdListOrErr = Device.getCmdListManager(CreateQueueInOrder, UserZeCtx);
+  auto CmdListOrErr = Device.getCmdListManager(UserZeCtx, CreateQueueInOrder);
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   CmdList = *CmdListOrErr;
@@ -491,9 +491,10 @@ Expected<L0QueueTy *> L0QueueCacheTy::getQueue(L0DeviceTy &Device) {
   return Queue;
 }
 
-void L0QueueCacheTy::releaseQueue(L0DeviceTy &Device, L0QueueTy *Queue) {
+void L0QueueCacheTy::releaseQueue(L0QueueTy *Queue) {
   if (!Queue)
     return;
+  L0DeviceTy &Device = Queue->getDevice();
   Queue->reset();
   std::lock_guard<std::mutex> Lock(Mtx);
   Queues[&Device].push_back(Queue);
