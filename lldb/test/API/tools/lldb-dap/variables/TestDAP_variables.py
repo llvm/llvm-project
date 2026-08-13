@@ -724,7 +724,7 @@ class TestDAP_variables(DAPTestCaseBase):
         self.assertIn("at main.cpp:", pc_reg.value)
 
     @no_debug_info_test
-    @requireDarwin
+    @requireDarwin()
     def test_darwin_dwarf_missing_obj(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove
@@ -738,7 +738,7 @@ class TestDAP_variables(DAPTestCaseBase):
         self.darwin_dwarf_missing_obj(None)
 
     @no_debug_info_test
-    @requireDarwin
+    @requireDarwin()
     def test_darwin_dwarf_missing_obj_with_symbol_ondemand_enabled(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove

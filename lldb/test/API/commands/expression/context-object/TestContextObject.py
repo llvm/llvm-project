@@ -8,7 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@requireExpressionEvaluation
+@requireExpressionEvaluation()
 class ContextObjectTestCase(TestBase):
     def test_context_object(self):
         """Tests expression evaluation in context of an object."""

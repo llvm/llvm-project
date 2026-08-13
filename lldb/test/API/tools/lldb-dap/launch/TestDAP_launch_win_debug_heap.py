@@ -9,7 +9,7 @@ from typing import List
 
 
 @skipIfBuildType(["debug"])
-@requireWindows
+@requireWindows()
 class TestDAP_launch_win_debug_heap(DAPTestCaseBase):
     """
     Test that lldb-dap respects the debug heap setting on Windows when launching in an integrated terminal.

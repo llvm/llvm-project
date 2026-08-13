@@ -15,7 +15,7 @@ class TestObjCClassMethod(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @requireDarwin
+    @requireDarwin()
     @add_test_categories(["pyapi"])
     def test_without_class_stubs(self):
         self.do_test_with_python_api()

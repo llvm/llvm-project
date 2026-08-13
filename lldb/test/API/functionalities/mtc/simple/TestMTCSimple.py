@@ -11,7 +11,7 @@ import json
 
 
 class MTCSimpleTestCase(TestBase):
-    @requireDarwin
+    @requireDarwin()
     @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     def test(self):
         self.mtc_dylib_path = findMainThreadCheckerDylib()

@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import PExpectTest
 
 
-@requireSignals  # no signal support
+@requireSignals("sends SIGINT to the inferior")
 class TestCase(PExpectTest):
     SHARED_BUILD_TESTCASE = False
 

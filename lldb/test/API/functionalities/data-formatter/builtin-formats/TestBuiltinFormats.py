@@ -8,7 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@requireExpressionEvaluation
+@requireExpressionEvaluation()
 class TestCase(TestBase):
     def getFormatted(self, format, expr):
         """
