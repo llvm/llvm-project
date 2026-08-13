@@ -8,7 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class ContextObjectTestCase(TestBase):
     def test_context_object_eval_function(self):
         """Tests expression evaluation of functions in context of an object."""
