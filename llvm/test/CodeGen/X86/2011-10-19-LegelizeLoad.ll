@@ -34,15 +34,13 @@ define dso_local i32 @main() nounwind uwtable {
 ;
 ; AVX512FP16-LABEL: main:
 ; AVX512FP16:       # %bb.0: # %entry
-; AVX512FP16-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512FP16-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512FP16-NEXT:    vpmovsxbd %xmm0, %xmm0
-; AVX512FP16-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX512FP16-NEXT:    vpmovsxbd %xmm1, %xmm1
-; AVX512FP16-NEXT:    vcvtdq2ps %xmm1, %xmm1
-; AVX512FP16-NEXT:    vdivps %xmm0, %xmm1, %xmm0
-; AVX512FP16-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX512FP16-NEXT:    vpmovdb %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpmovsxbw i(%rip), %xmm0
+; AVX512FP16-NEXT:    vcvtw2ph %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpmovsxbw j(%rip), %xmm1
+; AVX512FP16-NEXT:    vcvtw2ph %xmm1, %xmm1
+; AVX512FP16-NEXT:    vdivph %xmm0, %xmm1, %xmm0
+; AVX512FP16-NEXT:    vcvttph2w %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpmovwb %xmm0, %xmm0
 ; AVX512FP16-NEXT:    vpextrw $0, %xmm0, res(%rip)
 ; AVX512FP16-NEXT:    xorl %eax, %eax
 ; AVX512FP16-NEXT:    retq

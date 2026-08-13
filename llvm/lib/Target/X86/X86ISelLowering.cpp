@@ -51412,15 +51412,15 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
 
   // f32 recovers the quotient exactly when both operands fit in 24 bits
   MVT FPSclVT = MVT::f64;
+  EVT FP16VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f16);
+  bool FP16VTUsable =
+      DCI.isBeforeLegalize() || DAG.getTargetLoweringInfo().isTypeLegal(FP16VT);
   if (UseExactFPDiv &&
       (EltBits == 8 || BothFitFP(APFloat::IEEEhalf())) &&
-      Subtarget.hasFastFP16Div()) {
-    EVT FP16VT = VT.changeVectorElementType(*DAG.getContext(), MVT::f16);
-    if (DAG.getTargetLoweringInfo().isTypeLegal(FP16VT))
-      FPSclVT = MVT::f16;
-  }
-  if (FPSclVT == MVT::f64 && UseExactFPDiv &&
-      (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle())))
+      Subtarget.hasFastFP16Div() && FP16VTUsable)
+    FPSclVT = MVT::f16;
+  else if (UseExactFPDiv &&
+           (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle())))
     FPSclVT = MVT::f32;
 
   bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
