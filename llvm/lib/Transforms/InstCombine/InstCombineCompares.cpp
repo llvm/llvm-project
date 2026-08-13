@@ -6590,8 +6590,8 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
   // The re-extended constant changed, partly changed (in the case of a vector),
   // or could not be determined to be equal (in the case of a constant
   // expression), so the constant cannot be represented in the shorter type.
-  // All the cases that fold to true or false will have already been handled
-  // by simplifyICmpInst, so only deal with the tricky case.
+  // Equality and signed predicates that fold to true/false are handled by
+  // simplifyICmpInst. Remaining unsigned comparisons:
   if (IsSignedCmp || !IsSignedExt || !isa<ConstantInt>(C))
     return nullptr;
 
@@ -6602,8 +6602,13 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
 
   // Is source op negative?
   // icmp ugt (sext X), C --> icmp slt X, 0
-  assert(ICmp.getPredicate() == ICmpInst::ICMP_UGT && "ICmp should be folded!");
-  return new ICmpInst(CmpInst::ICMP_SLT, X, Constant::getNullValue(SrcTy));
+  if (ICmp.getPredicate() == ICmpInst::ICMP_UGT)
+    return new ICmpInst(CmpInst::ICMP_SLT, X, Constant::getNullValue(SrcTy));
+
+  // ule/uge are normally canonicalized to ult/ugt, but that can fail when
+  // flipping strictness would change the samesign poison domain, e.g.
+  // icmp samesign ule (sext X), INT_MAX. Do not assert on those predicates.
+  return nullptr;
 }
 
 /// Handle icmp (cast x), (cast or constant).
