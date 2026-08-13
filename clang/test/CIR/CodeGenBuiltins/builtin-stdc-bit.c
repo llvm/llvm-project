@@ -601,6 +601,104 @@ unsigned int test_stdc_first_trailing_one(unsigned char uc, unsigned short us,
 // OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
 // OGCG: trunc i64 %{{.*}} to i32
 
+void test_stdc_bit_ceil(unsigned char uc, unsigned short us, unsigned int ui,
+                        unsigned long ul, unsigned long long ull) {
+  volatile unsigned char ruc;
+  volatile unsigned short rus;
+  volatile unsigned int rui;
+  volatile unsigned long rul;
+  volatile unsigned long long rull;
+  ruc = __builtin_stdc_bit_ceil(uc);
+  rus = __builtin_stdc_bit_ceil(us);
+  rui = __builtin_stdc_bit_ceil(ui);
+  rul = __builtin_stdc_bit_ceil(ul);
+  rull = __builtin_stdc_bit_ceil(ull);
+}
+
+// CIR-LABEL: @test_stdc_bit_ceil(
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u8i
+// CIR: cir.clz %{{.+}} : !u8i
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u8i
+// CIR: cir.cmp le
+// CIR: cir.shift(left, %{{.+}} : !u8i, %{{.+}} : !u8i) -> !u8i
+// CIR: cir.shift(left, %{{.+}} : !u8i, %{{.+}} : !u8i) -> !u8i
+// CIR: cir.select
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u16i
+// CIR: cir.clz %{{.+}} : !u16i
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u16i
+// CIR: cir.cmp le
+// CIR: cir.shift(left, %{{.+}} : !u16i, %{{.+}} : !u16i) -> !u16i
+// CIR: cir.shift(left, %{{.+}} : !u16i, %{{.+}} : !u16i) -> !u16i
+// CIR: cir.select
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u32i
+// CIR: cir.clz %{{.+}} : !u32i
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u32i
+// CIR: cir.cmp le
+// CIR: cir.shift(left, %{{.+}} : !u32i, %{{.+}} : !u32i) -> !u32i
+// CIR: cir.shift(left, %{{.+}} : !u32i, %{{.+}} : !u32i) -> !u32i
+// CIR: cir.select
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+// CIR: cir.clz %{{.+}} : !u64i
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+// CIR: cir.cmp le
+// CIR: cir.shift(left, %{{.+}} : !u64i, %{{.+}} : !u64i) -> !u64i
+// CIR: cir.shift(left, %{{.+}} : !u64i, %{{.+}} : !u64i) -> !u64i
+// CIR: cir.select
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+// CIR: cir.clz %{{.+}} : !u64i
+// CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+// CIR: cir.cmp le
+// CIR: cir.shift(left, %{{.+}} : !u64i, %{{.+}} : !u64i) -> !u64i
+// CIR: cir.shift(left, %{{.+}} : !u64i, %{{.+}} : !u64i) -> !u64i
+// CIR: cir.select
+// LLVM-LABEL: @test_stdc_bit_ceil(
+// LLVM: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LLVM: sub i8 7, %{{.*}}
+// LLVM: icmp ule i8 %{{.*}}, 1
+// LLVM: shl i8 2, %{{.*}}
+// LLVM: select i1 %{{.*}}, i8 1, i8 %{{.*}}
+// LLVM: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LLVM: sub i16 15, %{{.*}}
+// LLVM: icmp ule i16 %{{.*}}, 1
+// LLVM: shl i16 2, %{{.*}}
+// LLVM: select i1 %{{.*}}, i16 1, i16 %{{.*}}
+// LLVM: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LLVM: sub i32 31, %{{.*}}
+// LLVM: icmp ule i32 %{{.*}}, 1
+// LLVM: shl i32 2, %{{.*}}
+// LLVM: select i1 %{{.*}}, i32 1, i32 %{{.*}}
+// LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: sub i64 63, %{{.*}}
+// LLVM: icmp ule i64 %{{.*}}, 1
+// LLVM: shl i64 2, %{{.*}}
+// LLVM: select i1 %{{.*}}, i64 1, i64 %{{.*}}
+// LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: sub i64 63, %{{.*}}
+// LLVM: icmp ule i64 %{{.*}}, 1
+// LLVM: shl i64 2, %{{.*}}
+// LLVM: select i1 %{{.*}}, i64 1, i64 %{{.*}}
+// OGCG-LABEL: @test_stdc_bit_ceil(
+// OGCG: icmp ule i8 %{{.*}}, 1
+// OGCG: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// OGCG: sub i8 7, %{{.*}}
+// OGCG: shl i8 2, %{{.*}}
+// OGCG: icmp ule i16 %{{.*}}, 1
+// OGCG: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// OGCG: sub i16 15, %{{.*}}
+// OGCG: shl i16 2, %{{.*}}
+// OGCG: icmp ule i32 %{{.*}}, 1
+// OGCG: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// OGCG: sub i32 31, %{{.*}}
+// OGCG: shl i32 2, %{{.*}}
+// OGCG: icmp ule i64 %{{.*}}, 1
+// OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: sub i64 63, %{{.*}}
+// OGCG: shl i64 2, %{{.*}}
+// OGCG: icmp ule i64 %{{.*}}, 1
+// OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: sub i64 63, %{{.*}}
+// OGCG: shl i64 2, %{{.*}}
+
 void test_stdc_bit_floor(unsigned char uc, unsigned short us, unsigned int ui,
                          unsigned long ul, unsigned long long ull) {
   volatile unsigned char ruc;
@@ -975,6 +1073,53 @@ unsigned int test_stdc_bit_width_lib(unsigned char uc, unsigned short us,
 // LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
 // LIB-CIR: cir.clz %{{.+}} : !u64i
 // LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+
+void test_stdc_bit_ceil_lib(unsigned char uc, unsigned short us,
+                            unsigned int ui, unsigned long ul,
+                            unsigned long long ull) {
+  volatile unsigned char ruc;
+  volatile unsigned short rus;
+  volatile unsigned int rui;
+  volatile unsigned long rul;
+  volatile unsigned long long rull;
+  ruc = stdc_bit_ceil_uc(uc);
+  rus = stdc_bit_ceil_us(us);
+  rui = stdc_bit_ceil_ui(ui);
+  rul = stdc_bit_ceil_ul(ul);
+  rull = stdc_bit_ceil_ull(ull);
+}
+
+// LIB-CIR-LABEL: @test_stdc_bit_ceil_lib(
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u8i
+// LIB-CIR: cir.clz %{{.+}} : !u8i
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u8i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u8i, %{{.+}} : !u8i) -> !u8i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u8i, %{{.+}} : !u8i) -> !u8i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u16i
+// LIB-CIR: cir.clz %{{.+}} : !u16i
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u16i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u16i, %{{.+}} : !u16i) -> !u16i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u16i, %{{.+}} : !u16i) -> !u16i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u32i
+// LIB-CIR: cir.clz %{{.+}} : !u32i
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u32i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u32i, %{{.+}} : !u32i) -> !u32i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u32i, %{{.+}} : !u32i) -> !u32i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+// LIB-CIR: cir.clz %{{.+}} : !u64i
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u64i, %{{.+}} : !u64i) -> !u64i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u64i, %{{.+}} : !u64i) -> !u64i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+// LIB-CIR: cir.clz %{{.+}} : !u64i
+// LIB-CIR: cir.sub %{{.+}}, %{{.+}} : !u64i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u64i, %{{.+}} : !u64i) -> !u64i
+// LIB-CIR: cir.shift(left, %{{.+}} : !u64i, %{{.+}} : !u64i) -> !u64i
+// LIB-CIR: cir.select
 
 void test_stdc_bit_floor_lib(unsigned char uc, unsigned short us,
                              unsigned int ui, unsigned long ul,

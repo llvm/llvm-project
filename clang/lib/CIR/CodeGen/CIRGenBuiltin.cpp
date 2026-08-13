@@ -130,14 +130,6 @@ static RValue errorStdcBitOpWidthNYI(CIRGenFunction &cgf, const CallExpr *e) {
   return cgf.getUndefRValue(e->getType());
 }
 
-static RValue errorBuiltinCallNYI(CIRGenFunction &cgf, const CallExpr *e,
-                                  unsigned builtinID) {
-  cgf.cgm.errorNYI(e->getSourceRange(),
-                   std::string("unimplemented builtin call: ") +
-                       cgf.getContext().BuiltinInfo.getName(builtinID));
-  return cgf.getUndefRValue(e->getType());
-}
-
 template <typename Op, typename... Args>
 static RValue emitStdcFirstBit(CIRGenFunction &cgf, const CallExpr *e,
                                bool invertArg, Args... args) {
@@ -162,6 +154,30 @@ static RValue emitStdcFirstBit(CIRGenFunction &cgf, const CallExpr *e,
   if (result.getType() != resultTy)
     result = builder.createIntCast(result, resultTy);
 
+  return RValue::get(result);
+}
+
+static RValue emitStdcBitCeil(CIRGenFunction &cgf, const CallExpr *e) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  auto argTy = mlir::cast<cir::IntType>(arg.getType());
+  if (!isStdcBitOpWidthSupported(argTy))
+    return errorStdcBitOpWidthNYI(cgf, e);
+
+  mlir::Value one = builder.getConstInt(loc, argTy, 1);
+  mlir::Value argMinusOne = builder.createSub(loc, arg, one);
+  mlir::Value lz =
+      cir::BitClzOp::create(builder, loc, argMinusOne, /*poisonZero=*/false)
+          .getResult();
+  mlir::Value widthMinusOne =
+      builder.getConstInt(loc, argTy, argTy.getWidth() - 1);
+  mlir::Value shiftAmt = builder.createSub(loc, widthMinusOne, lz);
+  mlir::Value isLeOne =
+      builder.createCompare(loc, cir::CmpOpKind::le, arg, one);
+  mlir::Value two = builder.createShiftLeft(loc, one, one);
+  mlir::Value ceil = builder.createShiftLeft(loc, two, shiftAmt);
+  mlir::Value result = builder.createSelect(loc, isLeOne, one, ceil);
   return RValue::get(result);
 }
 
@@ -1493,7 +1509,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_bit_ceil_ul:
   case Builtin::BIstdc_bit_ceil_ull:
   case Builtin::BI__builtin_stdc_bit_ceil:
-    return errorBuiltinCallNYI(*this, e, builtinID);
+    return emitStdcBitCeil(*this, e);
 
   case Builtin::BIstdc_bit_floor_uc:
   case Builtin::BIstdc_bit_floor_us:

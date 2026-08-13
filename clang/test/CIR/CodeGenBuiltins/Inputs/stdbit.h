@@ -73,7 +73,12 @@ unsigned int stdc_bit_width_ui(unsigned int);
 unsigned int stdc_bit_width_ul(unsigned long);
 unsigned int stdc_bit_width_ull(unsigned long long);
 
+unsigned char stdc_bit_ceil_uc(unsigned char);
+unsigned short stdc_bit_ceil_us(unsigned short);
 unsigned int stdc_bit_ceil_ui(unsigned int);
+unsigned long stdc_bit_ceil_ul(unsigned long);
+unsigned long long stdc_bit_ceil_ull(unsigned long long);
+
 unsigned char stdc_bit_floor_uc(unsigned char);
 unsigned short stdc_bit_floor_us(unsigned short);
 unsigned int stdc_bit_floor_ui(unsigned int);
