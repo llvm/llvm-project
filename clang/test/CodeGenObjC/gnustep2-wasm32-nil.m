@@ -26,13 +26,13 @@ int sendToPossiblyNil(Object *object) {
   return [object value];
 }
 
-Triple sendStructToPossiblyNil(Object *object) {
+S sendStructToPossiblyNil(Object *object) {
   // CHECK-LABEL: define{{.*}} void @sendStructToPossiblyNil
   // CHECK: [[ISNIL:%.*]] = icmp eq ptr %{{.*}}, null
   // CHECK: br i1 [[ISNIL]], label %[[NIL_CLEANUP:.*]], label %[[STRUCT_SEND:.*]]
   // CHECK: [[STRUCT_SEND]]:
   // CHECK: call ptr @objc_msg_lookup_sender
-  // CHECK: call void %{{.*}}(ptr{{.*}} sret(%struct.Triple){{.*}}
+  // CHECK: call void %{{.*}}(ptr{{.*}} sret(%struct.S){{.*}}
   // CHECK: br label %[[STRUCT_CONTINUE:.*]]
   // CHECK: [[NIL_CLEANUP]]:
   // CHECK-NEXT: call void @llvm.memset.p0.i32(ptr align 4 %agg.result, i8 0, i32 12, i1 false)
@@ -41,4 +41,3 @@ Triple sendStructToPossiblyNil(Object *object) {
   // CHECK: ret void
   return [object s];
 }
-

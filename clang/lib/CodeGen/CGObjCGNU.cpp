@@ -2968,7 +2968,6 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
                                   Class, Receiver))
       return false;
 
-
     // If there's a consumed argument, we need a nil check.
     if (Method && Method->hasParamDestroyedInCallee()) {
       hasParamDestroyedInCallee = true;
