@@ -1484,6 +1484,13 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/AMDGPUTypes.def"
   }
 
+  if (Target.getTriple().isSPIRV() ||
+      (AuxTarget && AuxTarget->getTriple().isSPIRV())) {
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/SPIRVTypes.def"
+  }
+
   // Builtin type for __objc_yes and __objc_no
   ObjCBuiltinBoolTy = (Target.useSignedCharForObjCBool() ?
                        SignedCharTy : BoolTy);
@@ -2445,6 +2452,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getPointerWidth(LangAS::Default);
       Align = Target->getPointerAlign(LangAS::Default);
       break;
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    Width = Target->getPointerWidth(LangAS::Default);                          \
+    Align = Target->getPointerAlign(LangAS::Default);                          \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -3360,13 +3373,17 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
 }
 
 uint16_t
-ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
+ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                     bool IsVTTEntry) {
   assert(RD->isPolymorphic() &&
          "Attempted to get vtable pointer discriminator on a monomorphic type");
+
   std::unique_ptr<MangleContext> MC(createMangleContext());
   SmallString<256> Str;
   llvm::raw_svector_ostream Out(Str);
   MC->mangleCXXVTable(RD, Out);
+  if (IsVTTEntry)
+    Out << VTTVTablePointerDiscriminatorSuffix;
   return llvm::getPointerAuthStableSipHash(Str);
 }
 
@@ -3594,6 +3611,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       llvm_unreachable("not yet implemented");
     }
     llvm_unreachable("should never get here");
@@ -5789,7 +5808,7 @@ QualType ASTContext::getAttributedType(const Attr *attr, QualType modifiedType,
 
 QualType ASTContext::getAttributedType(NullabilityKind nullability,
                                        QualType modifiedType,
-                                       QualType equivalentType) {
+                                       QualType equivalentType) const {
   switch (nullability) {
   case NullabilityKind::NonNull:
     return getAttributedType(attr::TypeNonNull, modifiedType, equivalentType);
@@ -8189,8 +8208,7 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
 
   // int x[_Nullable] -> int * _Nullable
   if (auto Nullability = Ty->getNullability()) {
-    Result = const_cast<ASTContext *>(this)->getAttributedType(*Nullability,
-                                                               Result, Result);
+    Result = getAttributedType(*Nullability, Result, Result);
   }
   return Result;
 }
@@ -9308,6 +9326,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
         Diags.Report(diag::err_unsupported_objc_primitive_encoding)

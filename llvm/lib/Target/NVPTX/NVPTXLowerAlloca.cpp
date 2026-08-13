@@ -39,30 +39,12 @@
 
 using namespace llvm;
 
-namespace {
-class NVPTXLowerAlloca : public FunctionPass {
-  bool runOnFunction(Function &F) override;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerAlloca() : FunctionPass(ID) {}
-  StringRef getPassName() const override {
-    return "convert address space of alloca'ed memory to local";
-  }
-};
-} // namespace
-
-char NVPTXLowerAlloca::ID = 0;
-
-INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
-                false)
-
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-bool NVPTXLowerAlloca::runOnFunction(Function &F) {
+static bool lowerAllocas(Function &F) {
   // Mandatory lowering: later stack lowering relies on local allocas, so run
-  // even for optnone functions (skipFunction is intentionally not called).
+  // even for optnone functions (optnone is intentionally not honored).
   SmallVector<AllocaInst *, 8> GenericAllocas;
   for (auto &BB : F)
     for (auto &I : BB)
@@ -116,6 +98,31 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
   return !GenericAllocas.empty();
 }
 
-FunctionPass *llvm::createNVPTXLowerAllocaPass() {
-  return new NVPTXLowerAlloca();
+namespace {
+class NVPTXLowerAllocaLegacyPass : public FunctionPass {
+  bool runOnFunction(Function &F) override { return lowerAllocas(F); }
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+  NVPTXLowerAllocaLegacyPass() : FunctionPass(ID) {}
+  StringRef getPassName() const override {
+    return "convert address space of alloca'ed memory to local";
+  }
+};
+} // namespace
+
+char NVPTXLowerAllocaLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXLowerAllocaLegacyPass, "nvptx-lower-alloca",
+                "Lower Alloca", false, false)
+
+FunctionPass *llvm::createNVPTXLowerAllocaLegacyPass() {
+  return new NVPTXLowerAllocaLegacyPass();
+}
+
+PreservedAnalyses NVPTXLowerAllocaPass::run(Function &F,
+                                            FunctionAnalysisManager &FAM) {
+  if (!lowerAllocas(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

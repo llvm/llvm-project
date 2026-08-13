@@ -1322,9 +1322,10 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   case Intrinsic::amdgcn_make_buffer_rsrc: {
     Type *SrcTy = NewV->getType();
     Type *DstTy = II->getType();
+    Type *NumRecordsTy = II->getArgOperand(2)->getType();
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        M, II->getIntrinsicID(), {DstTy, SrcTy});
+        M, II->getIntrinsicID(), {DstTy, SrcTy, NumRecordsTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;

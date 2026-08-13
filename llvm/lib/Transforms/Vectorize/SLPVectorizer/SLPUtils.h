@@ -51,6 +51,16 @@ bool isConstant(Value *V);
 /// returns for FAdd/FMul, whose identity fast-math may break anyway.
 bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
 
+/// \returns the opcode of the combines emitted for a reassociated node:
+/// subtract chains regroup their positive and negative operand columns with
+/// plain adds.
+unsigned getReassocCombineOpcode(unsigned Opcode);
+
+/// \returns True if \p I can be a link of a flattenable binary chain:
+/// subtracts flatten as adds of a negated leaf, float subtracts need reassoc
+/// to allow the regrouping.
+bool isReassocChainLink(const Instruction *I);
+
 /// Checks if \p V is one of vector-like instructions, i.e. undef,
 /// insertelement/extractelement with constant indices for fixed vector type
 /// or extractvalue instruction.
@@ -307,6 +317,24 @@ SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
 /// Opcode. Disabled lanes of these intrinsics are poison rather than UB,
 /// unlike the plain opcode.
 Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
+
+/// Returns true if \p I forms a vectorizable bundle on its own and its single
+/// user does not tear the vector apart. Loads and addresses are excluded: the
+/// tree is built without the users, so it does not pay off the extracts. A
+/// cast, feeding a multi-used cast, is excluded for the same reason, such a
+/// user stays scalar. The fp-to-int conversions move the result to the other
+/// register domain, so the extracts are paid on top of the repacking. The
+/// values, feeding the inserts, are vectorized together with them by the
+/// dedicated attempt.
+bool isOnceUsedSeed(const Instruction *I);
+
+/// If \p V is a single-use fpext of a single-use fptrunc forming a round-trip
+/// back to the type of \p V, returns the fptrunc; the round-trip source is its
+/// operand, always an instruction of the same type as \p V. If
+/// \p MustBeElidable, matches only when the intermediate rounding may be
+/// removed: both casts must allow contraction and the widening cast cannot
+/// produce nan/inf.
+Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
 
 } // namespace llvm::slpvectorizer
 

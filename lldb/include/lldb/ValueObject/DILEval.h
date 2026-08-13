@@ -73,6 +73,7 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode &node) override;
 
   /// Perform usual unary conversions on a value. At the moment this
   /// includes array-to-pointer and integral promotion for eligible types.
@@ -129,6 +130,7 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                         lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP> EvaluateLogical(const BinaryOpNode &node);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system, ExecutionContextScope &ctx,
                   const IntegerLiteralNode &literal);

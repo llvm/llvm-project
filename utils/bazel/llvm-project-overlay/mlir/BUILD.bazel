@@ -1601,6 +1601,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":AlignmentAttrInterfaceTdFiles",
         ":ArithOpsTdFiles",
         ":FuncTdFiles",
         ":InferIntDivisibilityOpInterfaceTdFiles",
@@ -4142,6 +4143,7 @@ cc_library(
     deps = [
         ":AffineMemoryOpInterfacesIncGen",
         ":AffineOpsIncGen",
+        ":AlignmentAttrInterface",
         ":ArithDialect",
         ":ControlFlowInterfaces",
         ":DialectUtils",
@@ -10865,9 +10867,15 @@ gentbl_cc_library(
 
 cc_library(
     name = "OpenMPDialect",
-    srcs = glob(["lib/Dialect/OpenMP/IR/*.cpp"]),
+    srcs = glob([
+        "lib/Dialect/OpenMP/IR/*.cpp",
+        "lib/Dialect/OpenMP/Utils/*.cpp",
+    ]),
     hdrs = glob(
-        include = ["include/mlir/Dialect/OpenMP/*.h"],
+        include = [
+            "include/mlir/Dialect/OpenMP/*.h",
+            "include/mlir/Dialect/OpenMP/Utils/*.h",
+        ],
         exclude = ["include/mlir/Dialect/OpenMP/OpenMPInterfaces.h"],
     ) + [
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h",
@@ -10877,6 +10885,7 @@ cc_library(
     deps = [
         ":AtomicInterfaces",
         ":AtomicInterfacesIncGen",
+        ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
         ":FuncDialect",
@@ -10905,20 +10914,9 @@ gentbl_cc_library(
     deps = [":PassBaseTdFiles"],
 )
 
-cc_library(
+alias(
     name = "OpenMPUtils",
-    srcs = glob(["lib/Dialect/OpenMP/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/OpenMP/Utils/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":AtomicInterfaces",
-        ":CallOpInterfaces",
-        ":IR",
-        ":LLVMDialect",
-        ":OpenMPDialect",
-        ":Support",
-        "//llvm:Support",
-    ],
+    actual = ":OpenMPDialect",
 )
 
 cc_library(
@@ -14161,11 +14159,13 @@ cc_library(
         "lib/Dialect/Bufferization/IR/BufferizationOps.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationTypeInterfaces.cpp",
         "lib/Dialect/Bufferization/IR/UnstructuredControlFlow.cpp",
+        "lib/Dialect/Bufferization/IR/ValueBoundsOpInterfaceImpl.cpp",
     ],
     hdrs = [
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
         "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Bufferization/IR/UnstructuredControlFlow.h",
+        "include/mlir/Dialect/Bufferization/IR/ValueBoundsOpInterfaceImpl.h",
     ],
     includes = ["include"],
     deps = [
@@ -14193,6 +14193,7 @@ cc_library(
         ":SparseTensorDialect",
         ":SubsetOpInterface",
         ":TensorDialect",
+        ":ValueBoundsOpInterface",
         "//llvm:Support",
     ],
 )

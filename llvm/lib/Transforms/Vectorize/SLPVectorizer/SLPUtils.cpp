@@ -40,6 +40,25 @@ bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
   return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
 }
 
+unsigned getReassocCombineOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::Sub:
+    return Instruction::Add;
+  case Instruction::FSub:
+    return Instruction::FAdd;
+  default:
+    return Opcode;
+  }
+}
+
+bool isReassocChainLink(const Instruction *I) {
+  if (I->getOpcode() == Instruction::Sub)
+    return true;
+  if (I->getOpcode() == Instruction::FSub)
+    return I->hasAllowReassoc();
+  return I->isAssociative();
+}
+
 bool isVectorLikeInstWithConstOps(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   // Non-instructions are vector-like only if they are undef.
@@ -679,6 +698,76 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
   }
+}
+
+/// Returns true if \p I is a part of a single-use chain, computing an address,
+/// which does not pay off the vectorization: a constant table is accessed by a
+/// gather, while the indices, unrelated between the lanes, require a full
+/// buildvector, unlike the ones, shifted by a constant from a common base.
+static bool isNonProfitableIndex(const Instruction *I) {
+  constexpr unsigned MaxIndexChainLength = 3;
+  // A constant shift of a common base is a cheap buildvector, while the loads
+  // are vectorized together with the indices, computed from them.
+  auto IsProfitableOperand = [](const Value *V) {
+    if (isa<Constant>(V))
+      return true;
+    if (const auto *Cast = dyn_cast<CastInst>(V); Cast && Cast->hasOneUse())
+      V = Cast->getOperand(0);
+    return isa<LoadInst>(V);
+  };
+  const User *U = I->user_back();
+  for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
+    if (const auto *GEP = dyn_cast<GetElementPtrInst>(U))
+      return isa<Constant>(GEP->getPointerOperand()) ||
+             none_of(I->operand_values(), IsProfitableOperand);
+    if (!isa<Instruction>(U) || !U->hasOneUse())
+      return false;
+    U = U->user_back();
+  }
+  return false;
+}
+
+bool isOnceUsedSeed(const Instruction *I) {
+  if (!I->hasOneUse() || isNonProfitableIndex(I))
+    return false;
+  // The operation with the identity or the absorbing constant is folded away
+  // before the codegen, the vector node only repacks the lanes.
+  if (const auto *BO = dyn_cast<BinaryOperator>(I)) {
+    unsigned Opcode = BO->getOpcode();
+    Type *Ty = BO->getType();
+    for (unsigned Idx : seq<unsigned>(2)) {
+      const auto *C = dyn_cast<Constant>(BO->getOperand(Idx));
+      if (C && (C == ConstantExpr::getBinOpIdentity(
+                         Opcode, Ty, /*AllowRHSConstant=*/Idx == 1) ||
+                C == ConstantExpr::getBinOpAbsorber(
+                         Opcode, Ty, /*AllowLHSConstant=*/Idx == 0)))
+        return false;
+    }
+  }
+  const User *U = I->user_back();
+  if (isa<ExtractElementInst, ExtractValueInst>(I))
+    return isa<InsertElementInst, InsertValueInst>(U);
+  if (isa<CastInst>(I))
+    return !isa<FPToSIInst, FPToUIInst>(I) &&
+           (!isa<CastInst>(U) || U->hasOneUse());
+  return isa<BinaryOperator, UnaryOperator, SelectInst, FreezeInst, CallInst>(
+      I);
+}
+
+Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
+  auto *Wide = dyn_cast<FPExtInst>(V);
+  if (!Wide || !Wide->hasOneUse())
+    return nullptr;
+  auto *Narrow = dyn_cast<FPTruncInst>(Wide->getOperand(0));
+  if (!Narrow || !Narrow->hasOneUse())
+    return nullptr;
+  Value *Src = Narrow->getOperand(0);
+  if (!isa<Instruction>(Src) || Src->getType() != Wide->getType())
+    return nullptr;
+  if (MustBeElidable && !(Wide->hasAllowContract() && Wide->hasNoNaNs() &&
+                          Wide->hasNoInfs() && Narrow->hasAllowContract()))
+    return nullptr;
+  return Narrow;
 }
 
 } // namespace llvm::slpvectorizer
