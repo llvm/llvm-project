@@ -57,7 +57,7 @@ no-alias rules can enable some trivial optimizations.
 
 Given the following example:
 
-```c++
+```hlsl
 void fn(float a[4]) {
   a[0] = a[1] + a[2] + a[3];
 }
@@ -80,7 +80,7 @@ unfortunate behavior divergence.
 
 ### Out Parameter Temporaries
 
-```c++
+```hlsl
 void Init(inout int X, inout int Y) {
   Y = 2;
   X = 1;
@@ -103,7 +103,7 @@ ordering is reversed, so the initialization and destruction occurs in the order:
 {`X`, `Y`, `~Y`, `X`}. This causes the write-back of the value `X` to
 occur last, resulting in the value of `V` being set to `1`.
 
-```c++
+```hlsl
 void Trunc(inout int3 V) { }
 
 
@@ -120,7 +120,7 @@ the floating point vector type `float3`. This results in an implicit
 element-wise conversion of the vector even if the value is unused in the
 function (effectively truncating the floating point values).
 
-```c++
+```hlsl
 void UB(out int X) {}
 
 void main() {
@@ -167,7 +167,7 @@ equivalent non-decayed `ArrayParameterType` if the underlying canonical
 `ConstantArrayType` is the same. This occurs during overload resolution
 instead of array to pointer decay.
 
-```c++
+```hlsl
 void SizedArray(float a[4]);
 void UnsizedArray(float a[]);
 
@@ -205,7 +205,7 @@ initialize an appropriately sized temporary.
 
 It is illegal in HLSL to convert an unsized array to a sized array:
 
-```c++
+```hlsl
 void SizedArray(float a[4]);
 void UnsizedArray(float a[]) {
   SizedArray(a); // Cannot convert float[] to float[4]
@@ -215,7 +215,7 @@ void UnsizedArray(float a[]) {
 When converting a sized array to an unsized array, an array temporary can also
 be inserted. Given the following code:
 
-```c++
+```hlsl
 void UnsizedArray(float a[]);
 void SizedArray(float a[4]) {
   UnsizedArray(a);
@@ -248,7 +248,7 @@ To represent this concept in Clang we introduce a new `HLSLOutArgExpr`. An
 
 Given this example:
 
-```c++
+```hlsl
 void Init(inout int X) {
   X = 1;
 }
@@ -290,7 +290,7 @@ denote whether or not the temporary is initialized from the sub-expression.
 
 The example below demonstrates argument casting:
 
-```c++
+```hlsl
 void Trunc(inout int3 V) { }
 
 

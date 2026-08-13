@@ -53,7 +53,7 @@ The availability of `ddx` function depends on a shader stage. It is available fo
 
 ### Compute shader example
 
-```c++
+```hlsl
 float unusedFunction(float f) {
   return ddx(f);
 }
@@ -84,7 +84,7 @@ With strict diagnostic mode, in addition to the 2 errors above Clang will also e
 
 ### Shader library example
 
-```c++
+```hlsl
 float myFunction(float f) {
   return ddx(f);
 }
@@ -123,4 +123,3 @@ With strict diagnostic mode Clang will also emit errors for availability issues 
 ```
 
 Note that `myFunction` is reachable from both pixel and compute shader entry points is therefore scanned twice - once for each context. The diagnostic is emitted only for the compute shader context.
-

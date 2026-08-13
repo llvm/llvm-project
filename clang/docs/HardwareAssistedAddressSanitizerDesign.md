@@ -76,7 +76,7 @@ convention that
 
 Currently, the following sequence is used:
 
-```text
+```objdump
 // int foo(int *a) { return *a; }
 // clang -O2 --target=aarch64-linux-android30 -fsanitize=hwaddress -S -o - load.c
 [...]
@@ -165,7 +165,7 @@ using the following mechanisms:
 
 A complete example is given below:
 
-```text
+```objdump
 // int x = 1; int *f() { return &x; }
 // clang -O2 --target=aarch64-linux-android30 -fsanitize=hwaddress -S -o - global.c
 

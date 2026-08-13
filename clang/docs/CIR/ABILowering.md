@@ -55,7 +55,7 @@ System V ABI, a struct containing two 64-bit integers might be "expanded" into
 two separate arguments passed in registers, rather than being passed as a single
 aggregate:
 
-```text
+```mlir
 // High-level CIR
 func @foo(i32, struct<i64, i64>) -> i32
 
@@ -287,7 +287,7 @@ At this stage, the types are still in their high-level, dialect-specific form
 these types into a list that will be fed to the classification logic in the next
 step.
 
-```text
+```mlir
 Input: func @foo(%arg0: !cir.int<u, 32>,
        %arg1: !cir.struct<{!cir.int<u, 64>,
                             !cir.int<u, 64>}>) -> !cir.int<u, 32>

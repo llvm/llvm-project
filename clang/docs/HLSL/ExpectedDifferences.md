@@ -64,7 +64,7 @@ Clang's implementation extends standard overload resolution rules to HLSL
 library functionality. This causes subtle changes in overload resolution
 behavior between Clang and DXC. Some examples include:
 
-```c++
+```hlsl
 void halfOrInt16(half H);
 void halfOrInt16(uint16_t U);
 void halfOrInt16(int16_t I);
@@ -154,7 +154,7 @@ where an overload `f1` is a better candidate than `f2` if for all arguments the
 conversion sequences is not worse than the corresponding conversion sequence and
 for at least one argument it is better.
 
-```c++
+```hlsl
 cbuffer CB {
   int I;
   float X;
@@ -208,4 +208,3 @@ The scores of each conversion sequence are then summed to generate a score for
 the overload candidate. The overload candidate with the lowest score is the best
 candidate. If more than one overload are matched for the lowest score the call
 is ambiguous.
-

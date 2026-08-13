@@ -28,7 +28,7 @@ part of the same `<substitution>` the `<unqualified-name>` is.
 
 They are mangled as:
 
-```text
+```bnf
 <abi-tags> ::= <abi-tag>*   # sort by name
 <abi-tag> ::= B <tag source-name>
 ```
@@ -49,7 +49,7 @@ enum), the explicit tags are the active tags.
 For variables and functions, the active tags are the explicit tags plus any
 "required tags" which are not in the "available tags" set:
 
-```text
+```bnf
 derived-tags := (required-tags - available-tags)
 active-tags := explicit-tags + derived-tags
 ```
