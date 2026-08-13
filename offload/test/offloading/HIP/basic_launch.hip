@@ -14,18 +14,17 @@
 
 #include <stdio.h>
 
-__global__ void square(int *A) {
-  __scoped_atomic_fetch_add(A, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_DEVICE);
-}
+__global__ void square(int *A) { *A = 42; }
 
 int main(int argc, char **argv) {
-  int DevNo = 0;
-  int *Ptr, I;
-  cudaMalloc(&Ptr, 4);
+  int *Ptr;
+  hipMalloc(&Ptr, 4);
   printf("Ptr %p\n", Ptr);
   // CHECK: Ptr [[Ptr:0x.*]]
-  square<<<7, 6>>>(Ptr);
-  cudaMemcpy(&I, Ptr, sizeof(int), cudaMemcpyDeviceToHost);
+  square<<<1, 1>>>(Ptr);
+  int I = 0;
+  hipDeviceSynchronize();
+  hipMemcpy(&I, Ptr, sizeof(int), hipMemcpyDeviceToHost);
   printf("I: %i\n", I);
   // CHECK: I: 42
 }

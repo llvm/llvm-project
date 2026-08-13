@@ -22,16 +22,16 @@ __global__ void square(int *Dst, short Q, int *Src, short P) {
 int main(int argc, char **argv) {
   int DevNo = 0;
   int *Src, *Ptr;
-  cudaMalloc(&Ptr, 4);
-  cudaMalloc(&Src, 8);
+  hipMalloc(&Ptr, 4);
+  hipMalloc(&Src, 8);
 
   int I = 7;
-  int HostSrc[2] = {-2, 8};
-  cudaMemcpy(Ptr, &I, sizeof(int), cudaMemcpyHostToDevice);
-  cudaMemcpy(Src, &HostSrc[0], 2 * sizeof(int), cudaMemcpyHostToDevice);
+  int HostSrc[2] = {-2,8};
+  hipMemcpy(Ptr, &I, sizeof(int), hipMemcpyHostToDevice);
+  hipMemcpy(Src, &HostSrc[0], 2*sizeof(int), hipMemcpyHostToDevice);
   square<<<1, 1>>>(Ptr, 3, Src, 4);
-  cudaMemcpy(&I, Ptr, sizeof(int), cudaMemcpyDeviceToHost);
-  cudaMemcpy(&HostSrc[0], Src, 2 * sizeof(int), cudaMemcpyDeviceToHost);
+  hipMemcpy(&I, Ptr, sizeof(int), hipMemcpyDeviceToHost);
+  hipMemcpy(&HostSrc[0], Src, 2 * sizeof(int), hipMemcpyDeviceToHost);
   printf("I: %i\n", I);
   // CHECK: I: 42
   printf("Src: %i, %i\n", HostSrc[0], HostSrc[1]);
