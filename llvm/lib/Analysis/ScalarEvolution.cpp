@@ -7853,9 +7853,10 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
           valuesForAddRecFromPHI(LI, cast<PHINode>(U));
       if (BEValueV && StartValueV) {
         Ops.push_back(StartValueV);
-        // FIXME: Find invariant values which feed into BEValueV. This search
-        // probably needs to be integrated into the top-level loop in
-        // createSCEVIter.
+        // FIXME: Handle values which feed into BEValueV. This probably needs
+        // to be integrated into the main loop of createSCEVIter. We could
+        // search for invariant values, or we could turn the whole
+        // createAddRecFromPHI algorithm into an iterative process.
       }
     }
     // In addition to getNodeForPHI, also construct nodes which might be needed
