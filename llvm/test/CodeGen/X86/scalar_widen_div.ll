@@ -288,13 +288,12 @@ define <4 x i8> @test_char_rem(<4 x i8> %num, <4 x i8> %rem) {
 ;
 ; AVX512FP16-LABEL: test_char_rem:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    vpmovsxbd %xmm1, %xmm2
-; AVX512FP16-NEXT:    vcvtdq2ps %xmm2, %xmm2
-; AVX512FP16-NEXT:    vpmovsxbd %xmm0, %xmm3
-; AVX512FP16-NEXT:    vcvtdq2ps %xmm3, %xmm3
-; AVX512FP16-NEXT:    vdivps %xmm2, %xmm3, %xmm2
-; AVX512FP16-NEXT:    vcvttps2dq %xmm2, %xmm2
-; AVX512FP16-NEXT:    vpackssdw %xmm2, %xmm2, %xmm2
+; AVX512FP16-NEXT:    vpmovsxbw %xmm1, %xmm2
+; AVX512FP16-NEXT:    vcvtw2ph %xmm2, %xmm2
+; AVX512FP16-NEXT:    vpmovsxbw %xmm0, %xmm3
+; AVX512FP16-NEXT:    vcvtw2ph %xmm3, %xmm3
+; AVX512FP16-NEXT:    vdivph %xmm2, %xmm3, %xmm2
+; AVX512FP16-NEXT:    vcvttph2w %xmm2, %xmm2
 ; AVX512FP16-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX512FP16-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
 ; AVX512FP16-NEXT:    vpmovwb %xmm1, %xmm1
