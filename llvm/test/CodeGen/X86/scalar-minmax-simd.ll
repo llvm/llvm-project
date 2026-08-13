@@ -1146,14 +1146,13 @@ define void @sort2_i64(ptr %a) nounwind {
 ;
 ; AVX512F-LABEL: sort2_i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movq (%rdi), %rax
-; AVX512F-NEXT:    movq 8(%rdi), %rcx
-; AVX512F-NEXT:    cmpq %rcx, %rax
-; AVX512F-NEXT:    movq %rcx, %rdx
-; AVX512F-NEXT:    cmovlq %rax, %rdx
-; AVX512F-NEXT:    cmovgq %rax, %rcx
-; AVX512F-NEXT:    movq %rdx, (%rdi)
-; AVX512F-NEXT:    movq %rcx, 8(%rdi)
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512F-NEXT:    vpminsq %zmm0, %zmm1, %zmm2
+; AVX512F-NEXT:    vpmaxsq %zmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; AVX512F-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: sort2_i64:
@@ -1168,14 +1167,13 @@ define void @sort2_i64(ptr %a) nounwind {
 ;
 ; AVX512FP16-LABEL: sort2_i64:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    movq (%rdi), %rax
-; AVX512FP16-NEXT:    movq 8(%rdi), %rcx
-; AVX512FP16-NEXT:    cmpq %rcx, %rax
-; AVX512FP16-NEXT:    movq %rcx, %rdx
-; AVX512FP16-NEXT:    cmovlq %rax, %rdx
-; AVX512FP16-NEXT:    cmovgq %rax, %rcx
-; AVX512FP16-NEXT:    movq %rdx, (%rdi)
-; AVX512FP16-NEXT:    movq %rcx, 8(%rdi)
+; AVX512FP16-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512FP16-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512FP16-NEXT:    vpminsq %zmm0, %zmm1, %zmm2
+; AVX512FP16-NEXT:    vpmaxsq %zmm0, %zmm1, %zmm0
+; AVX512FP16-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; AVX512FP16-NEXT:    vmovdqu %xmm0, (%rdi)
+; AVX512FP16-NEXT:    vzeroupper
 ; AVX512FP16-NEXT:    retq
   %p0 = getelementptr inbounds i64, ptr %a, i64 0
   %p1 = getelementptr inbounds i64, ptr %a, i64 1
@@ -1236,11 +1234,10 @@ define void @store_abs_i64(ptr %p, ptr %r) nounwind {
 ;
 ; AVX512F-LABEL: store_abs_i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movq (%rdi), %rax
-; AVX512F-NEXT:    movq %rax, %rcx
-; AVX512F-NEXT:    negq %rcx
-; AVX512F-NEXT:    cmovsq %rax, %rcx
-; AVX512F-NEXT:    movq %rcx, (%rsi)
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vpabsq %zmm0, %zmm0
+; AVX512F-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: store_abs_i64:
@@ -1252,11 +1249,10 @@ define void @store_abs_i64(ptr %p, ptr %r) nounwind {
 ;
 ; AVX512FP16-LABEL: store_abs_i64:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    movq (%rdi), %rax
-; AVX512FP16-NEXT:    movq %rax, %rcx
-; AVX512FP16-NEXT:    negq %rcx
-; AVX512FP16-NEXT:    cmovsq %rax, %rcx
-; AVX512FP16-NEXT:    movq %rcx, (%rsi)
+; AVX512FP16-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512FP16-NEXT:    vpabsq %zmm0, %zmm0
+; AVX512FP16-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512FP16-NEXT:    vzeroupper
 ; AVX512FP16-NEXT:    retq
   %x = load i64, ptr %p, align 8
   %a = call i64 @llvm.abs.i64(i64 %x, i1 false)
