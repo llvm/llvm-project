@@ -8453,7 +8453,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
       // stale pointers to blocks that may have been deleted during
       // vectorization. Clear it so that BlockFrequencyAnalysis (if requested
       // for a later loop) recomputes it fresh.
-      if (FAM && FAM->getCachedResult<CycleAnalysis>(F))
+      if (FAM->getCachedResult<CycleAnalysis>(F))
         FAM->clearAnalysis<CycleAnalysis>(F);
 
 #ifndef NDEBUG
