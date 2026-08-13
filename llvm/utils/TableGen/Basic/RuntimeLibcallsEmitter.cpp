@@ -651,6 +651,29 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       }
     }
 
+    // Split the top-level member list into named LibcallLibrary references,
+    // which are dispatched to their own setAvailableLibFuncs_<name> function
+    // under an isLibraryAvailable guard, and the remaining (bare impl /
+    // LibcallImpls) members, which are emitted inline via the flat path below.
+    const DagInit *MemberDag =
+        R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
+    SmallVector<StringRef, 4> DispatchLibs;
+    SmallVector<const Init *, 16> InlineArgs;
+    SmallVector<const StringInit *, 16> InlineArgNames;
+    for (auto [Arg, ArgName] :
+         zip_equal(MemberDag->getArgs(), MemberDag->getArgNames())) {
+      if (const auto *DI = dyn_cast<DefInit>(Arg);
+          DI && DI->getDef()->isSubClassOf("LibcallLibrary")) {
+        DispatchLibs.push_back(DI->getDef()->getValueAsString("LibraryName"));
+        continue;
+      }
+      InlineArgs.push_back(Arg);
+      InlineArgNames.push_back(ArgName);
+    }
+
+    const DagInit *InlineDag =
+        DagInit::get(MemberDag->getOperator(), InlineArgs, InlineArgNames);
+
     SetTheory Sets;
 
     DenseMap<const RuntimeLibcallImpl *,
@@ -659,8 +682,9 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     Sets.addExpander("LibcallImpls", std::make_unique<LibcallPredicateExpander>(
                                          Libcalls, Func2Preds));
 
-    const SetTheory::RecVec *Elements =
-        Sets.expand(R->getValueAsDef("MemberList"));
+    SetTheory::RecSet ElementsSet;
+    Sets.evaluate(InlineDag, ElementsSet, R->getLoc());
+    const SetTheory::RecSet *Elements = &ElementsSet;
 
     // Sort to get deterministic output
     SetVector<PredicateWithCC> PredicateSorter;
@@ -722,6 +746,19 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     }
     OS << "\n    });\n"
           "    AvailableLibcallImpls = SystemAvailableImpls;\n\n";
+
+    // Dispatch to each named library's setup function. This must come after the
+    // SystemAvailableImpls assignment above (which overwrites the bitset); the
+    // library functions union their members in on top via setAvailable.
+    for (StringRef LibName : DispatchLibs) {
+      OS << indent(4) << "if (isLibraryAvailable(\"" << LibName << "\"))\n"
+         << indent(6) << "setAvailableLibFuncs_";
+      emitLibFuncSuffix(OS, LibName);
+      OS << "(*this, TT, ExceptionModel, FloatABI, EABIVersion, ABIName, "
+            "LongDoubleFormat);\n";
+    }
+    if (!DispatchLibs.empty())
+      OS << '\n';
 
     emitPredicateGroups(OS, R, Pred2Funcs, PredicateSorter, /*BaseIndent=*/2,
                         /*Receiver=*/"");
