@@ -7297,6 +7297,23 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
     return true;
   }
 
+  // Fold ((shl (extract_vector_elt X, I), GRLen - EleBits)), 0, eq/ne) ->
+  //      ((extract_vector_elt X, I), 0, eq/ne)
+  if (isNullConstant(RHS) && (CCVal == ISD::SETEQ || CCVal == ISD::SETNE) &&
+      LHS.getOpcode() == ISD::SHL && LHS.hasOneUse() &&
+      isa<ConstantSDNode>(LHS.getOperand(1))) {
+    SDValue Ext = LHS.getOperand(0);
+    unsigned Sht = LHS.getConstantOperandVal(1);
+    if (Ext.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      SDValue Vec = Ext.getOperand(0);
+      unsigned EleBits = Vec.getScalarValueSizeInBits();
+      if ((EleBits + Sht) == Subtarget.getGRLen()) {
+        LHS = Ext;
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 

@@ -304,6 +304,7 @@ private:
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
+  void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
   void BeginMetadirectiveVariantScope();
   void EndMetadirectiveVariantScope();
