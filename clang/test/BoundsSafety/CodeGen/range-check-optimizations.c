@@ -572,17 +572,9 @@ void loop_accesses_eliminate_later_checks(int* __counted_by(n) dst, unsigned n) 
 // CHECK-NEXT:    [[OR_COND56:%.*]] = and i1 [[TMP6]], [[TMP5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp uge ptr [[ARRAYIDX8]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND57:%.*]] = and i1 [[TMP7]], [[OR_COND56]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND57]], label %[[CONT15:.*]], label %[[TRAP]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
-// CHECK:       [[CONT15]]:
-// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX8]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[ARRAYIDX8]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label %[[TRAP]], label %[[CONT54:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND57]], label %[[CONT54:.*]], label %[[TRAP]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT54]]:
-// CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr i8, ptr [[DST]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX21]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr i8, ptr [[DST]], i64 12
-// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX34]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[TMP0]], i8 0, i64 16, i1 false)
 // CHECK-NEXT:    ret void
 //
 void elim_consecutive_writes(int* __counted_by(n) dst, unsigned n) {
@@ -620,12 +612,9 @@ void elim_consecutive_writes(int* __counted_by(n) dst, unsigned n) {
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[ARRAYIDX8]], [[TMP4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND56:%.*]] = and i1 [[TMP6]], [[TMP5]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND56]], label %[[CONT15:.*]], label %[[TRAP]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
-// CHECK:       [[CONT15]]:
-// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX8]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[ARRAYIDX8]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label %[[TRAP]], label %[[CONT41:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND56]], label %[[CONT41:.*]], label %[[TRAP]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT41]]:
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX8]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr i8, ptr [[DST]], i64 12
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX21]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr i8, ptr [[DST]], i64 8
@@ -634,9 +623,7 @@ void elim_consecutive_writes(int* __counted_by(n) dst, unsigned n) {
 // CHECK-NEXT:    [[TMP8:%.*]] = icmp ule ptr [[TMP7]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP9:%.*]] = icmp ule ptr [[TMP4]], [[TMP7]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND62:%.*]] = and i1 [[TMP9]], [[TMP8]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp uge ptr [[TMP4]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND63:%.*]] = and i1 [[TMP10]], [[OR_COND62]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND63]], label %[[CONT54:.*]], label %[[TRAP]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND62]], label %[[CONT54:.*]], label %[[TRAP]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT54]]:
 // CHECK-NEXT:    store i32 0, ptr [[TMP4]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    br label %[[IF_END]]
