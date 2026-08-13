@@ -566,6 +566,7 @@ cc_library(
     hdrs = glob(["Process/wasm/*.h"]),
     includes = [".."],
     deps = [
+        ":PluginObjectFileWasm",
         ":PluginProcessGDBRemote",
         "//lldb:CoreHeaders",
         "//lldb:Headers",
@@ -2077,6 +2078,7 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -2414,6 +2416,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

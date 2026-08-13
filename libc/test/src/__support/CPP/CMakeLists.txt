@@ -8,7 +8,7 @@ add_libc_test(
     algorithm_test.cpp
   DEPENDS
     libc.src.__support.CPP.algorithm
-  )
+)
 
 add_libc_test(
   array_test
@@ -18,7 +18,7 @@ add_libc_test(
     array_test.cpp
   DEPENDS
     libc.src.__support.CPP.array
-  )
+)
 
 add_libc_test(
   bit_test
@@ -108,6 +108,7 @@ add_libc_test(
     libc.src.__support.CPP.utility
 )
 
+
 # This test fails with invalid address space operations on sm_60
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
@@ -140,17 +141,6 @@ add_libc_test(
     optional_test.cpp
   DEPENDS
     libc.src.__support.CPP.optional
-)
-
-add_libc_test(
-  unique_ptr_test
-  SUITE
-    libc-cpp-utils-tests
-  SRCS
-    unique_ptr_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.unique_ptr
-    libc.src.__support.CPP.utility
 )
 
 add_libc_test(

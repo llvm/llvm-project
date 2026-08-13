@@ -874,8 +874,8 @@ llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
                                   %numRecords : i64,
                                   %flags : i32) -> !llvm.ptr<8> {
   // CHECK-LABEL: rocdl.make.buffer.rsrc
-  // CHECK: %{{.*}} = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr to <8>
-  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr to !llvm.ptr<8>
+  // CHECK: %{{.*}} = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr, i64 to <8>
+  %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr, i64 to !llvm.ptr<8>
   llvm.return %rsrc : !llvm.ptr<8>
 }
 
@@ -906,6 +906,17 @@ llvm.func @rocdl.raw.ptr.buffer.f32(%rsrc : !llvm.ptr<8>,
   %atomic_fadd = rocdl.raw.ptr.buffer.atomic.fadd %vdata1, %rsrc, %offset, %soffset, 0 : f32
   %atomic_fmax = rocdl.raw.ptr.buffer.atomic.fmax %vdata1, %rsrc, %offset, %soffset, 0 : f32
 
+  llvm.return
+}
+
+llvm.func @rocdl.ptr.s.buffer(%rsrc : !llvm.ptr<8>, %offset : i32) {
+  // CHECK-LABEL: rocdl.ptr.s.buffer
+  // CHECK: %{{.*}} = rocdl.ptr.s.buffer.load %{{.*}}, %{{.*}}, 0 : i32
+  // CHECK: %{{.*}} = rocdl.ptr.s.buffer.load %{{.*}}, %{{.*}}, 0 : vector<2xi32>
+  // CHECK: %{{.*}} = rocdl.ptr.s.buffer.load %{{.*}}, %{{.*}}, 0 : vector<4xi32>
+  %r1 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : i32
+  %r2 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : vector<2xi32>
+  %r4 = rocdl.ptr.s.buffer.load %rsrc, %offset, 0 : vector<4xi32>
   llvm.return
 }
 

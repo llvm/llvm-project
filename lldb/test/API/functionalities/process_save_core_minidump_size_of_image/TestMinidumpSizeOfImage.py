@@ -24,7 +24,7 @@ class MinidumpSizeOfImageTestCase(TestBase):
         with open(lds, "w") as f:
             f.write(
                 "PHDRS { ro PT_LOAD FLAGS(5); rw PT_LOAD FLAGS(6);"
-                " dyn PT_DYNAMIC FLAGS(6); }\n"
+                " dyn PT_DYNAMIC FLAGS(6); stack PT_GNU_STACK FLAGS(6); }\n"
                 "SECTIONS {\n"
                 "  . = SIZEOF_HEADERS;\n"
                 "  .hash : { *(.hash) } :ro\n"

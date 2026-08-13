@@ -1,10 +1,10 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 # RUN: echo '.globl f, g, h; f: g: h:' | llvm-mc -filetype=obj -triple=powerpc - -o %t1.o
-# RUN: ld.lld -z nosort-thunks -shared %t1.o -soname t1.so -o %t1.so
+# RUN: ld.lld -shared %t1.o -soname t1.so -o %t1.so
 
 ## Check we can create PLT entries for -fno-PIE executable.
-# RUN: ld.lld -z nosort-thunks %t.o %t1.so -o %t
+# RUN: ld.lld %t.o %t1.so -o %t
 # RUN: llvm-readobj -r -d %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-readelf -x .plt %t | FileCheck --check-prefix=HEX %s
@@ -20,24 +20,24 @@
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
 # CHECK-LABEL: <_start>:
-# CHECK-NEXT:    bl 0x100101d0
-# CHECK-NEXT:    bl 0x100101d0
 # CHECK-NEXT:    bl 0x100101e0
 # CHECK-NEXT:    bl 0x100101e0
+# CHECK-NEXT:    bl 0x100101d0
+# CHECK-NEXT:    bl 0x100101d0
 # CHECK-EMPTY:
 
 ## -fno-PIC call stubs of f and g.
 ## .plt[0] = 0x100302c4 = 65536*4099+708
 ## .plt[1] = 0x100302c8 = 65536*4099+712
-# CHECK-NEXT:  <00000000.plt_call32.f>:
-# CHECK-NEXT:    lis 11, 4099
-# CHECK-NEXT:    lwz 11, 708(11)
-# CHECK-NEXT:    mtctr 11
-# CHECK-NEXT:    bctr
-# CHECK-EMPTY:
 # CHECK-NEXT:  <00000000.plt_call32.g>:
 # CHECK-NEXT:    lis 11, 4099
 # CHECK-NEXT:    lwz 11, 712(11)
+# CHECK-NEXT:    mtctr 11
+# CHECK-NEXT:    bctr
+# CHECK-EMPTY:
+# CHECK-NEXT:  <00000000.plt_call32.f>:
+# CHECK-NEXT:    lis 11, 4099
+# CHECK-NEXT:    lwz 11, 708(11)
 # CHECK-NEXT:    mtctr 11
 # CHECK-NEXT:    bctr
 # CHECK-EMPTY:
