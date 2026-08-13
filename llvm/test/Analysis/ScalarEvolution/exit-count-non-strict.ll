@@ -505,11 +505,11 @@ define i1 @postinc_step64_aligned_early_exit(ptr %bits, i64 %n) {
 ; CHECK-NEXT:  Determining loop execution counts for: @postinc_step64_aligned_early_exit
 ; CHECK-NEXT:  Loop %header: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for header: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:    exit count for latch: ((63 + (64 * (%n /u 64))<nuw>)<nuw><nsw> /u 64)
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 288230376151711743
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is ((63 + (64 * (%n /u 64))<nuw>)<nuw><nsw> /u 64)
 ; CHECK-NEXT:    symbolic max exit count for header: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for latch: ((63 + (64 * (%n /u 64))<nuw>)<nuw><nsw> /u 64)
 ;
 entry:
   %limit = and i64 %n, -64
