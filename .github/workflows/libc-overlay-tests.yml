@@ -33,10 +33,6 @@ jobs:
               c_compiler: clang-23
               cpp_compiler: clang++-23
             linker: lld-23
-          - os: windows-2022
-            compiler:
-              c_compiler: clang-cl
-              cpp_compiler: clang-cl
           - os: windows-2025
             compiler:
               c_compiler: clang-cl
