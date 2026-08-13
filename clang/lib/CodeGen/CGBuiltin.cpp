@@ -2672,6 +2672,45 @@ private:
     return CGF.getContext().getTypeSize(Ty);
   }
 
+  /// Compute the occupied bit intervals for a BitInt.
+  ///
+  /// In the case of little endian, the occupied bits are always contiguous so a
+  /// single interval is sufficient. However in big endian, the intervals can be
+  /// disjoint.
+  SmallVector<BitInterval> computeBitIntOccupiedIntervals(const Data &D) const {
+    uint64_t BitIntervalStart = D.StartBitOffset;
+    assert(BitIntervalStart % CharWidth == 0 &&
+           "BitInt start address is not byte aligned!");
+    QualType Ty = D.Ty;
+    uint64_t SizeInBits = getScalarOccupiedSizeInBits(Ty);
+    bool IsLittleEndian = CGF.getTarget().isLittleEndian();
+
+    if (IsLittleEndian)
+      return {BitInterval{BitIntervalStart, BitIntervalStart + SizeInBits}};
+
+    SmallVector<BitInterval, 2> Intervals;
+    uint64_t StorageSizeInBits = CGF.getContext().getTypeSize(Ty);
+    uint64_t ContiguousBitCount = SizeInBits & (~0ULL << 3);
+    uint64_t ContiguousIntervalStart =
+        BitIntervalStart + StorageSizeInBits - ContiguousBitCount;
+
+    Intervals.push_back(BitInterval{
+        ContiguousIntervalStart, ContiguousIntervalStart + ContiguousBitCount});
+
+    uint64_t RemainingBitCount = SizeInBits - ContiguousBitCount;
+    assert(RemainingBitCount < CharWidth);
+
+    if (RemainingBitCount == 0)
+      return Intervals;
+
+    uint64_t RemainingIntervalStart =
+        BitIntervalStart + (StorageSizeInBits - SizeInBits) & (~0ULL << 3);
+    Intervals.push_back(BitInterval{
+        RemainingIntervalStart, RemainingIntervalStart + RemainingBitCount});
+
+    return Intervals;
+  }
+
   void Visit(const Data &D) {
     if (auto *AT = dyn_cast<ConstantArrayType>(D.Ty)) {
       VisitArray(AT, D.StartBitOffset);
@@ -2697,6 +2736,12 @@ private:
 
     if (const auto *VT = D.Ty->getAs<clang::VectorType>()) {
       VisitVector(VT, D.StartBitOffset);
+      return;
+    }
+
+    if (D.Ty->isBitIntType()) {
+      auto Intervals = computeBitIntOccupiedIntervals(D);
+      OccuppiedIntervals.append(Intervals);
       return;
     }
 
