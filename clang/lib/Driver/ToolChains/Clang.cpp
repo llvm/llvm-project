@@ -1130,17 +1130,19 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         });
   }
 
-  // If we are compiling for a GPU target we want to override the system headers
-  // with ones created by the 'libc' project if present.
+  // If we are compiling for a GPU target with the LLVM environment we want to
+  // override the system headers with ones created by the 'libc' project if
+  // present.
   // TODO: This should be moved to `AddClangSystemIncludeArgs` by passing the
   //       OffloadKind as an argument.
+  bool OffloadUsesLLVMLibc =
+      C.getActiveOffloadKinds() == Action::OFK_OpenMP ||
+      (C.getActiveOffloadKinds() != Action::OFK_None &&
+       getToolChain().getTriple().getEnvironment() == llvm::Triple::LLVM);
   if (!Args.hasArg(options::OPT_nostdinc) &&
       Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
                    true) &&
-      !Args.hasArg(options::OPT_nobuiltininc) &&
-      (C.getActiveOffloadKinds() == Action::OFK_OpenMP)) {
-    // TODO: CUDA / HIP include their own headers for some common functions
-    // implemented here. We'll need to clean those up so they do not conflict.
+      !Args.hasArg(options::OPT_nobuiltininc) && OffloadUsesLLVMLibc) {
     SmallString<128> P(D.ResourceDir);
     llvm::sys::path::append(P, "include");
     llvm::sys::path::append(P, "llvm_libc_wrappers");
@@ -5174,8 +5176,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_no_offload_new_driver,
                     C.getActiveOffloadKinds() != Action::OFK_None));
 
-  bool IsRDCMode =
-      Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+  // SYCL defaults to RDC; CUDA/HIP default to non-RDC.
+  bool IsRDCMode = Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                                /*Default=*/IsSYCL);
 
   auto LTOMode = TC.getLTOMode(Args, JA.getOffloadingDeviceKind());
   bool IsUsingLTO = LTOMode != LTOK_None;
@@ -5335,7 +5338,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Args.hasArg(options::OPT_fclangir))
+  if (Args.hasFlag(options::OPT_fclangir, options::OPT_fno_clangir, false))
     CmdArgs.push_back("-fclangir");
 
   if (IsOpenMPDevice) {
@@ -7388,9 +7391,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                       options::OPT_fno_hip_kernel_arg_name);
   }
 
+  if ((IsCuda || IsHIP || IsSYCL) && IsRDCMode)
+    CmdArgs.push_back("-fgpu-rdc");
+
   if (IsCuda || IsHIP) {
-    if (IsRDCMode)
-      CmdArgs.push_back("-fgpu-rdc");
     Args.addOptInFlag(CmdArgs, options::OPT_fgpu_defer_diag,
                       options::OPT_fno_gpu_defer_diag);
     if (Args.hasFlag(options::OPT_fgpu_exclude_wrong_side_overloads,
