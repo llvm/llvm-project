@@ -625,11 +625,7 @@ void Prescanner::SkipCComments() {
   while (true) {
     if (IsCComment(at_)) {
       if (const char *after{SkipCComment(at_)}) {
-        column_ += after - at_;
-        // May have skipped over one or more newlines; relocate the start of
-        // the next line.
-        nextLine_ = at_ = after;
-        NextLine();
+        UpdateSourcePositionAfterSkip(after);
       } else {
         // Don't emit any messages about unclosed C-style comments, because
         // the sequence /* can appear legally in a FORMAT statement.  There's
@@ -660,11 +656,11 @@ const char *Prescanner::SkipWhiteSpace(const char *p) {
 }
 
 const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
-    const char *p) const {
+    const char *p, bool skipCComments) const {
   while (true) {
     if (int n{IsSpaceOrTab(p)}) {
       p += n;
-    } else if (IsCComment(p)) {
+    } else if (skipCComments && IsCComment(p)) {
       if (const char *after{SkipCComment(p)}) {
         p = after;
       } else {
@@ -717,6 +713,27 @@ const char *Prescanner::SkipCComment(const char *p) const {
     slash = *p++;
   }
   return p;
+}
+
+// When skipping over C-style comments, one or more newlines may be skipped.
+// Adjust current position, column, and next line in source.
+void Prescanner::UpdateSourcePositionAfterSkip(const char *after) {
+  if (at_ >= after) {
+    return;
+  }
+  const char *nl{after - 1};
+  while (nl > at_ && *nl != '\n') {
+    --nl;
+  }
+  if (*nl == '\n' && after >= nextLine_) {
+    tabInCurrentLine_ = false;
+    column_ = after - nl;
+    nextLine_ = nl + 1;
+    NextLine();
+  } else {
+    column_ += after - at_;
+  }
+  at_ = after;
 }
 
 bool Prescanner::NextToken(TokenSequence &tokens) {
@@ -1340,6 +1357,7 @@ bool Prescanner::SkipCommentLine(bool afterAmpersand) {
   } else {
     auto lineClass{ClassifyLine(nextLine_)};
     if (lineClass.kind == LineClassification::Kind::Comment) {
+      nextLine_ += lineClass.payloadOffset; // advance to '!' or newline
       NextLine();
       return true;
     } else if (lineClass.kind ==
@@ -1470,7 +1488,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   if (p >= limit_) {
     return nullptr;
   }
-  p = SkipWhiteSpaceIncludingEmptyMacros(p);
+  p = SkipWhiteSpaceIncludingEmptyMacros(p, /*skipCComments=*/true);
   if (InCompilerDirective()) {
     if (InConditionalLine()) {
       if (preprocessingOnly_) {
@@ -1594,8 +1612,8 @@ bool Prescanner::FreeFormContinuation() {
   }
   do {
     if (const char *cont{FreeFormContinuationLine(ampersand)}) {
-      BeginSourceLine(cont);
-      NextLine();
+      UpdateSourcePositionAfterSkip(cont);
+      tabInCurrentLine_ = false;
       return true;
     }
   } while (SkipCommentLine(ampersand));
@@ -1701,7 +1719,8 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
 
 std::optional<Prescanner::LineClassification>
 Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
-  if (const char *p{SkipWhiteSpaceIncludingEmptyMacros(start)};
+  if (const char *p{
+          SkipWhiteSpaceIncludingEmptyMacros(start, /*skipCComments=*/false)};
       p && *p == '!') {
     if (auto lnClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
       if (lnClass->kind == LineClassification::Kind::CompilerDirective) {
@@ -1934,7 +1953,7 @@ bool Prescanner::CompilerDirectiveContinuation(
   if (nextContinuation) {
     // What follows is !DIR$ & xxx; skip over the & so that it
     // doesn't cause a spurious continuation.
-    at_ = nextContinuation;
+    UpdateSourcePositionAfterSkip(nextContinuation);
   } else {
     // What follows looks like a source line before macro expansion,
     // but might become a directive continuation afterwards.
@@ -1990,10 +2009,9 @@ bool Prescanner::SourceLineContinuation(TokenSequence &tokens) {
       NextLine();
       return true;
     } else if (const char *nextContinuation{FreeFormContinuationLine(true)}) {
-      BeginSourceLine(nextLine_);
-      NextLine();
+      UpdateSourcePositionAfterSkip(nextContinuation);
+      tabInCurrentLine_ = false;
       TokenSequence followingTokens;
-      at_ = nextContinuation;
       while (NextToken(followingTokens)) {
       }
       if (auto followingPrepro{

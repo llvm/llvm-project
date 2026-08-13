@@ -3,36 +3,59 @@
 
 integer :: i
 
+! Single line comment.
 ! CHECK: i=1
 /* comment 1 */
 i&
 /* comment 2 */
 =1
-
 ! CHECK: i=2
   /* comment 1 */
   i&
   /* comment 2 */
   =2
-
 ! CHECK: i=3
   /* comment 1 */
   i&  
   /* comment 2 */  
   =3
-
 ! CHECK: i=4
   /* comment 1 */
   i&  /* inline comment */  
   /* comment 2 */  
   =4
 
-! CHECK: !$OMP PARALLEL DO
-  /* comments before directives are allowed now */ !$omp parallel do
-  do i = 1, 10
-  end do
+! Multi-line comment.
+! CHECK: i=5
+i&
+/* c
+*/ = 5
 
+! Compiler directive.
+! CHECK: !$OMP PARALLEL
+! CHECK: !$OMP END PARALLEL
+!$omp para&
+/* comment */
+!$omp llel
+!$omp end parallel
+! CHECK: !$OMP PARALLEL
+! CHECK: !$OMP END PARALLEL
+!$omp para&
+/* multi
+ * line */
+!$omp llel
+!$omp end parallel
+
+! Source line continuation after macro expansion.
+! CHECK: i=12
+! CHECK: i=14
 ! CHECK: PRINT *, "pass"
-  /* C comment */
-  print *,'pass'
+#define CONT &
+i = 6 CONT
+/* comment */
++ 6
+i = 7 CONT
+/* multi
+ * line */ + 7
+print *,'pass'
 end

@@ -223,9 +223,10 @@ private:
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
-  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *) const;
+  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *, bool) const;
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
+  void UpdateSourcePositionAfterSkip(const char *);
   bool NextToken(TokenSequence &);
   bool HandleExponent(TokenSequence &);
   bool HandleKindSuffix(TokenSequence &);
