@@ -173,3 +173,16 @@ void llvm::format_provider<lldb_private::npdb::PdbGlobalSymId>::format(
     Stream << "public, ";
   Stream << V.offset << ')';
 }
+
+void llvm::format_provider<lldb_private::npdb::PdbTypeSymId>::format(
+    const lldb_private::npdb::PdbTypeSymId &V, raw_ostream &Stream,
+    StringRef Style) {
+  Stream << "TypeSym(";
+  if (V.is_ipi)
+    Stream << "IPI, ";
+  else
+    Stream << "TPI, ";
+
+  write_hex(Stream, V.index.getIndex(), HexPrintStyle::PrefixLower);
+  Stream << ')';
+}
