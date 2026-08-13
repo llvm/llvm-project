@@ -11,10 +11,10 @@
 ; RUN: %if ptxas-sm_110f && ptxas-isa-9.0 %{ llc < %s -march=nvptx64 -mcpu=sm_110f -mattr=+ptx90 | %ptxas-verify -arch=sm_110f %}
 
 
-declare void @llvm.nvvm.tcgen05.alloc.cg1(ptr %addr, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.cg2(ptr %addr, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %addr, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %addr, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.alloc.cg1.p0(ptr %addr, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.alloc.cg2.p0(ptr %addr, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.alloc.cg1.p3(ptr addrspace(3) %addr, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.alloc.cg2.p3(ptr addrspace(3) %addr, i32 %ncols)
 
 define void @test_tcgen05_alloc_cg1(ptr %addr, i32 %ncols) {
 ; CHECK_PTX64-LABEL: test_tcgen05_alloc_cg1(
@@ -38,7 +38,7 @@ define void @test_tcgen05_alloc_cg1(ptr %addr, i32 %ncols) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b32 %r1, [test_tcgen05_alloc_cg1_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.alloc.cta_group::1.sync.aligned.b32 [%rd1], %r1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.alloc.cg1(ptr %addr, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.cg1.p0(ptr %addr, i32 %ncols)
   ret void
 }
 
@@ -64,7 +64,7 @@ define void @test_tcgen05_alloc_cg2(ptr %addr, i32 %ncols) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b32 %r1, [test_tcgen05_alloc_cg2_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.alloc.cta_group::2.sync.aligned.b32 [%rd1], %r1;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.alloc.cg2(ptr %addr, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.cg2.p0(ptr %addr, i32 %ncols)
   ret void
 }
 
@@ -89,7 +89,7 @@ define void @test_tcgen05_alloc_shared_cg1(ptr addrspace(3) %addr, i32 %ncols) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b32 %r2, [test_tcgen05_alloc_shared_cg1_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.alloc.cta_group::1.sync.aligned.shared::cta.b32 [%r1], %r2;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %addr, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.cg1.p3(ptr addrspace(3) %addr, i32 %ncols)
   ret void
 }
 
@@ -114,7 +114,7 @@ define void @test_tcgen05_alloc_shared_cg2(ptr addrspace(3) %addr, i32 %ncols) {
 ; CHECK_PTX64_SHARED32-NEXT:    ld.param::func.b32 %r2, [test_tcgen05_alloc_shared_cg2_param_1];
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.alloc.cta_group::2.sync.aligned.shared::cta.b32 [%r1], %r2;
 ; CHECK_PTX64_SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %addr, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.cg2.p3(ptr addrspace(3) %addr, i32 %ncols)
   ret void
 }
 

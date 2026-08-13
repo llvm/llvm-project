@@ -5844,30 +5844,85 @@ let Predicates = [SM90] in {
 def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
-let isConvergent = true in {
-let Predicates = [hasTcgen05InstSupport] in {
-multiclass TCGEN05_ALLOC_INTR<string AS, string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins ADDR:$dst, B32:$ncols),
-             "tcgen05.alloc.cta_group::" # num # ".sync.aligned" # AS # ".b32",
-             [(Intr addr:$dst, B32:$ncols)]>;
+multiclass TCGEN05_ALLOC_PATFRAGS<Intrinsic Intr> {
+  defvar frag_pat = (Intr node:$dst, node:$ncols);
+  def _GENERIC
+      : PatFrag<!setdagop(frag_pat, ops), frag_pat, AS_match.generic>;
+  def _SHARED
+      : PatFrag<!setdagop(frag_pat, ops), frag_pat, AS_match.shared>;
 }
 
-defm TCGEN05_ALLOC_CG1 : TCGEN05_ALLOC_INTR<"", "1", int_nvvm_tcgen05_alloc_cg1>;
-defm TCGEN05_ALLOC_CG2 : TCGEN05_ALLOC_INTR<"", "2", int_nvvm_tcgen05_alloc_cg2>;
+defm TCGEN05_ALLOC_CG1_PAT
+    : TCGEN05_ALLOC_PATFRAGS<int_nvvm_tcgen05_alloc_cg1>;
+defm TCGEN05_ALLOC_CG2_PAT
+    : TCGEN05_ALLOC_PATFRAGS<int_nvvm_tcgen05_alloc_cg2>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG1_PAT
+    : TCGEN05_ALLOC_PATFRAGS<int_nvvm_tcgen05_alloc_exclusive_cg1>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG2_PAT
+    : TCGEN05_ALLOC_PATFRAGS<int_nvvm_tcgen05_alloc_exclusive_cg2>;
 
-defm TCGEN05_ALLOC_S64_CG1 : TCGEN05_ALLOC_INTR<".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
-defm TCGEN05_ALLOC_S64_CG2 : TCGEN05_ALLOC_INTR<".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
+multiclass TCGEN05_ALLOC_INTR<string num, PatFrag GenericPat,
+                              PatFrag SharedPat,
+                              bit IsExclusive = 0> {
+  defvar exclusive = !if(IsExclusive, ".exclusive", "");
+  defvar Pred = !if(IsExclusive,
+                    [hasTcgen05InstSupport, PTX94],
+                    [hasTcgen05InstSupport]);
 
-multiclass TCGEN05_DEALLOC_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins B32:$tmem_addr, B32:$ncols),
-             "tcgen05.dealloc.cta_group::" # num # ".sync.aligned.b32",
-             [(Intr B32:$tmem_addr, B32:$ncols)]>;
+  let isConvergent = true, Predicates = Pred in {
+    def _GENERIC : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols),
+                     "tcgen05.alloc" # exclusive # ".cta_group::" # num #
+                     ".sync.aligned.b32",
+                     [(GenericPat addr:$dst, B32:$ncols)]>;
+    def _SHARED : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols),
+                    "tcgen05.alloc" # exclusive # ".cta_group::" # num #
+                    ".sync.aligned.shared::cta.b32",
+                    [(SharedPat addr:$dst, B32:$ncols)]>;
+  }
+}
+
+defm TCGEN05_ALLOC_CG1
+    : TCGEN05_ALLOC_INTR<"1", TCGEN05_ALLOC_CG1_PAT_GENERIC,
+                         TCGEN05_ALLOC_CG1_PAT_SHARED>;
+defm TCGEN05_ALLOC_CG2
+    : TCGEN05_ALLOC_INTR<"2", TCGEN05_ALLOC_CG2_PAT_GENERIC,
+                         TCGEN05_ALLOC_CG2_PAT_SHARED>;
+
+defm TCGEN05_ALLOC_EXCLUSIVE_CG1
+    : TCGEN05_ALLOC_INTR<"1", TCGEN05_ALLOC_EXCLUSIVE_CG1_PAT_GENERIC,
+                         TCGEN05_ALLOC_EXCLUSIVE_CG1_PAT_SHARED,
+                         /*IsExclusive=*/1>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG2
+    : TCGEN05_ALLOC_INTR<"2", TCGEN05_ALLOC_EXCLUSIVE_CG2_PAT_GENERIC,
+                         TCGEN05_ALLOC_EXCLUSIVE_CG2_PAT_SHARED,
+                         /*IsExclusive=*/1>;
+
+multiclass TCGEN05_DEALLOC_INTR<string num, Intrinsic Intr,
+                                bit IsExclusive = 0> {
+  defvar exclusive = !if(IsExclusive, ".exclusive", "");
+  defvar Pred = !if(IsExclusive,
+                    [hasTcgen05InstSupport, PTX94],
+                    [hasTcgen05InstSupport]);
+  let isConvergent = true, Predicates = Pred in {
+    def "" : BasicNVPTXInst<(outs),
+               (ins B32:$tmem_addr, B32:$ncols),
+               "tcgen05.dealloc" # exclusive # ".cta_group::" # num #
+               ".sync.aligned.b32",
+               [(Intr B32:$tmem_addr, B32:$ncols)]>;
+  }
 }
 defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
 defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
 
+defm TCGEN05_DEALLOC_EXCLUSIVE_CG1
+    : TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_exclusive_cg1,
+                           /*IsExclusive=*/1>;
+defm TCGEN05_DEALLOC_EXCLUSIVE_CG2
+    : TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_exclusive_cg2,
+                           /*IsExclusive=*/1>;
+
+let isConvergent = true in {
+let Predicates = [hasTcgen05InstSupport] in {
 multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
   def "" : NullaryInst<"tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned", Intr>;
 }

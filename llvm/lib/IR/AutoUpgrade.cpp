@@ -1279,6 +1279,17 @@ shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05AllocSharedIntrinsic(StringRef Name) {
+  if (!Name.consume_front("tcgen05.alloc.shared."))
+    return Intrinsic::not_intrinsic;
+
+  return StringSwitch<Intrinsic::ID>(Name)
+      .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
+      .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
+      .Default(Intrinsic::not_intrinsic);
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
@@ -1887,6 +1898,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
 
       // Upgrade tcgen05.commit shared variants to anyptr intrinsics.
       IID = shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), IID, F->getReturnType(),
+            F->getFunctionType()->params());
+        return true;
+      }
+
+      // Upgrade tcgen05.alloc shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05AllocSharedIntrinsic(Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(

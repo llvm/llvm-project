@@ -2798,24 +2798,27 @@ For more information on tensor-memory load/store instructions, refer to [PTX ISA
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.alloc.cg1(ptr %dst, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.cg2(ptr %dst, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %dst, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %dst, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.alloc.{cg1,cg2}.p0(ptr %dst, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.alloc.{cg1,cg2}.p3(ptr addrspace(3) %dst, i32 %ncols)
+
+declare void @llvm.nvvm.tcgen05.alloc.exclusive.{cg1,cg2}.p0(ptr %dst, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.alloc.exclusive.{cg1,cg2}.p3(ptr addrspace(3) %dst, i32 %ncols)
 ```
 
 ##### Overview:
 
 The '`@llvm.nvvm.tcgen05.alloc.*`' intrinsics correspond to the
-`tcgen05.alloc.cta_group*.sync.aligned.b32` family of PTX instructions.
-The `tcgen05.alloc` is a potentially blocking instruction which dynamically
-allocates the specified number of columns in the Tensor Memory and writes the
-address of the allocated Tensor Memory into shared memory at the location
-specified by `%dst`. The 32-bit operand `%ncols` specifies the number of
-columns to be allocated and it must be a power-of-two. The `.shared` variant
-explicitly uses shared memory address space for the `%dst` operand. The
-`.cg1` and `.cg2` variants generate `cta_group::1` and `cta_group::2`
-variants of the instruction respectively.
+`tcgen05.alloc{.exclusive}.cta_group*.sync.aligned.b32` family of PTX 
+instructions. The `tcgen05.alloc` is a potentially blocking instruction which
+dynamically allocates the specified number of columns in the Tensor Memory 
+and writes the address of the allocated Tensor Memory into shared memory at the
+location specified by `%dst`. The 32-bit operand `%ncols` specifies the number
+of columns to be allocated and it must be a power-of-two for non-exclusive
+allocations and it must be a multiple of 32 for exclusive allocations. The
+overloaded pointer argument may use generic or shared memory address space;
+a shared pointer emits the `.shared::cta` qualifier. The `.cg1` and `.cg2`
+variants generate `cta_group::1` and `cta_group::2` variants of the instruction
+respectively. The `.exclusive` variants claim ownership of the allocation permit.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 
@@ -2824,19 +2827,22 @@ For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parall
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.dealloc.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i32 %ncols)
+
+declare void @llvm.nvvm.tcgen05.dealloc.exclusive.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i32 %ncols)
 ```
 
 ##### Overview:
 
 The '`@llvm.nvvm.tcgen05.dealloc.*`' intrinsics correspond to the
-`tcgen05.dealloc.*` set of PTX instructions. The `tcgen05.dealloc`
+`tcgen05.dealloc{.exclusive}.*` set of PTX instructions. The `tcgen05.dealloc`
 instructions deallocates the Tensor Memory specified by the Tensor Memory
 address `%tmem_addr`. The operand `%tmem_addr` must point to a previous
 Tensor Memory allocation. The 32-bit operand `%ncols` specifies the number
 of columns to be de-allocated. The `.cg1` and `.cg2` variants generate
 `cta_group::1` and `cta_group::2` variants of the instruction respectively.
+Memory must be deallocated with `.exclusive` if and only if it was allocated
+with `.exclusive`.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 
