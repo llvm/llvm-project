@@ -8,7 +8,7 @@ from lit.llvm.subst import ToolSubst
 
 config.name = "inter-integration" if config.inter_test_is_integration else "inter"
 config.test_format = lit.formats.ShTest(False)
-config.suffixes = [".ll", ".mlir"]
+config.suffixes = [".ll", ".mlir", ".py"]
 if config.inter_test_is_integration:
     config.suffixes.append(".cl")
 config.excludes = ["Inputs", "lit.cfg.py", "lit.site.cfg.py"]
@@ -24,6 +24,7 @@ if inter_pipelines.exists():
 else:
     lit_config.fatal(f"missing Inter pipeline library: {inter_pipelines}")
 config.substitutions.append(("%python", f'"{sys.executable}"'))
+config.substitutions.append(("%inter_obj_root", config.inter_obj_root))
 
 llvm_config.with_system_environment(
     ["HOME", "INCLUDE", "LIB", "LD_LIBRARY_PATH", "TMP", "TEMP"]
