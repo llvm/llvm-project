@@ -235,23 +235,29 @@ struct Test {
     { // Many elements, needles found at various sampled positions
       int a[1073];
       std::fill(std::begin(a), std::end(a), 0);
-      int b[] = {2};
-      int c[] = {2, 0, 0};
-      int d[] = {2, 0, 0, 0, 0};
-      runway_sample(std::size(a) - std::size(d) + 1, [&](std::size_t i) {
+      int needle1[] = {2};
+      int needle2[] = {2, 0, 0};
+      int needle3[] = {2, 0, 0, 0, 0};
+      runway_sample(std::size(a) - std::size(needle3) + 1, [&](std::size_t i) {
         a[i] = 1;
-        assert(
-            std::search(
-                policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b)), Pred{}) ==
-            Iter1(std::begin(a) + i));
-        assert(
-            std::search(
-                policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(c)), Iter2(std::end(c)), Pred{}) ==
-            Iter1(std::begin(a) + i));
-        assert(
-            std::search(
-                policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(d)), Iter2(std::end(d)), Pred{}) ==
-            Iter1(std::begin(a) + i));
+        assert(std::search(policy,
+                           Iter1(std::begin(a)),
+                           Iter1(std::end(a)),
+                           Iter2(std::begin(needle1)),
+                           Iter2(std::end(needle1)),
+                           Pred{}) == Iter1(std::begin(a) + i));
+        assert(std::search(policy,
+                           Iter1(std::begin(a)),
+                           Iter1(std::end(a)),
+                           Iter2(std::begin(needle2)),
+                           Iter2(std::end(needle2)),
+                           Pred{}) == Iter1(std::begin(a) + i));
+        assert(std::search(policy,
+                           Iter1(std::begin(a)),
+                           Iter1(std::end(a)),
+                           Iter2(std::begin(needle3)),
+                           Iter2(std::end(needle3)),
+                           Pred{}) == Iter1(std::begin(a) + i));
         a[i] = 0;
       });
     }
