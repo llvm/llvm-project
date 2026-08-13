@@ -123,6 +123,7 @@ struct SendInstruction {
 
 struct SyncInstruction {
   xemachine::SyncKind kind = xemachine::SyncKind::nop;
+  uint32_t sbidMask = 0;
   SwsbInfo swsb;
 };
 

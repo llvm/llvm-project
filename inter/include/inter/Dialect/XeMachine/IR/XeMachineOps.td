@@ -188,10 +188,12 @@ def XeMachine_SyncOp : XeMachine_Op<"sync",
     XeMachine_SWSBFields {
   let summary = "software scoreboard synchronization";
   let arguments = !con((ins XeMachine_SyncKind:$kind,
-                        Optional<XeMachine_MemTokenType>:$dependency), swsbFields);
+                         Optional<XeMachine_MemTokenType>:$dependency,
+                         DefaultValuedAttr<I32Attr, "0">:$sbidMask), swsbFields);
   let results = (outs XeMachine_MemTokenType:$token);
   let assemblyFormat =
       "$kind (`dep` $dependency^)? attr-dict `:` qualified(type($token))";
+  let hasVerifier = 1;
 }
 
 // Named message ops: the convenient aliases over raw send. Each carries its

@@ -73,6 +73,26 @@ func.func @destination_reuse() {
   return
 }
 
+// Multiple destination completions share one selective allwr instruction.
+// CHECK-LABEL: func.func @multiple_destination_waits
+// CHECK: xemachine.load_a64
+// CHECK: xemachine.load_a64
+// CHECK-NEXT: xemachine.sync allwr {{.*}}sbidMask = 3
+// CHECK-NEXT: xemachine.add
+func.func @multiple_destination_waits() {
+  %root = xemachine.token
+  %address0 = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %address1 = xemachine.archreg 22 : !xemachine.reg<64, 22>
+  %loaded0, %token0 = xemachine.load_a64 %address0 dep %root
+      : !xemachine.reg<64, 20> -> (!xemachine.reg<16, 4>, !xemachine.mem.token)
+  %loaded1, %token1 = xemachine.load_a64 %address1 dep %root
+      : !xemachine.reg<64, 22> -> (!xemachine.reg<16, 6>, !xemachine.mem.token)
+  %sum = xemachine.add %loaded0, %loaded1
+      : (!xemachine.reg<16, 4>, !xemachine.reg<16, 6>, i32)
+      -> !xemachine.reg<16, 8>
+  return
+}
+
 // Distance assignment follows every operand of zero-cost tuple views.
 // CHECK-LABEL: func.func @tuple_distance
 // CHECK: [[LOW:%.*]] = xemachine.mov

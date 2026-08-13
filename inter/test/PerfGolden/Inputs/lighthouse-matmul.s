@@ -134,7 +134,7 @@
 /* [0850]  */ (W)     mov (1|M0)               r37.0<1>:q    64:q
 /* [0860]  */         cmp (1|M0)    (lt)f0.0   null<1>:q     r7.0<0;1,0>:d     r37.0<0;1,0>:d   {I@1}
 /* [0870]  */ (W)     mov (1|M0)               r37.0<1>:ud   f0.0<0;1,0>:ud                   {I@1}
-/* [0880]  */ (W&~f0.0) jmpi                               736
+/* [0880]  */ (W&~f0.0) jmpi                               688
 /* [0890]  */ (W)     mov (1|M0)               r38.0<1>:q    32:q
 /* [08A0]  */ (W)     add (1|M0)               r49.0<1>:q    r20.0<0;1,0>:q    r7.0<0;1,0>:q
 /* [08B0]  */ (W)     mov (1|M0)               r50.0<1>:q    16:q
@@ -166,56 +166,53 @@
 /* [0A50]  */         mov (1|M0)               r49.6<1>:ud   r54.0<1;1,0>:ud
 /* [0A60]  */ (W)     send.ugm (1|M0)          r79      r49  null:0  0x0            0x02800283           {I@1,$8} // wr:1+0, rd:8; load_block2d.ugm.d16v.a64
 /* [0A70]  */         sync.nop                             null                             {A@1}
-/* [0A80]  */         sync.nop                             null                             {$3.dst}
-/* [0A90]  */         sync.nop                             null                             {$7.dst}
-/* [0AA0]  */         dpas.8x8 (16|M0)         r9:f          r9:f              r71:hf            r55.0:hf         {$9}
-/* [0AB0]  */         sync.nop                             null                             {A@1}
-/* [0AC0]  */         sync.nop                             null                             {$4.dst}
-/* [0AD0]  */         sync.nop                             null                             {$8.dst}
-/* [0AE0]  */         dpas.8x8 (16|M0)         r9:f          r9:f              r79:hf            r59.0:hf         {$9}
-/* [0AF0]  */         sync.nop                             null                             {$5.dst}
-/* [0B00]  */         dpas.8x8 (16|M0)         r41:f         r41:f             r71:hf            r63.0:hf         {$10}
-/* [0B10]  */         sync.nop                             null                             {$6.dst}
-/* [0B20]  */         dpas.8x8 (16|M0)         r41:f         r41:f             r79:hf            r67.0:hf         {$10}
-/* [0B30]  */         sync.nop                             null                             {$9.dst}
-/* [0B40]  */         sync.nop                             null                             {$10.dst}
-/* [0B50]  */ (W)     jmpi                                 224
-/* [0B60]  */         mov (16|M0)              r9.0<1>:f     0.0:f
-/* [0B70]  */         mov (16|M0)              r10.0<1>:f    0.0:f
-/* [0B80]  */         mov (16|M0)              r11.0<1>:f    0.0:f
-/* [0B90]  */         mov (16|M0)              r12.0<1>:f    0.0:f
-/* [0BA0]  */         mov (16|M0)              r13.0<1>:f    0.0:f
-/* [0BB0]  */         mov (16|M0)              r14.0<1>:f    0.0:f
-/* [0BC0]  */         mov (16|M0)              r15.0<1>:f    0.0:f
-/* [0BD0]  */         mov (16|M0)              r16.0<1>:f    0.0:f
-/* [0BE0]  */         mov (1|M0)               r7.0<1>:q     0:q
-/* [0BF0]  */ (W)     mov (32|M0)              r41.0<1>:ud   r9.0<1;1,0>:ud                   {A@7}
-/* [0C00]  */ (W)     mov (32|M0)              r43.0<1>:ud   r11.0<1;1,0>:ud                  {A@5}
-/* [0C10]  */ (W)     mov (32|M0)              r45.0<1>:ud   r13.0<1;1,0>:ud                  {A@3}
-/* [0C20]  */ (W)     mov (32|M0)              r47.0<1>:ud   r15.0<1;1,0>:ud                  {A@1}
-/* [0C30]  */ (W)     mov (1|M0)               r54.0<1>:ud   r37.0<0;1,0>:ud                  {I@6}
-/* [0C40]  */         cmp (1|M0)    (ne)f0.0   null<1>:ud    r54.0<0;1,0>:ud   0x0:ud              {I@1}
-/* [0C50]  */ (W)     mov (1|M0)               r37.0<1>:ud   f0.0<0;1,0>:ud                   {I@1}
-/* [0C60]  */         cmp (1|M0)    (ne)f0.0   null<1>:ud    r37.0<0;1,0>:ud   0x0:ud              {I@1}
-/* [0C70]  */ (W&~f0.0) jmpi                               32
-/* [0C80]  */ (W)     jmpi                                 16
-/* [0C90]  */         cmp (1|M0)    (ne)f0.0   null<1>:ud    r37.0<0;1,0>:ud   0x0:ud              {I@2}
-/* [0CA0]  */ (W&f0.0) jmpi                                -1360
-/* [0CB0]  */ (W)     mov (1|M0)               r6.0<1>:ud    r5.0<0;1,0>:q
-/* [0CC0]  */ (W)     mov (1|M0)               r5.0<1>:q     r8.6<0;1,0>:q
-/* [0CD0]  */ (W)     mov (16|M0)              r7.0<1>:ud    0x0:ud
-/* [0CE0]  */ (W)     mov (1|M0)               r7.7<1>:ud    0x70F:ud
-/* [0CF0]  */ (W)     mov (1|M0)               r7.2<1>:ud    0x1FF:ud
-/* [0D00]  */ (W)     mov (1|M0)               r7.3<1>:ud    0x7F:ud
-/* [0D10]  */ (W)     mov (1|M0)               r7.4<1>:ud    0x1FF:ud
-/* [0D20]  */         mov (2|M0)               r7.0<1>:ud    r5.0<1;1,0>:ud                   {I@6}
-/* [0D30]  */         mov (1|M0)               r7.5<1>:ud    r17.0<1;1,0>:ud
-/* [0D40]  */ (W)     mov (16|M0)              r5.0<1>:ud    0x0:ud
-/* [0D50]  */         mov (16|M0)              r5.0<1>:ud    r7.0<1;1,0>:ud                   {I@2}
-/* [0D60]  */         mov (1|M0)               r5.6<1>:ud    r6.0<1;1,0>:ud
-/* [0D70]  */ (W)     send.ugm (1|M0)          null     r5  r21:8  0x0            0x02000407           {I@1,$11} // wr:1+8, rd:0; store_block2d.ugm.d32.a64
-/* [0D80]  */ (W)     mov (1|M0)               r7.6<1>:ud    r19.0<0;1,0>:q
-/* [0D90]  */         sync.nop                             null                             {$11.src}
-/* [0DA0]  */ (W)     send.ugm (1|M0)          null     r7  r29:8  0x0            0x02000407           {A@1,$12} // wr:1+8, rd:0; store_block2d.ugm.d32.a64
-/* [0DB0]  */         sync.nop                             null                             {$12.src}
-/* [0DC0]  */ (W)     send.gtwy (1|M0)         null     r0  null:0  0x0            0x02000010           {EOT,$13} // wr:1+0, rd:0; end of thread
+/* [0A80]  */         sync.allwr                           ($3,$7)
+/* [0A90]  */         dpas.8x8 (16|M0)         r9:f          r9:f              r71:hf            r55.0:hf         {$9}
+/* [0AA0]  */         sync.nop                             null                             {A@1}
+/* [0AB0]  */         sync.allwr                           ($4,$8)
+/* [0AC0]  */         dpas.8x8 (16|M0)         r9:f          r9:f              r79:hf            r59.0:hf         {$9}
+/* [0AD0]  */         sync.nop                             null                             {$5.dst}
+/* [0AE0]  */         dpas.8x8 (16|M0)         r41:f         r41:f             r71:hf            r63.0:hf         {$10}
+/* [0AF0]  */         sync.nop                             null                             {$6.dst}
+/* [0B00]  */         dpas.8x8 (16|M0)         r41:f         r41:f             r79:hf            r67.0:hf         {$10}
+/* [0B10]  */         sync.allwr                           ($9,$10)
+/* [0B20]  */ (W)     jmpi                                 224
+/* [0B30]  */         mov (16|M0)              r9.0<1>:f     0.0:f
+/* [0B40]  */         mov (16|M0)              r10.0<1>:f    0.0:f
+/* [0B50]  */         mov (16|M0)              r11.0<1>:f    0.0:f
+/* [0B60]  */         mov (16|M0)              r12.0<1>:f    0.0:f
+/* [0B70]  */         mov (16|M0)              r13.0<1>:f    0.0:f
+/* [0B80]  */         mov (16|M0)              r14.0<1>:f    0.0:f
+/* [0B90]  */         mov (16|M0)              r15.0<1>:f    0.0:f
+/* [0BA0]  */         mov (16|M0)              r16.0<1>:f    0.0:f
+/* [0BB0]  */         mov (1|M0)               r7.0<1>:q     0:q
+/* [0BC0]  */ (W)     mov (32|M0)              r41.0<1>:ud   r9.0<1;1,0>:ud                   {A@7}
+/* [0BD0]  */ (W)     mov (32|M0)              r43.0<1>:ud   r11.0<1;1,0>:ud                  {A@5}
+/* [0BE0]  */ (W)     mov (32|M0)              r45.0<1>:ud   r13.0<1;1,0>:ud                  {A@3}
+/* [0BF0]  */ (W)     mov (32|M0)              r47.0<1>:ud   r15.0<1;1,0>:ud                  {A@1}
+/* [0C00]  */ (W)     mov (1|M0)               r54.0<1>:ud   r37.0<0;1,0>:ud                  {I@6}
+/* [0C10]  */         cmp (1|M0)    (ne)f0.0   null<1>:ud    r54.0<0;1,0>:ud   0x0:ud              {I@1}
+/* [0C20]  */ (W)     mov (1|M0)               r37.0<1>:ud   f0.0<0;1,0>:ud                   {I@1}
+/* [0C30]  */         cmp (1|M0)    (ne)f0.0   null<1>:ud    r37.0<0;1,0>:ud   0x0:ud              {I@1}
+/* [0C40]  */ (W&~f0.0) jmpi                               32
+/* [0C50]  */ (W)     jmpi                                 16
+/* [0C60]  */         cmp (1|M0)    (ne)f0.0   null<1>:ud    r37.0<0;1,0>:ud   0x0:ud              {I@2}
+/* [0C70]  */ (W&f0.0) jmpi                                -1312
+/* [0C80]  */ (W)     mov (1|M0)               r6.0<1>:ud    r5.0<0;1,0>:q
+/* [0C90]  */ (W)     mov (1|M0)               r5.0<1>:q     r8.6<0;1,0>:q
+/* [0CA0]  */ (W)     mov (16|M0)              r7.0<1>:ud    0x0:ud
+/* [0CB0]  */ (W)     mov (1|M0)               r7.7<1>:ud    0x70F:ud
+/* [0CC0]  */ (W)     mov (1|M0)               r7.2<1>:ud    0x1FF:ud
+/* [0CD0]  */ (W)     mov (1|M0)               r7.3<1>:ud    0x7F:ud
+/* [0CE0]  */ (W)     mov (1|M0)               r7.4<1>:ud    0x1FF:ud
+/* [0CF0]  */         mov (2|M0)               r7.0<1>:ud    r5.0<1;1,0>:ud                   {I@6}
+/* [0D00]  */         mov (1|M0)               r7.5<1>:ud    r17.0<1;1,0>:ud
+/* [0D10]  */ (W)     mov (16|M0)              r5.0<1>:ud    0x0:ud
+/* [0D20]  */         mov (16|M0)              r5.0<1>:ud    r7.0<1;1,0>:ud                   {I@2}
+/* [0D30]  */         mov (1|M0)               r5.6<1>:ud    r6.0<1;1,0>:ud
+/* [0D40]  */ (W)     send.ugm (1|M0)          null     r5  r21:8  0x0            0x02000407           {I@1,$11} // wr:1+8, rd:0; store_block2d.ugm.d32.a64
+/* [0D50]  */ (W)     mov (1|M0)               r7.6<1>:ud    r19.0<0;1,0>:q
+/* [0D60]  */         sync.nop                             null                             {$11.src}
+/* [0D70]  */ (W)     send.ugm (1|M0)          null     r7  r29:8  0x0            0x02000407           {A@1,$12} // wr:1+8, rd:0; store_block2d.ugm.d32.a64
+/* [0D80]  */         sync.nop                             null                             {$12.src}
+/* [0D90]  */ (W)     send.gtwy (1|M0)         null     r0  null:0  0x0            0x02000010           {EOT,$13} // wr:1+0, rd:0; end of thread

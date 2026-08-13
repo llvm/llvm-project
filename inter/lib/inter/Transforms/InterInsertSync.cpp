@@ -243,6 +243,15 @@ static void applyWriteWait(SyncState &state) {
   });
 }
 
+static void applyTokenWait(SyncState &state, TokenWait wait);
+
+static void applyWriteWait(SyncState &state, uint32_t sbidMask) {
+  for (unsigned sbid : llvm::seq<unsigned>(0, 32))
+    if (sbidMask & (uint32_t{1} << sbid))
+      applyTokenWait(state,
+                     TokenWait{sbid, SWSBTokenMode::destination});
+}
+
 static void applyTokenWait(SyncState &state, TokenWait wait) {
   for (IssueTicket &ticket : state.issues) {
     if (ticket.sbid != wait.sbid)
@@ -529,8 +538,13 @@ static void observeSync(SyncOp sync, SyncState &state) {
                                swsb.tokenMode});
   } else if (sync.getKind() == SyncKind::allrd)
     applyReadWait(state);
-  else if (sync.getKind() == SyncKind::allwr)
-    applyWriteWait(state);
+  else if (sync.getKind() == SyncKind::allwr) {
+    uint32_t sbidMask = sync.getSbidMask();
+    if (sbidMask != 0)
+      applyWriteWait(state, sbidMask);
+    else
+      applyWriteWait(state);
+  }
   else if (sync.getKind() == SyncKind::bar)
     applyReadWait(state);
   deriveResults(sync, state);
@@ -740,7 +754,20 @@ static void emitWaits(OpBuilder &builder, Operation *operation,
       return lhs.sbid < rhs.sbid;
     return lhs.mode < rhs.mode;
   });
+  uint32_t destinationMask = 0;
+  unsigned destinationCount = 0;
   for (TokenWait wait : requirements) {
+    if (wait.mode != SWSBTokenMode::destination)
+      continue;
+    destinationMask |= uint32_t{1} << wait.sbid;
+    ++destinationCount;
+  }
+  if (destinationCount > 1)
+    SyncOp::create(builder, operation->getLoc(), tokenType, SyncKind::allwr,
+                   Value(), destinationMask);
+  for (TokenWait wait : requirements) {
+    if (destinationCount > 1 && wait.mode == SWSBTokenMode::destination)
+      continue;
     SyncOp sync = SyncOp::create(builder, operation->getLoc(), tokenType,
                                  SyncKind::nop, Value());
     FinalSWSB swsb;
@@ -1197,7 +1224,7 @@ public:
     unsigned nextSBID = 0;
     function.walk([&](Operation *operation) {
       if (SyncOp sync = dyn_cast<SyncOp>(operation)) {
-        if (sync.getKind() == SyncKind::allwr)
+        if (sync.getKind() == SyncKind::allwr && sync.getSbidMask() == 0)
           nextSBID = 0;
         return;
       }

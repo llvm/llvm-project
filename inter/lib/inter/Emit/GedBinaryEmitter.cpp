@@ -806,10 +806,10 @@ private:
     RETURN_IF_GED_ERROR(
         GED_SetSyncFC(&instruction, getSyncFunction(value.kind)));
     RETURN_IF_GED_ERROR(GED_SetDstHorzStride(&instruction, 1));
-    if (value.kind == SyncKind::bar) {
+    if (value.kind == SyncKind::bar || value.sbidMask != 0) {
       RETURN_IF_GED_ERROR(GED_SetSrc0RegFile(&instruction, GED_REG_FILE_IMM));
       RETURN_IF_GED_ERROR(GED_SetSrc0DataType(&instruction, GED_DATA_TYPE_ud));
-      RETURN_IF_GED_ERROR(GED_SetImm(&instruction, 0));
+      RETURN_IF_GED_ERROR(GED_SetImm(&instruction, value.sbidMask));
     } else {
       RETURN_IF_GED_ERROR(GED_SetSrc0RegFile(&instruction, GED_REG_FILE_ARF));
     }

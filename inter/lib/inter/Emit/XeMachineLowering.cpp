@@ -288,8 +288,9 @@ private:
   }
 
   void lowerSync(SyncOp sync) {
-    program.items.emplace_back(
-        SyncInstruction{sync.getKind(), getFinalSwsb(sync)});
+    program.items.emplace_back(SyncInstruction{
+        sync.getKind(), static_cast<uint32_t>(sync.getSbidMask()),
+        getFinalSwsb(sync)});
   }
 
   struct MessageForm {

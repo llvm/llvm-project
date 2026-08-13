@@ -128,6 +128,12 @@ DEFINE_SWSB_INTERFACE(BarrierSignalOp)
 DEFINE_SWSB_INTERFACE(EotOp)
 DEFINE_SWSB_INTERFACE(DpasOp)
 
+LogicalResult SyncOp::verify() {
+  if (getSbidMask() != 0 && getKind() != SyncKind::allwr)
+    return emitOpError("selective SBID mask requires allwr");
+  return success();
+}
+
 #define DEFINE_SEND_SCOREBOARD_INTERFACE(Op)                               \
   AsyncScoreboardKind Op::getAsyncScoreboardKind() {                       \
     return AsyncScoreboardKind::send;                                      \
