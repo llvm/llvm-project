@@ -1104,6 +1104,61 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+
+  // Cases not handled yet; but will handle some day.
+  case Stmt::DesignatedInitExprClass:
+  case Stmt::DesignatedInitUpdateExprClass:
+  case Stmt::ArrayInitIndexExprClass:
+  case Stmt::ExtVectorElementExprClass:
+  case Stmt::MatrixElementExprClass:
+  case Stmt::ImaginaryLiteralClass:
+  case Stmt::ObjCAtCatchStmtClass:
+  case Stmt::ObjCAtFinallyStmtClass:
+  case Stmt::ObjCAtTryStmtClass:
+  case Stmt::ObjCAutoreleasePoolStmtClass:
+  case Stmt::ObjCEncodeExprClass:
+  case Stmt::ObjCIsaExprClass:
+  case Stmt::ObjCProtocolExprClass:
+  case Stmt::ObjCSelectorExprClass:
+  case Stmt::ParenListExprClass:
+  case Stmt::ShuffleVectorExprClass:
+  case Stmt::ConvertVectorExprClass:
+  case Stmt::VAArgExprClass:
+  case Stmt::CUDAKernelCallExprClass:
+  case Stmt::OpaqueValueExprClass:
+  case Stmt::AsTypeExprClass:
+  case Stmt::ConceptSpecializationExprClass:
+  case Stmt::CXXRewrittenBinaryOperatorClass:
+  case Stmt::RequiresExprClass:
+  case Stmt::EmbedExprClass:
+
+  // Cases we intentionally don't evaluate, since they don't need
+  // to be explicitly evaluated.
+  case Stmt::PredefinedExprClass:
+  case Stmt::AddrLabelExprClass:
+  case Stmt::IntegerLiteralClass:
+  case Stmt::FixedPointLiteralClass:
+  case Stmt::CharacterLiteralClass:
+  case Stmt::CXXScalarValueInitExprClass:
+  case Stmt::CXXBoolLiteralExprClass:
+  case Stmt::ObjCBoolLiteralExprClass:
+  case Stmt::ObjCAvailabilityCheckExprClass:
+  case Stmt::FloatingLiteralClass:
+  case Stmt::NoInitExprClass:
+  case Stmt::SizeOfPackExprClass:
+  case Stmt::StringLiteralClass:
+  case Stmt::SourceLocExprClass:
+  case Stmt::ObjCStringLiteralClass:
+  case Stmt::CXXPseudoDestructorExprClass:
+  case Stmt::SubstNonTypeTemplateParmExprClass:
+  case Stmt::CXXNullPtrLiteralExprClass:
+  case Stmt::ArraySectionExprClass:
+  case Stmt::OMPArrayShapingExprClass:
+  case Stmt::OMPIteratorExprClass:
+  case Stmt::SYCLUniqueStableNameExprClass:
+  case Stmt::OpenACCAsteriskSizeExprClass:
+  case Stmt::TypeTraitExprClass:
+
   case Stmt::ArrayInitLoopExprClass:
   case Stmt::ArraySubscriptExprClass:
   case Stmt::AttributedStmtClass:
@@ -1135,6 +1190,61 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   switch (S->getStmtClass()) {
   default:
     return false;
+
+  // Cases not handled yet; but will handle some day.
+  case Stmt::DesignatedInitExprClass:
+  case Stmt::DesignatedInitUpdateExprClass:
+  case Stmt::ArrayInitIndexExprClass:
+  case Stmt::ExtVectorElementExprClass:
+  case Stmt::MatrixElementExprClass:
+  case Stmt::ImaginaryLiteralClass:
+  case Stmt::ObjCAtCatchStmtClass:
+  case Stmt::ObjCAtFinallyStmtClass:
+  case Stmt::ObjCAtTryStmtClass:
+  case Stmt::ObjCAutoreleasePoolStmtClass:
+  case Stmt::ObjCEncodeExprClass:
+  case Stmt::ObjCIsaExprClass:
+  case Stmt::ObjCProtocolExprClass:
+  case Stmt::ObjCSelectorExprClass:
+  case Stmt::ParenListExprClass:
+  case Stmt::ShuffleVectorExprClass:
+  case Stmt::ConvertVectorExprClass:
+  case Stmt::VAArgExprClass:
+  case Stmt::CUDAKernelCallExprClass:
+  case Stmt::OpaqueValueExprClass:
+  case Stmt::AsTypeExprClass:
+  case Stmt::ConceptSpecializationExprClass:
+  case Stmt::CXXRewrittenBinaryOperatorClass:
+  case Stmt::RequiresExprClass:
+  case Stmt::EmbedExprClass:
+
+  // Cases we intentionally don't evaluate, since they don't need
+  // to be explicitly evaluated.
+  case Stmt::PredefinedExprClass:
+  case Stmt::AddrLabelExprClass:
+  case Stmt::IntegerLiteralClass:
+  case Stmt::FixedPointLiteralClass:
+  case Stmt::CharacterLiteralClass:
+  case Stmt::CXXScalarValueInitExprClass:
+  case Stmt::CXXBoolLiteralExprClass:
+  case Stmt::ObjCBoolLiteralExprClass:
+  case Stmt::ObjCAvailabilityCheckExprClass:
+  case Stmt::FloatingLiteralClass:
+  case Stmt::NoInitExprClass:
+  case Stmt::SizeOfPackExprClass:
+  case Stmt::StringLiteralClass:
+  case Stmt::SourceLocExprClass:
+  case Stmt::ObjCStringLiteralClass:
+  case Stmt::CXXPseudoDestructorExprClass:
+  case Stmt::SubstNonTypeTemplateParmExprClass:
+  case Stmt::CXXNullPtrLiteralExprClass:
+  case Stmt::ArraySectionExprClass:
+  case Stmt::OMPArrayShapingExprClass:
+  case Stmt::OMPIteratorExprClass:
+  case Stmt::SYCLUniqueStableNameExprClass:
+  case Stmt::OpenACCAsteriskSizeExprClass:
+  case Stmt::TypeTraitExprClass:
+
   case Stmt::ArrayInitLoopExprClass:
   case Stmt::ArraySubscriptExprClass:
   case Stmt::AttributedStmtClass:
