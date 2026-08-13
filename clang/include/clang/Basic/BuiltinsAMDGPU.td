@@ -211,6 +211,17 @@ def __builtin_amdgcn_s_setprio : AMDGPUBuiltin<"void(_Constant short)">;
 def __builtin_amdgcn_ds_swizzle : AMDGPUBuiltin<"int(int, _Constant int)", [Const]>;
 def __builtin_amdgcn_ds_permute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_ds_bpermute : AMDGPUBuiltin<"int(int, int)", [Const]>;
+// Ask for a value to be kept in the register tuple starting at a given number.
+// The value and the result have the same, caller-chosen type, so the prototype
+// is checked in SemaAMDGPU rather than declared here.
+def __builtin_amdgcn_pin_vgpr : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]> {
+  let Documentation = [DocPinVGPR];
+  let ArgNames = ["value", "reg"];
+}
+def __builtin_amdgcn_pin_agpr : AMDGPUBuiltin<"void(...)", [Const, CustomTypeChecking]> {
+  let Documentation = [DocPinAGPR];
+  let ArgNames = ["value", "reg"];
+}
 def __builtin_amdgcn_readfirstlane : AMDGPUBuiltin<"int(int)", [Const]>;
 def __builtin_amdgcn_readlane : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_wave_shuffle : AMDGPUBuiltin<"int(int, int)", [Const]> {

@@ -695,6 +695,15 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_readfirstlane:
     return emitBuiltinWithOneOverloadedType<1>(*this, E,
                                                Intrinsic::amdgcn_readfirstlane);
+  case AMDGPU::BI__builtin_amdgcn_pin_vgpr:
+  case AMDGPU::BI__builtin_amdgcn_pin_agpr: {
+    llvm::Value *V = EmitScalarExpr(E->getArg(0));
+    unsigned Reg = E->getArg(1)
+                       ->EvaluateKnownConstInt(getContext())
+                       .getZExtValue();
+    return emitAMDGPUPin(V, BuiltinID == AMDGPU::BI__builtin_amdgcn_pin_agpr,
+                         Reg);
+  }
   case AMDGPU::BI__builtin_amdgcn_div_fixup:
   case AMDGPU::BI__builtin_amdgcn_div_fixupf:
   case AMDGPU::BI__builtin_amdgcn_div_fixuph:

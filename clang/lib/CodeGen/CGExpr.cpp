@@ -3077,8 +3077,11 @@ llvm::Value *CodeGenFunction::emitAMDGPUPinnedValue(llvm::Value *V,
   // rather than emit invalid IR.
   if (!getTarget().getTriple().isAMDGCN())
     return V;
-  bool IsAGPR = It->second.first;
-  unsigned Reg = It->second.second;
+  return emitAMDGPUPin(V, It->second.first, It->second.second);
+}
+
+llvm::Value *CodeGenFunction::emitAMDGPUPin(llvm::Value *V, bool IsAGPR,
+                                            unsigned Reg) {
   llvm::Type *Ty = V->getType();
   unsigned Bits = CGM.getDataLayout().getTypeSizeInBits(Ty);
   if (Bits == 0 || (Bits % 32) != 0)

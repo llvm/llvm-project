@@ -37,6 +37,10 @@ public:
   /// was emitted.
   bool checkAtomicOrderingCABIArg(Expr *E, bool MayLoad, bool MayStore);
 
+  /// Checks a __builtin_amdgcn_pin_{vgpr,agpr} call and gives it the type of
+  /// the value being pinned. \returns true if a diagnostic was emitted.
+  bool checkPinCall(CallExpr *TheCall, bool IsAGPR);
+
   bool checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore);
   bool checkAVLoadStore(CallExpr *TheCall, bool IsStore);
   bool checkAtomicMonitorLoad(CallExpr *TheCall);

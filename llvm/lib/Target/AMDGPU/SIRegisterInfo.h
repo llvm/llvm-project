@@ -30,10 +30,11 @@ class MachineInstrBuilder;
 class RegisterBank;
 struct SGPRSpillBuilder;
 
-/// Register allocation hint types. Helps eliminate unneeded COPY with True16
+/// Register allocation hint types. Size16/Size32 help eliminate unneeded COPY
+/// with True16; Pin requests a fixed physical tuple for a register pin.
 namespace AMDGPURI {
 
-enum { Size16 = 1, Size32 = 2 };
+enum { Size16 = 1, Size32 = 2, Pin = 3 };
 
 } // end namespace AMDGPURI
 
@@ -363,6 +364,9 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  void updateRegAllocHint(Register Reg, Register NewReg,
+                          MachineFunction &MF) const override;
 
   const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 

@@ -22,9 +22,18 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "si-register-info"
+
+STATISTIC(NumPinHintsOffered,
+          "Number of times a register pin was offered to the allocator");
+STATISTIC(NumPinHintsOutOfOrder,
+          "Number of register pins whose tuple was outside the allocation "
+          "order");
 
 #define GET_REGINFO_TARGET_DESC
 #include "AMDGPUGenRegisterInfo.inc"
@@ -51,6 +60,11 @@ static cl::opt<unsigned> StressAGPRLimit(
 static cl::opt<unsigned> StressSGPRLimit(
     "amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
     cl::desc("Limit SGPRs to N registers by reserving the rest"));
+
+static cl::opt<bool> PinExclusiveHint(
+    "amdgpu-pin-exclusive-hint", cl::Hidden, cl::init(true),
+    cl::desc("Make a register pin's allocation order a singleton (the pinned "
+             "tuple is the only candidate) instead of a preference"));
 
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
@@ -4097,6 +4111,28 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
   llvm_unreachable("Unexpected register pressure set!");
 }
 
+void SIRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
+                                        MachineFunction &MF) const {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(Reg);
+  if (Hint.first != AMDGPURI::Pin || !NewReg.isVirtual())
+    return;
+
+  // Coalescing a pinned value away must not lose where it has to live. A pin
+  // survives on the merged register only if the merge was whole-register: had
+  // the value become a sub-range of something wider, its tuple would no longer
+  // describe the register that now holds it. A pin already on the survivor
+  // wins, since dropping that one would trade one miss for another.
+  if (MRI.getRegAllocationHint(NewReg).first == AMDGPURI::Pin)
+    return;
+  const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(Reg);
+  const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(NewReg);
+  if (!SrcRC || !DstRC || getRegSizeInBits(*SrcRC) != getRegSizeInBits(*DstRC))
+    return;
+
+  MRI.setRegAllocationHint(NewReg, AMDGPURI::Pin, Hint.second);
+}
+
 const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
   static const int Empty[] = { -1 };
 
@@ -4119,6 +4155,26 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
   std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
 
   switch (Hint.first) {
+  case AMDGPURI::Pin: {
+    // A register pin names the physical tuple the value must occupy. Offering
+    // it as the only candidate turns the allocation order into a singleton,
+    // which is as close as LLVM gets to a register class created at compile
+    // time: greedy re-asks on every assign/evict, so an evicted pin comes back
+    // to the same tuple instead of drifting.
+    MCRegister PR = Hint.second.asMCReg();
+    // An unallocatable or out-of-budget tuple is not in Order; hinting it would
+    // leave the allocator with no candidate at all, so fall back to a normal
+    // allocation instead of failing.
+    if (!PR || !is_contained(Order, PR)) {
+      ++NumPinHintsOutOfOrder;
+      return false;
+    }
+    ++NumPinHintsOffered;
+    LLVM_DEBUG(dbgs() << "pin hint: " << printReg(VirtReg, this) << " -> "
+                      << printReg(PR, this) << '\n');
+    Hints.push_back(PR);
+    return PinExclusiveHint;
+  }
   case AMDGPURI::Size32: {
     Register Paired = Hint.second;
     assert(Paired);

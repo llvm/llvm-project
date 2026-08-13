@@ -113,12 +113,13 @@ define amdgpu_kernel void @pin_two_live_values(ptr addrspace(1) %p, ptr addrspac
 ; physical tuple must not be substituted into the PHI operand: LiveVariables
 ; walks PHI sources through getVarInfo(), which asserts on a physical register,
 ; so the pin falls back to the soft path instead. Two pinned accumulators keep
-; both PHIs live across the back edge. A soft hint costs no occupancy: the VGPR
-; count reflects what the allocator used, not the range the pins asked for.
+; both PHIs live across the back edge. The hint survives the copies that PHI
+; elimination and coalescing introduce, so the accumulator still lands on its
+; tuple and accumulates in place -- and the VGPR count has to cover it.
 ; CHECK-LABEL: {{^}}pin_into_loop_phi:
-; CHECK: v_wmma_f32_16x16x32_bf16
+; CHECK: v_wmma_f32_16x16x32_bf16 v[108:115], v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[108:115]
 ; CHECK: s_endpgm
-; CHECK: .set .Lpin_into_loop_phi.num_vgpr, 16
+; CHECK: .set .Lpin_into_loop_phi.num_vgpr, 116
 define amdgpu_kernel void @pin_into_loop_phi(ptr addrspace(1) %o) {
 entry:
   %i0 = call <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32> zeroinitializer, i32 100)

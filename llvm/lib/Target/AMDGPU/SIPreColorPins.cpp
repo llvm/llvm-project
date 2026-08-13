@@ -20,6 +20,23 @@
 /// hard pin) the pass falls back to a COPY plus a soft allocation hint, so it
 /// never regresses correctness. Runs pre-RA in SSA form (before PHIElimination
 /// / TwoAddressInstruction), so each value has a single reaching def.
+///
+/// A soft hint places a pinned value as reliably as pre-coloring for as long as
+/// the value stays one live range, loop-carried PHIs included. What it cannot
+/// express is a pin whose chain the control flow splits in two: an accumulator
+/// running through an unrolled main loop and then a remainder loop that may
+/// iterate zero times leaves the main loop's range live across the remainder
+/// loop, so the two ranges overlap and coalescing cannot merge them. Both then
+/// demand the one tuple, only one can have it, and the loser is split into
+/// fresh vregs that do not inherit the hint. Pre-coloring is not bound by this
+/// because rewriting both to the same physreg is only correct given that the
+/// two ranges hold the same value -- which the pin states and the allocator has
+/// no way to infer.
+///
+/// Placing fewer values is not by itself worse: on a 4-wave gfx1250 GEMM the
+/// hint path placed 432 of 640 accumulators against pre-coloring's 640, yet
+/// emitted fewer instructions, fewer S_SET_VGPR_MSB and fewer waits, at equal
+/// VGPR count and with no spill either way.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,6 +49,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -47,6 +65,26 @@ static cl::opt<bool> EnableHardPin(
     "amdgpu-hard-pin-regs", cl::init(true), cl::Hidden,
     cl::desc("Use hard register pre-coloring for llvm.amdgcn.pin.* (else soft "
              "allocation hints only)"));
+
+// Which allocation hint a soft pin uses: the AMDGPU Pin hint (which can make
+// the pinned tuple the only candidate, see SIRegisterInfo) or a plain copy
+// preference.
+static cl::opt<bool> PinHintKind(
+    "amdgpu-pin-hint-kind", cl::init(true), cl::Hidden,
+    cl::desc("Use the AMDGPU Pin allocation hint for a soft pin (else a plain "
+             "simple hint)"));
+
+// Whether a soft pin also grows the VGPR budget to cover its tuple. Without
+// this a high pin can never be honored by a hint alone.
+static cl::opt<bool> PinSoftReservesVGPRs(
+    "amdgpu-pin-soft-reserves-vgprs", cl::init(false), cl::Hidden,
+    cl::desc("Let a soft (hint-only) register pin raise the VGPR budget to "
+             "cover the pinned tuple"));
+
+// Whether a soft pin lowers to a copy rather than rewriting the pin's uses.
+static cl::opt<bool> PinSoftCopy(
+    "amdgpu-pin-soft-copy", cl::init(true), cl::Hidden,
+    cl::desc("Lower a soft pin to a copy instead of rewriting its uses"));
 
 // If set, convert an AGPR-pinned input's MFMA to the mixed vgprcd form
 // (v[C], a[A], a[B]) so the accumulator stays in VGPR; else keep the native
@@ -185,6 +223,22 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
   // never share a physreg. Reuse by a single value (e.g. an accumulation chain)
   // is instead absorbed into the first pin's tie-connected component, making
   // later pins on it no-ops.
+  // A pin that does not reach its register leaves correct but slower code, so
+  // it is a remark rather than a diagnostic. It is worth reporting at all
+  // because nothing in the source says which of the rules below a value fell
+  // foul of: -Rpass-missed=si-pre-color-pins names the pin and the reason.
+  MachineOptimizationRemarkEmitter ORE(MF, /*MBFI=*/nullptr);
+  auto remark = [&](const MachineInstr *Pin, const char *Name, bool WantAGPR,
+                    unsigned RegNo, StringRef What, StringRef Why) {
+    std::string Tgt = (WantAGPR ? "a" : "v") + std::to_string(RegNo);
+    ORE.emit([&] {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, Name,
+                                             Pin->getDebugLoc(),
+                                             Pin->getParent())
+             << "pin to " << Tgt << " " << What << ": " << Why;
+    });
+  };
+
   DenseSet<MCRegUnit> Claimed;
   bool NeedRecomputeLiveIns = false;
   bool AnyHardPin = false;
@@ -269,6 +323,8 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         MO.setReg(Src);
       if (Src.isVirtual())
         MRI.constrainRegClass(Src, TRI->getEquivalentVGPRClass(RC));
+      remark(Pin, "PinDropped", WantAGPR, RegNo, "was dropped",
+             "the target has no AGPRs; the value stays in a VGPR");
       Pin->eraseFromParent();
       ++NumNoOpPins;
       continue;
@@ -410,13 +466,25 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         MO.setSubReg(TRI->composeSubRegIndices(SubIdx, MO.getSubReg()));
         MO.setReg(Src);
       }
+      remark(Pin, "PinDropped", WantAGPR, RegNo, "was dropped",
+             "the value is a slice of a wider register, so placing it would "
+             "move the lanes it shares; pin at the width the value is used");
       Pin->eraseFromParent();
+      ++NumNoOpPins;
       continue;
     }
 
     bool Hard = EnableHardPin && PR && Src.isVirtual() && Dst.isVirtual();
-    // Why a pin could not be pre-colored, for -debug-only=si-pre-color-pins.
-    const char *SoftWhy = Hard ? "?" : "disabled or non-virtual";
+    // Why a pin could not be pre-colored. Null when hints are all that was
+    // asked for, so that choosing the hint path is not reported as a
+    // degradation the way an unexpected fallback is.
+    const char *SoftWhy = "?";
+    if (!EnableHardPin)
+      SoftWhy = nullptr;
+    else if (!PR)
+      SoftWhy = "no register tuple of this width and alignment starts there";
+    else if (!Src.isVirtual() || !Dst.isVirtual())
+      SoftWhy = "the value already lives in a physical register";
 
     // Deterministic placement for a load tuple: when the pinned value is a
     // REG_SEQUENCE of loads, rewrite each element's def to a fixed physical
@@ -780,16 +848,53 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
 
     ++NumSoftPins;
     LLVM_DEBUG(dbgs() << "pin to " << (WantAGPR ? 'a' : 'v') << RegNo
-                      << " not pre-colored: " << SoftWhy << '\n');
-    // Soft fallback: COPY + register-allocation hint (a no-op hint if the
-    // physical tuple was illegal).
-    BuildMI(*Pin->getParent(), Pin, Pin->getDebugLoc(),
-            TII->get(TargetOpcode::COPY), Dst)
-        .addReg(Src);
+                      << " not pre-colored: " << (SoftWhy ? SoftWhy : "by request")
+                      << '\n');
+    if (SoftWhy)
+      remark(Pin, PR ? "PinNotPreColored" : "PinDropped", WantAGPR, RegNo,
+             PR ? "is a hint rather than a fixed assignment" : "was dropped",
+             SoftWhy);
+    // Soft fallback: hint the value at the tuple (a no-op hint if the physical
+    // tuple was illegal). The copy a pin lowers to is redundant by
+    // construction -- source and destination hold the same value -- and
+    // coalescing normally removes it. But each copy is one more merge that has
+    // to succeed, and a merge that fails leaves the chain as two overlapping
+    // live ranges competing for the one tuple, which no hint can satisfy.
+    // Rewriting the uses instead keeps the chain in one piece from the start.
+    bool Rewrote = false;
+    if (!PinSoftCopy && Src.isVirtual() &&
+        MRI.getRegClassOrNull(Src) == MRI.getRegClassOrNull(Dst)) {
+      MRI.replaceRegWith(Dst, Src);
+      Dst = Src;
+      Rewrote = true;
+    }
+    if (!Rewrote)
+      BuildMI(*Pin->getParent(), Pin, Pin->getDebugLoc(),
+              TII->get(TargetOpcode::COPY), Dst)
+          .addReg(Src);
     if (PR) {
-      MRI.setSimpleHint(Dst, PR);
+      auto SetHint = [&](Register R, MCRegister Tgt) {
+        if (PinHintKind)
+          MRI.setRegAllocationHint(R, AMDGPURI::Pin, Tgt);
+        else
+          MRI.setSimpleHint(R, Tgt);
+      };
+      // A REG_SEQUENCE that assembles the pinned value out of several loads
+      // needs no hint of its own: coalescing folds it into the hinted value, so
+      // long as the tuple is used as a whole. A tuple read back in pieces
+      // instead has a disconnected live range, gets split into fresh vregs
+      // (which do not inherit the hint) and is not placed -- see the
+      // slot-granularity note in the pin docs.
+      SetHint(Dst, PR);
       if (Src.isVirtual())
-        MRI.setSimpleHint(Src, PR);
+        SetHint(Src, PR);
+      // A hint can only be honored if the tuple is inside the VGPR budget: the
+      // allocation order stops at the occupancy-derived limit, so a pin above
+      // it is not merely unlikely, it is unreachable. Reserving for a hint
+      // costs occupancy even when the allocator then ignores it, hence the
+      // flag.
+      if (PinSoftReservesVGPRs)
+        RecordVGPRFootprint();
     }
     Pin->eraseFromParent();
   }

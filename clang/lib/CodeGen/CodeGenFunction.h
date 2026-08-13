@@ -1565,6 +1565,11 @@ private:
   /// otherwise return \p V unchanged.
   llvm::Value *emitAMDGPUPinnedValue(llvm::Value *V, llvm::Value *Addr);
 
+  /// Return \p V wrapped with llvm.amdgcn.pin.{vgpr,agpr} asking for the tuple
+  /// starting at \p Reg, chunked into the widths the intrinsic has patterns
+  /// for. Shared by the amdgpu_pin_* attribute and the pin builtins.
+  llvm::Value *emitAMDGPUPin(llvm::Value *V, bool IsAGPR, unsigned Reg);
+
   /// Record \p LV's storage as pinned storage when \p VD carries an
   /// amdgpu_pin_{vgpr,agpr} attribute. The variable's own declaration registers
   /// its alloca (\sa EmitAutoVarAlloca), but a by-reference capture reaches it
