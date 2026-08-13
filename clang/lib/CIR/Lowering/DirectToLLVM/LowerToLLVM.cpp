@@ -5655,7 +5655,6 @@ static void clearPadding(mlir::ConversionPatternRewriter &rewriter,
                                                inputPtr, {index});
       uint64_t adjustedAlignment = llvm::MinAlign(baseAlignment, offset);
 
-
       auto zero = mlir::LLVM::ConstantOp::create(rewriter, loc, i8Ty, 0);
       mlir::LLVM::StoreOp::create(rewriter, loc, zero, element,
                                   adjustedAlignment);
@@ -5691,8 +5690,8 @@ mlir::LogicalResult CIRToLLVMClearPaddingOpLowering::matchAndRewrite(
 
   mlir::Value inputPtr = adaptor.getArg();
   for (mlir::Attribute attr : op.getPadding())
-    clearPadding(rewriter, op.getLoc(), inputPtr,
-                 op.getAlignment(), cast<cir::OffsetPairAttr>(attr));
+    clearPadding(rewriter, op.getLoc(), inputPtr, op.getAlignment(),
+                 cast<cir::OffsetPairAttr>(attr));
 
   rewriter.eraseOp(op);
   return mlir::success();
