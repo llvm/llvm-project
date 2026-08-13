@@ -819,12 +819,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   (a C++20 extension; warned as an extension in C++17). Individual bindings
   form aggregate decompositions(structs, classes, and arrays) can now be used
   in data-sharing clauses (``private``, ``firstprivate``, ``lastprivate``,
-  ``shared``, ``reduction``, ``linear``) and ``map`` clauses for target
-  directives.
+  ``shared``, ``linear``) and ``map`` clauses for target directives.
   Tuple-like bindings (types using the tuple protocol with ``get<N>()``,
   such as ``std::pair`` or ``std::tuple``) are not yet supported and
   will produce a compilation error. Reduction clauses with structured bindings
-  may produce non-deterministic results. Bare task directives (without an
+  are not yet supported. Bare task directives (without an
   enclosing parallel region) with firstprivate structured bindings do not
   execute correctly.
   When the original variable is explicitly mapped in a target region

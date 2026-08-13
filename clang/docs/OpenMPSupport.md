@@ -47,14 +47,12 @@ see {ref}`OpenMP implementation details <openmp-implementation-details>` and
 - C++20 structured bindings are now supported in OpenMP constructs.
   Bindings from structured binding declarations can be used in data-sharing
   clauses (``private``, ``firstprivate``, ``lastprivate``, ``shared``,
-  ``reduction``, ``linear``), and in ``map`` clauses for target directives.
+  ``linear``), and in ``map`` clauses for target directives.
   Limitations: tuple-like bindings (using the tuple protocol with ``get<N>()``)
-  are not yet supported; conditional lastprivate, task reductions, inscan
-  reductions, and non-trivial type reductions are not yet supported;
-  reduction clauses with structured bindings may produce non-deterministic results;
-  bare ``#pragma omp task`` directives (without an enclosing parallel region)
-  with ``firstprivate`` structured bindings do not execute correctly and must
-  be created within a parallel region.
+  are not yet supported; conditional lastprivate and reductions are not yet
+  supported; bare ``#pragma omp task`` directives (without an enclosing parallel
+  region) with ``firstprivate`` structured bindings do not execute correctly
+  and must be created within a parallel region.
   Important restriction for target regions: if the original variable is
   explicitly mapped (e.g., ``map(tofrom: t)``) but only bindings from it,
   and not the original variable itself, are used in the target region, the

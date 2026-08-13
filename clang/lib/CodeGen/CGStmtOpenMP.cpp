@@ -1722,78 +1722,27 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
       TaskRHSs.append(C->rhs_exprs().begin(), C->rhs_exprs().end());
     }
   }
-  // Filter out BindingDecls for ReductionCodeGen (it only supports VarDecls).
-  SmallVector<const Expr *, 4> VarDeclShareds;
-  SmallVector<const Expr *, 4> VarDeclPrivates;
-  SmallVector<const Expr *, 4> VarDeclReductionOps;
-
-  auto SharedsIt = Shareds.begin();
-  auto PrivatesIt = Privates.begin();
-  auto ReductionOpsIt = ReductionOps.begin();
-
-  for (; SharedsIt != Shareds.end();
-       ++SharedsIt, ++PrivatesIt, ++ReductionOpsIt) {
-    const BindingDecl *BD = nullptr;
-    if (const auto *DRE =
-            dyn_cast<DeclRefExpr>((*SharedsIt)->IgnoreParenImpCasts()))
-      BD = dyn_cast<BindingDecl>(DRE->getDecl());
-
-    if (!BD) {
-      // VarDecl - add to filtered lists for ReductionCodeGen.
-      VarDeclShareds.push_back(*SharedsIt);
-      VarDeclPrivates.push_back(*PrivatesIt);
-      VarDeclReductionOps.push_back(*ReductionOpsIt);
-    }
-  }
-
-  ReductionCodeGen RedCG(VarDeclShareds, VarDeclShareds, VarDeclPrivates,
-                         VarDeclReductionOps);
-  unsigned RedCGIdx = 0;
+  ReductionCodeGen RedCG(Shareds, Shareds, Privates, ReductionOps);
+  unsigned Count = 0;
   auto *ILHS = LHSs.begin();
   auto *IRHS = RHSs.begin();
   auto *IPriv = Privates.begin();
   for (const Expr *IRef : Shareds) {
     const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*IPriv)->getDecl());
-
-    // Check if this is a BindingDecl - ReductionCodeGen doesn't support them.
-    const BindingDecl *BD = nullptr;
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(IRef->IgnoreParenImpCasts()))
-      BD = dyn_cast<BindingDecl>(DRE->getDecl());
-
-    if (BD) {
-      // BindingDecls can't use ReductionCodeGen (it casts to VarDecl).
-      // Handle manually: emit private var, register addresses.
-      Address OriginalAddr = EmitOMPSharedLValue(IRef).getAddress();
-      EmitDecl(*PrivateVD);
-      Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
-
-      // Register for reduction operation.
-      const auto *LHSVD = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());
-      const auto *RHSVD = cast<VarDecl>(cast<DeclRefExpr>(*IRHS)->getDecl());
-      PrivateScope.addPrivate(LHSVD, OriginalAddr);
-      PrivateScope.addPrivate(RHSVD, PrivateAddr);
-
-      ++ILHS;
-      ++IRHS;
-      ++IPriv;
-      continue;
-    }
-
-    // Emit private VarDecl with reduction init using RedCGIdx.
-    RedCG.emitSharedOrigLValue(*this, RedCGIdx);
-    RedCG.emitAggregateType(*this, RedCGIdx);
+    RedCG.emitSharedOrigLValue(*this, Count);
+    RedCG.emitAggregateType(*this, Count);
     AutoVarEmission Emission = EmitAutoVarAlloca(*PrivateVD);
-    RedCG.emitInitialization(*this, RedCGIdx, Emission.getAllocatedAddress(),
-                             RedCG.getSharedLValue(RedCGIdx).getAddress(),
+    RedCG.emitInitialization(*this, Count, Emission.getAllocatedAddress(),
+                             RedCG.getSharedLValue(Count).getAddress(),
                              [&Emission](CodeGenFunction &CGF) {
                                CGF.EmitAutoVarInit(Emission);
                                return true;
                              });
     EmitAutoVarCleanups(Emission);
     Address BaseAddr = RedCG.adjustPrivateAddress(
-        *this, RedCGIdx, Emission.getAllocatedAddress());
+        *this, Count, Emission.getAllocatedAddress());
     bool IsRegistered =
-        PrivateScope.addPrivate(RedCG.getBaseDecl(RedCGIdx), BaseAddr);
+        PrivateScope.addPrivate(RedCG.getBaseDecl(Count), BaseAddr);
     assert(IsRegistered && "private var already registered as private");
     // Silence the warning about unused variable.
     (void)IsRegistered;
@@ -1806,21 +1755,21 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
       // Store the address of the original variable associated with the LHS
       // implicit variable.
       PrivateScope.addPrivate(LHSVD,
-                              RedCG.getSharedLValue(RedCGIdx).getAddress());
+                              RedCG.getSharedLValue(Count).getAddress());
       PrivateScope.addPrivate(RHSVD, GetAddrOfLocalVar(PrivateVD));
     } else if ((isaOMPArraySectionExpr && Type->isScalarType()) ||
                isa<ArraySubscriptExpr>(IRef)) {
       // Store the address of the original variable associated with the LHS
       // implicit variable.
       PrivateScope.addPrivate(LHSVD,
-                              RedCG.getSharedLValue(RedCGIdx).getAddress());
+                              RedCG.getSharedLValue(Count).getAddress());
       PrivateScope.addPrivate(RHSVD,
                               GetAddrOfLocalVar(PrivateVD).withElementType(
                                   ConvertTypeForMem(RHSVD->getType())));
     } else {
       QualType Type = PrivateVD->getType();
       bool IsArray = getContext().getAsArrayType(Type) != nullptr;
-      Address OriginalAddr = RedCG.getSharedLValue(RedCGIdx).getAddress();
+      Address OriginalAddr = RedCG.getSharedLValue(Count).getAddress();
       // Store the address of the original variable associated with the LHS
       // implicit variable.
       if (IsArray) {
@@ -1836,8 +1785,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     ++ILHS;
     ++IRHS;
     ++IPriv;
-    if (!BD)
-      ++RedCGIdx;
+    ++Count;
   }
   if (!Data.ReductionVars.empty()) {
     OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(D);

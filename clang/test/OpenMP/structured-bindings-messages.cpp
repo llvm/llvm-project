@@ -179,6 +179,12 @@ struct Point {
   int x, y;
 };
 
+struct ArrayStruct {
+  int arr[2];
+};
+
+#pragma omp declare reduction(mysum: int: omp_out += omp_in) initializer(omp_priv = 0)
+
 Point make_point() { return {1, 2}; }
 
 void test_function_call() {
@@ -349,7 +355,7 @@ void test_lastprivate_conditional() {
 void test_reduction_task() {
   Point p{0, 0};
   auto [a, b] = p;
-  // expected-error@+1{{array-type or class-type reductions on structured bindings are not yet supported}}
+  // expected-error@+1{{reductions on structured bindings are not yet supported}}
 #pragma omp parallel reduction(task, +:a)
   {
     a += 1;
@@ -359,7 +365,7 @@ void test_reduction_task() {
 void test_reduction_inscan() {
   Point p{0, 0};
   auto [a, b] = p;
-  // expected-error@+1{{array-type or class-type reductions on structured bindings are not yet supported}}
+  // expected-error@+1{{reductions on structured bindings are not yet supported}}
 #pragma omp for reduction(inscan, +:a)
   for (int i = 0; i < 10; ++i) {
     // expected-error@+1{{the list item must appear in 'reduction' clause with the 'inscan' modifier of the parent directive}}
@@ -385,7 +391,7 @@ void test_reduction_binding_nontrivial() {
   PairNonTrivial p{NonTrivial(0), NonTrivial(0)};
   auto [a, b] = p;
 
-  // expected-error@+1{{array-type or class-type reductions on structured bindings are not yet supported}}
+  // expected-error@+1{{reductions on structured bindings are not yet supported}}
 #pragma omp parallel for reduction(+:a)
   for (int i = 0; i < 10; ++i) {
     a += i;
@@ -397,7 +403,7 @@ void test_reduction_binding_sum() {
   Point p{0, 0};
   auto [a, b] = p;
 
-  // expected-error@+1{{array-type or class-type reductions on structured bindings are not yet supported}}
+  // expected-error@+1{{reductions on structured bindings are not yet supported}}
 #pragma omp parallel for reduction(+:a)
   for (int i = 0; i < 100; ++i) {
     a += i;
@@ -409,7 +415,7 @@ void test_reduction_binding_operators() {
   Point p{1, 100};
   auto [a, b] = p;
 
-  // expected-error@+1 2{{array-type or class-type reductions on structured bindings are not yet supported}}
+  // expected-error@+1 2{{reductions on structured bindings are not yet supported}}
 #pragma omp parallel for reduction(*:a) reduction(min:b)
   for (int i = 1; i <= 10; ++i) {
     a *= 2;
@@ -423,7 +429,7 @@ void test_reduction_binding_max() {
   Point p{-100, -100};
   auto [a, b] = p;
 
-  // expected-error@+1 2{{array-type or class-type reductions on structured bindings are not yet supported}}
+  // expected-error@+1 2{{reductions on structured bindings are not yet supported}}
 #pragma omp parallel for reduction(max:a,b)
   for (int i = 0; i < 100; ++i) {
     if (i > a) a = i;
@@ -431,6 +437,28 @@ void test_reduction_binding_max() {
   }
   use(a);
   use(b);
+}
+
+void test_array_reduction() {
+  ArrayStruct s{{1, 2}};
+  auto [arr] = s;
+
+  // expected-error@+1{{reductions on structured bindings are not yet supported}}
+#pragma omp parallel for reduction(+:arr)
+  for (int i = 0; i < 10; ++i) {
+    arr[0] += i;
+  }
+}
+
+void test_udr_reduction() {
+  Point p{0, 0};
+  auto [a, b] = p;
+
+  // expected-error@+1{{reductions on structured bindings are not yet supported}}
+#pragma omp parallel for reduction(mysum:a)
+  for (int i = 0; i < 10; ++i) {
+    a += i;
+  }
 }
 
 struct Triple { int x, y, z; };

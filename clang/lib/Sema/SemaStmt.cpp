@@ -4721,11 +4721,11 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
         // Detect structured bindings in OpenMP captured regions.
         // When a BindingDecl (e.g., 'a' from 'auto [a, b] = p')
         // is referenced inside an OpenMP region.
-        // This is reached during capture list construction when processing the
-        // OpenMP region, before expression evaluation in SemaExpr.cpp.
-        // Note: The reset to DecompositionDecl in SemaExpr.cpp happens during
-        // expression evaluation (a later phase). This code runs during capture
-        // list construction (earlier phase).
+        // isVariableCapturable() in SemaExpr.cpp already resets this to the
+        // DecompositionDecl during per-use expression checking. This runs
+        // later, at region-end (ActOnCapturedRegionEnd), over the
+        // already-built capture list, catching captures added without going
+        // through that per-use path (e.g. via explicit map clauses).
         if (RSI->CapRegionKind == CR_OpenMP && BD->getHoldingVar()) {
           S.Diag(Cap.getLocation(), diag::err_capture_tuple_binding_openmp)
               << CapVar;

@@ -3341,7 +3341,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       C.getPointerType(PrivatesQTy).withConst().withRestrict(),
       ImplicitParamKind::Other);
   Args.push_back(TaskPrivatesArg);
-  llvm::DenseMap<const ValueDecl *, unsigned> PrivateVarsPos;
+  llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, unsigned> PrivateVarsPos;
   unsigned Counter = 1;
   for (const Expr *E : Data.PrivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
@@ -3350,9 +3350,13 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const ValueDecl *D =
-        cast<ValueDecl>(cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
-    PrivateVarsPos[D] = Counter;
+    const Decl *D = cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl();
+    const VarDecl *VD;
+    if (const auto *BD = dyn_cast<BindingDecl>(D))
+      VD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
+    else
+      VD = cast<VarDecl>(D);
+    PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
   for (const Expr *E : Data.FirstprivateVars) {
@@ -3362,9 +3366,13 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const ValueDecl *D =
-        cast<ValueDecl>(cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
-    PrivateVarsPos[D] = Counter;
+    const Decl *D = cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl();
+    const VarDecl *VD;
+    if (const auto *BD = dyn_cast<BindingDecl>(D))
+      VD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
+    else
+      VD = cast<VarDecl>(D);
+    PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
   for (const Expr *E : Data.LastprivateVars) {
@@ -3374,9 +3382,13 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const ValueDecl *D =
-        cast<ValueDecl>(cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl());
-    PrivateVarsPos[D] = Counter;
+    const Decl *D = cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl();
+    const VarDecl *VD;
+    if (const auto *BD = dyn_cast<BindingDecl>(D))
+      VD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
+    else
+      VD = cast<VarDecl>(D);
+    PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
   for (const VarDecl *VD : Data.PrivateLocals) {
@@ -3423,21 +3435,21 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
   Counter = 0;
   for (const FieldDecl *Field : PrivatesQTyRD->fields()) {
     LValue FieldLVal = CGF.EmitLValueForField(Base, Field);
-    // For BindingDecls, lookup by the BindingDecl from OriginalRef.
-    // For VarDecls, lookup by the VarDecl from Original (as before).
-    const ValueDecl *D;
+    // For BindingDecls, lookup by the decomposed VarDecl.
+    // For VarDecls, lookup by the VarDecl from Original.
+    const VarDecl *LookupVD;
     if (Privates[Counter].second.OriginalRef) {
-      const ValueDecl *OrigDecl = cast<ValueDecl>(
-          cast<ValueDecl>(
-              cast<DeclRefExpr>(Privates[Counter].second.OriginalRef)
-                  ->getDecl())
-              ->getCanonicalDecl());
-      D = isa<BindingDecl>(OrigDecl) ? OrigDecl
-                                     : Privates[Counter].second.Original;
+      const Decl *OrigDecl = cast<DeclRefExpr>(
+          Privates[Counter].second.OriginalRef)->getDecl()->getCanonicalDecl();
+      if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+        LookupVD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
+      } else {
+        LookupVD = Privates[Counter].second.Original;
+      }
     } else {
-      D = Privates[Counter].second.Original;
+      LookupVD = Privates[Counter].second.Original;
     }
-    const VarDecl *VD = Args[PrivateVarsPos[D]];
+    const VarDecl *VD = Args[PrivateVarsPos[LookupVD]];
     LValue RefLVal =
         CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(VD), VD->getType());
     LValue RefLoadLVal = CGF.EmitLoadOfPointerLValue(
