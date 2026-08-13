@@ -49,6 +49,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -298,11 +299,11 @@ void emitConflictClusterLines(
 std::string canonicalizeToFileUri(llvm::StringRef FilePath) {
   llvm::SmallString<256> Buf;
   if (!llvm::sys::fs::real_path(FilePath, Buf))
-    return ("file://" + Buf).str();
+    return "file://" + llvm::sys::path::convert_to_slash(Buf);
   Buf.assign(FilePath.begin(), FilePath.end());
   if (!llvm::sys::fs::make_absolute(Buf))
-    return ("file://" + Buf).str();
-  return ("file://" + FilePath).str();
+    return "file://" + llvm::sys::path::convert_to_slash(Buf);
+  return "file://" + llvm::sys::path::convert_to_slash(FilePath);
 }
 
 /// Emit a SARIF 2.1.0 document at `Path` listing every conflict cluster.
