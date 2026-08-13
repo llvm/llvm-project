@@ -150,6 +150,10 @@ public:
     AvailableLibcallImpls.set(Impl);
   }
 
+  void setUnavailable(RTLIB::LibcallImpl Impl) {
+    AvailableLibcallImpls.reset(Impl);
+  }
+
   /// Check if a function name is a recognized runtime call of any kind. This
   /// does not consider if this call is available for any current compilation,
   /// just that it is a known call somewhere. This returns the set of all
