@@ -21,9 +21,16 @@
 #include "src/__support/macros/properties/os.h"
 
 // 'long double' properties.
-#if (LDBL_MANT_DIG == 53)
+//
+// Note: we cannot distinguish between f64 and f80 by just checking for a 53-bit
+// mantissa. On FreeBSD, `long double` is an fp80, but the FPU rounds the
+// mantissa to 53 bits. On GCC this is TARGET_96_ROUND_53_LONG_DOUBLE, which
+// reports LDBL_MANT_DIG == 53. As such, we must also check the exponent's range
+// to distinguish between f64 and 53-bit rounded f80 for `long double`.
+#if (LDBL_MANT_DIG == 53) && (LDBL_MAX_EXP == 1024)
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
-#elif (LDBL_MANT_DIG == 64)
+#elif (LDBL_MANT_DIG == 64) ||                                                 \
+    ((LDBL_MANT_DIG == 53) && (LDBL_MAX_EXP == 16384))
 #define LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #elif (LDBL_MANT_DIG == 113)
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
