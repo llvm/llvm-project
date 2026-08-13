@@ -648,6 +648,62 @@ static bool storageHasUseInside(const WeightedOverlapSummary &summary,
   });
 }
 
+static bool storageDiesAtBranch(const RegionFlow &flow,
+                                const WeightedOverlapSummary &summary,
+                                Value value, Operation *branch,
+                                DominanceInfo &dominance) {
+  Region *repetitiveRegion = flow.getEnclosingRepetitiveRegion(branch);
+  if (repetitiveRegion && !isDefinedInside(*repetitiveRegion, value))
+    return false;
+  return !storageIsLiveAfter(summary, value, branch, dominance);
+}
+
+static bool
+isUniqueJoinIncoming(const RegionFlow::Branch &branch,
+                     const RegionFlow::Transfer &current, Value value,
+                     const DenseMap<OpOperand *, Value> &incomingValues) {
+  return llvm::none_of(branch.transfers,
+                       [&](const RegionFlow::Transfer &other) {
+                         return !other.target && other.input != current.input &&
+                                incomingValues.lookup(other.operand) == value;
+                       });
+}
+
+static bool alternativesCanOverwrite(
+    const RegionFlow &flow, const RegionFlow::Branch &branch,
+    const RegionFlow::Transfer &current, Value value,
+    const DenseMap<OpOperand *, Value> &incomingValues,
+    const WeightedOverlapSummary &summary) {
+  bool sawAlternative = false;
+  for (const RegionFlow::Transfer &other : branch.transfers) {
+    if (other.target || other.input != current.input || &other == &current)
+      continue;
+    if (!flow.areMutuallyExclusive(current.source, other.source))
+      return false;
+    sawAlternative = true;
+    Value incoming = incomingValues.lookup(other.operand);
+    if (summary.overlaps(incoming, value))
+      continue;
+    if (!isDefinedInside(*other.source, incoming))
+      return false;
+  }
+  return sawAlternative;
+}
+
+static bool canAliasExternalJoinIncoming(
+    const RegionFlow &flow, const RegionFlow::Branch &branch,
+    const RegionFlow::Transfer &transfer, Value value,
+    const DenseMap<OpOperand *, Value> &incomingValues,
+    const WeightedOverlapSummary &summary, DominanceInfo &dominance) {
+  RegType type = cast<RegType>(value.getType());
+  return type.getBaseGRF() < 0 &&
+         storageDiesAtBranch(flow, summary, value, branch.operation,
+                             dominance) &&
+         isUniqueJoinIncoming(branch, transfer, value, incomingValues) &&
+         alternativesCanOverwrite(flow, branch, transfer, value, incomingValues,
+                                  summary);
+}
+
 static LogicalResult
 repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
                    const WeightedOverlapSummary &intrinsicSummary,
@@ -663,6 +719,10 @@ repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
           !flow.isRepetitive(transfer.source) &&
           isa<RegType>(transfer.input.getType()))
         groups[transfer.sourceOperation].push_back(&transfer);
+
+    DenseMap<OpOperand *, Value> incomingValues;
+    for (const RegionFlow::Transfer &transfer : branch.transfers)
+      incomingValues.try_emplace(transfer.operand, transfer.operand->get());
 
     for (auto [terminator, transfers] : groups) {
       bool crossing = false;
@@ -711,7 +771,7 @@ repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
 
       DenseSet<Value> seen;
       for (const RegionFlow::Transfer *transfer : transfers) {
-        Value source = transfer->operand->get();
+        Value source = incomingValues.lookup(transfer->operand);
         if (!isa<RegType>(source.getType()) ||
             isMarkedCopy(source, "branch-yield"))
           continue;
@@ -719,6 +779,10 @@ repairAcyclicExits(func::FuncOp function, const RegionFlow &flow,
                                             source, terminator, dominance);
         bool duplicate = !seen.insert(source).second;
         if (local && !duplicate)
+          continue;
+        if (!duplicate && canAliasExternalJoinIncoming(
+                              flow, branch, *transfer, source, incomingValues,
+                              intrinsicSummary, dominance))
           continue;
         RegType destinationType = cast<RegType>(transfer->input.getType());
         FailureOr<Value> destination =
@@ -916,11 +980,19 @@ inter::xemachine::prepareRegisterAllocation(func::FuncOp function) {
   RegionFlow regionFlow(function);
   {
     DominanceInfo dominance(function);
-    if (failed(repairAcyclicExits(function, regionFlow, intrinsicSummary,
-                                  dominance)))
-      return failure();
     if (failed(repairRepetitiveEntries(function, regionFlow, intrinsicSummary,
                                        dominance)))
+      return failure();
+  }
+
+  WeightedOverlapSummary exitSummary;
+  if (failed(exitSummary.build(function, /*includeRegionAliases=*/false)))
+    return failure();
+  RegionFlow updatedEntryFlow(function);
+  {
+    DominanceInfo dominance(function);
+    if (failed(repairAcyclicExits(function, updatedEntryFlow, exitSummary,
+                                  dominance)))
       return failure();
   }
 

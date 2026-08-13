@@ -146,6 +146,59 @@ module {
     return
   }
 
+  func.func @dead_external_uniform_branch_yield() attributes {
+      xemachine.grf_count = 16 : i32,
+      xemachine.reserved_grf_count = 0 : i32} {
+    %one = xemachine.imm 1 : i32
+    %flag = xemachine.arfreg f, 0 : !xemachine.arf<f, 2, 0>
+    %external = xemachine.mov %one {execSize = 16 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+    %result = xemachine.uniform_if %flag : !xemachine.arf<f, 2, 0> {
+      xemachine.yield %external : !xemachine.reg<16, -1>
+    } otherwise {
+      %local = xemachine.mov %one {execSize = 16 : i32, noMask}
+          : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+      xemachine.yield %local : !xemachine.reg<16, -1>
+    } -> !xemachine.reg<16, -1>
+    return
+  }
+
+  func.func @uniform_branch_passthrough() attributes {
+      xemachine.grf_count = 16 : i32,
+      xemachine.reserved_grf_count = 0 : i32} {
+    %one = xemachine.imm 1 : i32
+    %flag = xemachine.arfreg f, 0 : !xemachine.arf<f, 2, 0>
+    %external = xemachine.mov %one {execSize = 16 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+    %result = xemachine.uniform_if %flag : !xemachine.arf<f, 2, 0> {
+      xemachine.yield %external : !xemachine.reg<16, -1>
+    } otherwise {
+      xemachine.yield %external : !xemachine.reg<16, -1>
+    } -> !xemachine.reg<16, -1>
+    return
+  }
+
+  func.func @duplicate_uniform_branch_result() attributes {
+      xemachine.grf_count = 16 : i32,
+      xemachine.reserved_grf_count = 0 : i32} {
+    %one = xemachine.imm 1 : i32
+    %flag = xemachine.arfreg f, 0 : !xemachine.arf<f, 2, 0>
+    %external = xemachine.mov %one {execSize = 16 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+    %result:2 = xemachine.uniform_if %flag : !xemachine.arf<f, 2, 0> {
+      xemachine.yield %external, %external
+          : !xemachine.reg<16, -1>, !xemachine.reg<16, -1>
+    } otherwise {
+      %lhs = xemachine.mov %one {execSize = 16 : i32, noMask}
+          : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+      %rhs = xemachine.mov %one {execSize = 16 : i32, noMask}
+          : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+      xemachine.yield %lhs, %rhs
+          : !xemachine.reg<16, -1>, !xemachine.reg<16, -1>
+    } -> !xemachine.reg<16, -1>, !xemachine.reg<16, -1>
+    return
+  }
+
   func.func @duplicate_live_loop_inits() attributes {
       xemachine.grf_count = 16 : i32,
       xemachine.reserved_grf_count = 0 : i32} {
@@ -603,6 +656,22 @@ module {
 // PREP: [[YIELD_COPY:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "branch-yield"
 // PREP-NEXT: xemachine.yield [[YIELD_COPY]]
 
+// PREP-LABEL: func.func @dead_external_uniform_branch_yield
+// PREP: xemachine.uniform_if
+// PREP-NOT: xemachine.regalloc_copy = "branch-yield"
+// PREP: return
+
+// PREP-LABEL: func.func @uniform_branch_passthrough
+// PREP: xemachine.uniform_if
+// PREP-NOT: xemachine.regalloc_copy = "branch-yield"
+// PREP: return
+
+// PREP-LABEL: func.func @duplicate_uniform_branch_result
+// PREP: xemachine.uniform_if
+// PREP: [[DUPLICATE_RESULT_COPY0:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "branch-yield"
+// PREP-NEXT: [[DUPLICATE_RESULT_COPY1:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "branch-yield"
+// PREP-NEXT: xemachine.yield [[DUPLICATE_RESULT_COPY0]], [[DUPLICATE_RESULT_COPY1]]
+
 // PREP-LABEL: func.func @duplicate_live_loop_inits
 // PREP: [[INIT:%.*]] = xemachine.mov
 // PREP-NEXT: [[INIT_COPY0:%.*]] = xemachine.mov [[INIT]] {{.*}}xemachine.regalloc_copy = "loop-init"
@@ -697,8 +766,8 @@ module {
 
 // PREP-LABEL: func.func @subgrf_branch_yield
 // PREP: xemachine.uniform_if
-// PREP: [[SUBGRF_DEST:%.*]] = xemachine.mov {{.*}}execSize = 8{{.*}}xemachine.regalloc_copy = "branch-yield"
-// PREP-NEXT: xemachine.yield [[SUBGRF_DEST]]
+// PREP-NOT: xemachine.regalloc_copy = "branch-yield"
+// PREP: return
 
 // PREP-LABEL: func.func @branch_backedge_swap
 // PREP: xemachine.uniform_if
@@ -746,6 +815,23 @@ module {
 // ALLOC: [[ALLOC_RESULT:%.*]] = xemachine.uniform_if
 // ALLOC: } -> !xemachine.reg<16, 1>
 // ALLOC: xemachine.add [[ALLOC_EXTERNAL]], [[ALLOC_RESULT]]
+
+// ALLOC-LABEL: func.func @dead_external_uniform_branch_yield
+// ALLOC: [[DEAD_EXTERNAL:%.*]] = xemachine.mov {{.*}}-> !xemachine.reg<16, [[DEAD_SLOT:[0-9]+]]>
+// ALLOC: xemachine.uniform_if
+// ALLOC: xemachine.yield [[DEAD_EXTERNAL]] : !xemachine.reg<16, [[DEAD_SLOT]]>
+// ALLOC: xemachine.yield {{%.*}} : !xemachine.reg<16, [[DEAD_SLOT]]>
+
+// ALLOC-LABEL: func.func @uniform_branch_passthrough
+// ALLOC: [[PASSTHROUGH:%.*]] = xemachine.mov {{.*}}-> !xemachine.reg<16, [[PASSTHROUGH_SLOT:[0-9]+]]>
+// ALLOC: xemachine.uniform_if
+// ALLOC: xemachine.yield [[PASSTHROUGH]] : !xemachine.reg<16, [[PASSTHROUGH_SLOT]]>
+// ALLOC: xemachine.yield [[PASSTHROUGH]] : !xemachine.reg<16, [[PASSTHROUGH_SLOT]]>
+
+// ALLOC-LABEL: func.func @duplicate_uniform_branch_result
+// ALLOC: xemachine.uniform_if
+// ALLOC: xemachine.yield {{%.*}}, {{%.*}} : !xemachine.reg<16, [[DUP_SLOT0:[0-9]+]]>, !xemachine.reg<16, [[DUP_SLOT1:[0-9]+]]>
+// ALLOC-NOT: !xemachine.reg<16, [[DUP_SLOT0]]>, !xemachine.reg<16, [[DUP_SLOT0]]>
 
 // ALLOC-LABEL: func.func @duplicate_live_loop_inits
 // ALLOC: xemachine.uniform_loop
