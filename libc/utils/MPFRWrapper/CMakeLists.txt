@@ -16,7 +16,6 @@ if(LIBC_TESTS_CAN_USE_MPFR OR LIBC_TESTS_CAN_USE_MPC)
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
   )
   if(EXISTS ${LLVM_LIBC_MPFR_INSTALL_PATH})
@@ -45,7 +44,6 @@ if(LIBC_TESTS_CAN_USE_MPFR)
     libc.src.__support.CPP.array
     libc.src.__support.CPP.stringstream
     libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fpbits_str
     LibcTest.unit

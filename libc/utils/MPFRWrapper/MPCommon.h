@@ -13,24 +13,16 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/float128.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 
-using LIBC_NAMESPACE::fputil::Float128;
-
 #include "mpfr_inc.h"
 
-#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
+#ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 extern "C" {
 int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
 float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
-}
-#else
-extern "C" {
-int mpfr_set_float128(mpfr_ptr, Float128, mpfr_rnd_t);
-Float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
 }
 #endif
 
@@ -75,10 +67,6 @@ template <> struct ExtraPrecision<float128> {
 
 template <> struct ExtraPrecision<bfloat16> {
   static constexpr unsigned int VALUE = 64;
-};
-
-template <> struct ExtraPrecision<Float128> {
-  static constexpr unsigned int VALUE = 512;
 };
 
 // If the ulp tolerance is less than or equal to 0.5, we would check that the
@@ -173,17 +161,6 @@ public:
     mpfr_set_float128(value, x, mpfr_rounding);
   }
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
-
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<Float128, XType>, int> = 0>
-  explicit MPFRNumber(XType x,
-                      unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest)
-      : mpfr_precision(precision),
-        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
-    mpfr_init2(value, mpfr_precision);
-    mpfr_set_float128(value, x, mpfr_rounding);
-  }
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
@@ -314,7 +291,7 @@ public:
     if (FPBits<T>(input).is_subnormal())
       ++inputExponent;
 
-    if (thisAsT * input < T(0) || thisExponent == inputExponent) {
+    if (thisAsT * input < 0 || thisExponent == inputExponent) {
       MPFRNumber inputMPFR(input);
       mpfr_sub(inputMPFR.value, value, inputMPFR.value, MPFR_RNDN);
       mpfr_abs(inputMPFR.value, inputMPFR.value, MPFR_RNDN);

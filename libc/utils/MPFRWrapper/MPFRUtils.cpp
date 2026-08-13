@@ -12,12 +12,9 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/FPUtil/float128.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-
-using LIBC_NAMESPACE::fputil::Float128;
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -289,12 +286,6 @@ template void explain_unary_operation_single_output_error(Operation op,
 
 template void explain_unary_operation_single_output_error(Operation op,
                                                           bfloat16, bfloat16,
-                                                          double, RoundingMode);
-
-// Emulated Float128 is always available regardless of native float128 support.
-template void explain_unary_operation_single_output_error(Operation op,
-                                                          fputil::Float128,
-                                                          fputil::Float128,
                                                           double, RoundingMode);
 
 template <typename T>
@@ -588,10 +579,6 @@ template bool compare_unary_operation_single_output(Operation, float128,
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 template bool compare_unary_operation_single_output(Operation, bfloat16,
                                                     bfloat16, double,
-                                                    RoundingMode);
-// Emulated Float128
-template bool compare_unary_operation_single_output(Operation, fputil::Float128,
-                                                    fputil::Float128, double,
                                                     RoundingMode);
 
 template <typename T>
