@@ -386,7 +386,7 @@ public:
     auto CmdListOrErr = createImmCmdList(InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
-    return new L0CmdListManagerTy(*CmdListOrErr);
+    return new L0CmdListManagerTy(*CmdListOrErr, L0Context);
   }
 
   Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
