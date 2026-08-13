@@ -1982,7 +1982,7 @@ define <2 x i1> @slt_zero_add_nsw_splat_vec(<2 x i8> %a) {
 define void @latch_inc_phi_user(i32 %sub) {
 ; CHECK-LABEL: @latch_inc_phi_user(
 ; CHECK: [[INC:%.*]] = add nuw nsw i32 [[J:%.*]], 1
-; CHECK: icmp slt i32 [[J]], [[SUB:%.*]]
+; CHECK: icmp sgt i32 [[INC]], [[SUB:%.*]]
   entry:
   br label %loop
 
@@ -1998,8 +1998,7 @@ exit:
 
 define void @latch_inc_phi_user_sle(i32 %sub) {
 ; CHECK-LABEL: @latch_inc_phi_user_sle(
-; CHECK: [[INC:%.*]] = add nuw nsw i32 [[J:%.*]], 1
-; CHECK: icmp slt i32 [[J]], [[SUB:%.*]]
+; CHECK: icmp sgt i32 [[INC:%.*]], [[SUB:%.*]]
   entry:
   br label %loop
 loop:
@@ -2013,7 +2012,7 @@ exit:
 
 define void @latch_inc_phi_user_ugt(i32 %sub) {
 ; CHECK-LABEL: @latch_inc_phi_user_ugt(
-; CHECK: icmp ult i32 [[J:%.*]], [[SUB:%.*]]
+; CHECK: icmp ugt i32 [[INC:%.*]], [[SUB:%.*]]
   entry:
   br label %loop
 loop:
