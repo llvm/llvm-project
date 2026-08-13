@@ -4914,7 +4914,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   acosbf16_test
-  NEED_MPFR
   SUITE
     libc-math-smoke-tests
   SRCS
