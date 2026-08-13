@@ -1,5 +1,7 @@
 add_lldb_tool(lldb-rpc-gen
     RPCCommon.cpp
+    client/RPCLibraryHeaderEmitter.cpp
+    client/RPCLibrarySourceEmitter.cpp
     server/RPCServerHeaderEmitter.cpp
     server/RPCServerSourceEmitter.cpp
     lldb-rpc-gen.cpp
