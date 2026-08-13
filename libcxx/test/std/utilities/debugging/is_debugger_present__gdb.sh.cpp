@@ -16,7 +16,7 @@
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: "%{gdb}" %t.exe -ex "source %S/is_debugger_present__gdb.py" --silent
+// RUN: %{exec} "%{gdb}" %t.exe -ex "source %S/is_debugger_present__gdb.py" --silent
 
 // <debugging>
 
