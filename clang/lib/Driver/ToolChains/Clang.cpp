@@ -4662,7 +4662,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                    const ArgList &Args, types::ID InputType,
                    ArgStringList &CmdArgs, const InputInfo &Output,
                    llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
-                   DwarfFissionKind &DwarfFission) {
+                   DwarfFissionKind &DwarfFission, bool IsUsingLTO) {
   bool IRInput = isLLVMIR(InputType);
   bool PlainCOrCXX = isDerivedFromC(InputType) && !isCuda(InputType) &&
                      !isHIP(InputType) && !isObjC(InputType) &&
@@ -4895,7 +4895,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << Args.getLastArg(options::OPT_fdynamic_debugging)->getAsString(Args)
           << T.getTriple();
-    if (D.isUsingLTO())
+    if (IsUsingLTO)
       D.Diag(diag::err_drv_dyndbg_lto);
     if (DwarfFission != DwarfFissionKind::None)
       D.Diag(diag::err_drv_dyndbg_incompatible)
@@ -6471,7 +6471,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       llvm::codegenoptions::NoDebugInfo;
   DwarfFissionKind DwarfFission = DwarfFissionKind::None;
   renderDebugOptions(TC, D, RawTriple, Args, InputType, CmdArgs, Output,
-                     DebugInfoKind, DwarfFission);
+                     DebugInfoKind, DwarfFission, IsUsingLTO);
 
   // Add the split debug info name to the command lines here so we
   // can propagate it to the backend.
