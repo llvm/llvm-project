@@ -106,6 +106,12 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`readability-redundant-zero-initializer
+  <clang-tidy/checks/readability/redundant-zero-initializer>` check.
+
+  Finds explicit zero initializers of arrays that can be replaced with empty
+  braces.
+
 #### New check aliases
 
 #### Changes in existing checks
