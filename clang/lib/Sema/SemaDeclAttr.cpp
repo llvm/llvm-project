@@ -6128,12 +6128,23 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
     // We might want to ignore the nvptx arch check, e.g., when processing the
     // launch bounds attribute within ompx_attribute to support other archs.
     if (!IgnoreArch) {
-      // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-      OffloadArch SM = getOffloadArch(Context.getTargetInfo());
-      if (SM.isUnknown() || llvm::NVPTX::getSmVersion(SM.nvptxKind()) < 900) {
-        Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-            << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
-        // Ignore it by setting MaxBlocks to null;
+      const TargetInfo &DeviceTI =
+          (!Context.getLangOpts().CUDAIsDevice && Context.getAuxTargetInfo())
+              ? *Context.getAuxTargetInfo()
+              : Context.getTargetInfo();
+      if (DeviceTI.getTriple().isNVPTX()) {
+        // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
+        OffloadArch SM = getOffloadArch(DeviceTI);
+        if (SM.isUnknown() || llvm::NVPTX::getSmVersion(SM.nvptxKind()) < 900) {
+          Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
+              << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
+          // Ignore it by setting MaxBlocks to null;
+          MaxBlocks = nullptr;
+        }
+      } else {
+        // maxclusterrank is only handled for NVPTX; ignore it elsewhere.
+        // TODO: Interpret this for AMDGPU with the "clusters" subtarget
+        // feature.
         MaxBlocks = nullptr;
       }
     }
