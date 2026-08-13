@@ -43,8 +43,8 @@ define void @tc3_smin_i8_accept(ptr noalias %a, ptr noalias %b) #0 {
 ; DBG-LABEL: LV: Checking a loop in 'tc3_smin_i8_accept'
 ; DBG: LV: Picking MaxVF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 10.
-; DBG: Cost for VF 2: 15
-; DBG: LV: Accepting VF 2 for one-scalar-tail low trip count: vector cost 25 < scalar cost 30.
+; DBG: Cost for VF 2: 19
+; DBG: LV: Accepting VF 2 for one-scalar-tail low trip count: vector cost 29 < scalar cost 30.
 ; DBG: LV: Selecting VF: 2.
 entry:
   br label %loop
