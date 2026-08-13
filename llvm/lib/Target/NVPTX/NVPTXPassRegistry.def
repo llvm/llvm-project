@@ -17,6 +17,8 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("generic-to-nvvm", GenericToNVVMPass())
+MODULE_PASS("nvptx-asm-printer-begin", NVPTXAsmPrinterBeginPass())
+MODULE_PASS("nvptx-asm-printer-end", NVPTXAsmPrinterEndPass())
 MODULE_PASS("nvptx-lower-args", NVPTXLowerArgsPass(*this))
 MODULE_PASS("nvptx-lower-ctor-dtor", NVPTXCtorDtorLoweringPass())
 MODULE_PASS("nvptx-promote-param-align", NVPTXPromoteParamAlignPass())
@@ -57,6 +59,7 @@ FUNCTION_PASS("nvptx-lower-alloca", NVPTXLowerAllocaPass())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("nvptx-asm-printer", NVPTXAsmPrinterPass())
 MACHINE_FUNCTION_PASS("nvptx-replace-image-handles",
                       NVPTXReplaceImageHandlesPass())
 MACHINE_FUNCTION_PASS("nvptx-isel", NVPTXISelDAGToDAGPass(*this, getOptLevel()))
