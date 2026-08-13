@@ -82,35 +82,6 @@ module attributes {
 
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
-!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
-
-module attributes {
-  cir.triple = "x86_64-unknown-linux-gnu",
-  dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
-    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
-    #dlti.dl_entry<f32, dense<32>: vector<2xi64>>,
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
-} {
-
-  cir.func private @variadic(!cir.ptr<!s8i>, ...) -> !s32i
-
-  // Classifying the call's own operands can reach a coercion the bridge cannot
-  // represent, here the <2 x float> an all-float eightbyte pair coerces to.
-  cir.func @ellipsis_unrepresentable(%arg0: !cir.ptr<!s8i>) {
-    %slot = cir.alloca "p" align(4) : !cir.ptr<!rec_FF>
-    %v = cir.load %slot : !cir.ptr<!rec_FF>, !rec_FF
-    %0 = cir.call @variadic(%arg0, %v) : (!cir.ptr<!s8i>, !rec_FF) -> !s32i
-    cir.return
-  }
-
-  // CHECK: error: 'cir.call' op x86_64 calling-convention lowering not yet implemented for the ABI coercion of type '!cir.struct<"FF" {!cir.float, !cir.float}>'
-}
-
-// -----
-
-!s8i = !cir.int<s, 8>
-!s32i = !cir.int<s, 32>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",

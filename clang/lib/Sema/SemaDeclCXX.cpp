@@ -514,6 +514,14 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       continue;
     }
 
+    if (PrevForDefaultArgs->getFriendObjectKind()) {
+      // Don't inherit default arguments from a friend declaration. It's invalid
+      // to redeclare such a function at all if it owns the default arguments;
+      // we check for that later. Otherwise, it's not the declaration that we're
+      // inheriting them from.
+      continue;
+    }
+
     // We found the right previous declaration.
     break;
   }
@@ -6388,8 +6396,19 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
   if (!S.Context.getTargetInfo().getCXXABI().isMicrosoft())
     return;
 
+  if (Class->isInvalidDecl())
+    return;
+
   CXXConstructorDecl *LastExportedDefaultCtor = nullptr;
   for (Decl *Member : Class->decls()) {
+    // Nested classes finish delayed default argument parsing with the outermost
+    // class, so check each nested definition here.
+    if (auto *NestedClass = dyn_cast<CXXRecordDecl>(Member)) {
+      if (NestedClass->isThisDeclarationADefinition())
+        checkForMultipleExportedDefaultConstructors(S, NestedClass);
+      continue;
+    }
+
     // Look for exported default constructors.
     auto *CD = dyn_cast<CXXConstructorDecl>(Member);
     if (!CD || !CD->isDefaultConstructor())

@@ -1424,9 +1424,9 @@ def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-
   Alias<fno_gpu_flush_denormals_to_zero>;
 def : Flag<["-"], "fcuda-rdc">, Alias<fgpu_rdc>;
 def : Flag<["-"], "fno-cuda-rdc">, Alias<fno_gpu_rdc>;
-defm cuda_short_ptr : BoolFOption<"cuda-short-ptr",
-  TargetOpts<"NVPTXUseShortPointers">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+defm cuda_short_ptr : BoolOptionWithoutMarshalling<
+  "f", "cuda-short-ptr",
+  PosFlag<SetTrue, [], [],
           "Use 32-bit pointers for accessing const/local/shared address spaces">,
   NegFlag<SetFalse>>;
 }
@@ -3467,10 +3467,13 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
-def clangir_enable_call_conv_lowering : Flag<["-"], "clangir-enable-call-conv-lowering">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"ClangIR: Enable calling-convention lowering pass (x86_64 only)">,
-  MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
+defm clangir_call_conv_lowering : BoolFOption<"clangir-call-conv-lowering",
+  FrontendOpts<"ClangIRCallConvLowering">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Run the ClangIR calling-convention lowering pass">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Do not run the ClangIR calling-convention lowering pass">,
+  BothFlags<[], [ClangOption, CC1Option], " (x86_64 only)">>;
 
 def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,
@@ -4788,6 +4791,14 @@ defm enable_new_pm_codegen
                           "Use the NewPM for the Codegen Pipeline">>,
       DocBrief<
           [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
+def enable_new_pm_codegen : Joined<["-"], "fenable-new-pm-codegen=">,
+    Group<f_Group>,
+    Visibility<[CC1Option]>,
+    HelpText<"When enabled, use the NewPM to drive the CodeGen pipeline.">,
+    Values<"auto,force-on,force-disable">,
+    NormalizedValuesScope<"CodeGenOptions::NewPMEnablementLevel">,
+    NormalizedValues<["Auto","ForceEnable","ForceDisable"]>,
+    MarshallingInfoEnum<CodeGenOpts<"EnableNewPMCodeGen">, "Auto">;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",
