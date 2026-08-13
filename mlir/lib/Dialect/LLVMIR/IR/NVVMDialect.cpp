@@ -5304,9 +5304,8 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
          "expected generic or shared memory address");
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
-  llvm::Intrinsic::ID id =
-      is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
-                 : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
+  llvm::Intrinsic::ID id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
+                                      : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
 
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getAddr()));
