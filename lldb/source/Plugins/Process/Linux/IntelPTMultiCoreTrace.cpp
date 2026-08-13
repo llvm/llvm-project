@@ -91,7 +91,8 @@ void IntelPTMultiCoreTrace::ProcessDidStop() {
   ForEachCore([](cpu_id_t cpu_id, IntelPTSingleBufferTrace &core_trace) {
     if (Error err = core_trace.Pause()) {
       LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), std::move(err),
-                     "Unable to pause the core trace for core {0}", cpu_id);
+                     "Unable to pause the core trace for core {1}: {0}",
+                     cpu_id);
     }
   });
 }
@@ -100,7 +101,8 @@ void IntelPTMultiCoreTrace::ProcessWillResume() {
   ForEachCore([](cpu_id_t cpu_id, IntelPTSingleBufferTrace &core_trace) {
     if (Error err = core_trace.Resume()) {
       LLDB_LOG_ERROR(GetLog(POSIXLog::Trace), std::move(err),
-                     "Unable to resume the core trace for core {0}", cpu_id);
+                     "Unable to resume the core trace for core {1}: {0}",
+                     cpu_id);
     }
   });
 }

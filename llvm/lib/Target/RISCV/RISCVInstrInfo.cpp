@@ -3034,6 +3034,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM_LSB_ZEROS(2, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(5, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(6, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(6, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 00)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(8, 00)
@@ -5539,10 +5540,9 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
       if (II->definesRegister(PhysReg, nullptr) ||
           II->readsRegister(PhysReg, nullptr))
         return false;
-    if (II->mayStore()) {
-      SawStore = true;
+    II->isSafeToMove(SawStore);
+    if (SawStore)
       break;
-    }
   }
   return From.isSafeToMove(SawStore);
 }

@@ -664,7 +664,9 @@ void LoopInfoBase<BlockT, LoopT>::analyze(
       // Whatever reaches a latch without passing the header is in the loop.
       for (unsigned I = 0; I != Worklist.size(); ++I)
         for (BlockT *Pred : inverse_children<BlockT *>(Worklist[I]))
-          enqueue(Pred);
+          // Do not enqueue any unreachable nodes.
+          if (Blocks[num(Pred)])
+            enqueue(Pred);
       // Without a backedge the header forms no loop at all.
       Info[H].Pos = HasBackedge ? IsHeader : OffPath;
       // Partition the header's blocks: the loop keeps the ones the traversal
@@ -889,8 +891,7 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
 #endif
 
 template <class BlockT, class LoopT>
-void LoopInfoBase<BlockT, LoopT>::verify(
-    const DomTreeBase<BlockT> &DomTree) const {
+void LoopInfoBase<BlockT, LoopT>::verify() const {
   DenseSet<const LoopT *> Loops;
   for (iterator I = begin(), E = end(); I != E; ++I) {
     assert((*I)->isOutermost() && "Top-level loop has a parent!");
@@ -928,7 +929,7 @@ void LoopInfoBase<BlockT, LoopT>::verify(
 
   // Recompute LoopInfo to verify loops structure.
   LoopInfoBase<BlockT, LoopT> OtherLI;
-  OtherLI.analyze(DomTree);
+  OtherLI.analyze(ParentPtr);
 
   // Build a map we can use to move from our LI to the computed one. This
   // allows us to ignore the particular order in any layer of the loop forest

@@ -219,6 +219,12 @@ static Value *peekThroughBitcasts(Value *V) {
   return V;
 }
 
+/// Helper to peek through bitcasts to the same value.
+static bool isEquivBitcast(Value *X, Value *Y) {
+  return X->getType() == Y->getType() &&
+         peekThroughBitcasts(X) == peekThroughBitcasts(Y);
+}
+
 static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
   // Do not widen load if atomic/volatile or under asan/hwasan/memtag/tsan.
   // The widened load may load data from dirty regions or create data races
@@ -3740,19 +3746,13 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if (!FrontV)
       return false;
 
-    // Helper to peek through bitcasts to the same value.
-    auto IsEquiv = [&](Value *X, Value *Y) {
-      return X->getType() == Y->getType() &&
-             peekThroughBitcasts(X) == peekThroughBitcasts(Y);
-    };
-
     // Look for an identity value.
     if (FrontLane == 0 &&
         cast<FixedVectorType>(FrontV->getType())->getNumElements() ==
             Item.size() &&
-        all_of(drop_begin(enumerate(Item)), [IsEquiv, Item](const auto &E) {
+        all_of(drop_begin(enumerate(Item)), [Item](const auto &E) {
           Value *FrontV = Item.front().first;
-          return !E.value().first || (IsEquiv(E.value().first, FrontV) &&
+          return !E.value().first || (isEquivBitcast(E.value().first, FrontV) &&
                                       E.value().second == (int)E.index());
         })) {
       IdentityLeafs.insert(std::make_pair(FrontV, From));
@@ -4267,11 +4267,23 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     auto It = Demands.find(S);
     if (It == Demands.end() || It->second.Lanes.isZero())
       continue;
-    if (Cut || (!IsIdempotent && !It->second.Duplicates.isZero())) {
+    if (!IsIdempotent && !It->second.Duplicates.isZero()) {
       Cut.reset();
       break;
     }
-    Cut = ReductionCut{S, It->second.Lanes};
+    if (!Cut) {
+      Cut = ReductionCut{S, It->second.Lanes};
+      continue;
+    }
+    if (!isEquivBitcast(Cut->Src, S)) {
+      Cut.reset();
+      break;
+    }
+    if (!IsIdempotent && !(Cut->Elts & It->second.Lanes).isZero()) {
+      Cut.reset();
+      break;
+    }
+    Cut->Elts |= It->second.Lanes;
   }
   if (!Cut) {
     for (Value *V : Nodes) {
@@ -6124,31 +6136,49 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
 }
 /// Fold the following cases into a single byte-level bit-reverse operation
 /// and accepts bswap and bitreverse intrinsics:
-///   bswap(bitreverse(x)) <--> bitcast(bitreverse(bitcast(x)))
+///   bswap(bitreverse(x))  --> bitcast(bitreverse(bitcast(x)))
 ///   bitreverse(bswap(x)) <--> bitcast(bitreverse(bitcast(x)))
 /// The direction of the fold is cost-model driven.
+/// Also supports:
+///   bitcast(bitreverse(bitcast(x))) --> bitreverse(fshl(x))
 bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   Value *X;
 
   if (match(&I, m_BitCast(m_BitReverse(m_BitCast(m_Value(X)))))) {
     Type *Ty = X->getType();
     Type *VecTy = I.getOperand(0)->getType();
-    if (Ty->isIntegerTy() && Ty == I.getType() && isa<FixedVectorType>(VecTy) &&
+    // Detect the case when bitreversing every octet in X individually. Then we
+    // can use bswap to reorder the octets before doing a single bitreverse.
+    bool CanUseBswap =
+        Ty->isIntegerTy() && Ty == I.getType() && isa<FixedVectorType>(VecTy) &&
         cast<FixedVectorType>(VecTy)->getElementType()->isIntegerTy(8) &&
-        Ty->getIntegerBitWidth() % 16 == 0) {
+        Ty->getIntegerBitWidth() % 16 == 0;
+    // Detect the case when bitreversing upper and lower half of X
+    // individually. Then we can use fshl as a rotate operation, to swap the
+    // halves before doing a single bitreverse.
+    bool CanUseFshl =
+        Ty->isIntegerTy() && Ty == I.getType() && isa<FixedVectorType>(VecTy) &&
+        cast<FixedVectorType>(VecTy)->getElementType()->isIntegerTy() &&
+        cast<FixedVectorType>(VecTy)->getNumElements() == 2;
+    if (CanUseBswap || CanUseFshl) {
       auto *InnerCall = dyn_cast<Instruction>(I.getOperand(0));
       if (!InnerCall)
         return false;
       auto *InnerBitCast = dyn_cast<BitCastInst>(InnerCall->getOperand(0));
       if (!InnerBitCast)
         return false;
+      Constant *HalfBW = ConstantInt::get(Ty, Ty->getIntegerBitWidth() / 2);
       InstructionCost OldCost = TTI.getInstructionCost(InnerBitCast, CostKind) +
                                 TTI.getInstructionCost(InnerCall, CostKind) +
                                 TTI.getInstructionCost(&I, CostKind);
       IntrinsicCostAttributes ICABSwap(Intrinsic::bswap, Ty, {Ty});
+      IntrinsicCostAttributes ICABFshl(Intrinsic::fshl, Ty, {X, X, HalfBW},
+                                       {Ty, Ty, Ty});
       IntrinsicCostAttributes ICABRev(Intrinsic::bitreverse, Ty, {Ty});
-      InstructionCost NewCost = TTI.getIntrinsicInstrCost(ICABSwap, CostKind) +
-                                TTI.getIntrinsicInstrCost(ICABRev, CostKind);
+      InstructionCost NewCost =
+          TTI.getIntrinsicInstrCost(CanUseBswap ? ICABSwap : ICABFshl,
+                                    CostKind) +
+          TTI.getIntrinsicInstrCost(ICABRev, CostKind);
       if (!InnerCall->hasOneUse())
         NewCost += TTI.getInstructionCost(InnerCall, CostKind) +
                    TTI.getInstructionCost(InnerBitCast, CostKind);
@@ -6159,10 +6189,12 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
                         << " vs NewCost: " << NewCost << "\n");
       if (NewCost.isValid() && NewCost < OldCost) {
         Builder.SetInsertPoint(&I);
-        Value *BSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
-        Worklist.pushValue(BSwap);
-        Value *BRev =
-            Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, BSwap);
+        Value *Swap =
+            CanUseBswap
+                ? Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X)
+                : Builder.CreateIntrinsic(Ty, Intrinsic::fshl, {X, X, HalfBW});
+        Worklist.pushValue(Swap);
+        Value *BRev = Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, Swap);
         replaceValue(I, *BRev);
         return true;
       }
