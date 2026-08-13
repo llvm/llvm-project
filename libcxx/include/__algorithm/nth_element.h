@@ -156,6 +156,47 @@ __nth_element4(_RandomAccessIterator __first, _RandomAccessIterator, _Compare __
   std::__sort4<_AlgPolicy, _Compare>(__first, __first + 1, __first + 2, __first + 3, __comp);
 }
 
+// nth_element on 3 elements. Min or max takes 2 comparisons; the middle element is a
+// median-of-3, which is exactly a 3-sort.
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element3(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Compare __comp) {
+  using _Ops = _IterOps<_AlgPolicy>;
+
+  _RandomAccessIterator __x1 = __first;
+  _RandomAccessIterator __x2 = __first + 1;
+  _RandomAccessIterator __x3 = __first + 2;
+
+  const typename iterator_traits<_RandomAccessIterator>::difference_type __k = __nth - __first;
+  if (__k == 0) {
+    if (__comp(*__x2, *__x1))
+      _Ops::iter_swap(__x1, __x2);
+    if (__comp(*__x3, *__x1))
+      _Ops::iter_swap(__x1, __x3);
+    return;
+  }
+  if (__k == 2) {
+    if (__comp(*__x2, *__x1))
+      _Ops::iter_swap(__x1, __x2);
+    if (__comp(*__x3, *__x2))
+      _Ops::iter_swap(__x2, __x3);
+    return;
+  }
+  std::__sort3<_AlgPolicy, _Compare>(__x1, __x2, __x3, __comp);
+}
+
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element3(_RandomAccessIterator __first, _RandomAccessIterator, _Compare __comp) {
+  std::__sort3<_AlgPolicy, _Compare>(__first, __first + 1, __first + 2, __comp);
+}
+
 // Handles ranges of at most 5 elements. Returns false if the range was too large to be handled.
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_small(
@@ -171,7 +212,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_small(
       _Ops::iter_swap(__first, __last);
     return true;
   case 3:
-    std::__sort3<_AlgPolicy, _Compare>(__first, __first + difference_type(1), --__last, __comp);
+    std::__nth_element3<_AlgPolicy, _Compare>(__first, __nth, __comp);
     return true;
   case 4:
     std::__nth_element4<_AlgPolicy, _Compare>(__first, __nth, __comp);
