@@ -200,8 +200,8 @@ public:
       bool Optimized = Opt.RegAlloc > RegAllocType::Default
                            ? Opt.RegAlloc != RegAllocType::Fast
                            : getOptLevel() != CodeGenOptLevel::None;
-      Opt.OptimizeRegAlloc =
-          Optimized ? cl::boolOrDefault::BOU_TRUE : cl::boolOrDefault::BOU_FALSE;
+      Opt.OptimizeRegAlloc = Optimized ? cl::boolOrDefault::BOU_TRUE
+                                       : cl::boolOrDefault::BOU_FALSE;
     }
   }
 
