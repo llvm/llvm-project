@@ -23,6 +23,18 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
+#include <cstddef>
+#include <functional>
+#include <list>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #define GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
@@ -226,9 +238,10 @@ public:
   void Enter(const parser::OmpClause::To &x);
   void Enter(const parser::OmpClause::UnifiedAddress &x);
   void Enter(const parser::OmpClause::UnifiedSharedMemory &x);
-  void Enter(const parser::OmpClause::Update &x);
+  void Enter(const parser::OmpClause::UpdateDependObjects &x);
   void Enter(const parser::OmpClause::UseDeviceAddr &x);
   void Enter(const parser::OmpClause::UseDevicePtr &x);
+  void Enter(const parser::OmpClause::UsesAllocators &x);
   void Enter(const parser::OmpClause::When &x);
 
 private:
@@ -291,6 +304,7 @@ private:
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
+  void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
   void BeginMetadirectiveVariantScope();
   void EndMetadirectiveVariantScope();
@@ -411,6 +425,11 @@ private:
   void CheckIndividualAllocateDirective(
       const parser::OmpAllocateDirective &x, bool isExecutable);
   void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
+
+  void CheckUsesAllocatorsSpec(
+      const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec);
+  void CheckUsesAllocatorsTraits(
+      const parser::OmpTraitsArray &traits, parser::CharBlock source);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);

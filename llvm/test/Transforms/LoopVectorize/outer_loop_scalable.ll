@@ -136,6 +136,6 @@ exit:
 }
 
 !1 = distinct !{!1, !2, !3, !4}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}

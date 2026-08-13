@@ -2158,7 +2158,16 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
   // root itself and from the SUB case's operand fold.
   // Firing there produces worse code.
   auto MatchOperand = [&](SDValue Op) {
-    if (SplitsMaterializedValue(Op))
+    // The reuse shortcut places Op directly as a base/index register via
+    // matchAddressBase. That is illegal once AM is already %rip-relative:
+    // [%rip + disp32] takes no register beyond RIP itself (its implicit base) -
+    // no additional base and no index - so adding one would form an invalid
+    // address (folding a RIP-relative global and a materialized value into a
+    // single LEA, which asserts "Invalid rip-relative address" in the MC
+    // encoder). matchAddressRecursively correctly refuses to fold a register
+    // into a %rip-relative address, so fall back to it and let matchAdd keep
+    // the operands separate.
+    if (SplitsMaterializedValue(Op) && !AM.isRIPRelative())
       return matchAddressBase(Op, AM);
     return matchAddressRecursively(Op, AM, Depth + 1);
   };

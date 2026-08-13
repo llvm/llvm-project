@@ -1142,6 +1142,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    return getOrCreateStructPtrType(Name, SingletonId);
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;
@@ -4627,6 +4631,14 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
     TemplateParameters = nullptr;
   }
 
+  // Get context for static locals (that are technically globals) the same way
+  // we do for "local" locals -- by using current lexical block.
+  if (VD->isStaticLocal()) {
+    assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+    VDContext = LexicalBlockStack.back();
+    return;
+  }
+
   // Since we emit declarations (DW_AT_members) for static members, place the
   // definition of those static members in the namespace they were declared in
   // in the source code (the lexical decl context).
@@ -6413,8 +6425,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
                                   Type, false, llvm::DINode::FlagArtificial);
 
   if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
-    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
-                                     *InsertPoint);
+    DBuilder.insertDbgValue(Value, D, DBuilder.createExpression(), DIL,
+                            *InsertPoint);
   }
 }
 
