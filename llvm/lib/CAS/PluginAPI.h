@@ -1,9 +1,15 @@
-//===- PluginAPI.h ----------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Defines \c llcas_functions_t, the table of function pointers that is
+/// populated by looking up the \c llcas_* symbols of a loaded CAS plugin.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_CAS_PLUGINAPI_H
@@ -40,7 +46,7 @@ struct llcas_functions_t {
 
   int64_t (*cas_get_ondisk_size)(llcas_cas_t, char **error);
 
-  bool (*cas_set_ondisk_size_limit)(llcas_cas_t, uint64_t size_limit,
+  bool (*cas_set_ondisk_size_limit)(llcas_cas_t, int64_t size_limit,
                                     char **error);
 
   bool (*cas_prune_ondisk_data)(llcas_cas_t, char **error);
@@ -81,6 +87,11 @@ struct llcas_functions_t {
 
   llcas_object_refs_t (*loaded_object_get_refs)(llcas_cas_t,
                                                 llcas_loaded_object_t);
+
+  llcas_data_t (*loaded_object_get_standalone_data)(llcas_cas_t,
+                                                    llcas_loaded_object_t);
+
+  void (*standalone_data_dispose)(llcas_data_t);
 
   size_t (*object_refs_get_count)(llcas_cas_t, llcas_object_refs_t);
 

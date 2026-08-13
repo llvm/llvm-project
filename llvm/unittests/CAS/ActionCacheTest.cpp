@@ -25,7 +25,7 @@ using namespace llvm::unittest::cas;
 
 TEST_P(CASTest, ActionCacheHit) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
-  std::unique_ptr<ActionCache> Cache = createActionCache();
+  std::shared_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID;
   ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID), Succeeded());
@@ -40,7 +40,7 @@ TEST_P(CASTest, ActionCacheHit) {
 
 TEST_P(CASTest, ActionCacheMiss) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
-  std::unique_ptr<ActionCache> Cache = createActionCache();
+  std::shared_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID1, ID2;
   ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
@@ -63,7 +63,7 @@ TEST_P(CASTest, ActionCacheMiss) {
 
 TEST_P(CASTest, ActionCacheRewrite) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
-  std::unique_ptr<ActionCache> Cache = createActionCache();
+  std::shared_ptr<ActionCache> Cache = createActionCache();
 
   std::optional<ObjectProxy> ID1, ID2;
   ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
@@ -109,7 +109,7 @@ TEST_F(OnDiskCASTest, ActionCacheResultInvalid) {
 
 TEST_P(CASTest, ActionCacheAsync) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
-  std::unique_ptr<ActionCache> Cache = createActionCache();
+  std::shared_ptr<ActionCache> Cache = createActionCache();
 
   {
     std::optional<ObjectProxy> ID;

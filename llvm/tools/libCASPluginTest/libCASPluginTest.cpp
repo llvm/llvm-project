@@ -1,13 +1,18 @@
-//===- llvm/tools/libCASPluginTest/libCASPluginTest.cpp ---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Implementation of the LLVM CAS plugin API, for testing purposes.
-//
+///
+/// \file
+/// Implementation of the LLVM CAS plugin API, for testing purposes.
+///
+/// It is backed by \c UnifiedOnDiskCache and can optionally be given a second
+/// on-disk path via the \c upstream-path option, which it uses to simulate
+/// "uploading"/"downloading" objects to/from a distributed CAS.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/CAS/PluginAPI_functions.h"
@@ -18,12 +23,30 @@
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/ThreadPool.h"
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
+
+namespace llvm::cas::ondisk {
+/// Declared in the private "OnDiskCommon.h"; see \c setSmallMaxMappingSize.
+void setMaxMappingSize(uint64_t Size);
+} // namespace llvm::cas::ondisk
+
+/// This plugin exists only for testing, and a test process can create many
+/// instances of it. Keep the on-disk mappings small so that they stay cheap;
+/// the default sizes are measured in gigabytes per instance.
+///
+/// This has to happen inside the plugin: it links its own copy of LLVMCAS, so
+/// the setting the test binary applies to itself does not reach us.
+static void setSmallMaxMappingSize() {
+  static std::once_flag Flag;
+  std::call_once(Flag, [] { setMaxMappingSize(100 * 1024 * 1024); });
+}
 
 static char *copyNewMallocString(StringRef Str) {
   char *c_str = (char *)malloc(Str.size() + 1);
@@ -376,6 +399,7 @@ CASWrapper::downstreamKey(ArrayRef<uint8_t> Key) {
 
 llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
   auto &Opts = *unwrap(c_opts);
+  setSmallMaxMappingSize();
   Expected<std::unique_ptr<UnifiedOnDiskCache>> DB = UnifiedOnDiskCache::open(
       Opts.OnDiskPath, /*SizeLimit=*/std::nullopt,
       PluginCASContext::getHashName(), sizeof(HashType));
@@ -616,6 +640,42 @@ llcas_data_t llcas_loaded_object_get_data(llcas_cas_t c_cas,
   ondisk::ObjectHandle Obj = ondisk::ObjectHandle(c_obj.opaque);
   auto Data = CAS.getObjectData(Obj);
   return llcas_data_t{Data.data(), Data.size()};
+}
+
+/// The \c MemoryBuffer objects handed out by
+/// \c llcas_loaded_object_get_standalone_data, keyed by the bytes the C API
+/// reports, so \c llcas_standalone_data_dispose can find the owner again. The
+/// C API passes back only the buffer, and these outlive the \c llcas_cas_t, so
+/// they cannot be tracked on it.
+/// Intentionally leaked, since a buffer may be disposed of during static
+/// destruction, after a non-leaked map would already be gone.
+static std::mutex StandaloneBuffersLock;
+static auto *StandaloneBuffers =
+    new DenseMap<const void *, std::unique_ptr<MemoryBuffer>>();
+
+llcas_data_t
+llcas_loaded_object_get_standalone_data(llcas_cas_t c_cas,
+                                        llcas_loaded_object_t c_obj) {
+  auto &CAS = unwrap(c_cas)->DB->getGraphDB();
+  ondisk::ObjectHandle Obj = ondisk::ObjectHandle(c_obj.opaque);
+  // The underlying database already knows how to produce a buffer that does
+  // not reference it, so use that rather than copying the data again. The
+  // plugin API requires a nul terminator, which costs a copy for the objects
+  // whose file has no byte to spare for one.
+  std::unique_ptr<MemoryBuffer> Buffer = CAS.getStandaloneMemoryBuffer(
+      Obj, /*Name=*/"", /*RequiresNullTerminator=*/true);
+  const char *Data = Buffer->getBufferStart();
+  size_t Size = Buffer->getBufferSize();
+  {
+    std::lock_guard<std::mutex> Lock(StandaloneBuffersLock);
+    (*StandaloneBuffers)[Data] = std::move(Buffer);
+  }
+  return llcas_data_t{Data, Size};
+}
+
+void llcas_standalone_data_dispose(llcas_data_t c_data) {
+  std::lock_guard<std::mutex> Lock(StandaloneBuffersLock);
+  StandaloneBuffers->erase(c_data.data);
 }
 
 llcas_object_refs_t llcas_loaded_object_get_refs(llcas_cas_t c_cas,
