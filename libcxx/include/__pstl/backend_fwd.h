@@ -141,6 +141,13 @@ struct __fill_n;
 // operator()(_Policy&&, _ForwardIterator __first, _Size __n, _Tp const& __value) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __search;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+// optional<_ForwardIterator1>
+// operator()(_Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                       _ForwardIterator2 __first2, _ForwardIterator2 __last2, _BinaryPredicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __replace;
 // template <class _Policy, class _ForwardIterator, class _Tp>
 // optional<__empty>

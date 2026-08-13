@@ -15,6 +15,7 @@
 #include <__algorithm/merge.h>
 #include <__algorithm/mismatch.h>
 #include <__algorithm/reverse.h>
+#include <__algorithm/search.h>
 #include <__algorithm/search_n.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
@@ -115,6 +116,21 @@ struct __reverse<__serial_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept {
     std::reverse(std::move(__first), std::move(__last));
     return __empty{};
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __search<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _BinaryPredicate __pred) const noexcept {
+    return std::search(
+        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
   }
 };
 
