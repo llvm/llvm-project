@@ -10,6 +10,9 @@
 export namespace std {
 #if _LIBCPP_STD_VER >= 26
   using std::inplace_vector;
+
+  using std::erase;
+  using std::erase_if;
 #endif
 
 } // namespace std
