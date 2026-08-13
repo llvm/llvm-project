@@ -517,11 +517,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 #define ASSERT_DEATH(FUNC, SIG)                                                \
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, return)
 
-#else // not LIBC_TEST_SKIP_DEATH_TESTS or LIBC_TEST_SUBPROCESS_TESTS
-
-#error To run death tests provide a definition of EXPECT_DEATH and ASSERT_DEATH
-
-#endif // LIBC_TEST_SUBPROCESS_TESTS
+#endif // LIBC_TEST_SKIP_DEATH_TESTS or LIBC_TEST_SUBPROCESS_TESTS
 
 ////////////////////////////////////////////////////////////////////////////////
 // Custom matcher checks.
