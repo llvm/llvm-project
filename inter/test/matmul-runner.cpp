@@ -14,8 +14,8 @@
   do {                                                                         \
     ol_result_t result = (expr);                                               \
     if (result != OL_SUCCESS) {                                                \
-      fprintf(stderr, "FAIL %s:%d: %s -> %d\n", __FILE__, __LINE__, #expr,   \
-              result->Code);                                                   \
+      fprintf(stderr, "FAIL %s:%d: %s -> %d: %s\n", __FILE__, __LINE__,      \
+              #expr, result->Code, result->Details);                           \
       return 1;                                                                \
     }                                                                          \
   } while (0)

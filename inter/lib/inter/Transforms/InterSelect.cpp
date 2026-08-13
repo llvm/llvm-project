@@ -2519,14 +2519,13 @@ private:
   LogicalResult lowerBlock2D(Operation *operation, Value base,
                              Value surfaceWidth, Value surfaceHeight,
                              Value surfacePitch, Value x, Value y,
-                             int64_t elementBits, int64_t blockWidth,
-                             int64_t blockHeight, int64_t blocks, Value data,
+                             int64_t blockWidth, int64_t blockHeight,
+                             int64_t blocks, Value data,
                              Value dependency, Value valueResult,
                              Value tokenResult, uint32_t descriptor) {
-    int64_t blockWidthBytes = blockWidth * elementBits / 8;
     FailureOr<Value> payload = buildBlock2DPayload(
         operation, base, surfaceWidth, surfaceHeight, surfacePitch, x, y,
-        blockWidthBytes, blockHeight, blocks);
+        blockWidth, blockHeight, blocks);
     FailureOr<Value> selectedDependency = mapDependency(operation, dependency);
     if (failed(payload) || failed(selectedDependency))
       return failure();
@@ -3078,10 +3077,10 @@ private:
         if (failed(lowerBlock2D(
                  prefetch, prefetch.getBase(), prefetch.getSurfaceWidth(),
                  prefetch.getSurfaceHeight(), prefetch.getSurfacePitch(),
-                 prefetch.getX(), prefetch.getY(), prefetch.getElementBits(),
-                 prefetch.getBlockWidth(), prefetch.getBlockHeight(),
-                 prefetch.getBlocks(), Value(), prefetch.getDependency(),
-                 Value(), prefetch.getToken(), 0x02080203)))
+                  prefetch.getX(), prefetch.getY(), prefetch.getBlockWidth(),
+                  prefetch.getBlockHeight(), prefetch.getBlocks(), Value(),
+                  prefetch.getDependency(), Value(), prefetch.getToken(),
+                  0x02080203)))
           return failure();
       } else if (xw::Block2DReadOp read =
                      dyn_cast<xw::Block2DReadOp>(operation)) {
@@ -3089,20 +3088,18 @@ private:
         if (failed(lowerBlock2D(
                  read, read.getBase(), read.getSurfaceWidth(),
                  read.getSurfaceHeight(), read.getSurfacePitch(), read.getX(),
-                 read.getY(), read.getElementBits(), read.getBlockWidth(),
-                 read.getBlockHeight(), read.getBlocks(), Value(),
-                 read.getDependency(), read.getValue(), read.getToken(),
-                 descriptor)))
+                  read.getY(), read.getBlockWidth(), read.getBlockHeight(),
+                  read.getBlocks(), Value(), read.getDependency(),
+                  read.getValue(), read.getToken(), descriptor)))
           return failure();
       } else if (xw::Block2DWriteOp write =
                      dyn_cast<xw::Block2DWriteOp>(operation)) {
         if (failed(lowerBlock2D(
                  write, write.getBase(), write.getSurfaceWidth(),
                  write.getSurfaceHeight(), write.getSurfacePitch(), write.getX(),
-                 write.getY(), write.getElementBits(), write.getBlockWidth(),
-                 write.getBlockHeight(), write.getBlocks(), write.getValue(),
-                 write.getDependency(), Value(), write.getToken(),
-                 0x02000407)))
+                  write.getY(), write.getBlockWidth(), write.getBlockHeight(),
+                  write.getBlocks(), write.getValue(), write.getDependency(),
+                  Value(), write.getToken(), 0x02000407)))
           return failure();
       } else if (xw::AtomicRMWOp atomic =
                      dyn_cast<xw::AtomicRMWOp>(operation)) {
