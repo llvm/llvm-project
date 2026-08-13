@@ -11154,12 +11154,12 @@ bool LoongArchTargetLowering::isFMAFasterThanFMulAndFAdd(
 }
 
 Register LoongArchTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return LoongArch::R4;
 }
 
 Register LoongArchTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return LoongArch::R5;
 }
 
