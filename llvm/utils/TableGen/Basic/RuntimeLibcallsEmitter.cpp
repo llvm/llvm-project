@@ -105,6 +105,23 @@ private:
     std::vector<const RuntimeLibcallImpl *> Impls;
   };
 
+  // A single LibcallLibrary variant, expanded into its per-predicate impl
+  // groups. Unconditional impls are tracked separately for cross-variant
+  // deduplication. A variant is Deferred when it re-adds an impl its own
+  // consumer excludes; deferred variants are emitted after the LibraryRef
+  // exclusions so the re-add wins over the opt-out.
+  struct ExpandedLibrary {
+    const Record *Lib;
+    DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
+    SetVector<PredicateWithCC> PredicateSorter;
+    SetVector<const RuntimeLibcallImpl *> Unconditional;
+    bool Deferred = false;
+  };
+
+  // Emit one variant's guarded `setAvailable` block into the enclosing
+  // `setAvailableLibFuncs_<name>` function.
+  void emitLibraryVariant(raw_ostream &OS, ExpandedLibrary &EL) const;
+
   // Emit a `setAvailableLibFuncs_<name>` member function for all LibcallLibrary
   // defs sharing \p Name, each gated by its own availability predicate. \p
   // Exclusions are emitted as guarded setUnavailable calls at the end.
@@ -502,6 +519,29 @@ static void emitLibFuncSuffix(raw_ostream &OS, StringRef Name) {
     OS << (isAlnum(C) || C == '_' ? C : '_');
 }
 
+void RuntimeLibcallEmitter::emitLibraryVariant(raw_ostream &OS,
+                                               ExpandedLibrary &EL) const {
+  AvailabilityPredicate LibPred(EL.Lib->getValueAsDef("Pred"));
+
+  if (!LibPred.isAlwaysAvailable()) {
+    OS << indent(2);
+    LibPred.emitIf(OS);
+  } else {
+    // Own block scope so per-variant `LibraryCalls` tables do not collide.
+    OS << indent(2) << "{\n";
+  }
+
+  emitPredicateGroups(OS, EL.Lib, EL.Pred2Funcs, EL.PredicateSorter,
+                      /*BaseIndent=*/2);
+
+  if (!LibPred.isAlwaysAvailable()) {
+    OS << indent(2);
+    LibPred.emitEndIf(OS);
+  } else {
+    OS << indent(2) << "}\n";
+  }
+}
+
 void RuntimeLibcallEmitter::emitLibraryFunction(
     raw_ostream &OS, StringRef Name, ArrayRef<const Record *> Libs,
     ArrayRef<LibraryExclusion> Exclusions) const {
@@ -511,15 +551,6 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
         "ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, "
         "EABI EABIVersion, StringRef ABIName, "
         "LongDoubleFormat LongDoubleFormat) {\n";
-
-  // Per-variant expansion. Unconditional impls are tracked separately for
-  // cross-variant deduplication.
-  struct ExpandedLibrary {
-    const Record *Lib;
-    DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
-    SetVector<PredicateWithCC> PredicateSorter;
-    SetVector<const RuntimeLibcallImpl *> Unconditional;
-  };
 
   SmallVector<ExpandedLibrary, 2> Expanded;
   for (const Record *Lib : Libs) {
@@ -599,27 +630,32 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
     }
   }
 
-  // Emit each variant under its own Pred.
+  // Mark a variant deferred when it re-adds an impl its own consumer excludes
+  // (same triple, via LibraryRef). Such a variant must be emitted after the
+  // exclusion so the re-add wins while the exclusion still suppresses every
+  // other variant's contribution.
   for (ExpandedLibrary &EL : Expanded) {
-    AvailabilityPredicate LibPred(EL.Lib->getValueAsDef("Pred"));
+    const Record *ELPred = EL.Lib->getValueAsDef("Pred");
+    SetVector<const RuntimeLibcallImpl *> Impls;
+    for (const auto &[Key, Funcs] : EL.Pred2Funcs)
+      Impls.insert(Funcs.LibcallImpls.begin(), Funcs.LibcallImpls.end());
 
-    if (!LibPred.isAlwaysAvailable()) {
-      OS << indent(2);
-      LibPred.emitIf(OS);
-    } else {
-      // Own block scope so per-variant `LibraryCalls` tables do not collide.
-      OS << indent(2) << "{\n";
+    for (const LibraryExclusion &Excl : Exclusions) {
+      if (Excl.TriplePred != ELPred)
+        continue;
+      if (any_of(Excl.Impls, [&](const RuntimeLibcallImpl *Impl) {
+            return Impls.contains(Impl);
+          })) {
+        EL.Deferred = true;
+        break;
+      }
     }
+  }
 
-    emitPredicateGroups(OS, EL.Lib, EL.Pred2Funcs, EL.PredicateSorter,
-                        /*BaseIndent=*/2);
-
-    if (!LibPred.isAlwaysAvailable()) {
-      OS << indent(2);
-      LibPred.emitEndIf(OS);
-    } else {
-      OS << indent(2) << "}\n";
-    }
+  // Emit each non-deferred variant under its own Pred.
+  for (ExpandedLibrary &EL : Expanded) {
+    if (!EL.Deferred)
+      emitLibraryVariant(OS, EL);
   }
 
   // Emit each consumer's LibraryRef opt-outs.
@@ -635,6 +671,14 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
 
     OS << indent(2);
     ExcludePred.emitEndIf(OS);
+  }
+
+  // Deferred variants: emitted after exclusions so a target's own re-adds
+  // override its own LibraryRef opt-outs (the exclusion still applied above
+  // to every other variant's contributions).
+  for (ExpandedLibrary &EL : Expanded) {
+    if (EL.Deferred)
+      emitLibraryVariant(OS, EL);
   }
 
   OS << "}\n\n";
