@@ -53,8 +53,8 @@ int fun() {
     return g;
 }
 // OUTER-DAG: @_ZZ3funvE1g = internal global i32 0, align 4
-// OUTER-DAG: @_ZZ3funvE1g.dyndbg.[[hash:[0-9A-Z]+]] = hidden alias i32, ptr @_ZZ3funvE1g
-// INNER-DAG: @_ZZ3funvE1g.dyndbg.[[hash:[0-9A-Z]+]] = external hidden global i32, align 4
+// OUTER-DAG: @_ZZ3funvE1g.dyndbg.[[hash:[0-9A-F]+]] = hidden alias i32, ptr @_ZZ3funvE1g
+// INNER-DAG: @_ZZ3funvE1g.dyndbg.[[hash:[0-9A-F]+]] = external hidden global i32, align 4
 
 static int h = 1;
 // OUTER-DAG: @_ZL1h = internal global i32 1, align 4

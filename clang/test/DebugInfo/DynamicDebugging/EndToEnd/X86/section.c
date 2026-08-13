@@ -7,7 +7,7 @@
 //             [Nr] Name
 // CHECK:      .debug_llvm_dyndbg
 //             Type            Address          Off           Size          ES Lk Inf Al
-// CHECK-NEXT: LLVM_DYNDBG_ELF 0000000000000000 {{[0-9a-z]+}} {{[0-9a-z]+}} 00 0  0   8
+// CHECK-NEXT: LLVM_DYNDBG_ELF 0000000000000000 {{[0-9a-f]+}} {{[0-9a-f]+}} 00 0  0   8
 //             Flags
 // CHECK-NEXT: [0000000000000000]: {{$}}
 

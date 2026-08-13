@@ -21,9 +21,9 @@ void external() {}
 /// Outer: add external linkage alias. Inner: external reference to alias,
 /// __dyndbg copy.
 [[gnu::used]] static void internal() {}
-// OUTER-DAG: @_ZL8internalv.dyndbg.[[hash:[0-9A-Z]+]] = hidden alias void (), ptr @_ZL8internalv
+// OUTER-DAG: @_ZL8internalv.dyndbg.[[hash:[0-9A-F]+]] = hidden alias void (), ptr @_ZL8internalv
 // OUTER-DAG: define  internal void @_ZL8internalv()
-// INNER-DAG: declare hidden void @_ZL8internalv.dyndbg.[[hash:[0-9A-Z]+]]()
+// INNER-DAG: declare hidden void @_ZL8internalv.dyndbg.[[hash:[0-9A-F]+]]()
 // INNER-DAG: define  hidden void @__dyndbg._ZL8internalv.dyndbg.[[hash]]
 
 /// Outer: as input. Inner: external reference, __dyndbg copy.
