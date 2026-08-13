@@ -206,9 +206,11 @@ cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
                   });
 
   if (name.empty())
-    return getAnonRecordTy(members, packed, padded);
+    return getAnonRecordTy(members, packed, padded,
+                           cir::RecordType::getAllDataKinds(members));
 
-  return getCompleteNamedRecordType(members, packed, padded, name);
+  return getCompleteNamedRecordType(members, packed, padded, name,
+                                    cir::RecordType::getAllDataKinds(members));
 }
 
 mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(

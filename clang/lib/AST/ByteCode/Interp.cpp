@@ -1076,10 +1076,6 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Invalid decls have been diagnosed before.
-  if (DiagDecl->isInvalidDecl())
-    return false;
-
   // If this function is not constexpr because it is an inherited
   // non-constexpr constructor, diagnose that directly.
   const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
@@ -1122,8 +1118,8 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
         << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
 
     const FunctionDecl *Definition;
-    const Stmt *Body = DiagDecl->getBody(Definition);
-    if (Body && Definition)
+    bool HasBody = DiagDecl->hasBody(Definition);
+    if (HasBody && Definition)
       S.Note(Definition->getLocation(), diag::note_declared_at);
     else
       S.Note(DiagDecl->getLocation(), diag::note_declared_at);
@@ -1146,7 +1142,7 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
   const FunctionDecl *DiagDecl = F->getDecl();
   const FunctionDecl *Definition = nullptr;
-  DiagDecl->getBody(Definition);
+  DiagDecl->hasBody(Definition);
 
   if (!Definition && S.checkingPotentialConstantExpression() &&
       DiagDecl->isConstexpr()) {
@@ -1796,9 +1792,9 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
     return false;
 
   const FunctionDecl *Definition = nullptr;
-  const Stmt *Body = FD->getBody(Definition);
+  bool HasBody = FD->hasBody(Definition);
 
-  if (Definition && Body &&
+  if (Definition && HasBody &&
       (Definition->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
                                      Definition->hasAttr<MSConstexprAttr>())))
     return true;
@@ -1853,7 +1849,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 
 static void compileFunction(InterpState &S, const Function *Func) {
   const FunctionDecl *Definition;
-  if (!Func->getDecl()->getBody(Definition))
+  if (!Func->getDecl()->hasBody(Definition))
     return;
   if (!Definition)
     return;
