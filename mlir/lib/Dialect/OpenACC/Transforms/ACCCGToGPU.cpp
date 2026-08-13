@@ -645,10 +645,6 @@ private:
   llvm::SmallVector<scf::ParallelOp> loopReductions;
   llvm::DenseMap<gpu::Processor, Value> threadIdMap;
   llvm::DenseMap<gpu::Processor, Value> dimensionMap;
-  // True if ThreadY reduction exists, which triggers subgroup alignment
-  bool hasThreadYReduction = false;
-  // True if any ThreadX routine call exists in the kernel
-  bool hasThreadLevelRoutineCall = false;
   // True when a per-row ThreadY barrier is emitted
   bool hasThreadYBarrier = false;
 
@@ -839,34 +835,6 @@ ACCCGToGPULowering::getReductionKind(acc::ReductionOperator redOp, Type type,
 
 LogicalResult ACCCGToGPULowering::rewrite() {
 
-  // Pre-compute if thread-level reductions exist. ThreadY reduction generates
-  // shuffles which require subgroup alignment (blockDim.x = subgroupSize),
-  // meaning ThreadX lanes exist even without explicit ThreadX parallelism.
-  computeRegion->walk([&](acc::ReductionAccumulateOp op) -> WalkResult {
-    for (auto parDim : op.getParDimsAttr().getArray()) {
-      if (parDim.isThreadY()) {
-        hasThreadYReduction = true;
-        return WalkResult::interrupt();
-      }
-    }
-    return WalkResult::advance();
-  });
-
-  // Pre-compute if any thread-level (vector or worker) routine call exists.
-  // Such routines partition work across ThreadX/ThreadY and emit workgroup-wide
-  // barriers internally (e.g. for shared memory alloca synchronization), so all
-  // workgroup threads must reach the call site for those barriers to converge.
-  computeRegion->walk([&](CallOpInterface callOp) -> WalkResult {
-    if (mlir::acc::GPUParallelDimAttr parDim =
-            getAccRoutineCallParDim(callOp, defaultPolicy)) {
-      if (parDim.isThreadX() || parDim.isThreadY()) {
-        hasThreadLevelRoutineCall = true;
-        return WalkResult::interrupt();
-      }
-    }
-    return WalkResult::advance();
-  });
-
   Location loc = computeRegion->getLoc();
   Value constantOne = arith::ConstantIndexOp::create(rewriter, loc, 1);
 
@@ -896,8 +864,6 @@ LogicalResult ACCCGToGPULowering::rewrite() {
       mapping.map(computeRegion.gpuParWidth(processor), launchArg);
   };
 
-  llvm::StringRef blockDimXName = "blockDim.x";
-  llvm::StringRef blockDimYName = "blockDim.y";
   std::string deviceLabel = getDeviceRemarkQualifier(options.deviceType);
 
   if (!computeRegion->getParentOfType<gpu::GPUFuncOp>()) {
@@ -1049,39 +1015,39 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // because:
     // - Subgroup reductions (gpu.all_reduce) require full subgroups
     // - Per-row workgroup barriers require blockDim.x aligned to subgroupSize
-    bool isShuffleEnabled = false;
+    // A row-local (ThreadX) reduction only has rows to straddle when ThreadY or
+    // ThreadZ is wider than one; a ThreadY reduction shuffles across rows and
+    // always needs full subgroups.
     bool alignThreadXReduction =
         getConstantIntValue(launch.getBlockSizeY()) != 1 ||
         getConstantIntValue(launch.getBlockSizeZ()) != 1;
+    auto crossesSubgroup = [&](gpu::AllReduceOp allReduce) {
+      return llvm::any_of(mlir::acc::getParDimsAttr(allReduce).getArray(),
+                          [&](mlir::acc::GPUParallelDimAttr parDim) {
+                            return parDim.isThreadY() ||
+                                   (alignThreadXReduction &&
+                                    parDim.isThreadX());
+                          });
+    };
 
+    bool isShuffleEnabled = false;
     launch.walk([&](gpu::AllReduceOp allReduce) -> WalkResult {
-      ArrayRef<mlir::acc::GPUParallelDimAttr> parDims =
-          mlir::acc::getParDimsAttr(allReduce).getArray();
-      for (auto parDim : parDims) {
-        if (parDim.isThreadY() ||
-            (alignThreadXReduction && parDim.isThreadX())) {
-          // Shuffle are enabled. Need to adjust the ThreadX length.
-          isShuffleEnabled = true;
-          return WalkResult::interrupt();
-        }
+      if (crossesSubgroup(allReduce)) {
+        isShuffleEnabled = true;
+        return WalkResult::interrupt();
       }
       return WalkResult::advance();
     });
-    // Also check if called routines have ThreadY reductions
+    // Also check if called routines crosses subgroup
     if (!isShuffleEnabled) {
       launch.walk([&](func::CallOp callOp) -> WalkResult {
         if (gpu::GPUFuncOp callee =
                 callOp->getParentOfType<ModuleOp>()
                     .lookupSymbol<gpu::GPUFuncOp>(callOp.getCallee())) {
           callee.walk([&](gpu::AllReduceOp allReduce) -> WalkResult {
-            ArrayRef<mlir::acc::GPUParallelDimAttr> parDims =
-                mlir::acc::getParDimsAttr(allReduce).getArray();
-            for (auto parDim : parDims) {
-              if (parDim.isThreadY() ||
-                  (alignThreadXReduction && parDim.isThreadX())) {
-                isShuffleEnabled = true;
-                return WalkResult::interrupt();
-              }
+            if (crossesSubgroup(allReduce)) {
+              isShuffleEnabled = true;
+              return WalkResult::interrupt();
             }
             return WalkResult::advance();
           });
@@ -1092,11 +1058,26 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     }
 
     if (isShuffleEnabled || hasThreadYBarrier) {
+      // Redistributing threads across dimensions is only legal for dimensions
+      // the launch already declares: every consumer of a declared dimension
+      // knows to predicate on it. Widening ThreadX from an undeclared
+      // dimension would instead create lanes that own no work and that nothing
+      // predicates, so ThreadX must be declared before this pass.
+      if (!computeRegion.getLaunchArg(mlir::acc::GPUParallelDimAttr::threadXDim(
+              rewriter.getContext()))) {
+        (void)accSupport.emitNYI(
+            loc, "subgroup alignment without a thread_x launch dimension");
+        return failure();
+      }
+
       rewriter.setInsertionPoint(launch);
 
       Value curBlockDimX = launch.getBlockSizeX();
       Value curBlockDimY = launch.getBlockSizeY();
       Value curBlockDimZ = launch.getBlockSizeZ();
+
+      llvm::StringRef blockDimXName = "blockDim.x";
+      llvm::StringRef blockDimYName = "blockDim.y";
 
       // Emit a report on changing parallelism.
       accSupport.emitRemark(computeRegion, [&]() {
@@ -2155,47 +2136,24 @@ void ACCCGToGPULowering::processPredicateRegion(
   if (hasFailed)
     return;
 
-  // If ThreadY reduction exists, subgroup alignment is applied
-  // (blockDim.x = subgroupSize), so ThreadX lanes exist even without explicit
-  // ThreadX parallelism. Add ThreadX to inactiveParDims if not already present.
-  // Exception: if this region contains a thread-level (vector or worker)
-  // routine call, all ThreadX threads must reach the call so the routine's
-  // workgroup-wide barriers (e.g. shared memory alloca sync) converge.
-  if (hasThreadYReduction) {
-    MLIRContext *ctx = computeRegion->getContext();
-    mlir::acc::GPUParallelDimAttr threadXParDim =
-        mlir::acc::GPUParallelDimAttr::threadXDim(ctx);
-    bool hasThreadXInActive =
-        llvm::any_of(parDimsPair.first, [](mlir::acc::GPUParallelDimAttr pd) {
-          return pd.isThreadX();
-        });
-    bool hasThreadXInInactive =
-        llvm::any_of(parDimsPair.second, [](mlir::acc::GPUParallelDimAttr pd) {
-          return pd.isThreadX();
-        });
-
-    // Check if THIS predicate region contains a thread-level routine call.
-    // We use the pre-computed hasThreadLevelRoutineCall as an early-out
-    // optimization.
-    bool regionHasThreadLevelRoutineCall = false;
-    if (hasThreadLevelRoutineCall) {
-      interOp.getRegion().walk([&](CallOpInterface callOp) {
-        if (mlir::acc::GPUParallelDimAttr parDim =
-                getAccRoutineCallParDim(callOp, defaultPolicy)) {
-          if (parDim.isThreadX() || parDim.isThreadY()) {
-            regionHasThreadLevelRoutineCall = true;
-            return WalkResult::interrupt();
-          }
-        }
-        return WalkResult::advance();
-      });
+  bool requiresThreadConvergence = false;
+  interOp.getRegion().walk([&](Operation *op) {
+    if (mlir::acc::reductionHasThreadDim(op)) {
+      requiresThreadConvergence = true;
+      return WalkResult::interrupt();
     }
+    return WalkResult::advance();
+  });
 
-    if (!hasThreadXInActive && !hasThreadXInInactive &&
-        !regionHasThreadLevelRoutineCall) {
-      parDimsPair.second.push_back(threadXParDim);
-    }
-  }
+  // A thread-level reduction lowers to a uniform workgroup collective, which
+  // every work item must reach, so no thread dimension may be predicated.
+  // Routine calls need convergence too, but only across the callee's own level
+  // and below; that is already handled by excluding those dimensions from both
+  // lists, which leaves the coarser dimensions free to select the caller.
+  if (requiresThreadConvergence)
+    llvm::erase_if(parDimsPair.second, [](mlir::acc::GPUParallelDimAttr pd) {
+      return pd.isAnyThread();
+    });
 
   if (Value predicate = emitPredicate(loc, parDimsPair.second)) {
     LLVM_DEBUG(llvm::dbgs() << "predicate: " << predicate << "\n");
@@ -3254,22 +3212,14 @@ void ACCCGToGPULowering::createGPUAllReduceOp(
   // thread_y for a thread_x-only reduction), preventing other rows from
   // storing their independent results.
   SmallVector<mlir::acc::GPUParallelDimAttr> inactiveParDims;
-  MLIRContext *ctx = computeRegion->getContext();
-  bool hasThreadX = false;
   for (auto parDim : parDimsAttr.getArray()) {
     if (parDim.isAnyBlock())
       continue;
-    if (parDim.isThreadX())
-      hasThreadX = true;
     if (computeRegion.getLaunchArg(parDim) ||
         isInsideACCSpecializedRoutine(computeRegion)) {
       inactiveParDims.push_back(parDim);
     }
   }
-  // Subgroup alignment may introduce extra ThreadX lanes even when ThreadX is
-  // not part of the reduction. Predicate on ThreadX so only one lane stores.
-  if (!hasThreadX)
-    inactiveParDims.push_back(mlir::acc::GPUParallelDimAttr::threadXDim(ctx));
   Value predicate = emitPredicate(loc, inactiveParDims);
   // Predication is only needed when the store target is visible to
   // multiple threads (shared/global memory). Per-thread targets like
@@ -3546,32 +3496,41 @@ static Value accumulatorRoot(Value v) {
   return v;
 }
 
-/// Matches `%l = load %m[%i]` / `%c = combine(%l, %x)` / `store %c, %m[%i]` on
-/// the accumulator \p accum and returns the contributed value `%x`.
-static Value matchAccumulatorUpdate(memref::StoreOp store, Value accum) {
+/// An in-place update `%l = load %m[%i]` / `%c = combine(%l, %x)` /
+/// `store %c, %m[%j]` of a reduction accumulator.
+struct AccumulatorUpdate {
+  memref::LoadOp load;
+  /// The contributed value `%x`.
+  Value contribution;
+};
+
+/// Matches an in-place update of the accumulator \p accum. Whether the load and
+/// the store address the same element is left to the caller.
+static std::optional<AccumulatorUpdate>
+matchAccumulatorUpdate(memref::StoreOp store, Value accum) {
   if (accumulatorRoot(store.getMemRef()) != accum)
-    return {};
+    return std::nullopt;
   Operation *combine = store.getValueToStore().getDefiningOp();
   if (!combine || combine->getNumOperands() != 2)
-    return {};
+    return std::nullopt;
   for (unsigned i = 0; i != 2; ++i) {
     auto load = combine->getOperand(i).getDefiningOp<memref::LoadOp>();
     if (!load || accumulatorRoot(load.getMemRef()) != accum)
       continue;
-    if (!llvm::equal(load.getIndices(), store.getIndices()))
-      continue;
-    return combine->getOperand(1 - i);
+    return AccumulatorUpdate{load, combine->getOperand(1 - i)};
   }
-  return {};
+  return std::nullopt;
 }
 
 /// A block-shared accumulator is updated in place by the loop body, so several
 /// threads may hit the same element. Make those updates atomic unless the
-/// element index provably varies across the participating threads.
-static void atomicizeSharedAccumulatorUpdates(Value accum,
-                                              arith::AtomicRMWKind kind,
-                                              ArrayRef<Value> threadIds,
-                                              RewriterBase &rewriter) {
+/// element index provably varies across the participating threads. Fails when
+/// an update cannot be shown to address one element, since leaving it plain
+/// would race; the caller reports that as not-yet-implemented.
+static LogicalResult
+atomicizeSharedAccumulatorUpdates(Value accum, arith::AtomicRMWKind kind,
+                                  ArrayRef<Value> threadIds,
+                                  RewriterBase &rewriter) {
   OpBuilder::InsertionGuard guard(rewriter);
   SmallVector<memref::StoreOp> stores;
   SmallVector<Value> worklist{accum};
@@ -3588,9 +3547,13 @@ static void atomicizeSharedAccumulatorUpdates(Value accum,
     }
   }
 
+  // Classify every update before rewriting any, so a bail leaves the IR intact.
+  SmallVector<std::pair<memref::StoreOp, Value>> updates;
   for (memref::StoreOp store : stores) {
-    Value contribution = matchAccumulatorUpdate(store, accum);
-    if (!contribution)
+    std::optional<AccumulatorUpdate> update =
+        matchAccumulatorUpdate(store, accum);
+    // Stores that do not read the accumulator are not in-place updates.
+    if (!update)
       continue;
     // A thread-varying index means each thread owns its element, so the
     // existing plain update is already race-free.
@@ -3599,6 +3562,15 @@ static void atomicizeSharedAccumulatorUpdates(Value accum,
           return isThreadVarying(idx, threadIds, visited);
         }))
       continue;
+    // Reading and writing through the same index values is what makes this one
+    // element that threads contend for. Duplicated address arithmetic hides
+    // that, so CSE has to run before this pass.
+    if (!llvm::equal(update->load.getIndices(), store.getIndices()))
+      return failure();
+    updates.emplace_back(store, update->contribution);
+  }
+
+  for (auto [store, contribution] : updates) {
     Operation *combine = store.getValueToStore().getDefiningOp();
     rewriter.setInsertionPoint(store);
     memref::AtomicRMWOp::create(rewriter, store.getLoc(), kind, contribution,
@@ -3607,6 +3579,7 @@ static void atomicizeSharedAccumulatorUpdates(Value accum,
     if (combine && combine->use_empty())
       rewriter.eraseOp(combine);
   }
+  return success();
 }
 
 void ACCCGToGPULowering::processAccumulateArrayOp(
@@ -3710,8 +3683,13 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
       threadIds.push_back(yId);
     if (Value zId = getGPUThreadIdFor(gpu::Processor::ThreadZ))
       threadIds.push_back(zId);
-    atomicizeSharedAccumulatorUpdates(accumulatorRoot(memref), kind, threadIds,
-                                      rewriter);
+    if (failed(atomicizeSharedAccumulatorUpdates(accumulatorRoot(memref), kind,
+                                                 threadIds, rewriter))) {
+      (void)accSupport.emitNYI(
+          loc, "reduction: in-place update of a block-shared array accumulator "
+               "that cannot be made atomic");
+      return;
+    }
     eraseDeadBounds();
     return;
   }

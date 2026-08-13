@@ -60,6 +60,17 @@ Value createIdentityValue(OpBuilder &b, Location loc, Type type,
 Value generateReductionOp(OpBuilder &b, Location loc, Value lhs, Value rhs,
                           arith::AtomicRMWKind kind);
 
+/// True for a reduction accumulate (scalar or array) spanning a thread
+/// dimension: it lowers to `gpu.all_reduce`, whose `uniform` contract requires
+/// every work item of the workgroup to reach it in convergence. Callers use
+/// this both to reserve a subgroup-aligned ThreadX launch dimension and to keep
+/// the collective out of thread-predicated regions.
+///
+/// Conservative: a thread-level array reduction whose accumulator is
+/// block-shared does not emit a collective, but that classification depends on
+/// the per-thread stack budget, which is not available here.
+bool reductionHasThreadDim(Operation *op);
+
 } // namespace acc
 } // namespace mlir
 

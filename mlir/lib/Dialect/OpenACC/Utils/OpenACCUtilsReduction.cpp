@@ -217,5 +217,18 @@ Value generateReductionOp(OpBuilder &b, Location loc, Value lhs, Value rhs,
   return arith::getReductionOp(kind, b, loc, lhs, rhs);
 }
 
+bool reductionHasThreadDim(Operation *op) {
+  GPUParallelDimsAttr parDims;
+  if (auto scalar = dyn_cast<ReductionAccumulateOp>(op))
+    parDims = scalar.getParDims();
+  else if (auto array = dyn_cast<ReductionAccumulateArrayOp>(op))
+    parDims = array.getParDims();
+  else
+    return false;
+  return parDims && llvm::any_of(parDims.getArray(), [](GPUParallelDimAttr d) {
+           return d.isAnyThread();
+         });
+}
+
 } // namespace acc
 } // namespace mlir
