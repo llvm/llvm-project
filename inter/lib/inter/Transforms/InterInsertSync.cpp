@@ -168,11 +168,21 @@ static bool isDpasChainPredecessor(Operation *candidate, DpasOp consumer);
 enum class TransferMode { Analysis, Rewrite };
 
 static std::optional<RegisterSpan> getRegisterSpan(Value value) {
-  RegType type = dyn_cast<RegType>(value.getType());
-  if (!type || type.getBaseGRF() < 0 || type.getWidthDwords() == 0)
-    return std::nullopt;
-  int64_t begin = type.getBaseGRF() * 16;
-  return RegisterSpan{begin, begin + type.getWidthDwords()};
+  if (RegType type = dyn_cast<RegType>(value.getType())) {
+    if (type.getBaseGRF() < 0 || type.getWidthDwords() == 0)
+      return std::nullopt;
+    int64_t begin = type.getBaseGRF() * 16;
+    return RegisterSpan{begin, begin + type.getWidthDwords()};
+  }
+  if (ARFType type = dyn_cast<ARFType>(value.getType())) {
+    if (type.getIndex() < 0 || type.getWidthDwords() == 0)
+      return std::nullopt;
+    constexpr int64_t arfBase = int64_t{1} << 32;
+    int64_t begin = arfBase + static_cast<int64_t>(type.getFile()) * (1 << 20) +
+                    type.getIndex() * 16;
+    return RegisterSpan{begin, begin + type.getWidthDwords()};
+  }
+  return std::nullopt;
 }
 
 static Block *getDefiningBlock(Value value) {
@@ -537,7 +547,8 @@ static void runTransfer(Operation *operation, SyncState &state,
   }
 
   applyDrain(operation, state, mode, emit);
-  if (auto async = dyn_cast<AsyncScoreboardOpInterface>(operation))
+  if (auto async = dyn_cast<AsyncScoreboardOpInterface>(operation);
+      async && !isFullDrain(operation))
     recordIssue(async, state);
   else
     deriveResults(operation, state);
@@ -758,55 +769,88 @@ static void rewriteWithSolver(func::FuncOp function, DataFlowSolver &solver) {
   }
 }
 
-static Operation *getMachineDefiningOperation(Value value) {
-  Operation *definition = value.getDefiningOp();
-  while (definition &&
-         definition->hasTrait<OpTrait::xemachine::NoMachineInst>()) {
-    if (definition->getNumOperands() != 1)
-      return nullptr;
-    definition = definition->getOperand(0).getDefiningOp();
+struct DistanceAccess {
+  Xe2IssuePipe pipe;
+  int32_t pipeID;
+  SmallVector<RegisterSpan, 4> sources;
+  SmallVector<RegisterSpan, 2> destinations;
+};
+
+static std::optional<unsigned> getPipeIndex(Xe2IssuePipe pipe) {
+  switch (pipe) {
+  case Xe2IssuePipe::integer:
+    return 0;
+  case Xe2IssuePipe::floating:
+    return 1;
+  case Xe2IssuePipe::none:
+  case Xe2IssuePipe::send:
+  case Xe2IssuePipe::systolic:
+    return std::nullopt;
   }
-  return definition;
+  llvm_unreachable("unknown Xe2 issue pipe");
 }
 
-static void assignDistanceDependencies(func::FuncOp function) {
-  DenseMap<Operation *, int32_t> instructionIndices;
-  int32_t nextInstruction = 0;
-  function.walk([&](Operation *operation) {
-    if (operation->hasTrait<OpTrait::xemachine::NoMachineInst>() ||
-        operation->hasTrait<OpTrait::xemachine::NoAsmEmission>())
-      return;
-    instructionIndices[operation] = nextInstruction++;
-  });
+static SWSBDistancePipe getSWSBDistancePipe(Xe2IssuePipe pipe) {
+  if (pipe == Xe2IssuePipe::floating)
+    return SWSBDistancePipe::floating;
+  assert(pipe == Xe2IssuePipe::integer && "distance requires an ALU pipe");
+  return SWSBDistancePipe::in_order;
+}
 
+static SmallVector<RegisterSpan, 4> getRegisterSpans(ValueRange values) {
+  SmallVector<RegisterSpan, 4> spans;
+  for (Value value : values)
+    if (std::optional<RegisterSpan> span = getRegisterSpan(value))
+      insertSpan(spans, *span);
+  return spans;
+}
+
+static bool anyOverlap(ArrayRef<RegisterSpan> lhs,
+                       ArrayRef<RegisterSpan> rhs) {
+  return llvm::any_of(lhs, [&](RegisterSpan left) {
+    return llvm::any_of(rhs, [&](RegisterSpan right) {
+      return left.overlaps(right);
+    });
+  });
+}
+
+static LogicalResult assignDistanceDependencies(func::FuncOp function) {
+  std::array<int32_t, 2> nextPipeID{};
+  SmallVector<DistanceAccess> liveAccesses;
   bool hasWrittenAddressRegister = false;
-  function.walk([&](Operation *operation) {
+  WalkResult walkResult = function.walk([&](Operation *operation) {
     SWSBInfoOpInterface swsb = dyn_cast<SWSBInfoOpInterface>(operation);
     if (!swsb)
-      return;
+      return WalkResult::advance();
+
+    FailureOr<Xe2InstructionTiming> timing =
+        getXe2InstructionTiming(operation);
+    if (failed(timing))
+      return WalkResult::interrupt();
+    Xe2IssuePipe distancePipe = timing->pipe;
+    std::optional<unsigned> currentPipeIndex = getPipeIndex(distancePipe);
+    SmallVector<RegisterSpan, 4> sources =
+        getRegisterSpans(operation->getOperands());
+    SmallVector<RegisterSpan, 4> destinations =
+        getRegisterSpans(operation->getResults());
 
     FinalSWSB final = swsb.getFinalSWSB();
     int32_t youngestDistance = -1;
     SWSBDistancePipe pipe = SWSBDistancePipe::none;
-    for (Value operand : operation->getOperands()) {
-      if (isa<MemTokenType>(operand.getType()))
-        continue;
-      Operation *producer = getMachineDefiningOperation(operand);
-      if (!producer || isa<AsyncScoreboardOpInterface>(producer))
-        continue;
-      auto producerIndex = instructionIndices.find(producer);
-      auto consumerIndex = instructionIndices.find(operation);
-      if (producerIndex == instructionIndices.end() ||
-          consumerIndex == instructionIndices.end())
-        continue;
-      int32_t distance = consumerIndex->second - producerIndex->second;
+    for (const DistanceAccess &access : llvm::reverse(liveAccesses)) {
+      unsigned producerPipeIndex = *getPipeIndex(access.pipe);
+      int32_t distance = nextPipeID[producerPipeIndex] - access.pipeID;
       if (distance < 1 || distance > 7)
         continue;
-      ALUOpInterface alu = dyn_cast<ALUOpInterface>(producer);
-      SWSBDistancePipe producerPipe =
-          alu && alu.getInstructionElementType().isF32()
-              ? SWSBDistancePipe::floating
-              : SWSBDistancePipe::in_order;
+
+      bool raw = anyOverlap(sources, access.destinations);
+      bool crossPipe = !currentPipeIndex || distancePipe != access.pipe;
+      bool waw = crossPipe && anyOverlap(destinations, access.destinations);
+      bool war = crossPipe && anyOverlap(destinations, access.sources);
+      if (!raw && !waw && !war)
+        continue;
+
+      SWSBDistancePipe producerPipe = getSWSBDistancePipe(access.pipe);
       if (youngestDistance < 0) {
         youngestDistance = distance;
         pipe = producerPipe;
@@ -835,7 +879,17 @@ static void assignDistanceDependencies(func::FuncOp function) {
       }
     }
     swsb.setFinalSWSB(final);
+
+    if (currentPipeIndex) {
+      liveAccesses.push_back(DistanceAccess{distancePipe,
+                                            nextPipeID[*currentPipeIndex],
+                                            std::move(sources),
+                                            std::move(destinations)});
+      ++nextPipeID[*currentPipeIndex];
+    }
+    return WalkResult::advance();
   });
+  return success(!walkResult.wasInterrupted());
 }
 
 class InsertSync : public inter::impl::InsertSyncBase<InsertSync> {
@@ -876,8 +930,9 @@ public:
     solver.load<SyncAnalysis>(dominance);
     if (failed(solver.initializeAndRun(function)))
       return signalPassFailure();
+    if (failed(assignDistanceDependencies(function)))
+      return signalPassFailure();
     rewriteWithSolver(function, solver);
-    assignDistanceDependencies(function);
   }
 };
 

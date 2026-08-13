@@ -6,10 +6,13 @@
 // CHECK-LABEL: func.func @load_consumer
 // CHECK: xemachine.load_a64
 // CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
-// CHECK-NEXT: xemachine.add
+// CHECK-NEXT: xemachine.add {{.*}}swsbDistance = 1
 func.func @load_consumer() {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %zero = xemachine.imm 0 : i32
+  %previous = xemachine.mov %zero : (!xemachine.imm, i32)
+      -> !xemachine.reg<32, 4>
   %loaded, %load_token = xemachine.load_a64 %address dep %root
       : !xemachine.reg<64, 20> -> (!xemachine.reg<32, 4>, !xemachine.mem.token)
   %sum = xemachine.add %loaded, %loaded {execSize = 32 : i32}
@@ -67,6 +70,26 @@ func.func @destination_reuse() {
   %zero = xemachine.imm 0 : i32
   %reuse = xemachine.mov %zero : (!xemachine.imm, i32)
       -> !xemachine.reg<16, 4>
+  return
+}
+
+// Distance assignment follows every operand of zero-cost tuple views.
+// CHECK-LABEL: func.func @tuple_distance
+// CHECK: [[LOW:%.*]] = xemachine.mov
+// CHECK-NEXT: [[HIGH:%.*]] = xemachine.mov
+// CHECK-NEXT: [[TUPLE:%.*]] = xemachine.tuple_from_elements [[LOW]], [[HIGH]]
+// CHECK-NEXT: xemachine.mov [[TUPLE]] {{.*}}swsbDistance = 1
+func.func @tuple_distance() {
+  %zero = xemachine.imm 0 : i32
+  %low = xemachine.mov %zero : (!xemachine.imm, i32)
+      -> !xemachine.reg<16, 4>
+  %high = xemachine.mov %zero : (!xemachine.imm, i32)
+      -> !xemachine.reg<16, 5>
+  %tuple = xemachine.tuple_from_elements %low, %high
+      : (!xemachine.reg<16, 4>, !xemachine.reg<16, 5>)
+      -> !xemachine.reg<32, 4>
+  %copy = xemachine.mov %tuple {execSize = 32 : i32}
+      : (!xemachine.reg<32, 4>, i32) -> !xemachine.reg<32, 6>
   return
 }
 
@@ -148,6 +171,7 @@ func.func @bar_retires_reads() {
 // CHECK-NEXT: {{%.*}} = xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: {{%.*}} = xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.eot {{.*}} dep [[JOIN]]
+// CHECK-NEXT: return
 func.func @joined_eot() {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>

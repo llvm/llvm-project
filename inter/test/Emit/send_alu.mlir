@@ -17,7 +17,7 @@ func.func @k() {
   %joined = xemachine.token_join %root, %after : !xemachine.mem.token, !xemachine.mem.token
   // CHECK-NEXT: pc=48 opcode=sync exec=1 swsb=0x0 function=allrd mask=normal channel=0 pred=normal
   %t3 = xemachine.sync allrd dep %joined : !xemachine.mem.token
-  // CHECK-NEXT: pc=64 opcode=send exec=32 swsb=0x361 sfid=ugm exdescRegFile=imm exdesc=0x0 desc=0x8000584 mask=normal channel=0 pred=normal dst=arf0 src0=grf4 src1=grf6 len=2 eot=0
+  // CHECK-NEXT: pc=64 opcode=send exec=32 swsb=0x321 sfid=ugm exdescRegFile=imm exdesc=0x0 desc=0x8000584 mask=normal channel=0 pred=normal dst=arf0 src0=grf4 src1=grf6 len=2 eot=0
   %n, %tok2 = xemachine.send ugm %base data %sum dep %t3 {desc = 134219140 : i32, exdesc = 0 : i32, execSize = 32 : i32, sfid = 0 : i32} : (!xemachine.reg<16, 4>, !xemachine.reg<32, 6>) -> (!xemachine.reg<0, 9>, !xemachine.mem.token)
   %eot_payload = xemachine.archreg 0 : !xemachine.reg<16, 10>
   // CHECK-NEXT: pc=80 opcode=sync exec=1 swsb=0x80 function=nop
