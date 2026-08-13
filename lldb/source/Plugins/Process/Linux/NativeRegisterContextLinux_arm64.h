@@ -117,6 +117,9 @@ private:
 
   RegisterSetType m_validity = static_cast<RegisterSetType>(0);
 
+  // Returns the ptrace register set number for the given register set.
+  unsigned int GetPtraceSet(RegisterSetType set) const;
+
   void MakeValid(RegisterSetType set) { m_validity |= set; }
 
   [[nodiscard]] bool IsValid(RegisterSetType set) const {
@@ -274,8 +277,6 @@ private:
   size_t GetPACMaskSize() { return sizeof(m_pac_mask); }
 
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
-
-  unsigned GetSVERegSet();
 
   void *GetZABuffer() { return m_za_ptrace_payload.data(); };
 
