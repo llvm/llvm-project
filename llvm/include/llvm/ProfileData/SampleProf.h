@@ -19,6 +19,7 @@
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SortedVectorMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
@@ -277,9 +278,10 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
   case SecFuncMetadata:
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
     break;
-  default:
   case SecFuncOffsetTable:
     IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
+    break;
+  default:
     break;
   }
   if (!IsFlagLegal)
@@ -403,7 +405,7 @@ public:
   };
 
   using SortedCallTargetSet = SmallVector<CallTarget>;
-  using CallTargetMap = DenseMap<FunctionId, uint64_t>;
+  using CallTargetMap = SortedVectorMap<FunctionId, uint64_t, 0>;
   SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.

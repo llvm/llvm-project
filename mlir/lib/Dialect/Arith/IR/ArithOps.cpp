@@ -914,18 +914,6 @@ Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
 }
 
 //===----------------------------------------------------------------------===//
-// Ceil and floor division folding helpers
-//===----------------------------------------------------------------------===//
-
-static APInt signedCeilNonnegInputs(const APInt &a, const APInt &b,
-                                    bool &overflow) {
-  // Returns (a-1)/b + 1
-  APInt one(a.getBitWidth(), 1, true); // Signed value 1.
-  APInt val = a.ssub_ov(one, overflow).sdiv_ov(b, overflow);
-  return val.sadd_ov(one, overflow);
-}
-
-//===----------------------------------------------------------------------===//
 // CeilDivUIOp
 //===----------------------------------------------------------------------===//
 
@@ -989,56 +977,36 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
     return getIntegerAttrOfType(getType(), 1);
 
   // Don't fold if it would overflow or if it requires a division by zero.
-  // TODO: This hook won't fold operations where a = MININT, because
-  // negating MININT overflows. This can be improved.
   bool overflowOrDiv0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
-      adaptor.getOperands(), [&](APInt a, const APInt &b) {
+      adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
         if (overflowOrDiv0 || !b) {
           overflowOrDiv0 = true;
           return a;
         }
-        if (!a)
-          return a;
-        // After this point we know that neither a or b are zero.
-        unsigned bits = a.getBitWidth();
-        APInt zero = APInt::getZero(bits);
-        bool aGtZero = a.sgt(zero);
-        bool bGtZero = b.sgt(zero);
-        if (aGtZero && bGtZero) {
-          // Both positive, return ceil(a, b).
-          return signedCeilNonnegInputs(a, b, overflowOrDiv0);
-        }
-
-        // No folding happens if any of the intermediate arithmetic operations
-        // overflows.
-        bool overflowNegA = false;
-        bool overflowNegB = false;
+        // Compute the ceiling without negating either operand, so that MININT
+        // operands still fold whenever the result is representable.
+        //
+        // sdiv truncates towards zero, so it already rounds up whenever the
+        // exact quotient is negative. When the exact quotient is positive, i.e.
+        // when the operands have the same sign, an inexact division has to be
+        // corrected by one. This mirrors the expansion in ExpandOps.cpp.
         bool overflowDiv = false;
-        bool overflowNegRes = false;
-        if (!aGtZero && !bGtZero) {
-          // Both negative, return ceil(-a, -b).
-          APInt posA = zero.ssub_ov(a, overflowNegA);
-          APInt posB = zero.ssub_ov(b, overflowNegB);
-          APInt res = signedCeilNonnegInputs(posA, posB, overflowDiv);
-          overflowOrDiv0 = (overflowNegA || overflowNegB || overflowDiv);
-          return res;
+        APInt quotient = a.sdiv_ov(b, overflowDiv);
+        if (overflowDiv) {
+          // MININT / -1. The exact result is -MININT, which is not
+          // representable.
+          overflowOrDiv0 = true;
+          return a;
         }
-        if (!aGtZero && bGtZero) {
-          // A is negative, b is positive, return - ( -a / b).
-          APInt posA = zero.ssub_ov(a, overflowNegA);
-          APInt div = posA.sdiv_ov(b, overflowDiv);
-          APInt res = zero.ssub_ov(div, overflowNegRes);
-          overflowOrDiv0 = (overflowNegA || overflowDiv || overflowNegRes);
-          return res;
-        }
-        // A is positive, b is negative, return - (a / -b).
-        APInt posB = zero.ssub_ov(b, overflowNegB);
-        APInt div = a.sdiv_ov(posB, overflowDiv);
-        APInt res = zero.ssub_ov(div, overflowNegRes);
+        if (a.isNegative() != b.isNegative() || quotient * b == a)
+          return quotient;
 
-        overflowOrDiv0 = (overflowNegB || overflowDiv || overflowNegRes);
-        return res;
+        // The correction cannot overflow: it only applies when the exact
+        // quotient is positive and the division is inexact, which bounds the
+        // quotient well below the maximum. Check anyway, at no cost.
+        APInt one(a.getBitWidth(), 1, /*isSigned=*/true);
+        return quotient.sadd_ov(one, overflowOrDiv0);
       });
 
   return overflowOrDiv0 ? Attribute() : result;
