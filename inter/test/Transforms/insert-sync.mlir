@@ -254,15 +254,15 @@ func.func @joined_eot() {
   return
 }
 
-// Region exits are joined before synchronization at the continuation.
+// Region exits preserve pending completion until the continuation consumes it.
 // CHECK-LABEL: func.func @branch_join
 // CHECK: [[ROOT:%.*]] = xemachine.token
 // CHECK: [[IF:%.*]] = xemachine.exec_if
 // CHECK: [[STORE:%.*]] = xemachine.store_a64 {{.*}} dep [[ROOT]]
-// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK: xemachine.yield [[STORE]]
 // CHECK: xemachine.yield [[ROOT]]
-// CHECK: xemachine.load_a64 {{.*}} dep [[IF]]
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
+// CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[IF]]
 func.func @branch_join(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -285,9 +285,9 @@ func.func @branch_join(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-LABEL: func.func @branch_data_result
 // CHECK: [[RESULTS:%.*]]:2 = xemachine.uniform_if
 // CHECK: {{%.*}}, {{%.*}} = xemachine.load_a64
-// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.yield
 // CHECK: } -> !xemachine.reg<32, 4>, !xemachine.mem.token
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.add [[RESULTS]]#0, [[RESULTS]]#0
 func.func @branch_data_result(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -342,11 +342,11 @@ func.func @branch_without_else(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-LABEL: func.func @cross_arm_hazards
 // CHECK: xemachine.load_a64
 // CHECK-NEXT: xemachine.store_a64
-// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 3
-// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.yield
 // CHECK-NEXT: } otherwise {
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.mov {{.*}}noMask{{.*}} -> !xemachine.reg<16, 4>
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.mov {{.*}}noMask{{.*}} -> !xemachine.reg<16, 6>
 func.func @cross_arm_hazards(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -377,7 +377,9 @@ func.func @cross_arm_hazards(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK: [[ZERO:%.*]] = xemachine.imm 0
 // CHECK: {{%.*}}:2 = xemachine.uniform_if
 // CHECK: } -> !xemachine.mem.token, !xemachine.mem.token
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.mov [[ZERO]] {{.*}} -> !xemachine.reg<16, 4>
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
 // CHECK-NEXT: xemachine.mov [[ZERO]] {{.*}} -> !xemachine.reg<64, 20>
 func.func @multiple_branch_tokens(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -409,10 +411,11 @@ func.func @multiple_branch_tokens(%flag: !xemachine.arf<f, 2, 0>) {
 // CHECK-LABEL: func.func @loop_carried_token
 // CHECK: [[LOOP:%.*]] = xemachine.uniform_loop
 // CHECK: ^bb0([[ITER:%.*]]: !xemachine.mem.token):
-// CHECK-NEXT: [[STORE:%.*]] = xemachine.store_a64 {{.*}} dep [[ITER]]
 // CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
+// CHECK-NEXT: [[STORE:%.*]] = xemachine.store_a64 {{.*}} dep [[ITER]]
 // CHECK-NEXT: xemachine.continue_if {{.*}}([[STORE]] : !xemachine.mem.token)
-// CHECK: xemachine.load_a64 {{.*}} dep [[LOOP]]
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
+// CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[LOOP]]
 func.func @loop_carried_token(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -431,10 +434,10 @@ func.func @loop_carried_token(%flag: !xemachine.arf<f, 2, 0>) {
   return
 }
 
-// Store-only loop backedges retire the source phase before the next issue.
+// Store-only loop backedges retire the source phase at the next issue.
 // CHECK-LABEL: func.func @loop_store_only
-// CHECK: xemachine.store_a64
-// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
+// CHECK-NEXT: xemachine.store_a64
 // CHECK-NEXT: xemachine.continue_if
 func.func @loop_store_only(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -507,10 +510,11 @@ func.func @loop_forwarded_init(%flag: !xemachine.arf<f, 2, 0>) {
 // The analysis is driven by RegionBranchOpInterface, not XeMachine op names.
 // CHECK-LABEL: func.func @generic_region_branch_loop
 // CHECK: [[LOOP:%.*]] = scf.for
-// CHECK: [[STORE:%.*]] = xemachine.store_a64
 // CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 2
+// CHECK-NEXT: [[STORE:%.*]] = xemachine.store_a64
 // CHECK-NEXT: scf.yield [[STORE]]
-// CHECK: xemachine.load_a64 {{.*}} dep [[LOOP]]
+// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 2
+// CHECK-NEXT: xemachine.load_a64 {{.*}} dep [[LOOP]]
 func.func @generic_region_branch_loop() {
   %root = xemachine.token
   %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
@@ -575,10 +579,11 @@ func.func @nested_replay_after_fixpoint(%flag: !xemachine.arf<f, 2, 0>) {
 // even without an SSA token carry.
 // CHECK-LABEL: func.func @loop_physical_waw
 // CHECK: xemachine.uniform_loop
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.load_a64
-// CHECK: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.continue_if
 // CHECK: }
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
 // CHECK-NEXT: xemachine.mov
 func.func @loop_physical_waw(%flag: !xemachine.arf<f, 2, 0>) {
   %root = xemachine.token
@@ -593,6 +598,33 @@ func.func @loop_physical_waw(%flag: !xemachine.arf<f, 2, 0>) {
   } : () -> ()
   %reuse = xemachine.mov %zero : (!xemachine.imm, i32)
       -> !xemachine.reg<16, 4>
+  return
+}
+
+// A loop-carried DPAS remains pending across the backedge. Its wait belongs at
+// the next accumulator use, leaving independent tail work exposed.
+// CHECK-LABEL: func.func @loop_carried_dpas
+// CHECK: ^bb0([[ACC:%.*]]: !xemachine.reg<128, 32>):
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbTokenMode = 3
+// CHECK-NEXT: [[DPAS:%.*]] = xemachine.dpas {{.*}}, [[ACC]]
+// CHECK-NEXT: xemachine.mov
+// CHECK-NEXT: xemachine.continue_if {{.*}}([[DPAS]] : !xemachine.reg<128, 32>)
+func.func @loop_carried_dpas(%flag: !xemachine.arf<f, 2, 0>) {
+  %a = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %b = xemachine.archreg 24 : !xemachine.reg<128, 24>
+  %acc = xemachine.archreg 32 : !xemachine.reg<128, 32>
+  %zero = xemachine.imm 0 : i32
+  %result = xemachine.uniform_loop (%acc) {
+  ^bb0(%iter: !xemachine.reg<128, 32>):
+    %next = xemachine.dpas %a, %b, %iter {
+        aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
+        : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>,
+           !xemachine.reg<128, 32>) -> !xemachine.reg<128, 32>
+    %tail = xemachine.mov %zero
+        : (!xemachine.imm, i32) -> !xemachine.reg<16, 4>
+    xemachine.continue_if %flag : !xemachine.arf<f, 2, 0>
+        (%next : !xemachine.reg<128, 32>)
+  } : (!xemachine.reg<128, 32>) -> !xemachine.reg<128, 32>
   return
 }
 

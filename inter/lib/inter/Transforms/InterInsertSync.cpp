@@ -412,14 +412,7 @@ static bool isDpasChainPredecessor(Operation *candidate, DpasOp consumer) {
 static SmallVector<TokenWait> computeRequirement(Operation *operation,
                                                  const SyncState &state) {
   SmallVector<TokenWait> requirements;
-  if (isa<ContinueIfOp>(operation)) {
-    for (const IssueTicket &ticket : state.issues)
-      requireWait(requirements, ticket,
-                  ticket.destinationPending ? SWSBTokenMode::destination
-                                            : SWSBTokenMode::source);
-    return requirements;
-  }
-  if (isa<RegionBranchTerminatorOpInterface>(operation)) {
+  if (isa<PayloadPrologueEndOp>(operation)) {
     for (const IssueTicket &ticket : state.issues)
       requireWait(requirements, ticket,
                   ticket.destinationPending ? SWSBTokenMode::destination
