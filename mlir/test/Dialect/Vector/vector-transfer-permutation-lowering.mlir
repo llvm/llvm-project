@@ -479,6 +479,34 @@ func.func @xfer_read_minor_identitiy_bcast_dims_masked(
 }
 
 ///----------------------------------------------------------------------------------------
+/// [0-d corner case: no pattern applies]
+///
+/// 0-d transfers have a rank-0 result vector. There is no permutation,
+/// transpose, or leading broadcast to lower, so none of the patterns above
+/// should match. The downstream checks in each pattern filter these out:
+///   - TransferReadPermutationLowering: 0-result permutation map.
+///   - TransferWritePermutationLowering: vacuously minor identity.
+///   - TransferWriteNonPermutationLowering: vacuously projected permutation.
+///   - TransferOpReduceRank: no leading broadcast in an empty result map.
+///----------------------------------------------------------------------------------------
+
+// CHECK-LABEL: func @xfer_read_0d_unchanged
+//       CHECK:   %[[V:.+]] = vector.transfer_read %{{.*}}, %{{.*}} : memref<?x?xf32>, vector<f32>
+//       CHECK:   return %[[V]] : vector<f32>
+func.func @xfer_read_0d_unchanged(%mem: memref<?x?xf32>, %idx: index) -> vector<f32> {
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %mem[%idx, %idx], %pad : memref<?x?xf32>, vector<f32>
+  return %v : vector<f32>
+}
+
+// CHECK-LABEL: func @xfer_write_0d_unchanged
+//       CHECK:   vector.transfer_write %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : vector<f32>, memref<?x?xf32>
+func.func @xfer_write_0d_unchanged(%val: vector<f32>, %mem: memref<?x?xf32>, %idx: index) {
+  vector.transfer_write %val, %mem[%idx, %idx] : vector<f32>, memref<?x?xf32>
+  return
+}
+
+///----------------------------------------------------------------------------------------
 //  TD sequence
 ///----------------------------------------------------------------------------------------
 module attributes {transform.with_named_sequence} {

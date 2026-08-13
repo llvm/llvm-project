@@ -94,15 +94,13 @@ struct TransferReadPermutationLowering
   matchAndRewriteMaskableOp(vector::TransferReadOp op,
                             MaskingOpInterface maskOp,
                             PatternRewriter &rewriter) const override {
-    // TODO: support 0-d corner case.
-    if (op.getTransferRank() == 0)
-      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
     // TODO: Support transfer_read inside MaskOp case.
     if (maskOp)
       return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
+    // 0-d transfers have a 0-result permutation map and are filtered here.
     if (map.getNumResults() == 0)
       return rewriter.notifyMatchFailure(op, "0 result permutation map");
     if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation)) {
@@ -172,15 +170,14 @@ struct TransferWritePermutationLowering
   matchAndRewriteMaskableOp(vector::TransferWriteOp op,
                             MaskingOpInterface maskOp,
                             PatternRewriter &rewriter) const override {
-    // TODO: support 0-d corner case.
-    if (op.getTransferRank() == 0)
-      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
     // TODO: Support transfer_write inside MaskOp case.
     if (maskOp)
       return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
+    // 0-d transfers have a vacuously minor-identity permutation map and are
+    // filtered here.
     if (map.isMinorIdentity())
       return rewriter.notifyMatchFailure(op, "map is already minor identity");
 
@@ -244,15 +241,14 @@ struct TransferWriteNonPermutationLowering
   matchAndRewriteMaskableOp(vector::TransferWriteOp op,
                             MaskingOpInterface maskOp,
                             PatternRewriter &rewriter) const override {
-    // TODO: support 0-d corner case.
-    if (op.getTransferRank() == 0)
-      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
     // TODO: Support transfer_write inside MaskOp case.
     if (maskOp)
       return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
+    // 0-d transfers vacuously satisfy the minor-identity-with-broadcasting
+    // check and are filtered here.
     if (map.isPermutationOfMinorIdentityWithBroadcasting(permutation)) {
       return rewriter.notifyMatchFailure(
           op,
@@ -323,9 +319,6 @@ struct TransferOpReduceRank
   matchAndRewriteMaskableOp(vector::TransferReadOp op,
                             MaskingOpInterface maskOp,
                             PatternRewriter &rewriter) const override {
-    // TODO: support 0-d corner case.
-    if (op.getTransferRank() == 0)
-      return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
     // TODO: support masked case.
     if (maskOp)
       return rewriter.notifyMatchFailure(op, "Masked case not supported");
@@ -338,6 +331,7 @@ struct TransferOpReduceRank
         break;
       numLeadingBroadcast++;
     }
+    // 0-d transfers iterate the empty result list and hit this `0` check.
     // If there are no leading zeros in the map there is nothing to do.
     if (numLeadingBroadcast == 0)
       return rewriter.notifyMatchFailure(op, "no leading broadcasts in map");
