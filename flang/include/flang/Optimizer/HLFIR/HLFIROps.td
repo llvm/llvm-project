@@ -269,6 +269,7 @@ def hlfir_DesignateOp
                    OptionalAttr<BoolAttr>:$complex_part,
                    Optional<AnyShapeOrShiftType>:$shape,
                    Variadic<AnyIntegerType>:$typeparams,
+                   Variadic<AnyIntegerType>:$cosubscripts,
                    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
                 );
 
@@ -277,6 +278,7 @@ def hlfir_DesignateOp
   let assemblyFormat = [{
     $memref (`{` $component^ `}`)? (`<` $component_shape^ `>`)?
     custom<DesignatorIndices>($indices, $is_triplet)
+    (`[` $cosubscripts^ `]`)?
     (`substr` $substring^)?
     custom<DesignatorComplexPart>($complex_part)
     (`shape` $shape^)? (`typeparams` $typeparams^)?
@@ -303,6 +305,7 @@ def hlfir_DesignateOp
       CArg<"mlir::ValueRange", "{}">:$substring,
       CArg<"std::optional<bool>", "{}">:$complex_part,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$cosubscripts,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
 
     OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$memref,

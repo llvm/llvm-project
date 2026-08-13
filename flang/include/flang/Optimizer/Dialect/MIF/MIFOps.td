@@ -670,4 +670,112 @@ def mif_EventQueryOp : mif_Op<"event_query", []> {
   }];
 }
 
+
+//===----------------------------------------------------------------------===//
+// Atomic Operations
+//===----------------------------------------------------------------------===//
+
+def mif_AtomicAddOp : mif_Op<"atomic_add", [AttrSizedOperandSegments]> {
+  let summary = "Atomic addition";
+  let description = [{
+    Arguments: 
+      - `cosubscripts`: Shall be a list of coubscripts to determine the image index of 
+        `atom` where the operation need to be performed.
+      - `atom`: Shall be a coarray of type integer with kind ATOMIC_INT_KIND 
+        from module ISO_FORTRAN_ENV.
+      - `value`: Shall be a scalar integer with kind ATOMIC_INT_KIND.
+      - `old`: Is optional and shall be a scalar integer with kind ATOMIC_INT_KIND.
+  }];
+
+  let arguments = (ins AnyRefOrBoxType:$atom,
+                       Variadic<AnyIntegerType>:$cosubscripts,
+                       Arg<AnyIntegerType, "", [MemRead]>:$value,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$old,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat);
+  
+  let assemblyFormat = [{
+    `atom` $atom (`[` $cosubscripts^ `]`)?
+    `value` $value (`old` $old^ )?
+    (`stat` $stat^ )?
+    prop-dict attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_AtomicAndOp : mif_Op<"atomic_and", [AttrSizedOperandSegments]> {
+  let summary = "Atomic bitwise AND";
+  let description = [{
+    Arguments: 
+      - `cosubscripts`: Shall be a list of coubscripts to determine the image index of 
+        `atom` where the operation need to be performed.
+      - `atom`: Shall be a coarray of type integer with kind ATOMIC_INT_KIND 
+        from module ISO_FORTRAN_ENV.
+      - `value`: Shall be a scalar integer with kind ATOMIC_INT_KIND.
+      - `old`: Is optional and shall be a scalar integer with kind ATOMIC_INT_KIND.
+  }];
+
+  let arguments = (ins AnyRefOrBoxType:$atom,
+                       Variadic<AnyIntegerType>:$cosubscripts,
+                       Arg<AnyIntegerType, "", [MemRead]>:$value,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$old,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat);
+  
+  let assemblyFormat = [{
+    `atom` $atom (`[` $cosubscripts^ `]`)?
+    `value` $value (`old` $old^ )?
+    (`stat` $stat^ )?
+    prop-dict attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_AtomicOrOp : mif_Op<"atomic_or", [AttrSizedOperandSegments]> {
+  let summary = "Atomic bitwise OR";
+  let description = [{
+    Arguments: 
+      - `cosubscripts`: Shall be a list of coubscripts to determine the image index of 
+        `atom` where the operation need to be performed.
+      - `atom`: Shall be a coarray of type integer with kind ATOMIC_INT_KIND 
+        from module ISO_FORTRAN_ENV.
+      - `value`: Shall be a scalar integer with kind ATOMIC_INT_KIND.
+      - `old`: Is optional and shall be a scalar integer with kind ATOMIC_INT_KIND.
+  }];
+
+  let arguments = (ins AnyRefOrBoxType:$atom,
+                       Variadic<AnyIntegerType>:$cosubscripts,
+                       Arg<AnyIntegerType, "", [MemRead]>:$value,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$old,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat);
+  
+  let assemblyFormat = [{
+    `atom` $atom (`[` $cosubscripts^ `]`)?
+    `value` $value (`old` $old^ )?
+    (`stat` $stat^ )?
+    prop-dict attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_AtomicXorOp : mif_Op<"atomic_xor", [AttrSizedOperandSegments]> {
+  let summary = "Atomic bitwise XOR";
+  let description = [{
+    Arguments: 
+      - `cosubscripts`: Shall be a list of coubscripts to determine the image index of 
+        `atom` where the operation need to be performed.
+      - `atom`: Shall be a coarray of type integer with kind ATOMIC_INT_KIND 
+        from module ISO_FORTRAN_ENV.
+      - `value`: Shall be a scalar integer with kind ATOMIC_INT_KIND.
+      - `old`: Is optional and shall be a scalar integer with kind ATOMIC_INT_KIND.
+  }];
+
+  let arguments = (ins AnyRefOrBoxType:$atom,
+                       Variadic<AnyIntegerType>:$cosubscripts,
+                       Arg<AnyIntegerType, "", [MemRead]>:$value,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$old,
+                       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat);
+  
+  let assemblyFormat = [{
+    `atom` $atom (`[` $cosubscripts^ `]`)?
+    `value` $value (`old` $old^ )?
+    (`stat` $stat^ )?
+    prop-dict attr-dict `:` functional-type(operands, results)
+  }];
+}
 #endif // FORTRAN_DIALECT_MIF_MIF_OPS

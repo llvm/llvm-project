@@ -315,6 +315,7 @@ void hlfir::DesignateOp::build(
     mlir::Value component_shape, llvm::ArrayRef<Subscript> subscripts,
     mlir::ValueRange substring, std::optional<bool> complex_part,
     mlir::Value shape, mlir::ValueRange typeparams,
+    mlir::ValueRange cosubscripts,
     fir::FortranVariableFlagsAttr fortran_attrs) {
   auto componentAttr =
       component.empty() ? mlir::StringAttr{} : builder.getStringAttr(component);
@@ -339,7 +340,7 @@ void hlfir::DesignateOp::build(
           : mlir::BoolAttr{};
   build(builder, result, result_type, memref, componentAttr, component_shape,
         indices, isTripletAttr, substring, complexPartAttr, shape, typeparams,
-        fortran_attrs);
+        cosubscripts, fortran_attrs);
 }
 
 void hlfir::DesignateOp::build(mlir::OpBuilder &builder,
@@ -355,7 +356,7 @@ void hlfir::DesignateOp::build(mlir::OpBuilder &builder,
         /*componentAttr=*/mlir::StringAttr{}, /*component_shape=*/mlir::Value{},
         indices, isTripletAttr, /*substring*/ mlir::ValueRange{},
         /*complexPartAttr=*/mlir::BoolAttr{}, /*shape=*/mlir::Value{},
-        typeparams, fortran_attrs);
+        typeparams, /*cosubscripts=*/mlir::ValueRange{}, fortran_attrs);
 }
 
 static mlir::ParseResult parseDesignatorIndices(

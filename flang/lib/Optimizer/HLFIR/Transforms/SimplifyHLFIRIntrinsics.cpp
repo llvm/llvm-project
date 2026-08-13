@@ -2287,6 +2287,7 @@ public:
               /*substring=*/mlir::ValueRange{index, index},
               /*complexPart=*/std::nullopt,
               /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{length},
+              /*cosubscrits=*/mlir::ValueRange{},
               fir::FortranVariableFlagsAttr{});
           auto chrVal = fir::LoadOp::create(builder, loc, singleChr);
           mlir::Value intVal = fir::ExtractValueOp::create(
@@ -2529,7 +2530,7 @@ public:
         /*substring=*/mlir::ValueRange{one, lenTrim},
         /*complexPart=*/std::nullopt, /*shape=*/mlir::Value{},
         /*typeParams=*/mlir::ValueRange{lenTrim},
-        fir::FortranVariableFlagsAttr{});
+        /*cosubscrits=*/mlir::ValueRange{}, fir::FortranVariableFlagsAttr{});
 
     // The temporary holds LEN_TRIM(x) characters. When LEN(x) is constant it
     // is allocated with that length instead, so that the allocation has no
@@ -2671,7 +2672,7 @@ public:
           /*substring=*/mlir::ValueRange{index, index},
           /*complexPart=*/std::nullopt,
           /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{oneIdx},
-          fir::FortranVariableFlagsAttr{});
+          /*cosubscrits=*/mlir::ValueRange{}, fir::FortranVariableFlagsAttr{});
       auto chrVal = fir::LoadOp::create(builder, loc, singleChr);
       mlir::Value intVal = fir::ExtractValueOp::create(
           builder, loc, intTy, chrVal, builder.getArrayAttr(idxAttr));

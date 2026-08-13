@@ -136,6 +136,35 @@ mlir::Value getCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
   return mlir::Value{};
 }
 
+// Returns true if \p value is, or is derived (hlfir.designate, load, convert,
+// declare) from, an entity whose type carries a corank. hlfir.designate drops
+// the corank from its result type when a cosubscript is applied, so the
+// type of the designate result alone is not enough.
+static bool isCoarrayValue(mlir::Value value) {
+  while (value) {
+    mlir::Type ty = fir::unwrapRefType(value.getType());
+    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
+      if (boxTy.isCoarray())
+        return true;
+
+    mlir::Operation *defOp = value.getDefiningOp();
+    if (!defOp)
+      return false;
+
+    if (auto designate = mlir::dyn_cast<hlfir::DesignateOp>(defOp))
+      value = designate.getMemref();
+    else if (auto load = mlir::dyn_cast<fir::LoadOp>(defOp))
+      value = load.getMemref();
+    else if (auto convert = mlir::dyn_cast<fir::ConvertOp>(defOp))
+      value = convert.getValue();
+    else if (auto declare = mlir::dyn_cast<hlfir::DeclareOp>(defOp))
+      value = declare.getMemref();
+    else
+      return false;
+  }
+  return false;
+}
+
 // Storing the coarray descriptor as a global variable
 void storeCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::Value coarrayHandle, std::string uniqName) {
@@ -1665,7 +1694,6 @@ struct MIFEventPostOpConversion
     mlir::Type i64Ty = builder.getI64Type();
     mlir::Type errmsgTy = getPRIFErrmsgType(builder);
     mlir::Type statTy = getPRIFStatType(builder);
-    mlir::Type eventType = fir::unwrapRefType(op.getEvent().getType());
     mlir::FunctionType ftype;
     mlir::func::FuncOp funcOp;
     llvm::SmallVector<mlir::Value> args;
@@ -1676,11 +1704,7 @@ struct MIFEventPostOpConversion
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
 
-    bool isCoarray = false;
-    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(eventType))
-      isCoarray = boxTy.isCoarray();
-
-    if (isCoarray) {
+    if (isCoarrayValue(op.getEvent())) {
       ftype = mlir::FunctionType::get(builder.getContext(),
                                       /*inputs*/
                                       {builder.getRefType(i32Ty), ptrTy,
@@ -1746,6 +1770,123 @@ struct MIFEventQueryOpConversion
     count = builder.createConvert(loc, op.getType(), count);
     rewriter.replaceOp(op, count);
     return mlir::success();
+  }
+};
+
+template <class T>
+mlir::LogicalResult AtomicOpConversion(T op, mlir::PatternRewriter &rewriter,
+                                       const std::string &prefix) {
+  auto mod = op->template getParentOfType<mlir::ModuleOp>();
+  fir::FirOpBuilder builder(rewriter, mod);
+  mlir::Location loc = op.getLoc();
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Type refTy = builder.getRefType(builder.getNoneType());
+  mlir::Type refI64Ty = builder.getRefType(i64Ty);
+
+  mlir::Value atom = op.getAtom();
+  bool atomIsCoarray = false;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(atom.getType()))
+    atomIsCoarray = boxTy.isCoarray();
+
+  if (!atomIsCoarray)
+    TODO(loc, "coarray: atomic operation on allocatable/pointer component.");
+
+  mlir::Value atomHandle = getCoarrayHandle(builder, loc, op.getAtom());
+  llvm::SmallVector<mlir::Type> funcArgTypes;
+  if (op.getOld())
+    funcArgTypes = {
+        builder.getRefType(i32Ty), refTy, refI64Ty, refI64Ty, refI64Ty,
+        getPRIFStatType(builder)};
+  else
+    funcArgTypes = {builder.getRefType(i32Ty), refTy, refI64Ty, refI64Ty,
+                    getPRIFStatType(builder)};
+  mlir::FunctionType ftype = mlir::FunctionType::get(
+      builder.getContext(), /*inputs*/ funcArgTypes, /*results*/ {});
+  mlir::func::FuncOp funcOp =
+      builder.createFunction(loc, getPRIFProcName(prefix), ftype);
+
+  mlir::Value offset = builder.createTemporary(loc, i64Ty);
+  mlir::Value offset_val = computeOffsetInBytes(builder, loc, op.getAtom());
+  fir::StoreOp::create(builder, loc, offset_val, offset);
+
+  mlir::Value value = builder.createTemporary(loc, i64Ty);
+  mlir::Value cstValue = builder.createConvert(loc, i64Ty, op.getValue());
+  fir::StoreOp::create(builder, loc, cstValue, value);
+
+  mlir::Value imageNum =
+      getInitialTeamIndex(builder, loc, atomHandle, op.getCosubscripts());
+  mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
+
+  llvm::SmallVector<mlir::Value> args;
+  if (op.getOld())
+    args =
+        fir::runtime::createArguments(builder, loc, ftype, imageNum, atomHandle,
+                                      offset, value, op.getOld(), stat);
+  else
+    args = fir::runtime::createArguments(builder, loc, ftype, imageNum,
+                                         atomHandle, offset, value, stat);
+  rewriter.replaceOpWithNewOp<fir::CallOp>(op, funcOp, args);
+  return mlir::success();
+}
+
+/// Convert mif.atomic(_fetch)_add operation to runtime call of
+/// 'prif_atomic(_fetch)_add'
+struct MIFAtomicAddOpConversion
+    : public mlir::OpRewritePattern<mif::AtomicAddOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::AtomicAddOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (op.getOld())
+      return AtomicOpConversion(op, rewriter, "atomic_fetch_add");
+    return AtomicOpConversion(op, rewriter, "atomic_add");
+  }
+};
+
+/// Convert mif.atomic(_fetch)_and operation to runtime call of
+/// 'prif_atomic(_fetch)_and'
+struct MIFAtomicAndOpConversion
+    : public mlir::OpRewritePattern<mif::AtomicAndOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::AtomicAndOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (op.getOld())
+      return AtomicOpConversion(op, rewriter, "atomic_fetch_and");
+    return AtomicOpConversion(op, rewriter, "atomic_and");
+  }
+};
+
+/// Convert mif.atomic(_fetch)_or operation to runtime call of
+/// 'prif_atomic(_fetch)_or'
+struct MIFAtomicOrOpConversion
+    : public mlir::OpRewritePattern<mif::AtomicOrOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::AtomicOrOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (op.getOld())
+      return AtomicOpConversion(op, rewriter, "atomic_fetch_or");
+    return AtomicOpConversion(op, rewriter, "atomic_or");
+  }
+};
+
+/// Convert mif.atomic(_fetch)_xor operation to runtime call of
+/// 'prif_atomic(_fetch)_xor'
+struct MIFAtomicXorOpConversion
+    : public mlir::OpRewritePattern<mif::AtomicXorOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::AtomicXorOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (op.getOld())
+      return AtomicOpConversion(op, rewriter, "atomic_fetch_xor");
+    return AtomicOpConversion(op, rewriter, "atomic_xor");
   }
 };
 
@@ -1835,6 +1976,7 @@ void mif::populateMIFOpConversionPatterns(
       MIFDeallocCoarrayOpConversion, MIFCoshapeOpConversion,
       MIFLcoboundOpConversion, MIFUcoboundOpConversion,
       MIFImageIndexOpConversion, MIFEventPostOpConversion,
-      MIFEventWaitOpConversion, MIFEventQueryOpConversion>(
-      patterns.getContext());
+      MIFEventWaitOpConversion, MIFEventQueryOpConversion,
+      MIFAtomicAddOpConversion, MIFAtomicAndOpConversion,
+      MIFAtomicOrOpConversion, MIFAtomicXorOpConversion>(patterns.getContext());
 }
