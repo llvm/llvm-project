@@ -76,6 +76,7 @@ public:
   }
 
 #  if _LIBCPP_STD_VER >= 26
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
     requires approximately_sized_range<_Range>
   {

@@ -23,23 +23,23 @@
 // making these ranges approximately_sized only via their member reserve_hint().
 
 struct ConstReserveHintView : std::ranges::view_base {
-  bool* hint_called;
+  mutable bool hint_called = false;
   constexpr auto begin() const { return forward_iterator<int*>(nullptr); }
   constexpr auto end() const { return sentinel_wrapper<forward_iterator<int*>>(forward_iterator<int*>(nullptr)); }
 
   constexpr unsigned int reserve_hint() const {
-    *hint_called = true;
+    hint_called = true;
     return 3;
   }
 };
 
 struct NonConstReserveHintView : std::ranges::view_base {
-  bool* hint_called;
+  bool hint_called = false;
   constexpr auto begin() const { return forward_iterator<int*>(nullptr); }
   constexpr auto end() const { return sentinel_wrapper<forward_iterator<int*>>(forward_iterator<int*>(nullptr)); }
 
   constexpr unsigned int reserve_hint() {
-    *hint_called = true;
+    hint_called = true;
     return 5;
   }
 };
@@ -62,17 +62,15 @@ static_assert(!HasReserveHint<const std::ranges::as_rvalue_view<NoReserveHintVie
 
 constexpr bool test() {
   {
-    bool hint_called = false;
-    std::ranges::as_rvalue_view view(ConstReserveHintView{{}, &hint_called});
+    std::ranges::as_rvalue_view view(ConstReserveHintView{});
     assert(view.reserve_hint() == 3);
-    assert(hint_called);
+    assert(view.base().hint_called);
   }
 
   {
-    bool hint_called = false;
-    std::ranges::as_rvalue_view view(NonConstReserveHintView{{}, &hint_called});
+    std::ranges::as_rvalue_view view(NonConstReserveHintView{});
     assert(view.reserve_hint() == 5);
-    assert(hint_called);
+    assert(view.base().hint_called);
   }
 
   return true;

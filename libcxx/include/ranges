@@ -55,7 +55,7 @@ namespace std::ranges {
 
   // [range.approximately.sized], approximately sized ranges
   template<class T>
-    concept approximately_sized_range = ...;
+    concept approximately_sized_range = ...; // Since C++26
 
   // [range.sized], sized ranges
   template<class>
