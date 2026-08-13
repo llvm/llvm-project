@@ -95,10 +95,8 @@ struct TestInt {
       int* last = data + n;
 
       std::uninitialized_default_construct_n(policy, Iter(data), n);
-      for (int i = 0; i != n; ++i) {
-        data[i] = -i;
-        assert(data[i] == -i);
-      }
+      // There's nothing we can meaningfully test here, since default-constructing an int is only observable in constexpr contexts,
+      // but still run the algorithm to excercise the runtime.
 
       std::destroy(data, last);
       alloc.deallocate(data, n);
