@@ -655,7 +655,7 @@ class TMA_IM2COL_UTIL<int dim, string mode> {
 //   im2col        -> im2col_no_offs
 //   im2col_w      -> im2col_no_offs::w
 //   tile_scatter4 -> tile::scatter4
-class TMA_MODE_ASM_UTIL<string mode> {
+class TMA_S2G_MODE_ASM_UTIL<string mode> {
   string ret = !cond(
     !eq(mode, "im2col")        : "im2col_no_offs",
     !eq(mode, "im2col_w")      : "im2col_no_offs::w",
@@ -828,7 +828,7 @@ multiclass TMA_TENSOR_S2G_INTR<int dim, string mode,
                                  (intr B64:$ch, -1));
 
   // Fix-up the asm_str when it is im2col/scatter4.
-  defvar mode_asm_str = TMA_MODE_ASM_UTIL<mode>.ret;
+  defvar mode_asm_str = TMA_S2G_MODE_ASM_UTIL<mode>.ret;
   defvar prefix = "cp.async.bulk.tensor"
                   # "." # dim_val # "d"
                   # ".global.shared::cta"
@@ -911,7 +911,7 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<int dim, string mode,
                                                     string override> {
   defvar base = TMA_TENSOR_OVERRIDE_BASE<dim, mode, override>;
   defvar is_scatter4 = !eq(mode, "tile_scatter4");
-  defvar mode_asm_str = TMA_MODE_ASM_UTIL<mode>.ret;
+  defvar mode_asm_str = TMA_S2G_MODE_ASM_UTIL<mode>.ret;
   defvar inst_name = "cp.async.bulk.tensor." # !if(is_scatter4, 2, dim) #
                      "d.global.shared::cta." # mode_asm_str # ".bulk_group";
   defvar suffix = base.override_suffix;
@@ -943,7 +943,7 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<int dim, string mode,
   defvar intr_dag_ch =
       !con(intr_dag_base, (intr i64:$ch, -1));
 
-  let Predicates = [callSubtarget<"hasRubinFamilySupport">] in {
+  let Predicates = [hasRubinFamilySupport] in {
     def "" : NVPTXInst<(outs), ins_dag,
              inst_name # suffix # asm_operands # ";",
              [intr_dag]>;
@@ -964,7 +964,7 @@ def tma_tensor_reduction_imm :
 multiclass NVPTX_CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<int dim, string mode,
                                                     string override> {
   defvar base = TMA_TENSOR_OVERRIDE_BASE<dim, mode, override>;
-  defvar mode_asm_str = TMA_MODE_ASM_UTIL<mode>.ret;
+  defvar mode_asm_str = TMA_S2G_MODE_ASM_UTIL<mode>.ret;
   defvar inst_name = "cp.reduce.async.bulk.tensor." # dim #
                      "d.global.shared::cta";
   defvar suffix = "." # mode_asm_str # ".bulk_group" # base.override_suffix;
@@ -1000,7 +1000,7 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<int dim, string mode,
       !con(intr_dag_base,
            (intr B64:$ch, tma_tensor_reduction_imm:$red_op, -1));
 
-  let Predicates = [callSubtarget<"hasRubinFamilySupport">] in {
+  let Predicates = [hasRubinFamilySupport] in {
     def "" : NVPTXInst<(outs), ins_dag,
              inst_name # "${red_op}" # suffix # asm_operands # ";",
              [intr_dag]>;
@@ -1017,21 +1017,17 @@ foreach dim = 1...5 in {
     foreach override = !if(!eq(mode, "tile"),
                             ["override_addr", "override_addr_dim_stride"],
                             ["override_addr"]) in {
-      defm S2G_ # dim # "D_" #
-               !toupper(!subst("::", "_", mode) # "_" # override)
-          : NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<
-                dim, mode, override>;
-      defm RED_ # dim # "D_" #
-               !toupper(!subst("::", "_", mode) # "_" # override)
-          : NVPTX_CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<
-                dim, mode, override>;
+      defvar suffix = dim # "D_" # !toupper(mode # "_" # override);
+      defm S2G_ # suffix
+          : NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<dim, mode, override>;
+      defm RED_ # suffix
+          : NVPTX_CP_ASYNC_BULK_TENSOR_REDUCE_OVERRIDE_INTR<dim, mode, override>;
     }
   }
 }
 
 defm S2G_2D_TILE_SCATTER4_OVERRIDE_ADDR
-    : NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<
-          5, "tile_scatter4", "override_addr">;
+    : NVPTX_CP_ASYNC_BULK_TENSOR_S2G_OVERRIDE_INTR<5, "tile_scatter4", "override_addr">;
 
 // TMA Copy from Shared to Global memory with Reduction
 multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode,
@@ -1040,7 +1036,7 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode,
   defvar dims_str = TMA_DIMS_UTIL<dim>.base_str;
   defvar asm_str = " [$tmap, {{" # dims_str # "}}], [$src]";
 
-  defvar mode_asm_str = TMA_MODE_ASM_UTIL<mode>.ret;
+  defvar mode_asm_str = TMA_S2G_MODE_ASM_UTIL<mode>.ret;
   defvar prefix = "cp.reduce.async.bulk.tensor"
                   # "." # dim # "d"
                   # ".global.shared::cta";

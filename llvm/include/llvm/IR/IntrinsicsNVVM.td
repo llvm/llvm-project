@@ -1270,7 +1270,7 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
 
 // For im2col mode the number of offsets is (dim - 2).
 // For im2col_w / im2col_w_128 modes it is always 2 (wHalo and wOffset),
-//   irrespective of dim.
+// irrespective of dim.
 // For all other modes (e.g. tile) there are no offsets.
 class TMA_IM2COL_OFFSETS_UTIL<int dim, string mode> {
   int num = !cond(
