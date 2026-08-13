@@ -1972,6 +1972,7 @@ public:
               Status::FromErrorStringWithFormatv("Argument definition element "
                                                  "{0} is not an array",
                                                  counter);
+          return false;
         }
         
         args_array->ForEach(args_adder);
