@@ -403,6 +403,10 @@
 // MARCH-UNSET: "-target-feature" "+c"
 // MARCH-UNSET-SAME: "-target-abi" "ilp32"
 
+// Invalid -march= is an error even with a valid -mcpu
+// RUN: not %clang --target=riscv32 -### -c %s 2>&1 -march=rv32imc -march=bad -mcpu=sifive-e31 | FileCheck -check-prefix=MARCH-INVALID-MCPU %s
+// MARCH-INVALID-MCPU: invalid arch name 'bad', string must begin with rv32{i,e,g,y}, rv64{i,e,g,y}, or a supported profile name
+
 // Check interaction between -mcpu and mtune, -mtune won't affect arch related
 // target feature, but -mcpu will.
 //
