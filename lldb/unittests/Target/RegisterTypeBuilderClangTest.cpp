@@ -70,6 +70,8 @@ TEST_F(RegisterTypeBuilderClangTest, ReusesCachedType) {
   EXPECT_EQ(first, second);
 }
 
+// XML type IDs are scoped to a feature, so separate features may define
+// different types using the same ID.
 TEST_F(RegisterTypeBuilderClangTest, DistinguishesTypesWithTheSameID) {
   Target &target = m_debugger_sp->GetDummyTarget();
   RegisterTypeFlags first_flags("flags", 4,

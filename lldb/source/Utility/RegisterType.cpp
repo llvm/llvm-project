@@ -12,9 +12,7 @@
 
 using namespace lldb_private;
 
-namespace {
-std::atomic<uint64_t> g_next_register_type_uid{1};
-}
+static std::atomic<uint64_t> g_next_register_type_uid{1};
 
 RegisterType::RegisterType(RegisterTypeKind kind, std::string id)
     : m_kind(kind), m_id(std::move(id)),

@@ -51,7 +51,9 @@ public:
 
   const std::string &GetID() const { return m_id; }
 
-  /// Return an identifier unique for the lifetime of this debugger process.
+  /// Return an identifier unique among all RegisterType instances constructed
+  /// during the lifetime of the LLDB host process. The identifier is not
+  /// reused after this instance is destroyed.
   uint64_t GetUID() const { return m_uid; }
 
   void SetDependencies(std::vector<const RegisterType *> dependencies) {

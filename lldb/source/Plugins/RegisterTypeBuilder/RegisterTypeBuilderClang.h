@@ -47,7 +47,7 @@ private:
   // IDs are not unique across xml <feature> elements and this class does not
   // know anything about features.
   //
-  // The key contains the lifetime-unique ID of the type and the size of the
+  // The key contains the process-wide UID of the type and the size of the
   // register we made it for. Some types (enums for example) use the register
   // size in their type and must be rebuilt for a different size.
   //
