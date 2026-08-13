@@ -655,32 +655,24 @@ func.func @lowered_affine_ceildiv() -> (index, index) {
 // CHECK-DAG:  %c-1 = arith.constant -1 : index
   %c-43 = arith.constant -43 : index
   %c42 = arith.constant 42 : index
-  %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %0 = arith.cmpi sle, %c-43, %c0 : index
-  %1 = arith.subi %c0, %c-43 : index
-  %2 = arith.subi %c-43, %c1 : index
-  %3 = arith.select %0, %1, %2 : index
-  %4 = arith.divsi %3, %c42 : index
-  %5 = arith.subi %c0, %4 : index
-  %6 = arith.addi %4, %c1 : index
-  %7 = arith.select %0, %5, %6 : index
+  %0 = arith.divsi %c-43, %c42 : index
+  %1 = arith.muli %0, %c42 : index
+  %2 = arith.cmpi sgt, %c-43, %1 : index
+  %3 = arith.addi %0, %c1 : index
+  %4 = arith.select %2, %3, %0 : index
 // CHECK-DAG:  %c2 = arith.constant 2 : index
   %c43 = arith.constant 43 : index
   %c42_0 = arith.constant 42 : index
-  %c0_1 = arith.constant 0 : index
-  %c1_2 = arith.constant 1 : index
-  %8 = arith.cmpi sle, %c43, %c0_1 : index
-  %9 = arith.subi %c0_1, %c43 : index
-  %10 = arith.subi %c43, %c1_2 : index
-  %11 = arith.select %8, %9, %10 : index
-  %12 = arith.divsi %11, %c42_0 : index
-  %13 = arith.subi %c0_1, %12 : index
-  %14 = arith.addi %12, %c1_2 : index
-  %15 = arith.select %8, %13, %14 : index
+  %c1_0 = arith.constant 1 : index
+  %5 = arith.divsi %c43, %c42_0 : index
+  %6 = arith.muli %5, %c42_0 : index
+  %7 = arith.cmpi sgt, %c43, %6 : index
+  %8 = arith.addi %5, %c1_0 : index
+  %9 = arith.select %7, %8, %5 : index
 
   // CHECK-NEXT: return %c-1, %c2
-  return %7, %15 : index, index
+  return %4, %9 : index, index
 }
 
 // Checks that NOP casts are removed.
