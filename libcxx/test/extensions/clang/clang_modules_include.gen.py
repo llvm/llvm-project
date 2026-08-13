@@ -24,9 +24,6 @@
 # The Android headers don't appear to be compatible with modules yet
 # UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
-# TODO: Investigate this failure
-# UNSUPPORTED: LIBCXX-FREEBSD-FIXME
-
 # TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
 # UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
