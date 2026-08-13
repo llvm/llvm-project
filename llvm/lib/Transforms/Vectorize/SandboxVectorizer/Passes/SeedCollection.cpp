@@ -60,11 +60,14 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
                      AllowDiffTypes);
     for (auto &SeedRange : {SC.getStoreSeeds(), SC.getLoadSeeds()}) {
       for (SeedBundle &Seeds : SeedRange) {
+        if (Seeds.allUsed())
+          continue;
+        unsigned FirstUnusedIdx = Seeds.getFirstUnusedElementIdx();
         unsigned ElmBits =
             Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
-                                  Seeds[Seeds.getFirstUnusedElementIdx()])),
+                                  Seeds[FirstUnusedIdx])),
                               DL);
-        unsigned AS = getLoadStoreAddressSpace(Seeds[0]);
+        unsigned AS = getLoadStoreAddressSpace(Seeds[FirstUnusedIdx]);
         unsigned VecRegBits = OverrideVecRegBits != 0
                                   ? OverrideVecRegBits
                                   : A.getTTI().getLoadStoreVecRegBitWidth(AS);
