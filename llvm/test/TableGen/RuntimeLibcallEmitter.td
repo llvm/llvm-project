@@ -13,14 +13,11 @@ def MEMCPY : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
 
-// Test default names.
-let IsDefault = true in {
-  def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
-  def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
+def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
+def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
 
-  def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
-  def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
-}
+def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
+def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
 
 // Ignore non-default in initDefaultLibCallNames.
 def bzero : RuntimeLibcallImpl<BZERO>;
