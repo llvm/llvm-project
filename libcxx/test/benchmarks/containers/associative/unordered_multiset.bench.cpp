@@ -17,7 +17,7 @@ template <class K>
 struct support::adapt_operations<std::unordered_multiset<K>> {
   using ValueType = typename std::unordered_multiset<K>::value_type;
   using KeyType   = typename std::unordered_multiset<K>::key_type;
-  static ValueType create_value_from_key(KeyType const& k) { return k; }
+  static ValueType make_value_from_key(KeyType const& k) { return k; }
   static KeyType const& key_from_value(ValueType const& value) { return value; }
 
   using InsertionResult = typename std::unordered_multiset<K>::iterator;

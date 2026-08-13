@@ -18,7 +18,7 @@ template <class K, class V>
 struct support::adapt_operations<std::unordered_multimap<K, V>> {
   using ValueType = typename std::unordered_multimap<K, V>::value_type;
   using KeyType   = typename std::unordered_multimap<K, V>::key_type;
-  static ValueType create_value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
+  static ValueType make_value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
   static KeyType const& key_from_value(ValueType const& value) { return value.first; }
 
   using InsertionResult = typename std::unordered_multimap<K, V>::iterator;

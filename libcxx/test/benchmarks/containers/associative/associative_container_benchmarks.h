@@ -29,7 +29,7 @@ template <class Container>
 struct adapt_operations {
   // using ValueType = ...;
   // using KeyType   = ...;
-  // static ValueType create_value_from_key(KeyType const& k);
+  // static ValueType make_value_from_key(KeyType const& k);
   // static KeyType const& key_from_value(ValueType const& value);
 
   // using InsertionResult = ...;
@@ -56,7 +56,7 @@ void associative_container_benchmarks(std::string container) {
   auto make_value_types = [](std::vector<Key> const& keys) {
     std::vector<Value> kv;
     for (Key const& k : keys)
-      kv.push_back(adapt_operations<Container>::create_value_from_key(k));
+      kv.push_back(adapt_operations<Container>::make_value_from_key(k));
     return kv;
   };
 
