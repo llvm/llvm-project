@@ -1262,6 +1262,7 @@ static bool justRunCheckersAsPostVisit(const Stmt *S) {
   case Expr::ObjCBoxedExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::ObjCIvarRefExprClass:
+  case Stmt::ObjCForCollectionStmtClass:
   case Stmt::BlockExprClass:
   case Stmt::ImplicitCastExprClass:
   case Stmt::CStyleCastExprClass:

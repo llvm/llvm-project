@@ -123,9 +123,7 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
     populateObjCForDestinationSet(S, N, Tmp, elementV, /*hasElements=*/false);
 
-    // Finally, run any custom checkers.
-    // FIXME: Eventually all pre- and post-checks should live in VisitStmt.
-    getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
+    Dst.insert(Tmp);
   }
 }
 
