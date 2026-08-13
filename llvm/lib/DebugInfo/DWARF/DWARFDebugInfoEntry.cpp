@@ -30,7 +30,7 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
                           "DWARF unit from offset 0x%8.8" PRIx64 " incl. "
                           "to offset 0x%8.8" PRIx64 " excl. "
                           "tries to read DIEs at offset 0x%8.8" PRIx64,
-                          U.getOffset(), U.getNextUnitOffset(), *OffsetPtr));
+                          U.getOffset(), UEndOffset, *OffsetPtr));
     return false;
   }
   assert(DebugInfoData.isValidOffset(UEndOffset - 1));
