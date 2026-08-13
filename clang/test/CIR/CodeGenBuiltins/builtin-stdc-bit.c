@@ -395,6 +395,212 @@ unsigned int test_stdc_bit_width(unsigned char uc, unsigned short us,
 // OGCG: sub i64 64, %{{.*}}
 // OGCG: trunc i64 %{{.*}} to i32
 
+unsigned int test_stdc_first_leading_zero(unsigned char uc, unsigned short us,
+                                          unsigned int ui, unsigned long ul,
+                                          unsigned long long ull) {
+  volatile unsigned int r;
+  r = __builtin_stdc_first_leading_zero(uc);
+  r = __builtin_stdc_first_leading_zero(us);
+  r = __builtin_stdc_first_leading_zero(ui);
+  r = __builtin_stdc_first_leading_zero(ul);
+  r = __builtin_stdc_first_leading_zero(ull);
+  return r;
+}
+
+// CIR-LABEL: @test_stdc_first_leading_zero(
+// CIR: cir.not %{{.+}} : !u8i
+// CIR: cir.clz %{{.+}} : !u8i
+// CIR: cir.select
+// CIR: cir.not %{{.+}} : !u16i
+// CIR: cir.clz %{{.+}} : !u16i
+// CIR: cir.select
+// CIR: cir.not %{{.+}} : !u32i
+// CIR: cir.clz %{{.+}} : !u32i
+// CIR: cir.select
+// CIR: cir.not %{{.+}} : !u64i
+// CIR: cir.clz %{{.+}} : !u64i
+// CIR: cir.select
+// CIR: cir.not %{{.+}} : !u64i
+// CIR: cir.clz %{{.+}} : !u64i
+// CIR: cir.select
+// LLVM-LABEL: @test_stdc_first_leading_zero(
+// LLVM: xor i8 %{{.*}}, -1
+// LLVM: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LLVM: zext i8 %{{.*}} to i32
+// LLVM: xor i16 %{{.*}}, -1
+// LLVM: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LLVM: zext i16 %{{.*}} to i32
+// LLVM: xor i32 %{{.*}}, -1
+// LLVM: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LLVM: xor i64 %{{.*}}, -1
+// LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
+// LLVM: xor i64 %{{.*}}, -1
+// LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
+// OGCG-LABEL: @test_stdc_first_leading_zero(
+// OGCG: xor i8 %{{.*}}, -1
+// OGCG: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// OGCG: zext i8 %{{.*}} to i32
+// OGCG: xor i16 %{{.*}}, -1
+// OGCG: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// OGCG: zext i16 %{{.*}} to i32
+// OGCG: xor i32 %{{.*}}, -1
+// OGCG: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// OGCG: xor i64 %{{.*}}, -1
+// OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
+// OGCG: xor i64 %{{.*}}, -1
+// OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
+
+unsigned int test_stdc_first_leading_one(unsigned char uc, unsigned short us,
+                                         unsigned int ui, unsigned long ul,
+                                         unsigned long long ull) {
+  volatile unsigned int r;
+  r = __builtin_stdc_first_leading_one(uc);
+  r = __builtin_stdc_first_leading_one(us);
+  r = __builtin_stdc_first_leading_one(ui);
+  r = __builtin_stdc_first_leading_one(ul);
+  r = __builtin_stdc_first_leading_one(ull);
+  return r;
+}
+
+// CIR-LABEL: @test_stdc_first_leading_one(
+// CIR: cir.clz %{{.+}} : !u8i
+// CIR: cir.select
+// CIR: cir.clz %{{.+}} : !u16i
+// CIR: cir.select
+// CIR: cir.clz %{{.+}} : !u32i
+// CIR: cir.select
+// CIR: cir.clz %{{.+}} : !u64i
+// CIR: cir.select
+// CIR: cir.clz %{{.+}} : !u64i
+// CIR: cir.select
+// LLVM-LABEL: @test_stdc_first_leading_one(
+// LLVM: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// LLVM: zext i8 %{{.*}} to i32
+// LLVM: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// LLVM: zext i16 %{{.*}} to i32
+// LLVM: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
+// LLVM: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
+// OGCG-LABEL: @test_stdc_first_leading_one(
+// OGCG: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
+// OGCG: zext i8 %{{.*}} to i32
+// OGCG: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
+// OGCG: zext i16 %{{.*}} to i32
+// OGCG: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
+// OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
+// OGCG: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
+
+unsigned int test_stdc_first_trailing_zero(unsigned char uc, unsigned short us,
+                                           unsigned int ui, unsigned long ul,
+                                           unsigned long long ull) {
+  volatile unsigned int r;
+  r = __builtin_stdc_first_trailing_zero(uc);
+  r = __builtin_stdc_first_trailing_zero(us);
+  r = __builtin_stdc_first_trailing_zero(ui);
+  r = __builtin_stdc_first_trailing_zero(ul);
+  r = __builtin_stdc_first_trailing_zero(ull);
+  return r;
+}
+
+// CIR-LABEL: @test_stdc_first_trailing_zero(
+// CIR: cir.not %{{.+}} : !u8i
+// CIR: cir.ctz %{{.+}} : !u8i
+// CIR: cir.select
+// CIR: cir.not %{{.+}} : !u16i
+// CIR: cir.ctz %{{.+}} : !u16i
+// CIR: cir.select
+// CIR: cir.not %{{.+}} : !u32i
+// CIR: cir.ctz %{{.+}} : !u32i
+// CIR: cir.select
+// CIR: cir.not %{{.+}} : !u64i
+// CIR: cir.ctz %{{.+}} : !u64i
+// CIR: cir.select
+// CIR: cir.not %{{.+}} : !u64i
+// CIR: cir.ctz %{{.+}} : !u64i
+// CIR: cir.select
+// LLVM-LABEL: @test_stdc_first_trailing_zero(
+// LLVM: xor i8 %{{.*}}, -1
+// LLVM: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// LLVM: zext i8 %{{.*}} to i32
+// LLVM: xor i16 %{{.*}}, -1
+// LLVM: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// LLVM: zext i16 %{{.*}} to i32
+// LLVM: xor i32 %{{.*}}, -1
+// LLVM: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+// LLVM: xor i64 %{{.*}}, -1
+// LLVM: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
+// LLVM: xor i64 %{{.*}}, -1
+// LLVM: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
+// OGCG-LABEL: @test_stdc_first_trailing_zero(
+// OGCG: xor i8 %{{.*}}, -1
+// OGCG: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// OGCG: zext i8 %{{.*}} to i32
+// OGCG: xor i16 %{{.*}}, -1
+// OGCG: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// OGCG: zext i16 %{{.*}} to i32
+// OGCG: xor i32 %{{.*}}, -1
+// OGCG: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+// OGCG: xor i64 %{{.*}}, -1
+// OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
+// OGCG: xor i64 %{{.*}}, -1
+// OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
+
+unsigned int test_stdc_first_trailing_one(unsigned char uc, unsigned short us,
+                                          unsigned int ui, unsigned long ul,
+                                          unsigned long long ull) {
+  volatile unsigned int r;
+  r = __builtin_stdc_first_trailing_one(uc);
+  r = __builtin_stdc_first_trailing_one(us);
+  r = __builtin_stdc_first_trailing_one(ui);
+  r = __builtin_stdc_first_trailing_one(ul);
+  r = __builtin_stdc_first_trailing_one(ull);
+  return r;
+}
+
+// CIR-LABEL: @test_stdc_first_trailing_one(
+// CIR: cir.ctz %{{.+}} : !u8i
+// CIR: cir.select
+// CIR: cir.ctz %{{.+}} : !u16i
+// CIR: cir.select
+// CIR: cir.ctz %{{.+}} : !u32i
+// CIR: cir.select
+// CIR: cir.ctz %{{.+}} : !u64i
+// CIR: cir.select
+// CIR: cir.ctz %{{.+}} : !u64i
+// CIR: cir.select
+// LLVM-LABEL: @test_stdc_first_trailing_one(
+// LLVM: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// LLVM: zext i8 %{{.*}} to i32
+// LLVM: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// LLVM: zext i16 %{{.*}} to i32
+// LLVM: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+// LLVM: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
+// LLVM: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// LLVM: trunc i64 %{{.*}} to i32
+// OGCG-LABEL: @test_stdc_first_trailing_one(
+// OGCG: call i8 @llvm.cttz.i8(i8 %{{.*}}, i1 false)
+// OGCG: zext i8 %{{.*}} to i32
+// OGCG: call i16 @llvm.cttz.i16(i16 %{{.*}}, i1 false)
+// OGCG: zext i16 %{{.*}} to i32
+// OGCG: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 false)
+// OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
+// OGCG: call i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// OGCG: trunc i64 %{{.*}} to i32
+
 void test_stdc_bit_floor(unsigned char uc, unsigned short us, unsigned int ui,
                          unsigned long ul, unsigned long long ull) {
   volatile unsigned char ruc;
@@ -578,6 +784,120 @@ unsigned int test_stdc_leading_ones_lib(unsigned char uc, unsigned short us,
 // LIB-CIR: cir.clz %{{.+}} : !u64i
 // LIB-CIR: cir.not %{{.+}} : !u64i
 // LIB-CIR: cir.clz %{{.+}} : !u64i
+
+unsigned int test_stdc_first_leading_zero_lib(unsigned char uc,
+                                              unsigned short us,
+                                              unsigned int ui,
+                                              unsigned long ul,
+                                              unsigned long long ull) {
+  volatile unsigned int r;
+  r = stdc_first_leading_zero_uc(uc);
+  r = stdc_first_leading_zero_us(us);
+  r = stdc_first_leading_zero_ui(ui);
+  r = stdc_first_leading_zero_ul(ul);
+  r = stdc_first_leading_zero_ull(ull);
+  return r;
+}
+
+// LIB-CIR-LABEL: @test_stdc_first_leading_zero_lib(
+// LIB-CIR: cir.not %{{.+}} : !u8i
+// LIB-CIR: cir.clz %{{.+}} : !u8i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.not %{{.+}} : !u16i
+// LIB-CIR: cir.clz %{{.+}} : !u16i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.not %{{.+}} : !u32i
+// LIB-CIR: cir.clz %{{.+}} : !u32i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.not %{{.+}} : !u64i
+// LIB-CIR: cir.clz %{{.+}} : !u64i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.not %{{.+}} : !u64i
+// LIB-CIR: cir.clz %{{.+}} : !u64i
+// LIB-CIR: cir.select
+
+unsigned int test_stdc_first_leading_one_lib(unsigned char uc,
+                                             unsigned short us,
+                                             unsigned int ui,
+                                             unsigned long ul,
+                                             unsigned long long ull) {
+  volatile unsigned int r;
+  r = stdc_first_leading_one_uc(uc);
+  r = stdc_first_leading_one_us(us);
+  r = stdc_first_leading_one_ui(ui);
+  r = stdc_first_leading_one_ul(ul);
+  r = stdc_first_leading_one_ull(ull);
+  return r;
+}
+
+// LIB-CIR-LABEL: @test_stdc_first_leading_one_lib(
+// LIB-CIR: cir.clz %{{.+}} : !u8i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.clz %{{.+}} : !u16i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.clz %{{.+}} : !u32i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.clz %{{.+}} : !u64i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.clz %{{.+}} : !u64i
+// LIB-CIR: cir.select
+
+unsigned int test_stdc_first_trailing_zero_lib(unsigned char uc,
+                                               unsigned short us,
+                                               unsigned int ui,
+                                               unsigned long ul,
+                                               unsigned long long ull) {
+  volatile unsigned int r;
+  r = stdc_first_trailing_zero_uc(uc);
+  r = stdc_first_trailing_zero_us(us);
+  r = stdc_first_trailing_zero_ui(ui);
+  r = stdc_first_trailing_zero_ul(ul);
+  r = stdc_first_trailing_zero_ull(ull);
+  return r;
+}
+
+// LIB-CIR-LABEL: @test_stdc_first_trailing_zero_lib(
+// LIB-CIR: cir.not %{{.+}} : !u8i
+// LIB-CIR: cir.ctz %{{.+}} : !u8i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.not %{{.+}} : !u16i
+// LIB-CIR: cir.ctz %{{.+}} : !u16i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.not %{{.+}} : !u32i
+// LIB-CIR: cir.ctz %{{.+}} : !u32i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.not %{{.+}} : !u64i
+// LIB-CIR: cir.ctz %{{.+}} : !u64i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.not %{{.+}} : !u64i
+// LIB-CIR: cir.ctz %{{.+}} : !u64i
+// LIB-CIR: cir.select
+
+unsigned int test_stdc_first_trailing_one_lib(unsigned char uc,
+                                              unsigned short us,
+                                              unsigned int ui,
+                                              unsigned long ul,
+                                              unsigned long long ull) {
+  volatile unsigned int r;
+  r = stdc_first_trailing_one_uc(uc);
+  r = stdc_first_trailing_one_us(us);
+  r = stdc_first_trailing_one_ui(ui);
+  r = stdc_first_trailing_one_ul(ul);
+  r = stdc_first_trailing_one_ull(ull);
+  return r;
+}
+
+// LIB-CIR-LABEL: @test_stdc_first_trailing_one_lib(
+// LIB-CIR: cir.ctz %{{.+}} : !u8i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.ctz %{{.+}} : !u16i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.ctz %{{.+}} : !u32i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.ctz %{{.+}} : !u64i
+// LIB-CIR: cir.select
+// LIB-CIR: cir.ctz %{{.+}} : !u64i
+// LIB-CIR: cir.select
 
 _Bool test_stdc_has_single_bit_lib(unsigned char uc, unsigned short us,
                                    unsigned int ui, unsigned long ul,

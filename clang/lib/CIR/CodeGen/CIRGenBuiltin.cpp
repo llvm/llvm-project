@@ -138,6 +138,33 @@ static RValue errorBuiltinCallNYI(CIRGenFunction &cgf, const CallExpr *e,
   return cgf.getUndefRValue(e->getType());
 }
 
+template <typename Op, typename... Args>
+static RValue emitStdcFirstBit(CIRGenFunction &cgf, const CallExpr *e,
+                               bool invertArg, Args... args) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  auto argTy = mlir::cast<cir::IntType>(arg.getType());
+  if (!isStdcBitOpWidthSupported(argTy))
+    return errorStdcBitOpWidthNYI(cgf, e);
+
+  mlir::Value actualArg = invertArg ? builder.createNot(loc, arg) : arg;
+  mlir::Value count = Op::create(builder, loc, actualArg, args...).getResult();
+
+  mlir::Value zero = builder.getNullValue(argTy, loc);
+  mlir::Value one = builder.getConstInt(loc, argTy, 1);
+  mlir::Value countPlusOne = builder.createAdd(loc, count, one);
+  mlir::Value isZero =
+      builder.createCompare(loc, cir::CmpOpKind::eq, actualArg, zero);
+  mlir::Value result = builder.createSelect(loc, isZero, zero, countPlusOne);
+
+  mlir::Type resultTy = cgf.convertType(e->getType());
+  if (result.getType() != resultTy)
+    result = builder.createIntCast(result, resultTy);
+
+  return RValue::get(result);
+}
+
 // stdc_{leading,trailing}_{zeros,ones} and stdc_count_ones: counts bits using
 // clz, ctz, or popcount. InvertArg flips the input to count the opposite bit
 // value.
@@ -1430,25 +1457,35 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_first_leading_zero_ul:
   case Builtin::BIstdc_first_leading_zero_ull:
   case Builtin::BI__builtin_stdc_first_leading_zero:
+    return emitStdcFirstBit<cir::BitClzOp>(*this, e, /*invertArg=*/true,
+                                           /*poisonZero=*/false);
+
   case Builtin::BIstdc_first_leading_one_uc:
   case Builtin::BIstdc_first_leading_one_us:
   case Builtin::BIstdc_first_leading_one_ui:
   case Builtin::BIstdc_first_leading_one_ul:
   case Builtin::BIstdc_first_leading_one_ull:
   case Builtin::BI__builtin_stdc_first_leading_one:
+    return emitStdcFirstBit<cir::BitClzOp>(*this, e, /*invertArg=*/false,
+                                           /*poisonZero=*/false);
+
   case Builtin::BIstdc_first_trailing_zero_uc:
   case Builtin::BIstdc_first_trailing_zero_us:
   case Builtin::BIstdc_first_trailing_zero_ui:
   case Builtin::BIstdc_first_trailing_zero_ul:
   case Builtin::BIstdc_first_trailing_zero_ull:
   case Builtin::BI__builtin_stdc_first_trailing_zero:
+    return emitStdcFirstBit<cir::BitCtzOp>(*this, e, /*invertArg=*/true,
+                                           /*poisonZero=*/false);
+
   case Builtin::BIstdc_first_trailing_one_uc:
   case Builtin::BIstdc_first_trailing_one_us:
   case Builtin::BIstdc_first_trailing_one_ui:
   case Builtin::BIstdc_first_trailing_one_ul:
   case Builtin::BIstdc_first_trailing_one_ull:
   case Builtin::BI__builtin_stdc_first_trailing_one:
-    return errorBuiltinCallNYI(*this, e, builtinID);
+    return emitStdcFirstBit<cir::BitCtzOp>(*this, e, /*invertArg=*/false,
+                                           /*poisonZero=*/false);
 
   case Builtin::BIstdc_bit_ceil_uc:
   case Builtin::BIstdc_bit_ceil_us:

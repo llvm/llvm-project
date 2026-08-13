@@ -15,6 +15,10 @@ void test_unimplemented_builtin_stdc_bit(unsigned int ui,
   (void)__builtin_stdc_count_zeros(bi);   // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
   (void)__builtin_stdc_has_single_bit(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
   (void)__builtin_stdc_bit_floor(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
+  (void)__builtin_stdc_first_leading_zero(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
+  (void)__builtin_stdc_first_leading_one(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
+  (void)__builtin_stdc_first_trailing_zero(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
+  (void)__builtin_stdc_first_trailing_one(bi); // expected-error {{ClangIR code gen Not Yet Implemented: stdc bit builtin with unsupported argument integer width}}
 }
 
 #else
@@ -22,10 +26,6 @@ void test_unimplemented_builtin_stdc_bit(unsigned int ui,
 void test_unimplemented_stdc_first(unsigned int x) {
   volatile unsigned int r;
   r = stdc_bit_ceil_ui(x);  // expected-error {{ClangIR code gen Not Yet Implemented: unimplemented builtin call: stdc_bit_ceil_ui}}
-  (void)stdc_first_leading_zero_ui(x);  // expected-error {{ClangIR code gen Not Yet Implemented: unimplemented builtin call: stdc_first_leading_zero_ui}}
-  (void)stdc_first_leading_one_ui(x);   // expected-error {{ClangIR code gen Not Yet Implemented: unimplemented builtin call: stdc_first_leading_one_ui}}
-  (void)stdc_first_trailing_zero_ui(x); // expected-error {{ClangIR code gen Not Yet Implemented: unimplemented builtin call: stdc_first_trailing_zero_ui}}
-  (void)stdc_first_trailing_one_ui(x);  // expected-error {{ClangIR code gen Not Yet Implemented: unimplemented builtin call: stdc_first_trailing_one_ui}}
 }
 
 #endif

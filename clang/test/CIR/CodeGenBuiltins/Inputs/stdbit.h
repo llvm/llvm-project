@@ -43,10 +43,29 @@ _Bool stdc_has_single_bit_ui(unsigned int);
 _Bool stdc_has_single_bit_ul(unsigned long);
 _Bool stdc_has_single_bit_ull(unsigned long long);
 
+unsigned int stdc_first_leading_zero_uc(unsigned char);
+unsigned int stdc_first_leading_zero_us(unsigned short);
 unsigned int stdc_first_leading_zero_ui(unsigned int);
+unsigned int stdc_first_leading_zero_ul(unsigned long);
+unsigned int stdc_first_leading_zero_ull(unsigned long long);
+
+unsigned int stdc_first_leading_one_uc(unsigned char);
+unsigned int stdc_first_leading_one_us(unsigned short);
 unsigned int stdc_first_leading_one_ui(unsigned int);
+unsigned int stdc_first_leading_one_ul(unsigned long);
+unsigned int stdc_first_leading_one_ull(unsigned long long);
+
+unsigned int stdc_first_trailing_zero_uc(unsigned char);
+unsigned int stdc_first_trailing_zero_us(unsigned short);
 unsigned int stdc_first_trailing_zero_ui(unsigned int);
+unsigned int stdc_first_trailing_zero_ul(unsigned long);
+unsigned int stdc_first_trailing_zero_ull(unsigned long long);
+
+unsigned int stdc_first_trailing_one_uc(unsigned char);
+unsigned int stdc_first_trailing_one_us(unsigned short);
 unsigned int stdc_first_trailing_one_ui(unsigned int);
+unsigned int stdc_first_trailing_one_ul(unsigned long);
+unsigned int stdc_first_trailing_one_ull(unsigned long long);
 
 unsigned int stdc_bit_width_uc(unsigned char);
 unsigned int stdc_bit_width_us(unsigned short);
