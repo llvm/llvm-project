@@ -14,6 +14,7 @@
 #include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
 #ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
 using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128

@@ -11,6 +11,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, ceilf128, (float128 x)) {
   return fputil::cast<float128>(math::ceilf128(Float128(x)));
 }
