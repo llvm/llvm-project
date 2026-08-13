@@ -2,7 +2,8 @@
 // RUN: not --crash %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.6-compute %s -emit-obj -O1 -o %t 2>&1 | FileCheck %s
 
 // The DirectX backend turns an ambiguous local-resource access into an error.
-// local_resource_nested_blocks_reassign_ambiguous.hlsl covers the Sema warning.
+// local_resource_branched_reassign_ambiguous.hlsl covers the Sema warning for
+// this same construct; this test covers the backend error it lowers to.
 // The condition is runtime-valued so the optimizer cannot fold the ambiguity
 // away; this is deliberately the only CodeGenHLSL ambiguity test.
 //

@@ -3,15 +3,12 @@
 RWByteAddressBuffer GBuf1 : register(u1);
 RWByteAddressBuffer GBuf2 : register(u2);
 
-void Pass_NestedBlocks(uint Cond, uint Idx) {
+void Pass_BranchedReassign(uint Cond, uint Idx) {
 // expected-note@+1 {{variable 'Buf' is declared here}}
-    RWByteAddressBuffer Buf;
-    {
-        Buf = GBuf1;
-        if (Cond) {
+    RWByteAddressBuffer Buf = GBuf1;
+    if (Cond) {
 // expected-warning@+1 {{assignment of 'GBuf2' to local resource 'Buf' is not to the same unique global resource}}
-            Buf = GBuf2;
-        }
+        Buf = GBuf2;
     }
     Buf.Store(Idx * 4, 32);
 }
@@ -19,5 +16,5 @@ void Pass_NestedBlocks(uint Cond, uint Idx) {
 [numthreads(8,8,1)]
 void main(uint3 Tid : SV_DispatchThreadID) {
     uint Idx = Tid.x + Tid.y * 8;
-    Pass_NestedBlocks(Tid.x & 1, Idx);
+    Pass_BranchedReassign(Tid.x & 1, Idx);
 }
