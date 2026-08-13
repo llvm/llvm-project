@@ -1,0 +1,107 @@
+; REQUIRES: systemz-registered-target
+; RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %s -o %t
+; RUN: obj2yaml %t | FileCheck %s
+
+; CHECK:      --- !GOFF
+; CHECK-NEXT: FileHeader: {}
+; CHECK-NEXT: ESDRecords:
+; CHECK-NEXT:   - SymbolType:      ESD_ST_SectionDefinition
+; CHECK-NEXT:     ESDID:           1
+; CHECK-NEXT:     TaskingBehavior: ESD_TA_Rent
+; CHECK-NEXT:     BindingScope:    ESD_BSC_Section
+; CHECK-NEXT:     Name:            'esd-basic#C'
+; CHECK-NEXT:   - SymbolType:      ESD_ST_ElementDefinition
+; CHECK-NEXT:     ESDID:           2
+; CHECK-NEXT:     ParentESDID:     1
+; CHECK-NEXT:     Length:          100
+; CHECK-NEXT:     NameSpace:       ESD_NS_NormalName
+; CHECK-NEXT:     Rmode:           ESD_RMODE_64
+; CHECK-NEXT:     ReadOnly:        true
+; CHECK-NEXT:     Alignment:       ESD_ALIGN_Quadword
+; CHECK-NEXT:     FillByteValue:   0
+; CHECK-NEXT:     Name:            C_CODE64
+; CHECK-NEXT:   - SymbolType:      ESD_ST_ElementDefinition
+; CHECK-NEXT:     ESDID:           3
+; CHECK-NEXT:     ParentESDID:     1
+; CHECK-NEXT:     NameSpace:       ESD_NS_Parts
+; CHECK-NEXT:     Rmode:           ESD_RMODE_64
+; CHECK-NEXT:     BindingAlgorithm: ESD_BA_Merge
+; CHECK-NEXT:     ReadOnly:        true
+; CHECK-NEXT:     Alignment:       ESD_ALIGN_Doubleword
+; CHECK-NEXT:     FillByteValue:   0
+; CHECK-NEXT:     Name:            'C_@@QPPA2'
+; CHECK-NEXT:   - SymbolType:      ESD_ST_PartReference
+; CHECK-NEXT:     ESDID:           4
+; CHECK-NEXT:     ParentESDID:     3
+; CHECK-NEXT:     Length:          8
+; CHECK-NEXT:     NameSpace:       ESD_NS_Parts
+; CHECK-NEXT:     Executable:      ESD_EXE_DATA
+; CHECK-NEXT:     BindingScope:    ESD_BSC_Section
+; CHECK-NEXT:     Alignment:       ESD_ALIGN_Doubleword
+; CHECK-NEXT:     Name:            '.&ppa2'
+; CHECK-NEXT:   - SymbolType:      ESD_ST_ElementDefinition
+; CHECK-NEXT:     ESDID:           5
+; CHECK-NEXT:     ParentESDID:     1
+; CHECK-NEXT:     NameSpace:       ESD_NS_Parts
+; CHECK-NEXT:     Rmode:           ESD_RMODE_64
+; CHECK-NEXT:     BindingAlgorithm: ESD_BA_Merge
+; CHECK-NEXT:     LoadingBehavior: ESD_LB_Deferred
+; CHECK-NEXT:     Alignment:       ESD_ALIGN_Quadword
+; CHECK-NEXT:     FillByteValue:   0
+; CHECK-NEXT:     Name:            C_WSA64
+; CHECK-NEXT:   - SymbolType:      ESD_ST_PartReference
+; CHECK-NEXT:     ESDID:           6
+; CHECK-NEXT:     ParentESDID:     5
+; CHECK-NEXT:     Length:          2
+; CHECK-NEXT:     NameSpace:       ESD_NS_Parts
+; CHECK-NEXT:     Executable:      ESD_EXE_DATA
+; CHECK-NEXT:     BindingScope:    ESD_BSC_Section
+; CHECK-NEXT:     LinkageType:     ESD_LT_XPLink
+; CHECK-NEXT:     Alignment:       ESD_ALIGN_Quadword
+; CHECK-NEXT:     Name:            'esd-basic#S'
+; CHECK-NEXT:   - SymbolType:      ESD_ST_ElementDefinition
+; CHECK-NEXT:     ESDID:           7
+; CHECK-NEXT:     ParentESDID:     1
+; CHECK-NEXT:     Length:          34
+; CHECK-NEXT:     NameSpace:       ESD_NS_NormalName
+; CHECK-NEXT:     Rmode:           ESD_RMODE_64
+; CHECK-NEXT:     TextStyle:       ESD_TS_Structured
+; CHECK-NEXT:     ReadOnly:        true
+; CHECK-NEXT:     LoadingBehavior: ESD_LB_NoLoad
+; CHECK-NEXT:     Alignment:       ESD_ALIGN_Doubleword
+; CHECK-NEXT:     FillByteValue:   0
+; CHECK-NEXT:     Name:            B_IDRL
+; CHECK-NEXT:   - SymbolType:      ESD_ST_LabelDefinition
+; CHECK-NEXT:     ESDID:           8
+; CHECK-NEXT:     ParentESDID:     2
+; CHECK-NEXT:     NameSpace:       ESD_NS_NormalName
+; CHECK-NEXT:     Amode:           ESD_AMODE_64
+; CHECK-NEXT:     Executable:      ESD_EXE_CODE
+; CHECK-NEXT:     BindingScope:    ESD_BSC_Section
+; CHECK-NEXT:     LinkageType:     ESD_LT_XPLink
+; CHECK-NEXT:     ADAESDID:        6
+; CHECK-NEXT:     Name:            'esd-basic#C'
+; CHECK-NEXT:   - SymbolType:      ESD_ST_ExternalReference
+; CHECK-NEXT:     ESDID:           9
+; CHECK-NEXT:     ParentESDID:     1
+; CHECK-NEXT:     NameSpace:       ESD_NS_NormalName
+; CHECK-NEXT:     Amode:           ESD_AMODE_64
+; CHECK-NEXT:     BindingScope:    ESD_BSC_ImportExport
+; CHECK-NEXT:     Name:            CELQSTRT
+; CHECK-NEXT:   - SymbolType:      ESD_ST_LabelDefinition
+; CHECK-NEXT:     ESDID:           10
+; CHECK-NEXT:     ParentESDID:     2
+; CHECK-NEXT:     Offset:          64
+; CHECK-NEXT:     NameSpace:       ESD_NS_NormalName
+; CHECK-NEXT:     Amode:           ESD_AMODE_64
+; CHECK-NEXT:     Executable:      ESD_EXE_CODE
+; CHECK-NEXT:     BindingScope:    ESD_BSC_ImportExport
+; CHECK-NEXT:     LinkageType:     ESD_LT_XPLink
+; CHECK-NEXT:     ADAESDID:        6
+; CHECK-NEXT:     Name:            f
+
+define i32 @f() {
+entry:
+  ret i32 42
+}
+
