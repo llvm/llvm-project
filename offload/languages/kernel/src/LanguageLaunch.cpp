@@ -8,6 +8,7 @@
 
 #include "LanguageLaunch.h"
 #include "LanguageUtils.h"
+#include "OffloadAPI.h"
 #include "OffloadErrors.h"
 #include "State.h"
 #include "Stream.h"
@@ -45,8 +46,21 @@ ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
   LaunchSizeArgs.GroupSize.z = BlockDim.z;
   LaunchSizeArgs.DynSharedMemory = DynamicSharedMem;
 
-  ol_queue_handle_t Queue = Stream ? reinterpret_cast<StreamTy *>(Stream)->Queue
-                                   : ThreadState.getDefaultQueue();
+  StreamTy *LaunchStream = Stream ? reinterpret_cast<StreamTy *>(Stream)
+                                  : ThreadState::getDefaultStream();
+  if (!LaunchStream || !RuntimeState::isStreamRegistered(LaunchStream) ||
+      LaunchStream->Device != Device)
+    return &InvalidConfigurationError;
+
+  if (LaunchStream->Kind == llvm::offload::QueueKind::LegacyDefault) {
+    ol_result_t Result = waitOnBlockingStreams();
+    if (Result != OL_SUCCESS)
+      return Result;
+  } else if (LaunchStream->Kind == llvm::offload::QueueKind::ExplicitBlocking) {
+    ol_result_t Result = waitOnLegacyDefaultStream(LaunchStream, Device);
+    if (Result != OL_SUCCESS)
+      return Result;
+  }
 
   struct OffloadKernelArgs {
     void **Args;
@@ -62,7 +76,7 @@ ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
     if (!OKA->Args[I] || OKA->ArgSizes[I] == 0)
       return &InvalidArgumentError;
 
-  return olLaunchKernel(Queue, Device, Kernel, &LaunchSizeArgs,
+  return olLaunchKernel(LaunchStream->Queue, Device, Kernel, &LaunchSizeArgs,
                         /*Properties=*/nullptr, OKA->NumArgs, OKA->Args,
                         OKA->ArgSizes);
 }

@@ -61,6 +61,45 @@ static inline StreamTy *toInternalStream(Stream_t Stream) {
   return reinterpret_cast<StreamTy *>(Stream);
 }
 
+/// Wait for blocking streams before executing if we are legacy default stream.
+static inline ol_result_t waitOnBlockingStreams() {
+  ol_device_handle_t Device = ThreadState::getDefaultDevice();
+  if (!RuntimeState::hasLegacyDefaultStream(Device) ||
+      RuntimeState::getBlockingStreams(Device).empty())
+    return OL_SUCCESS;
+  StreamTy *DefaultStream = ThreadState::getDefaultStream();
+  llvm::SmallVector<ol_event_handle_t, 8> Events;
+  for (StreamTy *BlockingStream : RuntimeState::getBlockingStreams(Device)) {
+    ol_event_handle_t Event = nullptr;
+    ol_result_t Result =
+        olCreateEvent(BlockingStream->Queue, OL_EVENT_FLAGS_NONE, &Event);
+    if (Result != OL_SUCCESS)
+      return Result;
+    Events.push_back(Event);
+  }
+
+  return olWaitEvents(DefaultStream->Queue, Events.data(), Events.size());
+}
+
+/// Wait for the legacy default stream to complete before launching a kernel on
+/// a blocking stream.
+static inline ol_result_t waitOnLegacyDefaultStream(StreamTy *SourceStream,
+                                                    ol_device_handle_t Device) {
+  if (!RuntimeState::hasLegacyDefaultStream(Device))
+    return OL_SUCCESS;
+
+  StreamTy *DefaultStream = ThreadState::getDefaultStream();
+  assert(DefaultStream->Kind == llvm::offload::QueueKind::LegacyDefault &&
+         "Default stream is not a legacy default stream");
+
+  ol_event_handle_t Event = nullptr;
+  ol_result_t Result =
+      olCreateEvent(DefaultStream->Queue, OL_EVENT_FLAGS_NONE, &Event);
+  if (Result != OL_SUCCESS)
+    return Result;
+  return olWaitEvents(SourceStream->Queue, &Event, 1);
+}
+
 /// Convert a Stream_t to an ol_queue_handle_t.
 static inline Error_t getQueueFromStream(Stream_t Stream,
                                          ol_queue_handle_t *Queue) {
