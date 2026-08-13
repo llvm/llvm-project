@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/OpenACC.h"
@@ -45,7 +46,10 @@
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1271,6 +1275,236 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
   return attrs.empty() ? mlir::ArrayAttr{} : builder.getArrayAttr(attrs);
 }
 
+//===----------------------------------------------------------------------===//
+// -finit-local= helpers
+//===----------------------------------------------------------------------===//
+
+/// Returns true when \p var is an automatic local variable eligible for
+/// -finit-local= initialization. Excluded: variables without a symbol,
+/// globals, dummy arguments, SAVE'd vars, ALLOCATABLE/POINTER, vars in
+/// an EQUIVALENCE set, and vars with explicit or default initialization.
+static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
+  if (!var.hasSymbol() || var.isGlobal())
+    return false;
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+  if (Fortran::semantics::IsDummy(sym))
+    return false;
+  if (Fortran::semantics::IsSaved(sym))
+    return false;
+  if (Fortran::semantics::IsAllocatableOrPointer(sym))
+    return false;
+  if (Fortran::lower::hasDefaultInitialization(sym))
+    return false;
+  if (const auto *obj =
+          sym.detailsIf<Fortran::semantics::ObjectEntityDetails>())
+    if (obj->init())
+      return false;
+  if (Fortran::semantics::FindEquivalenceSet(sym))
+    return false;
+  return true;
+}
+
+/// Build a constant whose every byte equals \p bytePat.
+/// FP types: bitcast from an integer splat. Complex: apply to both parts.
+/// Character: falls back to fir.zero_bits (see TODO). Derived types are
+/// handled by the caller before this function is reached.
+static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Type ty,
+                                    uint8_t bytePat) {
+  mlir::Type eleTy = fir::unwrapSequenceType(ty);
+
+  // Build an integer constant of the given bit width from a byte splat.
+  auto makeIntCst = [&](unsigned bits) -> mlir::Value {
+    llvm::APInt byteVal(8, bytePat);
+    llvm::APInt splat = llvm::APInt::getSplat(bits, byteVal);
+    mlir::Type intTy = builder.getIntegerType(bits);
+    return mlir::arith::ConstantOp::create(
+        builder, loc, intTy, builder.getIntegerAttr(intTy, splat));
+  };
+
+  if (auto fpTy = mlir::dyn_cast<mlir::FloatType>(eleTy)) {
+    unsigned bits = fpTy.getWidth();
+    mlir::Value intCst = makeIntCst(bits);
+    return mlir::arith::BitcastOp::create(builder, loc, fpTy, intCst);
+  }
+  if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(eleTy)) {
+    return makeIntCst(intTy.getWidth());
+  }
+  // Complex: apply the byte pattern to each (real, imag) part.
+  if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(eleTy)) {
+    mlir::Type partTy = cplxTy.getElementType();
+    mlir::Value partVal = genByteSplatInit(builder, loc, partTy, bytePat);
+    return mlir::complex::CreateOp::create(builder, loc, cplxTy, partVal,
+                                           partVal);
+  }
+  // TODO: CHARACTER falls back to zero; a future improvement should fill each
+  // storage unit with the byte pattern.
+  return fir::ZeroOp::create(builder, loc, eleTy);
+}
+
+/// Build a quiet or signalling NaN constant of the given FP type.
+/// The payload is all-ones (matching clang's initializationPatternFor() and
+/// the RFC spec), and the sign bit is set (negative NaN).
+static mlir::Value genFPNaNInit(fir::FirOpBuilder &builder, mlir::Location loc,
+                                mlir::FloatType fpTy, bool isSignalling) {
+  const llvm::fltSemantics &sem = fpTy.getFloatSemantics();
+  // All-ones payload (precision-1 mantissa bits), negative sign, per RFC.
+  llvm::APInt payload = llvm::APInt::getAllOnes(sem.precision - 1);
+  llvm::APFloat apf =
+      isSignalling ? llvm::APFloat::getSNaN(sem, /*Negative=*/true, &payload)
+                   : llvm::APFloat::getQNaN(sem, /*Negative=*/true, &payload);
+  return mlir::arith::ConstantFloatOp::create(builder, loc, fpTy, apf);
+}
+
+/// Emit a store of the -finit-local= pattern for a single scalar address.
+/// Complex types get NaN on both parts; other non-FP types use 0xAA byte-splat
+/// for nan/snan modes.
+static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type ty, mlir::Value addr,
+                              Fortran::lower::InitLocalKind mode,
+                              uint8_t hexByte) {
+  mlir::Value val;
+  auto fpTy = mlir::dyn_cast<mlir::FloatType>(ty);
+  auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(ty);
+  switch (mode) {
+  case Fortran::lower::InitLocalKind::Zero:
+    val = fir::ZeroOp::create(builder, loc, ty);
+    break;
+  case Fortran::lower::InitLocalKind::Hex:
+    val = genByteSplatInit(builder, loc, ty, hexByte);
+    break;
+  case Fortran::lower::InitLocalKind::QNaN:
+    if (fpTy) {
+      val = genFPNaNInit(builder, loc, fpTy, /*signalling=*/false);
+    } else if (cplxTy) {
+      auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+      mlir::Value nanPart =
+          genFPNaNInit(builder, loc, partFpTy, /*signalling=*/false);
+      val = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
+                                            nanPart);
+    } else {
+      val = genByteSplatInit(builder, loc, ty, 0xAA);
+    }
+    break;
+  case Fortran::lower::InitLocalKind::SNaN:
+    if (fpTy) {
+      val = genFPNaNInit(builder, loc, fpTy, /*signalling=*/true);
+    } else if (cplxTy) {
+      auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+      mlir::Value nanPart =
+          genFPNaNInit(builder, loc, partFpTy, /*signalling=*/true);
+      val = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
+                                            nanPart);
+    } else {
+      val = genByteSplatInit(builder, loc, ty, 0xAA);
+    }
+    break;
+  default:
+    llvm_unreachable("unexpected InitLocalKind in genInitLocalStore");
+  }
+  fir::StoreOp::create(builder, loc, val, addr);
+}
+
+/// Initialize all storage of the local variable \p var per -finit-local= mode.
+/// Arrays use insert_on_range. Derived types walk fields for nan/snan/hex.
+/// Scalars store directly.
+static void genInitLocal(Fortran::lower::AbstractConverter &converter,
+                         const Fortran::lower::pft::Variable &var,
+                         Fortran::lower::SymMap &symMap) {
+  Fortran::lower::InitLocalKind mode =
+      converter.getLoweringOptions().getInitLocalMode();
+  if (mode == Fortran::lower::InitLocalKind::Off)
+    return;
+  if (!shouldInitLocal(var))
+    return;
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  uint8_t hexByte = converter.getLoweringOptions().getInitLocalPattern();
+
+  fir::ExtendedValue exv =
+      converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+  mlir::Value base = fir::getBase(exv);
+  mlir::Type storeTy = fir::unwrapRefType(base.getType());
+
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(storeTy)) {
+    // Array: build element constant and use insert_on_range.
+    mlir::Type eleTy = seqTy.getEleTy();
+    auto fpTy = mlir::dyn_cast<mlir::FloatType>(eleTy);
+    auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(eleTy);
+    mlir::Value elePat;
+    switch (mode) {
+    case Fortran::lower::InitLocalKind::Zero:
+      elePat = fir::ZeroOp::create(builder, loc, eleTy);
+      break;
+    case Fortran::lower::InitLocalKind::Hex:
+      elePat = genByteSplatInit(builder, loc, eleTy, hexByte);
+      break;
+    case Fortran::lower::InitLocalKind::QNaN:
+      if (fpTy)
+        elePat = genFPNaNInit(builder, loc, fpTy, false);
+      else if (cplxTy) {
+        auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+        mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, false);
+        elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
+                                                 nanPart);
+      } else
+        elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
+      break;
+    case Fortran::lower::InitLocalKind::SNaN:
+      if (fpTy)
+        elePat = genFPNaNInit(builder, loc, fpTy, true);
+      else if (cplxTy) {
+        auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+        mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, true);
+        elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
+                                                 nanPart);
+      } else
+        elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
+      break;
+    default:
+      llvm_unreachable("unexpected InitLocalKind");
+    }
+    // Build flat [lb0,ub0, lb1,ub1, ...] bounds vector.
+    llvm::SmallVector<int64_t> rangeBounds;
+    bool hasUnknown = false;
+    for (auto dim : seqTy.getShape()) {
+      if (dim == fir::SequenceType::getUnknownExtent()) {
+        hasUnknown = true;
+        break;
+      }
+      rangeBounds.push_back(0);
+      rangeBounds.push_back(dim - 1);
+    }
+    if (!hasUnknown) {
+      mlir::Value arrVal = fir::UndefOp::create(builder, loc, seqTy);
+      arrVal =
+          fir::InsertOnRangeOp::create(builder, loc, seqTy, arrVal, elePat,
+                                       builder.getIndexVectorAttr(rangeBounds));
+      fir::StoreOp::create(builder, loc, arrVal, base);
+    }
+  } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(storeTy)) {
+    // Derived type: zero the whole struct, or walk fields for nan/snan/hex.
+    if (mode == Fortran::lower::InitLocalKind::Zero) {
+      fir::StoreOp::create(builder, loc,
+                           fir::ZeroOp::create(builder, loc, recTy), base);
+    } else {
+      for (auto [fieldName, fieldTy] : recTy.getTypeList()) {
+        auto fieldIdx = fir::FieldIndexOp::create(
+            builder, loc, fir::FieldType::get(recTy.getContext()), fieldName,
+            recTy, mlir::ValueRange{});
+        mlir::Value fieldAddr =
+            fir::CoordinateOp::create(builder, loc, builder.getRefType(fieldTy),
+                                      base, mlir::ValueRange{fieldIdx});
+        genInitLocalStore(builder, loc, fieldTy, fieldAddr, mode, hexByte);
+      }
+    }
+  } else {
+    // Scalar (integer, real, complex, logical, character): store directly.
+    genInitLocalStore(builder, loc, storeTy, base, mode, hexByte);
+  }
+}
+
 /// Instantiate a local variable. Precondition: Each variable will be visited
 /// such that if its properties depend on other variables, the variables upon
 /// which its properties depend will already have been visited.
@@ -1294,6 +1528,8 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   if (mustBeDefaultInitializedAtRuntime(var))
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
+  else
+    genInitLocal(converter, var, symMap);
   auto *builder = &converter.getFirOpBuilder();
   bool needsHostCudaCleanup = needCUDAAlloc(var.getSymbol()) &&
                               !cuf::isCUDADeviceContext(builder->getRegion());
