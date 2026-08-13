@@ -619,11 +619,17 @@ mdspan limits
 mdspan span
 mdspan stdexcept
 mdspan version
+memory cctype
+memory climits
 memory compare
 memory cstdint
 memory cstring
+memory ctime
+memory cwchar
+memory cwctype
 memory initializer_list
 memory limits
+memory ratio
 memory tuple
 memory typeinfo
 memory version
@@ -742,7 +748,6 @@ queue vector
 queue version
 random cctype
 random climits
-random cmath
 random compare
 random cstdint
 random cstdio
