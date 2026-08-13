@@ -90,6 +90,9 @@ struct StateTy {
   /// Return the host device discovered during runtime initialization.
   static ol_device_handle_t getHostDevice();
 
+  /// Return the shared context that owns the discovered non-host devices.
+  static ol_context_handle_t getContext();
+
   /// Return the number of non-host devices available to kernel languages.
   static int getDeviceCount();
 
@@ -143,6 +146,7 @@ private:
   llvm::DenseMap<KernelIDTy, ol_symbol_handle_t> KernelMap;
   llvm::SmallVector<ol_device_handle_t, 8> Devices;
 
+  ol_context_handle_t Context = nullptr;
   ol_queue_handle_t DefaultQueue = nullptr;
   ol_device_handle_t HostDevice = nullptr;
 

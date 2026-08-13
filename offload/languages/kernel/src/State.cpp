@@ -125,7 +125,7 @@ ol_device_handle_t ThreadStateTy::getDevice(int *DeviceNo) {
 void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {
   if (DefaultQueue)
     olDestroyQueue(DefaultQueue);
-  CHECK_FATAL(olCreateQueue(Device, &DefaultQueue),
+  CHECK_FATAL(olCreateQueue(StateTy::getContext(), Device, &DefaultQueue),
               "Failed to create per-thread default queue");
 }
 
@@ -147,6 +147,8 @@ StateTy &StateTy::get() {
 StateTy *StateTy::tryGet() { return StatePtr.load(); }
 
 ol_device_handle_t StateTy::getHostDevice() { return get().HostDevice; }
+
+ol_context_handle_t StateTy::getContext() { return get().Context; }
 
 int StateTy::getDeviceCount() {
   int DeviceCount = get().getDevices().size();
@@ -248,9 +250,13 @@ StateTy::StateTy() {
   CHECK_FATAL(olIterateDevices(StateTy::addDevices, this),
               "Failed to identify devices");
 
+  if (!Devices.empty())
+    CHECK_FATAL(olCreateContext(Devices.size(), Devices.data(), &Context),
+                "Failed to create default context");
+
   if (!PerThreadQueue) [[likely]]
     if (!Devices.empty()) [[likely]]
-      CHECK_FATAL(olCreateQueue(Devices.front(), &DefaultQueue),
+      CHECK_FATAL(olCreateQueue(Context, Devices.front(), &DefaultQueue),
                   "Failed to create default queue");
 
   atexit(deleteState);
@@ -260,6 +266,8 @@ StateTy::~StateTy() {
   deleteThreadStates();
   destroyQueue(DefaultQueue);
   destroyRegisteredPrograms();
+  if (Context)
+    olDestroyContext(Context);
   olShutDown();
 }
 

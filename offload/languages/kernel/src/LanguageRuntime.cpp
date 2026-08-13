@@ -163,7 +163,8 @@ static Error_t getQueueFromStream(Stream_t Stream, ol_queue_handle_t *Queue) {
 
 Error_t StreamCreate(Stream_t *Stream) {
   ol_queue_handle_t Queue;
-  olCreateQueue(ThreadState::getDefaultDevice(), &Queue);
+  olCreateQueue(RuntimeState::getContext(), ThreadState::getDefaultDevice(),
+                &Queue);
   *Stream = reinterpret_cast<Stream_t>(Queue);
   return Success;
 }
