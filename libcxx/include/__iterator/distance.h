@@ -87,7 +87,8 @@ struct __distance {
   }
 
   template <class _Ip, sized_sentinel_for<decay_t<_Ip>> _Sp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip&& __first, _Sp __last) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<decay_t<_Ip>>
+  operator()(_Ip&& __first, _Sp __last) const {
     if constexpr (!is_array_v<remove_reference_t<_Ip>>) {
       return __last - __first;
     } else {
