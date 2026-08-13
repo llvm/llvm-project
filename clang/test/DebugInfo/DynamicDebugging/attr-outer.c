@@ -3,5 +3,7 @@
 // RUN: | FileCheck %s
 
 // CHECK: define dso_local i32 @f() #0
-// CHECK: attributes #0 = {{{.*}}nooutline{{.*}}}
+// CHECK: attributes #0 =
+// CHECK-SAME: noipa
+// CHECK-SAME: nooutline
 int f() { return 0; }
