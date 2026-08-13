@@ -18,6 +18,7 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -357,6 +358,18 @@ private:
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
   FindMutuallyExclusiveClauses(llvm::omp::ClauseSet exclusive,
       const std::vector<const parser::OmpClause *> &clauses);
+  bool VerifyModifierVersion(omp::WithSource<llvm::omp::Clause> clause,
+      const parser::omp::AppliedModifierInfo &info);
+  bool VerifyModifierRequired(omp::WithSource<llvm::omp::Clause> clause,
+      const parser::omp::AppliedModifierInfo &info);
+  bool VerifyModifierUnique(omp::WithSource<llvm::omp::Clause> clause,
+      const parser::omp::AppliedModifierInfo &info);
+  bool VerifyModifierExclusive(omp::WithSource<llvm::omp::Clause> clause,
+      const parser::omp::AppliedModifierInfo &info);
+  bool VerifyModifierUltimate(omp::WithSource<llvm::omp::Clause> clause,
+      const parser::omp::AppliedModifierInfo &info);
+  bool VerifyModifiers(omp::WithSource<llvm::omp::Clause> clause,
+      const parser::omp::AppliedModifierInfo &info);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
   void CheckSourceLabel(const parser::Label &);

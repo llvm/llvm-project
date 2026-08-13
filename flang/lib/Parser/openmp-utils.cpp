@@ -231,6 +231,48 @@ const OmpInitializerExpression *GetInitializerExpr(const OmpClause &x) {
   return nullptr;
 }
 
+static AppliedModifierInfo GetAppliedModifiersFromWrapper(
+    const parser::OmpDependClause &depend) {
+  using TaskDep = parser::OmpDependClause::TaskDep;
+  if (auto *task{std::get_if<TaskDep>(&depend.u)}) {
+    using Modifiers = std::optional<std::list<TaskDep::Modifier>>;
+    return GetAppliedModifiers(std::get<Modifiers>(task->t));
+  } else if (auto *doa{std::get_if<OmpDoacross>(&depend.u)}) {
+    using Modifiers = std::optional<std::list<OmpDoacross::Modifier>>;
+    return GetAppliedModifiers(std::get<Modifiers>(doa->t));
+  }
+  llvm_unreachable("Unexpected alternative in depend");
+}
+
+static AppliedModifierInfo GetAppliedModifiersFromWrapper(
+    const parser::OmpDoacrossClause &doacross) {
+  using Modifiers = std::optional<std::list<OmpDoacross::Modifier>>;
+  return GetAppliedModifiers(std::get<Modifiers>(doacross.v.t));
+}
+
+template <typename T>
+static AppliedModifierInfo GetAppliedModifiersFromWrapper(const T &wrapper) {
+  if constexpr (HasModifier<T>) {
+    using Modifiers = std::optional<std::list<typename T::Modifier>>;
+    return GetAppliedModifiers(std::get<Modifiers>(wrapper.t));
+  } else {
+    return AppliedModifierInfo{};
+  }
+}
+
+AppliedModifierInfo GetAppliedModifiers(const parser::OmpClause &clause) {
+  return common::visit(
+      [&](auto &&s) {
+        using TypeS = llvm::remove_cvref_t<decltype(s)>;
+        if constexpr (WrapperTrait<TypeS>) {
+          return GetAppliedModifiersFromWrapper(s.v);
+        } else {
+          return AppliedModifierInfo{};
+        }
+      },
+      clause.u);
+}
+
 static void SplitOmpAllocateHelper(
     OmpAllocateInfo &n, const OmpAllocateDirective &x) {
   n.dirs.push_back(&x);

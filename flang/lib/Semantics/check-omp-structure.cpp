@@ -1122,6 +1122,216 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
   }
 }
 
+bool OmpStructureChecker::VerifyModifierVersion(
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  bool valid{true};
+
+  // Verify that the specified modifiers are allowed in this version.
+  for (const AppliedModifier &am : info.modifiers) {
+    auto &mdesc{llvm::omp::getDescriptor(am.modifierId)};
+    if (mdesc.getClauses(version).test(clause.value)) {
+      continue;
+    }
+    // Find the next higher version that allows this modifier on this clause.
+    unsigned since{~0u}, until{0u};
+    for (unsigned v : mdesc.getVersions()) {
+      if (mdesc.getClauses(v).test(clause.value)) {
+        if (v < version) {
+          until = std::max(until, v);
+        } else if (v > version) {
+          since = std::min(since, v);
+        }
+      }
+    }
+    if (since == ~0u && until == 0u) {
+      // This shouldn't really happen, but have it just in case.
+      context_.Say(am.source,
+          "'%s' modifier is not supported on %s clause"_err_en_US,
+          mdesc.getName().str(), GetUpperName(clause.value, version));
+      valid = false;
+    } else if (since != ~0u && version < since) {
+      context_.Say(am.source,
+          "'%s' modifier is not supported in %s on %s clause, %s"_warn_en_US,
+          mdesc.getName().str(), ThisVersion(version),
+          GetUpperName(clause.value, version), TryVersion(since));
+      valid = false;
+    } else if (until != 0u && version > until) {
+      context_.Say(am.source,
+          "'%s' modifier is no longer supported in %s on %s clause"_warn_en_US,
+          mdesc.getName().str(), ThisVersion(version),
+          GetUpperName(clause.value, version));
+      valid = false;
+    }
+  }
+
+  return valid;
+}
+
+bool OmpStructureChecker::VerifyModifierRequired(
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  auto &cdesc{llvm::omp::getDescriptor(clause.value)};
+  bool valid{true};
+
+  // Verify required modifiers/modifier groups.
+  auto isPresent{[&](llvm::omp::Modifier m) {
+    auto f = llvm::find_if(info.modifiers,
+        [&](const AppliedModifier &am) { return am.modifierId == m; });
+    return f != info.modifiers.end();
+  }};
+
+  for (llvm::omp::Modifier m : cdesc.getModifiers(version)) {
+    auto &mdesc{llvm::omp::getDescriptor(m)};
+    if (mdesc.getProperties(version).test(llvm::omp::Property::Required)) {
+      if (!isPresent(m)) {
+        context_.Say(clause.source, "'%s' modifier is required"_err_en_US,
+            mdesc.getName().str());
+        valid = false;
+      }
+    }
+  }
+
+  return valid;
+}
+
+bool OmpStructureChecker::VerifyModifierUnique(
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  bool valid{true};
+
+  // Collect unique modifiers for this clause.
+  llvm::omp::Modifiers unique;
+  auto &cdesc{llvm::omp::getDescriptor(clause.value)};
+  for (llvm::omp::Modifier m : cdesc.getModifiers(version)) {
+    auto &mdesc{llvm::omp::getDescriptor(m)};
+    // Exclusive modifiers should have the "unique" property present as well.
+    if (mdesc.getProperties(version).test(llvm::omp::Property::Unique)) {
+      unique.set(m);
+    }
+  }
+
+  llvm::DenseMap<llvm::omp::Modifier, parser::CharBlock> present;
+  for (const AppliedModifier &am : info.modifiers) {
+    auto &mdesc{llvm::omp::getDescriptor(am.modifierId)};
+    if (!mdesc.getClauses(version).test(clause.value)) {
+      continue;
+    }
+    if (unique.test(am.modifierId)) {
+      auto [where, inserted]{present.insert({am.modifierId, am.source})};
+      if (!inserted) {
+        context_
+            .Say(am.source,
+                "'%s' modifier cannot occur multiple times"_err_en_US,
+                mdesc.getName().str())
+            .Attach(
+                where->second, "previous occurrence of this modifier"_en_US);
+        valid = false;
+      }
+    }
+  }
+
+  return valid;
+}
+
+bool OmpStructureChecker::VerifyModifierExclusive(
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
+  if (info.modifiers.empty()) {
+    return true;
+  }
+  unsigned version{context_.langOptions().OpenMPVersion};
+  bool valid{true};
+
+  // Check individual modifiers first.
+  const AppliedModifier &first{info.modifiers.front()};
+  const auto &fdesc{llvm::omp::getDescriptor(first.modifierId)};
+
+  auto emitErrorMessage{[&](const AppliedModifier &excl,
+                            const AppliedModifier &other) {
+    auto &descExcl{llvm::omp::getDescriptor(excl.modifierId)};
+    auto &descOther{llvm::omp::getDescriptor(other.modifierId)};
+    parser::MessageFormattedText txt(
+        "An exclusive '%s' modifier cannot be specified together with a modifier of a different type"_err_en_US,
+        descExcl.getName().str());
+    parser::Message message(excl.source, txt);
+    message.Attach(
+        other.source, "'%s' provided here"_en_US, descOther.getName().str());
+    context_.Say(std::move(message));
+  }};
+
+  auto rest{llvm::ArrayRef(info.modifiers).drop_front()};
+  if (fdesc.getProperties(version).test(llvm::omp::Property::Exclusive)) {
+    for (const AppliedModifier &am : rest) {
+      if (am.modifierId == first.modifierId) {
+        continue;
+      }
+      emitErrorMessage(first, am);
+      valid = false;
+      break;
+    }
+  } else {
+    for (const AppliedModifier &am : rest) {
+      auto &mdesc{llvm::omp::getDescriptor(am.modifierId)};
+      if (!mdesc.getProperties(version).test(llvm::omp::Property::Exclusive)) {
+        continue;
+      }
+      // The first modifier was not exclusive, so this must be a different
+      // modifier.
+      emitErrorMessage(am, first);
+      valid = false;
+      break;
+    }
+  }
+
+  return valid;
+}
+
+bool OmpStructureChecker::VerifyModifierUltimate(
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
+  if (info.modifiers.empty()) {
+    return true;
+  }
+  unsigned version{context_.langOptions().OpenMPVersion};
+  bool valid{true};
+
+  // Check if there is an ultimate modifier that is in a wrong position.
+  auto &cdesc{llvm::omp::getDescriptor(clause.value)};
+  llvm::ArrayRef<AppliedModifier> modifiers(info.modifiers);
+  llvm::StringRef where;
+
+  if (cdesc.getProperties(version).test(llvm::omp::Property::PostModified)) {
+    modifiers = modifiers.drop_front(1);
+    where = "first";
+  } else {
+    modifiers = modifiers.drop_back(1);
+    where = "last";
+  }
+  for (const AppliedModifier &am : modifiers) {
+    auto &mdesc{llvm::omp::getDescriptor(am.modifierId)};
+    if (mdesc.getProperties(version).test(llvm::omp::Property::Ultimate)) {
+      context_.Say(am.source, "'%s' should be the %s modifier"_err_en_US,
+          mdesc.getName().str(), where.str());
+      valid = false;
+    }
+  }
+
+  return valid;
+}
+
+bool OmpStructureChecker::VerifyModifiers(
+    WithSource<llvm::omp::Clause> clause, const AppliedModifierInfo &info) {
+  // Run all checks without short-circuiting, return 'true' if all succeed.
+  bool valid[]{
+      VerifyModifierVersion(clause, info),
+      VerifyModifierRequired(clause, info),
+      VerifyModifierUnique(clause, info),
+      VerifyModifierUltimate(clause, info),
+      VerifyModifierExclusive(clause, info),
+  };
+
+  return llvm::all_of(valid, [](bool x) { return x; });
+}
+
 void OmpStructureChecker::CheckMultipleOccurrence(
     semantics::UnorderedSymbolSet &listVars,
     const std::list<parser::Name> &nameList, const parser::CharBlock &item,
@@ -2156,20 +2366,21 @@ void OmpStructureChecker::CheckInitOnDepobj(
           OmpGetUniqueModifier<parser::OmpDepinfoModifier>(modifiers)}) {
     auto depKind{std::get<common::OmpDependenceKind>(depInfo->t)};
     if (depKind == common::OmpDependenceKind::Depobj) {
-      auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
+      auto &desc{
+          llvm::omp::getDescriptor(llvm::omp::Modifier::DepinfoModifier)};
       context_.Say(OmpGetModifierSource(modifiers, depInfo),
           "'%s' is not an allowed value of the '%s' modifier"_err_en_US,
           parser::ToUpperCaseLetters(EnumToString(depKind)),
           desc.getName().str());
     }
   } else {
-    auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
+    auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::DepinfoModifier)};
     context_.Say(initClause.source,
         "The '%s' modifier is required on a DEPOBJ construct"_err_en_US,
         desc.getName().str());
   }
   if (auto *prefType{OmpGetUniqueModifier<parser::OmpPreferType>(modifiers)}) {
-    auto &desc{OmpGetDescriptor<parser::OmpPreferType>()};
+    auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::PreferType)};
     context_.Say(OmpGetModifierSource(modifiers, prefType),
         "The '%s' modifier is not allowed on a DEPOBJ construct"_err_en_US,
         desc.getName().str());
@@ -2945,47 +3156,14 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
     context_.Say(GetContext().clauseSource,
         "THREADS and SIMD clauses are not allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
   }
-
-  int dependSinkCount{0}, dependSourceCount{0};
-  bool exclusiveShown{false}, duplicateSourceShown{false};
-
-  auto visitDoacross{[&](const parser::OmpDoacross &doa,
-                         const parser::CharBlock &src) {
-    // Modifiers should have been verified by now.
-    auto &modifiers{OmpGetModifiers(doa)};
-    if (auto *source{
-            OmpGetUniqueModifier<parser::OmpDependenceType>(modifiers)}) {
-      if (source->v == parser::OmpDependenceType::Value::Source) {
-        ++dependSourceCount;
-      } else {
-        ++dependSinkCount;
-      }
-    }
-    if (!exclusiveShown && dependSinkCount > 0 && dependSourceCount > 0) {
-      exclusiveShown = true;
-      context_.Say(src,
-          "The SINK and SOURCE dependence types are mutually exclusive"_err_en_US);
-    }
-    if (!duplicateSourceShown && dependSourceCount > 1) {
-      duplicateSourceShown = true;
-      context_.Say(src,
-          "At most one SOURCE dependence type can appear on ORDERED directive"_err_en_US);
-    }
-  }};
-
   // Visit the DEPEND and DOACROSS clauses.
   for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_depend)) {
     const auto &dependClause{std::get<parser::OmpClause::Depend>(clause->u)};
-    if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
-      visitDoacross(*doAcross, clause->source);
-    } else {
+    using TaskDep = parser::OmpDependClause::TaskDep;
+    if (std::holds_alternative<TaskDep>(dependClause.v.u)) {
       context_.Say(clause->source,
           "Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region"_err_en_US);
     }
-  }
-  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_doacross)) {
-    auto &doaClause{std::get<parser::OmpClause::Doacross>(clause->u)};
-    visitDoacross(doaClause.v.v, clause->source);
   }
 
   bool isNestedInDoOrderedWithPara{false};
@@ -3902,6 +4080,28 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   SetContextClause(x);
   CheckArgumentObjectKind(x);
+
+  llvm::omp::Clause id{x.Id()};
+  auto clauseId{omp::WithSource(id, x.source)};
+  switch (id) {
+  case llvm::omp::Clause::OMPC_ompx_bare:
+  case llvm::omp::Clause::OMPC_cancellation_construct_type:
+    // Those are extensions/synthetic clauses and they don't have descriptors.
+    break;
+  case llvm::omp::Clause::OMPC_uses_allocators: {
+    auto &uac{parser::UnwrapRef<parser::OmpUsesAllocatorsClause>(x)};
+    for (auto &&as : uac.v) {
+      bool legacy{std::get<bool>(as.t)};
+      if (!legacy) {
+        VerifyModifiers(clauseId, GetAppliedModifiers(OmpGetModifiers(as)));
+      }
+    }
+    break;
+  }
+  default:
+    VerifyModifiers(clauseId, GetAppliedModifiers(x));
+    break;
+  }
 }
 
 // Restrictions specific to each clause are implemented apart from the
@@ -4666,7 +4866,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     std::string dirName{parser::omp::GetUpperName(dir, version)};
 
     parser::CharBlock modifierSource{OmpGetModifierSource(modifiers, dnm)};
-    auto desc{OmpGetDescriptor<parser::OmpDirectiveNameModifier>()};
+    auto desc{
+        llvm::omp::getDescriptor(llvm::omp::Modifier::DirectiveNameModifier)};
     std::string modName{desc.getName().str()};
 
     if (!isConstituent(dir, sub)) {
@@ -4891,7 +5092,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         llvm::is_contained(leafs, Directive::OMPD_declare_mapper)};
 
     if (!mapEnteringConstructOrMapper || !IsMapEnteringType(mapType)) {
-      const auto &desc{OmpGetDescriptor<parser::OmpAttachModifier>()};
+      const auto &desc{
+          llvm::omp::getDescriptor(llvm::omp::Modifier::AttachModifier)};
       context_.Say(OmpGetModifierSource(modifiers, attach),
           "The '%s' modifier can only appear on a map-entering construct or on a DECLARE_MAPPER directive"_err_en_US,
           desc.getName().str());
@@ -5050,7 +5252,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
             OmpGetUniqueModifier<parser::OmpDeviceModifier>(modifiers)}) {
       using Value = parser::OmpDeviceModifier::Value;
       if (dir != llvm::omp::OMPD_target && deviceMod->v == Value::Ancestor) {
-        auto name{OmpGetDescriptor<parser::OmpDeviceModifier>().getName()};
+        auto name{llvm::omp::getDescriptor(llvm::omp::Modifier::DeviceModifier)
+                .getName()};
         context_.Say(OmpGetModifierSource(modifiers, deviceMod),
             "The ANCESTOR %s must not appear on the DEVICE clause on any directive other than the TARGET construct. Found on %s construct."_err_en_US,
             name.str(), parser::omp::GetUpperName(dir, version));
@@ -5718,7 +5921,8 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
     bool ok{
         memSpaceName && IsUsesAllocatorsMemSpaceName(*memSpaceName, version)};
     if (!ok) {
-      auto name{OmpGetDescriptor<parser::OmpMemSpace>().getName()};
+      auto name{
+          llvm::omp::getDescriptor(llvm::omp::Modifier::MemSpace).getName()};
       context_.Say(memSpaceSource,
           "The '%s' modifier must name a predefined memory space"_err_en_US,
           name.str());
@@ -6407,7 +6611,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::SelfMaps &x) {
 
 void OmpStructureChecker::CheckDimsModifier(parser::CharBlock source,
     size_t numValues, const parser::OmpDimsModifier &x) {
-  std::string name{OmpGetDescriptor<parser::OmpDimsModifier>().getName().str()};
+  auto &desc{llvm::omp::getDescriptor(llvm::omp::Modifier::DimsModifier)};
+  std::string name{desc.getName().str()};
 
   if (auto dimsVal{GetIntValue(x.v)}) {
     if (*dimsVal > 0) {
@@ -6582,7 +6787,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                 if (auto *depInfo{
                         OmpGetUniqueModifier<parser::OmpDepinfoModifier>(
                             modifiers)}) {
-                  auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
+                  auto &desc{llvm::omp::getDescriptor(
+                      llvm::omp::Modifier::DepinfoModifier)};
                   context_.Say(OmpGetModifierSource(modifiers, depInfo),
                       "The '%s' is not allowed on INTEROP construct"_err_en_US,
                       desc.getName().str());
