@@ -16,6 +16,7 @@
 #include <__algorithm/mismatch.h>
 #include <__algorithm/reverse.h>
 #include <__algorithm/search.h>
+#include <__algorithm/search_n.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
@@ -130,6 +131,20 @@ struct __search<__serial_backend_tag, _ExecutionPolicy> {
              _BinaryPredicate __pred) const noexcept {
     return std::search(
         std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __search_n<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size, class _Tp, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _Size __count,
+             const _Tp& __value,
+             _Predicate __pred) const noexcept {
+    return std::search_n(std::move(__first), std::move(__last), __count, __value, std::move(__pred));
   }
 };
 

@@ -87,4 +87,8 @@ void test() {
   std::search(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::search(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::search_n(std::execution::par, std::begin(a), std::end(a), 1, 1);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::search_n(std::execution::par, std::begin(a), std::end(a), 1, 1, pred2);
 }
