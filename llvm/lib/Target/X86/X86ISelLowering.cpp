@@ -53870,7 +53870,10 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
           DemandedElts.setBit(I);
 
       // We must freeze the result to prevent OR(poison,-1) -> poison.
-      if (!DemandedElts.isAllOnes() && !DAG.isGuaranteedNotToBePoison(N0) &&
+      // Restrict the fold to prevent infinite loops due to
+      // SimplifyDemandedVectorElts removing the freeze.
+      if (!DemandedElts.isAllOnes() &&
+          !DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts) &&
           TLI.SimplifyDemandedVectorElts(N0, DemandedElts, DCI)) {
         SDValue F0 = DAG.getFreeze(N->getOperand(0), ~DemandedElts);
         DAG.UpdateNodeOperands(N, F0, N->getOperand(1));
