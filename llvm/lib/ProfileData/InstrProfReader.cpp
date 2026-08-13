@@ -604,9 +604,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (BinaryIdEnd > BufferEnd)
     return error(instrprof_error::header_size_mismatch,
                  ("Header.BinaryIdSize = " + Twine(BinaryIdSize) +
-                  " bytes, file size is " + Twine(DataBuffer->getBufferSize()) +
-                  " bytes but expected at least " +
-                  Twine(BinaryIdEnd - ProfileStart) + " bytes")
+                  " bytes, Incomplete binary IDs data")
                      .str());
 
   ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
