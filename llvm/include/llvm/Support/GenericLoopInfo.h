@@ -857,7 +857,7 @@ public:
   // Debugging
   void print(raw_ostream &OS) const;
 
-  void verify(const DominatorTreeBase<BlockT, false> &DomTree) const;
+  void verify() const;
 
   /// Destroy a loop that has been removed from the `LoopInfo` nest.
   ///

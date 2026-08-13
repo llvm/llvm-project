@@ -1205,10 +1205,15 @@ code. See the documentation for `__declspec(code_seg)`_ on MSDN.
 def AllocAlignDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-Use ``__attribute__((alloc_align(<alignment>))`` on a function
-declaration to specify that the return value of the function (which must be a
-pointer type) is at least as aligned as the value of the indicated parameter. The
-parameter is given by its index in the list of formal parameters; the first
+Use ``__attribute__((alloc_align(<parameter-index>)))`` on a declaration with a
+function prototype to specify that the prototype's return value (which must be a
+pointer type) is at least as aligned as the value of the indicated parameter.
+This includes functions, Objective-C methods, blocks, and declarations of
+function pointer, member function pointer, function reference, and block pointer
+types. The attribute can also be applied to typedef or type alias declarations
+whose underlying type has a function prototype.
+
+The parameter is given by its index in the list of formal parameters; the first
 parameter has index 1 unless the function is a C++ non-static member function,
 in which case the first parameter has index 2 to account for the implicit ``this``
 parameter.
@@ -1217,6 +1222,10 @@ parameter.
 
   // The returned pointer has the alignment specified by the first parameter.
   void *a(size_t align) __attribute__((alloc_align(1)));
+
+  // The function pointer's returned pointer has the alignment specified by
+  // the first parameter of the pointed-to function.
+  void *(*allocator)(size_t align) __attribute__((alloc_align(1)));
 
   // The returned pointer has the alignment specified by the second parameter.
   void *b(void *v, size_t align) __attribute__((alloc_align(2)));
@@ -3601,6 +3610,32 @@ An error will be given if:
   - Specified values violate subtarget specifications;
   - Specified values are not compatible with values provided through other
     attributes.
+  }];
+}
+
+def AMDGPUAvailableVisibleDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+
+This attribute controls availability and visibility as described in the `AMDGPU
+Memory Model <https://llvm.org/docs/AMDGPUMemoryModel.html>`__. When placed on
+an atomic expression or fence, the resulting atomic or fence instruction carries
+the corresponding *AV Metadata*.
+
+The attribute takes a string literal as an argument, which currently has only
+one supported value:
+
+- ``"none"``: Disable MakeAvailable and MakeVisible semantics on release and
+  acquire operations respectively.
+
+.. code-block:: c++
+
+  [[clang::amdgpu_av("none")]] __atomic_thread_fence(__ATOMIC_SEQ_CST);
+  [[clang::amdgpu_av("none")]] __atomic_fetch_add(ptr, 1, __ATOMIC_ACQ_REL);
+
+  // Also works with _Atomic type qualifier operations.
+  _Atomic int *p;
+  [[clang::amdgpu_av("none")]] *p += 1;
   }];
 }
 
@@ -8995,6 +9030,31 @@ for details.
   }];
 }
 
+def HLSLControlFlowHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "branch, flatten";
+  let Content = [{
+
+The ``branch`` and ``flatten`` attributes can be applied to *if* and *switch*
+statements in the HLSL language mode to provide hints for how the backend
+should execute them.
+
+- ``branch`` means that control flow is preferred. The condition should be
+  evaluated first and we should only execute the block guarded by it.
+
+- ``flatten`` means that control flow should be avoided. All blocks should be
+  executed and variables that are modified should be conditionally assigned.
+
+These control flow hints are preserved through the compilation and emitted in a
+backend-specific way.
+
+For details, see the Direct3D documentation for `if Statement`_ and `switch Statement`_.
+
+.. _`if Statement`: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-if
+.. _`switch Statement`: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switchhttps://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switch
+  }];
+}
+
 def AtomicDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
@@ -9085,6 +9145,120 @@ Examples:
   }
 
 The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
+  }];
+}
+
+def HLSLResourceClassDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::resource_class`` attribute specifies the resource class of the HLSL
+resource represented by a member variable of type ``__hlsl_resource_t``,
+declaring it to be an SRV, UAV, CBuffer, or Sampler resource.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLResourceDimensionDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::dimension`` attribute specifies the dimensions of the HLSL resource
+represented by a member variable of type ``__hlsl_resource_t``, declaring the
+resource to have Unknown, 1D, 2D, 3D, or Cube dimension.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLContainedTypeDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::contained_type`` attribute specifies the type of the HLSL resource
+represented by a member variable of type ``__hlsl_resource_t``.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLRawBufferDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::raw_buffer`` attribute specifies that the HLSL resource represented
+by a member variable of type ``__hlsl_resource_t`` has raw buffer semantics.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLIsArrayDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
+by a member variable of type ``__hlsl_resource_t`` has array dimensions.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLIsMultiSampledDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
+by a member variable of type ``__hlsl_resource_t`` is multisampled.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLIsROVDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::is_rov`` attribute specifies that the HLSL resource represented by
+a member variable of type ``__hlsl_resource_t`` is a rasterizer ordered view.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+  }];
+}
+
+def HLSLIsCounterDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``hlsl::is_counter`` attribute specifies that the HLSL resource represented
+by a member variable of type ``__hlsl_resource_t`` is a counter buffer.
+
+This attribute is only valid for resource handles, and is an implementation
+detail of clang's HLSL implementation. For more information see `HLSL Resource
+Types`_
+
+.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
   }];
 }
 
@@ -9895,13 +10069,79 @@ Example:
 
 def CountedByDocs : Documentation {
   let Category = DocCatField;
+  let Heading = "counted_by";
   let Content = [{
-Clang supports the ``counted_by`` attribute on the flexible array member of a
-structure in C. The argument for the attribute is the name of a field member
-holding the count of elements in the flexible array. This information can be
-used to improve the results of the array bound sanitizer and the
-``__builtin_dynamic_object_size`` builtin. The ``count`` field member must be
-within the same non-anonymous, enclosing struct as the flexible array member.
+The ``counted_by`` attribute is applied to a pointer or flexible array member to
+indicate that the pointer points to (or the flexible array member contains) at
+least the number of *elements* given by the attribute's argument.
+
+This attribute is used by `-fbounds-safety <BoundsSafety.html>`__ to propagate
+bounds information on API surfaces without any ABI changes. This attribute is
+also used to improve the results of the array bound sanitizer and the
+``__builtin_dynamic_object_size`` builtin.
+
+Because the size of the pointee type must be known to compute the pointer's
+bounds, such a pointer must not be used while its pointee type is incomplete; a
+pointer to a forward-declared type is accepted on fields annotated with
+``counted_by``, but the type must be completed before the pointer is used. If
+the pointee type can never be completed, ``counted_by`` is rejected and
+``sized_by`` should be used instead. ``void *`` is a special case: as a GNU
+extension (diagnosed by ``-Wgnu-pointer-arith``), ``counted_by`` is accepted on
+it, where it behaves like ``sized_by`` (the argument is treated as a byte count,
+``void`` having an assumed size of one byte).
+
+A pointer annotated with ``counted_by`` must have a count of zero when it is
+null. This requirement is currently only enforced when compiling with
+`-fbounds-safety <BoundsSafety.html>`__ (see :ref:`Current status of
+-fbounds-safety support in upstream Clang <bounds-safety-current-upstream-status>`). Use
+``counted_by_or_null`` for a pointer that may be null while carrying a nonzero
+count.
+
+Keeping pointer and count in sync
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``counted_by`` attribute establishes a relationship between the annotated
+pointer and its count: the pointer must point to at least ``count`` elements.
+Assigning to only one of them can break this relationship.
+Without `-fbounds-safety <BoundsSafety.html>`__, it is the programmer's
+responsibility to ensure the pointer and count remain in sync. With
+``-fbounds-safety`` it is automatically enforced. For example:
+
+.. code-block:: c
+
+  struct buffer {
+    int *buf __attribute__((counted_by(count)));
+    size_t count;
+  };
+
+  void grow(struct buffer *b, size_t new_count) {
+    // b->buf isn't updated. The underlying memory pointed to by b->buf might be
+    // smaller than new_count which would contradict the counted_by attribute.
+    // Compile error with -fbounds-safety but allowed without -fbounds-safety.
+    b->count = new_count;
+  }
+
+Updating both together - so that ``buf`` points to ``count`` elements - keeps
+the attribute true. For example:
+
+.. code-block:: c
+
+  void grow(struct buffer *b, size_t new_count) {
+    // Allowed by -fbounds-safety
+    int *new_buf = malloc(new_count * sizeof(int));
+    // -fbounds-safety enforces that the `new_buf` points to at least `new_count`
+    // integers at runtime. Without -fbounds-safety nothing enforces this.
+    b->buf = new_buf;
+    b->count = new_count;
+  }
+
+Flexible array members
+~~~~~~~~~~~~~~~~~~~~~~
+
+The ``counted_by`` attribute may also be applied to the flexible array member of
+a structure in C. In this case the argument names the field member holding the
+count of elements in the flexible array; that field must be within the same
+non-anonymous, enclosing struct as the flexible array member.
 
 This example specifies that the flexible array member ``array`` has the number
 of elements allocated for it in ``count``:
@@ -9968,6 +10208,159 @@ requirement:
     --p->count;
     p->array[index] = val;
   }
+  }];
+}
+
+def SizedByDocs : Documentation {
+  let Category = DocCatField;
+  let Heading = "sized_by";
+  let Content = [{
+The ``sized_by`` attribute is applied to a pointer to indicate that the pointer
+points to memory containing at least the number of *bytes* given by the
+attribute's argument. It is closely related to ``counted_by``; the difference is
+that ``counted_by`` counts the number of *elements* of the pointee type, whereas
+``sized_by`` counts the number of *bytes*. This makes ``sized_by`` the natural
+choice for ``void *`` and other byte buffers.
+
+This attribute is used by `-fbounds-safety <BoundsSafety.html>`__ to propagate
+bounds information on API surfaces without any ABI changes. This attribute is
+also used to improve the results of the array bound sanitizer and the
+``__builtin_dynamic_object_size`` builtin.
+
+The argument is an expression of integer type, following the same rules as the
+argument of ``counted_by``. Unlike ``counted_by``, ``sized_by`` cannot be
+applied to a C99 flexible array member; it applies to pointers only. For
+example:
+
+.. code-block:: c
+
+  struct object {
+    unsigned long size;
+    void *data __attribute__((sized_by(size)));
+  };
+
+A pointer annotated with ``sized_by`` must have a size of zero when it is null.
+This requirement is currently only enforced when compiling with
+`-fbounds-safety <BoundsSafety.html>`__ (see :ref:`Current status of
+-fbounds-safety support in upstream Clang <bounds-safety-current-upstream-status>`). Use
+``sized_by_or_null`` for a pointer that may be null while carrying a nonzero
+size.
+
+Keeping pointer and size in sync
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``sized_by`` attribute establishes a relationship between the annotated
+pointer and its size: the pointer must point to at least ``size`` bytes.
+Assigning to only one of them can break this relationship.
+Without `-fbounds-safety <BoundsSafety.html>`__, it is the programmer's
+responsibility to ensure the pointer and size remain in sync. With
+``-fbounds-safety`` it is automatically enforced. For example:
+
+.. code-block:: c
+
+  struct buffer {
+    uint8_t *buf __attribute__((sized_by(size)));
+    size_t size;
+  };
+
+  void grow(struct buffer *b, size_t new_size) {
+    // b->buf isn't updated. The underlying memory pointed to by b->buf might be
+    // smaller than new_size which would contradict the sized_by attribute.
+    // Compile error with -fbounds-safety but allowed without -fbounds-safety.
+    b->size = new_size;
+  }
+
+Updating both together - so that ``buf`` points to ``size`` bytes - keeps
+the attribute true. For example:
+
+.. code-block:: c
+
+  void grow(struct buffer *b, size_t new_size) {
+    // Allowed by -fbounds-safety
+    uint8_t *new_buf = malloc(new_size);
+    // -fbounds-safety enforces that the `new_buf` points to at least `new_size`
+    // bytes at runtime. Without -fbounds-safety nothing enforces this.
+    b->buf = new_buf;
+    b->size = new_size;
+  }
+
+Incomplete and variable-length pointees
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``sized_by`` is typically applied to ``void *`` or a pointer to a byte-sized
+type, but it may be used with any pointee type. Two situations call for this,
+both of which rule out counting fixed-size elements:
+
+First, the pointee type may be incomplete, such as an opaque type. Its element
+size is then unavailable, so ``counted_by`` cannot be used, whereas ``sized_by``
+bounds the memory in bytes and imposes no completeness requirement.
+
+Second, the buffer may hold variable-length elements, so there is no fixed
+element size to count, even though the total byte size is well defined. For
+example, a buffer might pack together several structures that each end in a
+flexible array member of differing length:
+
+.. code-block:: c
+
+  struct var_len {
+    int fam_size;
+    char data[] __attribute__((counted_by(fam_size)));
+  };
+
+  struct buffer_view {
+    int byte_size;
+    struct var_len *buf __attribute__((sized_by(byte_size)));
+  };
+
+Here ``counted_by`` cannot be applied to ``buf`` because its pointee is a
+variable-length structure, but ``sized_by`` bounds the whole region in bytes;
+the region is traversed by advancing a byte offset rather than by indexing
+elements.
+  }];
+}
+
+def CountedByOrNullDocs : Documentation {
+  let Category = DocCatField;
+  let Heading = "counted_by_or_null";
+  let Content = [{
+The ``counted_by_or_null`` attribute is applied to a pointer to indicate that,
+if the pointer is non-null, it points to memory containing at least the number
+of *elements* given by the attribute's argument. If the pointer is null, the
+value of the argument is ignored and the pointer points to zero elements.
+
+The ``counted_by_or_null`` attribute is identical to ``counted_by`` except that
+it treats null pointers differently and cannot be applied to a flexible array
+member. Whereas ``counted_by`` requires a null pointer to have a count of zero,
+``counted_by_or_null`` allows the pointer to be null regardless of the value of
+the count. This supports the common idiom where a pointer is either null or
+points to memory containing at least the given number of elements.
+
+Currently only `-fbounds-safety <BoundsSafety.html>`__ makes use of the
+distinction between ``counted_by_or_null`` and ``counted_by`` (see
+:ref:`Current status of -fbounds-safety support in upstream Clang
+<bounds-safety-current-upstream-status>`).
+  }];
+}
+
+def SizedByOrNullDocs : Documentation {
+  let Category = DocCatField;
+  let Heading = "sized_by_or_null";
+  let Content = [{
+The ``sized_by_or_null`` attribute is applied to a pointer to indicate that, if
+the pointer is non-null, it points to memory containing at least the number of
+*bytes* given by the attribute's argument. If the pointer is null, the value of
+the argument is ignored and the pointer points to zero bytes.
+
+The ``sized_by_or_null`` attribute is identical to ``sized_by`` except in how
+it treats null pointers. Whereas ``sized_by`` requires a null pointer to have a
+size of zero, ``sized_by_or_null`` allows the pointer to be null regardless of
+the value of the size. This supports the common idiom where a pointer is either
+null or points to memory containing at least the given number of bytes.
+
+Currently only `-fbounds-safety <BoundsSafety.html>`__ makes use of the
+distinction between ``sized_by_or_null`` and ``sized_by`` (see
+:ref:`Current status of -fbounds-safety support in upstream Clang
+<bounds-safety-current-upstream-status>`).
   }];
 }
 

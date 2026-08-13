@@ -330,7 +330,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
 
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -2670,6 +2669,12 @@ SILoadStoreOptimizer::collectMergeableInsts(
       continue;
 
     if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
+      if (!STM->hasRelaxedTBufferOOBMode()) {
+        LLVM_DEBUG(
+            dbgs() << "Skip tbuffer combine: relaxed OOB mode not enabled\n");
+        continue;
+      }
+
       const MachineOperand *Fmt =
           TII->getNamedOperand(MI, AMDGPU::OpName::format);
       if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {

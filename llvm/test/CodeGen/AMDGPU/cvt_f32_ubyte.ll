@@ -1676,27 +1676,27 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v0, v0, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v1, 0xffffff00, v0
-; GFX10-NEXT:    v_add_nc_u16 v2, v0, 9
-; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX10-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffffff00, v3
-; GFX10-NEXT:    v_add_nc_u16 v3, v3, 9
-; GFX10-NEXT:    v_add_nc_u16 v1, 0x900, v1
-; GFX10-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX10-NEXT:    v_and_b32_e32 v3, 0xffffff00, v0
+; GFX10-NEXT:    v_add_nc_u16 v4, v0, 9
+; GFX10-NEXT:    v_and_b32_e32 v2, 0xffffff00, v1
+; GFX10-NEXT:    v_add_nc_u16 v1, v1, 9
+; GFX10-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-NEXT:    v_or_b32_sdwa v2, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; GFX10-NEXT:    v_and_b32_e32 v5, 0xffff, v1
-; GFX10-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0
-; GFX10-NEXT:    v_add_nc_u16 v6, 0x900, v2
+; GFX10-NEXT:    v_add_nc_u16 v1, 0x900, v1
+; GFX10-NEXT:    v_add_nc_u16 v5, 0x900, v2
 ; GFX10-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 16, v1
+; GFX10-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0
 ; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; GFX10-NEXT:    v_lshl_or_b32 v5, v6, 16, v5
+; GFX10-NEXT:    v_or_b32_sdwa v5, v6, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX10-NEXT:    global_store_dword v4, v5, s[2:3]
