@@ -2221,6 +2221,10 @@ public:
         Base, IsAppleKext);
   }
 
+  CXXSpecialMemberKind getSpecialMemberKind() const {
+    return getDefaultedFunctionKind().asSpecialMember();
+  }
+
   /// Determine whether this is a usual deallocation function (C++
   /// [basic.stc.dynamic.deallocation]p2), which is an overloaded delete or
   /// delete[] operator with a particular signature. Populates \p PreventedBy

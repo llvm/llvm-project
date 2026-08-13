@@ -1475,8 +1475,12 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_os",
         ":__support_osutil_exit_hdrs",
-        ":__support_osutil_io",
-    ],
+    ] + select({
+        "@platforms//os:linux": [":__support_osutil_io"],
+        "@platforms//os:macos": [":__support_osutil_io"],
+        "@platforms//os:windows": [":__support_osutil_io"],
+        "//conditions:default": [],
+    }),
 )
 
 libc_support_library(

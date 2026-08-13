@@ -17,11 +17,11 @@
 
 namespace llvm {
 namespace offloading {
-using EntryArrayTy = std::pair<GlobalVariable *, GlobalVariable *>;
+using EntryArrayTy = std::pair<Constant *, Constant *>;
 /// Wraps the input device images into the module \p M as global symbols and
 /// registers the images with the OpenMP Offloading runtime libomptarget.
-/// \param EntryArray Optional pair pointing to the `__start` and `__stop`
-/// symbols holding the `__tgt_offload_entry` array.
+/// \param EntryArray Optional pair pointing to the begin and end of the
+/// `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
 /// \param Relocatable Indicate if we need to change the offloading section to
 /// create a relocatable object.
@@ -32,8 +32,8 @@ wrapOpenMPBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
 
 /// Wraps the input fatbinary image into the module \p M as global symbols and
 /// registers the images with the CUDA runtime.
-/// \param EntryArray Optional pair pointing to the `__start` and `__stop`
-/// symbols holding the `__tgt_offload_entry` array.
+/// \param EntryArray Optional pair pointing to the begin and end of the
+/// `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
 /// \param EmitSurfacesAndTextures Whether to emit surface and textures
 /// registration code. It defaults to false.
@@ -45,8 +45,8 @@ LLVM_ABI llvm::Error wrapCudaBinary(llvm::Module &M,
 
 /// Wraps the input bundled image into the module \p M as global symbols and
 /// registers the images with the HIP runtime.
-/// \param EntryArray Optional pair pointing to the `__start` and `__stop`
-/// symbols holding the `__tgt_offload_entry` array.
+/// \param EntryArray Optional pair pointing to the begin and end of the
+/// `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
 /// \param EmitSurfacesAndTextures Whether to emit surface and textures
 /// registration code. It defaults to false.

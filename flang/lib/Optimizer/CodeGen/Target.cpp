@@ -1008,13 +1008,39 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     return marshal;
   }
 
+  /// AAPCS64 "Parameter passing rules" B.4: "If the argument type is a
+  /// Composite Type that is larger than 16 bytes, then the argument is copied
+  /// to memory allocated by the caller and the argument is replaced by a
+  /// pointer to the copy." Marking such an argument `byval` instead would let
+  /// the target lower it as a by-value aggregate, which does not match this
+  /// rule.
+  CodeGenSpecifics::Marshalling passIndirectly(mlir::Location loc,
+                                               mlir::Type ty) const {
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign =
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap);
+    // The pointee is the caller's copy, so the alignment reported for the
+    // pointer is the natural alignment of the aggregate.
+    marshal.emplace_back(
+        fir::ReferenceType::get(ty),
+        AT{sizeAndAlign.second, /*byval=*/false, /*sret=*/false,
+           /*append=*/false, /*intExt=*/AT::IntegerExtension::None,
+           /*indirect=*/true});
+    return marshal;
+  }
+
   CodeGenSpecifics::Marshalling
   structType(mlir::Location loc, fir::RecordType type, bool isResult) const {
     NRegs nregs = usedRegsForRecordType(loc, type);
 
-    // If the type needs no registers it must need to be passed on the stack
-    if (nregs.n == 0)
-      return passOnTheStack(loc, type, isResult);
+    // If the type needs no registers it is too large to be passed in
+    // registers. As an argument it is passed indirectly; as a result it is
+    // returned via the caller-provided indirect result buffer (sret).
+    if (nregs.n == 0) {
+      if (isResult)
+        return passOnTheStack(loc, type, /*isResult=*/true);
+      return passIndirectly(loc, type);
+    }
 
     CodeGenSpecifics::Marshalling marshal;
 

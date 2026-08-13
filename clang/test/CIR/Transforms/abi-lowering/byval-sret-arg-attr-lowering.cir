@@ -6,7 +6,7 @@
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
 !s64i = !cir.int<s, 64>
-!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i}>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
 
 #byval_arg = {
   return = { kind = "direct" },

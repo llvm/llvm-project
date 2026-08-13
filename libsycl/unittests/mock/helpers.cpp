@@ -223,8 +223,10 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olCreateQueue)
-      .WillByDefault([this](ol_device_handle_t Device,
+      .WillByDefault([this](ol_context_handle_t Context,
+                            ol_device_handle_t Device,
                             ol_queue_handle_t *Queue) -> ol_result_t {
+        std::ignore = Context;
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(Queue, nullptr);
         // Attach device as data to check what device queue belongs to if needed

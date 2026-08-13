@@ -2437,9 +2437,11 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // Create the fatbin wrapper struct:
   //    struct { int magic; int version; void *fatbin; void *unused; };
+  mlir::Type fatbinWrapperMembers[] = {intTy, intTy, voidPtrTy, voidPtrTy};
   auto fatbinWrapperType = cir::StructType::get(
-      &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
-      /*packed=*/false, /*padded=*/false, /*is_class=*/false);
+      &getContext(), fatbinWrapperMembers, /*packed=*/false, /*padded=*/false,
+      /*is_class=*/false,
+      cir::RecordType::getAllDataKinds(fatbinWrapperMembers));
   std::string fatbinWrapperName =
       addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
   GlobalOp fatbinWrapper = GlobalOp::create(

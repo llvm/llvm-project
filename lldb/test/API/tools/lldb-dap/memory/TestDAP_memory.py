@@ -3,209 +3,180 @@ Test lldb-dap memory support
 """
 
 from base64 import b64decode
-import dap_server
+
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
-import os
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
+from lldbsuite.test.tools.lldb_dap.types import *
 
 
-class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_memory(DAPTestCaseBase):
+    def stop_at_breakpoint(self, session: DAPTestSession):
+        """Build, launch, and stop at the `// Breakpoint` line. Returns the
+        top frame at that stop."""
+        program = self.getBuildArtifact("a.out")
+        source = self.getSourcePath("main.cpp")
+        bp_line = line_number(source, "// Breakpoint")
+        with session.configure(LaunchArgs(program)) as ctx:
+            session.resolve_source_breakpoints(source, [bp_line])
+        stop_event = session.verify_stopped_on_breakpoint(after=ctx.process_event)
+        thread_ctx = session.thread_context_from(stop_event)
+        return thread_ctx.top_frame()
+
     @skipIfWindows
     def test_memory_refs_variables(self):
-        """
-        Tests memory references for evaluate
-        """
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.cpp"
-        self.source_path = os.path.join(os.getcwd(), source)
-        self.set_source_breakpoints(
-            source,
-            [line_number(source, "// Breakpoint")],
-        )
-        self.continue_to_next_stop()
+        """Tests memory references on local variables."""
+        session = self.build_and_create_session()
+        top_frame = self.stop_at_breakpoint(session)
+        locals = top_frame.locals
 
-        locals = {l["name"]: l for l in self.dap_server.get_local_variables()}
-
-        # Pointers should have memory-references
-        self.assertIn("memoryReference", locals["rawptr"].keys())
-        # Non-pointers should also have memory-references
-        self.assertIn("memoryReference", locals["not_a_ptr"].keys())
+        # Pointers should have memory references.
+        self.assertIsNotNone(locals["rawptr"].memoryReference)
+        # Non-pointers should also have memory references.
+        self.assertIsNotNone(locals["not_a_ptr"].memoryReference)
 
     @skipIfWindows
     def test_memory_refs_evaluate(self):
-        """
-        Tests memory references for evaluate
-        """
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.cpp"
-        self.source_path = os.path.join(os.getcwd(), source)
-        self.set_source_breakpoints(
-            source,
-            [line_number(source, "// Breakpoint")],
-        )
-        self.continue_to_next_stop()
+        """Tests memory references on `evaluate` responses."""
+        session = self.build_and_create_session()
+        top_frame = self.stop_at_breakpoint(session)
 
-        self.assertIn(
-            "memoryReference",
-            self.dap_server.request_evaluate("rawptr")["body"].keys(),
-        )
+        eval_body = session.evaluate("rawptr", frameId=top_frame.id)
+        self.assertIsNotNone(eval_body.memoryReference)
 
     @skipIfWindows
     def test_memory_refs_set_variable(self):
-        """
-        Tests memory references for `setVariable`
-        """
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.cpp"
-        self.source_path = os.path.join(os.getcwd(), source)
-        self.set_source_breakpoints(
-            source,
-            [line_number(source, "// Breakpoint")],
-        )
-        self.continue_to_next_stop()
+        """Tests memory references on `setVariable` responses."""
+        session = self.build_and_create_session()
+        top_frame = self.stop_at_breakpoint(session)
+        locals = top_frame.locals
 
-        ptr_value = self.get_local_as_int("rawptr")
-        self.assertIn(
-            "memoryReference",
-            self.set_local("rawptr", ptr_value + 2)["body"].keys(),
-        )
+        ptr_value = locals["rawptr"].variable.value_as_int
+        response = locals.set("rawptr", ptr_value + 2)
+        response = self.expect_success(response)
+        self.assertIsNotNone(response.body.memoryReference)
 
     @skipIfWindows
-    @skipIfWasm  # the test finds the memory to read by evaluating an expression
+    @requireExpressionEvaluation
     def test_readMemory(self):
-        """
-        Tests the 'readMemory' request
-        """
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.cpp"
-        self.source_path = os.path.join(os.getcwd(), source)
-        self.set_source_breakpoints(
-            source,
-            [line_number(source, "// Breakpoint")],
-        )
-        self.continue_to_next_stop()
+        """Tests the `readMemory` request."""
+        session = self.build_and_create_session()
+        top_frame = self.stop_at_breakpoint(session)
 
-        ptr_deref = self.dap_server.request_evaluate("*rawptr")["body"]
-        memref = ptr_deref["memoryReference"]
+        eval_body = session.evaluate("*rawptr", frameId=top_frame.id)
+        memref = self.expect_not_none(eval_body.memoryReference)
 
-        # We can read the complete string
-        mem = self.dap_server.request_readMemory(memref, 0, 5)["body"]
-        self.assertEqual(b64decode(mem["data"]), b"dead\0")
+        # We can read the complete string.
+        response = session.read_memory(memref, count=5, offset=0).result()
+        data = self.expect_not_none(response.body.data)
+        self.assertEqual(b64decode(data), b"dead\0")
 
-        # We can read large chunks, potentially returning partial results
-        mem = self.dap_server.request_readMemory(memref, 0, 4096)["body"]
-        self.assertEqual(b64decode(mem["data"])[0:5], b"dead\0")
+        # Large reads return partial results.
+        response = session.read_memory(memref, count=4096, offset=0).result()
+        data = self.expect_not_none(response.body.data)
+        self.assertEqual(b64decode(data)[0:5], b"dead\0")
 
-        # Use an offset
-        mem = self.dap_server.request_readMemory(memref, 2, 3)["body"]
-        self.assertEqual(b64decode(mem["data"]), b"ad\0")
+        # Offsets work.
+        response = session.read_memory(memref, count=3, offset=2).result()
+        data = self.expect_not_none(response.body.data)
+        self.assertEqual(b64decode(data), b"ad\0")
 
-        # Reads of size 0 are successful
-        # VS Code sends those in order to check if a `memoryReference` can actually be dereferenced.
-        mem = self.dap_server.request_readMemory(memref, 0, 0)
-        self.assertEqual(mem["success"], True)
-        self.assertNotIn(
-            "data", mem["body"], f"expects no data key in response: {mem!r}"
+        # Reads of size 0 are successful.
+        # VSCode uses these to probe whether a memoryReference can actually be dereferenced.
+        response = session.read_memory(memref, count=0, offset=0).result()
+        self.assertIsNone(
+            response.body.data, f"expects no data in response: {response!r}"
         )
 
-        # Reads at offset 0x0 return unreadable bytes
+        # Reads at offset 0x0 return unreadable bytes.
         bytes_to_read = 6
-        mem = self.dap_server.request_readMemory("0x0", 0, bytes_to_read)
-        self.assertEqual(mem["body"]["unreadableBytes"], bytes_to_read)
+        response = session.read_memory("0x0", count=bytes_to_read, offset=0).result()
+        self.assertEqual(response.body.unreadableBytes, bytes_to_read)
 
-        # Reads with invalid address fails.
-        mem = self.dap_server.request_readMemory("-3204", 0, 10)
-        self.assertFalse(mem["success"], "expect fail on reading memory.")
+        # Reads with an invalid address fail.
+        session.read_memory("-3204", count=10, offset=0).error(
+            "expect fail on reading memory."
+        )
 
-        self.continue_to_exit()
+        session.continue_to_exit()
 
     # Flakey on 32-bit Arm Linux.
     @skipIf(oslist=["linux"], archs=["arm$"])
-    @skipIfWasm  # the test finds the memory to write by evaluating an expression
+    @requireExpressionEvaluation
     def test_writeMemory(self):
-        """
-        Tests the 'writeMemory' request
-        """
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.cpp"
-        self.source_path = os.path.join(os.getcwd(), source)
-        self.set_source_breakpoints(
-            source,
-            [line_number(source, "// Breakpoint")],
-        )
-        self.continue_to_next_stop()
+        """Tests the `writeMemory` request."""
+        session = self.build_and_create_session()
+        top_frame = self.stop_at_breakpoint(session)
 
-        # Get the 'not_a_ptr' writable variable reference address.
-        ptr_deref = self.dap_server.request_evaluate("not_a_ptr")["body"]
-        memref = ptr_deref["memoryReference"]
+        # Get `not_a_ptr`'s writable variable's memory reference.
+        eval_body = session.evaluate("not_a_ptr", frameId=top_frame.id)
+        memref = self.expect_not_none(eval_body.memoryReference)
 
         # Write the decimal value 50 (0x32 in hexadecimal) to memory.
-        # This corresponds to the ASCII character '2' and encodes to Base64 as "Mg==".
-        mem_response = self.writeMemory(memref, 50, 0, True)
-        self.assertEqual(mem_response["success"], True)
-        self.assertEqual(mem_response["body"]["bytesWritten"], 1)
+        # This corresponds to the ASCII character '2' and encodes to base64
+        # as "Mg==".
+        response = session.write_memory(memref, value=50, offset=0, allowPartial=True)
+        response = self.expect_success(response)
+        self.assertEqual(response.body.bytesWritten, 1)
 
-        # Read back the modified memory and verify that the written data matches
-        # the expected result.
-        mem_response = self.dap_server.request_readMemory(memref, 0, 1)
-        self.assertEqual(mem_response["success"], True)
-        self.assertEqual(mem_response["body"]["data"], "Mg==")
+        # Read back and verify.
+        read_response = session.read_memory(memref, count=1, offset=0).result()
+        self.assertEqual(read_response.body.data, "Mg==")
 
-        # Write the decimal value 100 (0x64 in hexadecimal) to memory.
-        # This corresponds to the ASCII character 'd' and encodes to Base64 as "ZA==".
-        # allowPartial=False
-        mem_response = self.writeMemory(memref, 100, 0, False)
-        self.assertEqual(mem_response["success"], True)
-        self.assertEqual(mem_response["body"]["bytesWritten"], 1)
+        # Write the decimal value 100 (0x64 in hexadecimal) to memory with
+        # allowPartial=False. This corresponds to the ASCII character 'd' and
+        # encodes to base64 as "ZA==".
+        response = session.write_memory(memref, value=100, offset=0, allowPartial=False)
+        response = self.expect_success(response)
+        self.assertEqual(response.body.bytesWritten, 1)
 
-        # Read back the modified memory and verify that the written data matches
-        # the expected result.
-        mem_response = self.dap_server.request_readMemory(memref, 0, 1)
-        self.assertEqual(mem_response["success"], True)
-        self.assertEqual(mem_response["body"]["data"], "ZA==")
+        # Read back and verify.
+        read_response = session.read_memory(memref, count=1, offset=0).result()
+        self.assertEqual(read_response.body.data, "ZA==")
 
-        # Memory write failed for 0x0.
-        mem_response = self.writeMemory("0x0", 50, 0, True)
-        self.assertEqual(mem_response["success"], False)
+        # Writing to 0x0 fails.
+        response = session.write_memory("0x0", value=50, offset=0, allowPartial=True)
+        self.expect_error(response)
 
-        # Malformed memory reference.
-        mem_response = self.writeMemory("12345", 50, 0, True)
-        self.assertEqual(mem_response["success"], False)
+        # Writing to a malformed memory reference fails.
+        response = session.write_memory("12345", value=50, offset=0, allowPartial=True)
+        self.expect_error(response)
 
-        ptr_deref = self.dap_server.request_evaluate("nonWritable")["body"]
-        memref = ptr_deref["memoryReference"]
-
-        # Writing to non-writable region should return an appropriate error.
-        mem_response = self.writeMemory(memref, 50, 0, False)
-        self.assertEqual(mem_response["success"], False)
+        # Writing to a non-writable region returns a not-writable error.
+        eval_body = session.evaluate("nonWritable", frameId=top_frame.id)
+        nonwritable_ref = self.expect_not_none(eval_body.memoryReference)
+        response = session.write_memory(
+            nonwritable_ref, value=50, offset=0, allowPartial=False
+        )
+        err = self.expect_error(response)
+        err_msg = self.expect_not_none(err.body and err.body.error)
         self.assertRegex(
-            mem_response["body"]["error"]["format"],
-            r"Memory " + memref + " region is not writable",
+            err_msg.format,
+            rf"Memory {nonwritable_ref} region is not writable",
         )
 
-        # Trying to write empty value; data=""
-        mem_response = self.writeMemory(memref)
-        self.assertEqual(mem_response["success"], False)
+        # Writing an empty value (no data) fails.
+        response = session.write_memory(nonwritable_ref, value="")
+        err = self.expect_error(response)
+        err_msg = self.expect_not_none(err.body and err.body.error)
         self.assertRegex(
-            mem_response["body"]["error"]["format"],
+            err_msg.format,
             r"Data cannot be empty value. Provide valid data",
         )
 
-        # Verify that large memory writes fail if the range spans non-writable
-        # or non -contiguous regions.
+        # Large writes spanning non-writable regions fail.
         data = bytes([0xFF] * 8192)
-        mem_response = self.writeMemory(
-            memref, int.from_bytes(data, byteorder="little"), 0, False
+
+        response = session.write_memory(
+            nonwritable_ref,
+            value=data,
+            offset=0,
+            allowPartial=False,
         )
-        self.assertEqual(mem_response["success"], False)
+        err = self.expect_error(response)
+        err_msg = self.expect_not_none(err.body and err.body.error)
         self.assertRegex(
-            mem_response["body"]["error"]["format"],
-            r"Memory " + memref + " region is not writable",
+            err_msg.format, rf"Memory {nonwritable_ref} region is not writable"
         )
+
+        session.continue_to_exit()

@@ -3189,8 +3189,10 @@ bool IRTranslator::translateLandingPad(const User &U,
   // If there aren't registers to copy the values into (e.g., during SjLj
   // exceptions), then don't bother.
   const Constant *PersonalityFn = MF->getFunction().getPersonalityFn();
-  if (TLI->getExceptionPointerRegister(PersonalityFn) == 0 &&
-      TLI->getExceptionSelectorRegister(PersonalityFn) == 0)
+  if (TLI->getExceptionPointerRegister(
+          TLI->getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
+      TLI->getExceptionSelectorRegister(
+          TLI->getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
     return true;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -3221,7 +3223,8 @@ bool IRTranslator::translateLandingPad(const User &U,
   assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
-  Register ExceptionReg = TLI->getExceptionPointerRegister(PersonalityFn);
+  Register ExceptionReg = TLI->getExceptionPointerRegister(
+      TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
   if (!ExceptionReg)
     return false;
 
@@ -3229,7 +3232,8 @@ bool IRTranslator::translateLandingPad(const User &U,
   ArrayRef<Register> ResRegs = getOrCreateVRegs(LP);
   MIRBuilder.buildCopy(ResRegs[0], ExceptionReg);
 
-  Register SelectorReg = TLI->getExceptionSelectorRegister(PersonalityFn);
+  Register SelectorReg = TLI->getExceptionSelectorRegister(
+      TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
   if (!SelectorReg)
     return false;
 

@@ -329,6 +329,7 @@ def TileLoadOp : ArmSME_Op<"tile_load", [
     CPred<"bool(getPadding()) == bool(getMask())">
   >,
 ]> {
+  let hasVerifier = 1;
   let summary = "Tile load operation";
   let description = [{
     Loads a 2D SME "virtual tile" from memory defined by a base and indices,
@@ -411,6 +412,7 @@ def TileStoreOp : ArmSME_Op<"tile_store", [
   AllElementTypesMatch<["valueToStore", "base"]>,
   HasMatchingMaskTypeConstraint<"valueToStore", "mask">,
 ]> {
+  let hasVerifier = 1;
   let summary = "Tile store operation";
   let description = [{
     Stores a 2D SME "virtual tile" to memory defined by a base and indices,

@@ -134,8 +134,8 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
 // Parse an assignment_expression
 //
 //  assignment_expression
-//    inclusive_or_expression
-//    inclusive_or_expression assignment_operator assignment_expression
+//    logical_or_expression
+//    logical_or_expression assignment_operator assignment_expression
 //
 //  assignment_operator:
 //    "="
@@ -143,7 +143,7 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
 //    "-="
 //
 ASTNodeUP DILParser::ParseAssignmentExpression() {
-  auto lhs = ParseInclusiveOrExpression();
+  auto lhs = ParseLogicalOrExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
   // Check if it's an assignment expression.
@@ -157,6 +157,50 @@ ASTNodeUP DILParser::ParseAssignmentExpression() {
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));
   }
+  return lhs;
+}
+
+// Parse a logical_or_expression.
+//
+//  logical_or_expression:
+//    logical_and_expression {"||" logical_and_expression}
+//
+ASTNodeUP DILParser::ParseLogicalOrExpression() {
+  auto lhs = ParseLogicalAndExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::pipepipe)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseLogicalAndExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a logical_and_expression.
+//
+//  logical_and_expression:
+//    inclusive_or_expression {"&&" inclusive_or_expression}
+//
+ASTNodeUP DILParser::ParseLogicalAndExpression() {
+  auto lhs = ParseInclusiveOrExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::ampamp)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseInclusiveOrExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
   return lhs;
 }
 
@@ -365,10 +409,11 @@ ASTNodeUP DILParser::ParseCastExpression() {
 //    "+"
 //    "-"
 //    "~"
+//    "!"
 //
 ASTNodeUP DILParser::ParseUnaryExpression() {
-  if (CurToken().IsOneOf(
-          {Token::amp, Token::star, Token::minus, Token::plus, Token::tilde})) {
+  if (CurToken().IsOneOf({Token::amp, Token::star, Token::minus, Token::plus,
+                          Token::tilde, Token::exclaim})) {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
@@ -389,6 +434,9 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
                                            std::move(rhs));
     case Token::tilde:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Not,
+                                           std::move(rhs));
+    case Token::exclaim:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::LNot,
                                            std::move(rhs));
     default:
       llvm_unreachable("invalid token kind");

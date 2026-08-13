@@ -682,6 +682,7 @@ if(CMAKE_HOST_APPLE AND APPLE)
     if(CMAKE_XCRUN)
       execute_process(COMMAND ${CMAKE_XCRUN} -find ld-classic
         OUTPUT_VARIABLE LD64_EXECUTABLE
+        ERROR_QUIET
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
       find_program(LD64_EXECUTABLE NAMES ld-classic DOC "The ld64 linker")

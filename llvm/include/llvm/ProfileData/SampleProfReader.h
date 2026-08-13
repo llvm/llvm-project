@@ -242,7 +242,6 @@
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/OnDiskHashTable.h"
 #include <array>
 #include <cstdint>
 #include <list>
@@ -971,55 +970,11 @@ public:
   static bool hasFormat(const MemoryBuffer &Buffer);
 };
 
-/// Trait class for reading the on-disk function offset hash table mapping
-/// function name GUIDs to their offsets in the SecLBRProfile section.
-class FuncOffsetHashTableInfo {
-public:
-  using key_type = uint64_t;
-  using key_type_ref = uint64_t;
-  using data_type = uint32_t; // Offset
-  using data_type_ref = uint32_t;
-  using hash_value_type = uint32_t;
-  using offset_type = uint32_t;
-  using internal_key_type = uint64_t;
-  using external_key_type = uint64_t;
-
-  static hash_value_type ComputeHash(key_type_ref Key) {
-    return static_cast<hash_value_type>(Key);
-  }
-
-  static bool EqualKey(key_type_ref LHS, key_type_ref RHS) {
-    return LHS == RHS;
-  }
-
-  static key_type GetInternalKey(key_type_ref Key) { return Key; }
-  static external_key_type GetExternalKey(internal_key_type Key) { return Key; }
-
-  static std::pair<offset_type, offset_type>
-  ReadKeyDataLength(const unsigned char *&D) {
-    // Implicit lengths: do NOT read or advance pointer D.
-    return {sizeof(key_type), sizeof(data_type)};
-  }
-
-  static key_type ReadKey(const unsigned char *D, offset_type Len) {
-    assert(Len == sizeof(key_type) && "Key length mismatch");
-    return support::endian::read64le(D);
-  }
-
-  static data_type ReadData(key_type_ref K, const unsigned char *D,
-                            offset_type Len) {
-    assert(Len == sizeof(data_type) && "Data length mismatch");
-    return support::endian::read32le(D);
-  }
-};
-
 /// Tags to select the initialization mode of SampleProfileFuncOffsetTable.
 struct InMemoryModeT {};
-struct OnDiskModeT {};
 struct EytzingerModeT {};
 
 inline constexpr InMemoryModeT InMemoryMode{};
-inline constexpr OnDiskModeT OnDiskMode{};
 inline constexpr EytzingerModeT EytzingerMode{};
 
 /// A unified wrapper representing the function offset table.
@@ -1031,21 +986,14 @@ inline constexpr EytzingerModeT EytzingerMode{};
 ///   profile offsets, populated when reading the array of offsets in
 ///   context-sensitive (CS) profiles or version 103 profiles.
 ///
-/// - An OnDiskIterableChainedHashTable providing the same mapping directly from
-///   the file in (non-context-sensitive) version 104 profiles.
-///
 /// - A raw slice of 32-bit relative offsets for Eytzinger parallel lookups.
 ///
 /// It exposes a single, type-agnostic lookup interface, shielding the reader
 /// from the underlying container types. To prevent hybrid-state corruption, the
-/// table's mode is locked at construction time, and assertions prevent
-/// modification in on-disk mode.
+/// table's mode is locked at construction time.
 class SampleProfileFuncOffsetTable {
 public:
-  enum class TableMode { InMemory, OnDisk, Eytzinger };
-
-  using OnDiskTableType =
-      llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
+  enum class TableMode { InMemory, Eytzinger };
 
   SampleProfileFuncOffsetTable() = delete;
   SampleProfileFuncOffsetTable(const SampleProfileFuncOffsetTable &) = delete;
@@ -1068,18 +1016,10 @@ public:
         FuncOffsetSpan(FuncOffsetSpan) {}
 
   /// Insert a function GUID and its profile offset into the in-memory map.
-  /// Enforces that the on-disk table must not have been set first.
   void insert(uint64_t GUID, uint64_t Offset) {
-    assert(!OnDiskTable &&
-           "Cannot insert in-memory elements after on-disk table has been set");
+    assert(Mode == TableMode::InMemory &&
+           "Cannot insert into a non-in-memory offset table");
     InMemoryTable[GUID] = Offset;
-  }
-
-  /// Instantiate the on-disk chained hash table using raw stream pointers.
-  SampleProfileFuncOffsetTable(OnDiskModeT, const uint8_t *Buckets,
-                               const uint8_t *Payload, const uint8_t *Base)
-      : Mode(TableMode::OnDisk) {
-    OnDiskTable.reset(OnDiskTableType::Create(Buckets, Payload, Base));
   }
 
   /// Query the offset table for the profile offset associated with the given
@@ -1093,15 +1033,9 @@ public:
       }
       return std::nullopt;
     }
-    if (OnDiskTable) {
-      auto Iter = OnDiskTable->find(GUID);
-      if (Iter != OnDiskTable->end())
-        return *Iter;
-    } else {
-      auto Iter = InMemoryTable.find(GUID);
-      if (Iter != InMemoryTable.end())
-        return Iter->second;
-    }
+    auto Iter = InMemoryTable.find(GUID);
+    if (Iter != InMemoryTable.end())
+      return Iter->second;
     return std::nullopt;
   }
 
@@ -1124,7 +1058,6 @@ public:
 private:
   TableMode Mode;
   llvm::DenseMap<hash_code, uint64_t> InMemoryTable;
-  std::unique_ptr<OnDiskTableType> OnDiskTable;
   EytzingerTableSpan<support::ulittle64_t> NameSpan;
   ArrayRef<support::ulittle32_t> FuncOffsetSpan;
 };

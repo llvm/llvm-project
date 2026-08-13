@@ -4,7 +4,7 @@
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
 !s32i = !cir.int<s, 32>
-!rec_SLD = !cir.struct<"SLD" {!cir.long_double<!cir.f80>}>
+!rec_SLD = !cir.struct<"SLD" {data !cir.long_double<!cir.f80>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<

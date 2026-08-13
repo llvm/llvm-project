@@ -754,4 +754,20 @@ bool isOnceUsedSeed(const Instruction *I) {
       I);
 }
 
+Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
+  auto *Wide = dyn_cast<FPExtInst>(V);
+  if (!Wide || !Wide->hasOneUse())
+    return nullptr;
+  auto *Narrow = dyn_cast<FPTruncInst>(Wide->getOperand(0));
+  if (!Narrow || !Narrow->hasOneUse())
+    return nullptr;
+  Value *Src = Narrow->getOperand(0);
+  if (!isa<Instruction>(Src) || Src->getType() != Wide->getType())
+    return nullptr;
+  if (MustBeElidable && !(Wide->hasAllowContract() && Wide->hasNoNaNs() &&
+                          Wide->hasNoInfs() && Narrow->hasAllowContract()))
+    return nullptr;
+  return Narrow;
+}
+
 } // namespace llvm::slpvectorizer

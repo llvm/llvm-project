@@ -510,8 +510,8 @@ public:
     return MVEVectorCostFactor;
   }
 
-  bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                   MCRegister PhysReg) const override;
+  void getCSRAllocationOrderMask(const MachineFunction &MF,
+                                 BitVector &Mask) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 

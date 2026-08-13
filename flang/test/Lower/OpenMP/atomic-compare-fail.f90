@@ -11,9 +11,11 @@ subroutine fail_acquire(x, e, d)
   !$omp atomic compare fail(acquire)
   if (x == e) x = d
 end
+! CHECK:   %[[E_DECL:.*]]:2 = hlfir.declare %arg1 {{.*}}Ee"
+! CHECK:   %[[E_VAL:.*]] = fir.load %[[E_DECL]]#0 : !fir.ref<i32>
 ! CHECK: omp.atomic.compare memory_order(relaxed) %{{.*}} : !fir.ref<i32> {
 ! CHECK: ^bb0(%[[XVAL:.*]]: i32):
-! CHECK:   arith.cmpi eq, %[[XVAL]], %{{.*}} : i32
+! CHECK:   arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:   omp.yield
 ! CHECK: } {fail_memory_order = #omp<memoryorderkind acquire>}
 

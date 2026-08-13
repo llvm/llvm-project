@@ -19,6 +19,11 @@
 // RUN:     FileCheck --check-prefix=NO-EXPERIMENTAL %s
 // NO-EXPERIMENTAL: invalid -mtune string 'sifive-x390:full-vec-fp64':
 // NO-EXPERIMENTAL-SAME: require '-mexperimental-mtune-syntax' to use with tune feature string
+//
+// RUN: not %clang --target=riscv64 -mtune=sifive-x390: -c %s 2>&1 | \
+// RUN:     FileCheck --check-prefix=NO-EXPERIMENTAL2 %s
+// NO-EXPERIMENTAL2: invalid -mtune string 'sifive-x390:':
+// NO-EXPERIMENTAL2-SAME: require '-mexperimental-mtune-syntax' to use with tune feature string
 
 // RUN: not %clang --target=riscv64 -mexperimental-mtune-syntax \
 // RUN:     -mtune=sifive-p470:full-vec-fp64 -c %s 2>&1 | \

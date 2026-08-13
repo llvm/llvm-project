@@ -5,9 +5,9 @@ This directory contains utilities for continuous benchmarking of libc++ with LNT
 ## Gathering historical performance data
 
 When generating historical performance data, benchmarking every commit of libc++
-is prohibitively expensive since a single run of the benchmark suite takes a few
-hours. Furthermore, generating this data from scratch is expected to be common,
-since it must happen whenever a fixed parameter like the compiler or the OS changes.
+is prohibitively expensive. Furthermore, generating this data from scratch is
+expected  to be common, since it must happen whenever a fixed parameter like the
+compiler or the OS changes.
 
 Instead, the tools in this directory aim to make it possible to generate historical
 performance data quickly with coarse granularity, with the goal of then generating

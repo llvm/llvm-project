@@ -218,16 +218,6 @@ void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
     if (Level != OptimizationLevel::O0)
       LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
   });
-
-  // TODO: Move this into the base CodeGenPassBuilder once all targets that
-  // currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(RISCVAsmPrinterBeginPass::name(),
-                            "riscv-asm-printer-begin");
-    PIC->addClassToPassName(RISCVAsmPrinterPass::name(), "riscv-asm-printer");
-    PIC->addClassToPassName(RISCVAsmPrinterEndPass::name(),
-                            "riscv-asm-printer-end");
-  }
 }
 
 Error RISCVTargetMachine::buildCodeGenPipeline(

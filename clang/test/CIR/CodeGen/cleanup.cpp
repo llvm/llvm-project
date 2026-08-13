@@ -7,7 +7,7 @@ struct Struk {
   ~Struk();
 };
 
-// CHECK: !rec_Struk = !cir.struct<"Struk" padded {!u8i}>
+// CHECK: !rec_Struk = !cir.struct<"Struk" padded {pad !u8i}>
 
 // CHECK: cir.func{{.*}} @_ZN5StrukD1Ev(!cir.ptr<!rec_Struk> {{.*}})
 

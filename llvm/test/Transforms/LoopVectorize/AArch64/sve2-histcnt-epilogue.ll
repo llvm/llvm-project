@@ -46,12 +46,7 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX4]]
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x i32>, ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = zext <2 x i32> [[WIDE_LOAD5]] to <2 x i64>
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP16]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP16]], i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x ptr> [[TMP20]], ptr [[TMP19]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <2 x i64> [[TMP16]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.v2p0.i32(<2 x ptr> [[TMP13]], i32 1, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX4]], 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]

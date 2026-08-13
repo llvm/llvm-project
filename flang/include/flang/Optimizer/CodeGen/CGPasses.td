@@ -118,6 +118,7 @@ def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
            "for W^X compliance. When enabled, internal procedure pointers "
            "use a runtime-managed pool of executable trampolines with "
            "separate data region, avoiding the need for an executable stack.">];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def LowerRepackArraysPass : Pass<"lower-repack-arrays", "mlir::ModuleOp"> {

@@ -94,12 +94,9 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
   }
 
   // Even if CSR list is same, we could have had a different allocation order
-  // if ignoreCSRForAllocationOrder is evaluated differently.
-  BitVector CSRHintsForAllocOrder(TRI->getNumRegs());
-  for (const MCPhysReg *I = CSR; *I; ++I)
-    for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
-      CSRHintsForAllocOrder[(*AI).id()] =
-          STI.ignoreCSRForAllocationOrder(mf, *AI);
+  // if the target's CSR allocation-order mask changes.
+  BitVector CSRHintsForAllocOrder;
+  STI.getCSRAllocationOrderMask(mf, CSRHintsForAllocOrder);
   if (IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
     Update = true;
     IgnoreCSRForAllocOrder = std::move(CSRHintsForAllocOrder);
@@ -129,7 +126,6 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
 void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   assert(RC && "no register class given");
   RCInfo &RCI = RegClass[RC->getID()];
-  auto &STI = MF->getSubtarget();
 
   // Raw register count, including all reserved regs.
   unsigned NumRegs = RC->getNumRegs();
@@ -154,7 +150,8 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
     MinCost = std::min(MinCost, Cost);
 
     if (getLastCalleeSavedAlias(PhysReg) &&
-        !STI.ignoreCSRForAllocationOrder(*MF, PhysReg))
+        (IgnoreCSRForAllocOrder.empty() ||
+         !IgnoreCSRForAllocOrder.test(PhysReg)))
       // PhysReg aliases a CSR, save it for later.
       CSRAlias.push_back(PhysReg);
     else {

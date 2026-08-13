@@ -477,8 +477,6 @@ private:
   SPIRVTypeInst getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
                                SPIRV::FPEncoding::FPEncoding FPEncode);
 
-  SPIRVTypeInst getOpTypeVoid(MachineIRBuilder &MIRBuilder);
-
   SPIRVTypeInst getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                 MachineIRBuilder &MIRBuilder);
 
@@ -630,6 +628,7 @@ public:
                                            unsigned NumElements,
                                            MachineInstr &I,
                                            const SPIRVInstrInfo &TII);
+  SPIRVTypeInst getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
   // Returns a pointer to a SPIR-V pointer type with the given base type and
   // storage class. The base type will be translated to a SPIR-V type, and the

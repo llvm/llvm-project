@@ -17,6 +17,8 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
+MODULE_PASS("amdgpu-asm-printer-begin", AMDGPUAsmPrinterBeginPass())
+MODULE_PASS("amdgpu-asm-printer-end", AMDGPUAsmPrinterEndPass())
 MODULE_PASS("amdgpu-export-kernel-runtime-handles", AMDGPUExportKernelRuntimeHandlesPass())
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
             AMDGPULowerBufferFatPointersPass(*this))
@@ -113,6 +115,7 @@ MACHINE_FUNCTION_ANALYSIS("amdgpu-next-use-analysis", AMDGPUNextUseAnalysisPass(
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("amdgpu-asm-printer", AMDGPUAsmPrinterPass())
 MACHINE_FUNCTION_PASS("amdgpu-insert-delay-alu", AMDGPUInsertDelayAluPass())
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("amdgpu-lower-vgpr-encoding", AMDGPULowerVGPREncodingPass())

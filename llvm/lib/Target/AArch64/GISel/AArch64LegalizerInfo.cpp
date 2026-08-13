@@ -2289,7 +2289,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
   Register ListPtr = MI.getOperand(1).getReg();
 
   LLT PtrTy = MRI.getType(ListPtr);
-  LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT IntPtrTy = LLT::integer(PtrTy.getSizeInBits());
 
   const unsigned PtrSize = PtrTy.getSizeInBits() / 8;
   const Align PtrAlign = Align(PtrSize);

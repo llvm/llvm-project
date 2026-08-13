@@ -685,11 +685,13 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
         const unsigned LShrAmt = llvm::Log2_32(SubVecTy->getNumElements());
         FixedVectorType *BitCastTy =
             FixedVectorType::get(NewElemTy, NewNumElts);
-        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastTy);
+        Value *BCVal =
+            Builder.CreateBitPreservingCastChain(DL, CurVal, BitCastTy);
         Value *NewIdx = Builder.CreateLShr(
             Index, ConstantInt::get(Index->getType(), LShrAmt));
         Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
-        Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
+        Value *BCOut =
+            Builder.CreateBitPreservingCastChain(DL, ExtVal, AccessTy);
         Inst->replaceAllUsesWith(BCOut);
         return nullptr;
       }

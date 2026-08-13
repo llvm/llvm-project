@@ -1252,7 +1252,11 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
-  if (CodeGenOpts.EnableNewPMCodeGen) {
+  if (CodeGenOpts.getEnableNewPMCodeGen() ==
+          CodeGenOptions::NewPMEnablementLevel::ForceEnable ||
+      (CodeGenOpts.getEnableNewPMCodeGen() ==
+           CodeGenOptions::NewPMEnablementLevel::Auto &&
+       TM->shouldDefaultToNewPM())) {
     RunCodegenPipelineNewPM(Action, OS, DwoOS, CGFT);
   } else {
     RunCodegenPipelineLegacy(Action, OS, DwoOS, CGFT);

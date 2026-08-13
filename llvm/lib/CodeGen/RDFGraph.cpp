@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -745,10 +746,12 @@ RegisterAggr DataFlowGraph::getLandingPadLiveIns() const {
   const Function &F = MF.getFunction();
   const Constant *PF = F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr;
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  if (RegisterId R = TLI.getExceptionPointerRegister(PF))
+  if (RegisterId R = TLI.getExceptionPointerRegister(
+          TLI.getTargetMachine().getExceptionModel(), PF))
     LR.insert(RegisterRef(R));
   if (!isFuncletEHPersonality(classifyEHPersonality(PF))) {
-    if (RegisterId R = TLI.getExceptionSelectorRegister(PF))
+    if (RegisterId R = TLI.getExceptionSelectorRegister(
+            TLI.getTargetMachine().getExceptionModel(), PF))
       LR.insert(RegisterRef(R));
   }
   return LR;

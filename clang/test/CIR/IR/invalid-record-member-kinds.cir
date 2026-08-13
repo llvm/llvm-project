@@ -1,0 +1,61 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// Every member is spelled with a mark, so a bare type has nothing to parse.
+!u8i = !cir.int<u, 8>
+// expected-error @below {{expected valid keyword}}
+!rec_S = !cir.struct<"S" {!u8i}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+// expected-error @below {{expected a record member kind}}
+!rec_S = !cir.struct<"S" {bogus !u8i}>
+
+module {}
+
+// -----
+
+// Only one mark is consumed, so a second one is left to the type parser.
+!u8i = !cir.int<u, 8>
+// expected-error @below {{expected non-function type}}
+!rec_S = !cir.struct<"S" {pad empty !u8i}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a union's tail padding takes no kind mark}}
+!rec_U = !cir.union<"U" {data !s32i}, padding = {pad !cir.array<!u8i x 4>}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a union's tail padding takes no kind mark}}
+!rec_U = !cir.union<"U" {data !s32i}, padding = {data !cir.array<!u8i x 4>}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a union's tail padding takes no kind mark}}
+!rec_U = !cir.union<"U" {data !s32i}, padding = {empty !cir.array<!u8i x 4>}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+// expected-error @below {{a union member cannot be marked pad}}
+!rec_U = !cir.union<"U" {data !s32i, pad !u8i}>
+
+module {}

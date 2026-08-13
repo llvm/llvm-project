@@ -252,12 +252,15 @@ int main(int argc, const char **argv, const char **envp) {
   ol_device_handle_t Host = getHostDevice();
   assert(Host && "Host device should always be present");
 
+  ol_context_handle_t Context;
+  OFFLOAD_ERR(olCreateContext(1, &Device, &Context));
+
   ol_program_handle_t Program;
   OFFLOAD_ERR(olCreateProgram(Device, Image.getBufferStart(),
                               Image.getBufferSize(), &Program));
 
   ol_queue_handle_t Queue;
-  OFFLOAD_ERR(olCreateQueue(Device, &Queue));
+  OFFLOAD_ERR(olCreateQueue(Context, Device, &Queue));
 
   int DevArgc = static_cast<int>(NewArgv.size());
   void *DevArgv = copyArgumentVector(NewArgv.size(), NewArgv.begin(), Device);
@@ -300,6 +303,7 @@ int main(int argc, const char **argv, const char **envp) {
   OFFLOAD_ERR(olMemFree(DevArgv));
   OFFLOAD_ERR(olMemFree(DevEnvp));
   OFFLOAD_ERR(olDestroyQueue(Queue));
+  OFFLOAD_ERR(olDestroyContext(Context));
   OFFLOAD_ERR(olDestroyProgram(Program));
   OFFLOAD_ERR(olShutDown());
 

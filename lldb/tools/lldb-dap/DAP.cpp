@@ -225,7 +225,8 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 }
 
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
-  in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
+  in =
+      lldb::SBFile(std::fopen(DEV_NULL, "r"), "r", /*transfer_ownership=*/true);
 
   if (auto error = out.RedirectTo(
           m_loop, overrideOut,

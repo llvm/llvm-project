@@ -240,6 +240,12 @@ public:
     NonStrictDefault = NonZero
   };
 
+  enum class NewPMEnablementLevel {
+    Auto,         // Use the target dependent default.
+    ForceEnable,  // Always enable regardless of the target default.
+    ForceDisable, // Always disable regardless of the target default.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
