@@ -18,6 +18,7 @@ function(add_fp_unittest name)
 
   # TODO: To be removed when we find a workaround to run MPFR tests for
   # emulated type where compiler doesn't support the native float128
+  # TODO: Check mpfr_buildopt_float128_p() returns non-zero.
   if(MATH_UNITTEST_NEED_MPFR_F128)
     set(MATH_UNITTEST_NEED_MPFR TRUE)
     if(NOT LIBC_TYPES_HAS_NATIVE_FLOAT128)
