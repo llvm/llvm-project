@@ -46,6 +46,13 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   SmallVector<InlineSite, 8> ReversedInlineStack;
   auto *InlinedAt = DebugLoc ? DebugLoc->getInlinedAt() : nullptr;
   while (InlinedAt) {
+    uint32_t Discriminator = InlinedAt->getDiscriminator();
+    // Every inline-tree edge must identify a real callsite probe. Stop at the
+    // first unrepresentable frame; skipping it would attach the inlinee to an
+    // unrelated outer callsite.
+    if (!DILocation::isPseudoProbeDiscriminator(Discriminator))
+      break;
+
     auto Name = InlinedAt->getSubprogramLinkageName();
     // Strip Coroutine suffixes from CoroSplit Pass, since pseudo probes are
     // generated in an earlier stage.
@@ -58,8 +65,8 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     if (VerifyGuidExistence)
       verifyGuidExistenceInDesc(CallerGuid, Name);
 #endif
-    uint64_t CallerProbeId = PseudoProbeDwarfDiscriminator::extractProbeIndex(
-        InlinedAt->getDiscriminator());
+    uint64_t CallerProbeId =
+        PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator);
     ReversedInlineStack.emplace_back(CallerGuid, CallerProbeId);
     InlinedAt = InlinedAt->getInlinedAt();
   }
