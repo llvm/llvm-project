@@ -15747,7 +15747,7 @@ struct PaddingCalculator {
 
     TySizeInBits = Ctx.getTypeSize(Ty);
 
-    Stack.push_back(Data{0, Ty, true});
+    Stack.push_back(Data{0, Ty.getCanonicalType(), true});
     while (!Stack.empty()) {
       Data Current = Stack.back();
       Stack.pop_back();
@@ -15801,6 +15801,13 @@ private:
   // Therefore, it is better to explicitly list all the scalar types
   // containing padding bits that we know of, namely, _BitInt(N) and x87 long
   // double.
+  //
+  // FIXME: There are likely other scalar types we need to think about here, as
+  // brought up in review for #215823:
+  //  - bool
+  //  - enums(both with/without fixed underlying type)
+  //  - nullptr_t
+  //  - more?
   uint64_t getScalarOccupiedSizeInBits(QualType Ty) const {
     if (const auto *BIT = Ty->getAs<BitIntType>())
       return BIT->getNumBits();
@@ -15829,7 +15836,7 @@ private:
 
     if (D.Ty->isAtomicType()) {
       auto Unwrapped = D;
-      Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType();
+      Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType().getCanonicalType();
       Stack.push_back(Unwrapped);
       return;
     }
@@ -15858,9 +15865,9 @@ private:
       auto ElementAlign = Ctx.getTypeAlignInChars(ElementQualType);
       auto Offset = ElementSize.alignTo(ElementAlign);
 
-      Stack.push_back(Data{StartBitOffset + ArrIndex * Offset.getQuantity() *
-                                                Ctx.getCharWidth(),
-                           ElementQualType, /*VisitVirtualBase*/ true});
+      Stack.push_back(Data{
+          StartBitOffset + ArrIndex * Offset.getQuantity() * Ctx.getCharWidth(),
+          ElementQualType.getCanonicalType(), /*VisitVirtualBase*/ true});
     }
   }
 
@@ -15893,9 +15900,10 @@ private:
         auto BaseOffset =
             std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
 
-        Stack.push_back(Data{StartBitOffset + BaseOffset * Ctx.getCharWidth(),
-                             Base.getType(), /*VisitVirtualBase*/
-                             false});
+        Stack.push_back(
+            Data{StartBitOffset + BaseOffset * Ctx.getCharWidth(),
+                 Base.getType().getCanonicalType(), /*VisitVirtualBase*/
+                 false});
       };
 
       for (auto Base : CXXRecord->bases()) {
@@ -15922,14 +15930,15 @@ private:
             StartBitOffset + FieldOffset,
             StartBitOffset + FieldOffset + Field->getBitWidthValue()});
       } else {
-        Stack.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
+        Stack.push_back(Data{StartBitOffset + FieldOffset,
+                             Field->getType().getCanonicalType(),
                              /*VisitVirtualBase*/ true});
       }
     }
   }
 
   void VisitComplex(const ComplexType *CT, uint64_t StartBitOffset) {
-    QualType ElementQualType = CT->getElementType();
+    QualType ElementQualType = CT->getElementType().getCanonicalType();
     auto ElementSize = Ctx.getTypeSizeInChars(ElementQualType);
     auto ElementAlign = Ctx.getTypeAlignInChars(ElementQualType);
     auto ImgOffset = ElementSize.alignTo(ElementAlign);
