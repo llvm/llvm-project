@@ -271,6 +271,7 @@ static void SearchForBinary(Target &target, DynamicLoader::BinarySpec &bin_spec,
   // Search for the binary and its symbols.
   SymbolLocator::Request request;
   request.module_spec = module_spec;
+  request.platform = target.GetPlatform();
   request.external_lookup = bin_spec.force_symbol_search;
 
   llvm::Expected<SymbolLocator::Result> located =

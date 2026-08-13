@@ -12,6 +12,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Target/Platform.h"
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/ThreadPool.h"
@@ -36,6 +37,15 @@ SymbolLocator::Locate(const Request &request,
   Result result;
   ModuleSpec &module_spec = result.module_spec;
   module_spec = request.module_spec;
+
+  // The locator plugins have no Platform to consult, so ask it here.
+  if (request.platform) {
+    if (std::optional<ModuleSpec> found = request.platform->FindModuleFiles(
+            module_spec, search_paths, result.statistics)) {
+      result.module_spec = *found;
+      return result;
+    }
+  }
 
   // Can lldb's symbol and executable location schemes find them locally?
   module_spec.GetSymbolFileSpec() = PluginManager::LocateExecutableSymbolFile(
