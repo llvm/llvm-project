@@ -2097,8 +2097,8 @@ bool TargetLowering::SimplifyDemandedBits(
       unsigned Op0LZ = Known.countMinLeadingZeros();
       unsigned NewShAmt = ShAmt + Op0LZ;
       if (NewShAmt < BitWidth && Op0LZ) {
-        APInt Op0Mask = APInt(InDemandedMask);
-        Op0Mask.clearHighBits(Op0LZ);
+        APInt Op0Mask = APInt::getBitsSet(
+            BitWidth, InDemandedMask.countTrailingZeros(), BitWidth - Op0LZ);
         if (SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
                 Op0, Op0Mask, DemandedElts, TLO.DAG, Depth + 1)) {
           unsigned NumSignBits =
