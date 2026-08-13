@@ -887,81 +887,60 @@ define i32 @freeze_vselect_demanded(<4 x i32> %csrc, <2 x i32> %a, <2 x i32> %b,
   ret i32 %ext
 }
 
-; checks ComputeKnownBits works on FREEZE that can't be removed
-; vselect has multiple poison operands so  visitFREEZE can't drop
-; escape store so demanded-elts can't drop
-; known bits from lshr must reach final add folded into or
-define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d, ptr %escape) nounwind {
+
+; check computeKnownBits sees through FREEZE it can't removed
+; - %cond and %rhs are poison so visitFREEZE can't fold freeze away
+; - the store %escape prevents demanded-elts from shrinking it
+; - knownbits(select) == intersection(lhs, lshr rhs) = 28 bits are known zeroes,
+;   so add should fold to an or
+define <2 x i64> @freeze_vselect_knownbits(<8 x i32> %csrc, <4 x i32> %a, <4 x i32> %c, ptr %escape) nounwind {
 ; X86-LABEL: freeze_vselect_knownbits:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 40(%ebp), %eax
-; X86-NEXT:    vmovdqa 24(%ebp), %xmm3
-; X86-NEXT:    vmovdqa 8(%ebp), %xmm4
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm5 = [2147483647,2147483647,2147483647,2147483647]
-; X86-NEXT:    vpaddd %xmm5, %xmm0, %xmm6
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; X86-NEXT:    vpsubd %xmm3, %xmm0, %xmm0
+; X86-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; X86-NEXT:    vpcmpgtd %xmm4, %xmm0, %xmm0
+; X86-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X86-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; X86-NEXT:    vpsrld $28, %xmm2, %xmm2
+; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; X86-NEXT:    vblendvps %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
+; X86-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X86-NEXT:    vpxor %xmm7, %xmm7, %xmm7
-; X86-NEXT:    vpcmpgtd %xmm7, %xmm6, %xmm6
-; X86-NEXT:    vpackssdw %xmm6, %xmm6, %xmm6
-; X86-NEXT:    vpcmpgtd %xmm7, %xmm0, %xmm0
-; X86-NEXT:    vpaddd %xmm5, %xmm1, %xmm1
-; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2
-; X86-NEXT:    vpsrld $28, %xmm4, %xmm4
-; X86-NEXT:    vpsrld $28, %xmm3, %xmm3
-; X86-NEXT:    vblendvps %xmm0, %xmm4, %xmm3, %xmm0
-; X86-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm6[0,0,1,1,2,2,3,3]
-; X86-NEXT:    vblendvps %xmm3, %xmm1, %xmm2, %xmm1
-; X86-NEXT:    vmovaps %xmm0, 16(%eax)
-; X86-NEXT:    vmovaps %xmm1, (%eax)
 ; X86-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0 # [16,0,16,0]
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_vselect_knownbits:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [2147483647,2147483647,2147483647,2147483647]
-; X64-NEXT:    vpaddd %xmm5, %xmm0, %xmm6
-; X64-NEXT:    vpxor %xmm7, %xmm7, %xmm7
-; X64-NEXT:    vpcmpgtd %xmm7, %xmm6, %xmm6
-; X64-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X64-NEXT:    vpcmpgtd %xmm7, %xmm0, %xmm0
-; X64-NEXT:    vpackssdw %xmm0, %xmm6, %xmm0
+; X64-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; X64-NEXT:    vpsubd %xmm3, %xmm0, %xmm0
+; X64-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; X64-NEXT:    vpcmpgtd %xmm4, %xmm0, %xmm0
+; X64-NEXT:    vpackssdw %xmm4, %xmm0, %xmm0
 ; X64-NEXT:    vpmovsxwd %xmm0, %ymm0
-; X64-NEXT:    vpaddd %xmm5, %xmm1, %xmm1
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
-; X64-NEXT:    vpsubd %xmm5, %xmm2, %xmm2
-; X64-NEXT:    vpsrld $28, %xmm3, %xmm3
-; X64-NEXT:    vpsrld $28, %xmm4, %xmm4
-; X64-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; X64-NEXT:    vinserti128 $1, %xmm4, %ymm2, %ymm2
-; X64-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
+; X64-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; X64-NEXT:    vpsrld $28, %xmm2, %xmm2
+; X64-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; X64-NEXT:    vblendvps %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X64-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [16,16]
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %poisonable.src = add nsw <8 x i32> %csrc, splat (i32 2147483647)
-  %poisonable.cmp  = icmp sgt <8 x i32> %poisonable.src, zeroinitializer
-  %clean.cmp  = icmp sgt <8 x i32> %csrc, zeroinitializer
-  %cond = shufflevector <8 x i1> %poisonable.cmp, <8 x i1> %clean.cmp, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
-  %poisonable.a = add nsw <4 x i32> %a, splat (i32 2147483647)
-  %poisonable.b = sub nsw <4 x i32> %b, splat (i32 -2147483648)
+  %poisonable.src = add nsw <8 x i32> %csrc, splat (i32 1)
+  %poisonable.cmp = icmp sgt <8 x i32> %poisonable.src, zeroinitializer
+  %cond = shufflevector <8 x i1> %poisonable.cmp, <8 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+  %poisonable.b = sub nsw <4 x i32> %a, splat (i32 1)
   %known.c = lshr <4 x i32> %c, splat (i32 28)
-  %known.d = lshr <4 x i32> %d, splat (i32 28)
-  %lhs = shufflevector <4 x i32> %poisonable.a, <4 x i32> %known.c, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %rhs = shufflevector <4 x i32> %poisonable.b, <4 x i32> %known.d, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %sel = select <8 x i1> %cond, <8 x i32> %lhs, <8 x i32> %rhs
-  %fr  = freeze <8 x i32> %sel
-  store <8 x i32> %fr, ptr %escape
-  %bc  = bitcast <8 x i32> %fr to <4 x i64>
+  %rhs = shufflevector <4 x i32> %poisonable.b, <4 x i32> %known.c, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %sel = select <8 x i1> %cond, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 0, i32 0, i32 0, i32 0>, <8 x i32> %rhs
+  %fr = freeze <8 x i32> %sel
+  store <8 x i32> %fr, ptr %escape, align 32
+  %bc = bitcast <8 x i32> %fr to <4 x i64>
   %ext = shufflevector <4 x i64> %bc, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
   %add = add <2 x i64> %ext, splat (i64 16)
   ret <2 x i64> %add
 }
-
