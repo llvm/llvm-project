@@ -1907,6 +1907,8 @@ def SDT_RISCVPackedNarrowingShift
     : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                            SDTCisVT<2, XLenVT>]>;
 def riscv_pnsrl : RVSDNode<"PNSRL", SDT_RISCVPackedNarrowingShift>;
+def riscv_pnclip  : RVSDNode<"PNCLIP", SDT_RISCVPackedNarrowingShift>;
+def riscv_pnclipu : RVSDNode<"PNCLIPU", SDT_RISCVPackedNarrowingShift>;
 
 // Packed narrowing clip pair.
 def SDT_RISCVPackedNarrowingClip
@@ -1915,17 +1917,11 @@ def SDT_RISCVPackedNarrowingClip
 def riscv_pnclipp  : RVSDNode<"PNCLIPP", SDT_RISCVPackedNarrowingClip>;
 def riscv_pnclipup : RVSDNode<"PNCLIPUP", SDT_RISCVPackedNarrowingClip>;
 
-def SDT_RISCVPackedNarrowingClipI
-    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
-                           SDTCisVT<2, XLenVT>]>;
-def riscv_pnclipp_i  : RVSDNode<"PNCLIPP_I", SDT_RISCVPackedNarrowingClipI>;
-def riscv_pnclipup_i : RVSDNode<"PNCLIPUP_I", SDT_RISCVPackedNarrowingClipI>;
-
-def SDT_RISCVNarrowingClipI
-    : SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>, SDTCisVT<1, GPRPairVT>,
-                           SDTCisVT<2, XLenVT>]>;
-def riscv_nclipp_i : RVSDNode<"NCLIPP_I", SDT_RISCVNarrowingClipI>;
-def riscv_nclipup_i : RVSDNode<"NCLIPUP_I", SDT_RISCVNarrowingClipI>;
+def SDT_RISCVNarrowingClip
+    : SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>,
+                           SDTCisVT<2, XLenVT>, SDTCisVT<3, XLenVT>]>;
+def riscv_nclip  : RVSDNode<"NCLIP", SDT_RISCVNarrowingClip>;
+def riscv_nclipu : RVSDNode<"NCLIPU", SDT_RISCVNarrowingClip>;
 
 def SDT_RISCVPackedNarrowingClipW
     : SDTypeProfile<1, 2, [SDTCisVT<0, v2i32>,
@@ -2659,23 +2655,19 @@ let append Predicates = [IsRV32] in {
             (EXTRACT_SUBREG GPRPair:$vec, sub_gpr_odd)>;
 
   // Packed narrowing clip by immediate (RV32). shift=0 == plain clip.
-  def : Pat<(v4i8 (riscv_pnclipp_i (v4i16 GPRPair:$rs1), uimm4:$imm)),
-            (PNCLIPI_B GPRPair:$rs1, uimm4:$imm)>;
-  def : Pat<(v4i8 (riscv_pnclipup_i (v4i16 GPRPair:$rs1), uimm4:$imm)),
-            (PNCLIPIU_B GPRPair:$rs1, uimm4:$imm)>;
-  def : Pat<(v2i16 (riscv_pnclipp_i (v2i32 GPRPair:$rs1), uimm5:$imm)),
-            (PNCLIPI_H GPRPair:$rs1, uimm5:$imm)>;
-  def : Pat<(v2i16 (riscv_pnclipup_i (v2i32 GPRPair:$rs1), uimm5:$imm)),
-            (PNCLIPIU_H GPRPair:$rs1, uimm5:$imm)>;
+  def : Pat<(v4i8 (riscv_pnclip (v4i16 GPRPair:$rs1), timm:$imm)),
+            (PNCLIPI_B GPRPair:$rs1, timm:$imm)>;
+  def : Pat<(v4i8 (riscv_pnclipu (v4i16 GPRPair:$rs1), timm:$imm)),
+            (PNCLIPIU_B GPRPair:$rs1, timm:$imm)>;
+  def : Pat<(v2i16 (riscv_pnclip (v2i32 GPRPair:$rs1), timm:$imm)),
+            (PNCLIPI_H GPRPair:$rs1, timm:$imm)>;
+  def : Pat<(v2i16 (riscv_pnclipu (v2i32 GPRPair:$rs1), timm:$imm)),
+            (PNCLIPIU_H GPRPair:$rs1, timm:$imm)>;
 
-  def : Pat<(XLenVT (riscv_nclipp_i
-                      (riscv_build_gpr_pair GPR:$lo, GPR:$hi),
-                      uimm6:$imm)),
-            (NCLIPI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
-  def : Pat<(XLenVT (riscv_nclipup_i
-                      (riscv_build_gpr_pair GPR:$lo, GPR:$hi),
-                      uimm6:$imm)),
-            (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$imm)>;
+  def : Pat<(XLenVT (riscv_nclip XLenVT:$lo, XLenVT:$hi, timm:$imm)),
+            (NCLIPI (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
+  def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi, timm:$imm)),
+            (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
 } // append Predicates = [IsRV32]
 
 let append Predicates = [IsRV64] in {

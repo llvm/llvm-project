@@ -12319,46 +12319,36 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     MVT XLenVT = Subtarget.getXLenVT();
+    auto ToXLen = [&](SDValue V) { return DAG.getBitcast(XLenVT, V); };
+    SDValue Shift = DAG.getTargetConstant(0, DL, XLenVT);
     if (VT == MVT::v4i8) {
-      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIPP_I : RISCVISD::PNCLIPUP_I;
-      SDValue Pair =
-          DAG.getNode(RISCVISD::BuildPairGPRVec, DL, MVT::v4i16, Rs1, Rs2);
-      return DAG.getNode(ClipOpc, DL, MVT::v4i8, Pair,
-                         DAG.getConstant(0, DL, XLenVT));
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
+      SDValue Pair = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs1, Rs2);
+      return DAG.getNode(ClipOpc, DL, VT, Pair, Shift);
     }
     if (VT == MVT::v2i16) {
-      unsigned HOpc = IsSigned ? RISCVISD::PNCLIPP_I : RISCVISD::PNCLIPUP_I;
-      SDValue Pair =
-          DAG.getNode(RISCVISD::BuildPairGPRVec, DL, MVT::v2i32, Rs1, Rs2);
-      return DAG.getNode(HOpc, DL, MVT::v2i16, Pair,
-                         DAG.getConstant(0, DL, XLenVT));
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
+      SDValue Pair = DAG.getNode(RISCVISD::BuildPairGPRVec, DL, MVT::v2i32,
+                                 ToXLen(Rs1), ToXLen(Rs2));
+      return DAG.getNode(ClipOpc, DL, VT, Pair, Shift);
     }
     if (VT == MVT::v2i32) {
-      unsigned NOpc = IsSigned ? RISCVISD::NCLIPP_I : RISCVISD::NCLIPUP_I;
-      SDValue Zero = DAG.getConstant(0, DL, XLenVT);
-      auto BuildPairFromI64 = [&](SDValue I64) {
-        SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, XLenVT, I64,
-                                 DAG.getConstant(0, DL, MVT::i32));
-        SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, XLenVT, I64,
-                                 DAG.getConstant(1, DL, MVT::i32));
-        return DAG.getNode(RISCVISD::BuildGPRPair, DL, MVT::Untyped, Lo, Hi);
-      };
-      SDValue Pair1 = BuildPairFromI64(Rs1);
-      SDValue Pair2 = BuildPairFromI64(Rs2);
-      SDValue Lo = DAG.getNode(NOpc, DL, XLenVT, Pair1, Zero);
-      SDValue Hi = DAG.getNode(NOpc, DL, XLenVT, Pair2, Zero);
+      unsigned ClipOpc = IsSigned ? RISCVISD::NCLIP : RISCVISD::NCLIPU;
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitScalar(Rs1, DL, XLenVT, XLenVT);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitScalar(Rs2, DL, XLenVT, XLenVT);
+      SDValue Lo = DAG.getNode(ClipOpc, DL, XLenVT, Rs1Lo, Rs1Hi, Shift);
+      SDValue Hi = DAG.getNode(ClipOpc, DL, XLenVT, Rs2Lo, Rs2Hi, Shift);
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
     if (VT == MVT::v8i8 || VT == MVT::v4i16) {
-      unsigned HOpc = IsSigned ? RISCVISD::PNCLIPP_I : RISCVISD::PNCLIPUP_I;
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
       MVT HalfVT = VT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
-      SDValue Zero = DAG.getConstant(0, DL, XLenVT);
-      SDValue Lo = DAG.getNode(HOpc, DL, HalfVT, Rs1, Zero);
-      SDValue Hi = DAG.getNode(HOpc, DL, HalfVT, Rs2, Zero);
-      return DAG.getNode(RISCVISD::BuildPairGPRVec, DL, VT, Lo, Hi);
+      SDValue Lo = DAG.getNode(ClipOpc, DL, HalfVT, Rs1, Shift);
+      SDValue Hi = DAG.getNode(ClipOpc, DL, HalfVT, Rs2, Shift);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
 
-    return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+    llvm_unreachable("unexpected VT for pnclipp/pnclipup on RV32");
   }
   case Intrinsic::riscv_pmulq:
   case Intrinsic::riscv_pmulqr: {
@@ -16649,8 +16639,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Res = DAG.getNode(Opc, DL, WideVT, Ops);
       else
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
-      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                                    DAG.getVectorIdxConstant(0, DL)));
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
     case Intrinsic::riscv_pnclipp:
@@ -16667,15 +16656,13 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         SDValue Packed =
             DAG.getNode(ISD::CONCAT_VECTORS, DL, WideSrcVT, {Src1, Src2});
         SDValue Res = DAG.getNode(Opc, DL, MVT::v8i8, {Packed, Packed});
-        Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                                      DAG.getVectorIdxConstant(0, DL)));
+        Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       } else {
         MVT WideSrcVT = MVT::v2i32;
         SDValue Packed =
             DAG.getNode(ISD::BUILD_VECTOR, DL, WideSrcVT, {Src1, Src2});
         SDValue Res = DAG.getNode(Opc, DL, MVT::v4i16, {Packed, Packed});
-        Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                                      DAG.getVectorIdxConstant(0, DL)));
+        Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       }
       return;
     }
