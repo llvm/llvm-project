@@ -1,9 +1,9 @@
 // RUN: llvm-mc -triple=amdgpu7.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK %s
+// RUN: llvm-mc -triple=amdgpu8.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
 // RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
 
 // CHECK:      	.amdgpu_metadata
-// CHECK:      amdhsa.kernels:  
+// CHECK:      amdhsa.kernels:
 // CHECK:        - .group_segment_fixed_size: 24
 // CHECK:          .kernarg_segment_align: 16
 // CHECK:          .kernarg_segment_size: 24
@@ -16,7 +16,7 @@
 // CHECK:          .vgpr_count:     14
 // CHECK:          .vgpr_spill_count: 1
 // CHECK:          .wavefront_size: 64
-// CHECK:      amdhsa.version:  
+// CHECK:      amdhsa.version:
 // CHECK-NEXT:   - 1
 // CHECK-NEXT:   - 0
 .amdgpu_metadata

@@ -355,7 +355,7 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessTwoQueues) {
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   ol_queue_handle_t Queue2 = nullptr;
-  ASSERT_SUCCESS(olCreateQueue(Device, &Queue2));
+  ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue2));
 
   // For the explanation of the reasoning behind particular values assigned to
   // parameters, see the comment in the Success test from the same test suite

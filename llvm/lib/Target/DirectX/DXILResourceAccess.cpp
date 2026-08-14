@@ -145,6 +145,58 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
   SI->replaceAllUsesWith(Inst);
 }
 
+/// Build a zero-initialized offset operand matching the shape of the given
+/// coordinate operand. Accesses through `operator[]` never have offsets.
+static Value *getNullOffsetsFor(IRBuilder<> &Builder, Value *Coords) {
+  Type *CoordTy = Coords->getType();
+  Type *OffsetTy;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
+    OffsetTy =
+        FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
+  else
+    OffsetTy = Builder.getInt32Ty();
+  return Constant::getNullValue(OffsetTy);
+}
+
+static void createTextureStore(IntrinsicInst *II, StoreInst *SI,
+                               dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = SI->getDataLayout();
+  IRBuilder<> Builder(SI);
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  Type *ScalarType = ContainedType->getScalarType();
+
+  Value *Handle = II->getOperand(0);
+  Value *Coords = II->getOperand(1);
+
+  Value *V = SI->getValueOperand();
+  if (V->getType() == ContainedType) {
+    // V is already the right type.
+    assert(SI->getPointerOperand() == II &&
+           "Store of whole element has mismatched address to store to");
+  } else if (V->getType() == ScalarType) {
+    // We're storing a scalar, so we need to load the current value and only
+    // replace the relevant part. For operator[] the mip level and the offsets
+    // are always zero; DXILOpLowering drops the mip level for UAVs.
+    Value *MipLevel = Builder.getInt32(0);
+    Value *Offsets = getNullOffsetsFor(Builder, Coords);
+    auto *Load = Builder.CreateIntrinsic(ContainedType,
+                                         Intrinsic::dx_resource_load_level,
+                                         {Handle, Coords, MipLevel, Offsets});
+
+    uint64_t AccessSize = DL.getTypeSizeInBits(ScalarType) / 8;
+    Value *Offset =
+        traverseGEPOffsets(DL, Builder, SI->getPointerOperand(), AccessSize);
+    V = Builder.CreateInsertElement(Load, V, Offset);
+  } else {
+    llvm_unreachable("Store to texture resource has invalid type");
+  }
+
+  auto *Inst = Builder.CreateIntrinsic(Builder.getVoidTy(),
+                                       Intrinsic::dx_resource_store_texture,
+                                       {Handle, Coords, V});
+  SI->replaceAllUsesWith(Inst);
+}
+
 static void emitRawStore(IRBuilder<> &Builder, Value *Buffer, Value *Index,
                          Value *Offset, Value *V, dxil::ResourceTypeInfo &RTI) {
   // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
@@ -209,16 +261,18 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
     return createRawStores(II, SI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
-  case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture3D:
-  case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::Texture1DArray:
   case dxil::ResourceKind::Texture2DArray:
+    return createTextureStore(II, SI, RTI);
+  case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    reportFatalUsageError("DXIL Store not implemented for texture resources");
+    reportFatalUsageError(
+        "DXIL Store not implemented for this texture resource kind");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
@@ -390,14 +444,7 @@ static void createTextureLoad(IntrinsicInst *II, LoadInst *LI,
   Value *MipLevel = Builder.getInt32(0);
 
   // For operator[], offsets are zero.
-  Type *CoordTy = Coords->getType();
-  Type *OffsetTy;
-  if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
-    OffsetTy =
-        FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
-  else
-    OffsetTy = Builder.getInt32Ty();
-  Value *Offsets = Constant::getNullValue(OffsetTy);
+  Value *Offsets = getNullOffsetsFor(Builder, Coords);
 
   Value *V =
       Builder.CreateIntrinsic(ContainedType, Intrinsic::dx_resource_load_level,
@@ -823,6 +870,8 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
          "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
 
   IRBuilder<> Builder(Ptr);
+  if (isa<PHINode>(Ptr))
+    Builder.SetInsertPoint(Ptr->getParent()->getFirstNonPHIIt());
   IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
   Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
   Builder.Insert(Handle);

@@ -2,7 +2,7 @@
 
 !u8i = !cir.int<u, 8>
 #true = #cir.bool<true> : !cir.bool
-!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {data !u8i}>
 
 module {
   cir.func private @ctor(!cir.ptr<!rec_S>)

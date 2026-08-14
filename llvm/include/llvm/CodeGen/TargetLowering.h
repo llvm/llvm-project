@@ -72,6 +72,7 @@ class CCValAssign;
 enum class ComplexDeinterleavingOperation;
 enum class ComplexDeinterleavingRotation;
 class Constant;
+enum class ExceptionHandling : int;
 class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
@@ -307,6 +308,16 @@ public:
     Expensive = 2   // Negated expression is more expensive.
   };
 
+  /// Enum that specifies how expensive lowering an EXTRACT_SUBVECTOR is.
+  enum class ExtractSubvectorCost {
+    Free = 0,  // Lowers to no instruction at all, e.g. a subregister copy.
+    Cheap = 1, // Lowers to at most one instruction, and may still be free if
+               // the target can fold the extract into the instruction
+               // consuming it (e.g. a widening op that reads the high half of
+               // a register).
+    Expensive = 2 // Needs a shuffle sequence that cannot be folded away.
+  };
+
   /// Enum of different potentially desirable ways to fold (and/or (setcc ...),
   /// (setcc ...)).
   enum AndOrSETCCFoldKind : uint8_t {
@@ -519,13 +530,6 @@ public:
   unsigned getBitWidthForCttzElements(EVT RetVT, ElementCount EC,
                                       bool ZeroIsPoison,
                                       const ConstantRange *VScaleRange) const;
-
-  /// Return true if the @llvm.experimental.vector.match intrinsic should be
-  /// expanded for vector type `VT' and search size `SearchSize' using generic
-  /// code in SelectionDAGBuilder.
-  virtual bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const {
-    return true;
-  }
 
   // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
   // vecreduce(op(x, y)) for the reduction opcode RedOpc.
@@ -2146,14 +2150,16 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   virtual Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const {
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const {
     return Register();
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   virtual Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const {
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const {
     return Register();
   }
 
@@ -3540,13 +3546,16 @@ public:
     return false;
   }
 
-  /// Return true if EXTRACT_SUBVECTOR is cheap for extracting this result type
-  /// from this source type with this index. This is needed because
-  /// EXTRACT_SUBVECTOR usually has custom lowering that depends on the index of
-  /// the first element, and only the target knows which lowering is cheap.
-  virtual bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                       unsigned Index) const {
-    return false;
+  /// Return the cost of extracting a subvector of type \p ResVT from a vector
+  /// of type \p SrcVT, starting at element \p Index.
+  ///
+  /// Most callers only create a new EXTRACT_SUBVECTOR when the cost is at most
+  /// ExtractSubvectorCost::Cheap. This hook exists because EXTRACT_SUBVECTOR
+  /// usually has custom lowering that depends on the index of the first
+  /// element, so only the target knows which lowering is cheap.
+  virtual ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                       unsigned Index) const {
+    return ExtractSubvectorCost::Expensive;
   }
 
   /// Try to convert an extract element of a vector binary operation into an
@@ -3733,11 +3742,6 @@ public:
   RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
     return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
   }
-
-  /// Get the comparison predicate that's to be used to test the result of the
-  /// comparison libcall against zero. This should only be used with
-  /// floating-point compare libcalls.
-  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
@@ -5764,6 +5768,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand VECTOR_MATCH nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVectorMatch(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand VECTOR_FIND_LAST_ACTIVE nodes
   /// \param N Node to expand
