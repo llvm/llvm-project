@@ -7,19 +7,20 @@
 // HOST: module {{.*}} attributes {
 // HOST-SAME: omp.is_gpu = false
 // HOST-SAME: omp.is_target_device = false
+// HOST-SAME: omp.version = #omp.version<version = {{[0-9]+}}>
 
 // Host with target triples
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda %s -o - \
+// RUN:   -fopenmp-targets=amdgpu-amd-amdhsa,nvptx64-nvidia-cuda %s -o - \
 // RUN:   | FileCheck %s --check-prefix=HOST-TRIPLES
 
 // HOST-TRIPLES: module {{.*}} attributes {
 // HOST-TRIPLES-SAME: omp.is_gpu = false
 // HOST-TRIPLES-SAME: omp.is_target_device = false
-// HOST-TRIPLES-SAME: omp.target_triples = ["amdgcn-amd-amdhsa", "nvptx64-nvidia-cuda"]
+// HOST-TRIPLES-SAME: omp.target_triples = ["amdgpu-amd-amdhsa", "nvptx64-nvidia-cuda"]
 
 // Device, AMDGPU
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fclangir -emit-cir \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fclangir -emit-cir \
 // RUN:   -fopenmp-is-target-device %s -o - \
 // RUN:   | FileCheck %s --check-prefix=AMDGPU-DEVICE
 
@@ -46,7 +47,7 @@
 // CPU-DEVICE-SAME: omp.is_target_device = true
 
 // Device with omp.flags
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fclangir -emit-cir \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fclangir -emit-cir \
 // RUN:   -fopenmp-is-target-device \
 // RUN:   -fopenmp-assume-no-thread-state \
 // RUN:   -fopenmp-assume-no-nested-parallelism %s -o - \

@@ -533,10 +533,16 @@ struct DependT {
   using Iterator = type::IteratorT<T, I, E>;
   using LocatorList = ObjectListT<I, E>;
   using DependenceType = tomp::type::DependenceType;
+  // For the (pre-5.2) doacross spelling of the depend clause on the
+  // ordered directive: depend(source) / depend(sink: vec). Empty Vector
+  // means omp_cur_iteration, matching DoacrossT::Vector. When Vector has a
+  // value, LocatorList must be empty and the dependence type must be Source or
+  // Sink.
+  using Vector = ListT<type::LoopIterationT<I, E>>;
 
   using TupleTrait = std::true_type;
   // Empty LocatorList means "omp_all_memory".
-  std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
+  std::tuple<DependenceType, OPT(Iterator), OPT(Vector), LocatorList> t;
 };
 
 // [tr14:212-213]
@@ -1316,9 +1322,14 @@ struct UntiedT {
 // V5.2: [15.9.3] `update` clause
 template <typename T, typename I, typename E> //
 struct UpdateT {
+  using EmptyTrait = std::true_type;
+};
+
+template <typename T, typename I, typename E> //
+struct UpdateDependObjectsT {
   using DependenceType = tomp::type::DependenceType;
   using WrapperTrait = std::true_type;
-  OPT(DependenceType) v;
+  DependenceType v;
 };
 
 // V5.2: [14.1.3] `use` clause
@@ -1393,7 +1404,8 @@ using EmptyClausesT = std::variant<
     NoOpenmpT<T, I, E>, NoParallelismT<T, I, E>, NotinbranchT<T, I, E>,
     NowaitT<T, I, E>, ReadT<T, I, E>, RelaxedT<T, I, E>, ReleaseT<T, I, E>,
     SeqCstT<T, I, E>, SimdT<T, I, E>, ThreadsT<T, I, E>, UnknownT<T, I, E>,
-    UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>, WriteT<T, I, E>>;
+    UntiedT<T, I, E>, UpdateT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
+    WriteT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =
@@ -1438,8 +1450,9 @@ using WrapperClausesT = std::variant<
     SelfMapsT<T, I, E>, SeverityT<T, I, E>, SharedT<T, I, E>, SimdlenT<T, I, E>,
     SizesT<T, I, E>, PermutationT<T, I, E>, ThreadLimitT<T, I, E>,
     ThreadsetT<T, I, E>, UnifiedAddressT<T, I, E>,
-    UnifiedSharedMemoryT<T, I, E>, UniformT<T, I, E>, UpdateT<T, I, E>,
-    UseDeviceAddrT<T, I, E>, UseDevicePtrT<T, I, E>, UsesAllocatorsT<T, I, E>>;
+    UnifiedSharedMemoryT<T, I, E>, UniformT<T, I, E>,
+    UpdateDependObjectsT<T, I, E>, UseDeviceAddrT<T, I, E>,
+    UseDevicePtrT<T, I, E>, UsesAllocatorsT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using UnionOfAllClausesT = typename type::Union< //

@@ -8,7 +8,7 @@
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=BIN,OLD,OLDN %s
+// RUN: | FileCheck -check-prefixes=BIN,OLDN %s
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --offload-new-driver --cuda-gpu-arch=gfx803 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,NEW,NEWN %s
@@ -18,7 +18,7 @@
 //
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --no-offload-new-driver --cuda-gpu-arch=gfx803 -fgpu-rdc %s 2>&1 \
-// RUN: | FileCheck -check-prefixes=BIN,OLD,OLDR %s
+// RUN: | FileCheck -check-prefixes=BIN,OLDR %s
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -ccc-print-phases \
 // RUN: --offload-new-driver --cuda-gpu-arch=gfx803 -fgpu-rdc %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN,NEW,NEWR %s
@@ -34,32 +34,35 @@
 // BIN-DAG: [[P5:[0-9]+]]: compiler, {[[P4]]}, ir, (device-[[T]], [[ARCH]])
 // OLDN-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, assembler, (device-[[T]], [[ARCH]])
 // OLDN-DAG: [[P7:[0-9]+]]: assembler, {[[P6]]}, object, (device-[[T]], [[ARCH]])
-// OLDR-DAG: [[P7:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH]])
-// OLD-DAG: [[P8:[0-9]+]]: linker, {[[P7]]}, image, (device-[[T]], [[ARCH]])
-// OLD-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P8]]}, image
-// NEW-DAG: [[P6:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P5]]}, ir
+// OLDN-DAG: [[P8:[0-9]+]]: linker, {[[P7]]}, image, (device-[[T]], [[ARCH]])
+// OLDN-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P8]]}, image
 // OLDN-DAG: [[P10:[0-9]+]]: linker, {[[P9]]}, hip-fatbin, (device-[[T]])
-// NEW-DAG: [[P7:[0-9]+]]: llvm-offload-binary, {[[P6]]}, image, (device-[[T]])
-// NEWN-DAG: [[P8:[0-9]+]]: clang-linker-wrapper, {[[P7]]}, hip-fatbin, (device-[[T]])
-// NEWLTO-DAG: [[P8:[0-9]+]]: clang-linker-wrapper, {[[P7]]}, hip-fatbin, (device-[[T]])
-// OLDR-DAG: [[P10:[0-9]+]]: linker, {[[P9]]}, object, (device-[[T]])
+// OLDR-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, lto-bc, (device-[[T]], [[ARCH]])
+// OLDR-DAG: [[P7:[0-9]+]]: linker, {[[P6]]}, image, (device-[[T]], [[ARCH]])
+// OLDR-DAG: [[P8:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P7]]}, image
+// OLDR-DAG: [[P9:[0-9]+]]: linker, {[[P8]]}, object, (device-[[T]])
+// OLDR-DAG: [[P10:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P9]]}, object
+// NEW-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, lto-bc, (device-[[T]], [[ARCH]])
+// NEW-DAG: [[P7:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P6]]}, lto-bc
+// NEW-DAG: [[P8:[0-9]+]]: llvm-offload-binary, {[[P7]]}, image, (device-[[T]])
+// NEWN-DAG: [[P9:[0-9]+]]: clang-linker-wrapper, {[[P8]]}, hip-fatbin, (device-[[T]])
+// NEWLTO-DAG: [[P9:[0-9]+]]: clang-linker-wrapper, {[[P8]]}, hip-fatbin, (device-[[T]])
 
 // OLDN-DAG: [[P11:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, ir
-// NEWN-DAG: [[P9:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P8]]}, ir
-// NEWLTO-DAG: [[P9:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P8]]}, ir
-// NEWR-DAG: [[P8:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (x86_64-unknown-linux-gnu)" {[[P7]]}, ir
-// OLDR-DAG: [[P11:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P10]]}, object
+// NEWN-DAG: [[P10:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P9]]}, ir
+// NEWLTO-DAG: [[P10:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P9]]}, ir
+// NEWR-DAG: [[P9:[0-9]+]]: offload, "host-[[T]] (x86_64-unknown-linux-gnu)" {[[P2]]}, "device-[[T]] (x86_64-unknown-linux-gnu)" {[[P8]]}, ir
+// OLDR-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P10]]}, image, (host-[[T]])
 // OLDN-DAG: [[P12:[0-9]+]]: backend, {[[P11]]}, assembler, (host-[[T]])
 // OLDN-DAG: [[P13:[0-9]+]]: assembler, {[[P12]]}, object, (host-[[T]])
-// NEWN-DAG: [[P10:[0-9]+]]: backend, {[[P9]]}, assembler, (host-[[T]])
-// NEWN-DAG: [[P11:[0-9]+]]: assembler, {[[P10]]}, object, (host-[[T]])
-// NEWLTO-DAG: [[P10:[0-9]+]]: backend, {[[P9]]}, lto-bc, (host-hip)
-// NEWR-DAG: [[P9:[0-9]+]]: backend, {[[P8]]}, assembler, (host-[[T]])
-// NEWR-DAG: [[P10:[0-9]+]]: assembler, {[[P9]]}, object, (host-[[T]])
 // OLDN-DAG: [[P14:[0-9]+]]: linker, {[[P13]]}, image, (host-[[T]])
-// NEWN-DAG: [[P12:[0-9]+]]: clang-linker-wrapper, {[[P11]]}, image, (host-[[T]])
-// OLDR-DAG: [[P14:[0-9]+]]: linker, {[[P13]], [[P11]]}, image, (host-[[T]])
-// NEWR-DAG: [[P11:[0-9]+]]: clang-linker-wrapper, {[[P10]]}, image, (host-[[T]])
+// NEWN-DAG: [[P11:[0-9]+]]: backend, {[[P10]]}, assembler, (host-[[T]])
+// NEWN-DAG: [[P12:[0-9]+]]: assembler, {[[P11]]}, object, (host-[[T]])
+// NEWN-DAG: [[P13:[0-9]+]]: clang-linker-wrapper, {[[P12]]}, image, (host-[[T]])
+// NEWLTO-DAG: [[P11:[0-9]+]]: backend, {[[P10]]}, lto-bc, (host-hip)
+// NEWR-DAG: [[P10:[0-9]+]]: backend, {[[P9]]}, assembler, (host-[[T]])
+// NEWR-DAG: [[P11:[0-9]+]]: assembler, {[[P10]]}, object, (host-[[T]])
+// NEWR-DAG: [[P12:[0-9]+]]: clang-linker-wrapper, {[[P11]]}, image, (host-[[T]])
 
 //
 // Test single gpu architecture up to the assemble phase.
@@ -73,7 +76,7 @@
 // ASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // ASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // ASM-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
-// ASM-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
+// ASM-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, lto-ir, (device-[[T]], [[ARCH]])
 
 // ASM-DAG: [[P5:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (host-[[T]])
 // ASM-DAG: [[P6:[0-9]+]]: preprocessor, {[[P5]]}, [[T]]-cpp-output, (host-[[T]])
@@ -136,18 +139,18 @@
 // RDC2-DAG: [[P3:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH1:gfx803]])
 // RDC2-DAG: [[P4:[0-9]+]]: preprocessor, {[[P3]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH1]])
 // RDC2-DAG: [[P5:[0-9]+]]: compiler, {[[P4]]}, ir, (device-[[T]], [[ARCH1]])
-// RDC2-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, ir, (device-[[T]], [[ARCH1]])
+// RDC2-DAG: [[P6:[0-9]+]]: backend, {[[P5]]}, lto-bc, (device-[[T]], [[ARCH1]])
 // RCL2-DAG: [[P8:[0-9]+]]: linker, {[[P6]]}, image, (device-[[T]], [[ARCH1]])
 // RCL2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P8]]}, image
-// RC2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P6]]}, ir
+// RC2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P6]]}, lto-bc
 
 // RDC2-DAG: [[P10:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
 // RDC2-DAG: [[P11:[0-9]+]]: preprocessor, {[[P10]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
 // RDC2-DAG: [[P12:[0-9]+]]: compiler, {[[P11]]}, ir, (device-[[T]], [[ARCH2]])
-// RDC2-DAG: [[P13:[0-9]+]]: backend, {[[P12]]}, ir, (device-[[T]], [[ARCH2]])
+// RDC2-DAG: [[P13:[0-9]+]]: backend, {[[P12]]}, lto-bc, (device-[[T]], [[ARCH2]])
 // RCL2-DAG: [[P15:[0-9]+]]: linker, {[[P13]]}, image, (device-[[T]], [[ARCH2]])
 // RCL2-DAG: [[P16:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P15]]}, image
-// RC2-DAG: [[P16:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P13]]}, ir
+// RC2-DAG: [[P16:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P13]]}, lto-bc
 
 // RC2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (host-[[T]])
 // RC2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -254,8 +257,8 @@
 // DBIN-DAG: [[P4:[0-9]+]]: assembler, {[[P3]]}, object, (device-[[T]], [[ARCH]])
 // DBIN-DAG: [[P5:[0-9]+]]: linker, {[[P4]]}, image, (device-[[T]], [[ARCH]])
 // DBIN-DAG: [[P6:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P5]]}, image
-// DBIN-DAG: [[P7:[0-9]+]]: linker, {[[P6]]}, hip-fatbin, (device-hip, )
-// DBIN-DAG: [[P8:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:)" {[[P7]]}, hip-fatbin
+// DBIN-DAG: [[P7:[0-9]+]]: linker, {[[P6]]}, hip-fatbin, (device-hip)
+// DBIN-DAG: [[P8:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P7]]}, hip-fatbin
 // DBIN-NOT: host
 
 //
@@ -317,7 +320,7 @@
 // RELOC2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
 // RELOC2-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
 // RELOC2-DAG: [[P4:[0-9]+]]: assembler, {[[P3]]}, object, (device-[[T]], [[ARCH]])
-// RELOC2-NOT: [[P5:[0-9]+]]: linker, {[[P4]]}, image, (device-[[T]], [[ARCH]])
+// RELOC2-NOT: linker
 // RELOC2-DAG: [[P5:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P4]]}, object
 // RELOC2-DAG: [[P6:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH2:gfx900]])
 // RELOC2-DAG: [[P7:[0-9]+]]: preprocessor, {[[P6]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
@@ -357,8 +360,8 @@
 // DBIN2-DAG: [[P11:[0-9]+]]: assembler, {[[P10]]}, object, (device-[[T]], [[ARCH2]])
 // DBIN2-DAG: [[P12:[0-9]+]]: linker, {[[P11]]}, image, (device-[[T]], [[ARCH2]])
 // DBIN2-DAG: [[P13:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P12]]}, image
-// DBIN2-DAG: [[P14:[0-9]+]]: linker, {[[P6]], [[P13]]}, hip-fatbin, (device-hip, )
-// DBIN2-DAG: [[P15:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:)" {[[P14]]}, hip-fatbin
+// DBIN2-DAG: [[P14:[0-9]+]]: linker, {[[P6]], [[P13]]}, hip-fatbin, (device-hip)
+// DBIN2-DAG: [[P15:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P14]]}, hip-fatbin
 // DBIN2-NOT: host
 
 //
@@ -391,8 +394,8 @@
 // DASM2-DAG: [[P7:[0-9]+]]: compiler, {[[P6]]}, ir, (device-[[T]], [[ARCH2]])
 // DASM2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, assembler, (device-[[T]], [[ARCH2]])
 // DASM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, assembler
-// DASM2-BUNDLE: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, assembler, (device-hip, )
-// DASM2-NOBUNDLE-NOT: clang-offload-bundler, {[[P4]], [[P9]]}, assembler, (device-hip, )
+// DASM2-BUNDLE: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, assembler, (device-hip)
+// DASM2-NOBUNDLE-NOT: clang-offload-bundler, {[[P4]], [[P9]]}, assembler, (device-hip)
 // DASM2-NOT: host
 
 //
@@ -518,8 +521,8 @@
 // PPE-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // PPE-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // PPE-DAG: [[P2:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P1]]}, [[T]]-cpp-output
-// PPEB-DAG: [[P3:[0-9]+]]: clang-offload-bundler, {[[P2]]}, [[T]]-cpp-output, (device-hip, )
-// PPEN-NOT: clang-offload-bundler, {{.*}}, [[T]]-cpp-output, (device-hip, )
+// PPEB-DAG: [[P3:[0-9]+]]: clang-offload-bundler, {[[P2]]}, [[T]]-cpp-output, (device-hip)
+// PPEN-NOT: clang-offload-bundler, {{.*}}, [[T]]-cpp-output, (device-hip)
 // PPE-NOT: host
 
 // PPE2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
@@ -528,8 +531,8 @@
 // PPE2-DAG: [[P5:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
 // PPE2-DAG: [[P6:[0-9]+]]: preprocessor, {[[P5]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
 // PPE2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P6]]}, [[T]]-cpp-output
-// PPE2B-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P2]], [[P9]]}, [[T]]-cpp-output, (device-hip, )
-// PPE2N-NOT: clang-offload-bundler, {{.*}}, [[T]]-cpp-output, (device-hip, )
+// PPE2B-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P2]], [[P9]]}, [[T]]-cpp-output, (device-hip)
+// PPE2N-NOT: clang-offload-bundler, {{.*}}, [[T]]-cpp-output, (device-hip)
 // PPE2-NOT: host
 
 // LLVM-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
@@ -549,7 +552,7 @@
 // LLVM2-DAG: [[P7:[0-9]+]]: compiler, {[[P6]]}, ir, (device-[[T]], [[ARCH2]])
 // LLVM2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, ir, (device-[[T]], [[ARCH2]])
 // LLVM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, ir
-// LLVM2-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, ir, (device-hip, )
+// LLVM2-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, ir, (device-hip)
 // LLVM2-NOT: host
 
 // PPELLVM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]]-cpp-output
@@ -560,7 +563,7 @@
 // PPELLVM2-DAG: [[P7:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH2:gfx900]])
 // PPELLVM2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, ir, (device-[[T]], [[ARCH2]])
 // PPELLVM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, ir
-// PPELLVM2-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, ir, (device-hip, )
+// PPELLVM2-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, ir, (device-hip)
 // PPELLVM2-NOT: host
 
 // Test mixed HIP and C++ compilation. HIP program should have HIP offload kind.
@@ -662,15 +665,17 @@
 // LTO-NEXT: 3: input, "[[INPUT]]", hip, (device-hip, gfx908)
 // LTO-NEXT: 4: preprocessor, {3}, hip-cpp-output, (device-hip, gfx908)
 // LTO-NEXT: 5: compiler, {4}, ir, (device-hip, gfx908)
-// LTO-NEXT: 6: offload, "device-hip (amdgcn-amd-amdhsa:gfx908)" {5}, ir
-// LTO-NEXT: 7: input, "[[INPUT]]", hip, (device-hip, gfx90a)
-// LTO-NEXT: 8: preprocessor, {7}, hip-cpp-output, (device-hip, gfx90a)
-// LTO-NEXT: 9: compiler, {8}, ir, (device-hip, gfx90a)
-// LTO-NEXT: 10: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {9}, ir
-// LTO-NEXT: 11: llvm-offload-binary, {6, 10}, image, (device-hip)
-// LTO-NEXT: 12: offload, "host-hip (x86_64-unknown-linux-gnu)" {2}, "device-hip (x86_64-unknown-linux-gnu)" {11}, ir
-// LTO-NEXT: 13: backend, {12}, assembler, (host-hip)
-// LTO-NEXT: 14: assembler, {13}, object, (host-hip)
+// LTO-NEXT: 6: backend, {5}, lto-bc, (device-hip, gfx908)
+// LTO-NEXT: 7: offload, "device-hip (amdgcn-amd-amdhsa:gfx908)" {6}, lto-bc
+// LTO-NEXT: 8: input, "[[INPUT]]", hip, (device-hip, gfx90a)
+// LTO-NEXT: 9: preprocessor, {8}, hip-cpp-output, (device-hip, gfx90a)
+// LTO-NEXT: 10: compiler, {9}, ir, (device-hip, gfx90a)
+// LTO-NEXT: 11: backend, {10}, lto-bc, (device-hip, gfx90a)
+// LTO-NEXT: 12: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {11}, lto-bc
+// LTO-NEXT: 13: llvm-offload-binary, {7, 12}, image, (device-hip)
+// LTO-NEXT: 14: offload, "host-hip (x86_64-unknown-linux-gnu)" {2}, "device-hip (x86_64-unknown-linux-gnu)" {13}, ir
+// LTO-NEXT: 15: backend, {14}, assembler, (host-hip)
+// LTO-NEXT: 16: assembler, {15}, object, (host-hip)
 
 //
 // Test the new driver when not bundling
@@ -688,7 +693,8 @@
 // Test the new driver bundling SPIR-V targets.
 //
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-phases \
-// RUN:        --offload-device-only --offload-arch=amdgcnspirv,gfx1030 %s 2>&1 \
+// RUN:        --offload-device-only -no-use-spirv-backend \
+// RUN:        --offload-arch=amdgcnspirv,gfx1030 %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SPIRV-ONLY %s
 //      SPIRV-ONLY: 0: input, "[[INPUT:.+]]", hip, (device-hip, gfx1030)
 // SPIRV-ONLY-NEXT: 1: preprocessor, {0}, hip-cpp-output, (device-hip, gfx1030)
@@ -700,7 +706,7 @@
 // SPIRV-ONLY-NEXT: 7: input, "[[INPUT]]", hip, (device-hip, amdgcnspirv)
 // SPIRV-ONLY-NEXT: 8: preprocessor, {7}, hip-cpp-output, (device-hip, amdgcnspirv)
 // SPIRV-ONLY-NEXT: 9: compiler, {8}, ir, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 10: backend, {9}, ir, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 10: backend, {9}, lto-bc, (device-hip, amdgcnspirv)
 // SPIRV-ONLY-NEXT: 11: linker, {10}, image, (device-hip, amdgcnspirv)
 // SPIRV-ONLY-NEXT: 12: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {11}, image
 // SPIRV-ONLY-NEXT: 13: linker, {6, 12}, hip-fatbin, (device-hip)

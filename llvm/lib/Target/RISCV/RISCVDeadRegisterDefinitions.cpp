@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "riscv-dead-defs"
@@ -35,7 +36,6 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
     AU.addPreserved<LiveStacksWrapperLegacy>();

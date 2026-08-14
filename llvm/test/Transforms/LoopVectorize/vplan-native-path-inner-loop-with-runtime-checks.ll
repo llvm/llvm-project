@@ -20,11 +20,12 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[SMAX6:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP6]], i64 1000)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[SMAX6]], 4
 ; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
-; CHECK-NEXT:    [[SMAX8:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP6]], i64 1000)
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[SMAX8]], [[TMP0]]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP0]], 1
+; CHECK-NEXT:    [[SMAX8:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP13]], i64 1000)
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[SMAX8]], [[TMP0]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
@@ -34,12 +35,9 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP3]])
-; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr [[TMP14]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP12]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
@@ -48,10 +46,10 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP8]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP8]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[SRC]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load double, ptr [[SRC]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT]], <i64 0, i64 1, i64 2, i64 3>
@@ -61,25 +59,25 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP20]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP20]], i64 1
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i64> [[TMP20]], i64 2
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP20]], i64 3
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP20]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i64> [[TMP20]], i64 2
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP20]], i64 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP31]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP26]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP33]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP28]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP31]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP26]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP33]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP28]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = or disjoint <4 x i64> [[TMP20]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[TMP29]], i64 0
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP29]], i64 1
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i64> [[TMP29]], i64 2
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i64> [[TMP29]], i64 3
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP30]]
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP29]], i64 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP32]]
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i64> [[TMP29]], i64 2
 ; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP34]]
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i64> [[TMP29]], i64 3
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP36]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP41]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP35]], align 8, !alias.scope [[META3]]

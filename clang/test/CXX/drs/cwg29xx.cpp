@@ -175,3 +175,13 @@ constexpr U _ = nondeterministic(true);
 } // namespace cwg2922
 
 // cwg2947 is in cwg2947.cpp
+
+namespace cwg2966 { // cwg2966: 2.7
+#if __cplusplus >= 201103L
+static_assert(sizeof(decltype(nullptr)) == sizeof(void*), "");
+static_assert(alignof(decltype(nullptr)) == alignof(void*), "");
+#endif
+} // namespace cwg2966
+
+// cwg2983: na
+// cwg2992: na

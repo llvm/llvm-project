@@ -96,6 +96,10 @@ unsigned LoongArchELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return ELF::R_LARCH_ABS64_LO20;
   case LoongArch::fixup_loongarch_abs64_hi12:
     return ELF::R_LARCH_ABS64_HI12;
+  case LoongArch::fixup_loongarch_dtprel32:
+    return ELF::R_LARCH_TLS_DTPREL32;
+  case LoongArch::fixup_loongarch_dtprel64:
+    return ELF::R_LARCH_TLS_DTPREL64;
   }
 }
 
