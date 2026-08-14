@@ -2365,11 +2365,11 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
   if (!isKnownNonZero(SrcY, SQ.getWithInstruction(&I)))
     return false;
 
-  // OldCost = fptoui + fdiv + 2*uitofp
+  // OldCost = fptoui + fdiv + uitofp(x) + uitofp(y)
   InstructionCost OldCost =
       TTI.getInstructionCost(&I, CostKind) +
       TTI.getArithmeticInstrCost(Instruction::FDiv, FloatTy, CostKind) +
-      2 * TTI.getInstructionCost(X, CostKind);
+      TTI.getInstructionCost(X, CostKind) + TTI.getInstructionCost(Y, CostKind);
   // NewCost = udiv
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(Instruction::UDiv, IntTy, CostKind);
