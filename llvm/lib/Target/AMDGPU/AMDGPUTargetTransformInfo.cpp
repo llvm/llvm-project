@@ -980,12 +980,58 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
   return BaseT::getCFInstrCost(Opcode, CostKind, I);
 }
 
+// A vector of i1 has no packed form on this target: every element lives in its
+// own mask. Measured instruction counts per element to pack the masks into an
+// integer, and to unpack them again.
+static constexpr unsigned MaskPackCostPerElt = 4;
+static constexpr unsigned MaskUnpackCostPerElt = 3;
+
+/// Returns the number of elements when \p Ty is a fixed vector of i1 with more
+/// than one element.
+static std::optional<unsigned> getPackedMaskElts(Type *Ty) {
+  auto *FVT = dyn_cast<FixedVectorType>(Ty);
+  if (FVT && FVT->getElementType()->isIntegerTy(1) && FVT->getNumElements() > 1)
+    return FVT->getNumElements();
+  return std::nullopt;
+}
+
+InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                             Type *Src,
+                                             TTI::CastContextHint CCH,
+                                             TTI::TargetCostKind CostKind,
+                                             const Instruction *I) const {
+  // A bitcast between a vector of i1 and an integer packs or unpacks a mask.
+  if (Opcode == Instruction::BitCast) {
+    if (std::optional<unsigned> Elts = getPackedMaskElts(Src);
+        Elts && Dst->isIntegerTy())
+      return InstructionCost(MaskPackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+    if (std::optional<unsigned> Elts = getPackedMaskElts(Dst);
+        Elts && Src->isIntegerTy())
+      return InstructionCost(MaskUnpackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+  }
+
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+}
+
 InstructionCost
 GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                        std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) const {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
+
+  // These three reductions over a vector of i1 go through the packed form of
+  // the mask, and the packing dominates their cost. ExpandReductions builds
+  // that form only when the element count is a power of two.
+  if (Opcode == Instruction::Add || Opcode == Instruction::And ||
+      Opcode == Instruction::Or) {
+    if (std::optional<unsigned> Elts = getPackedMaskElts(Ty);
+        Elts && isPowerOf2_32(*Elts))
+      return InstructionCost(MaskPackCostPerElt) * *Elts *
+             getFullRateInstrCost();
+  }
 
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
