@@ -30,6 +30,16 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 }
 } // namespace __sanitizer
 
+extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_print_stack_trace() {
+  GET_CURRENT_PC_BP;
+  UNINITIALIZED BufferedStackTrace stack;
+  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
+  stack.Print();
+}
+} // extern "C"
+
 namespace {
 class Decorator : public SanitizerCommonDecorator {
 public:
