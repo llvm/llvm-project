@@ -122,6 +122,8 @@ private:
 
   size_t GetSetSize(RegisterSetType set) const;
 
+  void *GetSetBuffer(RegisterSetType set);
+
   void MakeValid(RegisterSetType set) { m_validity |= set; }
 
   [[nodiscard]] bool IsValid(RegisterSetType set) const {
@@ -250,29 +252,7 @@ private:
 
   void SetSVERegVG(uint64_t vg) { m_sve_header.vl = vg * 8; }
 
-  void *GetSVEHeader() { return &m_sve_header; }
-
-  void *GetZAHeader() { return &m_za_header; }
-
-  void *GetPACMask() { return &m_pac_mask; }
-
-  void *GetMTEControl() { return &m_mte_ctrl_reg; }
-
-  void *GetTLSBuffer() { return &m_tls_regs; }
-
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
-
-  void *GetZTBuffer() { return m_zt_reg.data(); }
-
-  void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); }
-
-  void *GetFPMRBuffer() { return &m_fpmr_reg; }
-
-  void *GetGCSBuffer() { return &m_gcs_regs; }
-
-  void *GetPOEBuffer() { return &m_poe_regs; }
-
-  void *GetZABuffer() { return m_za_ptrace_payload.data(); };
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
