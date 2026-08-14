@@ -13,6 +13,8 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -26,14 +28,18 @@ using namespace llvm;
 
 class TestFrontendAction : public ASTFrontendAction {
 public:
-  TestFrontendAction(IntrusiveRefCntPtr<ExternalASTSource> Source)
-      : Source(std::move(Source)) {}
+  TestFrontendAction(IntrusiveRefCntPtr<ExternalASTSource> Source,
+                     std::function<void(ASTContext &)> Inject = nullptr)
+      : Source(std::move(Source)), Inject(std::move(Inject)) {}
 
 private:
   void ExecuteAction() override {
-    getCompilerInstance().getASTContext().setExternalSource(Source);
-    getCompilerInstance().getASTContext().getTranslationUnitDecl()
-        ->setHasExternalVisibleStorage();
+    ASTContext &Ctx = getCompilerInstance().getASTContext();
+    Ctx.setExternalSource(Source);
+    if (Inject)
+      Inject(Ctx);
+    else
+      Ctx.getTranslationUnitDecl()->setHasExternalVisibleStorage();
     return ASTFrontendAction::ExecuteAction();
   }
 
@@ -43,10 +49,12 @@ private:
   }
 
   IntrusiveRefCntPtr<ExternalASTSource> Source;
+  std::function<void(ASTContext &)> Inject;
 };
 
 bool testExternalASTSource(llvm::IntrusiveRefCntPtr<ExternalASTSource> Source,
-                           StringRef FileContents) {
+                           StringRef FileContents,
+                           std::function<void(ASTContext &)> Inject = nullptr) {
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
@@ -62,7 +70,7 @@ bool testExternalASTSource(llvm::IntrusiveRefCntPtr<ExternalASTSource> Source,
   Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
   Compiler.createDiagnostics();
 
-  TestFrontendAction Action(Source);
+  TestFrontendAction Action(Source, std::move(Inject));
   return Compiler.ExecuteAction(Action);
 }
 
@@ -86,4 +94,93 @@ TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {
   ASSERT_TRUE(testExternalASTSource(
       llvm::makeIntrusiveRefCnt<TestSource>(Calls), "int j, k = j;"));
   EXPECT_EQ(1u, Calls);
+}
+
+namespace {
+
+/// An external source which announces, without definitions,
+///
+///   template <typename T> struct A;      // primary pattern
+///   template <typename T> struct A<T *>; // partial specialization pattern
+///
+/// and supplies the definition of whichever pattern it is asked to complete.
+struct LazyTemplatePatterns : ExternalASTSource {
+  CXXRecordDecl *Primary = nullptr;
+  ClassTemplatePartialSpecializationDecl *Partial = nullptr;
+  unsigned PrimaryCompletions = 0;
+  unsigned PartialCompletions = 0;
+
+  void inject(ASTContext &Ctx) {
+    TranslationUnitDecl *TU = Ctx.getTranslationUnitDecl();
+    IdentifierInfo &AName = Ctx.Idents.get("A");
+
+    auto MakeParams = [&] {
+      auto *Param = TemplateTypeParmDecl::Create(
+          Ctx, TU, {}, {}, /*D=*/0, /*P=*/0, &Ctx.Idents.get("T"),
+          /*Typename=*/true, /*ParameterPack=*/false);
+      return TemplateParameterList::Create(Ctx, {}, {}, {Param}, {}, nullptr);
+    };
+
+    // template <typename T> struct A;
+    Primary = CXXRecordDecl::Create(Ctx, TagDecl::TagKind::Struct, TU, {}, {},
+                                    &AName);
+    auto *Template = ClassTemplateDecl::Create(
+        Ctx, TU, {}, DeclarationName(&AName), MakeParams(), Primary);
+    Primary->setDescribedClassTemplate(Template);
+    Primary->setHasExternalLexicalStorage();
+    TU->addDecl(Template);
+
+    // template <typename T> struct A<T *>;
+    TemplateParameterList *PartialParams = MakeParams();
+    TemplateArgument Arg(Ctx.getPointerType(Ctx.getTemplateTypeParmType(
+        /*Depth=*/0, /*Index=*/0, /*ParameterPack=*/false,
+        cast<TemplateTypeParmDecl>(PartialParams->getParam(0)))));
+    Partial = ClassTemplatePartialSpecializationDecl::Create(
+        Ctx, TagDecl::TagKind::Struct, TU, {}, {}, PartialParams, Template, Arg,
+        Ctx.getCanonicalType(Ctx.getTemplateSpecializationType(
+            ElaboratedTypeKeyword::Struct, TemplateName(Template), Arg, {})),
+        nullptr);
+    Partial->setHasExternalLexicalStorage();
+
+    // Deduction against a partial specialization reads its arguments as
+    // written, so they must be supplied even though nothing was written.
+    TemplateArgumentListInfo ArgsInfo;
+    ArgsInfo.addArgument(TemplateArgumentLoc(
+        Arg, Ctx.getTrivialTypeSourceInfo(Arg.getAsType())));
+    Partial->setTemplateArgsAsWritten(
+        ASTTemplateArgumentListInfo::Create(Ctx, ArgsInfo));
+
+    TU->addDecl(Partial);
+    Template->AddPartialSpecialization(Partial, nullptr);
+  }
+
+  void CompleteType(TagDecl *Tag) override {
+    auto *Record = dyn_cast<CXXRecordDecl>(Tag);
+    if (!Record || Record->isCompleteDefinition())
+      return;
+    if (Record == Primary)
+      ++PrimaryCompletions;
+    else if (Record == Partial)
+      ++PartialCompletions;
+    else
+      return;
+    Record->setHasExternalLexicalStorage(false);
+    Record->startDefinition();
+    Record->completeDefinition();
+  }
+};
+
+} // namespace
+
+// An instantiation must be able to complete the pattern it is actually built
+// from, whichever of the two that is, and in either order.
+TEST(ExternalASTSourceTest, CompletesPatternInEitherOrder) {
+  for (StringRef Code : {"A<int> a; A<int *> b;", "A<int *> b; A<int> a;"}) {
+    auto Source = llvm::makeIntrusiveRefCnt<LazyTemplatePatterns>();
+    ASSERT_TRUE(testExternalASTSource(Source, Code, [&](ASTContext &Ctx) {
+      Source->inject(Ctx);
+    })) << Code;
+    EXPECT_EQ(1u, Source->PrimaryCompletions) << Code;
+    EXPECT_EQ(1u, Source->PartialCompletions) << Code;
+  }
 }
