@@ -442,14 +442,16 @@ static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
   return SE->getSCEV(APtr) == SE->getSCEV(BPtr);
 }
 
-void LoopVectorizationLegality::collectUnitStridePredicates() const {
+SmallVector<const SCEVPredicate *>
+LoopVectorizationLegality::collectUnitStridePredicates() const {
+  ScalarEvolution &SE = *PSE.getSE();
+  SmallVector<const SCEVPredicate *> Predicates;
   if (!AllowRuntimeSCEVChecks || !TheLoop->isInnermost())
-    return;
-
-  for (BasicBlock *BB : TheLoop->blocks())
-    for (Instruction &I : *BB)
-      if (Value *Ptr = getLoadStorePointerOperand(&I))
-        isConsecutivePtr(getLoadStoreType(&I), Ptr);
+    return {};
+  for (const SCEV *StrideSCEV : LAI->getSymbolicStrides().values())
+    Predicates.push_back(
+        SE.getEqualPredicate(StrideSCEV, SE.getOne(StrideSCEV->getType())));
+  return Predicates;
 }
 
 int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
