@@ -2234,7 +2234,12 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
 
   int64_t level{*depth.value};
   Symbol::Flag ivDSA;
-  if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
+  const auto directive{GetContext().directive};
+  // For composite SIMD constructs (SIMD combined with do/distribute/taskloop),
+  // the loop iteration variable follows the worksharing rule (private), not
+  // the pure-SIMD rule (linear/lastprivate).
+  if (!llvm::omp::allSimdSet.test(directive) ||
+      llvm::omp::compositeSimdSet.test(directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
   } else if (level == 1 && version < 60) {
     ivDSA = Symbol::Flag::OmpLinear;
