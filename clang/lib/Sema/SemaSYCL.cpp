@@ -690,7 +690,8 @@ struct DeviceCopyableResult {
   std::optional<PartialDiagnostic> PD;
 };
 
-bool isMarkedDeviceCopyable(Sema &SemaRef, const QualType &Ty, SourceLocation Loc) {
+bool isMarkedDeviceCopyable(Sema &SemaRef, const QualType &Ty,
+                            SourceLocation Loc) {
   ASTContext &Ctx = SemaRef.getASTContext();
   // TODO too slow; cache this
   NamespaceDecl *SyclNamespace = getSyclNamespace(SemaRef, Loc);
@@ -789,33 +790,39 @@ bool isMarkedDeviceCopyable(Sema &SemaRef, const QualType &Ty, SourceLocation Lo
 }
 
 // TODO should these results be cached?
-DeviceCopyableResult isDeviceCopyable(Sema &SemaRef, const QualType &Ty, SourceLocation Loc) {
+DeviceCopyableResult isDeviceCopyable(Sema &SemaRef, const QualType &Ty,
+                                      SourceLocation Loc) {
   // No need to lookup anything if trivially copyable already
   ASTContext &Ctx = SemaRef.getASTContext();
   if (Ty.isTriviallyCopyableType(Ctx))
     return {true, /*PD=*/std::nullopt};
-  
+
   bool markedCopyable = isMarkedDeviceCopyable(SemaRef, Ty, Loc);
   if (const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
     // Set all lambdas as copyable: Future traversal passes will determine
-    // whether or not the parameters/capture of the lambda are actually 
+    // whether or not the parameters/capture of the lambda are actually
     // copyable.
     if (RD->isLambda())
       return {true, /*PD=*/std::nullopt};
     // TODO confirm:
-    // - does RD have at least one eligible copy constructor, move constructor, copy assignment operator, or move assignment operator?
+    // - does RD have at least one eligible copy constructor, move constructor,
+    // copy assignment operator, or move assignment operator?
     //   - for each of aforementioned, ensure it is public
-    //   - confirm each does a bitwise copy (perhaps not possible, up to the user to enforce)
+    //   - confirm each does a bitwise copy (perhaps not possible, up to the
+    //   user to enforce)
     // - confirm it has a non deleted destructor
-    //   - does the destructor have "no effect"? (perhaps not possible, up to user to enforce)
+    //   - does the destructor have "no effect"? (perhaps not possible, up to
+    //   user to enforce)
   }
   // TODO subsequent base classes shouldn't be checked for not device copyable
 
   if (!markedCopyable)
-    return { false, PartialDiagnostic(diag::err_sycl_kernel_param_not_device_copyable, SemaRef.Context.getDiagAllocator()) << Ty };
+    return {false,
+            PartialDiagnostic(diag::err_sycl_kernel_param_not_device_copyable,
+                              SemaRef.Context.getDiagAllocator())
+                << Ty};
   return {true, /*PD=*/std::nullopt};
 }
-
 
 class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   SemaSYCL &SemaSYCLRef;
@@ -921,15 +928,21 @@ public:
     }
 
     // TODO
-    // - if a class is marked as copyable, I should STOP descending into the class's subfields
-    //   - we STOP because the user's declaration that a class is copyable should overwrite
-    //     the results of future traversals; we shouldn't descend any further 
-    //   - although, because we want to catch classes that are obviously not copyable, we'll
-    //     need to do a shallow traversal in the future, checking that there aren't data members
-    //     in the class that are obviously not copyable: this will need to be its own function
-    //     - the stop condition should be if there are stuff that obviously breaks SYCL spec
+    // - if a class is marked as copyable, I should STOP descending into the
+    // class's subfields
+    //   - we STOP because the user's declaration that a class is copyable
+    //   should overwrite
+    //     the results of future traversals; we shouldn't descend any further
+    //   - although, because we want to catch classes that are obviously not
+    //   copyable, we'll
+    //     need to do a shallow traversal in the future, checking that there
+    //     aren't data members in the class that are obviously not copyable:
+    //     this will need to be its own function
+    //     - the stop condition should be if there are stuff that obviously
+    //     breaks SYCL spec
     //       for "is device copyable"
-    // - if a class is not marked as copyable, _then_ descend into the class's subfields
+    // - if a class is not marked as copyable, _then_ descend into the class's
+    // subfields
     //   - this is current behavior
 
     // TODO Issue warning if type is obviously not copyable
@@ -952,14 +965,16 @@ public:
     if (Ty->isReferenceType() && isa<const ParmVarDecl *>(DirectParent)) {
       Type = Ty->getPointeeType();
     }
-    const DeviceCopyableResult DCR = isDeviceCopyable(SemaSYCLRef.SemaRef, Type, Detail.Loc);
+    const DeviceCopyableResult DCR =
+        isDeviceCopyable(SemaSYCLRef.SemaRef, Type, Detail.Loc);
     if (DCR.PD) {
       // Emit diagnostics if any were generated.
       SemaSYCLRef.Diag(Detail.Loc, DCR.PD.value());
       emitObjectAccessPathNotes();
     }
     if (!DCR.copyable) {
-      assert(DCR.PD && "DeviceCopyableResult must emit an explanatory diagnostic if Ty is not device copyable");
+      assert(DCR.PD && "DeviceCopyableResult must emit an explanatory "
+                       "diagnostic if Ty is not device copyable");
       IsValid = false;
       return false;
     }
