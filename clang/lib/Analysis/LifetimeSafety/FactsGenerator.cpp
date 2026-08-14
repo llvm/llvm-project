@@ -233,8 +233,8 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  handleFunctionCall(CCE, CCE->getConstructor(),
-                     {CCE->getArgs(), CCE->getNumArgs()},
+  auto [FD, Args] = getFunctionCallInfo(CCE);
+  handleFunctionCall(CCE, FD, Args,
                      /*IsGslConstruction=*/false);
 }
 
@@ -256,21 +256,13 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   if (isGslPointerType(MCE->getType()) &&
       isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl()) &&
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
-    // The argument is the implicit object itself.
-    handleFunctionCall(MCE, MCE->getMethodDecl(),
-                       {MCE->getImplicitObjectArgument()},
+    auto [FD, Args] = getFunctionCallInfo(MCE);
+    handleFunctionCall(MCE, FD, Args,
                        /*IsGslConstruction=*/true);
     return;
   }
-  if (const CXXMethodDecl *Method = MCE->getMethodDecl()) {
-    // Construct the argument list, with the implicit 'this' object as the
-    // first argument.
-    llvm::SmallVector<const Expr *, 4> Args;
-    Args.push_back(MCE->getImplicitObjectArgument());
-    Args.append(MCE->getArgs(), MCE->getArgs() + MCE->getNumArgs());
-
-    handleFunctionCall(MCE, Method, Args, /*IsGslConstruction=*/false);
-  }
+  auto [FD, Args] = getFunctionCallInfo(MCE);
+  handleFunctionCall(MCE, FD, Args, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
@@ -290,8 +282,8 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  handleFunctionCall(CE, CE->getDirectCallee(),
-                     {CE->getArgs(), CE->getNumArgs()});
+  auto [FD, Args] = getFunctionCallInfo(CE);
+  handleFunctionCall(CE, FD, Args);
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -638,12 +630,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  ArrayRef<const Expr *> Args(OCE->getArgs(), OCE->getNumArgs());
-  // For `static operator()`, the first argument is the object argument,
-  // remove it from the argument list to avoid off-by-one errors.
-  if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
-    Args = Args.slice(1);
-  handleFunctionCall(OCE, OCE->getDirectCallee(), Args);
+  auto [FD, Args] = getFunctionCallInfo(OCE);
+  handleFunctionCall(OCE, FD, Args);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -916,18 +904,21 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
-    handleFunctionCall(CCE, CCE->getConstructor(),
-                       {CCE->getArgs(), CCE->getNumArgs()},
+    auto [FD, Args] = getFunctionCallInfo(CCE);
+    handleFunctionCall(CCE, FD, Args,
                        /*IsGslConstruction=*/true);
   }
 }
 
 void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
-  unsigned IsInstance = 0;
+  unsigned ImplicitObjectArgOffset = 0;
+  // Constructors are excluded because Args has no object argument for them,
+  // even though isImplicitObjectMemberFunction() is true.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      MD && MD->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-    IsInstance = 1;
+      MD && !isa<CXXConstructorDecl>(FD) &&
+      MD->isImplicitObjectMemberFunction()) {
+    ImplicitObjectArgOffset = 1;
     // std::unique_ptr::release() transfers ownership.
     // Treat it as a move to prevent false-positive warnings when the unique_ptr
     // destructor runs after ownership has been transferred.
@@ -940,10 +931,15 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
     }
   }
 
-  // Skip 'this' arg as it cannot be moved.
-  for (unsigned I = IsInstance;
-       I < Args.size() && I < FD->getNumParams() + IsInstance; ++I) {
-    const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
+  // Skip implicit 'this' arg as it cannot be moved.
+  for (unsigned I = ImplicitObjectArgOffset;
+       I < Args.size() && I < FD->getNumParams() + ImplicitObjectArgOffset;
+       ++I) {
+    const ParmVarDecl *PVD = FD->getParamDecl(I - ImplicitObjectArgOffset);
+    // In principle, explicit object parameters can be moved, but skip marking
+    // them as moved for consistency with implicit 'this'.
+    if (PVD->isExplicitObjectParameter())
+      continue;
     if (!PVD->getType()->isRValueReferenceType())
       continue;
     // Skip lifetime annotated r-value reference parameters. Lifetime annotation
@@ -1112,29 +1108,6 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     flow(CallList, getOriginsList(*Args[0]), /*Kill=*/true);
     return;
   }
-  auto IsArgLifetimeBound = [FD, &Args](unsigned I) -> bool {
-    const ParmVarDecl *PVD = nullptr;
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-      if (I == 0)
-        // For the 'this' argument, the attribute is on the method itself.
-        return implicitObjectParamIsLifetimeBound(Method) ||
-               shouldTrackImplicitObjectArg(
-                   *Args[0], Method, /*RunningUnderLifetimeSafety=*/true);
-      if ((I - 1) < Method->getNumParams())
-        // For explicit arguments, find the corresponding parameter
-        // declaration.
-        PVD = Method->getParamDecl(I - 1);
-    } else if (I == 0 && shouldTrackFirstArgument(FD)) {
-      return true;
-    } else if (I == 1 && shouldTrackSecondArgument(FD)) {
-      return true;
-    } else if (I < FD->getNumParams()) {
-      // For free functions or static methods.
-      PVD = FD->getParamDecl(I);
-    }
-    return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
-  };
   auto shouldTrackPointerImplicitObjectArg = [FD, &Args](unsigned I) -> bool {
     const auto *Method = dyn_cast<CXXMethodDecl>(FD);
     if (!Method || !Method->isInstance())
@@ -1151,6 +1124,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     OriginList *ArgList = getOriginsList(*Args[I]);
     if (!ArgList)
       continue;
+    bool ShouldTrackArg = getTrackedArgInfo(FD, Args, I).has_value();
     if (IsGslConstruction) {
       // TODO: document with code example.
       // std::string_view(const std::string_view& from)
@@ -1166,7 +1140,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));
         KillSrc = false;
-      } else if (IsArgLifetimeBound(I)) {
+      } else if (ShouldTrackArg) {
         // Only flow the outer origin here. For lifetimebound args in
         // gsl::Pointer construction, we do not have enough information to
         // safely match inner origins, so the source and
@@ -1186,7 +1160,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
           CallList->getOuterOriginID(),
           ArgList->peelOuterOrigin()->getOuterOriginID(), KillSrc));
       KillSrc = false;
-    } else if (IsArgLifetimeBound(I)) {
+    } else if (ShouldTrackArg) {
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
       // only constrains the top-level origin.

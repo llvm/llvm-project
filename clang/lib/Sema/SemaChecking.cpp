@@ -2352,7 +2352,8 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:
-    if (!ArgTy->getAs<VectorType>() && !isValidMathElementType(ArgTy)) {
+    if (!ArgTy->getAs<VectorType>() && !ArgTy->getAs<MatrixType>() &&
+        !isValidMathElementType(ArgTy)) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << ArgOrdinal << /* vector */ 2 << /* integer */ 1 << /* fp */ 1
              << ArgTy;
@@ -12254,9 +12255,14 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     }
   }
 
-  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
-    return TryGetExprRange(C, OVE->getSourceExpr(), MaxWidth, InConstantContext,
-                           Approximate);
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E)) {
+    // The source expression is null for the OpaqueValueExpr that stands in for
+    // a non-type template argument of pointer or reference type; fall back to
+    // the range of the type in that case.
+    if (const Expr *SourceExpr = OVE->getSourceExpr())
+      return TryGetExprRange(C, SourceExpr, MaxWidth, InConstantContext,
+                             Approximate);
+  }
 
   if (const auto *BitField = E->getSourceBitField())
     return IntRange(BitField->getBitWidthValue(),

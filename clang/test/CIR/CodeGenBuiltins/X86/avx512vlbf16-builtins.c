@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -target-feature +avx512bf16 -fclangir -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports vector types.
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -target-feature +avx512bf16 -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror -Wsign-conversion 
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -target-feature +avx512bf16 -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -target-feature +avx512bf16 -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512f -target-feature +avx512vl -target-feature +avx512bf16 -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=OGCG --input-file=%t.ll %s

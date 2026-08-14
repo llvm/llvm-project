@@ -87,6 +87,6 @@
 ; CHECK:     machine-sanmd
 ; CHECK:     stack-frame-layout
 ; CHECK:     verify
-; CHECK:     lanai-asmprinter
+; CHECK:     lanai-asm-printer
 ; CHECK:   free-machine-function
 ; CHECK: lanai-asm-printer-end

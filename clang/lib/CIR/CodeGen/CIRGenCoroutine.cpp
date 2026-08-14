@@ -274,11 +274,15 @@ cir::CoroBeginOp CIRGenFunction::emitCoroBeginBuiltinCall(const CallExpr *e) {
   return coroBegin;
 }
 
-cir::CoroEndOp CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
-                                                      mlir::Value nullPtr) {
-  return cir::CoroEndOp::create(
-      cgm.getBuilder(), loc,
-      mlir::ValueRange{nullPtr, builder.getBool(false, loc)});
+cir::CoroEndOp CIRGenFunction::emitCoroEndBuiltinCall(const CallExpr *e) {
+
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  llvm::SmallVector<mlir::Value, 3> args;
+  for (const Expr *arg : e->arguments())
+    args.push_back(emitScalarExpr(arg));
+  args.push_back(cir::TokenNoneOp::create(builder, loc));
+  return cir::CoroEndOp::create(builder, loc, {cgm.voidTy}, args);
 }
 
 cir::CoroFreeOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
@@ -504,10 +508,13 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       }
     }
   }
-  cir::CoroEndOp::create(
-      cgm.getBuilder(), openCurlyLoc,
-      mlir::ValueRange{builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc),
-                       builder.getBool(false, openCurlyLoc)});
+
+  cir::ConstantOp nullHandler =
+      builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc);
+  cir::ConstantOp noUnwind = builder.getBool(false, openCurlyLoc);
+  auto tkNone = cir::TokenNoneOp::create(builder, openCurlyLoc);
+  cir::CoroEndOp::create(builder, openCurlyLoc, nullHandler, noUnwind, tkNone);
+
   if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
