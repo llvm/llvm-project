@@ -10386,22 +10386,25 @@ public:
                               const FieldDecl &RI, llvm::Value *CV,
                               MapCombinedInfoTy &CombinedInfo,
                               ArrayRef<MapData> DeclComponentLists) const {
-    // Check if this is a DecompositionDecl whose original variable has been
-    // explicitly mapped. If so, skip this default mapping to avoid redundancy.
+    // For DecompositionDecls: skip default mapping only if the decomposition
+    // is by-reference and its original variable is explicitly mapped.
+    // By-value decompositions own distinct storage and must be mapped.
     if (CI.capturesVariable() || CI.capturesVariableByCopy()) {
       const VarDecl *VD = CI.getCapturedVar();
       if (auto *DD = dyn_cast<DecompositionDecl>(VD)) {
-        if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
-          // Check if the original variable has been explicitly mapped.
-          for (const MapData &L : DeclComponentLists) {
-            OMPClauseMappableExprCommon::MappableExprComponentListRef
-                Components = std::get<0>(L);
-            for (const OMPClauseMappableExprCommon::MappableComponent &MC :
-                 Components) {
-              if (MC.getAssociatedDeclaration() == OrigVar)
-                // Original variable is explicitly mapped, skip this default
-                // map.
-                return;
+        if (DD->getType()->isReferenceType()) {
+          if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
+            // Check if the original variable has been explicitly mapped.
+            for (const MapData &L : DeclComponentLists) {
+              OMPClauseMappableExprCommon::MappableExprComponentListRef
+                  Components = std::get<0>(L);
+              for (const OMPClauseMappableExprCommon::MappableComponent &MC :
+                   Components) {
+                if (MC.getAssociatedDeclaration() == OrigVar)
+                  // Original variable is explicitly mapped, skip this default
+                  // map.
+                  return;
+              }
             }
           }
         }

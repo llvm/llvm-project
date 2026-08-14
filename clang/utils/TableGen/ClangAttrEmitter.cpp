@@ -5305,6 +5305,9 @@ void EmitClangAttrTextNodeDump(const RecordKeeper &Records, raw_ostream &OS) {
     if (!R.getValueAsBit("ASTNode"))
       continue;
 
+    if (R.getValueAsBit("HasCustomTextNodeDump"))
+      continue;
+
     // If the attribute has a semantically-meaningful name (which is determined
     // by whether there is a Spelling enumeration for it), then write out the
     // spelling used for the attribute.
@@ -5315,10 +5318,6 @@ void EmitClangAttrTextNodeDump(const RecordKeeper &Records, raw_ostream &OS) {
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
     if (Spellings.size() > 1 && !SpellingNamesAreCommon(Spellings))
       SS << "    OS << \" \" << A->getSpelling();\n";
-
-    // Skip attributes with custom text node dump implementations.
-    if (Attr->getValueAsBit("HasCustomTextNodeDump"))
-      continue;
 
     std::vector<const Record *> Args = R.getValueAsListOfDefs("Args");
     for (const auto *Arg : Args)
