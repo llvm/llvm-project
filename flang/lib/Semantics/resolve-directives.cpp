@@ -2725,6 +2725,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         dirContext.defaultDSA == Symbol::Flag::OmpNone) {
       checkDefaultNone = true;
     }
+    bool hasDefaultNoneError{false};
     if (checkDefaultNone) {
       auto defaultNoneError = [&](parser::CharBlock loc, const Symbol *sym) {
         if (crayPtr) {
@@ -2736,6 +2737,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
               "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
               sym->name());
         }
+        hasDefaultNoneError = true;
       };
       if (dsa.test(Symbol::Flag::OmpPrivate) ||
           crayPtrDSA.test(Symbol::Flag::OmpPrivate)) {
@@ -2779,14 +2781,18 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
 
     if (dirContext.defaultDSA == Symbol::Flag::OmpPrivate ||
         dirContext.defaultDSA == Symbol::Flag::OmpFirstPrivate ||
-        dirContext.defaultDSA == Symbol::Flag::OmpShared) {
+        dirContext.defaultDSA == Symbol::Flag::OmpShared ||
+        (dirContext.defaultDSA == Symbol::Flag::OmpNone &&
+            !hasDefaultNoneError)) {
       // 1) default
       // Allowed only with parallel, teams and task generating constructs.
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
       dsa = {dirContext.defaultDSA};
-      makeSymbol(dsa);
+      if (dirContext.defaultDSA != Symbol::Flag::OmpNone) {
+        makeSymbol(dsa);
+      }
       PRINT_IMPLICIT_RULE("1) default");
     } else if (parallelDir) {
       // 2) parallel -> shared
@@ -2827,6 +2833,12 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         makeSymbol(dsa)->set(Symbol::Flag::OmpImplicit);
         PRINT_IMPLICIT_RULE("7) taskgen: firstprivate");
       }
+    }
+    if (hasDefaultNoneError &&
+        (dsa.none() || dsa == Symbol::Flags{Symbol::Flag::OmpNone})) {
+      // Set DSA to avoid reporting the same error multiple times.
+      dsa = {Symbol::Flag::OmpShared};
+      makeSymbol(dsa);
     }
     prevDSA = dsa;
   }
