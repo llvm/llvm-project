@@ -399,8 +399,8 @@ struct LLVM_ABI InstrumentationConfig {
     InlineRuntimeEagerly = BaseConfigurationOption::createBoolOption(
         *this, "inline_runtime", "Inline runtime function calls eagerly", true);
     RuntimeExportSymbols = BaseConfigurationOption::createStringListOption(
-      *this, "runtime_export_symbols",
-      "Runtime symbols that remain externally visible after linking.", {});
+        *this, "runtime_export_symbols",
+        "Runtime symbols that remain externally visible after linking.", {});
     populate(IIRB);
   }
 

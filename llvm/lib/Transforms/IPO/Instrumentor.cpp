@@ -638,8 +638,8 @@ std::unique_ptr<BaseConfigurationOption>
 BaseConfigurationOption::createStringListOption(
     InstrumentationConfig &IConf, StringRef Name, StringRef Description,
     ArrayRef<StringRef> DefaultValue) {
-  auto BCO = std::make_unique<BaseConfigurationOption>(Name, Description,
-                                                        STRING_LIST);
+  auto BCO =
+      std::make_unique<BaseConfigurationOption>(Name, Description, STRING_LIST);
   BCO->setStringList(DefaultValue);
   IConf.addBaseChoice(BCO.get());
   return BCO;
