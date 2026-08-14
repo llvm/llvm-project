@@ -834,31 +834,32 @@ bool DwarfExpression::addExpression(
     // Turn this into an implicit location description.
     addStackValue();
 
-  if (HasSymbolicBranches) {
-    for (const BranchFixup &Fixup : Fixups) {
-      auto Label = llvm::find_if(Labels, [&](const LabelOffset &Candidate) {
-        return Candidate.ID == Fixup.LabelID;
-      });
-      if (Label == Labels.end())
-        report_fatal_error(Twine("DWARF expression branch to label ") +
-                           Twine(Fixup.LabelID) + " has no matching label");
+  if (!HasSymbolicBranches)
+    return true;
 
-      // DW_OP_bra and DW_OP_skip apply the displacement after reading their
-      // two-byte operand, so use the byte after the placeholder as the base.
-      int64_t Displacement =
-          static_cast<int64_t>(Label->Offset) -
-          static_cast<int64_t>(Fixup.PlaceholderOffset + BranchOffsetByteSize);
-      if (!isInt<16>(Displacement))
-        report_fatal_error(Twine("DWARF expression branch offset ") +
-                           Twine(Displacement) + " is outside [-32768, 32767]");
+  for (const BranchFixup &Fixup : Fixups) {
+    auto Label = llvm::find_if(Labels, [&](const LabelOffset &Candidate) {
+      return Candidate.ID == Fixup.LabelID;
+    });
+    if (Label == Labels.end())
+      report_fatal_error(Twine("DWARF expression branch to label ") +
+                         Twine(Fixup.LabelID) + " has no matching label");
 
-      replaceTemporaryBufferData2(Fixup.PlaceholderOffset,
-                                  static_cast<uint16_t>(Displacement));
-    }
+    // DW_OP_bra and DW_OP_skip apply the displacement after reading their
+    // two-byte operand, so use the byte after the placeholder as the base.
+    int64_t Displacement =
+        static_cast<int64_t>(Label->Offset) -
+        static_cast<int64_t>(Fixup.PlaceholderOffset + BranchOffsetByteSize);
+    if (!isInt<16>(Displacement))
+      report_fatal_error(Twine("DWARF expression branch offset ") +
+                         Twine(Displacement) + " is outside [-32768, 32767]");
 
-    disableTemporaryBuffer();
-    commitTemporaryBuffer();
+    replaceTemporaryBufferData2(Fixup.PlaceholderOffset,
+                                static_cast<uint16_t>(Displacement));
   }
+
+  disableTemporaryBuffer();
+  commitTemporaryBuffer();
   return true;
 }
 
