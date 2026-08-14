@@ -293,8 +293,9 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   return writeBody(S, /*IsNested=*/false);
 }
 
-std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(
-    SecType Type, bool IsNested) {
+std::error_code
+SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(SecType Type,
+                                                       bool IsNested) {
   if (WriteEytzingerNameTables) {
     // Eytzinger layout requires MD5 representation and does not support
     // multi-context Context-Sensitive profiles.
@@ -745,8 +746,8 @@ std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
   // ProfSection / FuncOffsetSection are SecLBR* or SecTypified* after
   // configureTypifiedProfile.
   const SecType Sections[] = {
-      SecProfSummary,       SecNameTable,        SecCSNameTable,  ProfSection,
-      SecProfileSymbolList, FuncOffsetSection,   SecFuncMetadata,
+      SecProfSummary,       SecNameTable,      SecCSNameTable,  ProfSection,
+      SecProfileSymbolList, FuncOffsetSection, SecFuncMetadata,
   };
   for (SecType Type : Sections)
     if (std::error_code EC = writeOneSection(Type, ProfileMap))
@@ -773,14 +774,10 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
   // Flat SecFlag is pre-set in ExtBinaryHdrLayoutTable; findUnwrittenEntry
   // picks the matching unwritten ProfSection / FuncOffsetSection slot.
   const std::pair<SecType, const SampleProfileMap &> Sections[] = {
-      {SecProfSummary, ProfileMap},
-      {SecNameTable, ProfileMap},
-      {ProfSection, NestedProfileMap},
-      {FuncOffsetSection, NestedProfileMap},
-      {ProfSection, FlatProfileMap},
-      {FuncOffsetSection, FlatProfileMap},
-      {SecProfileSymbolList, ProfileMap},
-      {SecFuncMetadata, ProfileMap},
+      {SecProfSummary, ProfileMap},       {SecNameTable, ProfileMap},
+      {ProfSection, NestedProfileMap},    {FuncOffsetSection, NestedProfileMap},
+      {ProfSection, FlatProfileMap},      {FuncOffsetSection, FlatProfileMap},
+      {SecProfileSymbolList, ProfileMap}, {SecFuncMetadata, ProfileMap},
   };
   for (const auto &[Type, Map] : Sections)
     if (std::error_code EC = writeOneSection(Type, Map))
