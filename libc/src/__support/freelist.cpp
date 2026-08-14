@@ -31,7 +31,7 @@ void FreeList::push(Node *node) {
 void FreeList::remove(Node *node) {
   LIBC_ASSERT(begin_ && "cannot remove from empty list");
   node->integrity_check();
-  Node *next = node->next;
+  Node *next = node->next_;
   if (node == next) {
     LIBC_ASSERT(node == begin_ &&
                 "a self-referential node must be the only element");
@@ -51,7 +51,7 @@ void FreeList::integrity_check() const {
   Node *curr = begin_;
   do {
     curr->integrity_check();
-    curr = curr->next;
+    curr = curr->next_;
   } while (curr != begin_);
 }
 

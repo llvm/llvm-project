@@ -76,7 +76,7 @@ void FreeTrie::integrity_check() const {
     self(self, node->lower);
     self(self, node->upper);
   };
-  integrity_check_trie_node(integrity_check_trie_node, root);
+  integrity_check_trie_node(integrity_check_trie_node, root());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

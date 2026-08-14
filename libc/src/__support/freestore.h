@@ -65,8 +65,11 @@ public:
 
   /// Integrity check for the entire store.
   LIBC_INLINE void integrity_check() const {
-    large_trie.integrity_check();
-    for (const FreeList &list : small_lists)
+    if constexpr (USE_TRIE)
+      trie.integrity_check();
+    else
+      overflow_list.integrity_check();
+    for (const FreeList &list : free_lists)
       list.integrity_check();
   }
 
