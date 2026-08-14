@@ -570,22 +570,45 @@ void AMDGPUPromoteAllocaImpl::allocateVgprs(AllocaAnalysis &AA) {
   // object that already has its place keeps it, and the next one is allocated
   // after it. The markers above are still rewritten, since IR that carries the
   // metadata need not carry them.
+  unsigned Address = AllocVGPROffset;
   if (MDNode *MD = AA.Alloca->getMetadata("amdgpu.allocated.vgprs")) {
-    const auto &Allocated = *cast<AMDGPU::AllocatedVGPRsMetadata>(MD);
-    AllocVGPROffset = std::max(AllocVGPROffset,
-                               Allocated.getAddress() + alignTo(AllocaSize, 4));
-    return;
+    Address = cast<AMDGPU::AllocatedVGPRsMetadata>(MD)->getAddress();
+    AllocVGPROffset =
+        std::max(AllocVGPROffset, Address + alignTo(AllocaSize, 4));
+  } else {
+    // Find space for the alloca. Objects are packed in order at dword
+    // granularity, since a register cannot be shared between two of them.
+    Type *I32 = Type::getInt32Ty(Ctx);
+    AA.Alloca->setMetadata(
+        "amdgpu.allocated.vgprs",
+        MDNode::get(
+            Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32, Address)),
+                  ConstantAsMetadata::get(ConstantInt::get(I32, AllocaSize))}));
+    AllocVGPROffset += alignTo(AllocaSize, 4);
   }
 
-  // Find space for the alloca. Objects are packed in order at dword
-  // granularity, since a register cannot be shared between two of them.
-  Type *I32 = Type::getInt32Ty(Ctx);
-  AA.Alloca->setMetadata(
-      "amdgpu.allocated.vgprs",
-      MDNode::get(
-          Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32, AllocVGPROffset)),
-                ConstantAsMetadata::get(ConstantInt::get(I32, AllocaSize))}));
-  AllocVGPROffset += alignTo(AllocaSize, 4);
+  // The object occupies whole registers named by its address, and nothing may
+  // move or spill it, so it has to fit in the registers this function is
+  // entitled to. That budget is what promotion elsewhere in this pass already
+  // uses, and for a non-entry function it is the 32 registers the ABI preserves
+  // unless the function is known to be inlined.
+  //
+  // Diagnose the overflow here rather than leaving it to register allocation,
+  // which reports "ran out of registers" from a pass with no idea what an
+  // object in this address space is - and only once the object is large enough
+  // to starve everything else, so an object that merely overruns the budget
+  // goes through silently.
+  const unsigned FirstReg = Address / 4;
+  const unsigned LastReg = (Address + alignTo(AllocaSize, 4)) / 4 - 1;
+  if (LastReg >= MaxVGPRs) {
+    const Function &F = *AA.Alloca->getFunction();
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F,
+        Twine("object in the VGPR 'as memory' address space (13) at v[") +
+            Twine(FirstReg) + ":" + Twine(LastReg) + "] does not fit in the " +
+            Twine(MaxVGPRs) + " registers available to this function",
+        AA.Alloca->getDebugLoc()));
+  }
 }
 
 // Checks if the instruction I is a memset user of the alloca AI that we can
