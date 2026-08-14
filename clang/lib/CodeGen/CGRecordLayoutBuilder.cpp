@@ -198,7 +198,7 @@ struct CGRecordLowering {
                      const CXXRecordDecl *Query) const;
   void calculateZeroInit();
   CharUnits calculateTailClippingOffset(bool isNonVirtualBaseType) const;
-  void checkBitfieldClipping(bool isNonVirtualBaseType) const;
+  void checkForOverlap(bool isNonVirtualBaseType);
   /// Determines if we need a packed llvm struct.
   void determinePacked(bool NVBaseType);
   /// Inserts padding everywhere it's needed.
@@ -300,7 +300,7 @@ void CGRecordLowering::lower(bool NVBaseType) {
       accumulateVBases();
   }
   llvm::stable_sort(Members);
-  checkBitfieldClipping(NVBaseType);
+  checkForOverlap(NVBaseType);
   Members.push_back(StorageInfo(Size, getIntNType(8)));
   determinePacked(NVBaseType);
   insertPadding();
@@ -389,14 +389,28 @@ void CGRecordLowering::accumulateFields(bool isNonVirtualBaseType) {
       // Empty fields have no storage.
       ++Field;
     } else {
-      // Use base subobject layout for the potentially-overlapping field,
-      // as it is done in RecordLayoutBuilder
-      Members.push_back(MemberInfo(
-          bitsToCharUnits(getFieldBitOffset(*Field)), MemberInfo::Field,
-          Field->isPotentiallyOverlapping()
-              ? getStorageType(Field->getType()->getAsCXXRecordDecl())
-              : getStorageType(*Field),
-          *Field));
+      CharUnits CurOffset = bitsToCharUnits(getFieldBitOffset(*Field));
+      llvm::Type *StorageType = getStorageType(*Field);
+
+      // Detect cases when the next field needs to be packed into tail padding
+      // of a record field. This is typically caused by [[no_unique_address]],
+      // but we try to infer when that is the case rather than checking for the
+      // attribute explicitly because the attribute is typically not present in
+      // debug info. Use the base subobject LLVM struct type in these cases,
+      // which will be less than data size bytes.
+      if (const CXXRecordDecl *FieldRD =
+              Field->getType()->getAsCXXRecordDecl()) {
+        CharUnits NextOffset = Layout.getNonVirtualSize();
+        auto NextField = std::next(Field);
+        if (NextField != FieldEnd)
+          NextOffset = bitsToCharUnits(getFieldBitOffset(*NextField));
+        if (CurOffset + getSize(StorageType) > NextOffset) {
+          StorageType = getStorageType(FieldRD);
+        }
+      }
+
+      Members.push_back(
+          MemberInfo(CurOffset, MemberInfo::Field, StorageType, *Field));
       ++Field;
     }
   }
@@ -948,19 +962,19 @@ void CGRecordLowering::calculateZeroInit() {
 }
 
 // Verify accumulateBitfields computed the correct storage representations.
-void CGRecordLowering::checkBitfieldClipping(bool IsNonVirtualBaseType) const {
+void CGRecordLowering::checkForOverlap(bool IsNonVirtualBaseType) {
 #ifndef NDEBUG
   auto ScissorOffset = calculateTailClippingOffset(IsNonVirtualBaseType);
   auto Tail = CharUnits::Zero();
-  for (const auto &M : Members) {
+  for (MemberInfo &M : Members) {
     // Only members with data could possibly overlap.
     if (!M.Data)
       continue;
 
-    assert(M.Offset >= Tail && "Bitfield access unit is not clipped");
+    assert(M.Offset >= Tail && "LLVM struct member types overlap");
     Tail = M.Offset + getSize(M.Data);
     assert((Tail <= ScissorOffset || M.Offset >= ScissorOffset) &&
-           "Bitfield straddles scissor offset");
+           "Member straddles scissor offset");
   }
 #endif
 }
