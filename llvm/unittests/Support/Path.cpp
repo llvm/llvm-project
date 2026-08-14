@@ -2042,6 +2042,10 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
 #ifdef _WIN32
   EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
+#elif defined(_AIX) || defined(__MVS__)
+  // On AIX and z/OS, open() on a directory with O_RDONLY fails immediately
+  // with EISDIR, unlike Linux where open() succeeds and read() returns EISDIR.
+  EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
 #else
   ASSERT_THAT_EXPECTED(FD, Succeeded());
   scope_exit Close([&] { fs::closeFile(*FD); });
