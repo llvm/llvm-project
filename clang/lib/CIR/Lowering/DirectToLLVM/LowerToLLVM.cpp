@@ -878,9 +878,11 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
     } else if (auto floatAttr = mlir::dyn_cast<cir::FPAttr>(elementAttr)) {
       mlirAttr = rewriter.getFloatAttr(
           converter->convertType(floatAttr.getType()), floatAttr.getValue());
+    } else if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(elementAttr)) {
+      mlirAttr = rewriter.getBoolAttr(boolAttr.getValue());
     } else {
-      llvm_unreachable(
-          "vector constant with an element that is neither an int nor a float");
+      llvm_unreachable("vector constant with an element that is neither an "
+                       "int, a float, or a bool");
     }
     mlirValues.push_back(mlirAttr);
   }
