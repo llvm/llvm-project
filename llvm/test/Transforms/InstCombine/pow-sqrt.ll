@@ -338,6 +338,39 @@ define double @pow_intrinsic_neghalf_fast(double %x) {
   ret double %pow
 }
 
+; pow(X, 1.5) --> X * sqrt(X) via powi when 'afn' is present.
+
+define double @pow_intrinsic_three_halves_afn(double %x) {
+; CHECK-LABEL: @pow_intrinsic_three_halves_afn(
+; CHECK-NEXT:    [[SQRT:%.*]] = call afn double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul afn double [[X]], [[SQRT]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call afn double @llvm.pow.f64(double %x, double 1.5e+00)
+  ret double %pow
+}
+
+define float @powf_intrinsic_three_halves_afn(float %x) {
+; CHECK-LABEL: @powf_intrinsic_three_halves_afn(
+; CHECK-NEXT:    [[SQRT:%.*]] = call afn float @llvm.sqrt.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul afn float [[X]], [[SQRT]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call afn float @llvm.pow.f32(float %x, float 1.5e+00)
+  ret float %pow
+}
+
+; Negative test: without 'afn' the 1.5 exponent must not fold.
+
+define double @pow_intrinsic_three_halves_no_afn(double %x) {
+; CHECK-LABEL: @pow_intrinsic_three_halves_no_afn(
+; CHECK-NEXT:    [[POW:%.*]] = call double @llvm.pow.f64(double [[X:%.*]], double 1.500000e+00)
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call double @llvm.pow.f64(double %x, double 1.5e+00)
+  ret double %pow
+}
+
 declare double @llvm.pow.f64(double, double) #0
 declare float @llvm.pow.f32(float, float) #0
 declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>) #0

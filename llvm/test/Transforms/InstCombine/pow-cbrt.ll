@@ -109,6 +109,70 @@ define float @powf_libcall_negthird_fast(float %x) {
   ret float %pow
 }
 
+; pow(X, 2/3) --> cbrt(X) * cbrt(X) when { nnan ninf nsz afn } is present.
+
+define double @pow_intrinsic_twothirds_fast(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_fast(
+; CHECK-NEXT:    [[CBRT:%.*]] = call fast double @cbrt(double [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul fast double [[CBRT]], [[CBRT]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call fast double @llvm.pow.f64(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+define float @powf_intrinsic_twothirds_fast(float %x) {
+; CHECK-LABEL: @powf_intrinsic_twothirds_fast(
+; CHECK-NEXT:    [[CBRTF:%.*]] = call fast float @cbrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul fast float [[CBRTF]], [[CBRTF]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call fast float @llvm.pow.f32(float %x, float 0x3fe5555560000000)
+  ret float %pow
+}
+
+define double @pow_libcall_twothirds_fast(double %x) {
+; CHECK-LABEL: @pow_libcall_twothirds_fast(
+; CHECK-NEXT:    [[CBRT:%.*]] = call fast double @cbrt(double [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul fast double [[CBRT]], [[CBRT]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call fast double @pow(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+define float @powf_libcall_twothirds_fast(float %x) {
+; CHECK-LABEL: @powf_libcall_twothirds_fast(
+; CHECK-NEXT:    [[CBRTF:%.*]] = call fast float @cbrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul fast float [[CBRTF]], [[CBRTF]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call fast float @powf(float %x, float 0x3fe5555560000000)
+  ret float %pow
+}
+
+; Negative test: 'afn' alone is not enough; the fold requires nnan/ninf/nsz too.
+
+define double @pow_intrinsic_twothirds_approx(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_approx(
+; CHECK-NEXT:    [[POW:%.*]] = call afn double @llvm.pow.f64(double [[X:%.*]], double f0x3FE5555555555555)
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call afn double @llvm.pow.f64(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+; Negative test: a non-exact 2/3 exponent must not fold.
+
+define double @pow_intrinsic_twothirds_nonexact(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_nonexact(
+; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[X:%.*]], double f0x3FE5555555555556)
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call fast double @llvm.pow.f64(double %x, double 0x3fe5555555555556)
+  ret double %pow
+}
+
 declare double @llvm.pow.f64(double, double) #0
 declare float @llvm.pow.f32(float, float) #0
 declare double @pow(double, double)
