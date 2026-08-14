@@ -4712,6 +4712,7 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
     return false;
   case AMDGPU::OPERAND_INLINE_C_AV64_PSEUDO:
     return isLegalAV64PseudoImm(Imm);
@@ -5156,9 +5157,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP64:
     case AMDGPU::OPERAND_REG_IMM_V2INT64:
-      break;
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
-      break;
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_INT32:

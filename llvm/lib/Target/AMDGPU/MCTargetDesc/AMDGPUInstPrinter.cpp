@@ -887,6 +887,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
       printImmediateF16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:

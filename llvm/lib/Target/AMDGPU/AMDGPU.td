@@ -1140,8 +1140,11 @@ defm PseudoScalarTrans : AMDGPUSubtargetFeature<"pseudo-scalar-trans",
 
 defm NoF16PseudoScalarTransInlineConstants : AMDGPUSubtargetFeature<"no-f16-pseudo-scalar-trans-inline-constants",
   "Inline constants are not supported for F16 pseudo scalar transcendentals",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/1
 >;
+
+def HasF16PseudoScalarTransWithInlineConstants :
+  Predicate<"Subtarget->hasPseudoScalarTrans() && !Subtarget->hasNoF16PseudoScalarTransInlineConstants()">;
 
 defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",
   "Has restricted SOffset (immediate not supported)."

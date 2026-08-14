@@ -499,6 +499,8 @@ public:
 
   bool isSSrc_f16() const { return isSCSrcB16() || isLiteralImm(MVT::f16); }
 
+  bool isSSrc_NoInline_f16() const { return isSSrc_f16(); }
+
   bool isSSrcV2F16() const {
     llvm_unreachable("cannot happen");
     return isSSrc_f16();
@@ -2095,6 +2097,7 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_KIMM64:
     return &APFloat::IEEEdouble();
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
@@ -2489,6 +2492,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
     case AMDGPU::OPERAND_REG_IMM_INT16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
@@ -2596,6 +2600,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
@@ -3828,7 +3833,8 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16)
       return AMDGPU::isInlinableLiteralBF16(Val, hasInv2PiInlineImm());
 
-    if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16)
+    if (OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16 ||
+        OperandType == AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16)
       return false;
 
     llvm_unreachable("invalid operand type");
