@@ -613,8 +613,8 @@ protected:
   ShouldShowLocFn shouldShowLocFn;
 
 private:
-  /// Convert a location into the given memory buffer into an SMLoc.
-  SMLoc convertLocToSMLoc(FileLineColLoc loc);
+  /// Convert the start of a location range into an SMLoc.
+  SMLoc convertLocToSMLoc(FileLineColRange loc);
 
   /// Given a location, returns the first nested location (including 'loc') that
   /// can be shown to the user.
