@@ -38,6 +38,12 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   ASTContext::GetBuiltinTypeError error;
   getContext().GetBuiltinType(builtinID, error, &iceArguments);
   assert(error == ASTContext::GE_None && "Should not codegen an error");
+
+  if (builtinID == RISCV::BI__builtin_riscv_ntl_load)
+    iceArguments |= (1 << 1);
+  if (builtinID == RISCV::BI__builtin_riscv_ntl_store)
+    iceArguments |= (1 << 2);
+
   for (auto [idx, arg] : llvm::enumerate(e->arguments()))
     ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
 
@@ -94,7 +100,25 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
     intrinsicName = "riscv.unzip";
     break;
   }
-  // Zknh
+  // Zknd
+  case RISCV::BI__builtin_riscv_aes32dsi:
+  case RISCV::BI__builtin_riscv_aes32dsmi:
+  case RISCV::BI__builtin_riscv_aes64ds:
+  case RISCV::BI__builtin_riscv_aes64dsm:
+  case RISCV::BI__builtin_riscv_aes64im:
+  // Zknd & Zkne
+  case RISCV::BI__builtin_riscv_aes64ks1i:
+  case RISCV::BI__builtin_riscv_aes64ks2:
+  // Zkne
+  case RISCV::BI__builtin_riscv_aes32esi:
+  case RISCV::BI__builtin_riscv_aes32esmi:
+  case RISCV::BI__builtin_riscv_aes64es:
+  case RISCV::BI__builtin_riscv_aes64esm: {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented RISC-V builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
   case RISCV::BI__builtin_riscv_sha256sig0: {
     intrinsicName = "riscv.sha256sig0";
     break;
@@ -110,6 +134,21 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   case RISCV::BI__builtin_riscv_sha256sum1: {
     intrinsicName = "riscv.sha256sum1";
     break;
+  }
+  case RISCV::BI__builtin_riscv_sha512sig0h:
+  case RISCV::BI__builtin_riscv_sha512sig0l:
+  case RISCV::BI__builtin_riscv_sha512sig1h:
+  case RISCV::BI__builtin_riscv_sha512sig1l:
+  case RISCV::BI__builtin_riscv_sha512sum0r:
+  case RISCV::BI__builtin_riscv_sha512sum1r:
+  case RISCV::BI__builtin_riscv_sha512sig0:
+  case RISCV::BI__builtin_riscv_sha512sig1:
+  case RISCV::BI__builtin_riscv_sha512sum0:
+  case RISCV::BI__builtin_riscv_sha512sum1: {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented RISC-V builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   }
   // Zksed
   case RISCV::BI__builtin_riscv_sm4ks: {
@@ -154,9 +193,31 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load:
   case RISCV::BI__builtin_riscv_ntl_store: {
-    cgm.errorNYI(e->getSourceRange(),
-                 std::string("unimplemented RISC-V builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
+    unsigned domainVal = 5; // Default __RISCV_NTLH_ALL
+    unsigned domainArgNo =
+        builtinID == RISCV::BI__builtin_riscv_ntl_load ? 1 : 2;
+    if (e->getNumArgs() > domainArgNo) {
+      const std::optional<llvm::APSInt> result =
+          e->getArg(domainArgNo)->getIntegerConstantExpr(getContext());
+      assert(result && "Expected NTLH domain argument to be a constant");
+      domainVal = result->getZExtValue();
+    }
+
+    mlir::Location loc = getLoc(e->getSourceRange());
+    mlir::Attribute domainAttr = builder.getI32IntegerAttr(domainVal);
+    Address addr(ops[0],
+                 cgm.getNaturalPointeeTypeAlignment(e->getArg(0)->getType()));
+    if (builtinID == RISCV::BI__builtin_riscv_ntl_load) {
+      auto load = builder.createLoad(loc, addr, /*isVolatile=*/false,
+                                     /*isNontemporal=*/true);
+      load->setAttr("cir.riscv_nontemporal_domain", domainAttr);
+      return load.getResult();
+    }
+
+    mlir::Value val = emitToMemory(ops[1], e->getArg(1)->getType());
+    auto store = builder.createStore(loc, val, addr, /*isVolatile=*/false,
+                                     /*isNontemporal=*/true);
+    store->setAttr("cir.riscv_nontemporal_domain", domainAttr);
     return mlir::Value{};
   }
 
@@ -238,16 +299,38 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
   // XAndesPerf
   case RISCV::BI__builtin_riscv_nds_ffb_32:
-  case RISCV::BI__builtin_riscv_nds_ffb_64:
+  case RISCV::BI__builtin_riscv_nds_ffb_64: {
+    intrinsicName = "riscv.nds.ffb";
+    break;
+  }
   case RISCV::BI__builtin_riscv_nds_ffzmism_32:
-  case RISCV::BI__builtin_riscv_nds_ffzmism_64:
+  case RISCV::BI__builtin_riscv_nds_ffzmism_64: {
+    intrinsicName = "riscv.nds.ffzmism";
+    break;
+  }
   case RISCV::BI__builtin_riscv_nds_ffmism_32:
-  case RISCV::BI__builtin_riscv_nds_ffmism_64:
+  case RISCV::BI__builtin_riscv_nds_ffmism_64: {
+    intrinsicName = "riscv.nds.ffmism";
+    break;
+  }
   case RISCV::BI__builtin_riscv_nds_flmism_32:
-  case RISCV::BI__builtin_riscv_nds_flmism_64:
+  case RISCV::BI__builtin_riscv_nds_flmism_64: {
+    intrinsicName = "riscv.nds.flmism";
+    break;
+  }
   // XAndesBFHCvt
   case RISCV::BI__builtin_riscv_nds_fcvt_s_bf16:
   case RISCV::BI__builtin_riscv_nds_fcvt_bf16_s: {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented RISC-V builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
+
+  // XMIPS execution control
+  case RISCV::BI__builtin_riscv_mips_pause:
+  case RISCV::BI__builtin_riscv_mips_ehb:
+  case RISCV::BI__builtin_riscv_mips_ihb: {
     cgm.errorNYI(e->getSourceRange(),
                  std::string("unimplemented RISC-V builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));

@@ -152,6 +152,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
     setOperationAction(ISD::FMAXIMUM, T, Legal);
+    if (Subtarget->hasSIMD128() && MVT(T).isVector()) {
+      setOperationAction(ISD::PSEUDO_FMIN, T, Legal);
+      setOperationAction(ISD::PSEUDO_FMAX, T, Legal);
+    }
     // When experimental v8f16 support is enabled these instructions don't need
     // to be expanded.
     if (T != MVT::v8f16) {
@@ -253,6 +257,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     if (Subtarget->hasFP16()) {
       setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::f16, Custom);
       setOperationAction(ISD::FP_ROUND, MVT::v4f16, Custom);
     }
 
@@ -2507,7 +2512,7 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                      SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   if (VT == MVT::v8f16) {
-    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scaler
+    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scalar
     // FP16 type, so cast them to I16s.
     MVT IVT = VT.changeVectorElementType(MVT::i16);
     SmallVector<SDValue, 8> NewOps;
@@ -2814,6 +2819,18 @@ SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
 SDValue
 WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
                                                     SelectionDAG &DAG) const {
+  if (Op.getOpcode() == ISD::INSERT_VECTOR_ELT &&
+      Op.getValueType() == MVT::v8f16) {
+    // INSERT_VECTOR_ELT can't handle FP16 operands since Wasm doesn't have a
+    // scalar FP16 type, so cast them to I16s.
+    SDLoc DL(Op);
+    SDValue IntVector = DAG.getBitcast(MVT::v8i16, Op.getOperand(0));
+    SDValue IntElement = DAG.getBitcast(MVT::i16, Op.getOperand(1));
+    SDValue Inserted = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v8i16,
+                                   IntVector, IntElement, Op.getOperand(2));
+    return DAG.getBitcast(MVT::v8f16, Inserted);
+  }
+
   // Allow constant lane indices, expand variable lane indices
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
   if (isa<ConstantSDNode>(IdxNode)) {
@@ -2997,8 +3014,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 /// split up into scalar instructions during legalization, and the vector
 /// extending instructions are selected in performVectorExtendCombine below.
 static SDValue
-performVectorExtendToFPCombine(SDNode *N,
-                               TargetLowering::DAGCombinerInfo &DCI) {
+performVectorExtendToFPCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               const WebAssemblySubtarget *Subtarget) {
   auto &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::UINT_TO_FP ||
          N->getOpcode() == ISD::SINT_TO_FP);
@@ -3010,6 +3027,8 @@ performVectorExtendToFPCombine(SDNode *N,
     ExtVT = MVT::v4i32;
   else if (ResVT == MVT::v2f64 && (InVT == MVT::v2i16 || InVT == MVT::v2i8))
     ExtVT = MVT::v2i32;
+  else if (Subtarget->hasFP16() && ResVT == MVT::v8f16 && InVT == MVT::v8i8)
+    ExtVT = MVT::v8i16;
   else
     return SDValue();
 
@@ -4024,11 +4043,11 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
   case ISD::UINT_TO_FP:
-    if (auto ExtCombine = performVectorExtendToFPCombine(N, DCI))
+    if (auto ExtCombine = performVectorExtendToFPCombine(N, DCI, Subtarget))
       return ExtCombine;
     return performVectorNonNegToFPCombine(N, DCI);
   case ISD::SINT_TO_FP:
-    return performVectorExtendToFPCombine(N, DCI);
+    return performVectorExtendToFPCombine(N, DCI, Subtarget);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::FP_ROUND:

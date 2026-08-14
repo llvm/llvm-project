@@ -13,6 +13,7 @@
 #include "RISCVTargetMachine.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
+#include "RISCVGatherScatterLowering.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVMachineScheduler.h"
 #include "RISCVTargetObjectFile.h"
@@ -34,12 +35,10 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <optional>
 using namespace llvm;
 
@@ -129,8 +128,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVQCRelaxMarkingPass(*PR);
-  initializeRISCVGatherScatterLoweringPass(*PR);
+  initializeRISCVGatherScatterLoweringLegacyPass(*PR);
   initializeRISCVCodeGenPrepareLegacyPassPass(*PR);
+  initializeRISCVZacasABIFixLegacyPass(*PR);
   initializeRISCVPostRAExpandPseudoPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsPass(*PR);
@@ -623,8 +623,16 @@ void RISCVPassConfig::addPreEmitPass2() {
 void RISCVPassConfig::addMachineSSAOptimization() {
   // It's beneficial to reduce the VL to enable more
   // Machine SSA optimizations.
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
+    // RISCVVLOptimizer can make loop invariant instructions like vmv.v.i
+    // loop variant by propagating a VL defined inside the loop. Run LICM and
+    // hoist them early. Don't do this at -O0 to avoid the compile-time
+    // overhead. Not reducing the VL of loop invariant pseudos results in more
+    // vsetvli toggles, and still requires the MachineLoopInfo analysis to be
+    // run.
+    addPass(&EarlyMachineLICMID);
     addPass(createRISCVVLOptimizerPass());
+  }
 
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
@@ -671,17 +679,6 @@ bool RISCVPassConfig::addILPOpts() {
     addPass(&MachineCombinerID);
 
   return true;
-}
-
-void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "RISCVPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
-
-  PB.registerLateLoopOptimizationsEPCallback([=](LoopPassManager &LPM,
-                                                 OptimizationLevel Level) {
-    if (Level != OptimizationLevel::O0)
-      LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
-  });
 }
 
 yaml::MachineFunctionInfo *

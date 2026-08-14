@@ -12,6 +12,9 @@
 
 let Component = "Parse" in {
 let CategoryName = "Parse Issue" in {
+// C2y compatibility with C89.
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+
 // C++11 compatibility with C++98.
 defm enum_fixed_underlying_type : CXX11Compat<
   "enumeration types with a fixed underlying type are",
@@ -220,6 +223,9 @@ def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
 def err_c2y_labeled_break_continue : Error<
   "named %select{'break'|'continue'}0 is only supported in C2y">;
+def err_c2y_first_condition_clause_is_not_declaration : Error<
+  "first clause in condition must be a declaration">;
+def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -457,6 +463,12 @@ def err_expansion_stmt_requires_cxx2c : Error<
   "expansion statements are only supported in C++2c">;
 def err_for_template : Error<
   "'for template' is invalid; use 'template for' instead">;
+def ext_expansion_stmt_body_not_compound_stmt : Extension<
+  "ISO C++ requires the body of an expansion statement to be a compound statement">,
+  InGroup<ExpansionStmtBody>;
+def ext_expansion_stmt_body_attr : Extension<
+  "ISO C++ forbids attributes before the compound statement of an expansion statement">,
+  InGroup<ExpansionStmtBody>;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;
@@ -1710,6 +1722,8 @@ def err_omp_expected_fr_or_attr_selector : Error<
   "expected 'fr' or 'attr' selector in 'prefer_type'">;
 def err_omp_expected_pref_spec : Error<
   "expected preference-specification in 'prefer_type'">;
+def err_omp_append_args_prefer_type_60 : Error<
+  "'prefer_type' in 'append_args' requires OpenMP version 6.0 or later">;
 def err_expected_sequence_or_directive : Error<
   "expected an OpenMP 'directive' or 'sequence' attribute argument">;
 def ext_omp_attributes : ExtWarn<

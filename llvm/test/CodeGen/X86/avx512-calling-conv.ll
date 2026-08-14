@@ -682,10 +682,10 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL-NEXT:    movq %rdi, %rax
 ; KNL-NEXT:    vmovdqu64 152(%rsp), %zmm0
 ; KNL-NEXT:    vmovdqu64 216(%rsp), %zmm1
-; KNL-NEXT:    vpmovqb %zmm1, %xmm1
-; KNL-NEXT:    vpmovqb %zmm0, %xmm0
+; KNL-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-NEXT:    vpmovqw %zmm1, %xmm1
 ; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; KNL-NEXT:    vmovd %esi, %xmm1
 ; KNL-NEXT:    vpinsrb $1, %edx, %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $2, %ecx, %xmm1, %xmm1
@@ -702,7 +702,7 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL-NEXT:    vpinsrb $13, 120(%rsp), %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $14, 128(%rsp), %xmm1, %xmm1
 ; KNL-NEXT:    vpinsrb $15, 136(%rsp), %xmm1, %xmm1
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    kmovw 280(%rsp), %k0
 ; KNL-NEXT:    kmovw 144(%rsp), %k1
 ; KNL-NEXT:    kandw %k0, %k1, %k1
@@ -803,14 +803,15 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; SKX-NEXT:    pushq %r13
 ; SKX-NEXT:    pushq %r12
 ; SKX-NEXT:    pushq %rbx
-; SKX-NEXT:    movq %rdi, %rax
 ; SKX-NEXT:    vmovdqu64 152(%rsp), %zmm0
 ; SKX-NEXT:    vmovdqu64 216(%rsp), %zmm1
-; SKX-NEXT:    vpmovqb %zmm1, %xmm1
-; SKX-NEXT:    vpmovqb %zmm0, %xmm0
-; SKX-NEXT:    vpbroadcastb 280(%rsp), %xmm2
-; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SKX-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; SKX-NEXT:    vpmovqw %zmm0, %xmm0
+; SKX-NEXT:    vpmovqw %zmm1, %xmm1
+; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; SKX-NEXT:    vpmovwb %ymm0, %xmm0
+; SKX-NEXT:    vpbroadcastb 280(%rsp), %xmm1
+; SKX-NEXT:    movq %rdi, %rax
+; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; SKX-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; SKX-NEXT:    vptestmb %ymm1, %ymm0, %k1
 ; SKX-NEXT:    vmovd %esi, %xmm0
@@ -1027,10 +1028,11 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; FASTISEL-NEXT:    pushq %rbx
 ; FASTISEL-NEXT:    vmovdqu64 152(%rsp), %zmm0
 ; FASTISEL-NEXT:    vmovdqu64 216(%rsp), %zmm1
-; FASTISEL-NEXT:    vpmovqb %zmm1, %xmm1
+; FASTISEL-NEXT:    vpmovqw %zmm0, %xmm0
+; FASTISEL-NEXT:    vpmovqw %zmm1, %xmm1
 ; FASTISEL-NEXT:    movq %rdi, %rax
-; FASTISEL-NEXT:    vpmovqb %zmm0, %xmm0
-; FASTISEL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; FASTISEL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; FASTISEL-NEXT:    vpmovwb %ymm0, %xmm0
 ; FASTISEL-NEXT:    vpbroadcastb 280(%rsp), %xmm1
 ; FASTISEL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; FASTISEL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
@@ -2301,57 +2303,57 @@ define i128 @PR179334(<128 x i1> %m) nounwind {
 ; KNL-NEXT:    pushq %rbx
 ; KNL-NEXT:    vmovdqu64 480(%rsp), %zmm0
 ; KNL-NEXT:    vmovdqu64 544(%rsp), %zmm1
-; KNL-NEXT:    vpmovqb %zmm1, %xmm1
-; KNL-NEXT:    vpmovqb %zmm0, %xmm0
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm0, %xmm0
+; KNL-NEXT:    vpmovqw %zmm1, %xmm1
+; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; KNL-NEXT:    vptestmd %zmm0, %zmm1, %k0
-; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    kmovw %k0, %r10d
 ; KNL-NEXT:    vmovdqu64 608(%rsp), %zmm1
 ; KNL-NEXT:    vmovdqu64 672(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm1, %xmm1
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
-; KNL-NEXT:    vptestmd %zmm0, %zmm1, %k0
-; KNL-NEXT:    kmovw %k0, %r11d
-; KNL-NEXT:    shll $16, %r11d
-; KNL-NEXT:    orl %eax, %r11d
-; KNL-NEXT:    vmovdqu64 736(%rsp), %zmm1
-; KNL-NEXT:    vmovdqu64 800(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm1, %xmm1
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm1, %xmm1
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
 ; KNL-NEXT:    vptestmd %zmm0, %zmm1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    shll $16, %eax
+; KNL-NEXT:    orl %r10d, %eax
+; KNL-NEXT:    vmovdqu64 736(%rsp), %zmm1
+; KNL-NEXT:    vmovdqu64 800(%rsp), %zmm2
+; KNL-NEXT:    vpmovqw %zmm1, %xmm1
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
+; KNL-NEXT:    vptestmd %zmm0, %zmm1, %k0
+; KNL-NEXT:    kmovw %k0, %r11d
 ; KNL-NEXT:    vmovdqu64 864(%rsp), %zmm1
 ; KNL-NEXT:    vmovdqu64 928(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm1, %xmm1
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm1, %xmm1
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
 ; KNL-NEXT:    vptestmd %zmm0, %zmm1, %k0
 ; KNL-NEXT:    kmovw %k0, %r10d
 ; KNL-NEXT:    shll $16, %r10d
-; KNL-NEXT:    orl %eax, %r10d
+; KNL-NEXT:    orl %r11d, %r10d
 ; KNL-NEXT:    shlq $32, %r10
-; KNL-NEXT:    orq %r11, %r10
+; KNL-NEXT:    orq %rax, %r10
 ; KNL-NEXT:    vmovdqu64 224(%rsp), %zmm1
 ; KNL-NEXT:    vmovdqu64 288(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm1, %xmm1
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm1, %xmm1
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
 ; KNL-NEXT:    vptestmd %zmm0, %zmm1, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    vmovdqu64 352(%rsp), %zmm1
 ; KNL-NEXT:    vmovdqu64 416(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm1, %xmm1
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm1, %xmm1
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
 ; KNL-NEXT:    vptestmd %zmm0, %zmm1, %k0
 ; KNL-NEXT:    kmovw %k0, %r11d
 ; KNL-NEXT:    shll $16, %r11d
@@ -2359,10 +2361,10 @@ define i128 @PR179334(<128 x i1> %m) nounwind {
 ; KNL-NEXT:    shlq $32, %r11
 ; KNL-NEXT:    vmovdqu64 96(%rsp), %zmm1
 ; KNL-NEXT:    vmovdqu64 160(%rsp), %zmm2
-; KNL-NEXT:    vpmovqb %zmm2, %xmm2
-; KNL-NEXT:    vpmovqb %zmm1, %xmm1
-; KNL-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; KNL-NEXT:    vpmovqw %zmm1, %xmm1
+; KNL-NEXT:    vpmovqw %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
 ; KNL-NEXT:    vptestmd %zmm0, %zmm1, %k0
 ; KNL-NEXT:    kmovw %k0, %ebx
 ; KNL-NEXT:    vmovd %edi, %xmm1
@@ -2393,65 +2395,69 @@ define i128 @PR179334(<128 x i1> %m) nounwind {
 ;
 ; SKX-LABEL: PR179334:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovdqu64 216(%rsp), %zmm0
-; SKX-NEXT:    vmovdqu64 280(%rsp), %zmm1
-; SKX-NEXT:    vmovdqu64 344(%rsp), %zmm2
-; SKX-NEXT:    vmovdqu64 408(%rsp), %zmm3
-; SKX-NEXT:    vpmovqb %zmm1, %xmm1
-; SKX-NEXT:    vpmovqb %zmm3, %xmm3
-; SKX-NEXT:    vpmovqb %zmm0, %xmm0
-; SKX-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; SKX-NEXT:    vpmovqb %zmm2, %xmm2
-; SKX-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; SKX-NEXT:    vmovdqu64 88(%rsp), %zmm2
-; SKX-NEXT:    vmovdqu64 152(%rsp), %zmm3
-; SKX-NEXT:    vpmovqb %zmm3, %xmm3
-; SKX-NEXT:    vpmovqb %zmm2, %xmm2
-; SKX-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; SKX-NEXT:    vmovd %edi, %xmm1
-; SKX-NEXT:    vpinsrb $1, %esi, %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $2, %edx, %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $4, %r8d, %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $5, %r9d, %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $6, 8(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $7, 16(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $8, 24(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $9, 32(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $10, 40(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $11, 48(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $12, 56(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $13, 64(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpinsrb $14, 72(%rsp), %xmm1, %xmm1
-; SKX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SKX-NEXT:    vpinsrb $15, 80(%rsp), %xmm1, %xmm1
+; SKX-NEXT:    vmovd %edi, %xmm0
+; SKX-NEXT:    vpinsrb $1, %esi, %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $3, %ecx, %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $4, %r8d, %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $5, %r9d, %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $6, 8(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $7, 16(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $8, 24(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $9, 32(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $10, 40(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $11, 48(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $12, 56(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $13, 64(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $14, 72(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vpinsrb $15, 80(%rsp), %xmm0, %xmm0
+; SKX-NEXT:    vmovdqu64 88(%rsp), %zmm1
+; SKX-NEXT:    vmovdqu64 152(%rsp), %zmm2
+; SKX-NEXT:    vpmovqw %zmm1, %xmm1
+; SKX-NEXT:    vpmovqw %zmm2, %xmm2
 ; SKX-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; SKX-NEXT:    vpmovwb %ymm1, %xmm1
+; SKX-NEXT:    vmovdqu64 216(%rsp), %zmm2
+; SKX-NEXT:    vmovdqu64 280(%rsp), %zmm3
+; SKX-NEXT:    vmovdqu64 344(%rsp), %zmm4
+; SKX-NEXT:    vmovdqu64 408(%rsp), %zmm5
+; SKX-NEXT:    vpmovqw %zmm4, %xmm4
+; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; SKX-NEXT:    vpmovqw %zmm5, %xmm1
+; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm4, %ymm1
+; SKX-NEXT:    vpmovqw %zmm2, %xmm2
+; SKX-NEXT:    vpmovqw %zmm3, %xmm3
+; SKX-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; SKX-NEXT:    vpmovwb %zmm1, %ymm1
 ; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; SKX-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; SKX-NEXT:    vptestmb %zmm2, %zmm0, %k0
-; SKX-NEXT:    vmovdqu64 792(%rsp), %zmm0
-; SKX-NEXT:    vpmovqb %zmm0, %xmm0
-; SKX-NEXT:    vmovdqu64 920(%rsp), %zmm1
-; SKX-NEXT:    vpmovqb %zmm1, %xmm1
 ; SKX-NEXT:    vmovdqu64 472(%rsp), %zmm3
 ; SKX-NEXT:    vmovdqu64 536(%rsp), %zmm4
 ; SKX-NEXT:    vmovdqu64 600(%rsp), %zmm5
 ; SKX-NEXT:    vmovdqu64 664(%rsp), %zmm6
-; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; SKX-NEXT:    vpmovqb %zmm4, %xmm1
-; SKX-NEXT:    vpmovqb %zmm6, %xmm4
-; SKX-NEXT:    vinserti128 $1, %xmm4, %ymm1, %ymm1
-; SKX-NEXT:    vmovdqu64 728(%rsp), %zmm4
-; SKX-NEXT:    vpmovqb %zmm4, %xmm4
-; SKX-NEXT:    vmovdqu64 856(%rsp), %zmm6
-; SKX-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; SKX-NEXT:    vpmovqb %zmm6, %xmm1
-; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm4, %ymm1
-; SKX-NEXT:    vpmovqb %zmm3, %xmm3
-; SKX-NEXT:    vpmovqb %zmm5, %xmm4
+; SKX-NEXT:    vpmovqw %zmm5, %xmm5
+; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; SKX-NEXT:    vpmovqw %zmm6, %xmm1
+; SKX-NEXT:    vinserti128 $1, %xmm1, %ymm5, %ymm1
+; SKX-NEXT:    vpmovqw %zmm3, %xmm3
+; SKX-NEXT:    vpmovqw %zmm4, %xmm4
 ; SKX-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
 ; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm1
-; SKX-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm1[0],zmm0[0],zmm1[2],zmm0[2],zmm1[4],zmm0[4],zmm1[6],zmm0[6]
+; SKX-NEXT:    vpmovwb %zmm1, %ymm1
+; SKX-NEXT:    vmovdqu64 728(%rsp), %zmm3
+; SKX-NEXT:    vmovdqu64 792(%rsp), %zmm4
+; SKX-NEXT:    vmovdqu64 856(%rsp), %zmm5
+; SKX-NEXT:    vmovdqu64 920(%rsp), %zmm6
+; SKX-NEXT:    vpmovqw %zmm5, %xmm5
+; SKX-NEXT:    vpmovqw %zmm6, %xmm6
+; SKX-NEXT:    vptestmb %zmm2, %zmm0, %k0
+; SKX-NEXT:    vinserti128 $1, %xmm6, %ymm5, %ymm0
+; SKX-NEXT:    vpmovqw %zmm3, %xmm3
+; SKX-NEXT:    vpmovqw %zmm4, %xmm4
+; SKX-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
+; SKX-NEXT:    vinserti64x4 $1, %ymm0, %zmm3, %zmm0
+; SKX-NEXT:    vpmovwb %zmm0, %ymm0
+; SKX-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; SKX-NEXT:    vptestmb %zmm2, %zmm0, %k1
 ; SKX-NEXT:    kmovq %k1, %rdx
 ; SKX-NEXT:    kmovq %k0, %rax
@@ -2482,46 +2488,32 @@ define i128 @PR179334(<128 x i1> %m) nounwind {
 ;
 ; FASTISEL-LABEL: PR179334:
 ; FASTISEL:       ## %bb.0:
-; FASTISEL-NEXT:    vmovdqu64 792(%rsp), %zmm0
-; FASTISEL-NEXT:    vpmovqb %zmm0, %xmm0
-; FASTISEL-NEXT:    vmovdqu64 920(%rsp), %zmm1
-; FASTISEL-NEXT:    vpmovqb %zmm1, %xmm1
-; FASTISEL-NEXT:    vmovdqu64 472(%rsp), %zmm2
-; FASTISEL-NEXT:    vmovdqu64 536(%rsp), %zmm3
-; FASTISEL-NEXT:    vmovdqu64 600(%rsp), %zmm4
-; FASTISEL-NEXT:    vmovdqu64 664(%rsp), %zmm5
-; FASTISEL-NEXT:    vpmovqb %zmm3, %xmm3
-; FASTISEL-NEXT:    vpmovqb %zmm5, %xmm5
-; FASTISEL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; FASTISEL-NEXT:    vinserti128 $1, %xmm5, %ymm3, %ymm1
-; FASTISEL-NEXT:    vmovdqu64 728(%rsp), %zmm3
-; FASTISEL-NEXT:    vpmovqb %zmm3, %xmm3
-; FASTISEL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; FASTISEL-NEXT:    vmovdqu64 856(%rsp), %zmm1
-; FASTISEL-NEXT:    vpmovqb %zmm1, %xmm1
-; FASTISEL-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
-; FASTISEL-NEXT:    vpmovqb %zmm2, %xmm2
-; FASTISEL-NEXT:    vpmovqb %zmm4, %xmm3
+; FASTISEL-NEXT:    vmovdqu64 472(%rsp), %zmm0
+; FASTISEL-NEXT:    vmovdqu64 536(%rsp), %zmm1
+; FASTISEL-NEXT:    vmovdqu64 600(%rsp), %zmm2
+; FASTISEL-NEXT:    vmovdqu64 664(%rsp), %zmm3
+; FASTISEL-NEXT:    vpmovqw %zmm2, %xmm2
+; FASTISEL-NEXT:    vpmovqw %zmm3, %xmm3
 ; FASTISEL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
-; FASTISEL-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
-; FASTISEL-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm1[0],zmm0[0],zmm1[2],zmm0[2],zmm1[4],zmm0[4],zmm1[6],zmm0[6]
+; FASTISEL-NEXT:    vpmovqw %zmm0, %xmm0
+; FASTISEL-NEXT:    vpmovqw %zmm1, %xmm1
+; FASTISEL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; FASTISEL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; FASTISEL-NEXT:    vpmovwb %zmm0, %ymm0
+; FASTISEL-NEXT:    vmovdqu64 728(%rsp), %zmm1
+; FASTISEL-NEXT:    vmovdqu64 792(%rsp), %zmm2
+; FASTISEL-NEXT:    vmovdqu64 856(%rsp), %zmm3
+; FASTISEL-NEXT:    vmovdqu64 920(%rsp), %zmm4
+; FASTISEL-NEXT:    vpmovqw %zmm3, %xmm3
+; FASTISEL-NEXT:    vpmovqw %zmm4, %xmm4
+; FASTISEL-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
+; FASTISEL-NEXT:    vpmovqw %zmm1, %xmm1
+; FASTISEL-NEXT:    vpmovqw %zmm2, %xmm2
+; FASTISEL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; FASTISEL-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
+; FASTISEL-NEXT:    vpmovwb %zmm1, %ymm1
+; FASTISEL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; FASTISEL-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; FASTISEL-NEXT:    vptestmb %zmm1, %zmm0, %k0
-; FASTISEL-NEXT:    vmovdqu64 216(%rsp), %zmm0
-; FASTISEL-NEXT:    vmovdqu64 280(%rsp), %zmm2
-; FASTISEL-NEXT:    vmovdqu64 344(%rsp), %zmm3
-; FASTISEL-NEXT:    vmovdqu64 408(%rsp), %zmm4
-; FASTISEL-NEXT:    vpmovqb %zmm2, %xmm2
-; FASTISEL-NEXT:    vpmovqb %zmm4, %xmm4
-; FASTISEL-NEXT:    vpmovqb %zmm0, %xmm0
-; FASTISEL-NEXT:    vinserti128 $1, %xmm4, %ymm2, %ymm2
-; FASTISEL-NEXT:    vpmovqb %zmm3, %xmm3
-; FASTISEL-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
-; FASTISEL-NEXT:    vmovdqu64 88(%rsp), %zmm3
-; FASTISEL-NEXT:    vmovdqu64 152(%rsp), %zmm4
-; FASTISEL-NEXT:    vpmovqb %zmm4, %xmm4
-; FASTISEL-NEXT:    vpmovqb %zmm3, %xmm3
-; FASTISEL-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
 ; FASTISEL-NEXT:    vmovd %edi, %xmm2
 ; FASTISEL-NEXT:    vpinsrb $1, %esi, %xmm2, %xmm2
 ; FASTISEL-NEXT:    vpinsrb $2, %edx, %xmm2, %xmm2
@@ -2537,10 +2529,28 @@ define i128 @PR179334(<128 x i1> %m) nounwind {
 ; FASTISEL-NEXT:    vpinsrb $12, 56(%rsp), %xmm2, %xmm2
 ; FASTISEL-NEXT:    vpinsrb $13, 64(%rsp), %xmm2, %xmm2
 ; FASTISEL-NEXT:    vpinsrb $14, 72(%rsp), %xmm2, %xmm2
-; FASTISEL-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
 ; FASTISEL-NEXT:    vpinsrb $15, 80(%rsp), %xmm2, %xmm2
-; FASTISEL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
-; FASTISEL-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
+; FASTISEL-NEXT:    vmovdqu64 88(%rsp), %zmm3
+; FASTISEL-NEXT:    vmovdqu64 152(%rsp), %zmm4
+; FASTISEL-NEXT:    vpmovqw %zmm3, %xmm3
+; FASTISEL-NEXT:    vptestmb %zmm1, %zmm0, %k0
+; FASTISEL-NEXT:    vpmovqw %zmm4, %xmm0
+; FASTISEL-NEXT:    vinserti128 $1, %xmm0, %ymm3, %ymm0
+; FASTISEL-NEXT:    vpmovwb %ymm0, %xmm0
+; FASTISEL-NEXT:    vmovdqu64 216(%rsp), %zmm3
+; FASTISEL-NEXT:    vmovdqu64 280(%rsp), %zmm4
+; FASTISEL-NEXT:    vmovdqu64 344(%rsp), %zmm5
+; FASTISEL-NEXT:    vmovdqu64 408(%rsp), %zmm6
+; FASTISEL-NEXT:    vpmovqw %zmm5, %xmm5
+; FASTISEL-NEXT:    vpmovqw %zmm6, %xmm6
+; FASTISEL-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; FASTISEL-NEXT:    vinserti128 $1, %xmm6, %ymm5, %ymm2
+; FASTISEL-NEXT:    vpmovqw %zmm3, %xmm3
+; FASTISEL-NEXT:    vpmovqw %zmm4, %xmm4
+; FASTISEL-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
+; FASTISEL-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
+; FASTISEL-NEXT:    vpmovwb %zmm2, %ymm2
+; FASTISEL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; FASTISEL-NEXT:    vptestmb %zmm1, %zmm0, %k1
 ; FASTISEL-NEXT:    kmovq %k1, %rax
 ; FASTISEL-NEXT:    kmovq %k0, %rdx

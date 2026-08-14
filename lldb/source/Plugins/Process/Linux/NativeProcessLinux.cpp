@@ -285,7 +285,7 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
   assert(wpid == pid);
   UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
-    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={0}",
              WaitStatus::Decode(wstatus));
     return llvm::createStringError("could not sync with inferior process");
   }
@@ -1093,7 +1093,7 @@ Status NativeProcessLinux::Signal(int signo) {
   Status error;
 
   Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "sending signal {0} ({1}) to pid {1}", signo,
+  LLDB_LOG(log, "sending signal {0} ({1}) to pid {2}", signo,
            Host::GetSignalAsCString(signo), GetID());
 
   if (kill(GetID(), signo))

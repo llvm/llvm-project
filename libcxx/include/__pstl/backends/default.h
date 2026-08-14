@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_DEFAULT_H
 #define _LIBCPP___PSTL_BACKENDS_DEFAULT_H
 
+#include <__algorithm/adjacent_find.h>
 #include <__algorithm/copy_n.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
@@ -16,6 +17,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/is_sorted.h>
+#include <__algorithm/mismatch.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/not_fn.h>
@@ -23,13 +25,19 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__iterator/prev.h>
+#include <__iterator/reverse_iterator.h>
+#include <__memory/addressof.h>
+#include <__memory/construct_at.h>
+#include <__optional/comparison.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__type_traits/desugars_to.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -62,8 +70,18 @@ namespace __pstl {
 // - is_partitioned
 // - find_first_of
 //
+// mismatch family
+// ---------------
+// - adjacent_find
+// - is_sorted
+// - is_sorted_until
+// - lexicographical_compare
+// - mismatch_3leg
+//
 // for_each family
 // ---------------
+// - destroy
+// - destroy_n
 // - for_each_n
 // - fill
 // - fill_n
@@ -71,10 +89,28 @@ namespace __pstl {
 // - replace_if
 // - generate
 // - generate_n
+// - uninitialized_default_construct
+// - uninitialized_default_construct_n
+// - uninitialized_value_construct
+// - uninitialized_value_construct_n
+// - uninitialized_fill
+// - uninitialized_fill_n
 //
 // merge family
 // ------------
 // No other algorithms based on merge
+//
+// reverse family
+// ------------
+// No other algorithms based on reverse
+//
+// search family
+// ------------
+// No other algorithms based on search
+//
+// search_n family
+// ------------------
+// No other algorithms based on search_n
 //
 // stable_sort family
 // ------------------
@@ -86,16 +122,17 @@ namespace __pstl {
 // - count
 // - equal(3 legs)
 // - equal
-// - is_sorted
 // - reduce
 //
 // transform and transform_binary family
 // -------------------------------------
-// - replace_copy_if
-// - replace_copy
-// - move
+// - adjacent_difference
 // - copy
 // - copy_n
+// - move
+// - replace_copy
+// - replace_copy_if
+// - reverse_copy
 // - rotate_copy
 //
 
@@ -210,8 +247,170 @@ struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
 };
 
 //////////////////////////////////////////////////////////////
+// mismatch family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __lexicographical_compare<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _Comp __comp) const noexcept {
+    using _Mismatch = __dispatch<__mismatch, __current_configuration, _ExecutionPolicy>;
+    using _Ref1     = __iterator_reference<_ForwardIterator1>;
+    using _Ref2     = __iterator_reference<_ForwardIterator2>;
+    // find the first pair of elements that are not equal, or the end of one or both of the ranges
+    auto __res = _Mismatch()(__policy, __first1, __last1, __first2, __last2, [&](_Ref1 __lhs, _Ref2 __rhs) {
+      return !__comp(__lhs, __rhs) && !__comp(__rhs, __lhs); // derive equality from the less-than predicate
+    });
+    if (!__res) // if the underlying mismatch operation failed, return nullopt
+      return nullopt;
+    if (__res->first == __last1)       // the first range is exhausted,
+      return __res->second != __last2; // it is lexicographically less if the second range is not exhausted.
+    if (__res->second == __last2)      // the second range is exhausted,
+      return false;                    // the first range is not exhausted, so it is not lexicographically less.
+    return __comp(*__res->first, *__res->second); // otherwise, compare the first pair of non-equal elements
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __mismatch_3leg<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+  optional<pair<_ForwardIterator1, _ForwardIterator2>>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _Comp __comp) const noexcept {
+    if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
+      // Forward to the 4-legged version of mismatch.
+      using _Mismatch           = __dispatch<__mismatch, __current_configuration, _ExecutionPolicy>;
+      _ForwardIterator2 __last2 = __first2 + (__last1 - __first1);
+      return _Mismatch()(
+          __policy,
+          std::move(__first1),
+          std::move(__last1),
+          std::move(__first2),
+          std::move(__last2),
+          std::move(__comp));
+    } else {
+      // Currently only random access iterators are supported for parallel mismatch_3leg.
+      return std::mismatch(std::move(__first1), std::move(__last1), std::move(__first2), std::move(__comp));
+    }
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __adjacent_find<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _BinaryPredicate>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __predicate)
+      const noexcept {
+    if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
+      using _Mismatch = __dispatch<__mismatch, __current_configuration, _ExecutionPolicy>;
+      if (__first == __last) {
+        return __last; // Empty range, return __last.
+      }
+      _ForwardIterator __first2 = std::next(__first);
+      if (__first2 == __last) {
+        return __last; // Single element range, no adjacent elements, return __last.
+      }
+      _ForwardIterator __last2 = std::prev(__last);
+      // Find the first match within two overlapping ranges, expressed as a double negation of the predicate:
+      //   [first, __last - 1)
+      //   [first + 1, __last)
+      auto __res = _Mismatch()(
+          __policy,
+          std::move(__first),
+          std::move(__last2),
+          std::move(__first2),
+          __last,
+          [&](__iterator_reference<_ForwardIterator> __lhs, __iterator_reference<_ForwardIterator> __rhs) {
+            return !__predicate(__lhs, __rhs);
+          });
+      if (!__res) {
+        return nullopt; // Failed to run the algorithm, propagate the error.
+      }
+      if (__res->second == __last) {
+        return __last; // No adjacent elements found, return __last.
+      }
+      return __res->first; // Return the first iterator of the pair of mismatched elements.
+    } else {
+      // Currently anything outside bidirectional iterators has to be processed serially
+      return std::adjacent_find(std::move(__first), std::move(__last), std::move(__predicate));
+    }
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_sorted_until<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    using _AdjacentFind = __dispatch<__adjacent_find, __current_configuration, _ExecutionPolicy>;
+    using _Ref          = __iterator_reference<_ForwardIterator>;
+    // Find the first pair of adjacent elements that are not in sorted order (i.e. __comp(__rhs, __lhs) is true).
+    auto __res = _AdjacentFind()(__policy, std::move(__first), __last, [&](_Ref __lhs, _Ref __rhs) {
+      return __comp(__rhs, __lhs);
+    });
+    if (!__res) {
+      return nullopt; // Failed to run the algorithm, propagate the error.
+    }
+    if (*__res == __last) {
+      return __last; // Range is sorted, return __last.
+    }
+    ++*__res; // Advance the iterator to the first unsorted element.
+    return *__res;
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    using _IsSortedUntil = __dispatch<__is_sorted_until, __current_configuration, _ExecutionPolicy>;
+    auto __res           = _IsSortedUntil()(__policy, std::move(__first), __last, std::forward<_Comp>(__comp));
+    if (!__res) {
+      return nullopt; // Failed to run the algorithm, propagate the error.
+    }
+    return *__res == __last; // If the first unsorted element is the end of the range, the range is sorted.
+  }
+};
+
+//////////////////////////////////////////////////////////////
 // for_each family
 //////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __destroy<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator>
+  optional<__empty> operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
+    using _ForEach = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
+    using _Ref     = __iterator_reference<_ForwardIterator>;
+    return _ForEach()(__policy, std::move(__first), std::move(__last), [&](_Ref __element) {
+      std::destroy_at(std::addressof(__element));
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __destroy_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size>
+  optional<__empty> operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
+    using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+    using _Ref      = __iterator_reference<_ForwardIterator>;
+    return _ForEachN()(__policy, std::move(__first), __n, [&](_Ref __element) {
+      std::destroy_at(std::addressof(__element));
+    });
+  }
+};
+
 template <class _ExecutionPolicy>
 struct __for_each_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Function>
@@ -304,6 +503,90 @@ struct __generate_n<__default_backend_tag, _ExecutionPolicy> {
     using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _Ref      = __iterator_reference<_ForwardIterator>;
     return _ForEachN()(__policy, std::move(__first), __n, [&](_Ref __element) { __element = __gen(); });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_default_construct<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
+    using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEach()(__policy, std::move(__first), std::move(__last), [](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType;
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_default_construct_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
+    using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEachN()(__policy, std::move(__first), __n, [](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType;
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_value_construct<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
+    using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEach()(__policy, std::move(__first), std::move(__last), [](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType();
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_value_construct_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
+    using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEachN()(__policy, std::move(__first), __n, [](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType();
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_fill<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) const noexcept {
+    using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEach()(__policy, std::move(__first), std::move(__last), [&__value](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType(__value);
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_fill_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size, class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, const _Tp& __value) const noexcept {
+    using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
+    using _ValueType = __iterator_value_type<_ForwardIterator>;
+    using _Ref       = __iterator_reference<_ForwardIterator>;
+    return _ForEachN()(__policy, std::move(__first), __n, [&__value](_Ref __element) {
+      ::new (static_cast<void*>(std::addressof(__element))) _ValueType(__value);
+    });
   }
 };
 
@@ -419,35 +702,6 @@ struct __reduce<__default_backend_tag, _ExecutionPolicy> {
   }
 };
 
-template <class _ExecutionPolicy>
-struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Comp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
-  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
-    if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
-      if (__first == __last)
-        return true; // Empty, sorted by definition
-      _ForwardIterator __first2 = std::next(__first);
-      if (__first2 == __last)
-        return true; // Only one element, sorted by definition
-      --__last;      // Make two iterator ranges: [__first, __first + n - 1) and [__first + 1, __first + n)
-      using _TransformReduce = __dispatch<__transform_reduce_binary, __current_configuration, _ExecutionPolicy>;
-      using _Ref             = __iterator_reference<_ForwardIterator>;
-      return _TransformReduce()(
-          __policy,
-          std::move(__first),
-          std::move(__last),
-          std::move(__first2),
-          true,
-          std::logical_and{},
-          [&](_Ref __left, _Ref __right) -> bool { return !__comp(__right, __left); });
-    } else {
-      // Currently anything outside bidirectional iterators has to be processed serially
-      return std::is_sorted(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
-    }
-  }
-};
-
 //////////////////////////////////////////////////////////////
 // transform family
 //////////////////////////////////////////////////////////////
@@ -554,6 +808,51 @@ struct __rotate_copy<__default_backend_tag, _ExecutionPolicy> {
     if (__result_mid == nullopt)
       return nullopt;
     return _Copy()(__policy, std::move(__first), std::move(__middle), *std::move(__result_mid));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __reverse_copy<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _BidirectionalIterator, class _ForwardIterator>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&& __policy,
+             _BidirectionalIterator __first,
+             _BidirectionalIterator __last,
+             _ForwardIterator __result) const noexcept {
+    using _Copy = __dispatch<__copy, __current_configuration, _ExecutionPolicy>;
+    return _Copy()(__policy,
+                   std::reverse_iterator<_BidirectionalIterator>(std::move(__last)),
+                   std::reverse_iterator<_BidirectionalIterator>(std::move(__first)),
+                   std::move(__result));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __result,
+             _BinaryOperation&& __op) const noexcept {
+    using _TransformBinary = __dispatch<__transform_binary, __current_configuration, _ExecutionPolicy>;
+    if (__first1 == __last1)
+      return __result; // edge case: empty input range, just return the output iterator
+    *__result = *__first1;
+    ++__result;
+    _ForwardIterator1 __first2 = std::next(__first1);
+    if (__first2 == __last1)
+      return __result; // edge case: not enough elements to perform adjacent difference, just return the output
+                       // iterator
+    // Process as a binary transform of two iterator ranges: [__first1 + 1, __last1) and [__first1, __last1 - 1)
+    return _TransformBinary()(
+        __policy,
+        std::move(__first2),
+        std::move(__last1),
+        std::move(__first1),
+        std::move(__result),
+        std::forward<_BinaryOperation>(__op));
   }
 };
 

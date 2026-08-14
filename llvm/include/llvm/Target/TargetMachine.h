@@ -276,6 +276,7 @@ public:
 
   void setLargeDataThreshold(uint64_t LDT) { LargeDataThreshold = LDT; }
   bool isLargeGlobalValue(const GlobalValue *GV) const;
+  bool isLargeDataSize(uint64_t Size) const;
 
   bool isPositionIndependent() const;
 
@@ -311,6 +312,9 @@ public:
   }
   void setSupportsDebugEntryValues(bool Enable) {
     Options.SupportsDebugEntryValues = Enable;
+  }
+  void setEnableDefaultMachineVerifier(bool Enable) {
+    Options.EnableDefaultMachineVerifier = Enable;
   }
 
   void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
@@ -498,6 +502,10 @@ public:
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());
   }
+
+  /// Returns true if frontends should default to using the NewPM for this
+  /// specific target.
+  virtual bool shouldDefaultToNewPM() const { return false; }
 
   /// Returns true if the target is expected to pass all machine verifier
   /// checks. This is a stopgap measure to fix targets one by one. We will

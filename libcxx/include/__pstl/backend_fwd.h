@@ -141,6 +141,13 @@ struct __fill_n;
 // operator()(_Policy&&, _ForwardIterator __first, _Size __n, _Tp const& __value) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __search;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+// optional<_ForwardIterator1>
+// operator()(_Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                       _ForwardIterator2 __first2, _ForwardIterator2 __last2, _BinaryPredicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __replace;
 // template <class _Policy, class _ForwardIterator, class _Tp>
 // optional<__empty>
@@ -167,12 +174,32 @@ struct __generate_n;
 // operator()(_Policy&&, _ForwardIterator __first, _Size __n, _Generator __gen) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __reverse;
+// template <class _Policy, class _BidirectionalIterator>
+// optional<__empty>
+// operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __reverse_copy;
+// template <class _Policy, class _BidirectionalIterator, class _ForwardIterator>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last,
+//                       _ForwardIterator __result) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __merge;
 // template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Comp>
 // optional<_ForwardOutIterator>
 // operator()(_Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
 //                       _ForwardIterator2 __first2, _ForwardIterator2 __last2,
 //                       _ForwardOutIterator __result, _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __search_n;
+// template <class _Policy, class _ForwardIterator, class _Size, class _T, class _Predicate>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
+//                       _Size __count, const _T& __value, _Predicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __stable_sort;
@@ -309,6 +336,96 @@ struct __is_sorted;
 // template <class _Policy, class _ForwardIterator, class _Comp>
 // optional<bool>
 // operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __is_sorted_until;
+// template <class _Policy, class _ForwardIterator, class _Comp>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __adjacent_difference;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation>
+// optional<_ForwardIterator2>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _BinaryOperation &&__op) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __mismatch;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+// optional<pair<_ForwardIterator1, _ForwardIterator2>>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2,
+//                                _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __mismatch_3leg;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+// optional<pair<_ForwardIterator1, _ForwardIterator2>>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __adjacent_find;
+// template <class _Policy, class _ForwardIterator, class _BinaryPredicate>
+// optional<_ForwardIterator>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last,
+//                                _BinaryPredicate __predicate) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __lexicographical_compare;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+// optional<bool>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __destroy;
+// template <class _Policy, class _ForwardIterator>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __destroy_n;
+// template <class _Policy, class _ForwardIterator, class _Size>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __uninitialized_default_construct;
+// template <class _Policy, class _ForwardIterator>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __uninitialized_default_construct_n;
+// template <class _Policy, class _ForwardIterator, class _Size>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __uninitialized_value_construct;
+// template <class _Policy, class _ForwardIterator>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __uninitialized_value_construct_n;
+// template <class _Policy, class _ForwardIterator, class _Size>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __uninitialized_fill;
+// template <class _Policy, class _ForwardIterator, class _Tp>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp &__value) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __uninitialized_fill_n;
+// template <class _Policy, class _ForwardIterator, class _Size, class _Tp>
+// optional<__empty>
+// operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, const _Tp &__value) const noexcept;
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
