@@ -6,355 +6,401 @@
 //
 //===----------------------------------------------------------------------===//
 
-// The code produced for "generic" is only useful for tests and cannot
-// reasonably be expected to execute on any particular target.
-def : ProcessorModel<"generic", NoSchedModel,
-  []
->;
+// Shared ArchFeature lists. Grouped by wavefront mode and the XNACK/SRAMECC/WGP
+// features that recur across many GPUs in a generation.
+defvar ArchFeaturesW64Xnack = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32,
+                              FEATURE_XNACK, FEATURE_XNACK_ON_OFF_MODES];
+defvar ArchFeaturesW64XnackSramEcc = ArchFeaturesW64Xnack # [FEATURE_SRAMECC];
+defvar ArchFeaturesW32XnackWgp = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32,
+                                 FEATURE_WAVE32, FEATURE_XNACK,
+                                 FEATURE_XNACK_ON_OFF_MODES, FEATURE_WGP];
+defvar ArchFeaturesW32Wgp = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32,
+                            FEATURE_WAVE32, FEATURE_WGP];
 
-def : ProcessorModel<"generic-hsa", NoSchedModel,
-  [FeatureFlatAddressSpace]
->;
+// The code produced for "generic" is only useful for tests and cannot
+// be expected to execute on any target.
+def : AMDGPUProcessorModel<"generic", NoSchedModel, [], [6, 0, 0]> {
+  let IsPseudoTarget = true;
+}
+
+def : AMDGPUProcessorModel<"generic-hsa", NoSchedModel,
+  [FeatureFlatAddressSpace], [7, 0, 0]> {
+  let IsPseudoTarget = true;
+}
 
 //===------------------------------------------------------------===//
 // GCN GFX6 (Southern Islands (SI)).
 //===------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx600", SIFullSpeedModel,
-  FeatureISAVersion6_0_0.Features
+def GFX600 : AMDGPUProcessorModel<"gfx600", SIFullSpeedModel,
+  FeatureISAVersion6_0_0.Features, [6, 0, 0]> {
+  let ArchFeatures = [FEATURE_FAST_FMA_F32];
+}
+
+def : ProcessorAlias<"tahiti", "gfx600">;
+
+def GFX601 : AMDGPUProcessorModel<"gfx601", SIQuarterSpeedModel,
+  FeatureISAVersion6_0_1.Features, [6, 0, 1]
 >;
 
-def : ProcessorModel<"tahiti", SIFullSpeedModel,
-  FeatureISAVersion6_0_0.Features
+def : ProcessorAlias<"pitcairn", "gfx601">;
+def : ProcessorAlias<"verde", "gfx601">;
+
+def GFX602 : AMDGPUProcessorModel<"gfx602", SIQuarterSpeedModel,
+  FeatureISAVersion6_0_2.Features, [6, 0, 2]
 >;
 
-def : ProcessorModel<"gfx601", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_1.Features
->;
-
-def : ProcessorModel<"pitcairn", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_1.Features
->;
-
-def : ProcessorModel<"verde", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_1.Features
->;
-
-def : ProcessorModel<"gfx602", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_2.Features
->;
-
-def : ProcessorModel<"hainan", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_2.Features
->;
-
-def : ProcessorModel<"oland", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_2.Features
->;
+def : ProcessorAlias<"hainan", "gfx602">;
+def : ProcessorAlias<"oland", "gfx602">;
 
 //===------------------------------------------------------------===//
 // GCN GFX7 (Sea Islands (CI)).
 //===------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx700", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_0.Features
+def GFX700 : AMDGPUProcessorModel<"gfx700", SIQuarterSpeedModel,
+  FeatureISAVersion7_0_0.Features, [7, 0, 0]
 >;
 
-def : ProcessorModel<"kaveri", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_0.Features
+def : ProcessorAlias<"kaveri", "gfx700">;
+
+def GFX701 : AMDGPUProcessorModel<"gfx701", SIFullSpeedModel,
+  FeatureISAVersion7_0_1.Features, [7, 0, 1]> {
+  let ArchFeatures = [FEATURE_FAST_FMA_F32];
+}
+
+def : ProcessorAlias<"hawaii", "gfx701">;
+
+def GFX702 : AMDGPUProcessorModel<"gfx702", SIQuarterSpeedModel,
+  FeatureISAVersion7_0_2.Features, [7, 0, 2]> {
+  let ArchFeatures = [FEATURE_FAST_FMA_F32];
+}
+
+def GFX703 : AMDGPUProcessorModel<"gfx703", SIQuarterSpeedModel,
+  FeatureISAVersion7_0_3.Features, [7, 0, 3]
 >;
 
-def : ProcessorModel<"gfx701", SIFullSpeedModel,
-  FeatureISAVersion7_0_1.Features
+def : ProcessorAlias<"kabini", "gfx703">;
+def : ProcessorAlias<"mullins", "gfx703">;
+
+def GFX704 : AMDGPUProcessorModel<"gfx704", SIQuarterSpeedModel,
+  FeatureISAVersion7_0_4.Features, [7, 0, 4]
 >;
 
-def : ProcessorModel<"hawaii", SIFullSpeedModel,
-  FeatureISAVersion7_0_1.Features
->;
+def : ProcessorAlias<"bonaire", "gfx704">;
 
-def : ProcessorModel<"gfx702", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_2.Features
->;
-
-def : ProcessorModel<"gfx703", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_3.Features
->;
-
-def : ProcessorModel<"kabini", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_3.Features
->;
-
-def : ProcessorModel<"mullins", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_3.Features
->;
-
-def : ProcessorModel<"gfx704", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_4.Features
->;
-
-def : ProcessorModel<"bonaire", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_4.Features
->;
-
-def : ProcessorModel<"gfx705", SIQuarterSpeedModel,
-  FeatureISAVersion7_0_5.Features
+def GFX705 : AMDGPUProcessorModel<"gfx705", SIQuarterSpeedModel,
+  FeatureISAVersion7_0_5.Features, [7, 0, 5]
 >;
 
 //===------------------------------------------------------------===//
 // GCN GFX8 (Volcanic Islands (VI)).
 //===------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx801", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_1.Features
->;
+def GFX801 : AMDGPUProcessorModel<"gfx801", SIQuarterSpeedModel,
+  FeatureISAVersion8_0_1.Features, [8, 0, 1]> {
+  let ArchFeatures = ArchFeaturesW64Xnack;
+}
 
-def : ProcessorModel<"carrizo", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_1.Features
->;
+def : ProcessorAlias<"carrizo", "gfx801">;
 
-def : ProcessorModel<"gfx802", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_2.Features
->;
+def GFX802 : AMDGPUProcessorModel<"gfx802", SIQuarterSpeedModel,
+  FeatureISAVersion8_0_2.Features, [8, 0, 2]> {
+  let ArchFeatures = [FEATURE_FAST_DENORMAL_F32, FEATURE_SGPR_INIT_BUG];
+}
 
-def : ProcessorModel<"iceland", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_2.Features
->;
+def : ProcessorAlias<"iceland", "gfx802">;
+def : ProcessorAlias<"tonga", "gfx802">;
 
-def : ProcessorModel<"tonga", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_2.Features
->;
+def GFX803 : AMDGPUProcessorModel<"gfx803", SIQuarterSpeedModel,
+  FeatureISAVersion8_0_3.Features, [8, 0, 3]> {
+  let ArchFeatures = [FEATURE_FAST_DENORMAL_F32];
+}
 
-def : ProcessorModel<"gfx803", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_3.Features
->;
+def : ProcessorAlias<"fiji", "gfx803">;
+def : ProcessorAlias<"polaris10", "gfx803">;
+def : ProcessorAlias<"polaris11", "gfx803">;
 
-def : ProcessorModel<"fiji", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_3.Features
->;
+def GFX805 : AMDGPUProcessorModel<"gfx805", SIQuarterSpeedModel,
+  FeatureISAVersion8_0_5.Features, [8, 0, 5]> {
+  let ArchFeatures = [FEATURE_FAST_DENORMAL_F32, FEATURE_SGPR_INIT_BUG];
+}
 
-def : ProcessorModel<"polaris10", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_3.Features
->;
+def : ProcessorAlias<"tongapro", "gfx805">;
 
-def : ProcessorModel<"polaris11", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_3.Features
->;
+def GFX810 : AMDGPUProcessorModel<"gfx810", SIQuarterSpeedModel,
+  FeatureISAVersion8_1_0.Features, [8, 1, 0]> {
+  let ArchFeatures = [FEATURE_FAST_DENORMAL_F32, FEATURE_XNACK, FEATURE_XNACK_ON_OFF_MODES];
+}
 
-def : ProcessorModel<"gfx805", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_5.Features
->;
-
-def : ProcessorModel<"tongapro", SIQuarterSpeedModel,
-  FeatureISAVersion8_0_5.Features
->;
-
-def : ProcessorModel<"gfx810", SIQuarterSpeedModel,
-  FeatureISAVersion8_1_0.Features
->;
-
-def : ProcessorModel<"stoney", SIQuarterSpeedModel,
-  FeatureISAVersion8_1_0.Features
->;
+def : ProcessorAlias<"stoney", "gfx810">;
 
 //===------------------------------------------------------------===//
 // GCN GFX9.
 //===------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx900", SIQuarterSpeedModel,
-  FeatureISAVersion9_0_0.Features
->;
+def GFX900 : AMDGPUProcessorModel<"gfx900", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_0.Features, [9, 0, 0]> {
+  let ArchFeatures = ArchFeaturesW64Xnack;
+}
 
-def : ProcessorModel<"gfx902", SIQuarterSpeedModel,
-  FeatureISAVersion9_0_2.Features
->;
+def GFX902 : AMDGPUProcessorModel<"gfx902", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_2.Features, [9, 0, 2]> {
+  let ArchFeatures = ArchFeaturesW64Xnack;
+}
 
-def : ProcessorModel<"gfx904", SIQuarterSpeedModel,
-  FeatureISAVersion9_0_4.Features
->;
+def GFX904 : AMDGPUProcessorModel<"gfx904", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_4.Features, [9, 0, 4]> {
+  let ArchFeatures = ArchFeaturesW64Xnack;
+}
 
-def : ProcessorModel<"gfx906", SIQuarterSpeedModel,
-  FeatureISAVersion9_0_6.Features
->;
+def GFX906 : AMDGPUProcessorModel<"gfx906", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_6.Features, [9, 0, 6]> {
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
+}
 
-def : ProcessorModel<"gfx908", SIQuarterSpeedModel,
-  FeatureISAVersion9_0_8.Features
->;
+def GFX908 : AMDGPUProcessorModel<"gfx908", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_8.Features, [9, 0, 8]> {
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
+}
 
-def : ProcessorModel<"gfx909", SIQuarterSpeedModel,
-  FeatureISAVersion9_0_9.Features
->;
+def GFX909 : AMDGPUProcessorModel<"gfx909", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_9.Features, [9, 0, 9]> {
+  let ArchFeatures = ArchFeaturesW64Xnack;
+}
 
-def : ProcessorModel<"gfx90a", SIDPFullSpeedModel,
-  FeatureISAVersion9_0_A.Features
->;
+def GFX90A : AMDGPUProcessorModel<"gfx90a", SIDPFullSpeedModel,
+  FeatureISAVersion9_0_A.Features, [9, 0, 0xa]> {
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
+}
 
-def : ProcessorModel<"gfx90c", SIQuarterSpeedModel,
-  FeatureISAVersion9_0_C.Features
->;
+def GFX90C : AMDGPUProcessorModel<"gfx90c", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_C.Features, [9, 0, 0xc]> {
+  let ArchFeatures = ArchFeaturesW64Xnack;
+}
 
-def : ProcessorModel<"gfx942", SIDPGFX942FullSpeedModel,
-  FeatureISAVersion9_4_2.Features
->;
+def GFX942 : AMDGPUProcessorModel<"gfx942", SIDPGFX942FullSpeedModel,
+  FeatureISAVersion9_4_2.Features, [9, 4, 2]> {
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
+}
 
-def : ProcessorModel<"gfx950", SIDPGFX950FullSpeedModel,
-  FeatureISAVersion9_5_0.Features
->;
+def GFX950 : AMDGPUProcessorModel<"gfx950", SIDPGFX950FullSpeedModel,
+  FeatureISAVersion9_5_0.Features, [9, 5, 0]> {
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
+}
 
-// [gfx900, gfx902, gfx904, gfx906, gfx909, gfx90c]
-def : ProcessorModel<"gfx9-generic", SIQuarterSpeedModel,
-  FeatureISAVersion9_Generic.Features
->;
+def GFX9_GENERIC : AMDGPUProcessorModel<"gfx9-generic", SIQuarterSpeedModel,
+  FeatureISAVersion9_Generic.Features, [9, 0, 0]> {
+  let ArchFeatures = ArchFeaturesW64Xnack;
+  let CoveredGPUs = [GFX900, GFX902, GFX904, GFX906, GFX909, GFX90C];
+}
 
-// [gfx942]
-def : ProcessorModel<"gfx9-4-generic", SIDPGFX942FullSpeedModel,
-  FeatureISAVersion9_4_Generic.Features
->;
+def GFX9_4_GENERIC : AMDGPUProcessorModel<"gfx9-4-generic", SIDPGFX942FullSpeedModel,
+  FeatureISAVersion9_4_Generic.Features, [9, 4, 0]> {
+  let ArchFeatures = ArchFeaturesW64XnackSramEcc;
+  let CoveredGPUs = [GFX942, GFX950];
+}
 
 //===----------------------------------------------------------------------===//
 // GCN GFX10.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx1010", GFX10SpeedModel,
-  FeatureISAVersion10_1_0.Features
->;
+def GFX1010 : AMDGPUProcessorModel<"gfx1010", GFX10SpeedModel,
+  FeatureISAVersion10_1_0.Features, [10, 1, 0]> {
+  let ArchFeatures = ArchFeaturesW32XnackWgp;
+}
 
-def : ProcessorModel<"gfx1011", GFX10SpeedModel,
-  FeatureISAVersion10_1_1.Features
->;
+def GFX1011 : AMDGPUProcessorModel<"gfx1011", GFX10SpeedModel,
+  FeatureISAVersion10_1_1.Features, [10, 1, 1]> {
+  let ArchFeatures = ArchFeaturesW32XnackWgp;
+}
 
-def : ProcessorModel<"gfx1012", GFX10SpeedModel,
-  FeatureISAVersion10_1_2.Features
->;
+def GFX1012 : AMDGPUProcessorModel<"gfx1012", GFX10SpeedModel,
+  FeatureISAVersion10_1_2.Features, [10, 1, 2]> {
+  let ArchFeatures = ArchFeaturesW32XnackWgp;
+}
 
-def : ProcessorModel<"gfx1013", GFX10SpeedModel,
-  FeatureISAVersion10_1_3.Features
->;
+def GFX1013 : AMDGPUProcessorModel<"gfx1013", GFX10SpeedModel,
+  FeatureISAVersion10_1_3.Features, [10, 1, 3]> {
+  let ArchFeatures = ArchFeaturesW32XnackWgp;
+}
 
-def : ProcessorModel<"gfx1030", GFX10SpeedModel,
-  FeatureISAVersion10_3_0.Features
->;
+def GFX1030 : AMDGPUProcessorModel<"gfx1030", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features, [10, 3, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1031", GFX10SpeedModel,
-  FeatureISAVersion10_3_0.Features
->;
+def GFX1031 : AMDGPUProcessorModel<"gfx1031", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features, [10, 3, 1]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1032", GFX10SpeedModel,
-  FeatureISAVersion10_3_0.Features
->;
+def GFX1032 : AMDGPUProcessorModel<"gfx1032", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features, [10, 3, 2]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1033", GFX10SpeedModel,
-  FeatureISAVersion10_3_0.Features
->;
+def GFX1033 : AMDGPUProcessorModel<"gfx1033", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features, [10, 3, 3]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1034", GFX10SpeedModel,
-  FeatureISAVersion10_3_0.Features
->;
+def GFX1034 : AMDGPUProcessorModel<"gfx1034", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features, [10, 3, 4]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1035", GFX10SpeedModel,
-  FeatureISAVersion10_3_0.Features
->;
+def GFX1035 : AMDGPUProcessorModel<"gfx1035", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features, [10, 3, 5]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1036", GFX10SpeedModel,
-  FeatureISAVersion10_3_0.Features
->;
+def GFX1036 : AMDGPUProcessorModel<"gfx1036", GFX10SpeedModel,
+  FeatureISAVersion10_3_0.Features, [10, 3, 6]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-// [gfx1010, gfx1011, gfx1012, gfx1013]
-def : ProcessorModel<"gfx10-1-generic", GFX10SpeedModel,
-  FeatureISAVersion10_1_Generic.Features
->;
+def GFX10_1_GENERIC : AMDGPUProcessorModel<"gfx10-1-generic", GFX10SpeedModel,
+  FeatureISAVersion10_1_Generic.Features, [10, 1, 0]> {
+  let ArchFeatures = ArchFeaturesW32XnackWgp;
+  let CoveredGPUs = [GFX1010, GFX1011, GFX1012, GFX1013];
+}
 
-// [gfx1030, gfx1031, gfx1032, gfx1033, gfx1034, gfx1035, gfx1036]
-def : ProcessorModel<"gfx10-3-generic", GFX10SpeedModel,
-  FeatureISAVersion10_3_Generic.Features
->;
+def GFX10_3_GENERIC : AMDGPUProcessorModel<"gfx10-3-generic", GFX10SpeedModel,
+  FeatureISAVersion10_3_Generic.Features, [10, 3, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+  let CoveredGPUs = [GFX1030, GFX1031, GFX1032, GFX1033, GFX1034, GFX1035, GFX1036];
+}
 
 //===----------------------------------------------------------------------===//
 // GCN GFX11.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx1100", GFX11SpeedModel,
-  FeatureISAVersion11_0_0.Features
->;
+def GFX1100 : AMDGPUProcessorModel<"gfx1100", GFX11SpeedModel,
+  FeatureISAVersion11_0_0.Features, [11, 0, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1101", GFX11SpeedModel,
-  FeatureISAVersion11_0_1.Features
->;
+def GFX1101 : AMDGPUProcessorModel<"gfx1101", GFX11SpeedModel,
+  FeatureISAVersion11_0_1.Features, [11, 0, 1]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1102", GFX11SpeedModel,
-  FeatureISAVersion11_0_2.Features
->;
+def GFX1102 : AMDGPUProcessorModel<"gfx1102", GFX11SpeedModel,
+  FeatureISAVersion11_0_2.Features, [11, 0, 2]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1103", GFX11SpeedModel,
-  FeatureISAVersion11_0_3.Features
->;
+def GFX1103 : AMDGPUProcessorModel<"gfx1103", GFX11SpeedModel,
+  FeatureISAVersion11_0_3.Features, [11, 0, 3]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1150", GFX11SpeedModel,
-  FeatureISAVersion11_5_0.Features
->;
+def GFX1150 : AMDGPUProcessorModel<"gfx1150", GFX11SpeedModel,
+  FeatureISAVersion11_5_0.Features, [11, 5, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1151", GFX11SpeedModel,
-  FeatureISAVersion11_5_1.Features
->;
+def GFX1151 : AMDGPUProcessorModel<"gfx1151", GFX11SpeedModel,
+  FeatureISAVersion11_5_1.Features, [11, 5, 1]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1152", GFX11SpeedModel,
-  FeatureISAVersion11_5_2.Features
->;
+def GFX1152 : AMDGPUProcessorModel<"gfx1152", GFX11SpeedModel,
+  FeatureISAVersion11_5_2.Features, [11, 5, 2]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1153", GFX11SpeedModel,
-  FeatureISAVersion11_5_3.Features
->;
+def GFX1153 : AMDGPUProcessorModel<"gfx1153", GFX11SpeedModel,
+  FeatureISAVersion11_5_Common.Features, [11, 5, 3]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1170", GFX11SpeedModel,
-  FeatureISAVersion11_7_Common.Features
->;
+def GFX1154 : AMDGPUProcessorModel<"gfx1154", GFX11SpeedModel,
+  FeatureISAVersion11_5_Common.Features, [11, 5, 4]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1171", GFX11SpeedModel,
-  FeatureISAVersion11_7_Common.Features
->;
+def GFX1170 : AMDGPUProcessorModel<"gfx1170", GFX11SpeedModel,
+  FeatureISAVersion11_7_Common.Features, [11, 7, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1172", GFX11SpeedModel,
-  FeatureISAVersion11_7_Common.Features
->;
+def GFX1171 : AMDGPUProcessorModel<"gfx1171", GFX11SpeedModel,
+  FeatureISAVersion11_7_Common.Features, [11, 7, 1]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-// [gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx1153]
-def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
-  FeatureISAVersion11_Generic.Features
->;
+def GFX1172 : AMDGPUProcessorModel<"gfx1172", GFX11SpeedModel,
+  FeatureISAVersion11_7_Common.Features, [11, 7, 2]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
+
+def GFX11_GENERIC : AMDGPUProcessorModel<"gfx11-generic", GFX11SpeedModel,
+  FeatureISAVersion11_Generic.Features, [11, 0, 3]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+  let CoveredGPUs = [GFX1100, GFX1101, GFX1102, GFX1103, GFX1150, GFX1151, GFX1152, GFX1153,
+                     GFX1154];
+}
+
+def GFX11_7_GENERIC : AMDGPUProcessorModel<"gfx11-7-generic", GFX11SpeedModel,
+  FeatureISAVersion11_7_Generic.Features, [11, 7, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+  let CoveredGPUs = [GFX1170, GFX1171, GFX1172];
+}
 
 //===----------------------------------------------------------------------===//
 // GCN GFX12.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx1200", GFX12SpeedModel,
-  FeatureISAVersion12.Features
->;
+def GFX1200 : AMDGPUProcessorModel<"gfx1200", GFX12SpeedModel,
+  FeatureISAVersion12.Features, [12, 0, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-def : ProcessorModel<"gfx1201", GFX12SpeedModel,
-  FeatureISAVersion12.Features
->;
+def GFX1201 : AMDGPUProcessorModel<"gfx1201", GFX12SpeedModel,
+  FeatureISAVersion12.Features, [12, 0, 1]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
 
-// [gfx1200, gfx1201]
-def : ProcessorModel<"gfx12-generic", GFX12SpeedModel,
-  FeatureISAVersion12_Generic.Features
->;
+def GFX12_GENERIC : AMDGPUProcessorModel<"gfx12-generic", GFX12SpeedModel,
+  FeatureISAVersion12_Generic.Features, [12, 0, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+  let CoveredGPUs = [GFX1200, GFX1201];
+}
 
-def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
-  FeatureISAVersion12_50.Features
->;
+def GFX1250 : AMDGPUProcessorModel<"gfx1250", GFX1250SpeedModel,
+  FeatureISAVersion12_50.Features, [12, 5, 0]> {
+  let ArchFeatures = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32, FEATURE_WAVE32, FEATURE_XNACK, FEATURE_SRAMECC];
+}
 
-def : ProcessorModel<"gfx1251", GFX1250SpeedModel,
-  FeatureISAVersion12_51.Features
->;
+def GFX1251 : AMDGPUProcessorModel<"gfx1251", GFX1251SpeedModel,
+  FeatureISAVersion12_51.Features, [12, 5, 1]> {
+  let ArchFeatures = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32, FEATURE_WAVE32, FEATURE_XNACK, FEATURE_SRAMECC];
+}
 
-// [gfx1250, gfx1251]
-def : ProcessorModel<"gfx12-5-generic", GFX1250SpeedModel,
-  FeatureISAVersion12_5_Generic.Features
->;
+def GFX12_5_GENERIC : AMDGPUProcessorModel<"gfx12-5-generic", GFX125xGenericSpeedModel,
+  FeatureISAVersion12_5_Generic.Features, [12, 5, 0]> {
+  let ArchFeatures = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32, FEATURE_WAVE32, FEATURE_XNACK, FEATURE_SRAMECC];
+  let CoveredGPUs = [GFX1250, GFX1251];
+}
 
 //===----------------------------------------------------------------------===//
 // GCN GFX13.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx1310", GFX12SpeedModel,
-  FeatureISAVersion13.Features
->;
+def GFX1310 : AMDGPUProcessorModel<"gfx1310", GFX12SpeedModel,
+  FeatureISAVersion13.Features, [13, 1, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+}
+
+def GFX13_GENERIC : AMDGPUProcessorModel<"gfx13-generic", GFX12SpeedModel,
+  FeatureISAVersion13_Generic.Features, [13, 1, 0]> {
+  let ArchFeatures = ArchFeaturesW32Wgp;
+  let CoveredGPUs = [GFX1310];
+}
+
+// The gfx6/gfx7/gfx8 families have no "gfxN-generic" target, so their major
+// subarch (AMDGPUSubArch6/7/8) is declared here for getMajorSubArch.
+def : AMDGPUFamily<"6", [GFX600, GFX601, GFX602]>;
+def : AMDGPUFamily<"7", [GFX700, GFX701, GFX702, GFX703, GFX704, GFX705]>;
+def : AMDGPUFamily<"8", [GFX801, GFX802, GFX803, GFX805]>;

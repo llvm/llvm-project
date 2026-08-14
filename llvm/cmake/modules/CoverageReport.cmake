@@ -42,7 +42,7 @@ set(LLVM_COVERAGE_SOURCE_DIRS "" CACHE STRING "Source directories to restrict co
 mark_as_advanced(LLVM_COVERAGE_SOURCE_DIRS)
 
 foreach(dir ${LLVM_COVERAGE_SOURCE_DIRS})
-  list(APPEND restrict_flags -restrict ${dir})
+  list(APPEND restrict_flags --restrict ${dir})
 endforeach()
 
 # Utility target to clear out profile data.

@@ -492,7 +492,8 @@ public:
     // either.
     if (const CXXMethodDecl *Method =
             dyn_cast_or_null<CXXMethodDecl>(Callee.Decl))
-      if (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter())
+      if (IsFunctor || (!E->isTypeDependent() &&
+                        Method->hasCXXExplicitFunctionObjectParameter()))
         Args = Args.drop_front(1);
     processCall(Callee, E->getRParenLoc(), Args);
     return true;

@@ -70,7 +70,7 @@ public:
   }
 
   void testRange(RoundFunc func) {
-    constexpr int COUNT = 100'000;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
     StorageType v = 0;

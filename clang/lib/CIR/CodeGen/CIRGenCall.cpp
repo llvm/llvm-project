@@ -1016,6 +1016,18 @@ CIRGenTypes::arrangeFreeFunctionCall(const CallArgList &args,
   return arrangeFreeFunctionLikeCall(*this, cgm, args, fnType);
 }
 
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
+                                        const CallArgList &args) {
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  for (const CallArg &arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
+
+  CanQualType retType = resultType->getCanonicalTypeUnqualified();
+  return arrangeCIRFunctionInfo(retType, /*isInstanceMethod=*/false, argTypes,
+                                FunctionType::ExtInfo(), RequiredArgs::All);
+}
+
 /// Arrange the argument and result information for a declaration or definition
 /// of the given C++ non-static member function. The member function must be an
 /// ordinary function, i.e. not a constructor or destructor.
@@ -1028,7 +1040,15 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *md) {
       md->getType()->getCanonicalTypeUnqualified().getAs<FunctionProtoType>();
   assert(!cir::MissingFeatures::cudaSupport());
 
-  if (md->isInstance()) {
+  // Mirrors classic CodeGen's check at CGCall.cpp.  C++23 explicit-object
+  // member functions (P0847R7, `void f(this Self&&)`) do not receive an
+  // implicit `this`; the explicit object parameter takes its place at the
+  // AST level and appears as the first parameter of the FunctionProtoType.
+  // Arrange them as free functions so we don't prepend a stale implicit
+  // `this` to the parameter list, which would produce a CIRGenFunctionInfo
+  // with one more argument than the matching cir.func type and trip the
+  // assertion in setArgAttrs.
+  if (md->isImplicitObjectMemberFunction()) {
     // The abstract case is perfectly fine.
     auto *thisType = theCXXABI.getThisArgumentTypeForMethod(md);
     return arrangeCXXMethodType(thisType, prototype.getTypePtr(), md);
@@ -1153,11 +1173,15 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                mlir::Location loc) {
+                                bool isMustTail, mlir::Location loc) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
+
+  const Decl *targetDecl = callee.getAbstractInfo().getCalleeDecl().getDecl();
+  const FunctionDecl *callerDecl = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
+  const FunctionDecl *calleeDecl = dyn_cast_or_null<FunctionDecl>(targetDecl);
 
   assert(!cir::MissingFeatures::emitLifetimeMarkers());
 
@@ -1266,19 +1290,43 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                              attrs, argAttrs, retAttrs, callingConv, sideEffect,
                              /*attrOnCallSite=*/true, /*isThunk=*/false);
 
+  auto resolvedFuncOpFromGlobal = [&](mlir::Operation *op) -> cir::FuncOp {
+    if (auto fnOp = dyn_cast<cir::FuncOp>(op))
+      return fnOp;
+    if (auto getGlobalOp = dyn_cast<cir::GetGlobalOp>(op)) {
+      // FIXME(cir): This peephole optimization avoids indirect calls for
+      // builtins. This should be fixed in the builtin declaration instead by
+      // not emitting an unecessary get_global in the first place. However,
+      // this is also used for no-prototype functions.
+      mlir::Operation *globalOp = cgm.getGlobalValue(getGlobalOp.getName());
+      assert(globalOp && "undefined global function");
+      return cast<cir::FuncOp>(globalOp);
+    }
+    return nullptr;
+  };
+
   cir::FuncType indirectFuncTy;
   mlir::Value indirectFuncVal;
   cir::FuncOp directFuncOp;
-  if (auto fnOp = dyn_cast<cir::FuncOp>(calleePtr)) {
-    directFuncOp = fnOp;
-  } else if (auto getGlobalOp = mlir::dyn_cast<cir::GetGlobalOp>(calleePtr)) {
-    // FIXME(cir): This peephole optimization avoids indirect calls for
-    // builtins. This should be fixed in the builtin declaration instead by
-    // not emitting an unecessary get_global in the first place.
-    // However, this is also used for no-prototype functions.
-    mlir::Operation *globalOp = cgm.getGlobalValue(getGlobalOp.getName());
-    assert(globalOp && "undefined global function");
-    directFuncOp = mlir::cast<cir::FuncOp>(globalOp);
+
+  // If the callee resolves to a FuncOp whose stored signature differs from
+  // this call site's expected signature, the CIR verifier would reject the
+  // mismatched types. This happens, for example, when two declarations share a
+  // mangled name via __asm__ renaming (glibc's __REDIRECT_NTH pattern) but
+  // disagree about a struct argument type. If that happens, we demote the
+  // direct call to an indirect call through a function-pointer bitcast typed
+  // at the call site.
+  if (cir::FuncOp candidate = resolvedFuncOpFromGlobal(calleePtr)) {
+    if (candidate.getFunctionType() == cirFuncTy) {
+      directFuncOp = candidate;
+    } else {
+      mlir::Value addr = cir::GetGlobalOp::create(
+          builder, loc, cir::PointerType::get(candidate.getFunctionType()),
+          candidate.getSymName());
+      indirectFuncTy = cirFuncTy;
+      indirectFuncVal =
+          builder.createBitcast(addr, cir::PointerType::get(cirFuncTy));
+    }
   } else {
     [[maybe_unused]] mlir::ValueTypeRange<mlir::ResultRange> resultTypes =
         calleePtr->getResultTypes();
@@ -1306,7 +1354,52 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (callOp)
     *callOp = theCall;
 
-  assert(!cir::MissingFeatures::opCallMustTail());
+  // Sema/emitAttributedStmt (see
+  // https://github.com/llvm/llvm-project/issues/214764) should one-day enforce
+  // that only one of these is valid at a time. For now, we have the same 'bug'
+  // as classic codegen where we can end up having BOTH of these.
+  if (inNoInlineAttributedStmt)
+    theCall.setInlineKind(cir::InlineKind::NoInline);
+  if (inAlwaysInlineAttributedStmt &&
+      !cgm.getTargetCIRGenInfo().wouldInliningViolateFunctionCallABI(
+          callerDecl, calleeDecl))
+    theCall.setInlineKind(cir::InlineKind::AlwaysInline);
+
+  if (isMustTail) {
+    // PPC/MIPS have some diagnostics for classic-codegen, but we don't support
+    // them yet.
+    const llvm::Triple &triple = getTarget().getTriple();
+    if (triple.isPPC() || triple.isMIPS()) {
+      cgm.errorNYI(mustTailCall->getBeginLoc(),
+                   "musttail call target legality checks");
+      return getUndefRValue(retTy);
+    }
+
+    // Musttail is required to return immediately. Classic codegen does some
+    // work here to go through the exception handling scopes to put them before
+    // the call (it seems?) since musttail must be the last op before the
+    // return.  For now, skip this so we an do it later.
+    if (ehStack.stable_begin() != prologueCleanupDepth) {
+      cgm.errorNYI(mustTailCall->getBeginLoc(),
+                   "musttail call that skips cleanups");
+      return getUndefRValue(retTy);
+    }
+
+    theCall->setAttr(cir::CIRDialect::getMustTailAttrName(),
+                     builder.getUnitAttr());
+
+    if (isa<cir::VoidType>(convertType(retTy)))
+      cir::ReturnOp::create(builder, loc);
+    else
+      cir::ReturnOp::create(builder, loc, theCall->getResult(0));
+
+    // Musttail must return immediately, so we just do that.  All of the below
+    // stuff is effectively UB if this is a musttail, so just do a return
+    // immediately.
+    builder.createBlock(builder.getBlock()->getParent());
+    return getUndefRValue(retTy);
+  }
+
   assert(!cir::MissingFeatures::opCallReturn());
 
   mlir::Type retCIRTy = convertType(retTy);

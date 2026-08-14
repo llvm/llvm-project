@@ -824,7 +824,13 @@ struct VectorStoreOpConverter final
 
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = storeOp.getVectorType();
-    auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
+    // Use the converted vector type instead of original (single element vector
+    // would get converted to scalar).
+    auto spirvVectorType = typeConverter.convertType(vectorType);
+    if (!spirvVectorType)
+      return rewriter.notifyMatchFailure(storeOp, "unsupported vector type");
+
+    auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer
@@ -1018,8 +1024,11 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
 
     Location loc = stepOp.getLoc();
     int64_t numElements = stepOp.getType().getNumElements();
-    auto intType =
-        rewriter.getIntegerType(typeConverter.getIndexTypeBitwidth());
+    // Use the element type; the type converter collapses size-1 vectors to
+    // scalars, so `dstType` may already be the scalar element type.
+    Type intType = isa<VectorType>(dstType)
+                       ? cast<VectorType>(dstType).getElementType()
+                       : dstType;
 
     // Input vectors of size 1 are converted to scalars by the type converter.
     // We just create a constant in this case.

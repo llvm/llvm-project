@@ -892,9 +892,9 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   unsigned AddressSize = ELFT::Is64Bits ? 8 : 4;
   DataExtractor Data(Content, Obj.isLE());
 
-  std::vector<ELFYAML::BBAddrMapEntry> Entries;
+  std::vector<BBAddrMapYAML::BBAddrMapEntry> Entries;
   bool HasAnyPGOAnalysisMapEntry = false;
-  std::vector<ELFYAML::PGOAnalysisMapEntry> PGOAnalyses;
+  std::vector<BBAddrMapYAML::PGOAnalysisMapEntry> PGOAnalyses;
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
   uint16_t Feature = 0;
@@ -921,7 +921,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
       Address = Data.getUnsigned(Cur, AddressSize);
       NumBlocks = Data.getULEB128(Cur);
     }
-    std::vector<ELFYAML::BBAddrMapEntry::BBRangeEntry> BBRanges;
+    std::vector<BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry> BBRanges;
     uint64_t BaseAddress = 0;
     for (uint64_t BBRangeN = 0; Cur && BBRangeN != NumBBRanges; ++BBRangeN) {
       if (FeatureOrErr->MultiBBRange) {
@@ -931,7 +931,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
         BaseAddress = Address;
       }
 
-      std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
+      std::vector<BBAddrMapYAML::BBAddrMapEntry::BBEntry> BBEntries;
       // Read the specified number of BB entries, or until decoding fails.
       for (uint64_t BlockIndex = 0; Cur && BlockIndex < NumBlocks;
            ++BlockIndex) {
@@ -960,7 +960,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     Entries.push_back(
         {Version, Feature, /*NumBBRanges=*/{}, std::move(BBRanges)});
 
-    ELFYAML::PGOAnalysisMapEntry &PGOAnalysis = PGOAnalyses.emplace_back();
+    BBAddrMapYAML::PGOAnalysisMapEntry &PGOAnalysis =
+        PGOAnalyses.emplace_back();
     if (FeatureOrErr->hasPGOAnalysis()) {
       HasAnyPGOAnalysisMapEntry = true;
 
@@ -1023,7 +1024,7 @@ ELFDumper<ELFT>::dumpAddrsigSection(const Elf_Shdr *Shdr) {
 
   ArrayRef<uint8_t> Content = *ContentOrErr;
   DataExtractor::Cursor Cur(0);
-  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  DataExtractor Data(Content, Obj.isLE());
   std::vector<ELFYAML::YAMLFlowString> Symbols;
   while (Cur && Cur.tell() < Content.size()) {
     uint64_t SymNdx = Data.getULEB128(Cur);
@@ -1133,7 +1134,7 @@ ELFDumper<ELFT>::dumpCallGraphProfileSection(const Elf_Shdr *Shdr) {
 
   std::vector<ELFYAML::CallGraphEntryWeight> Entries(Content.size() /
                                                      SizeOfEntry);
-  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  DataExtractor Data(Content, Obj.isLE());
   DataExtractor::Cursor Cur(0);
   auto ReadEntry = [&](ELFYAML::CallGraphEntryWeight &E) {
     E.Weight = Data.getU64(Cur);
@@ -1357,7 +1358,7 @@ ELFDumper<ELFT>::dumpHashSection(const Elf_Shdr *Shdr) {
   }
 
   DataExtractor::Cursor Cur(0);
-  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  DataExtractor Data(Content, Obj.isLE());
   uint64_t NBucket = Data.getU32(Cur);
   uint64_t NChain = Data.getU32(Cur);
   if (Content.size() != (2 + NBucket + NChain) * 4) {
