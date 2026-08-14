@@ -1125,7 +1125,6 @@ void SPIRVNonSemanticDebugHandler::resetPerFunctionDebugState() {
   CurrentMF = nullptr;
   LastFunctionOpVariable = nullptr;
   DebugFunctionDefinitionEmitted = false;
-  EmitDebugLineForCurrentFn = false;
   clearCurLineState();
   CurLineMBB = nullptr;
 }
@@ -1148,8 +1147,6 @@ void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
   const DISubprogram *SP = MF->getFunction().getSubprogram();
   if (!SP || !SP->isDefinition())
     return;
-
-  EmitDebugLineForCurrentFn = true;
 
   // DebugFunctionDefinition is emitted after the last function-level
   // OpVariable. If there are none, it is emitted after the entry OpLabel.
@@ -1194,7 +1191,7 @@ void SPIRVNonSemanticDebugHandler::beginInstruction(const MachineInstr *MI) {
   assert(CurMI == nullptr && "CurMI must be null");
   CurMI = MI;
 
-  if (!EmitDebugLineForCurrentFn || !DebugFunctionDefinitionEmitted)
+  if (!DebugFunctionDefinitionEmitted)
     return;
   emitDebugLineForInstruction(MI);
 }

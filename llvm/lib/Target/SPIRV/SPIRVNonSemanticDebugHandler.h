@@ -180,8 +180,6 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   const MachineBasicBlock *CurLineMBB = nullptr;
   std::optional<DebugLineState> CurLineState;
 
-  bool EmitDebugLineForCurrentFn = false;
-
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
 
