@@ -384,7 +384,8 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   case 3:
     return SPIRV::StorageClass::Workgroup;
   case 4:
-    return SPIRV::StorageClass::Generic;
+    return STI.isShader() ? SPIRV::StorageClass::Function
+                          : SPIRV::StorageClass::Generic;
   case 5:
     return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
                ? SPIRV::StorageClass::DeviceOnlyINTEL
