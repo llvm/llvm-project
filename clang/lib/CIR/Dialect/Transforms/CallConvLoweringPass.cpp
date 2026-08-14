@@ -44,11 +44,17 @@
 #include "mlir/Pass/Pass.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/Support/MathExtras.h"
+
+#include <algorithm>
+#include <array>
 
 using namespace mlir;
 using namespace mlir::abi;
@@ -68,10 +74,11 @@ namespace {
 // SysV x86_64 classifier, and converts the result back into the
 // dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
 // consumes.  Integer (including `_BitInt` up to 128 bits) / pointer / bool /
-// floating-point scalars are handled, as are struct / union / array aggregates
-// and `_Complex`.  Vectors, packed or padded records, and a union no member of
-// which spans its declared size are reported NYI by classifyX86_64Function so
-// an unsupported signature fails the pass instead of being misclassified.
+// floating-point scalars are handled, as are struct / union / array aggregates,
+// `_Complex`, and a fixed-width vector whose width is a power of two.  Other
+// vectors, packed or padded records, and a union no member of which spans its
+// declared size are reported NYI by classifyX86_64Function so an unsupported
+// signature fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -103,8 +110,9 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
 /// bits (including `_BitInt` and `__int128`), pointer, bool, void, or any
 /// floating-point type.  Aggregates: a complete struct or union whose members
 /// are all themselves supported, or an array of a supported element type.
-/// Also a `_Complex` of a supported element type.  Everything else is reported
-/// NYI at the reject() choke point in classifyX86_64Function.
+/// Also a `_Complex`, or a fixed-width vector, of a supported element type.
+/// Everything else is reported NYI at the reject() choke point in
+/// classifyX86_64Function.
 static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
@@ -135,6 +143,34 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   }
   if (auto complexTy = dyn_cast<cir::ComplexType>(ty))
     return isSupportedType(complexTy.getElementType(), dl);
+  if (auto vecTy = dyn_cast<cir::VectorType>(ty)) {
+    // A scalable vector has no size the SysV eightbyte rules can read, and
+    // x86_64 has no calling convention for one.
+    if (vecTy.getIsScalable())
+      return false;
+    // The classifier sizes a vector as element count times element width, so
+    // an element is only usable where that width is the one clang gives it.
+    // It is not for bool (a bit to clang, a byte here), for a _BitInt narrower
+    // than a byte (clang rounds to the storage container), or for x87 long
+    // double (80 bits here against clang's 128).  A pointer is excluded for a
+    // different reason, its pointee being what abiTypeToCIR drops.
+    mlir::Type elemTy = vecTy.getElementType();
+    if (auto elemInt = dyn_cast<cir::IntType>(elemTy)) {
+      if (elemInt.getWidth() % 8)
+        return false;
+    } else if (auto elemFp = dyn_cast<cir::FPTypeInterface>(elemTy)) {
+      if (&elemFp.getFloatSemantics() == &llvm::APFloat::x87DoubleExtended())
+        return false;
+    } else {
+      return false;
+    }
+    // Clang also rounds the vector's own width up to a power of two, and the
+    // classifier branches on the exact width, so a three-char vector would be
+    // classified at 24 bits where clang uses 32.
+    if (!llvm::isPowerOf2_64(dl.getTypeSizeInBits(ty).getFixedValue()))
+      return false;
+    return isSupportedType(elemTy, dl);
+  }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
     return isSupportedType(arrTy.getElementType(), dl);
   if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
@@ -256,6 +292,14 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
             mapCIRType(complexTy.getElementType(), typeMapper, dl, modOp),
             llvm::Align(dl.getTypeABIAlignment(type)));
       })
+      .Case([&](cir::VectorType vecTy) {
+        // isSupportedType rejects a scalable vector, so the element count is
+        // always fixed here.
+        return tb.getVectorType(
+            mapCIRType(vecTy.getElementType(), typeMapper, dl, modOp),
+            llvm::ElementCount::getFixed(vecTy.getSize()),
+            llvm::Align(dl.getTypeABIAlignment(type)));
+      })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =
             mapCIRType(arrTy.getElementType(), typeMapper, dl, modOp);
@@ -334,10 +378,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // type, so a non-null coerce does not by itself mean a rewrite is needed.
     const llvm::abi::Type *coerceAbi = info.getCoerceToType();
     bool isAggregate = isa_and_present<cir::RecordType, cir::ArrayType>(origTy);
-    // For a _Complex the classifier's coerce is only sometimes the natural
-    // type, so it has to be read rather than assumed.
+    // For a _Complex or a vector the classifier's coerce is only sometimes the
+    // natural type, so it has to be read rather than assumed.
     bool comparesAgainstCoerce =
-        coerceAbi && isa_and_present<cir::ComplexType>(origTy);
+        coerceAbi && isa_and_present<cir::ComplexType, cir::VectorType>(origTy);
     bool coerceIsRegisterTuple =
         isa_and_present<llvm::abi::RecordType>(coerceAbi);
     // Compare widths rather than identity: a coerce no wider than the natural
@@ -381,8 +425,7 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
 /// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
 ///
 /// The only x86_64 rule that reads this boundary sends an unnamed vector wider
-/// than 128 bits to memory, and isSupportedType rejects every vector, so no
-/// input this bridge accepts can observe the difference.
+/// than 128 bits to memory.
 static llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy) {
   if (!fnTy.isVarArg())
     return llvm::abi::RequiredArgs::All;
@@ -463,6 +506,31 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
     fc.argInfos.push_back(*ac);
   }
   return fc;
+}
+
+/// The AVX level to classify \p func at: \p base, raised if the function's own
+/// recorded feature list enables a wider vector.
+static llvm::abi::X86AVXABILevel funcAvxLevel(cir::FuncOp func,
+                                              llvm::abi::X86AVXABILevel base) {
+  // Only a `target` attribute may raise the level.  A multiversioned function
+  // carries a raised feature list too, and must stay at the module's level.
+  assert(!cir::MissingFeatures::opFuncMultiVersioning());
+
+  auto features = func->getAttrOfType<mlir::StringAttr>("cir.target-features");
+  if (!features)
+    return base;
+  // A '-' entry disables the feature, so match a whole '+' entry rather than
+  // searching for the name.  avx512f implies avx, so both entries are present:
+  // return on the wider name so one pass suffices.
+  bool avx = false;
+  for (llvm::StringRef feature : llvm::split(features.getValue(), ',')) {
+    if (!feature.consume_front("+"))
+      continue;
+    if (feature == "avx512f")
+      return std::max(base, llvm::abi::X86AVXABILevel::AVX512);
+    avx |= feature == "avx";
+  }
+  return avx ? std::max(base, llvm::abi::X86AVXABILevel::AVX) : base;
 }
 
 /// Classify a cir.func for x86_64 SysV using the LLVM ABI library.  Returns
@@ -634,16 +702,33 @@ void CallConvLoweringPass::runOnOperation() {
   CIRABIRewriteContext rewriteCtx(moduleOp, dl);
   SymbolTable symbolTable(moduleOp);
 
-  // For the x86_64 target, build the LLVM ABI library classifier once and
-  // reuse it (and its type mapper) across every function.
+  // A per-function target attribute can raise the AVX level, so one classifier
+  // per module would misclassify a wide vector in such a function.
+  static constexpr unsigned numAvxLevels =
+      static_cast<unsigned>(llvm::abi::X86AVXABILevel::AVX512) + 1;
+  bool isX86 = target == cir::CallConvTarget::X86_64;
   std::optional<mlir::abi::ABITypeMapper> x86TypeMapper;
-  std::unique_ptr<llvm::abi::TargetInfo> x86Target;
-  if (target == cir::CallConvTarget::X86_64) {
+  std::array<std::unique_ptr<llvm::abi::TargetInfo>, numAvxLevels> x86Targets;
+  if (isX86)
     x86TypeMapper.emplace(dl);
-    x86Target = llvm::abi::createX86_64TargetInfo(
-        x86TypeMapper->getTypeBuilder(), x86AvxAbiLevel.getValue(),
-        /*Has64BitPointers=*/true, x86AbiCompat);
-  }
+  auto x86TargetFor =
+      [&](llvm::abi::X86AVXABILevel level) -> const llvm::abi::TargetInfo & {
+    assert(static_cast<unsigned>(level) < numAvxLevels &&
+           "a new X86AVXABILevel needs a slot in x86Targets");
+    std::unique_ptr<llvm::abi::TargetInfo> &slot =
+        x86Targets[static_cast<unsigned>(level)];
+    if (!slot)
+      slot = llvm::abi::createX86_64TargetInfo(
+          x86TypeMapper->getTypeBuilder(), level,
+          /*Has64BitPointers=*/true, x86AbiCompat);
+    return *slot;
+  };
+  llvm::abi::X86AVXABILevel baseAvxLevel = x86AvxAbiLevel.getValue();
+  auto avxLevelFor = [&](cir::FuncOp func) -> llvm::abi::X86AVXABILevel {
+    if (!allowsX86TargetAttrAvx || !func)
+      return baseAvxLevel;
+    return funcAvxLevel(func, baseAvxLevel);
+  };
 
   // Classify every cir.func up front.  No IR mutation happens here, so
   // later walks can consult any function's classification regardless of
@@ -652,8 +737,9 @@ void CallConvLoweringPass::runOnOperation() {
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
     std::optional<FunctionClassification> fc;
-    if (x86Target)
-      fc = classifyX86_64Function(f, dl, *x86TypeMapper, *x86Target, moduleOp);
+    if (isX86)
+      fc = classifyX86_64Function(f, dl, *x86TypeMapper,
+                                  x86TargetFor(avxLevelFor(f)), moduleOp);
     else
       fc = classifyFunction(f, dl, target, classificationAttr);
     if (!fc) {
@@ -694,7 +780,7 @@ void CallConvLoweringPass::runOnOperation() {
     // drivers the classification comes from a fixed per-function source, so
     // such a call stays short a classification and rewriteCallSite reports it.
     cir::FuncType calleeTy = callee.getFunctionType();
-    if (!x86Target || call.getNumArgOperands() <= calleeTy.getNumInputs())
+    if (!isX86 || call.getNumArgOperands() <= calleeTy.getNumInputs())
       return;
     // A callee declared without a prototype also takes more operands than it
     // declares, and the verifier allows it.  Those extra arguments are named
@@ -706,8 +792,14 @@ void CallConvLoweringPass::runOnOperation() {
       anyFailed = true;
       return;
     }
-    std::optional<FunctionClassification> fc = classifyX86_64VariadicCall(
-        call, calleeTy, dl, *x86TypeMapper, *x86Target, moduleOp);
+    // The callee's level, not the caller's: this pass rewrites the definition
+    // and its call sites from one classification, so they have to agree.
+    // Classic instead arranges every call site from the caller and reports a
+    // caller whose level disagrees with its callee in checkFunctionCallABI,
+    // which has no equivalent here yet.
+    std::optional<FunctionClassification> fc =
+        classifyX86_64VariadicCall(call, calleeTy, dl, *x86TypeMapper,
+                                   x86TargetFor(avxLevelFor(callee)), moduleOp);
     if (!fc) {
       anyFailed = true;
       return;
@@ -798,11 +890,15 @@ void CallConvLoweringPass::runOnOperation() {
     cir::FuncType funcTy = indirectCalleeType(c);
     auto classifySignature =
         [&](mlir::TypeRange argTypes) -> std::optional<FunctionClassification> {
-      if (x86Target)
-        return classifyX86_64Signature(funcTy.getReturnType(), argTypes,
-                                       requiredArgs(funcTy), ctx, dl,
-                                       *x86TypeMapper, *x86Target, moduleOp,
-                                       [&]() { return c->emitOpError(); });
+      // A callee resolved at run time carries no features of its own, so the
+      // level comes from the function containing the call, which is the
+      // declaration classic arranges every call site from.
+      if (isX86)
+        return classifyX86_64Signature(
+            funcTy.getReturnType(), argTypes, requiredArgs(funcTy), ctx, dl,
+            *x86TypeMapper,
+            x86TargetFor(avxLevelFor(c->getParentOfType<cir::FuncOp>())),
+            moduleOp, [&]() { return c->emitOpError(); });
       return withReturnVoidness(
           mlir::abi::test::classify(argTypes, funcTy.getReturnType(), dl),
           funcTy.getReturnType());
@@ -848,12 +944,12 @@ std::unique_ptr<Pass> mlir::createCallConvLoweringPass() {
   return std::make_unique<CallConvLoweringPass>();
 }
 
-std::unique_ptr<Pass>
-mlir::createCallConvLoweringPass(cir::CallConvTarget target,
-                                 llvm::abi::X86AVXABILevel x86AvxAbiLevel,
-                                 const llvm::abi::ABICompatInfo &x86AbiCompat) {
+std::unique_ptr<Pass> mlir::createCallConvLoweringPass(
+    cir::CallConvTarget target, llvm::abi::X86AVXABILevel x86AvxAbiLevel,
+    bool allowsX86TargetAttrAvx, const llvm::abi::ABICompatInfo &x86AbiCompat) {
   CallConvLoweringOptions options;
   options.target = target;
   options.x86AvxAbiLevel = x86AvxAbiLevel;
+  options.allowsX86TargetAttrAvx = allowsX86TargetAttrAvx;
   return std::make_unique<CallConvLoweringPass>(options, x86AbiCompat);
 }
