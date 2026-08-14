@@ -86,23 +86,23 @@ public:
     requires default_initializable<_View> && default_initializable<_Pattern>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 lazy_split_view(_View __base, _Pattern __pattern)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit lazy_split_view(_View __base, _Pattern __pattern)
       : __base_(std::move(__base)), __pattern_(std::move(__pattern)) {}
 
   template <input_range _Range>
     requires constructible_from<_View, views::all_t<_Range>> &&
                  constructible_from<_Pattern, single_view<range_value_t<_Range>>>
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 lazy_split_view(_Range&& __r, range_value_t<_Range> __e)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit lazy_split_view(_Range&& __r, range_value_t<_Range> __e)
       : __base_(views::all(std::forward<_Range>(__r))), __pattern_(views::single(std::move(__e))) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     if constexpr (forward_range<_View>) {
       return __outer_iterator < __simple_view<_View> && __simple_view < _Pattern >> {*this, ranges::begin(__base_)};
     } else {
@@ -111,19 +111,19 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires forward_range<_View> && forward_range<const _View>
   {
     return __outer_iterator<true>{*this, ranges::begin(__base_)};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires forward_range<_View> && common_range<_View>
   {
     return __outer_iterator < __simple_view<_View> && __simple_view < _Pattern >> {*this, ranges::end(__base_)};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
     if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View>) {
       return __outer_iterator<true>{*this, ranges::end(__base_)};
     } else {
@@ -188,8 +188,10 @@ private:
       _LIBCPP_HIDE_FROM_ABI value_type() = default;
       _LIBCPP_HIDE_FROM_ABI constexpr explicit value_type(__outer_iterator __i) : __i_(std::move(__i)) {}
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator<_Const> begin() const { return __inner_iterator<_Const>{__i_}; }
-      _LIBCPP_HIDE_FROM_ABI constexpr default_sentinel_t end() const noexcept { return default_sentinel; }
+      [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator<_Const> begin() const {
+        return __inner_iterator<_Const>{__i_};
+      }
+      [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr default_sentinel_t end() const noexcept { return default_sentinel; }
     };
 
     _LIBCPP_HIDE_FROM_ABI __outer_iterator() = default;
@@ -206,7 +208,7 @@ private:
       requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
         : __parent_(__i.__parent_), __current_(std::move(__i.__current_)) {}
 
-    _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return value_type{*this}; }
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return value_type{*this}; }
 
     _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator& operator++() {
       const auto __end = ranges::end(__parent_->__base_);
@@ -342,14 +344,16 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __inner_iterator(__outer_iterator<_Const> __i) : __i_(std::move(__i)) {}
 
-    _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept { return __i_.__current(); }
-    _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() &&
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept {
+      return __i_.__current();
+    }
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() &&
       requires forward_range<_View>
     {
       return std::move(__i_.__current());
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return *__i_.__current(); }
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return *__i_.__current(); }
 
     _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator& operator++() {
       __incremented_ = true;
@@ -385,7 +389,7 @@ private:
       return __x.__is_done();
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
     iter_move(const __inner_iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__outer_current()))) {
       return ranges::iter_move(__i.__outer_current());
     }

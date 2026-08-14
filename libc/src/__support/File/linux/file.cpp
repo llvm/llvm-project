@@ -12,7 +12,7 @@
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
-#include "src/__support/OSUtil/fcntl.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/lseek.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
@@ -120,7 +120,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
     return Error(EINVAL);
   }
 
-  auto result = internal::fcntl(fd, F_GETFL);
+  auto result = linux_syscalls::fcntl(fd, F_GETFL);
   if (!result.has_value()) {
     return Error(EBADF);
   }
@@ -138,8 +138,8 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   if ((modeflags & static_cast<ModeFlags>(OpenMode::APPEND)) &&
       !(fd_flags & O_APPEND)) {
     do_seek = true;
-    if (!internal::fcntl(fd, F_SETFL,
-                         reinterpret_cast<void *>(fd_flags | O_APPEND))
+    if (!linux_syscalls::fcntl(fd, F_SETFL,
+                               reinterpret_cast<void *>(fd_flags | O_APPEND))
              .has_value()) {
       return Error(EBADF);
     }

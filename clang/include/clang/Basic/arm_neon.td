@@ -285,7 +285,7 @@ def SPLATQ : WInst<"splat_laneq", ".(!Q)I",
                    "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPlmQm",
                    [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
 
-let TargetGuard = "bf16,neon" in {
+let TargetGuard = "neon" in {
   def SPLAT_BF  : WInst<"splat_lane", ".(!q)I", "bQb",
                       [ImmCheck<1, ImmCheckLaneIndex, 0>]>;
   def SPLATQ_BF : WInst<"splat_laneq", ".(!Q)I", "bQb",
@@ -1938,7 +1938,7 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f32mm,neon" in {
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16mm,neon" in {
-  def VMMLA_F16_F16 : SInst<"vmmla_f16", "....", "Qh">;
+  def VMMLA_F16_F16 : SInst<"vmmla", "....", "Qh">;
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16f32mm,neon" in {
@@ -2024,8 +2024,7 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v
   def VCMLAQ_ROT270_FP64 : SInst<"vcmlaq_rot270", "QQQQ", "d">;
 }
 
-// V8.2-A BFloat intrinsics
-let TargetGuard = "bf16,neon" in {
+let TargetGuard = "neon" in {
   def VCREATE_BF : NoTestOpInst<"vcreate", ".(IU>)", "b", OP_CAST> {
     let BigEndianSafe = 1;
   }
@@ -2088,7 +2087,11 @@ let TargetGuard = "bf16,neon" in {
   def VLD2_DUP_BF : WInst<"vld2_dup", "2(c*!)", "bQb">;
   def VLD3_DUP_BF : WInst<"vld3_dup", "3(c*!)", "bQb">;
   def VLD4_DUP_BF : WInst<"vld4_dup", "4(c*!)", "bQb">;
+}
 
+// V8.2-A BFloat intrinsics
+
+let TargetGuard = "bf16,neon" in {
   def VCVT_F32_BF16 : SOpInst<"vcvt_f32_bf16", "(F>)(Bq!)",  "Qb", OP_VCVT_F32_BF16>;
   def VCVT_LOW_F32_BF16 : SOpInst<"vcvt_low_f32", "(F>)(BQ!)",  "Qb", OP_VCVT_F32_BF16_LO>;
   def VCVT_HIGH_F32_BF16 : SOpInst<"vcvt_high_f32", "(F>)(BQ!)", "Qb", OP_VCVT_F32_BF16_HI>;
@@ -2108,21 +2111,23 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "b
   def VCVT_LOW_BF16_F32_A64 : SInst<"vcvt_low_bf16", "BQ", "Qf">;
   def VCVT_HIGH_BF16_F32_A64 : SInst<"vcvt_high_bf16", "BBQ", "Qf">;
   def VCVT_BF16_F32 : SInst<"vcvt_bf16", "BQ", "f">;
+}
 
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "neon" in {
   def COPY_LANE_BF16 : IOpInst<"vcopy_lane", "..I.I", "b", OP_COPY_LN>;
   def COPYQ_LANE_BF16 : IOpInst<"vcopy_lane", "..IqI", "Qb", OP_COPY_LN>;
   def COPY_LANEQ_BF16 : IOpInst<"vcopy_laneq", "..IQI", "b", OP_COPY_LN>;
   def COPYQ_LANEQ_BF16 : IOpInst<"vcopy_laneq", "..I.I", "Qb", OP_COPY_LN>;
 }
 
-let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)", TargetGuard = "bf16,neon" in {
+let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)", TargetGuard = "neon" in {
   let BigEndianSafe = 1 in {
     defm VREINTERPRET_BF : REINTERPRET_CROSS_TYPES<
         "csilUcUsUiUlhfPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQPcQPsQPl", "bQb">;
   }
 }
 
-let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "bf16,neon" in {
+let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "neon" in {
   let BigEndianSafe = 1 in {
     defm VVREINTERPRET_BF : REINTERPRET_CROSS_TYPES<
         "csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk", "bQb">;
@@ -2155,17 +2160,14 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
                           [ImmCheck<3, ImmCheck0_1>]>;
   def VLUTI4_H_X2_Q : SInst<"vluti4_laneq_x2", ".2(<U)I", "QsQUsQPsQh",
                           [ImmCheck<3, ImmCheck0_3>]>;
-
-  let TargetGuard = "lut,bf16" in {
-    def VLUTI2_BF      : SInst<"vluti2_lane", "Q.(<qU)I", "bQb",
-                              [ImmCheck<2, ImmCheck0_3>]>;
-    def VLUTI2_BF_Q    : SInst<"vluti2_laneq", "Q.(<QU)I", "bQb",
-                              [ImmCheck<2, ImmCheck0_7>]>;
-    def VLUTI4_BF_X2   : SInst<"vluti4_lane_x2", ".2(<qU)I", "Qb",
-                              [ImmCheck<3, ImmCheck0_1>]>;
-    def VLUTI4_BF_X2_Q   : SInst<"vluti4_laneq_x2", ".2(<U)I", "Qb",
-                              [ImmCheck<3, ImmCheck0_3>]>;
-  }
+  def VLUTI2_BF      : SInst<"vluti2_lane", "Q.(<qU)I", "bQb",
+                            [ImmCheck<2, ImmCheck0_3>]>;
+  def VLUTI2_BF_Q    : SInst<"vluti2_laneq", "Q.(<QU)I", "bQb",
+                            [ImmCheck<2, ImmCheck0_7>]>;
+  def VLUTI4_BF_X2   : SInst<"vluti4_lane_x2", ".2(<qU)I", "Qb",
+                            [ImmCheck<3, ImmCheck0_1>]>;
+  def VLUTI4_BF_X2_Q   : SInst<"vluti4_laneq_x2", ".2(<U)I", "Qb",
+                            [ImmCheck<3, ImmCheck0_3>]>;
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {

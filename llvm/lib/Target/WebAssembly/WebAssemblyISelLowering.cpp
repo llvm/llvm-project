@@ -152,6 +152,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
     setOperationAction(ISD::FMAXIMUM, T, Legal);
+    if (Subtarget->hasSIMD128() && MVT(T).isVector()) {
+      setOperationAction(ISD::PSEUDO_FMIN, T, Legal);
+      setOperationAction(ISD::PSEUDO_FMAX, T, Legal);
+    }
     // When experimental v8f16 support is enabled these instructions don't need
     // to be expanded.
     if (T != MVT::v8f16) {
@@ -197,6 +201,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         {ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM},
         {MVT::v4f32, MVT::v2f64}, Custom);
   }
+
+  // Combine expands these operations, because wasi-libc and emscripten do not
+  // yet have the dedicated libcalls.
+  setTargetDAGCombine(
+      {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM});
+
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
 
@@ -434,24 +444,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   // is equivalent to a simple branch. This reduces code size for wasm, and we
   // defer possible jump table optimizations to the VM.
   setMinimumJumpTableEntries(2);
-}
-
-MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
-                                            uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return MVT::funcref;
-  return TargetLowering::getPointerTy(DL, AS);
-}
-
-MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
-                                               uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return MVT::funcref;
-  return TargetLowering::getPointerMemTy(DL, AS);
 }
 
 TargetLowering::AtomicExpansionKind
@@ -1294,6 +1286,17 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
   auto Layout = MF.getDataLayout();
 
+  // A call through a funcref is expressed in IR as a call through the pointer
+  // produced by the llvm.wasm.funcref.to_ptr intrinsic. Detect this here and
+  // recover the underlying funcref value so the call can be lowered to a
+  // table.set + call_indirect through the dedicated __funcref_call_table.
+  bool IsFuncrefCall = false;
+  if (Callee.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+      Callee.getConstantOperandVal(0) == Intrinsic::wasm_funcref_to_ptr) {
+    Callee = Callee.getOperand(1);
+    IsFuncrefCall = true;
+  }
+
   CallingConv::ID CallConv = CLI.CallConv;
   if (!callingConvSupported(CallConv))
     fail(DL, DAG,
@@ -1537,8 +1540,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Lastly, if this is a call to a funcref we need to add an instruction
   // table.set to the chain and transform the call.
-  if (CLI.CB && WebAssembly::isWebAssemblyFuncrefType(
-                    CLI.CB->getCalledOperand()->getType())) {
+  if (IsFuncrefCall) {
     // In the absence of function references proposal where a funcref call is
     // lowered to call_ref, using reference types we generate a table.set to set
     // the funcref to a special table used solely for this purpose, followed by
@@ -1554,11 +1556,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue TableSetOps[] = {Chain, Sym, TableSlot, Callee};
     SDValue TableSet = DAG.getMemIntrinsicNode(
         WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
-        MVT::funcref,
-        // Machine Mem Operand args
-        MachinePointerInfo(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF),
-        CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
+        MVT::funcref, MachinePointerInfo(), Align(1),
         MachineMemOperand::MOStore);
 
     Ops[0] = TableSet; // The new chain is the TableSet itself
@@ -2275,6 +2273,17 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
       }
     }
     return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
+  }
+
+  case Intrinsic::wasm_funcref_to_ptr: {
+    // llvm.wasm.funcref.to_ptr only has a defined lowering when its result
+    // feeds directly into an indirect call. Reaching here means the pointer
+    // escapes a direct call. We haven't implemented conversion of a funcref
+    // into a real function pointer so we crash if we get here.
+    fail(DL, DAG,
+         "a funcref can only be converted to a pointer to be directly called; "
+         "the resulting pointer cannot otherwise be used");
+    return DAG.getPOISON(Op.getValueType());
   }
 
   case Intrinsic::thread_pointer: {
@@ -3981,6 +3990,28 @@ static SDValue performShiftCombine(SDNode *N,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, MulLo, MulHi);
 }
 
+static SDValue performMinMaxF128Combine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getValueType(0) != MVT::f128)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  switch (N->getOpcode()) {
+  // wasi-libc and emscripten do not currently define fminimuml and fmaximuml.
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    return TLI.expandFMINIMUM_FMAXIMUM(N, DAG);
+
+  // wasi-libc and emscripten do not currently define fminimum_numl and
+  // fmaximum_numl.
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return TLI.expandFMINIMUMNUM_FMAXIMUMNUM(N, DAG);
+
+  default:
+    return SDValue();
+  }
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -4021,5 +4052,10 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performMulCombine(N, DCI);
   case ISD::SHL:
     return performShiftCombine(N, DCI);
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return performMinMaxF128Combine(N, DCI.DAG);
   }
 }

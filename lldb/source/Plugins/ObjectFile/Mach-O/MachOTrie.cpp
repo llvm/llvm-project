@@ -20,6 +20,14 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
 
+/// Upper bound on the length of a symbol name assembled from export-trie edge
+/// labels.  A corrupt trie can encode an edge label whose terminator is far
+/// away in the trie data, so a single label is many megabytes long; appending
+/// it to the running name would otherwise request an unbounded allocation.  No
+/// legitimate symbol name comes close to this size.  Also 1 MiB is the
+/// symbol length limit in ld.
+static constexpr size_t kMaxTrieSymbolNameLength = 1 << 20; // 1 MiB
+
 void TrieEntry::Dump() const {
   printf("0x%16.16llx 0x%16.16llx 0x%16.16llx \"%s\"",
          static_cast<unsigned long long>(address),
@@ -118,16 +126,17 @@ bool ParseTrieEntriesImpl(DataExtractor &data, lldb::offset_t offset,
     const char *cstr = data.GetCStr(&children_offset);
     if (!cstr)
       return false; // Corrupt data
+    if (prefix.size() + llvm::StringRef(cstr).size() > kMaxTrieSymbolNameLength)
+      return false; // Corrupt data: implausibly long symbol name.
     const size_t prevSize = prefix.size();
     prefix.append(cstr);
     lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
-    if (childNodeOffset) {
-      if (!ParseTrieEntriesImpl(data, childNodeOffset, is_arm,
-                                text_seg_base_addr, prefix, resolver_addresses,
-                                reexports, ext_symbols, visited_nodes)) {
-        return false;
-      }
-    }
+    // A child offset of 0 points back at the root; like any other repeated
+    // offset it is a cycle, which ParseTrieEntriesImpl rejects as corrupt.
+    if (!ParseTrieEntriesImpl(data, childNodeOffset, is_arm, text_seg_base_addr,
+                              prefix, resolver_addresses, reexports,
+                              ext_symbols, visited_nodes))
+      return false;
     prefix.resize(prevSize);
   }
   return true;

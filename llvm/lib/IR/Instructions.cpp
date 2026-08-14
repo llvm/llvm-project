@@ -71,9 +71,12 @@ AllocaInst::getAllocationSize(const DataLayout &DL) const {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
       return std::nullopt;
+    std::optional<uint64_t> NumElements = C->getValue().tryZExtValue();
+    if (!NumElements)
+      return std::nullopt;
     assert(!Size.isScalable() && "Array elements cannot have a scalable size");
     auto CheckedProd =
-        checkedMulUnsigned(Size.getKnownMinValue(), C->getZExtValue());
+        checkedMulUnsigned(Size.getKnownMinValue(), *NumElements);
     if (!CheckedProd)
       return std::nullopt;
     return TypeSize::getFixed(*CheckedProd);
@@ -1362,6 +1365,12 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertBef) {}
 
+LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
+                   const LoadStoreInstProperties &Props,
+                   InsertPosition InsertBef)
+    : LoadInst(Ty, Ptr, Name, Props.IsVolatile, Props.Alignment, Props.Ordering,
+               Props.SSID, InsertBef) {}
+
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
                    InsertPosition InsertBef)
@@ -1396,6 +1405,12 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      InsertPosition InsertBefore)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertBefore) {}
+
+StoreInst::StoreInst(Value *Val, Value *Ptr,
+                     const LoadStoreInstProperties &Props,
+                     InsertPosition InsertBefore)
+    : StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment, Props.Ordering,
+                Props.SSID, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
@@ -1739,7 +1754,7 @@ bool InsertElementInst::isValidOperands(const Value *Vec, const Value *Elt,
     return false;// Second operand of insertelement must be vector element type.
 
   if (!Index->getType()->isIntegerTy())
-    return false;  // Third operand of insertelement must be i32.
+    return false; // Third operand of insertelement must be an integer.
   return true;
 }
 

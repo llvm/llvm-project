@@ -8,7 +8,6 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; INITIAL-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; INITIAL-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; INITIAL-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; INITIAL-NEXT:  Live-in vp<[[VP3:%[0-9]+]]> = backedge-taken count
 ; INITIAL-NEXT:  Live-in ir<%n> = original trip-count
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:  ir-bb<entry>:
@@ -19,32 +18,31 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; INITIAL-NEXT:  Successor(s): vector loop
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:  <x1> vector loop: {
-; INITIAL-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; INITIAL-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; INITIAL-NEXT:  vp<[[VP4:%[0-9]+]]> = HEADER-MASK
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:    vector.body:
 ; INITIAL-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; INITIAL-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
-; INITIAL-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
-; INITIAL-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = and vp<[[VP6]]>, vp<%incoming.alias.mask>
+; INITIAL-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = and vp<[[VP4]]>, vp<%incoming.alias.mask>
 ; INITIAL-NEXT:    Successor(s): vector.body.split
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:    vector.body.split:
 ; INITIAL-NEXT:      CLONE ir<%ptr.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.a>, ir<1>
-; INITIAL-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP8]]>, vp<[[VP7]]>
+; INITIAL-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.a>, ir<1>
+; INITIAL-NEXT:      WIDEN ir<%ld.a> = load vp<[[VP6]]>, vp<[[VP5]]>
 ; INITIAL-NEXT:      CLONE ir<%ptr.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.b>, ir<1>
-; INITIAL-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP9]]>, vp<[[VP7]]>
+; INITIAL-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.b>, ir<1>
+; INITIAL-NEXT:      WIDEN ir<%ld.b> = load vp<[[VP7]]>, vp<[[VP5]]>
 ; INITIAL-NEXT:      WIDEN ir<%add> = add ir<%ld.b>, ir<%ld.a>
 ; INITIAL-NEXT:      CLONE ir<%ptr.c> = getelementptr inbounds ir<%c>, ir<%iv>
-; INITIAL-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.c>, ir<1>
-; INITIAL-NEXT:      WIDEN store vp<[[VP10]]>, ir<%add>, vp<[[VP7]]>
+; INITIAL-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds ir<%ptr.c>, ir<1>
+; INITIAL-NEXT:      WIDEN store vp<[[VP8]]>, ir<%add>, vp<[[VP5]]>
 ; INITIAL-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; INITIAL-NEXT:      CLONE ir<%exitcond.not> = icmp eq ir<%iv.next>, ir<%n>
 ; INITIAL-NEXT:    Successor(s): vector.latch
 ; INITIAL-EMPTY:
 ; INITIAL-NEXT:    vector.latch:
-; INITIAL-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
+; INITIAL-NEXT:      EMIT vp<%index.next> = add vp<[[VP3]]>, vp<[[VP1]]>
 ; INITIAL-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; INITIAL-NEXT:    No successors
 ; INITIAL-NEXT:  }

@@ -751,8 +751,7 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
   Address ContextAddr = CGF.GetAddrOfLocalVar(CD->getContextParam());
   ContextV = CGF.Builder.CreateLoad(ContextAddr);
 
-  // The runtime passes arguments as a flat array of promoted intptr_t values.
-  llvm::Type *IntPtrTy = CGF.IntPtrTy;
+  // The runtime passes arguments as an array of pointers.
   llvm::Type *PtrTy = CGF.Builder.getPtrTy();
   llvm::Align PtrAlign = CGM.getDataLayout().getPointerABIAlignment(0);
   CharUnits SlotAlign = CharUnits::fromQuantity(PtrAlign.value());
@@ -760,11 +759,12 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
   for (auto [FD, C, FieldIdx] :
        llvm::zip(RD->fields(), CS.captures(),
                  llvm::seq<unsigned>(RD->getNumFields()))) {
-    llvm::Value *Slot =
-        CGF.Builder.CreateConstInBoundsGEP1_32(IntPtrTy, ContextV, FieldIdx);
+    llvm::Value *SlotPtr =
+        CGF.Builder.CreateConstInBoundsGEP1_32(PtrTy, ContextV, FieldIdx);
+    llvm::Value *Slot = CGF.Builder.CreateAlignedLoad(PtrTy, SlotPtr, PtrAlign);
 
-    // Generate the appropriate load from the GEP into the __context struct.
-    // This includes all of the user arguments as well as the implicit kernel
+    // Generate the appropriate load from the per-argument storage. This
+    // includes all of the user arguments as well as the implicit kernel
     // argument pointer.
     if (C.capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
       const VarDecl *CurVD = C.getCapturedVar();
@@ -973,11 +973,14 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
       const ImplicitParamDecl *Param = CD->getParam(I);
       if (Param == CD->getContextParam())
         continue;
-      llvm::Value *ParamAddr = Builder.CreateConstInBoundsGEP1_32(
-          IntPtrTy, ContextV, FieldIdx, Twine(Param->getName()) + ".addr");
+      llvm::Align PtrAlign = CGM.getDataLayout().getPointerABIAlignment(0);
+      llvm::Value *SlotPtr = Builder.CreateConstInBoundsGEP1_32(
+          Builder.getPtrTy(), ContextV, FieldIdx,
+          Twine(Param->getName()) + ".addr");
+      llvm::Value *ParamAddr =
+          Builder.CreateAlignedLoad(Builder.getPtrTy(), SlotPtr, PtrAlign);
       llvm::Value *ParamVal = Builder.CreateAlignedLoad(
-          Builder.getPtrTy(), ParamAddr,
-          CGM.getDataLayout().getPointerABIAlignment(0), Param->getName());
+          Builder.getPtrTy(), ParamAddr, PtrAlign, Param->getName());
       Address ParamLocalAddr =
           CreateMemTemp(Param->getType(), Param->getName());
       Builder.CreateStore(ParamVal, ParamLocalAddr);
@@ -1016,8 +1019,10 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
 
   for (auto [FD, InnerParam, SlotIdx] : llvm::zip(
            RD->fields(), F->args(), llvm::seq<unsigned>(RD->getNumFields()))) {
-    llvm::Value *Slot = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
-        WrapperCGF.IntPtrTy, WrapperContextV, SlotIdx);
+    llvm::Value *SlotPtr = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
+        WrapperCGF.Builder.getPtrTy(), WrapperContextV, SlotIdx);
+    llvm::Value *Slot = WrapperCGF.Builder.CreateAlignedLoad(
+        WrapperCGF.Builder.getPtrTy(), SlotPtr, PtrAlign);
     llvm::Value *Val = WrapperCGF.Builder.CreateAlignedLoad(
         InnerParam.getType(), Slot, PtrAlign, InnerParam.getName());
     CallArgs.push_back(Val);
@@ -1026,8 +1031,10 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
   // Handle the load from the implicit dyn_ptr at the end of the __context.
   unsigned SlotIdx = RD->getNumFields();
   auto InnerParam = F->arg_begin() + SlotIdx;
-  llvm::Value *Slot = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
-      WrapperCGF.IntPtrTy, WrapperContextV, SlotIdx);
+  llvm::Value *SlotPtr = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
+      WrapperCGF.Builder.getPtrTy(), WrapperContextV, SlotIdx);
+  llvm::Value *Slot = WrapperCGF.Builder.CreateAlignedLoad(
+      WrapperCGF.Builder.getPtrTy(), SlotPtr, PtrAlign);
   llvm::Value *Val = WrapperCGF.Builder.CreateAlignedLoad(
       InnerParam->getType(), Slot, PtrAlign, InnerParam->getName());
   CallArgs.push_back(Val);
@@ -3898,9 +3905,14 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       // GPU combined `distribute parallel for`: emit a single
       // for_static_init with the fused distr_static_chunk + static_chunkone
       // schedule (enum 93). The surrounding EmitOMPDistributeLoop must skip
-      // its distribute_static_init under the same conditions.
-      if (StaticChunkedOne && canEmitGPUFusedDistSchedule(CGM, S, EKind))
-        ScheduleKind.UseFusedDistChunkSchedule = true;
+      // its distribute_static_init under the same conditions. Both sites are
+      // guarded by canEmitGPUFusedDistSchedule() alone so they cannot
+      // disagree; the assert guards the invariant that makes this safe today,
+      // aka that the implicit GPU default schedule is always static chunk-one.
+      ScheduleKind.UseFusedDistChunkSchedule =
+          canEmitGPUFusedDistSchedule(CGM, S, EKind);
+      assert((!ScheduleKind.UseFusedDistChunkSchedule || StaticChunkedOne) &&
+             "fused distribute schedule requires a static chunk-one schedule");
       bool IsMonotonic =
           Ordered ||
           (ScheduleKind.Schedule == OMPC_SCHEDULE_static &&
@@ -7354,17 +7366,50 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
           CGF, S, *CS->getCapturedDecl()->param_begin(), InnermostKind,
           CodeGen);
 
-  const auto *NT = S.getSingleClause<OMPNumTeamsClause>();
-  const auto *TL = S.getSingleClause<OMPThreadLimitClause>();
-  if (NT || TL) {
-    const Expr *NumTeams = NT ? NT->getNumTeams().front() : nullptr;
-    const Expr *ThreadLimit = TL ? TL->getThreadLimit().front() : nullptr;
+  OMPTeamsScope Scope(CGF, S);
+  auto ParallelLeague = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+    const auto *NT = S.getSingleClause<OMPNumTeamsClause>();
+    const auto *TL = S.getSingleClause<OMPThreadLimitClause>();
+    if (NT || TL) {
+      const Expr *NumTeams = NT ? NT->getNumTeams().front() : nullptr;
+      const Expr *ThreadLimit = TL ? TL->getThreadLimit().front() : nullptr;
 
-    CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, NumTeams, ThreadLimit,
-                                                  S.getBeginLoc());
+      CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, NumTeams, ThreadLimit,
+                                                    S.getBeginLoc());
+    }
+  };
+
+  const Expr *IfCond = nullptr;
+  for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
+    if (C->getNameModifier() == OMPD_unknown ||
+        C->getNameModifier() == OMPD_teams) {
+      IfCond = C->getCondition();
+      break;
+    }
+  }
+  if (IfCond && CGF.CGM.getLangOpts().OpenMP >= 52) {
+    auto SerialLeague = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+      // OpenMP 5.2, 10.2, teams Construct
+      // When an if clause is present on a teams construct and the if clause
+      // expression evaluates to false, the number of created teams is one.
+      const llvm::APInt One(32, 1);
+      IntegerLiteral NumTeams(
+          CGF.getContext(), One,
+          CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
+          SourceLocation());
+      // The thread_limit clause is unaffected by the if clause.
+      const auto *TL = S.getSingleClause<OMPThreadLimitClause>();
+      const Expr *ThreadLimit = TL ? TL->getThreadLimit().front() : nullptr;
+      CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, &NumTeams, ThreadLimit,
+                                                    S.getBeginLoc());
+    };
+    CGF.CGM.getOpenMPRuntime().emitIfClause(CGF, IfCond, ParallelLeague,
+                                            SerialLeague);
+  } else {
+    const RegionCodeGenTy ThenRCG(ParallelLeague);
+    ThenRCG(CGF);
   }
 
-  OMPTeamsScope Scope(CGF, S);
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
   CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
   CGF.CGM.getOpenMPRuntime().emitTeamsCall(CGF, S, S.getBeginLoc(), OutlinedFn,

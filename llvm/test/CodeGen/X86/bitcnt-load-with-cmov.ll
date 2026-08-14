@@ -101,9 +101,7 @@ define i64 @popcnt64_load_cmov(ptr %p0, i64 %a1) {
 define i32 @lzcnt32_no_fold_nonzero_cmp(ptr %p0, i32 %a1) {
 ; CHECK-LABEL: lzcnt32_no_fold_nonzero_cmp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %ecx
-; CHECK-NEXT:    lzcntl %ecx, %eax
-; CHECK-NEXT:    cmpl $1, %ecx
+; CHECK-NEXT:    lzcntl (%rdi), %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %v = load i32, ptr %p0, align 4

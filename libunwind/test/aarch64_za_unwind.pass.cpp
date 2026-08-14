@@ -9,6 +9,7 @@
 // REQUIRES: target={{aarch64-.+}}
 // UNSUPPORTED: target={{.*-windows.*}}
 
+#include <alloca.h>
 #include <libunwind.h>
 #include <stdint.h>
 #include <stdio.h>

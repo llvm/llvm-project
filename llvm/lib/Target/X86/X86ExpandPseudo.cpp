@@ -672,7 +672,6 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
-  case X86::PTMMULTF32PSV:
   case X86::PTDPBF8PSV:
   case X86::PTDPBHF8PSV:
   case X86::PTDPHBF8PSV:
@@ -691,7 +690,6 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    case X86::PTMMULTF32PSV: Opc = X86::TMMULTF32PS; break;
     case X86::PTDPBF8PSV: Opc = X86::TDPBF8PS; break;
     case X86::PTDPBHF8PSV: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PSV: Opc = X86::TDPHBF8PS; break;
@@ -771,8 +769,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     unsigned Count = !!MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
     if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
       ++Count;
-    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
-        X86MCRegisterClasses[X86::GR32RegClassID].contains(Index))
+    if (getX86MCRegisterClass(X86::GR32RegClassID).contains(Base) ||
+        getX86MCRegisterClass(X86::GR32RegClassID).contains(Index))
       ++Count;
     if (Count < 2)
       return false;

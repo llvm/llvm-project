@@ -7,10 +7,10 @@ define i1 @test(ptr %arg, ptr %arg1, i1 %arg2, i1 %arg3, i1 %arg4) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr [[ARG1]], i64 3684
 ; CHECK-NEXT:    [[GETELEMENTPTR5:%.*]] = getelementptr i8, ptr [[ARG]], i64 21
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[ARG1]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[ARG1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <8 x ptr> [[TMP1]], <8 x i64> <i64 8484, i64 8484, i64 8484, i64 5284, i64 8484, i64 8484, i64 8484, i64 8484>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x ptr> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x ptr> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult ptr [[TMP3]], null
 ; CHECK-NEXT:    [[ICMP7:%.*]] = icmp ult ptr null, null
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 false, [[ICMP7]]
@@ -19,9 +19,9 @@ define i1 @test(ptr %arg, ptr %arg1, i1 %arg2, i1 %arg3, i1 %arg4) {
 ; CHECK-NEXT:    [[ICMP14:%.*]] = icmp ult ptr null, null
 ; CHECK-NEXT:    [[AND15:%.*]] = and i1 false, [[ICMP14]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <8 x ptr> [[TMP2]], splat (ptr null)
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i1> <i1 false, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, i1 [[ARG2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i1> <i1 false, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, i1 [[ARG2]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x ptr> [[TMP2]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x ptr> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[ICMP46:%.*]] = icmp ult ptr [[TMP7]], null
 ; CHECK-NEXT:    [[AND47:%.*]] = and i1 false, [[ICMP46]]
 ; CHECK-NEXT:    [[ICMP49:%.*]] = icmp ult ptr [[ARG]], null

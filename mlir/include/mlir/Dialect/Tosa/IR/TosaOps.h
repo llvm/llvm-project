@@ -135,6 +135,16 @@ RankedTensorType getVariableType(VariableOp variableOp);
 // Returns the bitwidth of a TOSA tensor element type
 unsigned getBitWidth(Type type);
 
+// Returns the storage element type for a given type
+Type getStorageElementTypeOrSelf(Type type);
+
+// Returns the storage element type for a given value
+Type getStorageElementTypeOrSelf(Value value);
+
+// Verify a block scaled tensor type is valid
+LogicalResult verifyBlockScaledTensorType(mlir::Type type,
+                                          bool allowScaleValues);
+
 } // namespace tosa
 } // namespace mlir
 

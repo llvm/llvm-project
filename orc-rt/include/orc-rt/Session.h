@@ -19,7 +19,6 @@
 #include "orc-rt/LockedAccess.h"
 #include "orc-rt/Service.h"
 #include "orc-rt/SimpleSymbolTable.h"
-#include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/TaskGroup.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
@@ -106,6 +105,18 @@ public:
   using ErrorReporterFn = move_only_function<void(Error)>;
   using OnDetachFn = move_only_function<void()>;
   using OnShutdownFn = move_only_function<void()>;
+
+  /// Callback used by the Session to run incoming wrapper-function calls.
+  ///
+  /// A ManagedCodeTaskGroup token is created for each call to this callback,
+  /// and implementations must eventually call either Fn (typically as
+  /// Fn(S, CallId, Return, ArgBytes.release())), or call Return directly to
+  /// bail out of the call (typically with
+  /// WrapperFunctionBuffer::createOutOfBandError(...)). Failing to do either
+  /// will block Session shutdown indefinitely.
+  using RunWrapperCall = move_only_function<void(
+      orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
+      orc_rt_WrapperFunction Fn, WrapperFunctionBuffer ArgBytes)>;
 
   using HandlerTag = void *;
   using OnCallHandlerCompleteFn =
@@ -208,9 +219,13 @@ public:
   /// program are not generally visible to ORC-RT, but can optionally be
   /// reported by calling the orc_rt_Session_reportError function.)
   ///
+  /// The RunCall callback will be invoked for every incoming wrapper-function
+  /// call, and is responsible for arranging the call to be run (inline,
+  /// queued, or posted to a thread pool, at the caller's discretion).
+  ///
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
-  Session(ExecutorProcessInfo EPI, std::unique_ptr<TaskDispatcher> Dispatcher,
+  Session(ExecutorProcessInfo EPI, RunWrapperCall RunCall,
           ErrorReporterFn ReportError);
 
   // Sessions are not copyable or moveable.
@@ -228,9 +243,6 @@ public:
   /// Provides information about the host process that the Session is running
   /// in.
   const ExecutorProcessInfo &processInfo() const noexcept { return EPI; }
-
-  /// Dispatch a task using the Session's TaskDispatcher.
-  void dispatch(std::unique_ptr<Task> T) { Dispatcher->dispatch(std::move(T)); }
 
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
@@ -265,26 +277,46 @@ public:
     return addService(std::move(*Srv));
   }
 
-  /// Initiate connection with controller, using the given BootstrapInfo.
-  ///
-  /// Upon first call, assuming that the Session has not already been detached
-  /// or shutdown, this will take (shared) ownership of CA and call its connect
-  /// method.
-  ///
-  /// If detach or shutdown have already been called then this method will not
-  /// take ownership of CA or call its connect method.
-  void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
-
-  /// Construct a ControllerAccessT with the given args, then immediately
-  /// attach using the given BootstrapInfo.
+  /// Construct a ControllerAccessT and immediately attach using the given
+  /// BootstrapInfo.
   ///
   /// This enables one-line attach operations in the common case where the
-  /// ControllerAccess implementation does not require any further
-  /// configuration after construction.
+  /// ControllerAccess implementation requires no further configuration after
+  /// construction and cannot fail to construct. ControllerAccess
+  /// implementations whose setup can fail (e.g. binding a socket) should
+  /// provide a Create factory and use tryAttach instead.
+  ///
+  /// ControllerAccessT is constructed with a reference to this Session as its
+  /// first argument, followed by the given args, as required by the
+  /// ControllerAccess base constructor.
   template <typename ControllerAccessT, typename... ArgTs>
   void attach(BootstrapInfo BI, ArgTs &&...Args) {
-    attach(std::make_shared<ControllerAccessT>(std::forward<ArgTs>(Args)...),
-           std::move(BI));
+    doAttach(std::make_shared<ControllerAccessT>(*this,
+                                                 std::forward<ArgTs>(Args)...),
+             std::move(BI));
+  }
+
+  /// Try to construct a ControllerAccessT by forwarding a reference to this
+  /// Session and the given args to ControllerAccessT::Create, which must
+  /// return an Expected<std::shared_ptr<ControllerAccessT>>. On success,
+  /// immediately attaches using the given BootstrapInfo.
+  ///
+  /// This is the fallible counterpart to attach<ControllerAccessT>: it allows
+  /// ControllerAccess implementations to surface setup failures (e.g. failure
+  /// to bind a socket) synchronously as an Error, without ever handing the
+  /// caller a usable-but-unconnected ControllerAccess object. Runtime and
+  /// remote failures should still be reported asynchronously via
+  /// notifyDisconnected.
+  ///
+  /// ControllerAccessT::Create is passed a reference to this Session as its
+  /// first argument, followed by the given args.
+  template <typename ControllerAccessT, typename... ArgTs>
+  Error tryAttach(BootstrapInfo BI, ArgTs &&...Args) {
+    auto CA = ControllerAccessT::Create(*this, std::forward<ArgTs>(Args)...);
+    if (!CA)
+      return CA.takeError();
+    doAttach(std::move(*CA), std::move(BI));
+    return Error::success();
   }
 
   /// Initiate detach from the controller.
@@ -309,10 +341,8 @@ public:
   ///      complete (via ManagedCodeTaskGroup).
   ///   3. Shutdown services: Calls onShutdown on all Services in reverse
   ///      order.
-  ///   4. Shutdown TaskDispatcher.
   ///
-  /// The optional OnShutdown callback is called after step (3), before
-  /// the TaskDispatcher is shut down.
+  /// The optional OnShutdown callback is called after step (3).
   void shutdown(OnShutdownFn OnShutdown = {});
 
   /// Register a callback to be called when the Session detaches from the
@@ -443,6 +473,18 @@ private:
 
   void appendService(std::unique_ptr<Service> Srv);
 
+  /// Attach the given ControllerAccess, using the given BootstrapInfo.
+  ///
+  /// Upon first call, assuming that the Session has not already been detached
+  /// or shutdown, this takes (shared) ownership of CA and calls its connect
+  /// method. If detach or shutdown have already been called then this method
+  /// will not take ownership of CA or call its connect method.
+  ///
+  /// This is an implementation detail of the public attach / tryAttach
+  /// templates, which are responsible for constructing the ControllerAccess
+  /// object: clients never hold a ControllerAccess directly.
+  void doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
+
   void handleDisconnect();
   void proceedToDetach(std::unique_lock<std::mutex> &Lock,
                        std::shared_ptr<ControllerAccess> TmpCA);
@@ -464,22 +506,15 @@ private:
       return;
     }
 
-    dispatch(makeGenericTask([=, ArgBytes = std::move(ArgBytes)]() mutable {
-      Fn(wrap(this), CallId, wrapperReturn, ArgBytes.release());
-    }));
+    RunCall(wrap(this), CallId, &wrapperReturn, Fn, std::move(ArgBytes));
   }
 
-  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
-    if (auto TmpCA = std::atomic_load(&CA))
-      TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
-    ManagedCodeTaskGroup->releaseToken();
-  }
-
+  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes);
   static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes);
 
   ExecutorProcessInfo EPI;
-  std::unique_ptr<TaskDispatcher> Dispatcher;
+  RunWrapperCall RunCall;
   std::shared_ptr<TaskGroup> ManagedCodeTaskGroup = TaskGroup::Create();
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
@@ -490,6 +525,17 @@ private:
   State TargetState = State::None;
   std::vector<std::unique_ptr<Service>> Services;
   NotificationService &Notifiers;
+};
+
+/// Helper function object to report errors via the given Session's
+/// reportError method.
+class ReportErrorsViaSession {
+public:
+  explicit ReportErrorsViaSession(Session &S) : S(S) {}
+  void operator()(Error Err) const { S.reportError(std::move(Err)); }
+
+private:
+  Session &S;
 };
 
 } // namespace orc_rt

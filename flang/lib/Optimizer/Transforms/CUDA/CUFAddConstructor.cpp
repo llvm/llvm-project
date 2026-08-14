@@ -10,14 +10,11 @@
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/Target.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -125,6 +122,26 @@ static mlir::Value computeGlobalSize(fir::FirOpBuilder &builder,
                .first;
   }
   return builder.createIntegerConstant(loc, idxTy, *size);
+}
+
+/// Storage size in bytes of \p globalOp as a raw integer (see computeGlobalSize
+/// for the box vs declared-type handling).
+static uint64_t getGlobalSizeInBytes(mlir::Location loc,
+                                     const mlir::DataLayout &dl,
+                                     const fir::KindMapping &kindMap,
+                                     fir::LLVMTypeConverter &typeConverter,
+                                     fir::GlobalOp globalOp) {
+  std::optional<uint64_t> size;
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(globalOp.getType())) {
+    mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
+    size = dl.getTypeSizeInBits(structTy) / 8;
+  }
+  if (!size) {
+    size = fir::getTypeSizeAndAlignmentOrCrash(loc, globalOp.getType(), dl,
+                                               kindMap)
+               .first;
+  }
+  return *size;
 }
 
 /// Emit a call to a CUF registration runtime function with the canonical
@@ -291,6 +308,18 @@ struct CUFAddConstructor
                                       typeConverter, registeredMod, func,
                                       /*addrGlobal=*/globalOp,
                                       /*nameGlobal=*/globalOp);
+              // Under -gpu=mem:unified, also register the global as
+              // device-resident so a matching host symbol from another
+              // translation unit is not treated as host memory.
+              if (cudaUnified) {
+                uint64_t szBytes = getGlobalSizeInBytes(
+                    loc, *dl, kindMap, typeConverter, globalOp);
+                cuf::RegisterVariableStaticOp::create(
+                    builder, loc,
+                    mlir::SymbolRefAttr::get(ctx, globalOp.getSymName()),
+                    builder.getStringAttr(globalOp.getSymName()),
+                    builder.getI64IntegerAttr(szBytes));
+              }
             }
           } break;
           default:

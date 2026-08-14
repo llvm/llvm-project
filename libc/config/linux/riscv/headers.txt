@@ -15,6 +15,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.fenv
     libc.include.float
     libc.include.inttypes
+    libc.include.libgen
     libc.include.limits
     libc.include.link
     libc.include.locale
@@ -23,6 +24,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.netinet_in
     libc.include.netinet_tcp
     libc.include.netinet_udp
+    libc.include.nl_types
     libc.include.poll
     libc.include.pthread
     libc.include.sched
@@ -57,6 +59,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_time
     libc.include.sys_types
     libc.include.sys_uio
+    libc.include.sys_un
     libc.include.sys_utsname
     libc.include.sys_wait
     libc.include.syscall

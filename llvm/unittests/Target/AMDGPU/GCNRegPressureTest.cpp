@@ -22,7 +22,7 @@ using namespace llvm;
 
 class GCNRegPressureTest : public llvm::CodeGenTestBase {
 public:
-  void SetUp() override { setUpImpl("amdgcn--", "gfx908", ""); }
+  void SetUp() override { setUpImpl("amdgpu9.08--", "", ""); }
 };
 
 TEST_F(GCNRegPressureTest, DownwardTrackerEndOnDbgVal) {

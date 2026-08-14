@@ -469,12 +469,12 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; COST1-NEXT:    [[TMP6:%.*]] = mul <4 x i64> [[VEC_IND]], splat (i64 3)
 ; COST1-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP6]], i64 0
-; COST1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP6]], i64 1
-; COST1-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP6]], i64 2
-; COST1-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP6]], i64 3
 ; COST1-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
+; COST1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP6]], i64 1
 ; COST1-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
+; COST1-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP6]], i64 2
 ; COST1-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP9]]
+; COST1-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP6]], i64 3
 ; COST1-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP10]]
 ; COST1-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP11]], i64 2
 ; COST1-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP12]], i64 2
@@ -535,12 +535,12 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST10-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; COST10-NEXT:    [[TMP3:%.*]] = mul <4 x i64> [[VEC_IND]], splat (i64 3)
 ; COST10-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
-; COST10-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i64 1
-; COST10-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i64 2
-; COST10-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
 ; COST10-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; COST10-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i64 1
 ; COST10-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
+; COST10-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i64 2
 ; COST10-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
+; COST10-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i64 3
 ; COST10-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
 ; COST10-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP8]], i64 2
 ; COST10-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP9]], i64 2
@@ -600,8 +600,8 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
 ; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
-; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
 ; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
 ; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; COMMON:       [[PRED_STORE_IF]]:
@@ -731,22 +731,22 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST1-NEXT:    [[TMP39:%.*]] = insertelement <4 x i8> [[TMP38]], i8 [[TMP35]], i32 2
 ; COST1-NEXT:    [[TMP40:%.*]] = insertelement <4 x i8> [[TMP39]], i8 [[TMP36]], i32 3
 ; COST1-NEXT:    [[TMP41:%.*]] = zext <4 x i8> [[TMP32]] to <4 x i32>
-; COST1-NEXT:    [[TMP44:%.*]] = extractelement <4 x i32> [[TMP41]], i64 0
-; COST1-NEXT:    [[TMP49:%.*]] = extractelement <4 x i32> [[TMP41]], i64 1
-; COST1-NEXT:    [[TMP42:%.*]] = extractelement <4 x i32> [[TMP41]], i64 2
-; COST1-NEXT:    [[TMP43:%.*]] = extractelement <4 x i32> [[TMP41]], i64 3
 ; COST1-NEXT:    [[TMP46:%.*]] = zext <4 x i8> [[TMP40]] to <4 x i32>
-; COST1-NEXT:    [[TMP45:%.*]] = extractelement <4 x i32> [[TMP46]], i64 0
-; COST1-NEXT:    [[TMP50:%.*]] = extractelement <4 x i32> [[TMP46]], i64 1
-; COST1-NEXT:    [[TMP47:%.*]] = extractelement <4 x i32> [[TMP46]], i64 2
-; COST1-NEXT:    [[TMP48:%.*]] = extractelement <4 x i32> [[TMP46]], i64 3
+; COST1-NEXT:    [[TMP44:%.*]] = extractelement <4 x i32> [[TMP41]], i64 0
 ; COST1-NEXT:    store i32 [[TMP44]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META22:![0-9]+]], !noalias [[META19]]
+; COST1-NEXT:    [[TMP49:%.*]] = extractelement <4 x i32> [[TMP41]], i64 1
 ; COST1-NEXT:    store i32 [[TMP49]], ptr [[NEXT_GEP2]], align 4, !alias.scope [[META22]], !noalias [[META19]]
+; COST1-NEXT:    [[TMP42:%.*]] = extractelement <4 x i32> [[TMP41]], i64 2
 ; COST1-NEXT:    store i32 [[TMP42]], ptr [[NEXT_GEP3]], align 4, !alias.scope [[META22]], !noalias [[META19]]
+; COST1-NEXT:    [[TMP43:%.*]] = extractelement <4 x i32> [[TMP41]], i64 3
 ; COST1-NEXT:    store i32 [[TMP43]], ptr [[NEXT_GEP4]], align 4, !alias.scope [[META22]], !noalias [[META19]]
+; COST1-NEXT:    [[TMP45:%.*]] = extractelement <4 x i32> [[TMP46]], i64 0
 ; COST1-NEXT:    store i32 [[TMP45]], ptr [[NEXT_GEP5]], align 4, !alias.scope [[META22]], !noalias [[META19]]
+; COST1-NEXT:    [[TMP50:%.*]] = extractelement <4 x i32> [[TMP46]], i64 1
 ; COST1-NEXT:    store i32 [[TMP50]], ptr [[NEXT_GEP6]], align 4, !alias.scope [[META22]], !noalias [[META19]]
+; COST1-NEXT:    [[TMP47:%.*]] = extractelement <4 x i32> [[TMP46]], i64 2
 ; COST1-NEXT:    store i32 [[TMP47]], ptr [[NEXT_GEP7]], align 4, !alias.scope [[META22]], !noalias [[META19]]
+; COST1-NEXT:    [[TMP48:%.*]] = extractelement <4 x i32> [[TMP46]], i64 3
 ; COST1-NEXT:    store i32 [[TMP48]], ptr [[NEXT_GEP8]], align 4, !alias.scope [[META22]], !noalias [[META19]]
 ; COST1-NEXT:    [[TMP51:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 24
 ; COST1-NEXT:    [[TMP52:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 24
@@ -844,12 +844,12 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST10-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP16]], i32 3
 ; COST10-NEXT:    [[TMP21:%.*]] = zext <4 x i8> [[TMP20]] to <4 x i32>
 ; COST10-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP21]], i64 0
-; COST10-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP21]], i64 1
-; COST10-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[TMP21]], i64 2
-; COST10-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP21]], i64 3
 ; COST10-NEXT:    store i32 [[TMP24]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META22:![0-9]+]], !noalias [[META19]]
+; COST10-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP21]], i64 1
 ; COST10-NEXT:    store i32 [[TMP25]], ptr [[NEXT_GEP2]], align 4, !alias.scope [[META22]], !noalias [[META19]]
+; COST10-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[TMP21]], i64 2
 ; COST10-NEXT:    store i32 [[TMP22]], ptr [[NEXT_GEP3]], align 4, !alias.scope [[META22]], !noalias [[META19]]
+; COST10-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP21]], i64 3
 ; COST10-NEXT:    store i32 [[TMP23]], ptr [[NEXT_GEP4]], align 4, !alias.scope [[META22]], !noalias [[META19]]
 ; COST10-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 24
 ; COST10-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 24

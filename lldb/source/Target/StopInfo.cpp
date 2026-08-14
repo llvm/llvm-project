@@ -193,7 +193,7 @@ public:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // Breakpoint callbacks run on the PST during stop processing. Push
     // private state context so callback code sees the private reality.
-    PolicyStack::Guard policy_guard(Policy::PrivateState());
+    PolicyStack::Guard policy_guard = PolicyStack::Get().PushPrivateState();
 
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
@@ -436,8 +436,7 @@ protected:
           ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
           Process *process = exe_ctx.GetProcessPtr();
           Policy policy = PolicyStack::Get().Current();
-          if (!policy.capabilities.can_run_breakpoint_actions ||
-              process->GetModIDRef().IsRunningExpression()) {
+          if (!policy.capabilities.can_run_breakpoint_actions) {
             // If we are in the middle of evaluating an expression, don't run
             // asynchronous breakpoint commands or expressions.  That could
             // lead to infinite recursion if the command or condition re-calls
@@ -903,7 +902,7 @@ protected:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // Watchpoint callbacks run on the PST during stop processing. Push
     // private state context so callback code sees the private reality.
-    PolicyStack::Guard policy_guard(Policy::PrivateState());
+    PolicyStack::Guard policy_guard = PolicyStack::Get().PushPrivateState();
 
     // If we are running our step-over the watchpoint plan, stop if it's done
     // and continue if it's not:

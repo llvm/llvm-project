@@ -79,8 +79,12 @@ createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (TT.getArch() == Triple::r600)
     return createR600MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 
-  MCSubtargetInfo *STI =
-      createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  StringRef ResolvedCPU = CPU;
+  if (ResolvedCPU.empty())
+    ResolvedCPU = AMDGPU::getArchNameFromSubArch(TT.getSubArch());
+
+  MCSubtargetInfo *STI = createAMDGPUMCSubtargetInfoImpl(
+      TT, ResolvedCPU, /*TuneCPU*/ ResolvedCPU, FS);
 
   bool IsWave64 = STI->hasFeature(AMDGPU::FeatureWavefrontSize64);
   bool IsWave32 = STI->hasFeature(AMDGPU::FeatureWavefrontSize32);
@@ -191,9 +195,12 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAMDGPUTargetMC() {
 
   TargetRegistry::RegisterMCInstrInfo(getTheGCNTarget(), createAMDGPUMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheGCNLegacyTarget(),
+                                      createAMDGPUMCInstrInfo);
   TargetRegistry::RegisterMCInstrInfo(getTheR600Target(),
                                       createR600MCInstrInfo);
-  for (Target *T : {&getTheR600Target(), &getTheGCNTarget()}) {
+  for (Target *T :
+       {&getTheR600Target(), &getTheGCNTarget(), &getTheGCNLegacyTarget()}) {
     RegisterMCAsmInfo<AMDGPUMCAsmInfo> X(*T);
 
     TargetRegistry::RegisterMCRegInfo(*T, createAMDGPUMCRegisterInfo);
@@ -211,13 +218,14 @@ LLVMInitializeAMDGPUTargetMC() {
       getTheR600Target(), createAMDGPUObjectTargetStreamer);
 
   // GCN specific registration
-  TargetRegistry::RegisterMCCodeEmitter(getTheGCNTarget(),
-                                        createAMDGPUMCCodeEmitter);
+  for (Target *T : {&getTheGCNTarget(), &getTheGCNLegacyTarget()}) {
+    TargetRegistry::RegisterMCCodeEmitter(*T, createAMDGPUMCCodeEmitter);
 
-  TargetRegistry::RegisterAsmTargetStreamer(getTheGCNTarget(),
-                                            createAMDGPUAsmTargetStreamer);
-  TargetRegistry::RegisterObjectTargetStreamer(
-      getTheGCNTarget(), createAMDGPUObjectTargetStreamer);
-  TargetRegistry::RegisterNullTargetStreamer(getTheGCNTarget(),
-                                             createAMDGPUNullTargetStreamer);
+    TargetRegistry::RegisterAsmTargetStreamer(*T,
+                                              createAMDGPUAsmTargetStreamer);
+    TargetRegistry::RegisterObjectTargetStreamer(
+        *T, createAMDGPUObjectTargetStreamer);
+    TargetRegistry::RegisterNullTargetStreamer(*T,
+                                               createAMDGPUNullTargetStreamer);
+  }
 }

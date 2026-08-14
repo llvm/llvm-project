@@ -7,7 +7,7 @@
 // CHECK-REPRODUCABLE-NOT: filename:
 
 //NOTE: currently . and .\ just gets eliminated after mapping 
-// RUN: %clang_cl -E /pathmap:%p=. %s | FileCheck %s --check-prefix CHECK-SIMPLE
+// RUN: %clang_cl -E /pathmap:%p=. -- %s | FileCheck %s --check-prefix CHECK-SIMPLE
 // CHECK-SIMPLE: filename: "cl-pathmap.c"
 // CHECK-SIMPLE-NOT: filename:
 filename: __FILE__

@@ -45,10 +45,17 @@
 // RUN: %clang_cl -arm64EC -marm64x -fuse-ld=link -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X %s
 // ARM64X: "-machine:arm64x"
 
+// RUN: %clang --target=arm64ec-pc-windows-msvc -marm64x -### %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang --target=aarch64-pc-windows-msvc -marm64x -### %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang_cl -marm64x -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// RUN: %clang_cl -arm64EC -marm64x -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X-LLD %s
+// ARM64X-LLD: lld-link
+// ARM64X-LLD-SAME: "-machine:arm64x"
+
 // RUN: not %clang --target=x86_64-linux-gnu -marm64x -### %s 2>&1 | FileCheck --check-prefix=HYBRID-ERR %s
 // HYBRID-ERR: error: unsupported option '-marm64x' for target 'x86_64-linux-gnu'
 
-// RUN: %clang -c -marm64x  --target=arm64ec-pc-windows-msvc -fuse-ld=link -### %s 2>&1 | \
+// RUN: %clang -S -marm64x  --target=arm64ec-pc-windows-msvc -fuse-ld=link -### %s 2>&1 | \
 // RUN:        FileCheck --check-prefix=HYBRID-WARN %s
 // HYBRID-WARN: warning: argument unused during compilation: '-marm64x' [-Wunused-command-line-argument]
 

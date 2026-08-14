@@ -1807,9 +1807,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     }
 
     if (IsExported) {
-      // TODO: use F->getGUID() once #184065 is relanded.
-      GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-          GlobalValue::dropLLVMManglingEscape(F->getName()));
+      GlobalValue::GUID GUID = F->getGUID();
       if (IsJumpTableCanonical)
         ExportSummary->cfiFunctionDefs().addSymbolWithThinLTOGUID(F->getName(),
                                                                   GUID);
@@ -2270,22 +2268,28 @@ bool LowerTypeTestsModule::lower() {
           F = nullptr;
         }
 
-        if (!F)
+        if (!F) {
           F = Function::Create(
               FunctionType::get(Type::getVoidTy(M.getContext()), false),
               GlobalVariable::ExternalLinkage,
               M.getDataLayout().getProgramAddressSpace(), FunctionName, &M);
-
+          F->setMetadata(
+              LLVMContext::MD_unique_id,
+              MDTuple::get(M.getContext(), {FuncMD->getOperand(2).get()}));
+        }
         // If the function is available_externally, remove its definition so
         // that it is handled the same way as a declaration. Later we will try
         // to create an alias using this function's linkage, which will fail if
         // the linkage is available_externally. This will also result in us
         // following the code path below to replace the type metadata.
         if (F->hasAvailableExternallyLinkage()) {
+          // Maintain !guid metadata.
+          auto *OrigGUIDMD = F->getMetadata(LLVMContext::MD_unique_id);
           F->setLinkage(GlobalValue::ExternalLinkage);
           F->deleteBody();
           F->setComdat(nullptr);
           F->clearMetadata();
+          F->setMetadata(LLVMContext::MD_unique_id, OrigGUIDMD);
         }
 
         // Update the linkage for extern_weak declarations when a definition

@@ -2626,13 +2626,12 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheReadOnlyAddress() {
         SectionList *section_list = objc_module_sp->GetSectionList();
 
         if (section_list) {
-          SectionSP text_segment_sp(
-              section_list->FindSectionByName(ConstString("__TEXT")));
+          SectionSP text_segment_sp(section_list->FindSectionByName("__TEXT"));
 
           if (text_segment_sp) {
             SectionSP objc_opt_section_sp(
                 text_segment_sp->GetChildren().FindSectionByName(
-                    ConstString("__objc_opt_ro")));
+                    "__objc_opt_ro"));
 
             if (objc_opt_section_sp) {
               return objc_opt_section_sp->GetLoadBaseAddress(
@@ -3091,16 +3090,16 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorLegacy::IsPossibleTaggedPointer(
   return (ptr & 1);
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
     lldb::addr_t ptr) {
   if (!IsPossibleTaggedPointer(ptr))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uint32_t foundation_version = m_runtime.GetFoundationVersion();
 
   if (foundation_version == LLDB_INVALID_MODULE_VERSION)
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uint64_t class_bits = (ptr & 0xE) >> 1;
   ConstString name;
@@ -3129,7 +3128,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
       name = g_NSDate;
       break;
     default:
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     }
   } else {
     switch (class_bits) {
@@ -3146,12 +3145,12 @@ AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
       name = g_NSDateTS;
       break;
     default:
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     }
   }
 
   lldb::addr_t unobfuscated = ptr ^ m_runtime.GetTaggedPointerObfuscator();
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(name, unobfuscated));
+  return std::make_unique<ClassDescriptorV2Tagged>(name, unobfuscated);
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::
@@ -3178,14 +3177,14 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::
   return (ptr & m_objc_debug_taggedpointer_mask) != 0;
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
   uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
   if (!IsPossibleTaggedPointer(unobfuscated))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uintptr_t slot = (ptr >> m_objc_debug_taggedpointer_slot_shift) &
                    m_objc_debug_taggedpointer_slot_mask;
@@ -3212,7 +3211,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
       }
     }
     if (!actual_class_descriptor_sp)
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     m_cache[slot] = actual_class_descriptor_sp;
   }
 
@@ -3222,8 +3221,8 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
   int64_t data_payload_signed =
       ((int64_t)(unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(
-      actual_class_descriptor_sp, data_payload, data_payload_signed));
+  return std::make_unique<ClassDescriptorV2Tagged>(
+      actual_class_descriptor_sp, data_payload, data_payload_signed);
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorExtended::TaggedPointerVendorExtended(
@@ -3271,14 +3270,14 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorExtended::
           m_objc_debug_taggedpointer_ext_mask);
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
   uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
   if (!IsPossibleTaggedPointer(unobfuscated))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   if (!IsPossibleExtendedTaggedPointer(unobfuscated))
     return this->TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(ptr);
@@ -3301,7 +3300,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     actual_class_descriptor_sp =
         m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
     if (!actual_class_descriptor_sp)
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     m_ext_cache[slot] = actual_class_descriptor_sp;
   }
 
@@ -3313,8 +3312,8 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
                  << m_objc_debug_taggedpointer_ext_payload_lshift) >>
        m_objc_debug_taggedpointer_ext_payload_rshift);
 
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(
-      actual_class_descriptor_sp, data_payload, data_payload_signed));
+  return std::make_unique<ClassDescriptorV2Tagged>(
+      actual_class_descriptor_sp, data_payload, data_payload_signed);
 }
 
 AppleObjCRuntimeV2::NonPointerISACache::NonPointerISACache(
@@ -3629,6 +3628,7 @@ static void RegisterObjCExceptionRecognizer(Process *process) {
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-      module.GetFilename(), symbols, Mangled::NamePreference::ePreferDemangled,
+      ConstString(module.GetFilename()), symbols,
+      Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ true);
 }

@@ -2426,16 +2426,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
-    // Keep track of the various subcomponents we see.
-    // FIXME: Comps and D below carry the same designator chain in two
-    // different shapes. ActOnBuiltinOffsetOf should be taught to accept a
-    // Designation directly so this duplication can go away.
-    SmallVector<Sema::OffsetOfComponent, 4> Comps;
-
-    Comps.push_back(Sema::OffsetOfComponent());
-    Comps.back().isBrackets = false;
-    Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-    Comps.back().LocStart = Comps.back().LocEnd = Tok.getLocation();
     D.AddDesignator(Designator::CreateFieldDesignator(
         Tok.getIdentifierInfo(), SourceLocation(), Tok.getLocation()));
     ConsumeToken();
@@ -2444,9 +2434,7 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     while (true) {
       if (Tok.is(tok::period)) {
         // offsetof-member-designator: offsetof-member-designator '.' identifier
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = false;
-        Comps.back().LocStart = ConsumeToken();
+        SourceLocation DotLoc = ConsumeToken();
 
         if (Tok.is(tok::code_completion)) {
           TriggerCompletion(D);
@@ -2457,33 +2445,26 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           SkipUntil(tok::r_paren, StopAtSemi);
           return ExprError();
         }
-        Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-        Comps.back().LocEnd = Tok.getLocation();
         D.AddDesignator(Designator::CreateFieldDesignator(
-            Tok.getIdentifierInfo(), Comps.back().LocStart, Tok.getLocation()));
+            Tok.getIdentifierInfo(), DotLoc, Tok.getLocation()));
         ConsumeToken();
       } else if (Tok.is(tok::l_square)) {
         if (CheckProhibitedCXX11Attribute())
           return ExprError();
 
         // offsetof-member-designator: offsetof-member-design '[' expression ']'
-        Comps.push_back(Sema::OffsetOfComponent());
-        Comps.back().isBrackets = true;
         BalancedDelimiterTracker ST(*this, tok::l_square);
         ST.consumeOpen();
-        Comps.back().LocStart = ST.getOpenLocation();
         Res = ParseExpression();
         if (Res.isInvalid()) {
           SkipUntil(tok::r_paren, StopAtSemi);
           return Res;
         }
-        Comps.back().U.E = Res.get();
 
         ST.consumeClose();
-        Comps.back().LocEnd = ST.getCloseLocation();
         Designator ArrayD =
-            Designator::CreateArrayDesignator(Res.get(), Comps.back().LocStart);
-        ArrayD.setRBracketLoc(Comps.back().LocEnd);
+            Designator::CreateArrayDesignator(Res.get(), ST.getOpenLocation());
+        ArrayD.setRBracketLoc(ST.getCloseLocation());
         D.AddDesignator(ArrayD);
       } else {
         // A code-completion token here (e.g. cursor right after `]`) is past
@@ -2501,9 +2482,9 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           Res = ExprError();
         } else {
           PT.consumeClose();
-          Res = Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
-                                             Ty.get(), Comps,
-                                             PT.getCloseLocation());
+          Res =
+              Actions.ActOnBuiltinOffsetOf(getCurScope(), StartLoc, TypeLoc,
+                                           Ty.get(), D, PT.getCloseLocation());
         }
         break;
       }
@@ -3234,7 +3215,8 @@ void Parser::injectEmbedTokens() {
 
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  llvm::function_ref<void()> ExpressionStarts,
-                                 bool FailImmediatelyOnInvalidExpr) {
+                                 bool FailImmediatelyOnInvalidExpr,
+                                 bool ParsingExpansionStmtInitList) {
   bool SawError = false;
   while (true) {
     if (ExpressionStarts)
@@ -3263,7 +3245,11 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       SawError = true;
       if (FailImmediatelyOnInvalidExpr)
         break;
-      SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
+
+      // We expect '}' rather than ')' at the end of an expansion-init-list.
+      SkipUntil(tok::comma,
+                ParsingExpansionStmtInitList ? tok::r_brace : tok::r_paren,
+                StopAtSemi | StopBeforeMatch);
     } else {
       Exprs.push_back(Expr.get());
     }
@@ -3273,6 +3259,11 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     // Move to the next argument, remember where the comma was.
     Token Comma = Tok;
     ConsumeToken();
+
+    // CWG 3061: Trailing commas are allowed in expansion-init-lists.
+    if (ParsingExpansionStmtInitList && Tok.is(tok::r_brace))
+      break;
+
     checkPotentialAngleBracketDelimiter(Comma);
   }
   return SawError;

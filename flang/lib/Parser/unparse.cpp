@@ -591,6 +591,10 @@ public:
     common::visit(
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
+            [&](const ExplicitShapeBoundsSpec &y) {
+              llvm_unreachable(
+                  "Unparse for ExplicitShapeBoundsSpec should not be reached");
+            },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
             [&](const DeferredShapeSpecList &y) { Walk(y); },
             [&](const AssumedSizeSpec &y) { Walk(y); },
@@ -2209,6 +2213,17 @@ public:
   }
   void Unparse(const OmpAppendArgsClause &x) { Walk(x.v, ","); }
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
+  void Unparse(const OmpLoopModifier &x) {
+    Word(
+        llvm::omp::getLoopModifierName(std::get<llvm::omp::LoopModifier>(x.t)));
+    Walk("(", std::get<std::optional<std::list<ScalarIntConstantExpr>>>(x.t),
+        ")");
+  }
+  void Unparse(const OmpApplyClause &x) {
+    using Modifier = OmpApplyClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
+    Walk(std::get<std::list<OmpDirectiveSpecification>>(x.t));
+  }
   void Unparse(const OmpAttachModifier &x) {
     Word("ATTACH(");
     Walk(x.v);
@@ -2511,7 +2526,7 @@ public:
   void Unparse(const OmpObject &x) {
     common::visit( //
         common::visitors{
-            [&](const Designator &y) { Walk(y); },
+            [&](const auto &y) { Walk(y); },
             [&](const Name &y) {
               Put("/");
               Walk(y);

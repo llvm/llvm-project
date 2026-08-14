@@ -2,14 +2,12 @@
 Test lldb-dap stackTrace request for compiler generated code
 """
 
-import os
-
-import lldbdap_testcase
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
 
 
-class TestDAP_stackTraceCompilerGeneratedCode(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_stackTraceCompilerGeneratedCode(DAPTestCaseBase):
     def test_non_leaf_frame_compiler_generate_code(self):
         """
         Test that non-leaf frames with compiler-generated code are properly resolved.
@@ -22,37 +20,40 @@ class TestDAP_stackTraceCompilerGeneratedCode(lldbdap_testcase.DAPTestCaseBase):
         follows, which lacks proper symbolication information.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        source = "main.c"
+        session = self.build_and_create_session()
 
-        # Set breakpoint inside bar() function
-        lines = [line_number(source, "// breakpoint here")]
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        with session.configure(LaunchArgs(program)) as ctx:
+            source = "main.c"
+
+            # Set breakpoint inside bar() function.
+            lines = [line_number(source, "// breakpoint here")]
+            [bp_id] = session.resolve_source_breakpoints(source, lines)
+
+        stop_event = session.verify_stopped_on_breakpoint(
+            bp_id, after=ctx.process_event
         )
 
-        self.continue_to_breakpoints(breakpoint_ids)
-
-        # Get the stack frames: [0] = bar(), [1] = foo(), [2] = main()
-        stack_frames = self.get_stackFrames()
+        # Get the stack frames: [0] = bar(), [1] = foo(), [2] = main().
+        thread_ctx = session.thread_context_from(stop_event)
+        stack_frames = thread_ctx.frames()
         self.assertGreater(len(stack_frames), 2, "Expected more than 2 stack frames")
 
         # Examine the foo() frame (stack_frames[1])
-        # This is the critical frame containing compiler-generated code
-        foo_frame = stack_frames[1]
+        # This is the critical frame containing compiler-generated code.
+        foo_frame = stack_frames[1].frame
 
         # Verify that the frame's line number points to the bar() call,
-        # not to the compiler-generated code after it
-        foo_call_bar_source_line = foo_frame.get("line")
+        # not to the compiler-generated code after it.
+        foo_call_bar_source_line = foo_frame.line
         self.assertEqual(
             foo_call_bar_source_line,
             line_number(source, "foo call bar"),
             "Expected foo call bar to be the source line of the frame",
         )
 
-        # Verify the source file name is correctly resolved
-        foo_source_name = foo_frame.get("source", {}).get("name")
+        # Verify the source file name is correctly resolved.
+        foo_source = self.expect_not_none(foo_frame.source)
+        foo_source_name = self.expect_not_none(foo_source.name)
         self.assertEqual(
             foo_source_name, "main.c", "Expected foo source name to be main.c"
         )
@@ -61,6 +62,6 @@ class TestDAP_stackTraceCompilerGeneratedCode(lldbdap_testcase.DAPTestCaseBase):
         # source with path of format <module>`<symbol> or <module>`<address> with
         # sourceReference to retrieve disassembly source file.
         # Verify that this didn't happen - the path should be a real file path.
-        foo_path = foo_frame.get("source", {}).get("path")
+        foo_path = self.expect_not_none(foo_source.path)
         self.assertNotIn("`", foo_path, "Expected foo source path to not contain `")
-        self.continue_to_exit()
+        session.continue_to_exit()

@@ -45,6 +45,9 @@ jobs:
             test-command: 'true'
             target: github-automation
             context: llvm/utils/git/
+          - container-name: ids-checks
+            test-command: 'idt --help'
+            target: ids-checks
 
     steps:
       - name: Checkout LLVM

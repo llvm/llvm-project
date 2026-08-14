@@ -1,5 +1,9 @@
 // RUN: %clang -### --target=amdgcn--amdhsa -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
 // RUN: %clang -### -g --target=amdgcn--amdhsa -mcpu=kaveri -nogpulib %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
+
+// RUN: %clang -### --target=amdgpu7--amdhsa -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
+// RUN: %clang -### -g --target=amdgpu7--amdhsa -mcpu=kaveri -nogpulib %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
+
 // RUN: %clang -### --target=amdgcn-amd-amdpal -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
 // RUN: %clang -### -g --target=amdgcn-amd-amdpal -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
 // RUN: %clang -### --target=amdgcn-mesa-mesa3d -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
@@ -25,11 +29,15 @@
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
 // RUN:   -L. -flto -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=LTO %s
 // LTO: clang{{.*}}"-flto=full"{{.*}}"-fconvergent-functions"
-// LTO: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"-plugin-opt=-mattr=-sramecc,+xnack"{{.*}}
+// LTO: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"-plugin-opt=-mattr=+xnack,-sramecc"{{.*}}
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
 // RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
-// MCPU: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"-plugin-opt=-mattr=-sramecc,+xnack"{{.*}}
+
+// RUN: %clang -### --target=amdgpu9.0a-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
+// RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
+
+// MCPU: ld.lld{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"-plugin-opt=-mattr=+xnack,-sramecc"{{.*}}
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
 // RUN:   -fuse-ld=ld %s 2>&1 | FileCheck -check-prefixes=LD %s

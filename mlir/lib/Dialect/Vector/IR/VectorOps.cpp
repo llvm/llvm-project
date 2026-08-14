@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -5035,6 +5036,7 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+/// If `padding` is null, a poison value is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
@@ -5044,46 +5046,45 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
   if (!padding)
     padding = ub::PoisonOp::create(builder, result.location, elemType);
+  // Delegate to the most general builder (see
+  // `mlir/Dialect/Vector/IR/VectorOps.cpp.inc`)
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         *padding, /*mask=*/Value(), inBoundsAttr);
 }
 
-/// 2. Builder that sets padding to zero an empty mask (variant without attrs).
+/// 2. Builder that sets padding to zero and an empty mask (variant without
+/// attrs).
+/// If `padding` is null, a poison value is used.
+/// If `permutationMap` is null, a minor identity map is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
                            AffineMap permutationMap,
                            std::optional<ArrayRef<bool>> inBounds) {
+  if (!permutationMap)
+    permutationMap = getTransferMinorIdentityMap(
+        llvm::cast<ShapedType>(source.getType()), vectorType);
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
                           : builder.getBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
-  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  if (!padding)
-    padding = ub::PoisonOp::create(builder, result.location, elemType);
-  build(builder, result, vectorType, source, indices, *padding,
+  // Delegate to Builder 1
+  build(builder, result, vectorType, source, indices, padding,
         permutationMapAttr, inBoundsAttr);
 }
 
 /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+/// If `padding` is null, a poison value is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
                            std::optional<ArrayRef<bool>> inBounds) {
-  AffineMap permutationMap = getTransferMinorIdentityMap(
-      llvm::cast<ShapedType>(source.getType()), vectorType);
-  auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : builder.getBoolArrayAttr(
-                                SmallVector<bool>(vectorType.getRank(), false));
-  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  if (!padding)
-    padding = ub::PoisonOp::create(builder, result.location, elemType);
-  build(builder, result, vectorType, source, indices, permutationMapAttr,
-        *padding,
-        /*mask=*/Value(), inBoundsAttr);
+  // Delegate to Builder 2
+  build(builder, result, vectorType, source, indices, padding,
+        /*permutationMap=*/AffineMap(), inBounds);
 }
 
 template <typename EmitFun>
@@ -5692,11 +5693,15 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 }
 
 /// 3. Builder with type inference that sets an empty mask (variant without
-/// attrs)
+/// attrs). If `permutationMap` is null, a minor identity map is used.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             AffineMap permutationMap,
                             std::optional<ArrayRef<bool>> inBounds) {
+  if (!permutationMap)
+    permutationMap =
+        getTransferMinorIdentityMap(llvm::cast<ShapedType>(dest.getType()),
+                                    llvm::cast<VectorType>(vector.getType()));
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr =
       (inBounds && !inBounds.value().empty())
@@ -5712,10 +5717,8 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             std::optional<ArrayRef<bool>> inBounds) {
-  auto vectorType = llvm::cast<VectorType>(vector.getType());
-  AffineMap permutationMap = getTransferMinorIdentityMap(
-      llvm::cast<ShapedType>(dest.getType()), vectorType);
-  build(builder, result, vector, dest, indices, permutationMap, inBounds);
+  build(builder, result, vector, dest, indices, /*permutationMap=*/AffineMap(),
+        inBounds);
 }
 
 ParseResult TransferWriteOp::parse(OpAsmParser &parser,
@@ -6192,6 +6195,12 @@ LogicalResult vector::LoadOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, resVecTy, memRefTy)))
     return failure();
 
+  // Negative strides are not supported on vector.load. The lowering to LLVM
+  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
+  // non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memRefTy))
+    return emitOpError("memref strides must be non-negative");
+
   if (memRefTy.getRank() < resVecTy.getRank())
     return emitOpError(
         "destination memref has lower rank than the result vector");
@@ -6238,6 +6247,12 @@ LogicalResult vector::StoreOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, valueVecTy, memRefTy)))
     return failure();
 
+  // Negative strides are not supported on vector.store. The lowering to LLVM
+  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
+  // non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memRefTy))
+    return emitOpError("memref strides must be non-negative");
+
   if (memRefTy.getRank() < valueVecTy.getRank())
     return emitOpError("source memref has lower rank than the vector to store");
 
@@ -6281,6 +6296,12 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType passVType = getPassThruVectorType();
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
+
+  // Negative strides are not supported on vector.maskedload. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
 
   if (failed(
           verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
@@ -6342,6 +6363,12 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
+  // Negative strides are not supported on vector.maskedstore. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
+
   if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
                                      "valueToStore")))
     return failure();
@@ -6402,6 +6429,13 @@ LogicalResult GatherOp::verify() {
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
+
+  // Negative strides are not supported on vector.gather.
+  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
+  // flags that assume non-negative strides to avoid undefined behavior.
+  if (auto memRefType = dyn_cast<MemRefType>(baseType))
+    if (memref::hasNegativeStaticStride(memRefType))
+      return emitOpError("memref strides must be non-negative");
 
   if (failed(
           verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
@@ -6516,6 +6550,13 @@ LogicalResult ScatterOp::verify() {
 
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
+
+  // Negative strides are not supported on vector.scatter.
+  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
+  // flags that assume non-negative strides to avoid undefined behavior.
+  if (auto memRefType = dyn_cast<MemRefType>(baseType))
+    if (memref::hasNegativeStaticStride(memRefType))
+      return emitOpError("memref strides must be non-negative");
 
   if (failed(verifyElementTypesMatch(*this, baseType, valueVType, "base",
                                      "valueToStore")))
@@ -8211,10 +8252,14 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     return;
   }
   unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
-  APInt zero(bitwidth, 0);
-  APInt high(bitwidth, resultType.getDimSize(0) - 1);
-  ConstantIntRanges result = {zero, high, zero, high};
-  setResultRanges(getResult(), result);
+  // The result holds the sequence [0, 1, ..., N-1], with each value truncated
+  // to the result element type.
+  uint64_t maxIndex = resultType.getDimSize(0) - 1;
+  APInt umin = APInt::getZero(bitwidth);
+  APInt umax = APInt::getMaxValue(bitwidth).ugt(maxIndex)
+                   ? APInt(bitwidth, maxIndex)
+                   : APInt::getMaxValue(bitwidth);
+  setResultRanges(getResult(), ConstantIntRanges::fromUnsigned(umin, umax));
 }
 
 namespace {

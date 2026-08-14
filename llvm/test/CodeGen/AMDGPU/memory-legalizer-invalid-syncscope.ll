@@ -11,7 +11,7 @@ entry:
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_load void (ptr, ptr): Unsupported non-inclusive atomic synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_load void (ptr, ptr): Unsupported atomic synchronization scope
 define amdgpu_kernel void @invalid_load(
     ptr %in, ptr %out) {
 entry:
@@ -20,7 +20,7 @@ entry:
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_store void (i32, ptr): Unsupported non-inclusive atomic synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_store void (i32, ptr): Unsupported atomic synchronization scope
 define amdgpu_kernel void @invalid_store(
     i32 %in, ptr %out) {
 entry:
@@ -28,7 +28,7 @@ entry:
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_cmpxchg void (ptr, i32, i32): Unsupported non-inclusive atomic synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_cmpxchg void (ptr, i32, i32): Unsupported atomic synchronization scope
 define amdgpu_kernel void @invalid_cmpxchg(
     ptr %out, i32 %in, i32 %old) {
 entry:
@@ -37,7 +37,7 @@ entry:
   ret void
 }
 
-; CHECK: error: <unknown>:0:0: in function invalid_rmw void (ptr, i32): Unsupported non-inclusive atomic synchronization scope
+; CHECK: error: <unknown>:0:0: in function invalid_rmw void (ptr, i32): Unsupported atomic synchronization scope
 define amdgpu_kernel void @invalid_rmw(
     ptr %out, i32 %in) {
 entry:

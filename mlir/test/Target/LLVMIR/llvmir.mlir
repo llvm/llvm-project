@@ -1893,12 +1893,62 @@ llvm.func @my_allocator(i64) attributes {passthrough = [["allocsize", "429496729
 // -----
 
 // CHECK-LABEL: @functionEntryCount
-// CHECK-SAME: !prof ![[PROF_ID:[0-9]*]]
-llvm.func @functionEntryCount() attributes {function_entry_count = 4242 : i64} {
+// CHECK-SAME: !prof ![[PROF_ID:[0-9]+]]
+llvm.func @functionEntryCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 4242>
+} {
   llvm.return
 }
 
-// CHECK: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
+// CHECK-DAG: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
+
+// -----
+
+// CHECK-LABEL: @syntheticFunctionEntryCount
+// CHECK-SAME: !prof ![[SYNTH_PROF_ID:[0-9]+]]
+llvm.func @syntheticFunctionEntryCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[SYNTH_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7}
+
+// -----
+
+// CHECK-LABEL: @syntheticFunctionEntryCountWithImports
+// CHECK-SAME: !prof ![[SYNTH_IMPORTS_PROF_ID:[0-9]+]]
+llvm.func @syntheticFunctionEntryCountWithImports() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic, imports = 1234, 4, 1234>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[SYNTH_IMPORTS_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7, i64 4, i64 1234}
+
+// -----
+
+// CHECK-LABEL: @functionEntryCountWithImports
+// CHECK-SAME: !prof ![[IMPORTS_PROF_ID:[0-9]+]]
+llvm.func @functionEntryCountWithImports() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, imports = 1234, 4, 18446744073709551615, 1234>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[IMPORTS_PROF_ID]] = !{!"function_entry_count", i64 7, i64 4, i64 1234, i64 -1}
+
+// -----
+
+// CHECK-LABEL: @functionEntryCountNegativeCount
+// CHECK-SAME: !prof ![[NEG_PROF_ID:[0-9]+]]
+llvm.func @functionEntryCountNegativeCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[NEG_PROF_ID]] = !{!"function_entry_count", i64 -1}
 
 // -----
 
@@ -3557,3 +3607,10 @@ llvm.mlir.global external @target_specific_attrs_only() {target_specific_attrs =
 // CHECK: @target_specific_attrs_combined = global i32 2, section "mysection", align 4 #[[ATTRS:[0-9]+]]
 // CHECK: attributes #[[ATTRS]] = { norecurse "bss-section"="my_bss.1" }
 llvm.mlir.global external @target_specific_attrs_combined(2 : i32) {alignment = 4 : i64, section = "mysection", target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]} : i32
+
+// -----
+
+// CHECK-LABEL: define b8 @byte_type(b8 %0)
+llvm.func @byte_type(%arg0: !llvm.byte<8>) -> !llvm.byte<8> {
+  llvm.return %arg0 : !llvm.byte<8>
+}

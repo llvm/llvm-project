@@ -302,8 +302,8 @@ define void @eliminate_spill_after_mfma_rewrite_x2(i32 %x, i32 %y, <4 x i32> %ar
 ; CHECK-NEXT:    v_accvgpr_write_b32 a34, v2
 ; CHECK-NEXT:    v_accvgpr_write_b32 a33, v1
 ; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
-; CHECK-NEXT:    v_accvgpr_read_b32 v7, a3
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_accvgpr_read_b32 v7, a3
 ; CHECK-NEXT:    v_accvgpr_read_b32 v6, a2
 ; CHECK-NEXT:    v_accvgpr_read_b32 v5, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v4, a0

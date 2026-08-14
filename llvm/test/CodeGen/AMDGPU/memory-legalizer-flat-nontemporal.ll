@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1010 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX10-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -O0 -mcpu=gfx700 -amdgcn-skip-cache-invalidations < %s | FileCheck --check-prefixes=SKIP-CACHE-INV %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX90A-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 < %s | FileCheck -check-prefixes=GFX942-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX942-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 | FileCheck -check-prefixes=GFX942-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
@@ -239,6 +239,8 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ;
 ; GFX1250-LABEL: flat_nontemporal_load_0:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -252,7 +254,7 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr %in, ptr %out) {
+    ptr %in, ptr %out) #0 {
 entry:
   %val = load i32, ptr %in, align 4, !nontemporal !0
   store i32 %val, ptr %out
@@ -639,6 +641,8 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ;
 ; GFX1250-LABEL: flat_nontemporal_load_1:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -656,7 +660,7 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr %in, ptr %out) {
+    ptr %in, ptr %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val.gep = getelementptr inbounds i32, ptr %in, i32 %tid
@@ -891,6 +895,8 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ;
 ; GFX1250-LABEL: flat_nontemporal_store_0:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -904,7 +910,7 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] th:TH_STORE_NT
 ; GFX1250-NEXT:    s_endpgm
-    ptr %in, ptr %out) {
+    ptr %in, ptr %out) #0 {
 entry:
   %val = load i32, ptr %in, align 4
   store i32 %val, ptr %out, !nontemporal !0
@@ -1287,6 +1293,8 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ;
 ; GFX1250-LABEL: flat_nontemporal_store_1:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -1303,7 +1311,7 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scale_offset th:TH_STORE_NT
 ; GFX1250-NEXT:    s_endpgm
-    ptr %in, ptr %out) {
+    ptr %in, ptr %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val = load i32, ptr %in, align 4
@@ -1534,6 +1542,8 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ;
 ; GFX1250-LABEL: flat_nontemporal_volatile_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -1548,7 +1558,7 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr %in, ptr %out) {
+    ptr %in, ptr %out) #0 {
 entry:
   %val = load volatile i32, ptr %in, align 4, !nontemporal !0
   store i32 %val, ptr %out
@@ -1557,3 +1567,5 @@ entry:
 
 !0 = !{i32 1}
 declare i32 @llvm.amdgcn.workitem.id.x()
+
+attributes #0 = { nounwind }

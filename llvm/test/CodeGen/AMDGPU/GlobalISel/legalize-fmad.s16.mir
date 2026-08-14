@@ -34,6 +34,7 @@ body: |
     ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD]](s32)
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX7-LABEL: name: test_fmad_s16_flush
     ; GFX7: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX7-NEXT: {{  $}}
@@ -46,6 +47,7 @@ body: |
     ; GFX7-NEXT: [[FMAD:%[0-9]+]]:_(s16) = G_FMAD [[TRUNC]], [[TRUNC1]], [[TRUNC2]]
     ; GFX7-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FMAD]](s16)
     ; GFX7-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX10-LABEL: name: test_fmad_s16_flush
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
@@ -119,9 +121,10 @@ body: |
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC3]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST3]](<2 x s16>)
+    ;
     ; GFX7-LABEL: name: test_fmad_v2s16_flush
     ; GFX7: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX7-NEXT: {{  $}}
@@ -146,9 +149,10 @@ body: |
     ; GFX7-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FMAD]](s16)
     ; GFX7-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FMAD1]](s16)
     ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX7-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX7-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX7-NEXT: $vgpr0 = COPY [[BITCAST3]](<2 x s16>)
+    ;
     ; GFX10-LABEL: name: test_fmad_v2s16_flush
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
@@ -261,15 +265,16 @@ body: |
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC3]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC5]](s16)
     ; GFX6-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC7]](s16)
     ; GFX6-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX6-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX6-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](i32)
     ; GFX6-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
+    ;
     ; GFX7-LABEL: name: test_fmad_v4s16_flush
     ; GFX7: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GFX7-NEXT: {{  $}}
@@ -311,15 +316,16 @@ body: |
     ; GFX7-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FMAD]](s16)
     ; GFX7-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FMAD1]](s16)
     ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX7-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX7-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX7-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FMAD2]](s16)
     ; GFX7-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[FMAD3]](s16)
     ; GFX7-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX7-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX7-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+    ; GFX7-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX7-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](i32)
     ; GFX7-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>)
     ; GFX7-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
+    ;
     ; GFX10-LABEL: name: test_fmad_v4s16_flush
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GFX10-NEXT: {{  $}}
@@ -404,6 +410,7 @@ body: |
     ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD]](s32)
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX7-LABEL: name: test_fmad_s16_denorm
     ; GFX7: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX7-NEXT: {{  $}}
@@ -417,6 +424,7 @@ body: |
     ; GFX7-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[FMUL]], [[TRUNC2]]
     ; GFX7-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FADD]](s16)
     ; GFX7-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX10-LABEL: name: test_fmad_s16_denorm
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
@@ -461,16 +469,17 @@ body: |
     ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
     ; GFX6-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
-    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
+    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC]](s16)
+    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC1]](s16)
     ; GFX6-NEXT: [[FMUL:%[0-9]+]]:_(s32) = nnan G_FMUL [[FPEXT]], [[FPEXT1]]
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FMUL]](s32)
+    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = nnan G_FPEXT [[FPTRUNC]](s16)
+    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC2]](s16)
     ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = nnan G_FADD [[FPEXT2]], [[FPEXT3]]
-    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD]](s32)
+    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FADD]](s32)
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX7-LABEL: name: test_fmad_s16_denorm_flags
     ; GFX7: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX7-NEXT: {{  $}}
@@ -484,6 +493,7 @@ body: |
     ; GFX7-NEXT: [[FADD:%[0-9]+]]:_(s16) = nnan G_FADD [[FMUL]], [[TRUNC2]]
     ; GFX7-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FADD]](s16)
     ; GFX7-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX10-LABEL: name: test_fmad_s16_denorm_flags
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
@@ -557,9 +567,10 @@ body: |
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC3]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST3]](<2 x s16>)
+    ;
     ; GFX7-LABEL: name: test_fmad_v2s16_denorm
     ; GFX7: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX7-NEXT: {{  $}}
@@ -586,9 +597,10 @@ body: |
     ; GFX7-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FADD]](s16)
     ; GFX7-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FADD1]](s16)
     ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX7-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX7-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX7-NEXT: $vgpr0 = COPY [[BITCAST3]](<2 x s16>)
+    ;
     ; GFX10-LABEL: name: test_fmad_v2s16_denorm
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
@@ -651,28 +663,29 @@ body: |
     ; GFX6-NEXT: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
     ; GFX6-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; GFX6-NEXT: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
-    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
+    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC]](s16)
+    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC2]](s16)
     ; GFX6-NEXT: [[FMUL:%[0-9]+]]:_(s32) = nnan G_FMUL [[FPEXT]], [[FPEXT1]]
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC4]](s16)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FMUL]](s32)
+    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = nnan G_FPEXT [[FPTRUNC]](s16)
+    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC4]](s16)
     ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = nnan G_FADD [[FPEXT2]], [[FPEXT3]]
-    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD]](s32)
-    ; GFX6-NEXT: [[FPEXT4:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
-    ; GFX6-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
+    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FADD]](s32)
+    ; GFX6-NEXT: [[FPEXT4:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC1]](s16)
+    ; GFX6-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC3]](s16)
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = nnan G_FMUL [[FPEXT4]], [[FPEXT5]]
-    ; GFX6-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
-    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC2]](s16)
-    ; GFX6-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC5]](s16)
+    ; GFX6-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FMUL1]](s32)
+    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = nnan G_FPEXT [[FPTRUNC2]](s16)
+    ; GFX6-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC5]](s16)
     ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s32) = nnan G_FADD [[FPEXT6]], [[FPEXT7]]
-    ; GFX6-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD1]](s32)
+    ; GFX6-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FADD1]](s32)
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC3]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST3]](<2 x s16>)
+    ;
     ; GFX7-LABEL: name: test_fmad_v2s16_denorm_flags
     ; GFX7: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX7-NEXT: {{  $}}
@@ -699,9 +712,10 @@ body: |
     ; GFX7-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FADD]](s16)
     ; GFX7-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FADD1]](s16)
     ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX7-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX7-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX7-NEXT: $vgpr0 = COPY [[BITCAST3]](<2 x s16>)
+    ;
     ; GFX10-LABEL: name: test_fmad_v2s16_denorm_flags
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
@@ -814,15 +828,16 @@ body: |
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC3]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC5]](s16)
     ; GFX6-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC7]](s16)
     ; GFX6-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX6-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX6-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](i32)
     ; GFX6-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
+    ;
     ; GFX7-LABEL: name: test_fmad_v4s16_denorm
     ; GFX7: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GFX7-NEXT: {{  $}}
@@ -868,15 +883,16 @@ body: |
     ; GFX7-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FADD]](s16)
     ; GFX7-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FADD1]](s16)
     ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX7-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX7-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX7-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FADD2]](s16)
     ; GFX7-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[FADD3]](s16)
     ; GFX7-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX7-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX7-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+    ; GFX7-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX7-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](i32)
     ; GFX7-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>)
     ; GFX7-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
+    ;
     ; GFX10-LABEL: name: test_fmad_v4s16_denorm
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GFX10-NEXT: {{  $}}
@@ -976,50 +992,51 @@ body: |
     ; GFX6-NEXT: [[TRUNC10:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST5]](s32)
     ; GFX6-NEXT: [[LSHR5:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST5]], [[C]](s32)
     ; GFX6-NEXT: [[TRUNC11:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR5]](s32)
-    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC4]](s16)
+    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC]](s16)
+    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC4]](s16)
     ; GFX6-NEXT: [[FMUL:%[0-9]+]]:_(s32) = nnan G_FMUL [[FPEXT]], [[FPEXT1]]
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC8]](s16)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FMUL]](s32)
+    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = nnan G_FPEXT [[FPTRUNC]](s16)
+    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC8]](s16)
     ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = nnan G_FADD [[FPEXT2]], [[FPEXT3]]
-    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD]](s32)
-    ; GFX6-NEXT: [[FPEXT4:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
-    ; GFX6-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC5]](s16)
+    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FADD]](s32)
+    ; GFX6-NEXT: [[FPEXT4:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC1]](s16)
+    ; GFX6-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC5]](s16)
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = nnan G_FMUL [[FPEXT4]], [[FPEXT5]]
-    ; GFX6-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
-    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC2]](s16)
-    ; GFX6-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC9]](s16)
+    ; GFX6-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FMUL1]](s32)
+    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = nnan G_FPEXT [[FPTRUNC2]](s16)
+    ; GFX6-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC9]](s16)
     ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s32) = nnan G_FADD [[FPEXT6]], [[FPEXT7]]
-    ; GFX6-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD1]](s32)
-    ; GFX6-NEXT: [[FPEXT8:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
-    ; GFX6-NEXT: [[FPEXT9:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC6]](s16)
+    ; GFX6-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FADD1]](s32)
+    ; GFX6-NEXT: [[FPEXT8:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC2]](s16)
+    ; GFX6-NEXT: [[FPEXT9:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC6]](s16)
     ; GFX6-NEXT: [[FMUL2:%[0-9]+]]:_(s32) = nnan G_FMUL [[FPEXT8]], [[FPEXT9]]
-    ; GFX6-NEXT: [[FPTRUNC4:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL2]](s32)
-    ; GFX6-NEXT: [[FPEXT10:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC4]](s16)
-    ; GFX6-NEXT: [[FPEXT11:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC10]](s16)
+    ; GFX6-NEXT: [[FPTRUNC4:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FMUL2]](s32)
+    ; GFX6-NEXT: [[FPEXT10:%[0-9]+]]:_(s32) = nnan G_FPEXT [[FPTRUNC4]](s16)
+    ; GFX6-NEXT: [[FPEXT11:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC10]](s16)
     ; GFX6-NEXT: [[FADD2:%[0-9]+]]:_(s32) = nnan G_FADD [[FPEXT10]], [[FPEXT11]]
-    ; GFX6-NEXT: [[FPTRUNC5:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD2]](s32)
-    ; GFX6-NEXT: [[FPEXT12:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
-    ; GFX6-NEXT: [[FPEXT13:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC7]](s16)
+    ; GFX6-NEXT: [[FPTRUNC5:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FADD2]](s32)
+    ; GFX6-NEXT: [[FPEXT12:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC3]](s16)
+    ; GFX6-NEXT: [[FPEXT13:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC7]](s16)
     ; GFX6-NEXT: [[FMUL3:%[0-9]+]]:_(s32) = nnan G_FMUL [[FPEXT12]], [[FPEXT13]]
-    ; GFX6-NEXT: [[FPTRUNC6:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL3]](s32)
-    ; GFX6-NEXT: [[FPEXT14:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC6]](s16)
-    ; GFX6-NEXT: [[FPEXT15:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC11]](s16)
+    ; GFX6-NEXT: [[FPTRUNC6:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FMUL3]](s32)
+    ; GFX6-NEXT: [[FPEXT14:%[0-9]+]]:_(s32) = nnan G_FPEXT [[FPTRUNC6]](s16)
+    ; GFX6-NEXT: [[FPEXT15:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC11]](s16)
     ; GFX6-NEXT: [[FADD3:%[0-9]+]]:_(s32) = nnan G_FADD [[FPEXT14]], [[FPEXT15]]
-    ; GFX6-NEXT: [[FPTRUNC7:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD3]](s32)
+    ; GFX6-NEXT: [[FPTRUNC7:%[0-9]+]]:_(s16) = nnan G_FPTRUNC [[FADD3]](s32)
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC3]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC5]](s16)
     ; GFX6-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC7]](s16)
     ; GFX6-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX6-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX6-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](i32)
     ; GFX6-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
+    ;
     ; GFX7-LABEL: name: test_fmad_v4s16_denorm_flags
     ; GFX7: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GFX7-NEXT: {{  $}}
@@ -1065,15 +1082,16 @@ body: |
     ; GFX7-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FADD]](s16)
     ; GFX7-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FADD1]](s16)
     ; GFX7-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX7-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX7-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX7-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX7-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FADD2]](s16)
     ; GFX7-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[FADD3]](s16)
     ; GFX7-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX7-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX7-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+    ; GFX7-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX7-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](i32)
     ; GFX7-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>)
     ; GFX7-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
+    ;
     ; GFX10-LABEL: name: test_fmad_v4s16_denorm_flags
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GFX10-NEXT: {{  $}}

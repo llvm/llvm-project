@@ -38,6 +38,7 @@ typedef struct CUuuid_st {
 } CUuuid;
 
 #define CU_DEVICE_INVALID ((CUdevice)(-2))
+#define CU_DEVICE_CPU ((CUdevice)(-1))
 
 typedef unsigned long long CUmemGenericAllocationHandle_v1;
 typedef CUmemGenericAllocationHandle_v1 CUmemGenericAllocationHandle;
@@ -381,6 +382,14 @@ CUresult cuMemFree(CUdeviceptr);
 CUresult cuMemFreeHost(void *);
 CUresult cuMemFreeAsync(CUdeviceptr, CUstream);
 
+CUresult cuMemPrefetchAsync(CUdeviceptr, size_t, CUdevice, CUstream);
+
+typedef enum CUpointer_attribute_enum {
+  CU_POINTER_ATTRIBUTE_IS_MANAGED = 8
+} CUpointer_attribute;
+
+CUresult cuPointerGetAttribute(void *, CUpointer_attribute, CUdeviceptr);
+
 CUresult cuModuleGetFunction(CUfunction *, CUmodule, const char *);
 CUresult cuModuleGetGlobal(CUdeviceptr *, size_t *, CUmodule, const char *);
 
@@ -434,6 +443,5 @@ CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
                                           CUoccupancyB2DSize, size_t, int);
 CUresult cuOccupancyMaxActiveBlocksPerMultiprocessor(int *, CUfunction, int,
                                                      size_t);
-CUresult cuFuncGetParamInfo(CUfunction, size_t, size_t *, size_t *);
 
 #endif

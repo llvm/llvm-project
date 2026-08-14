@@ -283,6 +283,11 @@ struct MemRefPointerLikeModel
     Attribute memSpace = memrefTy.getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
   }
+
+  MemRefType getAsMemRefType(Type pointer, ModuleOp module) const {
+    (void)module;
+    return dyn_cast<MemRefType>(pointer);
+  }
 };
 
 struct LLVMPointerPointerLikeModel
@@ -360,6 +365,15 @@ struct PrivateTypePointerLikeModel
     if (!isa<PointerLikeType>(resultType))
       return {};
     return UnwrapPrivateOp::create(builder, loc, resultType, value).getResult();
+  }
+
+  MemRefType getAsMemRefType(Type type, ModuleOp module) const {
+    Type baseTy = cast<PrivateType>(type).getBaseTy();
+    if (auto memrefTy = dyn_cast<MemRefType>(baseTy))
+      return memrefTy;
+    if (auto ptrLikeTy = dyn_cast<PointerLikeType>(baseTy))
+      return ptrLikeTy.getAsMemRefType(module);
+    return {};
   }
 };
 
@@ -506,7 +520,7 @@ void OpenACCDialect::initialize() {
 //===----------------------------------------------------------------------===//
 
 /// Generic helper for single-region OpenACC ops that execute their body once
-/// and then return to the parent operation with their results (if any).
+/// and then continue after the operation with their results (if any).
 static void
 getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
                                   RegionBranchPoint point,
@@ -516,12 +530,12 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     return;
   }
 
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(op));
 }
 
 static ValueRange getSingleRegionSuccessorInputs(Operation *op,
                                                  RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(op->getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(op->getResults()) : ValueRange();
 }
 
 void KernelsOp::getSuccessorRegions(RegionBranchPoint point,
@@ -584,13 +598,13 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
       regions.push_back(RegionSuccessor(&getRegion()));
       return;
     }
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
   // Structured loops: model a loop-shaped region graph similar to scf.for.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange LoopOp::getSuccessorInputs(RegionSuccessor successor) {
@@ -2220,6 +2234,10 @@ bool acc::ParallelOp::hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType) {
       getVectorLength(), deviceType);
 }
 
+bool acc::ParallelOp::isEffectivelySerial() {
+  return isGangWorkerVectorAllOne(*this);
+}
+
 bool acc::ParallelOp::hasWaitOnly() {
   return hasWaitOnly(mlir::acc::DeviceType::None);
 }
@@ -3091,6 +3109,10 @@ bool acc::KernelsOp::hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType) {
       getNumGangsDeviceType(), getNumGangs(), getNumGangsSegments(),
       getNumWorkersDeviceType(), getNumWorkers(), getVectorLengthDeviceType(),
       getVectorLength(), deviceType);
+}
+
+bool acc::KernelsOp::isEffectivelySerial() {
+  return isGangWorkerVectorAllOne(*this);
 }
 
 bool acc::KernelsOp::hasWaitOnly() {

@@ -87,8 +87,9 @@ static bool isKeywordWithCondition(const FormatToken &Tok) {
 static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   if (!IsCpp || !Tok.startsSequence(tok::l_square, tok::l_square))
     return false;
-  // The first square bracket is part of an ObjC array literal
-  if (Tok.Previous && Tok.Previous->is(tok::at))
+  // The first square bracket belongs to an ObjC array literal or malformed
+  // nested-bracket input.
+  if (Tok.Previous && Tok.Previous->isOneOf(tok::at, tok::l_square))
     return false;
   const FormatToken *AttrTok = Tok.Next->Next;
   if (!AttrTok)
@@ -1297,6 +1298,11 @@ private:
         next();
         return true;
       }
+      // An unmatched `}` belongs to an enclosing parseBrace call, consuming it
+      // here would pop that call's Scopes frame and trigger its assertion.
+      // Return early instead.
+      if (CurrentToken->is(tok::r_brace))
+        return false;
       if (!consumeToken())
         return false;
     }
@@ -1686,7 +1692,8 @@ private:
         }
       }
       while (CurrentToken &&
-             CurrentToken->isNoneOf(tok::l_paren, tok::semi, tok::r_paren)) {
+             CurrentToken->isNoneOf(tok::l_paren, tok::semi, tok::r_paren,
+                                    tok::r_brace)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
           CurrentToken->setType(TT_PointerOrReference);
         auto Next = CurrentToken->getNextNonComment();
@@ -2494,6 +2501,8 @@ private:
         Current.setType(TT_Unknown);
       } else {
         Current.setType(TT_ConditionalExpr);
+        if (IsCpp)
+          Contexts.back().IsExpression = true;
       }
     } else if (Current.isBinaryOperator() &&
                (!Current.Previous || Current.Previous->isNot(tok::l_square)) &&
@@ -2536,6 +2545,8 @@ private:
     } else if (Current.is(tok::r_paren)) {
       if (rParenEndsCast(Current))
         Current.setType(TT_CastRParen);
+      if (Current.MatchingParen && Current.MatchingParen->is(TT_InlineASMParen))
+        Current.setType(TT_InlineASMParen);
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
           Current.Next->isNoneOf(
@@ -2811,7 +2822,7 @@ private:
       // If there is an identifier (or with a few exceptions a keyword) right
       // before the parentheses, this is unlikely to be a cast.
       if (LeftOfParens->Tok.getIdentifierInfo() &&
-          LeftOfParens->isNoneOf(Keywords.kw_in, tok::kw_return, tok::kw_case,
+          LeftOfParens->isNoneOf(TT_ObjCForIn, tok::kw_return, tok::kw_case,
                                  tok::kw_delete, tok::kw_throw)) {
         return false;
       }
@@ -3657,22 +3668,29 @@ void TokenAnnotator::setCommentLineLevels(
 
     // If the comment is currently aligned with the line immediately following
     // it, that's probably intentional and we should keep it.
-    if (NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
+    if (const auto Column = Line->First->OriginalColumn;
+        NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
         Line->isComment() && !isClangFormatOff(Line->First->TokenText) &&
-        NextNonCommentLine->First->OriginalColumn ==
-            Line->First->OriginalColumn) {
+        NextNonCommentLine->First->OriginalColumn == Column) {
       const bool PPDirectiveOrImportStmt =
           NextNonCommentLine->Type == LT_PreprocessorDirective ||
           NextNonCommentLine->Type == LT_ImportStatement;
       if (PPDirectiveOrImportStmt)
         Line->Type = LT_CommentAbovePPDirective;
-      // Align comments for preprocessor lines with the # in column 0 if
-      // preprocessor lines are not indented. Otherwise, align with the next
-      // line.
-      Line->Level = Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
-                            PPDirectiveOrImportStmt
-                        ? 0
-                        : NextNonCommentLine->Level;
+      if (const auto IndentWidth = Style.IndentWidth;
+          NextNonCommentLine->First->Finalized && IndentWidth > 0 &&
+          Column % IndentWidth == 0) {
+        Line->Level = Column / IndentWidth;
+      } else {
+        // Align comments for preprocessor lines with the # in column 0 if
+        // preprocessor lines are not indented. Otherwise, align with the next
+        // line.
+        Line->Level =
+            Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
+                    PPDirectiveOrImportStmt
+                ? 0
+                : NextNonCommentLine->Level;
+      }
     } else {
       NextNonCommentLine = Line->First->isNot(tok::r_brace) ? Line : nullptr;
     }

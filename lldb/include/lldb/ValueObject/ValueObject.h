@@ -851,6 +851,14 @@ public:
 
   virtual bool GetIsConstant() const { return m_update_point.IsConstant(); }
 
+  /// Returns false when this value cannot be modified through
+  /// SetValueFromCString() or SetData() because it exists in the
+  /// target but has no writable storage, e.g., a constant or a
+  /// computed variable value.  A true result does not guarantee a
+  /// write will succeed; other runtime conditions can still cause
+  /// SetValue* to fail.
+  virtual bool CanSetValue() { return !GetIsConstant(); }
+
   bool NeedsUpdating() {
     const bool accept_invalid_exe_ctx =
         (CanUpdateWithInvalidExecutionContext() == eLazyBoolYes);

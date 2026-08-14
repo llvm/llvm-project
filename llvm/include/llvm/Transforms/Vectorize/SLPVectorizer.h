@@ -96,7 +96,8 @@ private:
   /// \param MaxVFOnly Vectorize only using maximal allowed register size.
   /// \returns true if a value was vectorized.
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
-                          bool MaxVFOnly = false);
+                          bool MaxVFOnly = false,
+                          bool LimitToRegisterVF = false);
 
   /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R,
@@ -174,7 +175,8 @@ private:
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-          &Visited);
+          &Visited,
+      bool AllowMaskedStores = true);
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;

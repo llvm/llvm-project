@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -30,7 +31,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <unordered_set>
 #include <vector>
 
 using namespace llvm;
@@ -77,9 +77,9 @@ bool PseudoProbeVerifier::shouldVerifyFunction(const Function *F) {
   if (F->hasAvailableExternallyLinkage())
     return false;
   // Do a name matching.
-  static std::unordered_set<std::string> VerifyFuncNames(
-      VerifyPseudoProbeFuncList.begin(), VerifyPseudoProbeFuncList.end());
-  return VerifyFuncNames.empty() || VerifyFuncNames.count(F->getName().str());
+  static const StringSet<> VerifyFuncNames(llvm::from_range,
+                                           VerifyPseudoProbeFuncList);
+  return VerifyFuncNames.empty() || VerifyFuncNames.contains(F->getName());
 }
 
 void PseudoProbeVerifier::registerCallbacks(PassInstrumentationCallbacks &PIC) {

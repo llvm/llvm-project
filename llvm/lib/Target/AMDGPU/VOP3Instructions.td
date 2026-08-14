@@ -1794,7 +1794,7 @@ class VOP3_CVT_SR_FP16_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_F1632_FP
 
 // FIXME: GlobalISel cannot distinguish f16 and bf16 and may start using bf16 patterns
 //        instead of less complex f16. Disable GlobalISel for these for now.
-def bf16_fpround : PatFrag <(ops node:$src0),  (fpround $src0), [{ return true; }]> {
+def bf16_fpround : PatFrag <(ops node:$src0),  (any_fpround $src0), [{ return true; }]> {
   let GISelPredicateCode = [{return false;}];
 }
 

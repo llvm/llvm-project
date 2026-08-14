@@ -1449,11 +1449,8 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
   TemplateArgumentList *template_args_ptr = TemplateArgumentList::CreateCopy(
       func_decl->getASTContext(), infos.GetArgs());
 
-  func_decl->setFunctionTemplateSpecialization(
-      func_decl->getASTContext(), func_tmpl_decl, template_args_ptr,
-      /*InsertPos=*/nullptr, TSK_ImplicitInstantiation,
-      /*TemplateParams=*/nullptr, /*TemplateArgsAsWritten=*/nullptr,
-      /*PointOfInstantiation=*/SourceLocation(), /*AddSpecialization=*/true);
+  func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
+                                               template_args_ptr, nullptr);
 }
 
 /// Returns true if the given template parameter can represent the given value.
@@ -1652,40 +1649,6 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
       template_param_list);
 }
 
-static const ASTTemplateArgumentListInfo *getTrivialTemplateArgumentListInfo(
-    ASTContext &ast, ArrayRef<TemplateArgument> args, SourceLocation Loc) {
-  TemplateArgumentListInfo Args(/*LAngleLoc=*/Loc, /*RAngleLoc=*/Loc);
-  for (const auto &arg : args) {
-    if (arg.getIsDefaulted())
-      break;
-    switch (arg.getKind()) {
-    case TemplateArgument::Type:
-      Args.addArgument(TemplateArgumentLoc(
-          arg.getAsType(), ast.getTrivialTypeSourceInfo(arg.getAsType(), Loc)));
-      break;
-    case TemplateArgument::Expression:
-      Args.addArgument(TemplateArgumentLoc(arg, arg.getAsExpr()));
-      break;
-    case TemplateArgument::Template:
-    case TemplateArgument::TemplateExpansion:
-      Args.addArgument(
-          TemplateArgumentLoc(ast, arg, Loc, NestedNameSpecifierLoc(), Loc));
-      break;
-    case TemplateArgument::Declaration:
-    case TemplateArgument::Integral:
-    case TemplateArgument::NullPtr:
-    case TemplateArgument::Pack:
-    case TemplateArgument::StructuralValue:
-      Args.addArgument(
-          TemplateArgumentLoc(arg, TemplateArgumentLocInfo(ast, Loc)));
-      break;
-    case TemplateArgument::Null:
-      llvm_unreachable("unexpected null template argument");
-    }
-  }
-  return ASTTemplateArgumentListInfo::Create(ast, Args);
-}
-
 ClassTemplateSpecializationDecl *
 TypeSystemClang::CreateClassTemplateSpecializationDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
@@ -1728,13 +1691,6 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
 
   class_template_specialization_decl->setSpecializationKind(
       TSK_ExplicitSpecialization);
-  SourceLocation FakeLoc = class_template_specialization_decl->getLocation();
-  auto *TemplateParams = TemplateParameterList::Create(
-      ast, /*TemplateLoc=*/FakeLoc, /*LAngleLoc=*/FakeLoc,
-      /*Params=*/ArrayRef<NamedDecl *>(), /*RAngleLoc=*/FakeLoc,
-      /*RequiresClause=*/nullptr);
-  class_template_specialization_decl->setExplicitSpecializationInfo(
-      TemplateParams, ::getTrivialTemplateArgumentListInfo(ast, args, FakeLoc));
 
   return class_template_specialization_decl;
 }
@@ -8521,14 +8477,19 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 namespace {
 struct ScopedASTColor {
   ScopedASTColor(clang::ASTContext &ast, bool show_colors)
-      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
-    ast.getDiagnostics().setShowColors(show_colors);
+      : ast(ast),
+        old_show_colors(
+            ast.getDiagnostics().getDiagnosticOptions().getShowColors()) {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(
+        show_colors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off);
   }
 
-  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+  ~ScopedASTColor() {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(old_show_colors);
+  }
 
   clang::ASTContext &ast;
-  const bool old_show_colors;
+  const clang::ShowColorsKind old_show_colors;
 };
 } // namespace
 

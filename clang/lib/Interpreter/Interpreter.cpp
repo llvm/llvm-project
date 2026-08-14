@@ -21,6 +21,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
@@ -40,6 +41,8 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -78,6 +81,51 @@ GetCC1Arguments(DiagnosticsEngine *Diagnostics,
                                    "Driver initialization failed");
 
   return &Cmd->getArguments();
+}
+
+// ASTReaderListener that captures the PIC level stored in a serialized AST
+// file (PCH or PCM) so the interpreter can compare it against its own.
+class PICLevelReader : public ASTReaderListener {
+  unsigned &PICLevel;
+
+public:
+  PICLevelReader(unsigned &PICLevel) : PICLevel(PICLevel) {}
+
+  bool ReadLanguageOptions(const LangOptions &LangOpts,
+                           StringRef ModuleFilename, bool Complain,
+                           bool AllowCompatibleDifferences) override {
+    PICLevel = LangOpts.PICLevel;
+    return false;
+  }
+};
+
+// clang-repl always compiles position-independent code (it injects -fPIC), so a
+// PCH/PCM that was built with a different PIC level is incompatible: mixing the
+// two leads to relocations that may be out of range once the JIT maps code more
+// than 2GB away. PICLevel is a "compatible" language option, so the ASTReader
+// would otherwise accept the mismatch silently. Reject it up front.
+//
+// The file is probed with its own FileManager and ModuleCache (sharing only the
+// VFS) so this read leaves the CompilerInstance's state untouched for the real
+// load performed later by ExecuteAction().
+static llvm::Error checkASTFilePICLevel(CompilerInstance &Clang,
+                                        StringRef Filename) {
+  llvm::IntrusiveRefCntPtr<FileManager> FileMgr(new FileManager(
+      Clang.getFileSystemOpts(), Clang.getVirtualFileSystemPtr()));
+  std::shared_ptr<ModuleCache> ModCache = createCrossProcessModuleCache();
+  unsigned ASTPICLevel = 0;
+  PICLevelReader Reader(ASTPICLevel);
+  if (!ASTReader::readASTFileControlBlock(
+          Filename, *FileMgr, *ModCache, Clang.getPCHContainerReader(),
+          /*FindModuleFileExtensions=*/false, Reader,
+          /*ValidateDiagnosticOptions=*/false) &&
+      ASTPICLevel != Clang.getLangOpts().PICLevel)
+    return llvm::createStringError(
+        llvm::errc::not_supported,
+        "AST file '%s' was built with PIC level %u, which is incompatible "
+        "with clang-repl's PIC level %u",
+        Filename.str().c_str(), ASTPICLevel, Clang.getLangOpts().PICLevel);
+  return llvm::Error::success();
 }
 
 static llvm::Expected<std::unique_ptr<CompilerInstance>>
@@ -135,6 +183,25 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   Clang->getFrontendOpts().DisableFree = false;
   Clang->getCodeGenOpts().DisableFree = false;
+
+  // Reject any precompiled input (PCH or PCM) built with a PIC level that
+  // differs from clang-repl's own, before any Interpreter/FrontendAction is
+  // constructed. See checkASTFilePICLevel for the rationale.
+  StringRef PCHInclude = Clang->getPreprocessorOpts().ImplicitPCHInclude;
+  if (!PCHInclude.empty())
+    if (llvm::Error Err = checkASTFilePICLevel(*Clang, PCHInclude))
+      return std::move(Err);
+
+  // Explicitly loaded modules: -fmodule-file=<path> and
+  // -fmodule-file=<name>=<path>.
+  for (StringRef ModuleFile : Clang->getFrontendOpts().ModuleFiles)
+    if (llvm::Error Err = checkASTFilePICLevel(*Clang, ModuleFile))
+      return std::move(Err);
+  for (const auto &NameAndFile :
+       Clang->getHeaderSearchOpts().PrebuiltModuleFiles)
+    if (llvm::Error Err = checkASTFilePICLevel(*Clang, NameAndFile.second))
+      return std::move(Err);
+
   return std::move(Clang);
 }
 
@@ -152,6 +219,17 @@ IncrementalCompilerBuilder::create(std::string TT,
       llvm::sys::fs::getMainExecutable(nullptr, nullptr);
 
   ClangArgv.insert(ClangArgv.begin(), MainExecutableName.c_str());
+
+  // Compile as position-independent code. This prevents the frontend from
+  // marking external symbols (e.g. C++ type-info such as _ZTIPKc used for
+  // exception handling) as dso_local and emitting direct PC-relative
+  // references. JITLink can place the GOT entry near the JIT'd code, keeping
+  // the relocation in range. Without -fPIC, a direct Delta32 relocation to a
+  // host symbol may be out of range when the JIT memory is mapped more than
+  // 2GB away (as on FreeBSD), breaking tests such as
+  // Interpreter/simple-exception.cpp. Insert before user arguments so it can
+  // still be overridden.
+  ClangArgv.insert(ClangArgv.begin() + 1, "-fPIC");
 
   // Prepending -c to force the driver to do something if no action was
   // specified. By prepending we allow users to override the default
@@ -264,6 +342,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
   if (ErrOut)
     return;
+
   CI->ExecuteAction(*Act);
 
   IncrParser =

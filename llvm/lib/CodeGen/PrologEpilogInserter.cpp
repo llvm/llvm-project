@@ -67,7 +67,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "prologepilog"
+#define DEBUG_TYPE "prolog-epilog"
 
 using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
@@ -1278,8 +1278,11 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
     // Want only registers used for arguments.
     if (OnlyArg) {
       if (OnlyUsed) {
-        if (!LiveIns[Reg.id()])
-          continue;
+        for (MCRegister LiveReg : LiveIns.set_bits()) {
+          if (TRI.regsOverlap(Reg, LiveReg))
+            RegsToZero.set(LiveReg);
+        }
+        continue;
       } else if (!TRI.isArgumentRegister(MF, Reg)) {
         continue;
       }

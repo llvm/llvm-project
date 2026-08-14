@@ -8,14 +8,9 @@
 
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -166,6 +161,7 @@ public:
         continue;
       }
       auto *cloned = globalOp->clone();
+      auto clonedGlobal = mlir::cast<fir::GlobalOp>(cloned);
       // Under -gpu=mem:unified, plain host module-scope variables (no
       // explicit CUF data attribute, not a constant) get a no-body
       // declaration in the GPU module: clear the body, init value, and
@@ -178,11 +174,17 @@ public:
       // time, and HMM/ATS handles migration.
       if (cudaUnified && !globalOp.getConstant() &&
           !globalOp.getDataAttrAttr()) {
-        auto clonedGlobal = mlir::cast<fir::GlobalOp>(cloned);
         clonedGlobal.getRegion().getBlocks().clear();
         clonedGlobal.removeInitValAttr();
         clonedGlobal.removeLinkNameAttr();
       }
+      // Registered CUDA globals with internal linkage must have a visible
+      // device symbol so runtime lookups (cudaGetSymbolAddress) can resolve
+      // them. Drop internal linkage from the GPU clone so it uses default
+      // external linkage.
+      if (cuf::isRegisteredDeviceGlobal(globalOp) &&
+          globalOp.getLinkName() == "internal")
+        clonedGlobal.removeLinkNameAttr();
       gpuSymTable.insert(cloned);
     }
   }

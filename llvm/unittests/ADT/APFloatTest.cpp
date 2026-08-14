@@ -1027,6 +1027,13 @@ TEST(APFloatTest, Denormal) {
     EXPECT_TRUE(NegT.isDenormal());
     EXPECT_EQ(fcNegSubnormal, NegT.classify());
   }
+
+  // Test E8M0
+  {
+    APInt bits(8, 0);
+    APFloat minExp(APFloat::Float8E8M0FNU(), bits);
+    EXPECT_FALSE(minExp.isDenormal());
+  }
 }
 
 TEST(APFloatTest, IsSmallestNormalized) {
@@ -7376,6 +7383,169 @@ TEST(APFloatTest, x87Next) {
   EXPECT_TRUE(ilogb(F) == -1);
 }
 
+static APInt makeX87Bits(bool sign, int64_t exponent, int integerBit,
+                         int64_t significand) {
+  return (APInt(80, (sign ? 1 : 0)) << 79) | (APInt(80, exponent) << 64) |
+         (APInt(80, integerBit) << 63) | APInt(80, significand);
+}
+
+static APFloat makeX87FromBits(bool sign, int64_t exponent, int integerBit,
+                               int64_t significand) {
+  return APFloat(APFloatBase::x87DoubleExtended(),
+                 makeX87Bits(sign, exponent, integerBit, significand));
+}
+
+static APFloat makeX87(float value) {
+  bool losesInfo = false;
+  APFloat apf(value);
+  apf.convert(APFloatBase::x87DoubleExtended(),
+              llvm::APFloat::rmNearestTiesToEven, &losesInfo);
+  return apf;
+}
+
+TEST(APFloatTest, x87Bits) {
+  constexpr int bias = 16383;
+  EXPECT_TRUE(makeX87FromBits(false, 0, 0, 0).bitwiseIsEqual(makeX87(0.0)));
+  EXPECT_TRUE(makeX87FromBits(false, bias, 1, 0).bitwiseIsEqual(makeX87(1.0)));
+
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 1, 1, 0).bitwiseIsEqual(makeX87(2.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 1, 1, 0).bitwiseIsEqual(makeX87(-2.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 2, 1, 0).bitwiseIsEqual(makeX87(4.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 2, 1, 0).bitwiseIsEqual(makeX87(-4.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(false, bias + 8, 1, 0).bitwiseIsEqual(makeX87(256.0)));
+  EXPECT_TRUE(
+      makeX87FromBits(true, bias + 8, 1, 0).bitwiseIsEqual(makeX87(-256.0)));
+
+  EXPECT_EQ(makeX87FromBits(false, (1u << 14u) - 1u, 1, 0).bitcastToAPInt(),
+            APInt(80, 0x7fff) << 63);
+  EXPECT_EQ(
+      makeX87FromBits(false, (1ull << 14ull) - 1ull, 1, (1ull << 63ull) - 1ull)
+          .bitcastToAPInt(),
+      (APInt(80, 1) << 78) - 1);
+
+  const fltSemantics &S = APFloat::x87DoubleExtended();
+
+  // Test valid infinity: exp=0x7fff, int_bit=1, significand=0
+  {
+    APFloat inf(S, APInt(80, {0x8000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(inf.isInfinity());
+    EXPECT_FALSE(inf.isNaN());
+    EXPECT_TRUE(inf.bitwiseIsEqual(APFloat::getInf(S, false)));
+  }
+
+  // Test valid NaN: exp=0x7fff, int_bit=1, significand!=0
+  {
+    APFloat nan(S, APInt(80, {0xC000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(nan.isNaN());
+    EXPECT_FALSE(nan.isInfinity());
+  }
+
+  // Test pseudoinfinity: exp=0x7fff, int_bit=0, significand=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat pseudoInf(S, APInt(80, {0x0000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(pseudoInf.isNaN());
+    EXPECT_TRUE(pseudoInf.isSignaling());
+    EXPECT_FALSE(pseudoInf.isInfinity());
+  }
+
+  // Test pseudoNaN: exp=0x7fff, int_bit=0, significand!=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat pseudoNan(S, APInt(80, {0x4000000000000000ull, 0x7fffull}));
+    EXPECT_TRUE(pseudoNan.isNaN());
+    EXPECT_FALSE(pseudoNan.isInfinity());
+  }
+
+  // Test unnormal: exp!=0 and !=0x7fff, int_bit=0
+  // Is treated as NaN in APFloat, see IEEEFloat::initFromF80LongDoubleAPInt
+  {
+    APFloat unnormal(S, APInt(80, {0x4000000000000000ull, 0x4000ull}));
+    EXPECT_TRUE(unnormal.isNaN());
+    EXPECT_FALSE(unnormal.isSignaling());
+  }
+
+  // Test pseudodenormal: exp=0, integer int_bit=1
+  {
+    APFloat pseudoDenormal(APFloat::x87DoubleExtended(),
+                           makeX87Bits(false, 0, 1, 0));
+    EXPECT_TRUE(pseudoDenormal.isFinite());
+    EXPECT_FALSE(pseudoDenormal.isDenormal());
+    APFloat scale(APFloat::x87DoubleExtended(),
+                  makeX87Bits(false, bias * 2 - 1, 1, 0));
+    EXPECT_TRUE((pseudoDenormal * scale).bitwiseIsEqual(makeX87(1.0)));
+  }
+}
+
+static bool isBitcastRoundtripSafe(APFloat value) {
+  APInt bits = value.bitcastToAPInt();
+  APFloat fromBits = APFloat(value.getSemantics(), bits);
+  return (value.isNaN() || value == fromBits) && value.bitwiseIsEqual(fromBits);
+}
+
+TEST(APFloatTest, bitcast) {
+  // 4, 6, and 8 bit types are handled in Float[468]ExhaustivePair below
+  for (APFloat::Semantics Sem : {
+           APFloat::S_IEEEhalf,
+           APFloat::S_BFloat,
+           APFloat::S_IEEEsingle,
+           APFloat::S_IEEEdouble,
+           APFloat::S_IEEEquad,
+           APFloat::S_PPCDoubleDouble,
+           APFloat::S_Float8E5M2,
+           APFloat::S_Float8E4M3,
+           APFloat::S_Float8E3M4,
+           APFloat::S_FloatTF32,
+           APFloat::S_x87DoubleExtended,
+       }) {
+    const fltSemantics &S = APFloatBase::EnumToSemantics(Sem);
+
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getLargest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getLargest(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, true)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, false)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSNaN(S, true)));
+  }
+
+  {
+    // PPCDoubleDoubleLegacy format supports most but not all operations
+    const fltSemantics &S =
+        APFloatBase::EnumToSemantics(APFloat::S_PPCDoubleDoubleLegacy);
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getZero(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getOne(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getSmallest(S, true)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, false)));
+    EXPECT_TRUE(
+        isBitcastRoundtripSafe(APFloat::getSmallestNormalized(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getInf(S, true)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, false)));
+    EXPECT_TRUE(isBitcastRoundtripSafe(APFloat::getQNaN(S, true)));
+  }
+}
+
 TEST(APFloatTest, Float8ExhaustivePair) {
   // Test each pair of 8-bit floats with non-standard semantics
   for (APFloat::Semantics Sem :
@@ -9420,6 +9590,32 @@ TEST(APFloatTest, getExactLog2) {
   }
 }
 
+TEST(APFloatTest, isPowerOf2) {
+  const fltSemantics &Semantics = APFloat::IEEEdouble();
+
+  EXPECT_TRUE(APFloat(Semantics, "1.0").isPowerOf2(0));
+  EXPECT_TRUE(APFloat(Semantics, "8.0").isPowerOf2(3));
+  EXPECT_TRUE(APFloat(Semantics, "0.25").isPowerOf2(-2));
+
+  EXPECT_FALSE(APFloat(Semantics, "3.0").isPowerOf2(1));
+  EXPECT_FALSE(APFloat(Semantics, "-8.0").isPowerOf2(3));
+  EXPECT_FALSE(APFloat(Semantics, "-8.0").isPowerOf2(INT_MIN));
+  EXPECT_FALSE(APFloat::getZero(Semantics, false).isPowerOf2(0));
+  EXPECT_FALSE(APFloat::getInf(Semantics).isPowerOf2(0));
+  EXPECT_FALSE(APFloat::getNaN(Semantics, false).isPowerOf2(0));
+
+  EXPECT_TRUE(APFloat(Semantics, "-1.0").isNegPowerOf2(0));
+  EXPECT_TRUE(APFloat(Semantics, "-8.0").isNegPowerOf2(3));
+  EXPECT_TRUE(APFloat(Semantics, "-0.25").isNegPowerOf2(-2));
+
+  EXPECT_FALSE(APFloat(Semantics, "-3.0").isNegPowerOf2(1));
+  EXPECT_FALSE(APFloat(Semantics, "8.0").isNegPowerOf2(3));
+  EXPECT_FALSE(APFloat(Semantics, "8.0").isNegPowerOf2(INT_MIN));
+  EXPECT_FALSE(APFloat::getZero(Semantics, false).isNegPowerOf2(0));
+  EXPECT_FALSE(APFloat::getInf(Semantics).isNegPowerOf2(0));
+  EXPECT_FALSE(APFloat::getNaN(Semantics, false).isNegPowerOf2(0));
+}
+
 TEST(APFloatTest, Float8E8M0FNUGetZero) {
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
@@ -10206,6 +10402,27 @@ TEST(APFloatTest, isValidArbitraryFPFormat) {
   EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("unknown"));
 }
 
+TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
+  // Every valid format reports the bit width of its semantics.
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M2"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M2FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3FN"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3B11FNUZ"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E3M4"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E8M0FNU"));
+  EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E3M2FN"));
+  EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E2M3FN"));
+  EXPECT_EQ(4u, APFloat::getArbitraryFPFormatSizeInBits("Float4E2M1FN"));
+
+  // Invalid formats report zero.
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits(""));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("Float8"));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("float4e2m1fn"));
+  EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("unknown"));
+}
+
 TEST(APFloatTest, DecimalStringPreservesInexactStatus) {
   APFloat F(APFloat::IEEEsingle());
 
@@ -10230,60 +10447,111 @@ TEST(APFloatTest, DecimalStringPreservesInexactStatus) {
 
 TEST(APFloatTest, expf) {
   // exp(+-0) = 1.
-  EXPECT_EQ(1.0f, llvm::exp(APFloat(0.0f)).convertToFloat());
-  EXPECT_EQ(1.0f, llvm::exp(APFloat(-0.0f)).convertToFloat());
+  EXPECT_EQ(1.0f, llvm::exp(APFloat(0.0f))->convertToFloat());
+  EXPECT_EQ(1.0f, llvm::exp(APFloat(-0.0f))->convertToFloat());
   // exp(+Inf) = +Inf.
   EXPECT_EQ(std::numeric_limits<float>::infinity(),
             llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), false))
-                .convertToFloat());
+                ->convertToFloat());
   // exp(-Inf) = 0.
-  EXPECT_EQ(
-      0.0f,
-      llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), true)).convertToFloat());
+  EXPECT_EQ(0.0f, llvm::exp(APFloat::getInf(APFloat::IEEEsingle(), true))
+                      ->convertToFloat());
   // exp(NaN) = NaN.
-  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEsingle())).isNaN());
+  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEsingle()))->isNaN());
   // exp(1)
-  EXPECT_EQ(0x1.5bf0a8p1f, llvm::exp(APFloat(1.0f)).convertToFloat());
+  EXPECT_EQ(0x1.5bf0a8p1f, llvm::exp(APFloat(1.0f))->convertToFloat());
   // exp(float max)
   EXPECT_EQ(std::numeric_limits<float>::infinity(),
             llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false))
-                .convertToFloat());
+                ->convertToFloat());
   // exp(min_denormal)
   EXPECT_EQ(1.0f, llvm::exp(APFloat::getSmallest(APFloat::IEEEsingle(), false))
-                      .convertToFloat());
+                      ->convertToFloat());
   // exp(-1)
-  EXPECT_EQ(0x1.78b564p-2f, llvm::exp(APFloat(-1.0f)).convertToFloat());
+  EXPECT_EQ(0x1.78b564p-2f, llvm::exp(APFloat(-1.0f))->convertToFloat());
   // exp(-90)
-  EXPECT_EQ(0x1.1d85p-130f, llvm::exp(APFloat(-90.0f)).convertToFloat());
+  EXPECT_EQ(0x1.1d85p-130f, llvm::exp(APFloat(-90.0f))->convertToFloat());
 }
 
 TEST(APFloatTest, exp) {
   // exp(+-0) = 1.
-  EXPECT_EQ(1.0, llvm::exp(APFloat(0.0)).convertToDouble());
-  EXPECT_EQ(1.0, llvm::exp(APFloat(-0.0)).convertToDouble());
+  EXPECT_EQ(1.0, llvm::exp(APFloat(0.0))->convertToDouble());
+  EXPECT_EQ(1.0, llvm::exp(APFloat(-0.0))->convertToDouble());
   // exp(+Inf) = +Inf.
   EXPECT_EQ(std::numeric_limits<double>::infinity(),
             llvm::exp(APFloat::getInf(APFloat::IEEEdouble(), false))
-                .convertToDouble());
+                ->convertToDouble());
   // exp(-Inf) = 0.
   EXPECT_EQ(0.0, llvm::exp(APFloat::getInf(APFloat::IEEEdouble(), true))
-                     .convertToDouble());
+                     ->convertToDouble());
   // exp(NaN) = NaN.
-  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEdouble())).isNaN());
+  EXPECT_TRUE(llvm::exp(APFloat::getNaN(APFloat::IEEEdouble()))->isNaN());
   // exp(1)
-  EXPECT_EQ(0x1.5bf0a8b145769p1, llvm::exp(APFloat(1.0)).convertToDouble());
+  EXPECT_EQ(0x1.5bf0a8b145769p1, llvm::exp(APFloat(1.0))->convertToDouble());
   // exp(float max)
   EXPECT_EQ(std::numeric_limits<double>::infinity(),
             llvm::exp(APFloat::getLargest(APFloat::IEEEdouble(), false))
-                .convertToDouble());
+                ->convertToDouble());
   // exp(min_denormal)
   EXPECT_EQ(1.0, llvm::exp(APFloat::getSmallest(APFloat::IEEEdouble(), false))
-                     .convertToDouble());
+                     ->convertToDouble());
   // exp(-1)
-  EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0)).convertToDouble());
+  EXPECT_EQ(0x1.78b56362cef38p-2, llvm::exp(APFloat(-1.0))->convertToDouble());
   // exp(-710)
   EXPECT_EQ(0x1.9c017e9459e18p-1025,
-            llvm::exp(APFloat(-710.0)).convertToDouble());
+            llvm::exp(APFloat(-710.0))->convertToDouble());
+}
+
+TEST(APFloatTest, exp_exceptions) {
+  APFloat::opStatus status;
+
+  // exp(0) should be exact (no inexact, no overflow/underflow -> opOK).
+  status = APFloat::opInvalidOp; // initialize to a dummy flag
+  auto res1 = llvm::exp(APFloat(0.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res1.has_value());
+  EXPECT_EQ(APFloat::opOK, status);
+
+  // exp(1) should be inexact (not representing an exact power of 2).
+  status = APFloat::opOK;
+  auto res2 = llvm::exp(APFloat(1.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res2.has_value());
+  EXPECT_EQ(APFloat::opInexact, status);
+
+  // exp(float max) should overflow and be inexact.
+  status = APFloat::opOK;
+  auto res3 = llvm::exp(APFloat::getLargest(APFloat::IEEEsingle(), false),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res3.has_value());
+  EXPECT_EQ(
+      static_cast<APFloat::opStatus>(APFloat::opOverflow | APFloat::opInexact),
+      status);
+
+  // exp(-90.0f) should underflow and be inexact.
+  status = APFloat::opOK;
+  auto res4 = llvm::exp(APFloat(-90.0f), APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res4.has_value());
+  EXPECT_EQ(
+      static_cast<APFloat::opStatus>(APFloat::opUnderflow | APFloat::opInexact),
+      status);
+
+  // exp(NaN) should be quiet and not raise any exceptions.
+  status = APFloat::opInvalidOp;
+  auto res5 = llvm::exp(APFloat::getNaN(APFloat::IEEEsingle()),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res5.has_value());
+  EXPECT_EQ(APFloat::opOK, status);
+
+  // exp(sNaN) should raise an invalid operation exception.
+  status = APFloat::opOK;
+  auto res6 = llvm::exp(APFloat::getSNaN(APFloat::IEEEsingle()),
+                        APFloat::rmNearestTiesToEven, &status);
+  EXPECT_TRUE(res6.has_value());
+  EXPECT_EQ(APFloat::opInvalidOp, status);
+
+  // exp with unsupported rounding mode or unsupported semantics should
+  // return std::nullopt.
+  EXPECT_FALSE(llvm::exp(APFloat(1.0f), APFloat::rmTowardPositive).has_value());
+  EXPECT_FALSE(llvm::exp(APFloat::getZero(APFloat::IEEEhalf())).has_value());
 }
 
 } // namespace

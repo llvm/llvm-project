@@ -28,9 +28,9 @@ body: |
     ; GFX9-NEXT: %smax:sreg_32 = S_ABS_I32 %src0, implicit-def dead $scc
     ; GFX9-NEXT: S_ENDPGM 0, implicit %smax
     %src0:sgpr(s32) = COPY $sgpr0
-    %zero:sgpr(s32) = G_CONSTANT i32 0
-    %ineg:sgpr(s32) = G_SUB %zero, %src0
-    %smax:sgpr(s32) = G_SMAX %src0, %ineg
+    %zero:sgpr(i32) = G_CONSTANT i32 0
+    %ineg:sgpr(i32) = G_SUB %zero, %src0
+    %smax:sgpr(i32) = G_SMAX %src0, %ineg
     S_ENDPGM 0, implicit %smax
 ...
 
@@ -58,9 +58,9 @@ body: |
     ; GFX9-NEXT: %smax:sreg_32 = S_ABS_I32 %src0, implicit-def dead $scc
     ; GFX9-NEXT: S_ENDPGM 0, implicit %smax
     %src0:sgpr(s32) = COPY $sgpr0
-    %zero:sgpr(s32) = G_CONSTANT i32 0
-    %ineg:sgpr(s32) = G_SUB %zero, %src0
-    %smax:sgpr(s32) = G_SMAX %ineg, %src0
+    %zero:sgpr(i32) = G_CONSTANT i32 0
+    %ineg:sgpr(i32) = G_SUB %zero, %src0
+    %smax:sgpr(i32) = G_SMAX %ineg, %src0
     S_ENDPGM 0, implicit %smax
 ...
 
@@ -92,9 +92,9 @@ body: |
     ; GFX9-NEXT: %smax:vgpr_32 = V_MAX_I32_e64 %src0, %ineg, implicit $exec
     ; GFX9-NEXT: S_ENDPGM 0, implicit %smax
     %src0:vgpr(s32) = COPY $vgpr0
-    %zero:vgpr(s32) = G_CONSTANT i32 0
-    %ineg:vgpr(s32) = G_SUB %zero, %src0
-    %smax:vgpr(s32) = G_SMAX %src0, %ineg
+    %zero:vgpr(i32) = G_CONSTANT i32 0
+    %ineg:vgpr(i32) = G_SUB %zero, %src0
+    %smax:vgpr(i32) = G_SMAX %src0, %ineg
     S_ENDPGM 0, implicit %smax
 ...
 

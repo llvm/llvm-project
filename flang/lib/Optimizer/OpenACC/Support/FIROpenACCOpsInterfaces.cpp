@@ -18,7 +18,6 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace fir::acc {
@@ -39,7 +38,7 @@ AccFortranObjectViewModel<mlir::acc::ReductionInitOp>::getViewSource(
   detail::verifyFortranObjectViewResult(op, resultView);
   auto iface = mlir::cast<mlir::RegionBranchOpInterface>(op);
   llvm::SmallVector<mlir::Value, 1> resultValues;
-  iface.getPredecessorValues(mlir::RegionSuccessor::parent(), /*index=*/0,
+  iface.getPredecessorValues(mlir::RegionSuccessor(op), /*index=*/0,
                              resultValues);
   assert(!resultValues.empty() &&
          "acc.reduction_init's result must have at least one possible value");
@@ -142,6 +141,26 @@ bool OutlineRematerializationModel<
   // that addresses stay live-in instead of the scalar values.
   return fir::ConvertOp::isPointerCompatible(inTy) &&
          fir::ConvertOp::isIntegerCompatible(outTy);
+}
+
+template <>
+void OutlineIdentityOperandDeclareModel<
+    fir::DeclareOp>::dropOutlinedIdentityOperands(mlir::Operation *op) const {
+  auto declareOp = mlir::cast<fir::DeclareOp>(op);
+  if (declareOp.getDummyScope()) {
+    declareOp.getDummyScopeMutable().clear();
+    declareOp->removeAttr(declareOp.getDummyArgNoAttrName());
+  }
+}
+
+template <>
+void OutlineIdentityOperandDeclareModel<
+    hlfir::DeclareOp>::dropOutlinedIdentityOperands(mlir::Operation *op) const {
+  auto declareOp = mlir::cast<hlfir::DeclareOp>(op);
+  if (declareOp.getDummyScope()) {
+    declareOp.getDummyScopeMutable().clear();
+    declareOp->removeAttr(declareOp.getDummyArgNoAttrName());
+  }
 }
 
 // Helper to recursively process address-of operations in derived type

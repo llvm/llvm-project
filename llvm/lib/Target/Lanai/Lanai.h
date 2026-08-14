@@ -14,6 +14,10 @@
 #ifndef LLVM_LIB_TARGET_LANAI_LANAI_H
 #define LLVM_LIB_TARGET_LANAI_LANAI_H
 
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -21,25 +25,40 @@ class FunctionPass;
 class LanaiTargetMachine;
 class PassRegistry;
 
-// createLanaiISelDag - This pass converts a legalized DAG into a
+// createLanaiISelDagPass - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.
-FunctionPass *createLanaiISelDag(LanaiTargetMachine &TM);
+class LanaiISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  LanaiISelDAGToDAGPass(LanaiTargetMachine &TM);
+};
+
+FunctionPass *createLanaiISelDagLegacyPass(LanaiTargetMachine &TM);
 
 // createLanaiDelaySlotFillerPass - This pass fills delay slots
 // with useful instructions or nop's
-FunctionPass *createLanaiDelaySlotFillerPass(const LanaiTargetMachine &TM);
+class LanaiDelaySlotFillerPass
+    : public PassInfoMixin<LanaiDelaySlotFillerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *
+createLanaiDelaySlotFillerLegacyPass(const LanaiTargetMachine &TM);
 
 // createLanaiMemAluCombinerPass - This pass combines loads/stores and
 // arithmetic operations.
-FunctionPass *createLanaiMemAluCombinerPass();
+class LanaiMemAluCombinerPass : public PassInfoMixin<LanaiMemAluCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-// createLanaiSetflagAluCombinerPass - This pass combines SET_FLAG and ALU
-// operations.
-FunctionPass *createLanaiSetflagAluCombinerPass();
+FunctionPass *createLanaiMemAluCombinerLegacyPass();
 
 void initializeLanaiAsmPrinterPass(PassRegistry &);
 void initializeLanaiDAGToDAGISelLegacyPass(PassRegistry &);
-void initializeLanaiMemAluCombinerPass(PassRegistry &);
+void initializeLanaiMemAluCombinerLegacyPass(PassRegistry &);
 
 } // namespace llvm
 

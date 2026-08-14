@@ -54,7 +54,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
   requires view<_View> && is_object_v<_Pred>
-class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS filter_view : public view_interface<filter_view<_View, _Pred>> {
+class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG filter_view : public view_interface<filter_view<_View, _Pred>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
@@ -72,7 +72,7 @@ public:
     requires default_initializable<_View> && default_initializable<_Pred>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 filter_view(_View __base, _Pred __pred)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit filter_view(_View __base, _Pred __pred)
       : __base_(std::move(__base)), __pred_(in_place, std::move(__pred)) {}
 
   template <class _Vp = _View>

@@ -23,7 +23,7 @@ body: |
     ; GFX1150-NEXT: {{  $}}
     ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; GFX1150-NEXT: [[FCMP:%[0-9]+]]:sgpr(s32) = G_FCMP floatpred(uge), [[COPY]](s32), [[COPY1]]
+    ; GFX1150-NEXT: [[FCMP:%[0-9]+]]:sgpr(i32) = G_FCMP floatpred(uge), [[COPY]](s32), [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_FCMP floatpred(uge), %0(s32), %1

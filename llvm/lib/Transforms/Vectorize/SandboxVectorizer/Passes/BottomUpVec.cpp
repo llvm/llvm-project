@@ -540,7 +540,7 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
   IMaps = std::make_unique<InstrMaps>();
   LegalityAnalysis Legality(A.getAA(), A.getScalarEvolution(),
                             F.getParent()->getDataLayout(), F.getContext(),
-                            *IMaps);
+                            *IMaps, SchedDirection::BottomUp);
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());

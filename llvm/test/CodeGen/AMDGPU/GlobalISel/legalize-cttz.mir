@@ -168,8 +168,8 @@ body: |
     ; CHECK-NEXT: [[CTTZ_ZERO_POISON1:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[OR1]](s32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[CTTZ_ZERO_POISON1]](s32)
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY2]], [[C]](s32)
-    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[COPY1]], [[SHL]]
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[COPY1]], [[SHL]]
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](i32)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = G_CTTZ %0

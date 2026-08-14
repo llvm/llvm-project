@@ -90,11 +90,11 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
 
-  auto *Replacement = IRBuilder.CreateCall(TLIVecFunc, Args, OpBundles);
+  // Preserve fast math flags for FP math (getFastMathFlagsOrNone keeps this
+  // safe for non-FP intrinsics, whose flags are simply empty).
+  auto *Replacement = IRBuilder.CreateCall(
+      TLIVecFunc, Args, OpBundles, /*FMFSource=*/II->getFastMathFlagsOrNone());
   II->replaceAllUsesWith(Replacement);
-  // Preserve fast math flags for FP math.
-  if (isa<FPMathOperator>(Replacement))
-    Replacement->copyFastMathFlags(II);
   Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
 

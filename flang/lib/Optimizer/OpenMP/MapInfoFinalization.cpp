@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -34,7 +35,6 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -47,7 +47,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
-#include <numeric>
 
 #define DEBUG_TYPE "omp-map-info-finalization"
 
@@ -377,21 +376,21 @@ class MapInfoFinalizationPass
       builder.restoreInsertionPoint(insPt);
     }
 
-    // We should only emit a store if the passed in data is present, it is
-    // possible a user passes in no argument to an optional parameter, in which
-    // case we cannot store or we'll segfault on the emitted memcpy.
-    // TODO: We currently emit a present -> load/store every time we use a
-    // mapped value that requires a local allocation, this isn't the most
-    // efficient, although, it is more correct in a lot of situations. One
-    // such situation is emitting a this series of instructions in separate
-    // segments of a branch (e.g. two target regions in separate else/if branch
-    // mapping the same function argument), however, it would be nice to be able
-    // to optimize these situations e.g. raising the load/store out of the
-    // branch if possible. But perhaps this is best left to lower level
-    // optimisation passes.
+    // Make sure that our new allocation is "allocated" to default box state.
+    mlir::Type boxType = fir::unwrapRefType(alloca.getType());
+    mlir::Value nullBox = fir::factory::createUnallocatedBox(
+        builder, loc, boxType, /*nonDeferredLenParams=*/{});
+    fir::StoreOp::create(builder, loc, nullBox, alloca);
+
+    // Only overwrite with actual descriptor data if present.
+    // TODO: We currently emit a present check every time we use a mapped
+    // value that requires a local allocation. This isn't the most efficient,
+    // but it is correct for situations like separate target regions in
+    // different branches mapping the same function argument. Optimization
+    // (e.g., hoisting the load/store) is best left to lower level passes.
     auto isPresent =
         fir::IsPresentOp::create(builder, loc, builder.getI1Type(), descriptor);
-    builder.genIfOp(loc, {}, isPresent, false)
+    builder.genIfOp(loc, {}, isPresent, /*withElseRegion=*/false)
         .genThen([&]() {
           descriptor = builder.loadIfRef(loc, descriptor);
           fir::StoreOp::create(builder, loc, descriptor, alloca);
@@ -762,7 +761,8 @@ class MapInfoFinalizationPass
       return mapTypeFlag;
     }
 
-    flags |= MapFlags::to | (mapTypeFlag & MapFlags::implicit);
+    flags |=
+        MapFlags::to | (mapTypeFlag & (MapFlags::implicit | MapFlags::present));
 
     // Descriptors for objects will always be copied. This is because the
     // descriptor can be rematerialized by the compiler, and so the address

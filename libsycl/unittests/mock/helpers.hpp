@@ -65,6 +65,10 @@ template <class T> void releaseDummyHandle(T Handle) {
   delete DummyHandlePtr;
 }
 
+template <typename... HandleT> void releaseDummyHandles(HandleT... Handles) {
+  (releaseDummyHandle(Handles), ...);
+}
+
 class MockLiboffload {
 public:
   MockLiboffload() { initDefault(); }
@@ -104,13 +108,28 @@ public:
               (ol_queue_handle_t Queue, ol_event_handle_t *Events,
                size_t NumEvents));
   MOCK_METHOD(ol_result_t, olCreateEvent,
-              (ol_queue_handle_t Queue, ol_event_handle_t *Event));
+              (ol_queue_handle_t Queue, ol_event_flags_t Flags,
+               ol_event_handle_t *Event));
+  MOCK_METHOD(ol_result_t, olLaunchKernel,
+              (ol_queue_handle_t Queue, ol_device_handle_t Device,
+               ol_symbol_handle_t Kernel,
+               const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+               const ol_kernel_launch_prop_t *Properties, size_t NumArgs,
+               void **ArgPtrs, const size_t *ArgSizes));
+  MOCK_METHOD(ol_result_t, olMemcpy,
+              (ol_queue_handle_t Queue, void *DstPtr,
+               ol_device_handle_t DstDevice, const void *SrcPtr,
+               ol_device_handle_t SrcDevice, size_t Size));
+  MOCK_METHOD(ol_result_t, olGetMemInfo,
+              (const void *Ptr, ol_mem_info_t PropName, size_t PropSize,
+               void *PropValue));
 
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =
         Errors.emplace(std::make_pair(Code, ol_error_struct_t{Code, ""}));
     return &Iterator->second;
   }
+  ol_device_handle_t getHostOLDevice() { return HostDevice; }
 
 private:
   void initDefault();
@@ -118,6 +137,8 @@ private:
   std::unordered_map<ol_errc_t, ol_error_struct_t> Errors;
   ol_platform_handle_t DefaultPlatform{};
   ol_device_handle_t DefaultDevice{};
+  ol_platform_handle_t HostPlatform{};
+  ol_device_handle_t HostDevice{};
 };
 
 #ifndef _LIB_EXPORT

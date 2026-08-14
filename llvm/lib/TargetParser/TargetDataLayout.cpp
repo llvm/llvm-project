@@ -18,7 +18,7 @@ static StringRef getManglingComponent(const Triple &T) {
     return "-m:l";
   if (T.isOSBinFormatMachO())
     return "-m:o";
-  if ((T.isOSWindows() || T.isUEFI()) && T.isOSBinFormatCOFF())
+  if (T.isOSWindowsOrUEFI() && T.isOSBinFormatCOFF())
     return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
   if (T.isOSBinFormatXCOFF())
     return "-m:a";
@@ -597,8 +597,8 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::ppc64:
   case Triple::ppc64le:
     return computePowerDataLayout(*this, ABIName);
+  case Triple::amdgpu:
   case Triple::r600:
-  case Triple::amdgcn:
     return computeAMDDataLayout(*this);
   case Triple::riscv32:
   case Triple::riscv64:

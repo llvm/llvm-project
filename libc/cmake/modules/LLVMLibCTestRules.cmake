@@ -28,6 +28,10 @@ function(_get_common_test_compile_options output_var c_test flags)
     list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
   endif()
 
+  if(CMAKE_CROSSCOMPILING_EMULATOR)
+    list(APPEND compile_options "-DLIBC_TEST_UNDER_EMULATOR")
+  endif()
+
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 

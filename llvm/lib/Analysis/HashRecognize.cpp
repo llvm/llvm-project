@@ -150,21 +150,21 @@ private:
 };
 
 /// Check the well-formedness of the (most|least) significant bit check given \p
-/// ConditionalRecurrence, \p SimpleRecurrence, depending on \p
-/// ByteOrderSwapped. We check that ConditionalRecurrence.Step is a
-/// Select(Cmp()) where the compare is `>= 0` in the big-endian case, and `== 0`
-/// in the little-endian case (or the inverse, in which case the branches of the
-/// compare are swapped). We check that the LHS is (ConditionalRecurrence.Phi
-/// [xor SimpleRecurrence.Phi]) in the big-endian case, and additionally check
-/// for an AND with one in the little-endian case. We then check AllowedByR
-/// against CheckAllowedByR, which is [0, smin) in the big-endian case, and is
-/// [0, 1) in the little-endian case. CheckAllowedByR checks for
-/// significant-bit-clear, and we match the corresponding arms of the select
-/// against bit-shift and bit-shift-and-xor-gen-poly.
+/// ConditionalRecurrence, \p SimpleRecurrence, depending on \p IsBigEndian. We
+/// check that ConditionalRecurrence.Step is a Select(Cmp()) where the compare
+/// is `>= 0` in the big-endian case, and `== 0` in the little-endian case (or
+/// the inverse, in which case the branches of the compare are swapped). We
+/// check that the LHS is (ConditionalRecurrence.Phi [xor SimpleRecurrence.Phi])
+/// in the big-endian case, and additionally check for an AND with one in the
+/// little-endian case. We then check AllowedByR against CheckAllowedByR, which
+/// is [0, smin) in the big-endian case, and is [0, 1) in the little-endian
+/// case. CheckAllowedByR checks for significant-bit-clear, and we match the
+/// corresponding arms of the select against bit-shift and
+/// bit-shift-and-xor-gen-poly.
 static bool
 isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
                                 const RecurrenceInfo &SimpleRecurrence,
-                                bool ByteOrderSwapped) {
+                                bool IsBigEndian) {
   auto *SI = cast<SelectInst>(ConditionalRecurrence.Step);
   CmpPredicate Pred;
   const Value *L;
@@ -180,8 +180,8 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
       m_Specific(ConditionalRecurrence.Phi),
       m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(ConditionalRecurrence.Phi)),
               m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
-  bool LWellFormed = ByteOrderSwapped ? match(L, MatchPred)
-                                      : match(L, m_c_And(MatchPred, m_One()));
+  bool LWellFormed =
+      IsBigEndian ? match(L, MatchPred) : match(L, m_c_And(MatchPred, m_One()));
   if (!LWellFormed)
     return false;
 
@@ -190,8 +190,8 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
   auto RCR = ConstantRange::fromKnownBits(KnownR, false);
   auto AllowedByR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
   ConstantRange CheckAllowedByR(APInt::getZero(BW),
-                                ByteOrderSwapped ? APInt::getSignedMinValue(BW)
-                                                 : APInt(BW, 1));
+                                IsBigEndian ? APInt::getSignedMinValue(BW)
+                                            : APInt(BW, 1));
 
   BinaryOperator *BitShift = ConditionalRecurrence.BO;
   if (AllowedByR == CheckAllowedByR)
@@ -342,21 +342,21 @@ getRecurrences(BasicBlock *LoopLatch, const PHINode *IndVar, const Loop &L) {
 }
 
 PolynomialInfo::PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
-                               Value *ComputedValue, bool ByteOrderSwapped,
+                               Value *ComputedValue, bool IsBigEndian,
                                Value *LHSAux)
     : TripCount(TripCount), LHS(LHS), RHS(RHS), ComputedValue(ComputedValue),
-      ByteOrderSwapped(ByteOrderSwapped), LHSAux(LHSAux) {}
+      IsBigEndian(IsBigEndian), LHSAux(LHSAux) {}
 
 /// Generate a lookup table of 256 entries by interleaving the generating
 /// polynomial. The optimization technique of table-lookup for CRC is also
 /// called the Sarwate algorithm.
 CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
-                                        bool ByteOrderSwapped) {
+                                        bool IsBigEndian) {
   unsigned BW = GenPoly.getBitWidth();
   CRCTable Table;
   Table[0] = APInt::getZero(BW);
 
-  if (ByteOrderSwapped) {
+  if (IsBigEndian) {
     APInt CRCInit = APInt::getSignedMinValue(BW);
     for (unsigned I = 1; I < 256; I <<= 1) {
       CRCInit = CRCInit.shl(1) ^
@@ -458,12 +458,12 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
 
   // Make sure that all recurrences are either all SCEVMul with two or SCEVDiv
   // with two, or in other words, that they're single bit-shifts.
-  std::optional<bool> ByteOrderSwapped =
+  std::optional<bool> IsBigEndian =
       isBigEndianBitShift(ConditionalRecurrence.BO, SE);
-  if (!ByteOrderSwapped)
+  if (!IsBigEndian)
     return "Loop with non-unit bitshifts";
   if (SimpleRecurrence) {
-    if (isBigEndianBitShift(SimpleRecurrence.BO, SE) != ByteOrderSwapped)
+    if (isBigEndianBitShift(SimpleRecurrence.BO, SE) != IsBigEndian)
       return "Loop with non-unit bitshifts";
 
     // Ensure that the PHIs have exactly two uses:
@@ -483,9 +483,20 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
       return "Recurrences not intertwined with XOR";
   }
 
-  // Make sure that the TC doesn't exceed the bitwidth of LHSAux, or LHS.
   Value *LHS = ConditionalRecurrence.Start;
   Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
+
+  // In the big-endian case where LHSAux is narrower than LHS, the most
+  // significant bit check will never be influenced by LHSAux. In this case,
+  // SimpleRecurrence must still be well-formed, but LHSAux is effectively dead.
+  // This also averts a possible miscompile later where LHSAux gets shifted by
+  // its entire bit width, creating poison.
+  if (*IsBigEndian && LHSAux &&
+      LHSAux->getType()->getIntegerBitWidth() <
+          LHS->getType()->getIntegerBitWidth())
+    LHSAux = nullptr;
+
+  // Make sure that the TC doesn't exceed the bitwidth of LHSAux, or LHS.
   if (TC > (LHSAux ? LHSAux->getType()->getIntegerBitWidth()
                    : LHS->getType()->getIntegerBitWidth()))
     return "Loop iterations exceed bitwidth of data";
@@ -505,7 +516,7 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   const APInt &GenPoly = *ConditionalRecurrence.ExtraConst;
 
   if (!isSignificantBitCheckWellFormed(ConditionalRecurrence, SimpleRecurrence,
-                                       *ByteOrderSwapped))
+                                       *IsBigEndian))
     return "Malformed significant-bit check";
 
   SmallVector<const Instruction *> Roots(
@@ -517,8 +528,7 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   if (containsUnreachable(L, Roots))
     return "Found stray unvisited instructions";
 
-  return PolynomialInfo(TC, LHS, GenPoly, ComputedValue, *ByteOrderSwapped,
-                        LHSAux);
+  return PolynomialInfo(TC, LHS, GenPoly, ComputedValue, *IsBigEndian, LHSAux);
 }
 
 void CRCTable::print(raw_ostream &OS) const {
@@ -547,7 +557,7 @@ void HashRecognize::print(raw_ostream &OS) const {
   }
 
   auto Info = std::get<PolynomialInfo>(Ret);
-  OS << "Found" << (Info.ByteOrderSwapped ? " big-endian " : " little-endian ")
+  OS << "Found" << (Info.IsBigEndian ? " big-endian " : " little-endian ")
      << "CRC-" << Info.RHS.getBitWidth() << " loop with trip count "
      << Info.TripCount << "\n";
   OS.indent(2) << "Initial CRC: ";
@@ -565,7 +575,7 @@ void HashRecognize::print(raw_ostream &OS) const {
     OS << "\n";
   }
   OS.indent(2) << "Computed CRC lookup table:\n";
-  genSarwateTable(Info.RHS, Info.ByteOrderSwapped).print(OS);
+  genSarwateTable(Info.RHS, Info.IsBigEndian).print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

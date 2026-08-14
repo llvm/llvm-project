@@ -62,7 +62,7 @@ follows:
     ulittle32_t BlockMapAddr;
   };
 
-- **FileMagic** - Must be equal to ``"Microsoft C / C++ MSF 7.00\\r\\n"``
+- **FileMagic** - Must be equal to ``"Microsoft C/C++ MSF 7.00\\r\\n"``
   followed by the bytes ``1A 44 53 00 00 00``.
 - **BlockSize** - The block size of the internal file system.  Valid values are
   512, 1024, 2048, and 4096 bytes.  Certain aspects of the MSF file layout vary

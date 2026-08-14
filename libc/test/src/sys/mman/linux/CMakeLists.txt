@@ -187,6 +187,11 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
+if(CMAKE_CROSSCOMPILING_EMULATOR)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "Skipping remap_file_pages_test under emulator.")
+  endif()
+else()
 add_libc_unittest(
   remap_file_pages_test
   SUITE
@@ -207,6 +212,7 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.sysconf
 )
+endif()
 
 add_libc_unittest(
   shm_test

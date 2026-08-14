@@ -82,8 +82,6 @@ public:
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
-  bool useFP16ConversionIntrinsics() const override { return false; }
-
   bool isCLZForZeroUndef() const override { return false; }
 
   bool
@@ -158,7 +156,7 @@ public:
       Values.emplace_back(OffloadArchToString(static_cast<OffloadArch>(i)));
   }
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     GPU = StringToOffloadArch(Name);
     return GPU != OffloadArch::Unknown;
   }

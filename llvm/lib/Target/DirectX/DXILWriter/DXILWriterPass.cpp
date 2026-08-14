@@ -35,6 +35,9 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+extern cl::opt<bool> EmbedDebug;
+extern cl::opt<std::string> PdbDebugPath;
+
 namespace {
 class WriteDXILPass : public llvm::ModulePass {
   raw_ostream &OS; // raw_ostream to print on
@@ -227,6 +230,18 @@ public:
     legalizeLifetimeIntrinsics(M);
 
     bool HasDebugInfo = !M.debug_compile_units().empty();
+
+    // Enable EmbedDebug if there is debug info, but it is not being written
+    // to a PDB file.
+    if (HasDebugInfo && !EmbedDebug && PdbDebugPath.empty())
+      EmbedDebug = true;
+    if (!HasDebugInfo && EmbedDebug)
+      reportFatalUsageError(
+          "Missing debug info for embedding into the container");
+    // TODO: move this check to DXContainerPDB.cpp when /Zs is implemented.
+    if (!HasDebugInfo && !PdbDebugPath.empty())
+      reportFatalUsageError("Missing debug info for writing to the PDB file");
+
     std::string ILDBData;
     if (HasDebugInfo) {
       // Write DXIL with debug info to ILDB part.

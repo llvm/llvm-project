@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -fsyntax-only -DTEXTURE=Texture2D -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -fsyntax-only -DTEXTURE=Texture2DArray -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -fsyntax-only -DTEXTURE=RWTexture2D -verify %s
 
-Texture2D<float4> tex;
+TEXTURE<float4> tex;
 
 void main() {
   uint u_w, u_h, u_l;

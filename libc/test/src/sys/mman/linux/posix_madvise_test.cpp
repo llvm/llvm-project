@@ -45,6 +45,12 @@ TEST_F(LlvmLibcPosixMadviseTest, Error_BadPtr) {
 
   // posix_madvise doesn't set errno, but the return value is actually the error
   // code.
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU stubs madvise hints, so posix_madvise returns 0.
+  EXPECT_EQ(LIBC_NAMESPACE::posix_madvise(nullptr, 8, POSIX_MADV_SEQUENTIAL),
+            0);
+#else
   EXPECT_EQ(LIBC_NAMESPACE::posix_madvise(nullptr, 8, POSIX_MADV_SEQUENTIAL),
             ENOMEM);
+#endif
 }

@@ -90,7 +90,7 @@ LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam) {
 
   if (Error Err = prepareDtltoJobs())
     return Err;
-  if (Error Err = serializeLTOInputs())
+  if (Error Err = extractLTOInputs())
     return Err;
   if (Error Err = performCodegen())
     return Err;
@@ -103,6 +103,8 @@ LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam) {
 Error lto::DTLTO::checkCacheHit(Job &J) {
   if (!Cache.isValid())
     return Error::success();
+
+  TimeTraceScope TimeScope("Check cache for DTLTO", J.SummaryIndexPath);
 
   auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
   if (Error Err = CacheAddStreamExp.takeError())
@@ -152,6 +154,10 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
   if (Error Err = checkCacheHit(J))
     return Err;
   if (!J.Cached) {
+    InputModuleIDsToExtract.insert(J.ModuleID);
+    for (StringRef ImportPath : J.ImportsFilesList)
+      InputModuleIDsToExtract.insert(ImportPath);
+
     TimeTraceScope JobScope("Emit individual index for DTLTO",
                             J.SummaryIndexPath);
     if (Error Err = save(SummaryIndexFiles[Task], J.SummaryIndexPath))
@@ -222,6 +228,8 @@ void lto::DTLTO::buildCommonRemoteCompilerOptions() {
 Error lto::DTLTO::prepareDtltoJobs() {
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
+  InputModuleIDsToExtract.clear();
 
   if (ModuleMap.empty())
     return Error::success();

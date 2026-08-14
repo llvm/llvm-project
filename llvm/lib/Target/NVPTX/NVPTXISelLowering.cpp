@@ -15,6 +15,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
@@ -561,6 +562,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
       break;
     case ISD::FEXP2:
+    case ISD::FTANH:
       IsOpSupported &= STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70;
       break;
     }
@@ -1013,6 +1015,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::FROUND, MVT::bf16, Promote);
   AddPromotedToType(ISD::FROUND, MVT::bf16, MVT::f32);
 
+  setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
+
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
@@ -1025,7 +1029,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
   // to f32.
   for (const auto &Op :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FTANH}) {
+       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
     // only div/rem/sqrt are legal for f64
@@ -1037,6 +1041,25 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
   setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
+
+  // FTANH support:
+  // - f32 (sm_75+, PTX 7.0+)
+  // - f16/f16x2 (sm_75+, PTX 7.0+)
+  // - bf16/bf16x2 (sm_90+, PTX 7.8+)
+  // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
+  if (STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70)
+    setOperationAction(ISD::FTANH, MVT::f32, Legal);
+  setOperationAction(ISD::FTANH, MVT::v2f32, Expand);
+
+  // Scalar f16/bf16: promote to f32 when not natively supported.
+  setFP16OperationAction(ISD::FTANH, MVT::f16, Legal, Promote);
+  setBF16OperationAction(ISD::FTANH, MVT::bf16, Legal, Promote);
+  if (getOperationAction(ISD::FTANH, MVT::bf16) == Promote)
+    AddPromotedToType(ISD::FTANH, MVT::bf16, MVT::f32);
+
+  // Vector v2f16/v2bf16: expand when not natively supported.
+  setFP16OperationAction(ISD::FTANH, MVT::v2f16, Legal, Expand);
+  setBF16OperationAction(ISD::FTANH, MVT::v2bf16, Legal, Expand);
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   setOperationAction(ISD::FABS, MVT::v2f32, Expand);
@@ -1118,19 +1141,23 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(STI.hasAtomSwap128() ? 128 : 64);
   setMaxDivRemBitWidthSupported(64);
+  setMaxLargeFPConvertBitWidthSupported(64);
 
   // Custom lowering for tcgen05.ld vector operands
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
-                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::v2f32,
-                      MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32,
-                      MVT::v64f32, MVT::v128f32},
+                     {MVT::v1i32, MVT::v2i32, MVT::v4i32, MVT::v8i32,
+                      MVT::v16i32, MVT::v32i32, MVT::v64i32, MVT::v128i32,
+                      MVT::v2f32, MVT::v4f32, MVT::v8f32, MVT::v16f32,
+                      MVT::v32f32, MVT::v64f32, MVT::v128f32},
                      Custom);
 
-  // Custom lowering for tcgen05.st vector operands
+  // Custom lowering for tcgen05.st vector operands and the st.async
+  // i128 (.b128) operand. MVT::i8 is needed for the st.async.{sys,gpu} b8
+  // variant.
   setOperationAction(ISD::INTRINSIC_VOID,
-                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::Other},
+                     {MVT::i8, MVT::v1i32, MVT::v2i32, MVT::v4i32, MVT::v8i32,
+                      MVT::v16i32, MVT::v32i32, MVT::v64i32, MVT::v128i32,
+                      MVT::i128, MVT::Other},
                      Custom);
 
   // Enable custom lowering for the following:
@@ -1201,144 +1228,6 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
           MakeIntrinsicCall(Intrinsic::nvvm_rsqrt_approx_d));
     }
   }
-}
-
-static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                                  const DataLayout &DL);
-
-std::string NVPTXTargetLowering::getPrototype(
-    const DataLayout &DL, Type *RetTy, const ArgListTy &Args,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    std::optional<unsigned> FirstVAArg, const CallBase &CB,
-    unsigned UniqueCallSite) const {
-  auto PtrVT = getPointerTy(DL);
-
-  std::string Prototype;
-  raw_string_ostream O(Prototype);
-  O << "prototype_" << UniqueCallSite << " : .callprototype ";
-
-  if (RetTy->isVoidTy()) {
-    O << "()";
-  } else {
-    O << "(";
-    if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign = getArgumentAlignment(&CB, RetTy, 0, DL);
-      O << ".param .align " << RetAlign.value() << " .b8 _["
-        << DL.getTypeAllocSize(RetTy) << "]";
-    } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
-      unsigned size = 0;
-      if (auto *ITy = dyn_cast<IntegerType>(RetTy)) {
-        size = ITy->getBitWidth();
-      } else {
-        assert(RetTy->isFloatingPointTy() &&
-               "Floating point type expected here");
-        size = RetTy->getPrimitiveSizeInBits();
-      }
-      // PTX ABI requires all scalar return values to be at least 32
-      // bits in size.  fp16 normally uses .b16 as its storage type in
-      // PTX, so its size must be adjusted here, too.
-      size = promoteScalarArgumentSize(size);
-
-      O << ".param .b" << size << " _";
-    } else if (isa<PointerType>(RetTy)) {
-      O << ".param .b" << PtrVT.getSizeInBits() << " _";
-    } else {
-      llvm_unreachable("Unknown return type");
-    }
-    O << ") ";
-  }
-  O << "_ (";
-
-  bool first = true;
-
-  const unsigned NumArgs = FirstVAArg.value_or(Args.size());
-  auto AllOuts = ArrayRef(Outs);
-  for (const unsigned I : llvm::seq(NumArgs)) {
-    const auto ArgOuts =
-        AllOuts.take_while([I](auto O) { return O.OrigArgIndex == I; });
-    AllOuts = AllOuts.drop_front(ArgOuts.size());
-
-    Type *Ty = Args[I].Ty;
-    if (!first) {
-      O << ", ";
-    }
-    first = false;
-
-    if (ArgOuts[0].Flags.isByVal()) {
-      // Indirect calls need strict ABI alignment so we disable optimizations by
-      // not providing a function to optimize.
-      Type *ETy = Args[I].IndirectType;
-      Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-      Align ParamByValAlign =
-          getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
-
-      O << ".param .align " << ParamByValAlign.value() << " .b8 _["
-        << ArgOuts[0].Flags.getByValSize() << "]";
-    } else {
-      if (shouldPassAsArray(Ty)) {
-        Align ParamAlign =
-            getArgumentAlignment(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
-        O << ".param .align " << ParamAlign.value() << " .b8 _["
-          << DL.getTypeAllocSize(Ty) << "]";
-        continue;
-      }
-      // i8 types in IR will be i16 types in SDAG
-      assert((getValueType(DL, Ty) == ArgOuts[0].VT ||
-              (getValueType(DL, Ty) == MVT::i8 && ArgOuts[0].VT == MVT::i16)) &&
-             "type mismatch between callee prototype and arguments");
-      // scalar type
-      unsigned sz = 0;
-      if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-        sz = promoteScalarArgumentSize(ITy->getBitWidth());
-      } else if (isa<PointerType>(Ty)) {
-        sz = PtrVT.getSizeInBits();
-      } else {
-        sz = Ty->getPrimitiveSizeInBits();
-      }
-      O << ".param .b" << sz << " _";
-    }
-  }
-
-  if (FirstVAArg)
-    O << (first ? "" : ",") << " .param .align "
-      << STI.getMaxRequiredAlignment() << " .b8 _[]";
-  O << ")";
-  if (shouldEmitPTXNoReturn(&CB, *nvTM))
-    O << " .noreturn";
-  O << ";";
-
-  return Prototype;
-}
-
-static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                                  const DataLayout &DL) {
-  if (!CB) {
-    // CallSite is zero, fallback to ABI type alignment
-    return DL.getABITypeAlign(Ty);
-  }
-
-  const Function *DirectCallee = CB->getCalledFunction();
-
-  if (!DirectCallee) {
-    // We don't have a direct function symbol, but that may be because of
-    // constant cast instructions in the call.
-
-    // With bitcast'd call targets, the instruction will be the call
-    if (const auto *CI = dyn_cast<CallInst>(CB)) {
-      // Check if we have call alignment metadata
-      if (MaybeAlign StackAlign = getAlign(*CI, Idx))
-        return StackAlign.value();
-    }
-    DirectCallee = getMaybeBitcastedCallee(CB);
-  }
-
-  // Check for function alignment information if we found that the
-  // ultimate target is a Function
-  if (DirectCallee)
-    return getFunctionArgumentAlignment(DirectCallee, Ty, Idx, DL);
-
-  // Call is indirect, fall back to the ABI type alignment
-  return DL.getABITypeAlign(Ty);
 }
 
 static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
@@ -1455,7 +1344,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   //
   // After all vararg is processed, 'VAOffset' holds the size of the
   // vararg byte array.
-  assert((CLI.IsVarArg || CLI.Args.size() == CLI.NumFixedArgs) &&
+  assert((CLI.IsVarArg || CLI.Args.size() <= CLI.NumFixedArgs) &&
          "Non-VarArg function with extra arguments");
 
   const unsigned FirstVAArg = CLI.NumFixedArgs; // position of first variadic
@@ -1507,10 +1396,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         // so we don't need to worry whether it's naturally aligned or not.
         // See TargetLowering::LowerCallTo().
         const Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-        return getFunctionByValParamAlign(CB->getCalledFunction(), ETy,
-                                          InitialAlign, DL);
+        return getDeviceByValParamAlign(CB->getCalledFunction(), ETy,
+                                        InitialAlign, DL);
       }
-      return getArgumentAlignment(CB, Arg.Ty, ArgI + 1, DL);
+      return getPTXParamAlign(CB, Arg.Ty, ArgI + AttributeList::FirstArgIndex,
+                              DL);
     }();
 
     const unsigned TySize = DL.getTypeAllocSize(ETy);
@@ -1644,7 +1534,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
+      const Align RetAlign =
+          getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
       MakeDeclareArrayParam(RetSymbol, RetAlign, ResultSize);
     } else {
       MakeDeclareScalarParam(RetSymbol, ResultSize);
@@ -1687,25 +1578,15 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CalleeFunc->addFnAttr("nvptx-libcall-callee", "true");
   }
 
-  if (IsIndirectCall) {
-    // This is indirect function call case : PTX requires a prototype of the
-    // form
-    // proto_0 : .callprototype(.param .b32 _) _ (.param .b32 _);
-    // to be emitted, and the label has to used as the last arg of call
-    // instruction.
-    // The prototype is embedded in a string and put as the operand for a
-    // CallPrototype SDNode which will print out to the value of the string.
-    const bool HasVAArgs = CLI.IsVarArg && (CLI.Args.size() > CLI.NumFixedArgs);
-    std::string Proto =
-        getPrototype(DL, RetTy, Args, CLI.Outs,
-                     HasVAArgs ? std::optional(FirstVAArg) : std::nullopt, *CB,
-                     UniqueCallSite);
-    const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
-    const SDValue PrototypeDeclare = DAG.getNode(
-        NVPTXISD::CallPrototype, dl, MVT::Other,
-        {StartChain, DAG.getTargetExternalSymbol(ProtoStr, MVT::i32)});
-    CallPrereqs.push_back(PrototypeDeclare);
-  }
+  // In the indirect function call case, PTX requires a prototype of the form:
+  //     proto_0 : .callprototype(.param .b32 _) _ (.param .b32 _);
+  // Where the label is to be used as the last arg of the call instruction.
+  // We record the call site here and emit all prototypes at the
+  // start of the function in the AsmPrinter.
+  if (IsIndirectCall)
+    DAG.getMachineFunction()
+        .getInfo<NVPTXMachineFunctionInfo>()
+        ->addCallPrototype(UniqueCallSite, CB);
 
   const bool IsUnknownIntrinsic =
       CalleeF && CalleeF->isIntrinsic() &&
@@ -1737,7 +1618,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-    const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
+    const Align RetAlign =
+        getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
@@ -2651,6 +2533,90 @@ static SDValue lowerBSWAP(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
+static SDValue lowerStAsyncWithMbarrier(SDValue Op, SelectionDAG &DAG) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  Intrinsic::ID IntrinsicID = N->getConstantOperandVal(1);
+  SDValue DestAddr = N->getOperand(2);
+  SDValue Value = N->getOperand(3);
+  SDValue MbarAddr = N->getOperand(4);
+
+  MVT ValueVT = Value.getSimpleValueType();
+
+  if (ValueVT == MVT::i32 || ValueVT == MVT::i64)
+    return Op;
+
+  if (ValueVT == MVT::i128) {
+    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Value);
+    SDValue ValueLo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                                  DAG.getIntPtrConstant(0, DL));
+    SDValue ValueHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                                  DAG.getIntPtrConstant(1, DL));
+    SDValue Ops[] = {N->getOperand(0), DestAddr, ValueLo, ValueHi, MbarAddr};
+    return DAG.getNode(NVPTXISD::ST_ASYNC_MBARRIER_B128, DL, MVT::Other, Ops);
+  }
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      Twine("unsupported argument type ") + llvm::EVT(ValueVT).getEVTString() +
+          " for " + llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
+      DiagnosticLocation(DL.getDebugLoc())));
+  return Op.getOperand(0); // Return only the chain
+}
+
+static SDValue lowerStAsyncRelease(SDValue Op, SelectionDAG &DAG) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  Intrinsic::ID IntrinsicID = N->getConstantOperandVal(1);
+  SDValue DestAddr = N->getOperand(2);
+  SDValue Value = N->getOperand(3);
+
+  MVT ValueVT = Value.getSimpleValueType();
+
+  if (ValueVT == MVT::i16 || ValueVT == MVT::i32 || ValueVT == MVT::i64)
+    return Op;
+
+  if (ValueVT == MVT::i8) {
+    unsigned OpCode;
+    switch (IntrinsicID) {
+    case Intrinsic::nvvm_st_async_sys:
+      OpCode = NVPTXISD::ST_ASYNC_SYS_B8;
+      break;
+    case Intrinsic::nvvm_st_async_gpu:
+      OpCode = NVPTXISD::ST_ASYNC_GPU_B8;
+      break;
+    case Intrinsic::nvvm_st_async_mmio_sys:
+      OpCode = NVPTXISD::ST_ASYNC_MMIO_SYS_B8;
+      break;
+    default:
+      llvm_unreachable("unexpected intrinsic ID for st.async.release");
+    }
+
+    Value = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Value);
+
+    // The `.mmio` variant has no multimem form and therefore no `isMultimem`
+    // operand.
+    if (IntrinsicID == Intrinsic::nvvm_st_async_mmio_sys) {
+      SDValue Ops[] = {N->getOperand(0), DestAddr, Value};
+      return DAG.getNode(OpCode, DL, MVT::Other, Ops);
+    }
+
+    SDValue IsMultimem =
+        DAG.getTargetConstant(N->getConstantOperandVal(4), DL, MVT::i1);
+    SDValue Ops[] = {N->getOperand(0), DestAddr, Value, IsMultimem};
+    return DAG.getNode(OpCode, DL, MVT::Other, Ops);
+  }
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      Twine("unsupported argument type ") + llvm::EVT(ValueVT).getEVTString() +
+          " for " + llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
+      DiagnosticLocation(DL.getDebugLoc())));
+  return Op.getOperand(0); // Return only the chain
+}
+
 static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
   switch (IID) {
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
@@ -2845,6 +2811,14 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   switch (IntrinNo) {
   default:
     break;
+  case Intrinsic::nvvm_st_async:
+    return lowerStAsyncWithMbarrier(Op, DAG);
+  case Intrinsic::nvvm_st_async_sys:
+  case Intrinsic::nvvm_st_async_gpu:
+  case Intrinsic::nvvm_st_async_mmio_sys:
+    return lowerStAsyncRelease(Op, DAG);
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
@@ -2864,6 +2838,7 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
@@ -2873,6 +2848,7 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
     return lowerTcgen05St(Op, DAG);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
   case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
   case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
   case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
@@ -3199,8 +3175,6 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_prmt_rc16:
   case Intrinsic::nvvm_prmt_rc8:
     return lowerPrmtIntrinsic(Op, DAG);
-  case Intrinsic::nvvm_internal_addrspace_wrap:
-    return Op.getOperand(1);
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
@@ -4109,15 +4083,17 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   // See similar issue in LowerCall.
 
   auto AllIns = ArrayRef(Ins);
-  for (const auto &Arg : F.args()) {
-    const auto ArgIns = AllIns.take_while(
-        [&](auto I) { return I.OrigArgIndex == Arg.getArgNo(); });
+  const auto NonEmptyArgs = make_filter_range(
+      F.args(), [](const Argument &A) { return !A.getType()->isEmptyTy(); });
+  for (const auto &[ParamI, Arg] : enumerate(NonEmptyArgs)) {
+    const unsigned ArgNo = Arg.getArgNo();
+    const auto ArgIns =
+        AllIns.take_while([&](auto I) { return I.OrigArgIndex == ArgNo; });
     AllIns = AllIns.drop_front(ArgIns.size());
 
     Type *Ty = Arg.getType();
-
-    if (ArgIns.empty())
-      report_fatal_error("Empty parameter types are not supported");
+    assert(!ArgIns.empty() &&
+           "Non-empty argument produced no parameter values");
 
     if (Arg.use_empty()) {
       // argument is dead
@@ -4128,7 +4104,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       continue;
     }
 
-    SDValue ArgSymbol = getParamSymbol(DAG, Arg.getArgNo(), PtrVT);
+    SDValue ArgSymbol = getParamSymbol(DAG, ParamI, PtrVT);
 
     // In the following cases, assign a node order of "i+1"
     // to newly created nodes. The SDNodes for params have to
@@ -4150,8 +4126,10 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
       SDValue P;
       if (IsKernel) {
-        assert(isParamGridConstant(Arg) && "ByVal argument must be lowered to "
-                                           "grid_constant by NVPTXLowerArgs");
+        assert(Arg.getType()->getPointerAddressSpace() ==
+                   ADDRESS_SPACE_ENTRY_PARAM &&
+               "Kernel ByVal argument must be lowered to the param address "
+               "space by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
@@ -4168,7 +4146,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
-      const Align ArgAlign = getFunctionArgumentAlignment(
+      const Align ArgAlign = getPTXParamAlign(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       unsigned I = 0;
@@ -4225,7 +4203,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   LLVMContext &Ctx = *DAG.getContext();
 
   const SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
-  const auto RetAlign = getFunctionParamOptimizedAlign(&F, RetTy, DL);
+  const auto RetAlign =
+      getPTXParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
 
   // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
   // 32-bits are sign extended or zero extended, depending on whether
@@ -5403,7 +5382,7 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1: {
     Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = MVT::i32;
+    Info.memVT = MVT::v1i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
@@ -7295,12 +7274,14 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
     return;
   }
 
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
   case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
@@ -7325,6 +7306,7 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
     }
     return;
 
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:

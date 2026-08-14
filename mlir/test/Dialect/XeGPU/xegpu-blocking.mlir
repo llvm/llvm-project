@@ -815,3 +815,31 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
+
+// -----
+// Test that an scf.if whose results expand 1:N during blocking is legalized.
+#if_a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+gpu.module @test_kernel {
+  // CHECK-LABEL: func @if_one_to_n_results
+  gpu.func @if_one_to_n_results(%c: i1, %p: i64) {
+    %c0 = arith.constant 0 : index
+    // CHECK: scf.if
+    // CHECK-COUNT-8: vector<8x16xf32>
+    %r:2 = scf.if %c -> (vector<16x64xf32>, vector<16xf32>) {
+      %a = arith.constant dense<1.0> : vector<16x64xf32>
+      %b = arith.constant dense<1.0> : vector<16xf32>
+      scf.yield %a, %b : vector<16x64xf32>, vector<16xf32>
+    } else {
+      %a = arith.constant dense<0.0> : vector<16x64xf32>
+      %b = arith.constant dense<0.0> : vector<16xf32>
+      scf.yield %a, %b : vector<16x64xf32>, vector<16xf32>
+    }
+    %bc = vector.broadcast %r#1 : vector<16xf32> to vector<64x16xf32>
+    %tp = vector.transpose %bc, [1, 0] : vector<64x16xf32> to vector<16x64xf32>
+    %add = arith.addf %r#0, %tp : vector<16x64xf32>
+    %tr = arith.truncf %add : vector<16x64xf32> to vector<16x64xf16>
+    %td = xegpu.create_nd_tdesc %p, shape:[16, 64], strides:[64, 1] : i64 -> !xegpu.tensor_desc<16x64xf16, #if_a>
+    xegpu.store_nd %tr, %td[%c0, %c0] <{layout = #if_a}> : vector<16x64xf16>, !xegpu.tensor_desc<16x64xf16, #if_a>
+    gpu.return
+  }
+}

@@ -521,12 +521,11 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    v_mov_b32_e32 v46, v2
 ; CHECK-NEXT:    v_dual_mov_b32 v0, v72 :: v_dual_mov_b32 v1, v73
 ; CHECK-NEXT:    v_dual_mov_b32 v2, v74 :: v_dual_mov_b32 v3, v75
-; CHECK-NEXT:    v_mov_b32_e32 v43, v34
-; CHECK-NEXT:    v_dual_mov_b32 v42, v33 :: v_dual_mov_b32 v41, v32
-; CHECK-NEXT:    v_dual_mov_b32 v40, v31 :: v_dual_mov_b32 v39, v30
-; CHECK-NEXT:    v_dual_mov_b32 v38, v29 :: v_dual_mov_b32 v37, v28
-; CHECK-NEXT:    v_dual_mov_b32 v36, v27 :: v_dual_mov_b32 v35, v26
-; CHECK-NEXT:    v_mov_b32_e32 v34, v25
+; CHECK-NEXT:    v_dual_mov_b32 v43, v34 :: v_dual_mov_b32 v42, v33
+; CHECK-NEXT:    v_dual_mov_b32 v41, v32 :: v_dual_mov_b32 v40, v31
+; CHECK-NEXT:    v_dual_mov_b32 v39, v30 :: v_dual_mov_b32 v38, v29
+; CHECK-NEXT:    v_dual_mov_b32 v37, v28 :: v_dual_mov_b32 v36, v27
+; CHECK-NEXT:    v_dual_mov_b32 v35, v26 :: v_dual_mov_b32 v34, v25
 ; CHECK-NEXT:    v_mov_b32_e32 v33, v24
 ; CHECK-NEXT:    v_mov_b32_e32 v32, v23
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v22

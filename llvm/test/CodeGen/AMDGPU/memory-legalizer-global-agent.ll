@@ -5,9 +5,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1010 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX10-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -O0 -mcpu=gfx700 -amdgcn-skip-cache-invalidations < %s | FileCheck --check-prefixes=SKIP-CACHE-INV %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a < %s | FileCheck -check-prefixes=GFX90A-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx90a | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 < %s | FileCheck -check-prefixes=GFX942-NOTTGSPLIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 -mattr=+tgsplit < %s | FileCheck -check-prefixes=GFX942-TGSPLIT %s
+; RUN: sed 's/attributes #0 = { nounwind }/attributes #0 = { nounwind "amdgpu-tg-split" }/' %s | llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx942 | FileCheck -check-prefixes=GFX942-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
@@ -236,6 +236,8 @@ define amdgpu_kernel void @global_agent_unordered_load(
 ;
 ; GFX1250-LABEL: global_agent_unordered_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -249,7 +251,7 @@ define amdgpu_kernel void @global_agent_unordered_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent") unordered, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -478,6 +480,8 @@ define amdgpu_kernel void @global_agent_monotonic_load(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -491,7 +495,7 @@ define amdgpu_kernel void @global_agent_monotonic_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent") monotonic, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -744,6 +748,8 @@ define amdgpu_kernel void @global_agent_acquire_load(
 ;
 ; GFX1250-LABEL: global_agent_acquire_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -759,7 +765,7 @@ define amdgpu_kernel void @global_agent_acquire_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent") acquire, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -1026,6 +1032,8 @@ define amdgpu_kernel void @global_agent_seq_cst_load(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -1043,7 +1051,7 @@ define amdgpu_kernel void @global_agent_seq_cst_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent") seq_cst, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -1253,6 +1261,8 @@ define amdgpu_kernel void @global_agent_unordered_store(
 ;
 ; GFX1250-LABEL: global_agent_unordered_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -1266,7 +1276,7 @@ define amdgpu_kernel void @global_agent_unordered_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(1) %out) {
+    i32 %in, ptr addrspace(1) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(1) %out syncscope("agent") unordered, align 4
   ret void
@@ -1475,6 +1485,8 @@ define amdgpu_kernel void @global_agent_monotonic_store(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -1488,7 +1500,7 @@ define amdgpu_kernel void @global_agent_monotonic_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(1) %out) {
+    i32 %in, ptr addrspace(1) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(1) %out syncscope("agent") monotonic, align 4
   ret void
@@ -1714,6 +1726,8 @@ define amdgpu_kernel void @global_agent_release_store(
 ;
 ; GFX1250-LABEL: global_agent_release_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -1732,7 +1746,7 @@ define amdgpu_kernel void @global_agent_release_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(1) %out) {
+    i32 %in, ptr addrspace(1) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(1) %out syncscope("agent") release, align 4
   ret void
@@ -1958,6 +1972,8 @@ define amdgpu_kernel void @global_agent_seq_cst_store(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -1976,7 +1992,7 @@ define amdgpu_kernel void @global_agent_seq_cst_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(1) %out) {
+    i32 %in, ptr addrspace(1) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(1) %out syncscope("agent") seq_cst, align 4
   ret void
@@ -2185,6 +2201,8 @@ define amdgpu_kernel void @global_agent_monotonic_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2198,7 +2216,7 @@ define amdgpu_kernel void @global_agent_monotonic_atomicrmw(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent") monotonic
   ret void
@@ -2436,6 +2454,8 @@ define amdgpu_kernel void @global_agent_acquire_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_acquire_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2452,7 +2472,7 @@ define amdgpu_kernel void @global_agent_acquire_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent") acquire
   ret void
@@ -2686,6 +2706,8 @@ define amdgpu_kernel void @global_agent_release_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_release_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2704,7 +2726,7 @@ define amdgpu_kernel void @global_agent_release_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent") release
   ret void
@@ -2967,6 +2989,8 @@ define amdgpu_kernel void @global_agent_acq_rel_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_acq_rel_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -2988,7 +3012,7 @@ define amdgpu_kernel void @global_agent_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent") acq_rel
   ret void
@@ -3251,6 +3275,8 @@ define amdgpu_kernel void @global_agent_seq_cst_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3272,7 +3298,7 @@ define amdgpu_kernel void @global_agent_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent") seq_cst
   ret void
@@ -3525,6 +3551,8 @@ define amdgpu_kernel void @global_agent_acquire_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_acquire_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3542,7 +3570,7 @@ define amdgpu_kernel void @global_agent_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent") acquire
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -3821,6 +3849,8 @@ define amdgpu_kernel void @global_agent_acq_rel_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_acq_rel_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -3843,7 +3873,7 @@ define amdgpu_kernel void @global_agent_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent") acq_rel
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -4122,6 +4152,8 @@ define amdgpu_kernel void @global_agent_seq_cst_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -4144,7 +4176,7 @@ define amdgpu_kernel void @global_agent_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent") seq_cst
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -4444,6 +4476,8 @@ define amdgpu_kernel void @global_agent_monotonic_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -4463,7 +4497,7 @@ define amdgpu_kernel void @global_agent_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") monotonic monotonic
@@ -4792,6 +4826,8 @@ define amdgpu_kernel void @global_agent_acquire_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acquire_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -4814,7 +4850,7 @@ define amdgpu_kernel void @global_agent_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acquire monotonic
@@ -5139,6 +5175,8 @@ define amdgpu_kernel void @global_agent_release_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_release_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -5163,7 +5201,7 @@ define amdgpu_kernel void @global_agent_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") release monotonic
@@ -5517,6 +5555,8 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acq_rel_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -5544,7 +5584,7 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acq_rel monotonic
@@ -5898,6 +5938,8 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -5925,7 +5967,7 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst monotonic
@@ -6254,6 +6296,8 @@ define amdgpu_kernel void @global_agent_monotonic_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -6276,7 +6320,7 @@ define amdgpu_kernel void @global_agent_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") monotonic acquire
@@ -6605,6 +6649,8 @@ define amdgpu_kernel void @global_agent_acquire_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acquire_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -6627,7 +6673,7 @@ define amdgpu_kernel void @global_agent_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acquire acquire
@@ -6981,6 +7027,8 @@ define amdgpu_kernel void @global_agent_release_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_release_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -7008,7 +7056,7 @@ define amdgpu_kernel void @global_agent_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") release acquire
@@ -7362,6 +7410,8 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acq_rel_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -7389,7 +7439,7 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acq_rel acquire
@@ -7743,6 +7793,8 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -7770,7 +7822,7 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst acquire
@@ -8124,6 +8176,8 @@ define amdgpu_kernel void @global_agent_monotonic_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -8151,7 +8205,7 @@ define amdgpu_kernel void @global_agent_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") monotonic seq_cst
@@ -8505,6 +8559,8 @@ define amdgpu_kernel void @global_agent_acquire_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acquire_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -8532,7 +8588,7 @@ define amdgpu_kernel void @global_agent_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acquire seq_cst
@@ -8886,6 +8942,8 @@ define amdgpu_kernel void @global_agent_release_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_release_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -8913,7 +8971,7 @@ define amdgpu_kernel void @global_agent_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") release seq_cst
@@ -9267,6 +9325,8 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acq_rel_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -9294,7 +9354,7 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acq_rel seq_cst
@@ -9648,6 +9708,8 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -9675,7 +9737,7 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
@@ -10005,6 +10067,8 @@ define amdgpu_kernel void @global_agent_monotonic_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -10026,7 +10090,7 @@ define amdgpu_kernel void @global_agent_monotonic_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") monotonic monotonic
@@ -10374,6 +10438,8 @@ define amdgpu_kernel void @global_agent_acquire_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acquire_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -10397,7 +10463,7 @@ define amdgpu_kernel void @global_agent_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acquire monotonic
@@ -10754,6 +10820,8 @@ define amdgpu_kernel void @global_agent_release_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_release_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -10780,7 +10848,7 @@ define amdgpu_kernel void @global_agent_release_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") release monotonic
@@ -11153,6 +11221,8 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acq_rel_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -11181,7 +11251,7 @@ define amdgpu_kernel void @global_agent_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acq_rel monotonic
@@ -11554,6 +11624,8 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -11582,7 +11654,7 @@ define amdgpu_kernel void @global_agent_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst monotonic
@@ -11930,6 +12002,8 @@ define amdgpu_kernel void @global_agent_monotonic_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -11953,7 +12027,7 @@ define amdgpu_kernel void @global_agent_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") monotonic acquire
@@ -12301,6 +12375,8 @@ define amdgpu_kernel void @global_agent_acquire_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acquire_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -12324,7 +12400,7 @@ define amdgpu_kernel void @global_agent_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acquire acquire
@@ -12697,6 +12773,8 @@ define amdgpu_kernel void @global_agent_release_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_release_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -12725,7 +12803,7 @@ define amdgpu_kernel void @global_agent_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") release acquire
@@ -13098,6 +13176,8 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acq_rel_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -13126,7 +13206,7 @@ define amdgpu_kernel void @global_agent_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acq_rel acquire
@@ -13499,6 +13579,8 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -13527,7 +13609,7 @@ define amdgpu_kernel void @global_agent_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst acquire
@@ -13900,6 +13982,8 @@ define amdgpu_kernel void @global_agent_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_monotonic_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -13928,7 +14012,7 @@ define amdgpu_kernel void @global_agent_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") monotonic seq_cst
@@ -14301,6 +14385,8 @@ define amdgpu_kernel void @global_agent_acquire_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acquire_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -14329,7 +14415,7 @@ define amdgpu_kernel void @global_agent_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acquire seq_cst
@@ -14702,6 +14788,8 @@ define amdgpu_kernel void @global_agent_release_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_release_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -14730,7 +14818,7 @@ define amdgpu_kernel void @global_agent_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") release seq_cst
@@ -15103,6 +15191,8 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -15131,7 +15221,7 @@ define amdgpu_kernel void @global_agent_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") acq_rel seq_cst
@@ -15504,6 +15594,8 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -15532,7 +15624,7 @@ define amdgpu_kernel void @global_agent_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
@@ -15763,6 +15855,8 @@ define amdgpu_kernel void @global_agent_one_as_unordered_load(
 ;
 ; GFX1250-LABEL: global_agent_one_as_unordered_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -15776,7 +15870,7 @@ define amdgpu_kernel void @global_agent_one_as_unordered_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent-one-as") unordered, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -16005,6 +16099,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_load(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -16018,7 +16114,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent-one-as") monotonic, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -16271,6 +16367,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_load(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -16286,7 +16384,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent-one-as") acquire, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -16562,6 +16660,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_load(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -16579,7 +16679,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load atomic i32, ptr addrspace(1) %in syncscope("agent-one-as") seq_cst, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -16789,6 +16889,8 @@ define amdgpu_kernel void @global_agent_one_as_unordered_store(
 ;
 ; GFX1250-LABEL: global_agent_one_as_unordered_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -16802,7 +16904,7 @@ define amdgpu_kernel void @global_agent_one_as_unordered_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(1) %out) {
+    i32 %in, ptr addrspace(1) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(1) %out syncscope("agent-one-as") unordered, align 4
   ret void
@@ -17011,6 +17113,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_store(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -17024,7 +17128,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(1) %out) {
+    i32 %in, ptr addrspace(1) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(1) %out syncscope("agent-one-as") monotonic, align 4
   ret void
@@ -17250,6 +17354,8 @@ define amdgpu_kernel void @global_agent_one_as_release_store(
 ;
 ; GFX1250-LABEL: global_agent_one_as_release_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -17268,7 +17374,7 @@ define amdgpu_kernel void @global_agent_one_as_release_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(1) %out) {
+    i32 %in, ptr addrspace(1) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(1) %out syncscope("agent-one-as") release, align 4
   ret void
@@ -17494,6 +17600,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_store(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -17512,7 +17620,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    i32 %in, ptr addrspace(1) %out) {
+    i32 %in, ptr addrspace(1) %out) #0 {
 entry:
   store atomic i32 %in, ptr addrspace(1) %out syncscope("agent-one-as") seq_cst, align 4
   ret void
@@ -17721,6 +17829,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -17734,7 +17844,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_atomicrmw(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent-one-as") monotonic
   ret void
@@ -17972,6 +18082,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -17988,7 +18100,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent-one-as") acquire
   ret void
@@ -18222,6 +18334,8 @@ define amdgpu_kernel void @global_agent_one_as_release_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_one_as_release_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -18240,7 +18354,7 @@ define amdgpu_kernel void @global_agent_one_as_release_atomicrmw(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent-one-as") release
   ret void
@@ -18503,6 +18617,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acq_rel_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -18524,7 +18640,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent-one-as") acq_rel
   ret void
@@ -18787,6 +18903,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -18808,7 +18926,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_atomicrmw(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent-one-as") seq_cst
   ret void
@@ -19061,6 +19179,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -19078,7 +19198,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent-one-as") acquire
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -19357,6 +19477,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acq_rel_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -19379,7 +19501,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent-one-as") acq_rel
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -19658,6 +19780,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -19680,7 +19804,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_ret_atomicrmw(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in) {
+    ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(1) %out, i32 %in syncscope("agent-one-as") seq_cst
   store i32 %val, ptr addrspace(1) %out, align 4
@@ -19980,6 +20104,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -19999,7 +20125,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") monotonic monotonic
@@ -20328,6 +20454,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -20350,7 +20478,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acquire monotonic
@@ -20675,6 +20803,8 @@ define amdgpu_kernel void @global_agent_one_as_release_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_release_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -20699,7 +20829,7 @@ define amdgpu_kernel void @global_agent_one_as_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    global_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") release monotonic
@@ -21053,6 +21183,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acq_rel_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -21080,7 +21212,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acq_rel monotonic
@@ -21434,6 +21566,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -21461,7 +21595,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") seq_cst monotonic
@@ -21790,6 +21924,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -21812,7 +21948,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") monotonic acquire
@@ -22141,6 +22277,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -22163,7 +22301,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acquire acquire
@@ -22517,6 +22655,8 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_release_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -22544,7 +22684,7 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") release acquire
@@ -22898,6 +23038,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acq_rel_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -22925,7 +23067,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acq_rel acquire
@@ -23279,6 +23421,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -23306,7 +23450,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") seq_cst acquire
@@ -23660,6 +23804,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -23687,7 +23833,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") monotonic seq_cst
@@ -24041,6 +24187,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -24068,7 +24216,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acquire seq_cst
@@ -24422,6 +24570,8 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_release_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -24449,7 +24599,7 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") release seq_cst
@@ -24803,6 +24953,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acq_rel_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -24830,7 +24982,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acq_rel seq_cst
@@ -25184,6 +25336,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -25211,7 +25365,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") seq_cst seq_cst
@@ -25541,6 +25695,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -25562,7 +25718,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") monotonic monotonic
@@ -25910,6 +26066,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -25933,7 +26091,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acquire monotonic
@@ -26306,6 +26464,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acq_rel_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -26334,7 +26494,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acq_rel monotonic
@@ -26707,6 +26867,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -26735,7 +26897,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") seq_cst monotonic
@@ -27083,6 +27245,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -27106,7 +27270,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") monotonic acquire
@@ -27454,6 +27618,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -27477,7 +27643,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acquire acquire
@@ -27850,6 +28016,8 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_release_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -27878,7 +28046,7 @@ define amdgpu_kernel void @global_agent_one_as_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") release acquire
@@ -28251,6 +28419,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acq_rel_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -28279,7 +28449,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acq_rel acquire
@@ -28652,6 +28822,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -28680,7 +28852,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") seq_cst acquire
@@ -29053,6 +29225,8 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_monotonic_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -29081,7 +29255,7 @@ define amdgpu_kernel void @global_agent_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") monotonic seq_cst
@@ -29454,6 +29628,8 @@ define amdgpu_kernel void @global_agent_one_as_acquire_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acquire_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -29482,7 +29658,7 @@ define amdgpu_kernel void @global_agent_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acquire seq_cst
@@ -29855,6 +30031,8 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_release_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -29883,7 +30061,7 @@ define amdgpu_kernel void @global_agent_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") release seq_cst
@@ -30256,6 +30434,8 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -30284,7 +30464,7 @@ define amdgpu_kernel void @global_agent_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") acq_rel seq_cst
@@ -30657,6 +30837,8 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: global_agent_one_as_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -30685,7 +30867,7 @@ define amdgpu_kernel void @global_agent_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
-    ptr addrspace(1) %out, i32 %in, i32 %old) {
+    ptr addrspace(1) %out, i32 %in, i32 %old) #0 {
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 4
   %val = cmpxchg volatile ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent-one-as") seq_cst seq_cst
@@ -30693,3 +30875,5 @@ entry:
   store i32 %val0, ptr addrspace(1) %out, align 4
   ret void
 }
+
+attributes #0 = { nounwind }

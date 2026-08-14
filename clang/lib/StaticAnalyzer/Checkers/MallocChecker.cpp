@@ -401,6 +401,14 @@ public:
 
   bool ShouldRegisterNoOwnershipChangeVisitor = false;
 
+  /// Add extra branches for allocation failure. Generally a return value of an
+  /// allocation function is not constrained to be null or non-null and
+  /// information about a later null pointer access can be lost. When failure
+  /// branches are added, they contain the constrained null pointer return value
+  /// and allow detection of a null pointer access if the result of an
+  /// allocation is not checked for null.
+  bool ModelAllocationFailure = false;
+
   // This checker family implements many bug types and frontends, and several
   // bug types are shared between multiple frontends, so most of the frontends
   // are declared with the helper class DynMemFrontend.
@@ -466,6 +474,7 @@ private:
   CHECK_FN(checkFree)
   CHECK_FN(checkIfNameIndex)
   CHECK_FN(checkBasicAlloc)
+  CHECK_FN(checkBasicAllocMayFail)
   CHECK_FN(checkKernelMalloc)
   CHECK_FN(checkCalloc)
   CHECK_FN(checkAlloca)
@@ -530,7 +539,7 @@ private:
   };
 
   CallDescriptionMap<CheckFn> AllocatingMemFnMap{
-      {{CDM::CLibrary, {"malloc"}, 1}, &MallocChecker::checkBasicAlloc},
+      {{CDM::CLibrary, {"malloc"}, 1}, &MallocChecker::checkBasicAllocMayFail},
       {{CDM::CLibrary, {"malloc"}, 3}, &MallocChecker::checkKernelMalloc},
       {{CDM::CLibrary, {"calloc"}, 2}, &MallocChecker::checkCalloc},
       {{CDM::CLibrary, {"valloc"}, 1}, &MallocChecker::checkBasicAlloc},
@@ -538,7 +547,7 @@ private:
       {{CDM::CLibrary, {"strdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"_strdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"kmalloc"}, 2}, &MallocChecker::checkKernelMalloc},
-      {{CDM::CLibrary, {"if_nameindex"}, 1}, &MallocChecker::checkIfNameIndex},
+      {{CDM::CLibrary, {"if_nameindex"}, 0}, &MallocChecker::checkIfNameIndex},
       {{CDM::CLibrary, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{CDM::CLibrary, {"g_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
@@ -662,6 +671,19 @@ private:
                                              const CallEvent &Call, SVal Size,
                                              SVal Init, ProgramStateRef State,
                                              AllocationFamily Family) const;
+
+  /// Models a non-successful memory allocation.
+  /// Can be used if the allocation function may return null on failure when the
+  /// size to be allocated is non-zero.
+  ///
+  /// \param [in] Call The expression that allocates memory.
+  /// \param [in] State The \c ProgramState right before allocation.
+  /// \param [in] SizeArgIndexes Indexes of arguments that specify the
+  /// allocation size.
+  /// \returns The ProgramState right after an unsuccessful allocation.
+  [[nodiscard]] ProgramStateRef
+  FailedAlloc(CheckerContext &C, const CallEvent &Call, ProgramStateRef State,
+              llvm::ArrayRef<unsigned> SizeArgIndexes = {}) const;
 
   // Check if this malloc() for special flags. At present that means M_ZERO or
   // __GFP_ZERO (in which case, treat it like calloc).
@@ -1354,6 +1376,17 @@ void MallocChecker::checkBasicAlloc(ProgramStateRef State,
   C.addTransition(State);
 }
 
+void MallocChecker::checkBasicAllocMayFail(ProgramStateRef State,
+                                           const CallEvent &Call,
+                                           CheckerContext &C) const {
+  C.addTransition(FailedAlloc(C, Call, State, {0}));
+
+  State = MallocMemAux(C, Call, Call.getArgExpr(0), UndefinedVal(), State,
+                       AllocationFamily(AF_Malloc));
+  State = ProcessZeroAllocCheck(C, Call, 0, State);
+  C.addTransition(State);
+}
+
 void MallocChecker::checkKernelMalloc(ProgramStateRef State,
                                       const CallEvent &Call,
                                       CheckerContext &C) const {
@@ -1389,13 +1422,17 @@ static bool isGRealloc(const CallEvent &Call) {
 void MallocChecker::checkRealloc(ProgramStateRef State, const CallEvent &Call,
                                  CheckerContext &C,
                                  bool ShouldFreeOnFail) const {
+  bool StandardRealloc = isStandardRealloc(Call);
   // Ignore calls to functions whose type does not match the expected type of
   // either the standard realloc or g_realloc from GLib.
   // FIXME: Should we perform this kind of checking consistently for each
   // function? If yes, then perhaps extend the `CallDescription` interface to
   // handle this.
-  if (!isStandardRealloc(Call) && !isGRealloc(Call))
+  if (!StandardRealloc && !isGRealloc(Call))
     return;
+
+  if (StandardRealloc)
+    C.addTransition(FailedAlloc(C, Call, State, {1}));
 
   State = ReallocMemAux(C, Call, ShouldFreeOnFail, State,
                         AllocationFamily(AF_Malloc));
@@ -1405,6 +1442,8 @@ void MallocChecker::checkRealloc(ProgramStateRef State, const CallEvent &Call,
 
 void MallocChecker::checkCalloc(ProgramStateRef State, const CallEvent &Call,
                                 CheckerContext &C) const {
+  C.addTransition(FailedAlloc(C, Call, State, {0, 1}));
+
   State = CallocMem(C, Call, State);
   State = ProcessZeroAllocCheck(C, Call, 0, State);
   State = ProcessZeroAllocCheck(C, Call, 1, State);
@@ -1434,20 +1473,23 @@ void MallocChecker::checkStrdup(ProgramStateRef State, const CallEvent &Call,
   const auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
   if (!CE)
     return;
+
+  C.addTransition(FailedAlloc(C, Call, State));
+
   State = MallocMemAux(C, Call, UnknownVal(), UnknownVal(), State,
                        AllocationFamily(AF_Malloc));
-
   C.addTransition(State);
 }
 
 void MallocChecker::checkIfNameIndex(ProgramStateRef State,
                                      const CallEvent &Call,
                                      CheckerContext &C) const {
+  C.addTransition(FailedAlloc(C, Call, State));
+
   // Should we model this differently? We can allocate a fixed number of
   // elements with zeros in the last one.
   State = MallocMemAux(C, Call, UnknownVal(), UnknownVal(), State,
                        AllocationFamily(AF_IfNameIndex));
-
   C.addTransition(State);
 }
 
@@ -2033,6 +2075,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   SVal RetVal = State->getSVal(CE, C.getStackFrame());
 
   // Fill the region with the initialization value.
+  // FIXME: Why use stack frame of the predecessor?
   State = State->bindDefaultInitial(RetVal, Init, SF);
 
   // If Size is somehow undefined at this point, this line prevents a crash.
@@ -2046,6 +2089,27 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
                            Size.castAs<DefinedOrUnknownSVal>());
 
   return MallocUpdateRefState(C, CE, State, Family);
+}
+
+ProgramStateRef
+MallocChecker::FailedAlloc(CheckerContext &C, const CallEvent &Call,
+                           ProgramStateRef State,
+                           llvm::ArrayRef<unsigned> SizeArgIndexes) const {
+  if (!State || !ModelAllocationFailure)
+    return nullptr;
+
+  for (unsigned SizeArgI : SizeArgIndexes) {
+    auto DefArgVal = Call.getArgSVal(SizeArgI).getAs<DefinedOrUnknownSVal>();
+    if (!DefArgVal)
+      return nullptr;
+    State = State->assume(*DefArgVal, true);
+    if (!State)
+      return nullptr;
+  }
+
+  auto RetVal = State->getSVal(Call.getOriginExpr(), C.getStackFrame())
+                    .castAs<DefinedOrUnknownSVal>();
+  return State->assume(RetVal, false);
 }
 
 static ProgramStateRef MallocUpdateRefState(CheckerContext &C, const Expr *E,
@@ -4201,6 +4265,9 @@ void ento::registerDynamicMemoryModeling(CheckerManager &Mgr) {
   Chk->ShouldRegisterNoOwnershipChangeVisitor =
       Mgr.getAnalyzerOptions().getCheckerBooleanOption(
           DMMName, "AddNoOwnershipChangeNotes");
+  Chk->ModelAllocationFailure =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          DMMName, "ModelAllocationFailure");
 }
 
 bool ento::shouldRegisterDynamicMemoryModeling(const CheckerManager &mgr) {

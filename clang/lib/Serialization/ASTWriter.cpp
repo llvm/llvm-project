@@ -1608,14 +1608,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
-#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-  Record.push_back(LangOpts.Name);
+  const uint64_t LanguageOptionValues[] = {
+#define LANGOPT(Name, Bits, Default, Compatibility, Description) LangOpts.Name,
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-  Record.push_back(static_cast<unsigned>(LangOpts.get##Name()));
+  static_cast<unsigned>(LangOpts.get##Name()),
 #include "clang/Basic/LangOptions.def"
-#define SANITIZER(NAME, ID)                                                    \
-  Record.push_back(LangOpts.Sanitize.has(SanitizerKind::ID));
+#define SANITIZER(NAME, ID) LangOpts.Sanitize.has(SanitizerKind::ID),
 #include "clang/Basic/Sanitizers.def"
+  };
+  llvm::append_range(Record, LanguageOptionValues);
 
   Record.push_back(LangOpts.ModuleFeatures.size());
   for (StringRef Feature : LangOpts.ModuleFeatures)
@@ -5719,6 +5720,8 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   RegisterPredefDecl(Context.VaListTagDecl, PREDEF_DECL_VA_LIST_TAG);
   RegisterPredefDecl(Context.BuiltinMSVaListDecl,
                      PREDEF_DECL_BUILTIN_MS_VA_LIST_ID);
+  RegisterPredefDecl(Context.BuiltinZOSVaListDecl,
+                     PREDEF_DECL_BUILTIN_ZOS_VA_LIST_ID);
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
   RegisterPredefDecl(Context.MSTypeInfoTagDecl,
@@ -7525,7 +7528,7 @@ void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
     assert(ES->CheckedForSideEffects);
     Val |= (ES->HasConstantInitialization ? 2 : 0);
     Val |= (ES->HasConstantDestruction ? 4 : 0);
-    APValue *Evaluated = VD->getEvaluatedValue();
+    const APValue *Evaluated = VD->getEvaluatedValue();
     // If the evaluated result is constant, emit it.
     if (Evaluated && (Evaluated->isInt() || Evaluated->isFloat()))
       Val |= 8;
@@ -8587,6 +8590,9 @@ void OMPClauseWriter::VisitOMPAllocateClause(OMPAllocateClause *C) {
 
 void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
   Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getModifier());
+  Record.AddSourceLocation(C->getModifierLoc());
+  Record.AddStmt(C->getModifierExpr());
   VisitOMPClauseWithPreInit(C);
   Record.AddSourceLocation(C->getLParenLoc());
   for (auto *VE : C->varlist())

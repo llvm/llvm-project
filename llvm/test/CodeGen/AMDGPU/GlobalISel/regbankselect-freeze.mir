@@ -66,8 +66,8 @@ body:             |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:sgpr(s32) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[FREEZE]](s32)
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:sgpr(i32) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[FREEZE]](i32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0(s32)
     %2:_(s1) = G_FREEZE %1

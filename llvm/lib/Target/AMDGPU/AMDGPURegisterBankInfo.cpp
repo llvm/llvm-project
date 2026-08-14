@@ -4063,8 +4063,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UBFX:
   case AMDGPU::G_AMDGPU_S_MUL_I64_I32:
   case AMDGPU::G_AMDGPU_S_MUL_U64_U32:
-    if (isSALUMapping(MI))
+    if (isSALUMapping(MI)) {
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      unsigned Size = Ty.getSizeInBits();
+      // Packed add and sub are VALU only.
+      if (Subtarget.hasPackedU64Ops() && Ty.isVector() && Size == 128)
+        return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
+    }
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_SMIN:
   case AMDGPU::G_SMAX:
@@ -4826,6 +4832,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_f64_16x16x4_f64:
     case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:

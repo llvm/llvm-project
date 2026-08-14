@@ -69,9 +69,9 @@ Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
        "%s initialized with starting address %p, "
-       "memory size %lu bytes, and output directory in %s\n",
+       "memory size %" PRIu64 " bytes, and output directory in %s\n",
        Status == StatusTy::Recording ? "Record" : "Replay", StartAddr,
-       TotalSize, OutputDirectory.c_str());
+       TotalSize, OutputDirectory.string().c_str());
 
   return Plugin::success();
 }
@@ -88,20 +88,34 @@ Error RecordReplayTy::deinit() {
 }
 
 Error RecordReplayTy::emitInstanceReport() {
+  llvm::raw_ostream *OutStream = &llvm::outs();
+  std::unique_ptr<llvm::raw_fd_ostream> FileOut;
+
+  if (!ReportFilename.empty()) {
+    // The report file is emitted in the output directory.
+    std::string ReportFilepath =
+        (std::filesystem::absolute(OutputDirectory) / ReportFilename).string();
+    std::error_code EC;
+    FileOut = std::make_unique<llvm::raw_fd_ostream>(ReportFilepath, EC);
+    if (EC)
+      return Plugin::error(ErrorCode::HOST_IO, "saving report file");
+    OutStream = FileOut.get();
+  }
+
   std::lock_guard<std::mutex> LG(InstancesLock);
-  llvm::outs() << "=== Kernel Record Report ===\n";
-  llvm::outs() << "Directory: "
-               << std::filesystem::absolute(OutputDirectory).string() << "\n";
-  llvm::outs() << "Total Instances: " << Instances.size() << "\n";
-  llvm::outs() << "JSON Filename, Kernel Name, Time (ns), Occurrences:\n";
+  *OutStream << "=== Kernel Record Report ===\n";
+  *OutStream << "Directory: "
+             << std::filesystem::absolute(OutputDirectory).string() << "\n";
+  *OutStream << "Total Instances: " << OrderedInstances.size() << "\n";
+  *OutStream << "JSON Filename, Kernel Name, Time (ns), Occurrences:\n";
 
   SmallString<128> Filename;
-  for (const auto &Inst : Instances)
-    llvm::outs()
-        << getFilename(Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
-        << ", " << Inst.Kernel.getName() << ", " << Inst.getRecordedTimeNs()
-        << ", " << Inst.Occurrences << "\n";
-  llvm::outs() << "=== End Kernel Record Report ===\n";
+  for (const auto *Inst : OrderedInstances)
+    *OutStream
+        << getFilename(*Inst, FileTy::Descriptor, /*IncludeDir=*/false).c_str()
+        << ", " << Inst->Kernel.getName() << ", " << Inst->getRecordedTimeNs()
+        << ", " << Inst->Occurrences << "\n";
+  *OutStream << "=== End Kernel Record Report ===\n";
 
   return Plugin::success();
 }
@@ -114,18 +128,24 @@ RecordReplayTy::registerInstance(const GenericKernelTy &Kernel,
   std::lock_guard<std::mutex> LG(InstancesLock);
   auto [It, Inserted] = Instances.emplace(Kernel, NumTeams, NumThreads,
                                           SharedMemorySize, ReplayOutcome);
+  // Keep insertion order.
+  if (Inserted)
+    OrderedInstances.push_back(&(*It));
+
   // Increase the number of occurrences.
   It->Occurrences += 1;
-  return {*It, Inserted};
+
+  // Return reference and whether it was registered for the first time. Notice
+  // that registering an unregistered instance counts as a new registration.
+  return {*It, (It->Occurrences == 1)};
 }
 
 Error RecordReplayTy::unregisterInstance(const InstanceTy &Instance) {
   assert(isReplaying() && "Cannot unregister instance when recording.");
 
+  // Do not remove it, it may be reused in the future.
   std::lock_guard<std::mutex> LG(InstancesLock);
-  size_t Erased = Instances.erase(Instance);
-  if (Erased != 1)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT, "invalid instance");
+  Instance.Occurrences = 0;
   return Plugin::success();
 }
 
@@ -226,7 +246,9 @@ Error NativeRecordReplayTy::recordPrologueImpl(
     return Err;
 
   SmallString<128> ImageFilename = getFilename(Instance, FileTy::Program);
-  return recordImage(Kernel, ImageFilename.c_str());
+
+  SmallString<128> IRImageFilename = getFilename(Instance, FileTy::IRImage);
+  return recordImage(Kernel, ImageFilename.c_str(), IRImageFilename.c_str());
 }
 
 Error NativeRecordReplayTy::recordEpilogueImpl(const GenericKernelTy &Kernel,
@@ -250,23 +272,29 @@ Error NativeRecordReplayTy::recordDescImpl(
   JsonKernelInfo["VAllocAddr"] = (intptr_t)StartAddr;
   JsonKernelInfo["VAllocSize"] = TotalSize;
 
-  // Add minimum and maximum for allowed number of teams. If zero, it means
+  // Export minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
+  uint32_t MinMaxBlocks = std::max(KernelArgs.UserNumBlocks[0], uint32_t(0));
   json::Array JsonTeamsLimits;
-  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
-  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
+  JsonTeamsLimits.push_back(MinMaxBlocks);
+  JsonTeamsLimits.push_back(MinMaxBlocks);
   JsonKernelInfo["TeamsLimits"] = json::Value(std::move(JsonTeamsLimits));
 
-  // Add minimum and maximum for allowed number of threads. If zero, it means
+  // Export minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
+  uint32_t UserThreads = std::max(KernelArgs.UserThreadLimit[0], uint32_t(0));
+  uint32_t MaxThreads = UserThreads
+                            ? std::min(UserThreads, Kernel.getMaxThreads())
+                            : Kernel.getMaxThreads();
+  assert(MaxThreads >= 0 && "MaxThreads must be greater than zero.");
   json::Array JsonThreadsLimits;
-  JsonThreadsLimits.push_back(uint32_t(KernelArgs.UserThreadLimit[0] > 0));
-  JsonThreadsLimits.push_back(KernelArgs.UserThreadLimit[0]);
+  JsonThreadsLimits.push_back(1);
+  JsonThreadsLimits.push_back(MaxThreads);
   JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;
   for (uint32_t I = 0; I < KernelArgs.NumArgs; ++I)
-    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchParams.Ptrs[I]));
+    JsonArgPtrs.push_back((intptr_t)(*(void **)LaunchParams.Args[I]));
   JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
 
   json::Array JsonArgOffsets;
@@ -297,6 +325,8 @@ StringRef NativeRecordReplayTy::getExtension(FileTy FileType) {
     return "globals";
   case FileTy::Program:
     return "image";
+  case FileTy::IRImage:
+    return "bc";
   }
   return "";
 }
@@ -308,7 +338,7 @@ NativeRecordReplayTy::getFilenameImpl(const InstanceTy &Instance,
   Filepath /= std::to_string(Instance.KernelHash) + "_" +
               std::to_string(Instance.LaunchConfigHash);
   Filepath.replace_extension(getExtension(FileType).data());
-  SmallString<128> Filename(Filepath.c_str());
+  SmallString<128> Filename(Filepath.string());
   return Filename;
 }
 
@@ -318,35 +348,46 @@ Error NativeRecordReplayTy::recordSnapshot(StringRef Filename) {
   uint64_t RecordSize = CurrentSize;
   AllocationLock.unlock();
 
-  ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
-      WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
-  if (!DeviceMemoryMB)
-    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                         "creating MemoryBuffer for device memory");
+  std::unique_ptr<WritableMemoryBuffer> DeviceMB;
+  if (RecordSize) {
+    DeviceMB = WritableMemoryBuffer::getNewUninitMemBuffer(RecordSize);
+    if (!DeviceMB)
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "creating MemoryBuffer for device memory");
 
-  if (auto Err = Device.dataRetrieve(DeviceMemoryMB.get()->getBufferStart(),
-                                     StartAddr, RecordSize, nullptr))
-    return Err;
-
-  StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), RecordSize);
+    if (auto Err = Device.dataRetrieve(DeviceMB->getBufferStart(), StartAddr,
+                                       RecordSize, nullptr))
+      return Err;
+  }
 
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving memory snapshot file");
-  OS << DeviceMemory;
+  if (DeviceMB)
+    OS.write(DeviceMB->getBufferStart(), RecordSize);
   OS.close();
   return Plugin::success();
 }
 
 Error NativeRecordReplayTy::recordImage(const GenericKernelTy &Kernel,
-                                        StringRef Filename) {
+                                        StringRef Filename,
+                                        StringRef IRImageFilename) {
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
   if (EC)
     return Plugin::error(ErrorCode::HOST_IO, "saving image file");
   OS << Kernel.getImage().getMemoryBuffer().getBuffer();
   OS.close();
+
+  if (!IRImageFilename.empty() && Kernel.getImage().hasIRImage()) {
+    raw_fd_ostream IROS(IRImageFilename, EC);
+    if (EC)
+      return Plugin::error(ErrorCode::HOST_IO, "saving IR image file");
+    IROS << Kernel.getImage().getIRImageMemoryBuffer().getBuffer();
+    IROS.close();
+  }
+
   return Plugin::success();
 }
 
@@ -369,13 +410,12 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
     NumGlobals++;
   }
 
-  ErrorOr<std::unique_ptr<WritableMemoryBuffer>> GlobalsMB =
-      WritableMemoryBuffer::getNewUninitMemBuffer(TotalSize);
+  auto GlobalsMB = WritableMemoryBuffer::getNewUninitMemBuffer(TotalSize);
   if (!GlobalsMB)
     return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                          "creating MemoryBuffer for globals memory");
 
-  void *BufferPtr = GlobalsMB.get()->getBufferStart();
+  void *BufferPtr = GlobalsMB->getBufferStart();
   *((uint32_t *)(BufferPtr)) = NumGlobals;
   BufferPtr = utils::advancePtr(BufferPtr, sizeof(uint32_t));
 
@@ -398,16 +438,15 @@ Error NativeRecordReplayTy::recordGlobals(StringRef Filename) {
       return Err;
     BufferPtr = utils::advancePtr(BufferPtr, Global.Size);
   }
-  assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
+  assert(BufferPtr == GlobalsMB->getBufferEnd() &&
          "Buffer over or under-filled.");
   assert(TotalSize == (uint64_t)utils::getPtrDiff(
-                          BufferPtr, GlobalsMB->get()->getBufferStart()) &&
+                          BufferPtr, GlobalsMB->getBufferStart()) &&
          "Buffer size mismatch.");
 
-  StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), TotalSize);
   std::error_code EC;
   raw_fd_ostream OS(Filename, EC);
-  OS << GlobalsMemory;
+  OS.write(GlobalsMB->getBufferStart(), TotalSize);
   OS.close();
   return Plugin::success();
 }

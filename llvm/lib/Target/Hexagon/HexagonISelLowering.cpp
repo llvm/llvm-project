@@ -113,6 +113,7 @@ static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "HexagonGenCallingConv.inc"
 
 unsigned HexagonTargetLowering::getVectorTypeBreakdownForCallingConv(
@@ -644,6 +645,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   unsigned OpCode = DoesNotReturn ? HexagonISD::CALLnr : HexagonISD::CALL;
   Chain = DAG.getNode(OpCode, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   Glue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -1063,10 +1066,8 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   MVT OpTy = ty(LHS);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
-    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
-                                  OpTy.getVectorNumElements());
+    assert(OpTy.getVectorElementType().isScalarInteger());
+    MVT WideTy = OpTy.widenIntegerElementType();
     return DAG.getSetCC(dl, ResTy,
                         DAG.getSExtOrTrunc(LHS, SDLoc(LHS), WideTy),
                         DAG.getSExtOrTrunc(RHS, SDLoc(RHS), WideTy), CC);
@@ -1121,10 +1122,8 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
-    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
-                                  OpTy.getVectorNumElements());
+    assert(OpTy.getVectorElementType().isScalarInteger());
+    MVT WideTy = OpTy.widenIntegerElementType();
     // Generate (trunc (select (_, sext, sext))).
     return DAG.getSExtOrTrunc(
               DAG.getSelect(dl, WideTy, PredOp,
@@ -2854,16 +2853,15 @@ HexagonTargetLowering::getCombine(SDValue Hi, SDValue Lo, const SDLoc &dl,
 
   if (!ElemTy.isVector()) {
     assert(ElemTy.isScalarInteger());
-    MVT PairTy = MVT::getIntegerVT(2 * ElemTy.getSizeInBits());
+    MVT PairTy = ElemTy.widenIntegerElementType();
     SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, PairTy, Lo, Hi);
     return DAG.getBitcast(ResTy, Pair);
   }
 
   unsigned Width = ElemTy.getSizeInBits();
   MVT IntTy = MVT::getIntegerVT(Width);
-  MVT PairTy = MVT::getIntegerVT(2 * Width);
   SDValue Pair =
-      DAG.getNode(ISD::BUILD_PAIR, dl, PairTy,
+      DAG.getNode(ISD::BUILD_PAIR, dl, IntTy.widenIntegerElementType(),
                   {DAG.getBitcast(IntTy, Lo), DAG.getBitcast(IntTy, Hi)});
   return DAG.getBitcast(ResTy, Pair);
 }
@@ -3971,6 +3969,31 @@ MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
   }
 }
 
+MachineInstr *
+HexagonTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::instr_iterator &MBBI,
+                                     const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  switch (MBBI->getOpcode()) {
+  case Hexagon::J2_callr:
+  case Hexagon::PS_callr_nr:
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  MachineOperand &Target = MBBI->getOperand(0);
+  assert(Target.isReg() && "Invalid target operand for an indirect call");
+  Target.setIsRenamable(false);
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Hexagon::KCFI_CHECK))
+      .addReg(Target.getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
+}
+
 bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
   // Only sink 'and' mask to cmp use block if it is masking a single bit since
@@ -4017,4 +4040,22 @@ bool HexagonTargetLowering::isUsedByReturnOnly(SDNode *N,
 
   Chain = Copy->getOperand(0);
   return true;
+}
+
+bool HexagonTargetLowering::hasInlineStackProbe(
+    const MachineFunction &MF) const {
+  if (MF.getFunction().hasFnAttribute("probe-stack"))
+    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
+           "inline-asm";
+  return false;
+}
+
+unsigned HexagonTargetLowering::getStackProbeSize(const MachineFunction &MF,
+                                                  Align StackAlign) const {
+  const Function &Fn = MF.getFunction();
+  unsigned StackProbeSize =
+      Fn.getFnAttributeAsParsedInteger("stack-probe-size", 4096);
+  // Round down to the stack alignment.
+  StackProbeSize = alignDown(StackProbeSize, StackAlign.value());
+  return StackProbeSize ? StackProbeSize : StackAlign.value();
 }

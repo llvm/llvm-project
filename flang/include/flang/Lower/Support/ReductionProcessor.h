@@ -13,6 +13,7 @@
 #ifndef FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 #define FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -21,6 +22,7 @@
 #include "flang/Semantics/type.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 namespace omp {
@@ -96,6 +98,16 @@ public:
                                       const fir::KindMapping &kindMap,
                                       mlir::Type ty, bool isByRef);
 
+  /// Returns the module-unique name of the omp.declare_reduction op that
+  /// materializes a user-defined reduction (named or operator). The name is
+  /// derived from the reduction symbol's ultimate name, qualified with its
+  /// owning scope via AbstractConverter::mangleName, so that reductions with
+  /// the same spelling in different modules do not collide. The directive and
+  /// clause lowering must both use this to agree on the op's symbol name.
+  static std::string
+  getScopedUserReductionName(AbstractConverter &converter,
+                             const semantics::Symbol &reductionSymbol);
+
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:
   ///    0 + x = x,
@@ -158,8 +170,16 @@ public:
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
       const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+      llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
       llvm::DenseMap<const semantics::Symbol *, mlir::Value>
           *reductionVarCache = nullptr);
+
+  /// Check if an expression is lowered as a Reduction object. This ensures
+  /// reductions such as Array Elements are properly represented, rather than
+  /// reducing the full array.
+  // TODO support more types of objects
+  // to avoid Reduction clauses being represented in FIR as full arrays.
+  static bool isExpressionLoweredAsReductionObject(const Object *object);
 };
 
 template <typename FloatOp, typename IntegerOp>

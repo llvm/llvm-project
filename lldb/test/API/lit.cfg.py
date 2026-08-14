@@ -272,6 +272,28 @@ if is_configured("lldb_executable"):
             "Could not get lldb version from {}: {}".format(config.lldb_executable, e)
         )
 
+    # Discover the directory that contains the 'lldb' Python module once here,
+    # so each dotest invocation doesn't have to spawn '<lldb> -P' itself.
+    try:
+        lldb_dash_p_output = subprocess.check_output(
+            [config.lldb_executable, "-P"],
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        for line in lldb_dash_p_output.splitlines():
+            line = line.strip()
+            if os.path.isdir(line) and os.path.exists(
+                os.path.join(line, "lldb", "__init__.py")
+            ):
+                dotest_cmd += ["--lldb-python-dir", line]
+                break
+    except (subprocess.CalledProcessError, OSError) as e:
+        lit_config.warning(
+            "Could not discover lldb python path from {}: {}".format(
+                config.lldb_executable, e
+            )
+        )
+
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
 
@@ -346,6 +368,8 @@ if is_configured("lldb_platform_working_dir"):
     dotest_cmd += ["--platform-working-dir", config.lldb_platform_working_dir]
 if is_configured("cmake_sysroot"):
     dotest_cmd += ["--sysroot", config.cmake_sysroot]
+if is_configured("test_resource_dir"):
+    dotest_cmd += ["--resource-dir", config.test_resource_dir]
 
 if is_configured("dotest_user_args_str"):
     dotest_cmd.extend(config.dotest_user_args_str.split(";"))
@@ -381,8 +405,9 @@ if platform.system() == "Windows":
         if v in os.environ:
             config.environment[v] = os.environ[v]
 
-    if getattr(config, "lldb_use_lldb_server", False):
-        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
+    config.environment["LLDB_USE_LLDB_SERVER"] = (
+        "1" if getattr(config, "lldb_use_lldb_server", False) else "0"
+    )
 
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
     # escape sequences into the output stream, which breaks tests that check

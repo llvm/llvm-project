@@ -132,10 +132,8 @@ define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x i32>
-; CHECK: %[[ICMP1:.*]] = icmp slt <vscale x 8 x i32> %[[LOAD1]]
-; CHECK: %[[ICMP2:.*]] = icmp slt <vscale x 8 x i32> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[ICMP1]], <vscale x 8 x i32> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[ICMP2]], <vscale x 8 x i32> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = call <vscale x 8 x i32> @llvm.smin
+; CHECK: %[[SEL2:.*]] = call <vscale x 8 x i32> @llvm.smin
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = call <vscale x 8 x i32> @llvm.smin.nxv8i32(<vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]])
 ; CHECK-NEXT: call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32>  %[[RDX]])
@@ -147,8 +145,7 @@ for.body:
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
-  %cmp.i = icmp slt i32 %0, %sum.010
-  %.sroa.speculated = select i1 %cmp.i, i32 %0, i32 %sum.010
+  %.sroa.speculated = call i32 @llvm.smin(i32 %0, i32 %sum.010)
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -165,10 +162,8 @@ define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x i32>
-; CHECK: %[[ICMP1:.*]] = icmp ugt <vscale x 8 x i32> %[[LOAD1]]
-; CHECK: %[[ICMP2:.*]] = icmp ugt <vscale x 8 x i32> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[ICMP1]], <vscale x 8 x i32> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[ICMP2]], <vscale x 8 x i32> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = call <vscale x 8 x i32> @llvm.umax
+; CHECK: %[[SEL2:.*]] = call <vscale x 8 x i32> @llvm.umax
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = call <vscale x 8 x i32> @llvm.umax.nxv8i32(<vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]])
 ; CHECK-NEXT: call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32>  %[[RDX]])
@@ -180,8 +175,7 @@ for.body:
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
-  %cmp.i = icmp ugt i32 %0, %sum.010
-  %.sroa.speculated = select i1 %cmp.i, i32 %0, i32 %sum.010
+  %.sroa.speculated = call i32 @llvm.umax(i32 %0, i32 %sum.010)
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -319,17 +313,23 @@ for.end:
 
 ; ADD (with reduction stored in invariant address)
 
-; CHECK-REMARK: vectorized loop (vectorization width: vscale x 4, interleaved count: 2)
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 4, interleaved count: 4)
 define void @invariant_store(ptr %dst, ptr readonly %src) {
 ; CHECK-LABEL: @invariant_store
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 4 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 4 x i32>
+; CHECK: %[[LOAD3:.*]] = load <vscale x 4 x i32>
+; CHECK: %[[LOAD4:.*]] = load <vscale x 4 x i32>
 ; CHECK: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD1]]
 ; CHECK: %[[ADD2:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD2]]
+; CHECK: %[[ADD3:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD3]]
+; CHECK: %[[ADD4:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD4]]
 ; CHECK: middle.block:
-; CHECK: %[[ADD:.*]] = add <vscale x 4 x i32> %[[ADD2]], %[[ADD1]]
-; CHECK-NEXT: %[[SUM:.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %[[ADD]])
+; CHECK: %[[ADD5:.*]] = add <vscale x 4 x i32> %[[ADD2]], %[[ADD1]]
+; CHECK: %[[ADD6:.*]] = add <vscale x 4 x i32> %[[ADD3]], %[[ADD5]]
+; CHECK: %[[ADD7:.*]] = add <vscale x 4 x i32> %[[ADD4]], %[[ADD6]]
+; CHECK-NEXT: %[[SUM:.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %[[ADD7]])
 ; CHECK-NEXT: store i32 %[[SUM]], ptr %gep.dst, align 4
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42

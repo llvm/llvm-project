@@ -2810,9 +2810,9 @@ uint64_t PPCFrameLowering::getStackThreshold() const {
   // when extending the stack and is positive when releasing the stack frame.
   // To make `stux` and `add` paired, the absolute value of the number contained
   // in the scratch register should be the same. Thus the maximum stack size
-  // is (2^63)-1, i.e., LONG_MAX.
+  // is (2^63)-1, i.e., INT64_MAX.
   if (Subtarget.isPPC64())
-    return LONG_MAX;
+    return INT64_MAX;
 
   return TargetFrameLowering::getStackThreshold();
 }

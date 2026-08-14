@@ -10,6 +10,8 @@
 
 // Windows includes
 #include "lldb/Host/windows/windows.h"
+#include <dbghelp.h>
+#include <excpt.h>
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
@@ -18,6 +20,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
@@ -95,11 +98,14 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
 }
 
 static bool ShouldUseLLDBServer() {
-  llvm::StringRef use_lldb_server = ::getenv("LLDB_USE_LLDB_SERVER");
-  return use_lldb_server.equals_insensitive("on") ||
-         use_lldb_server.equals_insensitive("yes") ||
-         use_lldb_server.equals_insensitive("1") ||
-         use_lldb_server.equals_insensitive("true");
+  if (const char *env = ::getenv("LLDB_USE_LLDB_SERVER")) {
+    llvm::StringRef use_lldb_server(env);
+    return use_lldb_server.equals_insensitive("on") ||
+           use_lldb_server.equals_insensitive("yes") ||
+           use_lldb_server.equals_insensitive("1") ||
+           use_lldb_server.equals_insensitive("true");
+  }
+  return LLDB_ENABLE_LIBXML2;
 }
 
 void ProcessWindows::Initialize() {
@@ -312,74 +318,6 @@ void ProcessWindows::DidAttach(ArchSpec &arch_spec) {
     RefreshStateAfterStop();
 }
 
-static void
-DumpAdditionalExceptionInformation(llvm::raw_ostream &stream,
-                                   const ExceptionRecordSP &exception) {
-  // Decode additional exception information for specific exception types based
-  // on
-  // https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_exception_record
-
-  const int addr_min_width = 2 + 8; // "0x" + 4 address bytes
-
-  const std::vector<ULONG_PTR> &args = exception->GetExceptionArguments();
-  switch (exception->GetExceptionCode()) {
-  case EXCEPTION_ACCESS_VIOLATION: {
-    if (args.size() < 2)
-      break;
-
-    stream << ": ";
-    const int access_violation_code = args[0];
-    const lldb::addr_t access_violation_address = args[1];
-    switch (access_violation_code) {
-    case 0:
-      stream << "Access violation reading";
-      break;
-    case 1:
-      stream << "Access violation writing";
-      break;
-    case 8:
-      stream << "User-mode data execution prevention (DEP) violation at";
-      break;
-    default:
-      stream << "Unknown access violation (code " << access_violation_code
-             << ") at";
-      break;
-    }
-    stream << " location "
-           << llvm::format_hex(access_violation_address, addr_min_width);
-    break;
-  }
-  case EXCEPTION_IN_PAGE_ERROR: {
-    if (args.size() < 3)
-      break;
-
-    stream << ": ";
-    const int page_load_error_code = args[0];
-    const lldb::addr_t page_load_error_address = args[1];
-    const DWORD underlying_code = args[2];
-    switch (page_load_error_code) {
-    case 0:
-      stream << "In page error reading";
-      break;
-    case 1:
-      stream << "In page error writing";
-      break;
-    case 8:
-      stream << "User-mode data execution prevention (DEP) violation at";
-      break;
-    default:
-      stream << "Unknown page loading error (code " << page_load_error_code
-             << ") at";
-      break;
-    }
-    stream << " location "
-           << llvm::format_hex(page_load_error_address, addr_min_width)
-           << " (status code " << llvm::format_hex(underlying_code, 8) << ")";
-    break;
-  }
-  }
-}
-
 void ProcessWindows::RefreshStateAfterStop() {
   Log *log = GetLog(WindowsLog::Exception);
   llvm::sys::ScopedLock lock(m_mutex);
@@ -417,7 +355,7 @@ void ProcessWindows::RefreshStateAfterStop() {
   if (site && IsBreakpointSitePhysicallyEnabled(*site))
     stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
 
-  switch (active_exception->GetExceptionCode()) {
+  switch (active_exception->GetExceptionValue()) {
   case EXCEPTION_SINGLE_STEP: {
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
         stop_thread->GetRegisterContext().get());
@@ -509,10 +447,10 @@ void ProcessWindows::RefreshStateAfterStop() {
     std::string desc;
     llvm::raw_string_ostream desc_stream(desc);
     desc_stream << "Exception "
-                << llvm::format_hex(active_exception->GetExceptionCode(), 8)
+                << llvm::format_hex(active_exception->GetExceptionValue(), 8)
                 << " encountered at address "
                 << llvm::format_hex(active_exception->GetExceptionAddress(), 8);
-    DumpAdditionalExceptionInformation(desc_stream, active_exception);
+    active_exception->Dump(desc_stream);
 
     stop_info =
         StopInfo::CreateStopReasonWithException(*stop_thread, desc.c_str());
@@ -763,7 +701,7 @@ ProcessWindows::OnDebugException(bool first_chance,
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x}, "
              "but there is no session.",
-             record.GetExceptionCode(), record.GetExceptionAddress());
+             record.GetExceptionValue(), record.GetExceptionAddress());
     return ExceptionResult::SendToApplication;
   }
 
@@ -775,7 +713,7 @@ ProcessWindows::OnDebugException(bool first_chance,
   }
 
   ExceptionResult result = ExceptionResult::SendToApplication;
-  switch (record.GetExceptionCode()) {
+  switch (record.GetExceptionValue()) {
   case EXCEPTION_BREAKPOINT:
     // Handle breakpoints at the first chance.
     result = ExceptionResult::BreakInDebugger;
@@ -808,7 +746,7 @@ ProcessWindows::OnDebugException(bool first_chance,
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x} "
              "(first_chance={2})",
-             record.GetExceptionCode(), record.GetExceptionAddress(),
+             record.GetExceptionValue(), record.GetExceptionAddress(),
              first_chance);
     // For non-breakpoints, give the application a chance to handle the
     // exception first.
@@ -859,15 +797,19 @@ void ProcessWindows::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
     m_session_data->m_exited_threads.insert(thread_id);
 }
 
-void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
-                               lldb::addr_t module_addr) {
+DllEventAction ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
+                                         lldb::addr_t module_addr,
+                                         lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(nullptr, module_spec, module_addr);
+  return DllEventAction::ContinueDebugLoop;
 }
 
-void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
+DllEventAction ProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
+                                           lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnUnloadModule(module_addr);
+  return DllEventAction::ContinueDebugLoop;
 }
 
 void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
@@ -905,57 +847,6 @@ void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
   }
 }
 
-llvm::Error
-ProcessWindows::ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
-                                uint16_t length_lower_word,
-                                llvm::SmallVectorImpl<char> &output) {
-  if (is_unicode && length_lower_word % 2 != 0)
-    return llvm::createStringError(
-        "Utf16 string can't have uneven size in bytes");
-
-  const auto is_zero_terminated = [&] {
-    // The zero terminator is always at the end of the buffer.
-    if (is_unicode)
-      return output.size() >= 2 && output.back() == 0 &&
-             output[output.size() - 2] == 0;
-
-    return !output.empty() && output.back() == 0;
-  };
-
-  // Read at most 1 MiB ((1 << 16) * 16 - 1 Bytes) since we don't know the exact
-  // size of the string. We know that `strlen(string) & 0xffff ==
-  // length_lower_word`, so we read in chunks until we reach the terminator:
-  // - 0: `length_lower_word` Bytes
-  // - 1..16: 64 KiB (= 2^16 Bytes)
-  size_t start = length_lower_word == 0 ? 1 : 0;
-  for (size_t i = start; i < 16; ++i) {
-    output.resize_for_overwrite(length_lower_word + i * (1 << 16));
-    size_t chunk_size = i == 0 ? length_lower_word : (1 << 16);
-    lldb::addr_t addr = debug_string_addr + output.size_in_bytes() - chunk_size;
-
-    Status error;
-    size_t bytes_read =
-        DoReadMemory(addr, output.end() - chunk_size, chunk_size, error);
-    if (error.Fail())
-      return error.takeError();
-
-    if (bytes_read != chunk_size) {
-      return llvm::createStringErrorV(
-          "Expected to read {0} bytes, but read {1}", chunk_size, bytes_read);
-    }
-
-    if (is_zero_terminated())
-      break;
-  }
-
-  if (!is_zero_terminated())
-    return llvm::createStringError("String is 1 MiB or larger");
-
-  // Remove null terminator.
-  output.pop_back_n(is_unicode ? 2 : 1);
-  return llvm::Error::success();
-}
-
 void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
   Log *log = GetLog(WindowsLog::Process);
@@ -991,7 +882,7 @@ std::optional<DWORD> ProcessWindows::GetActiveExceptionCode() const {
   auto exc = m_session_data->m_debugger->GetActiveException().lock();
   if (!exc)
     return std::nullopt;
-  return exc->GetExceptionCode();
+  return exc->GetExceptionValue();
 }
 
 Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {

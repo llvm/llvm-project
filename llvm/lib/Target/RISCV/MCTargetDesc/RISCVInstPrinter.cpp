@@ -137,7 +137,7 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
     if (Reg.IsAltName || Reg.IsDeprecatedName)
       continue;
     if (Reg.haveRequiredFeatures(STI.getFeatureBits())) {
-      markup(O, Markup::Register) << Reg.Name;
+      markup(O, Markup::Register) << RISCVSysReg::getSysRegStr(Reg.Name);
       return;
     }
   }
@@ -160,6 +160,16 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
     O << 'w';
   if (FenceArg == 0)
     O << "0";
+}
+
+void RISCVInstPrinter::printSMTVType(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  auto VType =
+      static_cast<XSMTVTypeMode::SMTVTypeMode>(MI->getOperand(OpNo).getImm());
+  assert(XSMTVTypeMode::isValidSMTVTypeMode(VType) &&
+         "SpacemiT's Integer Matrix only supports [i4|i8] mode");
+  O << ", " << XSMTVTypeMode::SMTVTypeModeToString(VType);
 }
 
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,

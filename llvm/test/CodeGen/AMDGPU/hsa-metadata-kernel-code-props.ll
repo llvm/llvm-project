@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX700,WAVE64 %s
-; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX803,WAVE64 %s
-; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX900,WAVE64 %s
-; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX1010,WAVE32 %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX700,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgpu8.03-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX803,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgpu9.00-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX900,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgpu10.10-amd-amdhsa -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX1010,WAVE32 %s
 
 @var = addrspace(1) global float 0.0
 

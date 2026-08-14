@@ -74,12 +74,22 @@ public:
     return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
   }
 
+  Error memoryPrefetch(const void *Ptr, size_t Size) {
+    if (Size == 0)
+      return Plugin::success();
+    return memoryPrefetchImpl(Ptr, Size);
+  }
+
   Error dispatchLaunchKernel(ze_kernel_handle_t Kernel, L0LaunchEnvTy &KEnv,
                              ze_event_handle_t SignalEvent = nullptr,
                              uint32_t NumWaitEvents = 0,
                              ze_event_handle_t *WaitEvents = nullptr);
   Error launchKernel(ze_kernel_handle_t Kernel, L0LaunchEnvTy &KEnv) {
     return launchKernelImpl(Kernel, KEnv);
+  }
+
+  Error hostCall(void (*Callback)(void *), void *UserData) {
+    return hostCallImpl(Callback, UserData);
   }
 
   Error dataFence() { return dataFenceImpl(); }
@@ -126,10 +136,14 @@ public:
   }
   virtual Error launchKernelImpl(ze_kernel_handle_t Kernel,
                                  L0LaunchEnvTy &KEnv) = 0;
+  virtual Error hostCallImpl(void (*Callback)(void *), void *UserData) = 0;
 
   virtual Error memoryFillImpl(void *Ptr, const void *Pattern,
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
+  }
+  virtual Error memoryPrefetchImpl(const void *Ptr, size_t Size) {
+    return CmdList->appendMemoryPrefetch(Ptr, Size);
   }
   virtual Error dataFenceImpl() = 0;
 
@@ -186,6 +200,7 @@ public:
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
                        size_t Size) override;
   Error dataFenceImpl() override;
@@ -204,6 +219,7 @@ public:
   Error synchronizeImpl() override;
   std::tuple<size_t, ze_event_handle_t *> getMemCopyEvents() override;
   std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents() override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error dataFenceImpl() override { return Plugin::success(); }
 };
 
@@ -222,6 +238,7 @@ public:
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error dataFenceImpl() override { return Plugin::success(); }
 };
 
@@ -240,6 +257,7 @@ public:
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
 };
 
 /// Simple cache for queue objects.

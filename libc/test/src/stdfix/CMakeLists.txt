@@ -121,7 +121,7 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
     SUITE
       libc-stdfix-tests
     HDRS
-      IdivTest.h
+      IdivFxTest.h
     SRCS
       idiv${suffix}_test.cpp
     DEPENDS

@@ -1,0 +1,137 @@
+if(NOT TARGET libc.src.__support.OSUtil.osutil)
+  return()
+endif()
+
+add_object_library(
+  report
+  SRCS
+    report.cpp
+  HDRS
+    report.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.arg_list
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.StringUtil.error_to_string
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  err
+  SRCS
+    err.cpp
+  HDRS
+    err.h
+  DEPENDS
+    .report
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  verr
+  SRCS
+    verr.cpp
+  HDRS
+    verr.h
+  DEPENDS
+    .report
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  errx
+  SRCS
+    errx.cpp
+  HDRS
+    errx.h
+  DEPENDS
+    .report
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  verrx
+  SRCS
+    verrx.cpp
+  HDRS
+    verrx.h
+  DEPENDS
+    .report
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  warn
+  SRCS
+    warn.cpp
+  HDRS
+    warn.h
+  DEPENDS
+    .report
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  vwarn
+  SRCS
+    vwarn.cpp
+  HDRS
+    vwarn.h
+  DEPENDS
+    .report
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  warnx
+  SRCS
+    warnx.cpp
+  HDRS
+    warnx.h
+  DEPENDS
+    .report
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  vwarnx
+  SRCS
+    vwarnx.cpp
+  HDRS
+    vwarnx.h
+  DEPENDS
+    .report
+    libc.src.__support.arg_list
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+)

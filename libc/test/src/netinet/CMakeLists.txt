@@ -7,9 +7,19 @@ add_libc_unittest(
   SRCS
     in_test.cpp
   DEPENDS
+    libc.hdr.netinet_in_macros
     libc.hdr.types.struct_in6_addr
+    libc.hdr.types.struct_ip_mreq
+    libc.hdr.types.struct_ip_mreq_source
+    libc.hdr.types.struct_ip_mreqn
+    libc.hdr.types.struct_ip_msfilter
+    libc.hdr.types.struct_ip_opts
+    libc.hdr.types.struct_ipv6_mreq
+    libc.hdr.types.struct_sockaddr_in6
     libc.src.arpa.inet.htons
     libc.src.arpa.inet.htonl
+    libc.src.netinet.in6addr_any
+    libc.src.netinet.in6addr_loopback
     libc.src.string.memcmp
 )
 

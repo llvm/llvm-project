@@ -20,7 +20,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/Fortran.h"
-#include <initializer_list>
+#include "llvm/ADT/StringRef.h"
 #include <variant>
 
 namespace Fortran::semantics {
@@ -203,6 +203,7 @@ private:
   }
   void Analyze(const parser::AssumedShapeSpec &);
   void Analyze(const parser::ExplicitShapeSpec &);
+  void Analyze(const parser::ExplicitShapeBoundsSpec &);
   void Analyze(const parser::AssumedImpliedSpec &);
   void Analyze(const parser::DeferredShapeSpecList &);
   void Analyze(const parser::AssumedRankSpec &);
@@ -237,7 +238,69 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }
+
+static bool shouldRewriteShapeSpecListToExplicitBounds(
+    SemanticsContext &context, const parser::ArraySpec &x) {
+  auto &explicitShapeSpecList{
+      std::get<std::list<parser::ExplicitShapeSpec>>(x.u)};
+
+  if (explicitShapeSpecList.size() != 1) {
+    return false;
+  }
+
+  auto &explicitShapeSpec{explicitShapeSpecList.front()};
+  const auto &upperBound{std::get<1>(explicitShapeSpec.t)};
+  const auto &lowerBoundOpt{std::get<0>(explicitShapeSpec.t)};
+
+  bool foundArray{false};
+
+  if (MaybeExpr analyzedExpr =
+          AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(upperBound));
+      analyzedExpr && (analyzedExpr->Rank() > 0)) {
+    foundArray = true;
+  }
+
+  if (lowerBoundOpt) {
+    const auto &lowerBound{*lowerBoundOpt};
+    if (MaybeExpr analyzedExpr =
+            AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(lowerBound));
+        analyzedExpr && (analyzedExpr->Rank() > 0)) {
+      foundArray = true;
+    }
+  }
+
+  return foundArray;
+}
+
+static void rewriteShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
+  auto &explicitShapeSpecList{std::get<std::list<parser::ExplicitShapeSpec>>(
+      const_cast<parser::ArraySpec &>(x).u)};
+  auto &mutableArraySpec{const_cast<parser::ArraySpec &>(x)};
+  auto &mutableExplicitShapeSpec{explicitShapeSpecList.front()};
+
+  auto &mutableUpperBound{std::get<1>(mutableExplicitShapeSpec.t)};
+  parser::IntExpr upperIntExpr{std::move(mutableUpperBound.v.thing)};
+
+  auto &mutableLowerBound{std::get<0>(mutableExplicitShapeSpec.t)};
+  std::optional<parser::IntExpr> lowerIntExpr;
+  if (mutableLowerBound) {
+    lowerIntExpr = std::move(mutableLowerBound->v.thing);
+  }
+
+  parser::ExplicitShapeBoundsSpec boundsSpec{
+      std::move(lowerIntExpr), std::move(upperIntExpr)};
+  mutableArraySpec.u = std::move(boundsSpec);
+}
+
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
+  // This node is rewritten manually here, as opposed to using RewriteParseTree,
+  // because RewriteParseTree is called after ResolveNames in
+  // PerformStatementSemantics, at which point we would have already
+  // aborted due to semantic errors before getting a chance to rewrite.
+  if (std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u) &&
+      shouldRewriteShapeSpecListToExplicitBounds(context_, x)) {
+    rewriteShapeSpecListToExplicitBounds(x);
+  }
   common::visit(common::visitors{
                     [&](const parser::AssumedSizeSpec &y) {
                       Analyze(
@@ -279,6 +342,14 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
       std::get<parser::SpecificationExpr>(x.t));
 }
+
+void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
+  context_.Say("TODO: Analyze overload for ExplicitShapeBoundsSpec"_todo_en_US);
+  // prevent CHECK abort in Analyze(ArraySpec), otherwise it'll abort before
+  // printing error message
+  arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+}
+
 void ArraySpecAnalyzer::Analyze(const parser::AssumedImpliedSpec &x) {
   MakeImplied(x.v);
 }
@@ -879,6 +950,40 @@ void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
     mapper.MapSymbolExprs(*ref);
   }
   newScope.InstantiateDerivedTypes();
+}
+
+std::string GetReductionFortranId(const parser::CharBlock &mangledName) {
+  llvm::StringRef name{mangledName.begin(), mangledName.size()};
+  if (!name.starts_with("op.")) {
+    return name.str();
+  }
+  llvm::StringRef suffix{name.drop_front(3)};
+  // Intrinsic arithmetic operators: op.+ -> operator(+)
+  if (suffix == "+" || suffix == "-" || suffix == "*") {
+    return ("operator(" + suffix + ")").str();
+  }
+  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
+  if (suffix == "AND") {
+    return "operator(.and.)";
+  }
+  if (suffix == "OR") {
+    return "operator(.or.)";
+  }
+  if (suffix == "EQV") {
+    return "operator(.eqv.)";
+  }
+  if (suffix == "NEQV") {
+    return "operator(.neqv.)";
+  }
+  // Defined operators: op.combine. -> .combine.
+  // MangleDefinedOperator prepends "op" to the operator name (e.g.,
+  // ".combine.") so after stripping "op.", the suffix ends with '.' for defined
+  // operators.
+  if (!suffix.empty() && suffix.back() == '.') {
+    return ("." + suffix).str();
+  }
+  // Named functions: op.max -> max
+  return suffix.str();
 }
 
 } // namespace Fortran::semantics

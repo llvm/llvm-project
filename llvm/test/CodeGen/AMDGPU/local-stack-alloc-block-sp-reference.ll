@@ -516,9 +516,9 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) #1 {
 ; FLATSCR-NEXT:    scratch_store_dword off, v2, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
-; FLATSCR-NEXT:    s_mov_b32 s3, s0
 ; FLATSCR-NEXT:    s_mov_b32 s1, s0
 ; FLATSCR-NEXT:    s_mov_b32 s2, s0
+; FLATSCR-NEXT:    s_mov_b32 s3, s0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v5, s3
 ; FLATSCR-NEXT:    v_mov_b32_e32 v4, s2
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, s1
@@ -566,11 +566,11 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) #1 {
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x2000
 ; FLATSCR-NEXT:    s_add_i32 s4, s33, s0
 ; FLATSCR-NEXT:    s_mov_b32 s0, 0
-; FLATSCR-NEXT:    s_mov_b32 s3, s0
 ; FLATSCR-NEXT:    s_mov_b32 s1, s0
 ; FLATSCR-NEXT:    s_mov_b32 s2, s0
-; FLATSCR-NEXT:    v_mov_b32_e32 v5, s3
+; FLATSCR-NEXT:    s_mov_b32 s3, s0
 ; FLATSCR-NEXT:    s_addk_i32 s4, 0x3000
+; FLATSCR-NEXT:    v_mov_b32_e32 v5, s3
 ; FLATSCR-NEXT:    v_mov_b32_e32 v4, s2
 ; FLATSCR-NEXT:    v_mov_b32_e32 v3, s1
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, s0

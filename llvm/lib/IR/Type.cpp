@@ -123,24 +123,24 @@ bool Type::isScalableTargetExtTy() const {
 }
 
 Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
-  Type *Ty;
-  if (&S == &APFloat::IEEEhalf())
-    Ty = Type::getHalfTy(C);
-  else if (&S == &APFloat::BFloat())
-    Ty = Type::getBFloatTy(C);
-  else if (&S == &APFloat::IEEEsingle())
-    Ty = Type::getFloatTy(C);
-  else if (&S == &APFloat::IEEEdouble())
-    Ty = Type::getDoubleTy(C);
-  else if (&S == &APFloat::x87DoubleExtended())
-    Ty = Type::getX86_FP80Ty(C);
-  else if (&S == &APFloat::IEEEquad())
-    Ty = Type::getFP128Ty(C);
-  else {
-    assert(&S == &APFloat::PPCDoubleDouble() && "Unknown FP format");
-    Ty = Type::getPPC_FP128Ty(C);
+  switch (llvm::APFloat::SemanticsToEnum(S)) {
+  case llvm::APFloat::S_IEEEhalf:
+    return llvm::Type::getHalfTy(C);
+  case llvm::APFloat::S_BFloat:
+    return llvm::Type::getBFloatTy(C);
+  case llvm::APFloat::S_IEEEsingle:
+    return llvm::Type::getFloatTy(C);
+  case llvm::APFloat::S_IEEEdouble:
+    return llvm::Type::getDoubleTy(C);
+  case llvm::APFloat::S_IEEEquad:
+    return llvm::Type::getFP128Ty(C);
+  case llvm::APFloat::S_PPCDoubleDouble:
+    return llvm::Type::getPPC_FP128Ty(C);
+  case llvm::APFloat::S_x87DoubleExtended:
+    return llvm::Type::getX86_FP80Ty(C);
+  default:
+    llvm_unreachable("unhandled float format");
   }
-  return Ty;
 }
 
 bool Type::isRISCVVectorTupleTy() const {
@@ -334,13 +334,11 @@ Type *Type::getByteFromIntType(Type *Ty) {
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(10)
-  return PointerType::get(C, 10);
+  return TargetExtType::get(C, "wasm.externref", {}, {});
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(20)
-  return PointerType::get(C, 20);
+  return TargetExtType::get(C, "wasm.funcref", {}, {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -1133,6 +1131,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(Type::getInt32Ty(C), TargetExtType::CanBeLocal,
                           TargetExtType::CanBeVectorElement);
   }
+
+  // Opaque types in the WebAssembly name space.
+  if (Name == "wasm.funcref" || Name == "wasm.externref")
+    return TargetTypeInfo(PointerType::getUnqual(C), TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

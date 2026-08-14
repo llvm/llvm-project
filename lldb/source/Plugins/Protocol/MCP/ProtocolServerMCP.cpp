@@ -26,7 +26,6 @@ using namespace llvm;
 LLDB_PLUGIN_DEFINE(ProtocolServerMCP)
 
 static constexpr llvm::StringLiteral kName = "lldb-mcp";
-static constexpr llvm::StringLiteral kVersion = "0.1.0";
 
 ProtocolServerMCP::ProtocolServerMCP() : ProtocolServer() {}
 
@@ -98,8 +97,6 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   auto listening_uris = m_listener->GetListeningConnectionURI();
   if (listening_uris.empty())
     return createStringError("failed to get listening connections");
-  std::string address =
-      llvm::join(m_listener->GetListeningConnectionURI(), ", ");
 
   ServerInfo info{listening_uris[0]};
   llvm::Expected<ServerInfoHandle> server_info_handle = ServerInfo::Write(info);
@@ -108,7 +105,8 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
 
   m_client_count = 0;
   m_server = std::make_unique<lldb_protocol::mcp::Server>(
-      std::string(kName), std::string(kVersion), [](StringRef message) {
+      std::string(kName), std::string(lldb_protocol::mcp::GetServerVersion()),
+      [](StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "MCP Server: {0}", message);
       });
   Extend(*m_server);
