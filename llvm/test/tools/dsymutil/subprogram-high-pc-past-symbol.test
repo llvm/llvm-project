@@ -1,0 +1,57 @@
+# REQUIRES: aarch64-registered-target
+
+# A DW_AT_high_pc reaching past the code the linker kept for a function must be
+# cut short at the function the linker placed next, otherwise the two overlap in
+# the output and verification fails with "DIEs have overlapping address ranges".
+# A scope nested in the function inherits the overrun, so it has to be cut short
+# with its parent to stay inside it.
+
+# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj \
+# RUN:   %p/Inputs/subprogram-high-pc-past-symbol.s -o %t.o
+# RUN: echo '---' > %t.map
+# RUN: echo "triple: 'arm64-apple-darwin'" >> %t.map
+# RUN: echo 'objects:' >> %t.map
+# RUN: echo " - filename: '%/t.o'" >> %t.map
+# RUN: echo '   symbols:' >> %t.map
+# RUN: echo '     - { sym: _a, objAddr: 0x0, binAddr: 0x1000, size: 0x4 }' >> %t.map
+# RUN: echo '     - { sym: _b, objAddr: 0x8, binAddr: 0x1004, size: 0x4 }' >> %t.map
+
+# _inside starts within the code the linker kept for _a, so it is nested rather
+# than adjacent and must not cut _a short.
+
+# RUN: echo '     - { sym: _inside, binAddr: 0x1002, size: 0x2 }' >> %t.map
+# RUN: echo '...' >> %t.map
+
+# RUN: dsymutil --linker classic -y %t.map -f -o %t-classic.out
+# RUN: llvm-dwarfdump -a %t-classic.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t-classic.out | FileCheck %s --check-prefix=VERIFY
+
+# RUN: dsymutil --linker parallel -y %t.map -f -o %t-parallel.out
+# RUN: llvm-dwarfdump -a %t-parallel.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t-parallel.out | FileCheck %s --check-prefix=VERIFY
+
+# Same again with DW_AT_high_pc as an address rather than a length.
+
+# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj \
+# RUN:   %p/Inputs/subprogram-high-pc-past-symbol-dwarf2.s -o %t.o
+# RUN: dsymutil --linker classic -y %t.map -f -o %t-classic2.out
+# RUN: llvm-dwarfdump -a %t-classic2.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t-classic2.out | FileCheck %s --check-prefix=VERIFY
+
+# RUN: dsymutil --linker parallel -y %t.map -f -o %t-parallel2.out
+# RUN: llvm-dwarfdump -a %t-parallel2.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t-parallel2.out | FileCheck %s --check-prefix=VERIFY
+
+# CHECK:      DW_TAG_subprogram
+# CHECK:        DW_AT_name{{.*}}"a"
+# CHECK-NEXT:   DW_AT_low_pc{{.*}}(0x0000000000001000)
+# CHECK-NEXT:   DW_AT_high_pc{{.*}}(0x0000000000001004)
+# CHECK:        DW_TAG_lexical_block
+# CHECK-NEXT:     DW_AT_low_pc{{.*}}(0x0000000000001000)
+# CHECK-NEXT:     DW_AT_high_pc{{.*}}(0x0000000000001004)
+# CHECK:      DW_TAG_subprogram
+# CHECK:        DW_AT_name{{.*}}"b"
+# CHECK-NEXT:   DW_AT_low_pc{{.*}}(0x0000000000001004)
+# CHECK-NEXT:   DW_AT_high_pc{{.*}}(0x0000000000001008)
+
+# VERIFY: No errors.

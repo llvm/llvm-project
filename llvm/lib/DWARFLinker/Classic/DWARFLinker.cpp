@@ -672,7 +672,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
     // function ranges when available, falling back to labels otherwise.
     if (Unit.getLanguage() == dwarf::DW_LANG_Mips_Assembler ||
         Unit.getLanguage() == dwarf::DW_LANG_Assembly) {
-      if (auto Range = RelocMgr.getAssemblyRangeForAddress(*LowPc)) {
+      if (auto Range = RelocMgr.getSymbolRangeForAddress(*LowPc)) {
         Unit.addFunctionRange(Range->LowPC, Range->HighPC, MyInfo.AddrAdjust);
       } else {
         Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
@@ -698,7 +698,10 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
   }
 
   // Replace the debug map range with a more accurate one.
-  Unit.addFunctionRange(*LowPc, *HighPc, MyInfo.AddrAdjust);
+  Unit.addFunctionRange(
+      *LowPc,
+      RelocMgr.constrainCodeRangeHighPC(*LowPc, *HighPc, MyInfo.AddrAdjust),
+      MyInfo.AddrAdjust);
   return Flags;
 }
 
@@ -1471,6 +1474,14 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     else
       return 0;
   } else {
+    // A nested scope inherits the range its parent function overran, so every
+    // range is constrained, not just the subprogram's own.
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc) {
+      if (std::optional<uint64_t> LowPC =
+              dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc)))
+        Addr = ObjFile.Addresses->constrainCodeRangeHighPC(*LowPC, *Addr,
+                                                           Info.PCOffset);
+    }
     *Addr += Info.PCOffset;
   }
 
@@ -1627,6 +1638,14 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
         "Unsupported scalar attribute form. Dropping attribute.", File,
         &InputDIE);
     return 0;
+  }
+
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc) {
+    if (std::optional<uint64_t> LowPC =
+            dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc)))
+      Value = File.Addresses->constrainCodeRangeHighPC(*LowPC, *LowPC + Value,
+                                                       Info.PCOffset) -
+              *LowPC;
   }
 
   DIE::value_iterator Patch =
