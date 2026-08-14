@@ -1,5 +1,5 @@
 ; RUN: not llvm-as < %s 2>&1 | FileCheck %s
-; CHECK: error: unexpected vector type; constant vector elements should not repeat the type
+; CHECK: error: constant vector elements must begin with a type
 
 define <2 x i16> @test(<2 x i16> %in) {
 entry:
