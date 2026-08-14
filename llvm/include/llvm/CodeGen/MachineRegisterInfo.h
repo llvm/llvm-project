@@ -643,6 +643,13 @@ public:
   /// multiple definitions or no definition, return null.
   LLVM_ABI MachineInstr *getUniqueVRegDef(Register Reg) const;
 
+  /// Return the machine basic block in which the specified virtual register is
+  /// defined, or null if it has no definition. This assumes SSA form.
+  MachineBasicBlock *getDefBlock(Register Reg) const {
+    MachineInstr *DefMI = getVRegDef(Reg);
+    return DefMI ? DefMI->getParent() : nullptr;
+  }
+
   /// clearKillFlags - Iterate over all the uses of the given register and
   /// clear the kill flag from the MachineOperand. This function is used by
   /// optimization passes which extend register lifetimes and need only
