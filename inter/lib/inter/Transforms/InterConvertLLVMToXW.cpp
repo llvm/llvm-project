@@ -1363,6 +1363,14 @@ public:
   LogicalResult
   matchAndRewrite(LLVM::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (op.getVolatile_())
+      return op.emitOpError(
+          "volatile LLVM load has no exact XW representation");
+    if (op.getOrdering() != LLVM::AtomicOrdering::not_atomic)
+      return op.emitOpError("atomic LLVM load has no exact XW representation");
+    if (op.getSyncscope())
+      return op.emitOpError(
+          "LLVM load syncscope has no exact XW representation");
     SmallVector<Value> operands = unwrapOperands(adaptor.getOperands());
     FailureOr<Type> type = convertResultType(op, *getTypeConverter(), rewriter);
     FailureOr<int64_t> width = getFunctionSimdWidth(op);
@@ -1383,6 +1391,14 @@ public:
   LogicalResult
   matchAndRewrite(LLVM::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (op.getVolatile_())
+      return op.emitOpError(
+          "volatile LLVM store has no exact XW representation");
+    if (op.getOrdering() != LLVM::AtomicOrdering::not_atomic)
+      return op.emitOpError("atomic LLVM store has no exact XW representation");
+    if (op.getSyncscope())
+      return op.emitOpError(
+          "LLVM store syncscope has no exact XW representation");
     SmallVector<Value> operands = unwrapOperands(adaptor.getOperands());
     xw::StoreOp converted = xw::StoreOp::create(
         rewriter, op.getLoc(), xw::MemTokenType::get(op.getContext()),

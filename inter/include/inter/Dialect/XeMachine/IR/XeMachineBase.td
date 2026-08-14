@@ -1,5 +1,5 @@
 // Dialect definition, enums, and attributes for xemachine.
-// Design: inter/docs/IntelXeBackendDesign.md section 10.
+// Design: inter/docs/BackendDialect.md.
 
 #ifndef INTER_DIALECT_XEMACHINE_IR_XEMACHINEBASE_TD
 #define INTER_DIALECT_XEMACHINE_IR_XEMACHINEBASE_TD
@@ -22,7 +22,7 @@ def XeMachineDialect : Dialect {
 }
 
 // ARF (architecture register file) selector. Allocation of these is a
-// separate mini-problem from GRF pressure; see design doc section 12.
+// separate mini-problem from GRF pressure; see RegisterAllocation.md.
 def XeMachine_ARFFile : I32EnumAttr<"ARFFile", "ARF register file", [
     I32EnumAttrCase<"a0",  0>,
     I32EnumAttrCase<"f",   1>,

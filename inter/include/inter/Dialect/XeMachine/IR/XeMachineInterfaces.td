@@ -1,5 +1,5 @@
 // Op interfaces for xemachine. Semantics land with the passes; defaults here
-// are conservative (design doc section 10, "Interfaces").
+// are conservative (see inter/docs/BackendDialect.md).
 
 #ifndef INTER_DIALECT_XEMACHINE_IR_XEMACHINEINTERFACES_TD
 #define INTER_DIALECT_XEMACHINE_IR_XEMACHINEINTERFACES_TD

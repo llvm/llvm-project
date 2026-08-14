@@ -99,3 +99,17 @@ func.func @overflow_widen(%value: i32) {
   %wide = xw.cast intconvert %value overflow<nsw> : i32 -> i64
   return
 }
+
+// -----
+
+func.func @multiblock_vnni(%base: !xw.ptr<#xw.global>, %geometry: i32)
+    attributes {xw.simd_width = 16 : i32} {
+  // expected-error@+1 {{transformed block2D reads require one block}}
+  %value, %token = xw.block2d_read %base[%geometry, %geometry]
+      surface (%geometry, %geometry, %geometry)
+      {block_height = 16 : i64, block_width = 16 : i64, blocks = 2 : i64,
+       element_bits = 16 : i64, vnni}
+      : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+        -> (!xw.simd<vector<16xi16>, 16>, !xw.mem.token)
+  return
+}

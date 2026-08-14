@@ -54,3 +54,26 @@ module {
     llvm.return
   }
 }
+
+// -----
+
+module {
+  llvm.func spir_kernelcc @volatile_load(%pointer: !llvm.ptr<1>) {
+    // expected-error@+2 {{volatile LLVM load has no exact XW representation}}
+    // expected-error@+1 {{failed to legalize operation 'llvm.load'}}
+    %value = llvm.load volatile %pointer : !llvm.ptr<1> -> i32
+    llvm.return
+  }
+}
+
+// -----
+
+module {
+  llvm.func spir_kernelcc @atomic_store(%pointer: !llvm.ptr<1>, %value: i32) {
+    // expected-error@+2 {{atomic LLVM store has no exact XW representation}}
+    // expected-error@+1 {{failed to legalize operation 'llvm.store'}}
+    llvm.store %value, %pointer atomic monotonic {alignment = 4 : i64}
+        : i32, !llvm.ptr<1>
+    llvm.return
+  }
+}

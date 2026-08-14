@@ -190,3 +190,72 @@ module {
     return
   }
 }
+
+// -----
+
+module {
+  func.func @unsupported_block2d(%base: !xw.ptr<#xw.global>) attributes {
+      xemachine.kernel,
+      xemachine.kernel_args = [
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_only", size = 8, alignment = 8, offset = 24>
+      ],
+      xw.simd_width = 16 : i32} {
+    %size = xw.constant 128 : i32
+    %zero = xw.constant 0 : i32
+    %root = xw.token : !xw.mem.token
+    // expected-error@+1 {{BMG selection supports only an untransformed 16-bit 8x16 single-block prefetch}}
+    %prefetched = xw.block2d_prefetch %base[%zero, %zero]
+        surface (%size, %size, %size) after %root
+        {block_height = 16 : i64, block_width = 16 : i64, blocks = 1 : i64,
+         element_bits = 16 : i64}
+        : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32, !xw.mem.token)
+          -> !xw.mem.token
+    return
+  }
+}
+
+// -----
+
+module {
+  func.func @unsupported_block2d_read_packet(%base: !xw.ptr<#xw.global>) attributes {
+      xemachine.kernel,
+      xemachine.kernel_args = [
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "read_only", size = 8, alignment = 8, offset = 24>
+      ],
+      xw.simd_width = 16 : i32} {
+    %size = xw.constant 128 : i32
+    %zero = xw.constant 0 : i32
+    // expected-error@+1 {{result packet does not match the selected block2D read}}
+    %value, %token = xw.block2d_read %base[%zero, %zero]
+        surface (%size, %size, %size)
+        {block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+         element_bits = 16 : i64}
+        : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+          -> (!xw.simd<vector<4xi16>, 16>, !xw.mem.token)
+    return
+  }
+}
+
+// -----
+
+module {
+  func.func @unsupported_block2d_write_packet(%base: !xw.ptr<#xw.global>) attributes {
+      xemachine.kernel,
+      xemachine.kernel_args = [
+        #xemachine.kernel_arg<kind = by_pointer, address_space = "global", access = "write_only", size = 8, alignment = 8, offset = 24>
+      ],
+      xw.simd_width = 16 : i32} {
+    %size = xw.constant 128 : i32
+    %zero = xw.constant 0 : i32
+    %value = xw.constant dense<0> : vector<4xi32>
+        -> !xw.simd<vector<4xi32>, 16>
+    // expected-error@+1 {{data packet does not match the selected block2D write}}
+    %token = xw.block2d_write %value -> %base[%zero, %zero]
+        surface (%size, %size, %size)
+        {block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+         element_bits = 32 : i64}
+        : (!xw.simd<vector<4xi32>, 16>, !xw.ptr<#xw.global>, i32, i32,
+           i32, i32, i32) -> !xw.mem.token
+    return
+  }
+}

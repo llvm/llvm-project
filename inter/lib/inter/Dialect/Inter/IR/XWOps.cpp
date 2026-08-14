@@ -208,7 +208,7 @@ static LogicalResult verifyBlock2D(Operation *operation, Value base,
   if (write && (blocks != 1 || transpose || vnni))
     return operation->emitOpError(
         "block2D writes require one untransformed block");
-  if (transpose && blocks != 1)
+  if ((transpose || vnni) && blocks != 1)
     return operation->emitOpError(
         "transformed block2D reads require one block");
   if (data) {

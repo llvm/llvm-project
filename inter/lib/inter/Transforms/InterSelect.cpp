@@ -3027,6 +3027,12 @@ private:
           return failure();
       } else if (xw::Block2DPrefetchOp prefetch =
                      dyn_cast<xw::Block2DPrefetchOp>(operation)) {
+        if (prefetch.getElementBits() != 16 || prefetch.getBlockWidth() != 16 ||
+            prefetch.getBlockHeight() != 8 || prefetch.getBlocks() != 1 ||
+            prefetch.getTranspose() || prefetch.getVnni())
+          return prefetch.emitOpError(
+              "BMG selection supports only an untransformed 16-bit 8x16 "
+              "single-block prefetch");
         if (failed(lowerBlock2D(
                 prefetch, prefetch.getBase(), prefetch.getSurfaceWidth(),
                 prefetch.getSurfaceHeight(), prefetch.getSurfacePitch(),
@@ -3037,6 +3043,21 @@ private:
           return failure();
       } else if (xw::Block2DReadOp read =
                      dyn_cast<xw::Block2DReadOp>(operation)) {
+        bool ordinary = !read.getVnni() && read.getBlockHeight() == 8;
+        bool transformed = read.getVnni() && read.getBlockHeight() == 16;
+        if (read.getElementBits() != 16 || read.getBlockWidth() != 16 ||
+            read.getBlocks() != 1 || read.getTranspose() ||
+            (!ordinary && !transformed))
+          return read.emitOpError(
+              "BMG selection supports only 16-bit 8x16 ordinary or 16x16 "
+              "VNNI single-block reads");
+        FailureOr<int64_t> footprint =
+            getFootprint(read.getValue().getType(), read);
+        int64_t expectedDwords = read.getBlockWidth() * read.getBlockHeight() *
+                                 read.getElementBits() / 32;
+        if (failed(footprint) || *footprint != expectedDwords)
+          return read.emitOpError(
+              "result packet does not match the selected block2D read");
         uint32_t descriptor = read.getVnni() ? 0x02800283 : 0x02400203;
         if (failed(lowerBlock2D(read, read.getBase(), read.getSurfaceWidth(),
                                 read.getSurfaceHeight(), read.getSurfacePitch(),
@@ -3047,6 +3068,20 @@ private:
           return failure();
       } else if (xw::Block2DWriteOp write =
                      dyn_cast<xw::Block2DWriteOp>(operation)) {
+        if (write.getElementBits() != 32 || write.getBlockWidth() != 16 ||
+            write.getBlockHeight() != 8 || write.getBlocks() != 1 ||
+            write.getTranspose() || write.getVnni())
+          return write.emitOpError(
+              "BMG selection supports only an untransformed 32-bit 8x16 "
+              "single-block write");
+        FailureOr<int64_t> footprint =
+            getFootprint(write.getValue().getType(), write);
+        int64_t expectedDwords = write.getBlockWidth() *
+                                 write.getBlockHeight() *
+                                 write.getElementBits() / 32;
+        if (failed(footprint) || *footprint != expectedDwords)
+          return write.emitOpError(
+              "data packet does not match the selected block2D write");
         if (failed(lowerBlock2D(
                 write, write.getBase(), write.getSurfaceWidth(),
                 write.getSurfaceHeight(), write.getSurfacePitch(), write.getX(),

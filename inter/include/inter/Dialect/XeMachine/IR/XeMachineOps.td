@@ -1,5 +1,5 @@
 // xemachine ops. One base class injects the interface set; per-op metadata
-// lands as TableGen fields when the passes need them (design doc section 10).
+// lands as TableGen fields when the passes need them (see BackendDialect.md).
 
 #ifndef INTER_DIALECT_XEMACHINE_IR_XEMACHINEOPS_TD
 #define INTER_DIALECT_XEMACHINE_IR_XEMACHINEOPS_TD
@@ -198,7 +198,7 @@ def XeMachine_SyncOp : XeMachine_Op<"sync",
 
 // Named message ops: the convenient aliases over raw send. Each carries its
 // message semantics; the emitter owns the descriptor encodings. Memory
-// ordering between them is explicit token edges (design doc section 9).
+// ordering between them is explicit token edges (see Synchronization.md).
 class XeMachine_MsgOp<string mnemonic, list<Trait> traits = []> :
     XeMachine_Op<mnemonic, traits # [
       DeclareOpInterfaceMethods<XeMachine_SWSBInfoOpInterface>,

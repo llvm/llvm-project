@@ -1,5 +1,5 @@
 // xemachine types. Virtual and physical registers share a type; regalloc
-// rewrites the index slot (design doc section 10).
+// rewrites the index slot (see inter/docs/BackendDialect.md).
 
 #ifndef INTER_DIALECT_XEMACHINE_IR_XEMACHINETYPES_TD
 #define INTER_DIALECT_XEMACHINE_IR_XEMACHINETYPES_TD
@@ -33,7 +33,7 @@ def XeMachine_ImmType : TypeDef<XeMachineDialect, "Imm"> {
 }
 
 // Explicit memory ordering token. Legality is SSA dominance plus token
-// edges; see design doc section 9.
+// edges; see inter/docs/Synchronization.md.
 def XeMachine_MemTokenType : TypeDef<XeMachineDialect, "MemToken"> {
   let mnemonic = "mem.token";
   let summary = "Memory ordering token";
