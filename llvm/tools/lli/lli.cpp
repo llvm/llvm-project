@@ -516,7 +516,12 @@ int main(int argc, char **argv, char * const *envp) {
 
   builder.setTargetOptions(Options);
 
-  std::unique_ptr<ExecutionEngine> EE(builder.create());
+  // Resolve the target the JIT will compile for and record it in the module
+  TargetMachine *TM = builder.selectTarget();
+  if (TM && Mod->getTargetTriple().empty())
+    Mod->setTargetTriple(TM->getTargetTriple());
+
+  std::unique_ptr<ExecutionEngine> EE(builder.create(TM));
   if (!EE) {
     if (!ErrorMsg.empty())
       WithColor::error(errs(), argv[0])
