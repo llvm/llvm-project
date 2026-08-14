@@ -293,9 +293,8 @@ define <2 x i32> @align_up_vec_poison_elt(<2 x i32> %x) {
 
 define i32 @align_up_via_or(i32 %x) {
 ; CHECK-LABEL: @align_up_via_or(
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SUB]], 4095
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %sub = add i32 %x, -1
@@ -306,9 +305,8 @@ define i32 @align_up_via_or(i32 %x) {
 
 define i32 @align_up_via_or_commuted(i32 %x) {
 ; CHECK-LABEL: @align_up_via_or_commuted(
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SUB]], 4095
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %sub = add i32 %x, -1
@@ -319,9 +317,8 @@ define i32 @align_up_via_or_commuted(i32 %x) {
 
 define i32 @align_up_via_or_commuted_or(i32 %x) {
 ; CHECK-LABEL: @align_up_via_or_commuted_or(
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SUB]], 4095
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %sub = add i32 %x, -1
@@ -332,9 +329,8 @@ define i32 @align_up_via_or_commuted_or(i32 %x) {
 
 define <2 x i32> @align_up_via_or_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @align_up_via_or_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 -1)
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SUB]], splat (i32 4095)
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[OR]], splat (i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 4095)
+; CHECK-NEXT:    [[ADD:%.*]] = and <2 x i32> [[TMP1]], splat (i32 -4096)
 ; CHECK-NEXT:    ret <2 x i32> [[ADD]]
 ;
   %sub = add <2 x i32> %x, splat (i32 -1)
@@ -381,8 +377,8 @@ define i32 @align_up_via_or_multiuse_or(i32 %x) {
 define i32 @align_up_via_or_multiuse_sub(i32 %x) {
 ; CHECK-LABEL: @align_up_via_or_multiuse_sub(
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SUB]], 4095
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
 ; CHECK-NEXT:    call void @use(i32 [[SUB]])
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
