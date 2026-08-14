@@ -36,7 +36,6 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
   bool indirect = false;
   bool is_block = false;
   m_value.data = nullptr;
-  uint8_t ref_addr_size;
   // Read the value for the form into value and follow and DW_FORM_indirect
   // instances we run into
   do {
@@ -77,10 +76,6 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     case DW_FORM_strp:
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
-      //FIXME: For AIX
-      assert(m_unit); // Unit must be valid
-      ref_addr_size = m_unit->GetFormParams().getDwarfOffsetByteSize();
-      m_value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
     case DW_FORM_GNU_ref_alt:
     case DW_FORM_GNU_strp_alt:
       assert(m_unit);
@@ -127,8 +122,8 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
       break;
     case DW_FORM_ref_addr:
       assert(m_unit);
-      ref_addr_size = m_unit->GetFormParams().getRefAddrByteSize();
-      m_value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
+      m_value.uval = data.GetMaxU64(
+              offset_ptr, m_unit->GetFormParams().getRefAddrByteSize());
       break;
     case DW_FORM_indirect:
       m_form = static_cast<dw_form_t>(data.GetULEB128(offset_ptr));
@@ -214,7 +209,6 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
                                const DWARFDataExtractor &debug_info_data,
                                lldb::offset_t *offset_ptr,
                                const DWARFUnit *unit) {
-  uint8_t ref_addr_size;
   switch (form) {
   // Blocks if inlined data that have a length field and the data bytes inlined
   // in the .debug_info
@@ -253,8 +247,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
   case DW_FORM_ref_addr:
     assert(unit); // Unit must be valid for DW_FORM_ref_addr objects or we will
                   // get this wrong
-    ref_addr_size = unit->GetFormParams().getRefAddrByteSize();
-    *offset_ptr += ref_addr_size;
+    *offset_ptr += unit->GetFormParams().getRefAddrByteSize();
     return true;
 
   // 0 bytes values (implied from DW_FORM)
@@ -289,8 +282,6 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
     case DW_FORM_line_strp:
-      ref_addr_size = unit->GetFormParams().getDwarfOffsetByteSize();
-      *offset_ptr += ref_addr_size;
     case DW_FORM_GNU_ref_alt:
     case DW_FORM_GNU_strp_alt:
       assert(unit);
