@@ -2534,7 +2534,7 @@ public:
   /// Returns the declarator information for a base class or delegating
   /// initializer.
   TypeSourceInfo *getTypeSourceInfo() const {
-    return Initializee.dyn_cast<TypeSourceInfo *>();
+    return dyn_cast<TypeSourceInfo *>(Initializee);
   }
 
   /// If this is a member initializer, returns the declaration of the

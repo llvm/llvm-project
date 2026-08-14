@@ -1580,8 +1580,8 @@ void ASTContext::addExplicitInstantiationDecl(const NamedDecl *Spec,
 MemberSpecializationInfo *
 ASTContext::getInstantiatedFromStaticDataMember(const VarDecl *Var) {
   assert(Var->isStaticDataMember() && "Not a static data member");
-  return getTemplateOrSpecializationInfo(Var)
-      .dyn_cast<MemberSpecializationInfo *>();
+  return dyn_cast<MemberSpecializationInfo *>(
+      getTemplateOrSpecializationInfo(Var));
 }
 
 ASTContext::TemplateOrSpecializationInfo

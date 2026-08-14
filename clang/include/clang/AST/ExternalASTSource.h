@@ -479,7 +479,7 @@ public:
 
   /// Set the value of this pointer, in the current generation.
   void set(T NewValue) {
-    if (auto *LazyVal = Value.template dyn_cast<LazyData *>()) {
+    if (auto *LazyVal = dyn_cast<LazyData *>(Value)) {
       LazyVal->LastValue = NewValue;
       return;
     }
@@ -491,7 +491,7 @@ public:
 
   /// Get the value of this pointer, updating its owner if necessary.
   T get(Owner O) {
-    if (auto *LazyVal = Value.template dyn_cast<LazyData *>()) {
+    if (auto *LazyVal = dyn_cast<LazyData *>(Value)) {
       if (LazyVal->LastGeneration != LazyVal->ExternalSource->getGeneration()) {
         LazyVal->LastGeneration = LazyVal->ExternalSource->getGeneration();
         (LazyVal->ExternalSource->*Update)(O);
@@ -503,7 +503,7 @@ public:
 
   /// Get the most recently computed value of this pointer without updating it.
   T getNotUpdated() const {
-    if (auto *LazyVal = Value.template dyn_cast<LazyData *>())
+    if (auto *LazyVal = dyn_cast<LazyData *>(Value))
       return LazyVal->LastValue;
     return cast<T>(Value);
   }

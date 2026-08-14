@@ -123,7 +123,7 @@ public:
   /// is used for elaborated-type-specifiers and, in C++0x, for
   /// arbitrary friend type declarations.
   TypeSourceInfo *getFriendType() const {
-    return Friend.dyn_cast<TypeSourceInfo*>();
+    return dyn_cast<TypeSourceInfo *>(Friend);
   }
 
   unsigned getFriendTypeNumTemplateParameterLists() const {
@@ -136,9 +136,7 @@ public:
 
   /// If this friend declaration doesn't name a type, return the inner
   /// declaration.
-  NamedDecl *getFriendDecl() const {
-    return Friend.dyn_cast<NamedDecl *>();
-  }
+  NamedDecl *getFriendDecl() const { return dyn_cast<NamedDecl *>(Friend); }
 
   /// Retrieves the location of the 'friend' keyword.
   SourceLocation getFriendLoc() const {

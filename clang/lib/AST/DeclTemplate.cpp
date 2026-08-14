@@ -1030,7 +1030,7 @@ void ClassTemplateSpecializationDecl::getNameForDiagnostic(
 ClassTemplateDecl *
 ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
-          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization*>())
+          dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
   return cast<ClassTemplateDecl *>(SpecializedTemplate);
 }
@@ -1460,7 +1460,7 @@ void VarTemplateSpecializationDecl::getNameForDiagnostic(
 
 VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
-          SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+          dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();
   return cast<VarTemplateDecl *>(SpecializedTemplate);
 }

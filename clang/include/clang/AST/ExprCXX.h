@@ -2711,11 +2711,11 @@ public:
   PseudoDestructorTypeStorage(TypeSourceInfo *Info);
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    return Type.dyn_cast<TypeSourceInfo *>();
+    return dyn_cast<TypeSourceInfo *>(Type);
   }
 
   const IdentifierInfo *getIdentifier() const {
-    return Type.dyn_cast<const IdentifierInfo *>();
+    return dyn_cast<const IdentifierInfo *>(Type);
   }
 
   SourceLocation getLocation() const { return Location; }
@@ -4957,11 +4957,11 @@ public:
   }
 
   LifetimeExtendedTemporaryDecl *getLifetimeExtendedTemporaryDecl() {
-    return State.dyn_cast<LifetimeExtendedTemporaryDecl *>();
+    return dyn_cast<LifetimeExtendedTemporaryDecl *>(State);
   }
   const LifetimeExtendedTemporaryDecl *
   getLifetimeExtendedTemporaryDecl() const {
-    return State.dyn_cast<LifetimeExtendedTemporaryDecl *>();
+    return dyn_cast<LifetimeExtendedTemporaryDecl *>(State);
   }
 
   /// Get the declaration which triggered the lifetime-extension of this

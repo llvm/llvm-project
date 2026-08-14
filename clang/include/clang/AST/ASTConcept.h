@@ -76,7 +76,7 @@ public:
 
   bool HasSubstitutionFailure() {
     for (const auto &Detail : Details)
-      if (Detail.dyn_cast<const ConstraintSubstitutionDiagnostic *>())
+      if (isa<const ConstraintSubstitutionDiagnostic *>(Detail))
         return true;
     return false;
   }

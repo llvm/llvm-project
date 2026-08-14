@@ -2401,7 +2401,7 @@ Expr *VarDecl::getInit() {
 }
 
 Stmt **VarDecl::getInitAddress() {
-  if (auto *ES = Init.dyn_cast<EvaluatedStmt *>())
+  if (auto *ES = dyn_cast<EvaluatedStmt *>(Init))
     return ES->Value.getAddressOfPointer(getASTContext().getExternalSource());
 
   return Init.getAddrOfPtr1();
@@ -2705,7 +2705,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
   if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
-      if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
+      if (auto *VTD = dyn_cast<VarTemplateDecl *>(From)) {
         while (!VTD->isMemberSpecialization()) {
           auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
           if (!NewVTD)
@@ -2715,7 +2715,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
         return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
-              From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
         while (!VTPSD->isMemberSpecialization()) {
           auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
           if (!NewVTPSD)
@@ -4251,7 +4251,7 @@ void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
 
 FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
   return dyn_cast_if_present<FunctionDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+      dyn_cast<NamedDecl *>(TemplateOrSpecialization));
 }
 
 bool FunctionDecl::isImplicitlyInstantiable() const {
@@ -4567,12 +4567,12 @@ bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
 }
 
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
-  if (FunctionTemplateSpecializationInfo *FTSInfo
-        = TemplateOrSpecialization.dyn_cast<
-                                        FunctionTemplateSpecializationInfo*>())
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          dyn_cast<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization))
     return FTSInfo->getPointOfInstantiation();
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast<MemberSpecializationInfo *>(TemplateOrSpecialization))
     return MSInfo->getPointOfInstantiation();
 
   return SourceLocation();

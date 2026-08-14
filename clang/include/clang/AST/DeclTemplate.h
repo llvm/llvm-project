@@ -315,7 +315,7 @@ class DefaultArgStorage {
 
   static ParmDecl *getParmOwningDefaultArg(ParmDecl *Parm) {
     const DefaultArgStorage &Storage = Parm->getDefaultArgStorage();
-    if (auto *Prev = Storage.ValueOrInherited.template dyn_cast<ParmDecl *>())
+    if (auto *Prev = dyn_cast<ParmDecl *>(Storage.ValueOrInherited))
       Parm = Prev;
     assert(!isa<ParmDecl *>(Parm->getDefaultArgStorage().ValueOrInherited) &&
            "should only be one level of indirection");
@@ -336,9 +336,9 @@ public:
   /// default argument is visible.
   ArgType get() const {
     const DefaultArgStorage *Storage = this;
-    if (const auto *Prev = ValueOrInherited.template dyn_cast<ParmDecl *>())
+    if (const auto *Prev = dyn_cast<ParmDecl *>(ValueOrInherited))
       Storage = &Prev->getDefaultArgStorage();
-    if (const auto *C = Storage->ValueOrInherited.template dyn_cast<Chain *>())
+    if (const auto *C = dyn_cast<Chain *>(Storage->ValueOrInherited))
       return C->Value;
     return cast<ArgType>(Storage->ValueOrInherited);
   }
@@ -346,9 +346,9 @@ public:
   /// Get the parameter from which we inherit the default argument, if any.
   /// This is the parameter on which the default argument was actually written.
   const ParmDecl *getInheritedFrom() const {
-    if (const auto *D = ValueOrInherited.template dyn_cast<ParmDecl *>())
+    if (const auto *D = dyn_cast<ParmDecl *>(ValueOrInherited))
       return D;
-    if (const auto *C = ValueOrInherited.template dyn_cast<Chain *>())
+    if (const auto *C = dyn_cast<Chain *>(ValueOrInherited))
       return C->PrevDeclWithDefaultArg;
     return nullptr;
   }
@@ -1989,7 +1989,7 @@ public:
                      ClassTemplatePartialSpecializationDecl *>
   getSpecializedTemplateOrPartial() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return PartialSpec->PartialSpecialization;
 
     return cast<ClassTemplateDecl *>(SpecializedTemplate);
@@ -2008,7 +2008,7 @@ public:
   /// itself.
   const TemplateArgumentList &getTemplateInstantiationArgs() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();
@@ -2505,15 +2505,13 @@ public:
   /// a dependent member type of a templated type), return that
   /// type;  otherwise return null.
   TypeSourceInfo *getFriendType() const {
-    return Friend.dyn_cast<TypeSourceInfo*>();
+    return dyn_cast<TypeSourceInfo *>(Friend);
   }
 
   /// If this friend declaration names a templated function (or
   /// a member function of a templated type), return that type;
   /// otherwise return null.
-  NamedDecl *getFriendDecl() const {
-    return Friend.dyn_cast<NamedDecl*>();
-  }
+  NamedDecl *getFriendDecl() const { return dyn_cast<NamedDecl *>(Friend); }
 
   /// Retrieves the location of the 'friend' keyword.
   SourceLocation getFriendLoc() const {
@@ -2757,7 +2755,7 @@ public:
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
   getSpecializedTemplateOrPartial() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return PartialSpec->PartialSpecialization;
 
     return cast<VarTemplateDecl *>(SpecializedTemplate);
@@ -2776,7 +2774,7 @@ public:
   /// specialization itself.
   const TemplateArgumentList &getTemplateInstantiationArgs() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();
@@ -3458,9 +3456,9 @@ public:
 };
 
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
-  if (auto *PD = P.dyn_cast<TemplateTypeParmDecl *>())
+  if (auto *PD = dyn_cast<TemplateTypeParmDecl *>(P))
     return PD;
-  if (auto *PD = P.dyn_cast<NonTypeTemplateParmDecl *>())
+  if (auto *PD = dyn_cast<NonTypeTemplateParmDecl *>(P))
     return PD;
   return cast<TemplateTemplateParmDecl *>(P);
 }

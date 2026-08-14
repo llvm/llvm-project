@@ -251,7 +251,7 @@ std::optional<TemplateName> TemplateName::desugar(bool IgnoreDeduced) const {
 
 OverloadedTemplateStorage *TemplateName::getAsOverloadedTemplate() const {
   if (UncommonTemplateNameStorage *Uncommon =
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
+          dyn_cast<UncommonTemplateNameStorage *>(Storage))
     return Uncommon->getAsOverloadedStorage();
 
   return nullptr;
@@ -259,7 +259,7 @@ OverloadedTemplateStorage *TemplateName::getAsOverloadedTemplate() const {
 
 AssumedTemplateStorage *TemplateName::getAsAssumedTemplateName() const {
   if (UncommonTemplateNameStorage *Uncommon =
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
+          dyn_cast<UncommonTemplateNameStorage *>(Storage))
     return Uncommon->getAsAssumedTemplateName();
 
   return nullptr;
@@ -277,7 +277,7 @@ TemplateName::getAsSubstTemplateTemplateParm() const {
 SubstTemplateTemplateParmPackStorage *
 TemplateName::getAsSubstTemplateTemplateParmPack() const {
   if (UncommonTemplateNameStorage *Uncommon =
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
+          dyn_cast<UncommonTemplateNameStorage *>(Storage))
     return Uncommon->getAsSubstTemplateTemplateParmPack();
 
   return nullptr;
@@ -288,7 +288,7 @@ QualifiedTemplateName *TemplateName::getAsQualifiedTemplateName() const {
 }
 
 DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
-  return Storage.dyn_cast<DependentTemplateName *>();
+  return dyn_cast<DependentTemplateName *>(Storage);
 }
 
 std::tuple<NestedNameSpecifier, bool>
@@ -307,7 +307,7 @@ TemplateName::getQualifierAndTemplateKeyword() const {
 }
 
 UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
-  if (Decl *D = Storage.dyn_cast<Decl *>())
+  if (Decl *D = dyn_cast<Decl *>(Storage))
     if (UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D))
       return USD;
   if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName())
