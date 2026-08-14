@@ -27,19 +27,25 @@ using namespace offload;
 __attribute__((weak)) uint32_t PerThreadQueue = 0;
 
 // Process-wide singleton and thread-state registry.
-static std::mutex StateLock;
+static std::mutex &getStateLock() {
+  static std::mutex StateLock;
+  return StateLock;
+}
 static std::atomic<StateTy *> StatePtr = nullptr;
 
 static thread_local ThreadStateTy *ThreadState = nullptr;
 
-static std::mutex ThreadStatesLock;
+static std::mutex &getThreadStatesLock() {
+  static std::mutex ThreadStatesLock;
+  return ThreadStatesLock;
+}
 using ThreadStatesTy = SmallVector<ThreadStateTy *, 64>;
 static ThreadStatesTy *ThreadStatesPtr = nullptr;
 
 static void deleteThreadStates() {
   // Detach the registry before deletion because deleteThreadState may be called
   // more than once via atexit and StateTy teardown.
-  std::lock_guard<std::mutex> LG(ThreadStatesLock);
+  std::lock_guard<std::mutex> LG(getThreadStatesLock());
   ThreadStatesTy *ThreadStates = ThreadStatesPtr;
   ThreadStatesPtr = nullptr;
   if (!ThreadStates)
@@ -84,7 +90,7 @@ ThreadStateTy &ThreadStateTy::get() {
   auto *&TS = ThreadState;
   if (!TS) {
     TS = new ThreadStateTy();
-    std::lock_guard<std::mutex> LG(ThreadStatesLock);
+    std::lock_guard<std::mutex> LG(getThreadStatesLock());
     if (!ThreadStatesPtr)
       ThreadStatesPtr = new ThreadStatesTy;
     ThreadStatesPtr->push_back(TS);
@@ -134,7 +140,7 @@ void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {
 StateTy &StateTy::get() {
   StateTy *ST = StatePtr.load();
   if (!ST) [[unlikely]] {
-    std::lock_guard<std::mutex> LG(StateLock);
+    std::lock_guard<std::mutex> LG(getStateLock());
     ST = StatePtr.load();
     if (!ST) {
       ST = new StateTy();
