@@ -8448,8 +8448,6 @@ multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> 
               (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$Rn))))),
               (i64 0))), (i64 0))),
             (v4i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i16v") V128:$Rn), ssub))>;
-  def : Pat<(v1i64 (extract_subvector (v2i64 (AArch64uaddv (v2i64 (addlp (v4i32 V128:$Rn))))), (i64 0))),
-            (v1i64 (!cast<Instruction>(Opc#"v4i32v") V128:$Rn))>;
   def : Pat<(v2i64 (concat_vectors
               (v1i64 (extract_subvector (v2i64 (AArch64uaddv (v2i64 (addlp (v4i32 V128:$Rn))))), (i64 0))),
               (v1i64 immAllZerosV))),
