@@ -27,8 +27,15 @@ class TargetMachine;
 // GlobalISel passes
 void initializeAMDGPUPreLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPreLegalizeCombiner(bool IsOptNone);
-void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
+void initializeAMDGPUPostLegalizerCombinerLegacyPass(PassRegistry &);
 FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
+
+class AMDGPUPostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AMDGPUPostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
 void initializeAMDGPURegBankCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
