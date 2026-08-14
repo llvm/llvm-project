@@ -11,7 +11,7 @@
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -258,20 +258,16 @@ unsigned SPIRVNonSemanticDebugHandler::toNSDISrcLang(unsigned DwarfSrcLang) {
 }
 
 static void collectUniqueDebugLocations(const Module &M,
-                                        SmallVector<const DILocation *> &Out) {
-  SmallPtrSet<const DILocation *, 16> Seen;
-  auto AddUnique = [&](const DILocation *DL) {
-    if (DL && Seen.insert(DL).second)
-      Out.push_back(DL);
-  };
-
+                                        SetVector<const DILocation *> &Out) {
   for (const Function &F : M) {
     if (!F.getSubprogram())
       continue;
     for (const Instruction &I : instructions(F)) {
-      AddUnique(I.getDebugLoc().get());
+      if (const DILocation *DL = I.getDebugLoc().get())
+        Out.insert(DL);
       for (DbgRecord &DR : I.getDbgRecordRange())
-        AddUnique(DR.getDebugLoc().get());
+        if (const DILocation *DL = DR.getDebugLoc().get())
+          Out.insert(DL);
     }
   }
 }

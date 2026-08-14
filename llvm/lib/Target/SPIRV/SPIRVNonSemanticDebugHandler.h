@@ -21,6 +21,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -95,7 +96,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   // Distinct DILocations from instruction !dbg attachments and debug program
   // records (#dbg_declare, #dbg_value, #dbg_assign, #dbg_label).
-  SmallVector<const DILocation *> UniqueDebugLocations;
+  SetVector<const DILocation *> UniqueDebugLocations;
 
   struct GlobalVariableDebugInfo {
     const DIExpression *Expr = nullptr;
