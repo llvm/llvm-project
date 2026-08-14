@@ -6517,6 +6517,7 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   };
 
   // Cost model checks
+  Value *Poison = PoisonValue::get(WideTy);
   InstructionCost OldCost =
       TTI.getMemoryOpCost(Instruction::Load, LoadTy, LowLoad->getAlign(),
                           LowLoad->getPointerAddressSpace(), CostKind);
@@ -6531,6 +6532,12 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
                                   SV->getShuffleMask(), CostKind);
     SmallVector<int, 32> NewMask;
     RemapMask(SV, NewMask);
+    // LoadSz = initial load size
+    // WideSz = 2 * LoadSz
+    // MaxMaskSize = WideSz * 2
+    // Check if MaxMaskSize fits within an integer range.
+    if (!ShuffleVectorInst::isValidOperands(Poison, Poison, NewMask))
+      return false;
     NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SV->getType(),
                                   WideTy, NewMask, CostKind);
   }
@@ -6561,7 +6568,6 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
   copyMetadataForLoad(*WideLoad, *LowLoad);
   combineMetadataForCSE(WideLoad, HighLoad, /*DoesKMove=*/true);
 
-  Value *Poison = PoisonValue::get(WideTy);
   for (ShuffleVectorInst *SV : Shuffles) {
     SmallVector<int, 32> NewMask;
     RemapMask(SV, NewMask);
