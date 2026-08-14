@@ -63,6 +63,13 @@ public:
   static constexpr size_t LINEAR_BINS = Table::LINEAR_BINS;
   static constexpr bool USE_TRIE = CONFIG::USE_TRIE_FOR_OVERFLOW_BIN;
 
+  /// Integrity check for the entire store.
+  LIBC_INLINE void integrity_check() const {
+    large_trie.integrity_check();
+    for (const FreeList &list : small_lists)
+      list.integrity_check();
+  }
+
 private:
   LIBC_INLINE constexpr TLSFFreeStoreImpl(cpp::bool_constant<true>) : trie() {}
   LIBC_INLINE constexpr TLSFFreeStoreImpl(cpp::bool_constant<false>)

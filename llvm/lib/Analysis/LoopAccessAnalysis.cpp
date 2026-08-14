@@ -57,6 +57,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -227,8 +228,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
       DL, CheckForNonNull, /*CanBeFreed=*/nullptr);
 
+  // If the deref size is only known when the pointer is non-null, ignore it
+  // here and fall back to a dereferenceable assumption below.
   if (DerefBytes && CheckForNonNull)
-    return false;
+    DerefBytes = 0;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
   Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
@@ -266,6 +269,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
   // For the computations below, make sure they don't unsigned wrap.
+  // FIXME: for a negative step the lowest accessed address is not
+  // AR->getStart() but AR->evaluateAtIteration(MaxBTC, SE); the check below
+  // therefore compares StartPtr against the highest accessed address instead
+  // of the lowest.
   if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
     return false;
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
@@ -275,45 +282,51 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
   MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
 
-  const SCEV *OffsetAtLastIter =
-      mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
-  if (!OffsetAtLastIter) {
+  const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
+  // Total distance (in bytes) between the first and the last
+  // accessed pointer.
+  const SCEV *DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
+  if (!DistToLastIter) {
     // Re-try with constant max backedge-taken count if using the symbolic one
     // failed.
     MaxBTC = SE.getConstantMaxBackedgeTakenCount(AR->getLoop());
     if (isa<SCEVCouldNotCompute>(MaxBTC))
       return false;
-    MaxBTC = SE.getNoopOrZeroExtend(
-        MaxBTC, WiderTy);
-    OffsetAtLastIter =
-        mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
-    if (!OffsetAtLastIter)
+    MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
+    DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
+    if (!DistToLastIter)
       return false;
   }
 
-  const SCEV *OffsetEndBytes = addSCEVNoOverflow(
-      OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
-  if (!OffsetEndBytes)
+  // Total length in bytes of the accessed range (from the first accessed
+  // byte through the end of the last access).
+  const SCEV *AccessedBytes = addSCEVNoOverflow(
+      DistToLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
+  if (!AccessedBytes)
     return false;
 
+  // Compute MaxOffset per direction: exclusive upper offset of the
+  // accessed range.
+  const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
-    // For positive steps, check if
-    //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
-    // while making sure none of the computations unsigned wrap themselves.
-    const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
-    if (!EndBytes)
+    MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
+    if (!MaxOffset)
       return false;
-
     DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
-    return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
+  } else {
+    // FIXME: two independent off-by-EltSize bugs on this branch:
+    //  1. StartOffset here is actually the HIGHEST offset, because it is
+    //     computed from AR->getStart() rather than
+    //     AR->evaluateAtIteration(MaxBTC, SE) (see FIXME above).
+    //  2. The lower check is over-strict by EltSize and the upper is
+    //     under-counted by EltSize.
+    assert(SE.isKnownNegative(Step) && "must be known negative");
+    if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, AccessedBytes))
+      return false;
+    MaxOffset = StartOffset;
   }
-
-  // For negative steps check if
-  //  * StartOffset >= (MaxBTC * Step + EltSize)
-  //  * StartOffset <= DerefBytes.
-  assert(SE.isKnownNegative(Step) && "must be known negative");
-  return SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, OffsetEndBytes) &&
-         SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset, DerefBytesSCEV);
+  // MaxOffset must not exceed the deref-region end.
+  return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
 }
 
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
@@ -1958,6 +1971,13 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
     MaxStoreLoadForwardSafeDistanceInBits =
         std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
+
+    if (MaxVF < 2) {
+      LLVM_DEBUG(
+          dbgs() << "LAA: strided access with Distance " << Distance
+                 << " that could cause a store-load forwarding conflict\n");
+      return true;
+    }
   }
   return false;
 }
@@ -2191,8 +2211,8 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   uint64_t BSz = DL.getTypeAllocSize(BTy);
   uint64_t TypeByteSize = (AStoreSz == BStoreSz) ? BSz : 0;
 
-  uint64_t StrideAScaled = std::abs(StrideAPtrInt) * ASz;
-  uint64_t StrideBScaled = std::abs(StrideBPtrInt) * BSz;
+  uint64_t StrideAScaled = AbsoluteValue(StrideAPtrInt) * ASz;
+  uint64_t StrideBScaled = AbsoluteValue(StrideBPtrInt) * BSz;
 
   uint64_t MaxStride = std::max(StrideAScaled, StrideBScaled);
 
@@ -2940,14 +2960,8 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
 
   // Emit remark for first unsafe dependence
-  bool HasForcedDistribution = false;
-  std::optional<const MDOperand *> Value =
-      findStringMetadataForLoop(TheLoop, "llvm.loop.distribute.enable");
-  if (Value) {
-    const MDOperand *Op = *Value;
-    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
-    HasForcedDistribution = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
-  }
+  bool HasForcedDistribution =
+      getBooleanLoopAttribute(TheLoop, "llvm.loop.distribute.enable");
 
   const std::string Info =
       HasForcedDistribution

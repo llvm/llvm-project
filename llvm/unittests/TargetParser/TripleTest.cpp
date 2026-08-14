@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1609,6 +1611,241 @@ static std::string Join(StringRef A, StringRef B, StringRef C, StringRef D) {
   Str += '-';
   Str += D;
   return Str;
+}
+
+TEST(TripleTest, DefaultFloatABI) {
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-none-eabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-gnueabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-gnueabihft64").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-musleabihf").getDefaultFloatABI());
+
+  // Non-hard EABI environments are soft, regardless of OS.
+  EXPECT_EQ(FloatABI::Soft, Triple("arm-none-none-eabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-gnueabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-musleabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-android").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("armv7-apple-ios").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("armv7-apple-macosx").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("armv7-unknown-fuchsia").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("arm-unknown-openbsd").getDefaultFloatABI());
+
+  // MachO M-profile v7em is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7em-apple-darwin").getDefaultFloatABI());
+
+  // Windows is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7-unknown-windows-msvc").getDefaultFloatABI());
+
+  // The AAPCS16 (watchOS) ABI is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7k-apple-watchos").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard, Triple("thumbv7k-apple-ios").getDefaultFloatABI());
+
+  // The Thumb arch goes through the same ARM logic.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7-none-linux-gnueabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("thumbv7-none-linux-gnueabi").getDefaultFloatABI());
+
+  // PowerPC, SystemZ and SPARC default to hard float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("powerpc64le-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("s390x-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("sparc-unknown-linux-gnu").getDefaultFloatABI());
+
+  // MIPS defaults to hard float, except on FreeBSD which uses soft float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("mips-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("mips-unknown-freebsd").getDefaultFloatABI());
+
+  // Defaults to soft float.
+  EXPECT_EQ(FloatABI::Soft, Triple("avr-unknown-unknown").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("csky-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("msp430-unknown-unknown").getDefaultFloatABI());
+
+  // Targets without a special case default to hard float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("x86_64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("aarch64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("riscv64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard, Triple("amdgpu-amd-amdhsa").getDefaultFloatABI());
+}
+
+TEST(TripleTest, DefaultLongDoubleFormat) {
+  // PowerPC defaults to IBM double-double, independent of the environment.
+  EXPECT_EQ(
+      LongDoubleFormat::PPCDoubleDouble,
+      Triple("powerpc64le-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64le-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpcle-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpcle-unknown-linux").getDefaultLongDoubleFormat());
+  // ... except on AIX, FreeBSD, OpenBSD, and Musl, which use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc-ibm-aix").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-ibm-aix").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-unknown-openbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("powerpc64-unknown-linux-musl").getDefaultLongDoubleFormat());
+  // NetBSD only switches to IEEE double on 32-bit PowerPC.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc-unknown-netbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-netbsd").getDefaultLongDoubleFormat());
+
+  // X86 defaults to x87 80-bit extended precision, independent of environment.
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("i686-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("i686-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-apple-macosx").getDefaultLongDoubleFormat());
+  // MinGW and Cygwin keep x87 extended precision.
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-pc-windows-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-pc-cygwin").getDefaultLongDoubleFormat());
+  // Windows-MSVC and UEFI use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("x86_64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("x86_64-unknown-uefi").getDefaultLongDoubleFormat());
+  // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-linux-android").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("x86_64-unknown-linux-android").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-linux-ohos").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("x86_64-unknown-linux-ohos").getDefaultLongDoubleFormat());
+
+  // AArch64 defaults to IEEE quad, for all AArch64 arch variants, independent
+  // of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64_be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  // ... except on Windows and Darwin, which use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64-unknown-linux-android").getDefaultLongDoubleFormat());
+
+  // ARM/Thumb use IEEE double.
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("armv7-unknown-linux-gnueabihf").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("thumbv7-unknown-linux-gnueabi").getDefaultLongDoubleFormat());
+
+  // Targets that use IEEE quad, independent of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("s390x-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("s390x-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparc-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparcel-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparcv9-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv32-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv32be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv64be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("loongarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("ve-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("wasm32-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("wasm64-unknown-unknown").getDefaultLongDoubleFormat());
+
+  // 64-bit MIPS uses IEEE quad; 32-bit MIPS uses IEEE double. Both are
+  // independent of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64el-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips-unknown-linux").getDefaultLongDoubleFormat());
+
+  // AVR and 32-bit OpenASIP use IEEE single; the 64-bit tcele64 uses double.
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("avr-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("tce-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("tcele-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("tcele64-unknown-unknown").getDefaultLongDoubleFormat());
+
+  // Targets without a special case fall back to IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("msp430-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("amdgpu-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("nvptx64-unknown-unknown").getDefaultLongDoubleFormat());
 }
 
 TEST(TripleTest, Normalization) {
@@ -3745,6 +3982,36 @@ TEST(TripleTest, DefaultWCharSize) {
   EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
 
   EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
+}
+
+TEST(DataLayoutTest, NVPTX) {
+  Triple TT32 = Triple("nvptx-nvidia-cuda");
+  Triple TT64 = Triple("nvptx64-nvidia-cuda");
+
+  auto PointerLayoutSpecs = [](StringRef DataLayout) {
+    SmallVector<std::string, 8> Specs;
+    for (StringRef Spec : split(DataLayout, '-'))
+      if (Spec.starts_with("p"))
+        Specs.emplace_back(Spec);
+    return Specs;
+  };
+
+  // The 32-bit target uses a single 32-bit pointer specification and is
+  // unaffected by the ABI name.
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("")),
+              testing::ElementsAre("p:32:32"));
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("shortptr")),
+              testing::ElementsAre("p:32:32"));
+
+  // The default 64-bit target only shrinks Tensor Memory (addrspace:6).
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("")),
+              testing::ElementsAre("p6:32:32"));
+
+  // In shortptr mode the extra address spaces become 32-bit. The pointer
+  // specifications must remain sorted by address space.
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("shortptr")),
+              testing::ElementsAre("p3:32:32", "p4:32:32", "p5:32:32",
+                                   "p6:32:32", "p7:32:32", "p101:32:32"));
 }
 
 TEST(DataLayoutTest, CheriRISCV32) {

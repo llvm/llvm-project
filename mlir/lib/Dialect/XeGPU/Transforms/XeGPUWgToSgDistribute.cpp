@@ -189,7 +189,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     Location loc = op.getLoc();
     MLIRContext *ctx = op.getContext();
     xegpu::TensorDescType tdescTy = op.getType();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(tdescTy.getLayout());
+    auto layout = dyn_cast<xegpu::DistributeLayoutAttr>(tdescTy.getLayout());
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
@@ -530,7 +530,7 @@ struct WgToSgConvertLayoutOp
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto inputLayout = op.getInputLayout();
+    auto inputLayout = op.getEffectiveInputLayout();
     auto targetLayout = op.getTargetLayout();
 
     if (!inputLayout || !targetLayout || !inputLayout.isForWorkgroup() ||
@@ -1599,8 +1599,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
                                xegpu::StoreNdOp, xegpu::PrefetchNdOp>(
       [=](Operation *op) -> bool {
         auto tdescTy = getTensorDescType(op);
-        auto layout =
-            dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());
+        auto layout = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
+            tdescTy.getLayout());
         return isLegal(layout);
       });
 
@@ -1661,7 +1661,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<xegpu::ConvertLayoutOp>(
       [=](xegpu::ConvertLayoutOp op) -> bool {
-        return isLegal(op.getInputLayout()) && isLegal(op.getTargetLayout());
+        return isLegal(op.getEffectiveInputLayout()) &&
+               isLegal(op.getTargetLayout());
       });
 
   target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(

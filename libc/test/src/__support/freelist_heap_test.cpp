@@ -375,3 +375,19 @@ TEST_FOR_EACH_ALLOCATOR(NegativeTestForFullHeap, 2048) {
   void *ptr3 = allocator.allocate(605);
   EXPECT_EQ(ptr3, static_cast<void *>(nullptr));
 }
+
+TEST_FOR_EACH_ALLOCATOR(IntegrityCheck, 2048) {
+  allocator.integrity_check();
+
+  void *ptr1 = allocator.allocate(512);
+  allocator.integrity_check();
+
+  void *ptr2 = allocator.allocate(512);
+  allocator.integrity_check();
+
+  allocator.free(ptr1);
+  allocator.integrity_check();
+
+  allocator.free(ptr2);
+  allocator.integrity_check();
+}

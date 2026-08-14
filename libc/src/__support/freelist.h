@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FREELIST_H
 
 #include "block.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -43,6 +44,13 @@ public:
 
     /// @returns The next node in the list containing this node.
     LIBC_INLINE Node *next() const { return next_; }
+  protected:
+    LIBC_INLINE void integrity_check() const {
+      LIBC_HEAP_INTEGRITY_CHECK(next->prev == this,
+                                "FreeList node corruption detected");
+      LIBC_HEAP_INTEGRITY_CHECK(prev->next == this,
+                                "FreeList node corruption detected");
+    }
 
   private:
     // Circularly linked pointers to adjacent nodes.
@@ -87,6 +95,9 @@ public:
 
   /// Remove an arbitrary node from the list.
   void remove(Node *node);
+
+  /// Verify integrity of all nodes in the list.
+  void integrity_check() const;
 
 private:
   Node *begin_;

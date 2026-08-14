@@ -659,9 +659,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       auto paddingArray =
           cir::ArrayType::get(cgm.sInt8Ty, (atomicSize - valueSize) / 8);
       mlir::Type elements[] = {resultType, paddingArray};
+      cir::RecordMemberKind kinds[] = {cir::RecordMemberKind::Data,
+                                       cir::RecordMemberKind::Pad};
       resultType = cir::StructType::get(&getMLIRContext(), /*members=*/elements,
-                                        /*packed=*/false, /*padded=*/false,
-                                        /*is_class=*/false);
+                                        /*packed=*/false, /*padded=*/true,
+                                        /*is_class=*/false, kinds);
     }
 
     break;

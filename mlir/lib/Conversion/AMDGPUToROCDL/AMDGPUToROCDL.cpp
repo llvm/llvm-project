@@ -104,6 +104,11 @@ static bool hasDot12Insts(const Chipset &chipset) {
   return chipset.majorVersion == 12 && chipset.minorVersion == 0;
 }
 
+static bool has45BitNumRecordsBufferResource(const Chipset &chipset) {
+  return chipset.majorVersion > 12 ||
+         (chipset.majorVersion == 12 && chipset.minorVersion >= 5);
+}
+
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
                                   Location loc, Value val) {
@@ -169,7 +174,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                            MemRefDescriptor &memrefDescriptor,
                            ArrayRef<int64_t> strides, int64_t elementByteWidth,
                            amdgpu::Chipset chipset, bool boundsCheck) {
-  if (chipset >= kGfx1250 && !boundsCheck) {
+  if (has45BitNumRecordsBufferResource(chipset) && !boundsCheck) {
     constexpr int64_t first45bits = (1ll << 45) - 1;
     return createI64Constant(rewriter, loc, first45bits);
   }
@@ -252,6 +257,9 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
     }
   }
   Value flagsConst = createI32Constant(rewriter, loc, flags);
+  numRecords = has45BitNumRecordsBufferResource(chipset)
+                   ? convertUnsignedToI64(rewriter, loc, numRecords)
+                   : convertUnsignedToI32(rewriter, loc, numRecords);
   Type rsrcType =
       LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
   Value resource = rewriter.createOrFold<ROCDL::MakeBufferRsrcOp>(
