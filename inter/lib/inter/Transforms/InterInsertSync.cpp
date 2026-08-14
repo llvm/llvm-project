@@ -12,9 +12,11 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include <array>
+#include <limits>
 #include <optional>
 
 namespace inter {
@@ -45,7 +47,6 @@ struct RegisterSpan {
 
 struct IssueTicket {
   Operation *issue;
-  unsigned sbid;
   SmallVector<RegisterSpan, 4> sources;
   SmallVector<RegisterSpan, 2> destinations;
   bool sourcePending = false;
@@ -62,6 +63,7 @@ struct ValueTicket {
 struct SyncState {
   SmallVector<IssueTicket, 8> issues;
   SmallVector<ValueTicket, 8> values;
+  bool initialized = false;
 };
 
 static bool insertSpan(SmallVectorImpl<RegisterSpan> &spans,
@@ -76,7 +78,6 @@ static bool insertIssue(SyncState &state, IssueTicket ticket) {
   for (IssueTicket &existing : state.issues) {
     if (existing.issue != ticket.issue)
       continue;
-    assert(existing.sbid == ticket.sbid && "one issue must have one SBID");
     bool changed = false;
     for (RegisterSpan span : ticket.sources)
       changed |= insertSpan(existing.sources, span);
@@ -124,6 +125,12 @@ public:
   const SyncState &get() const { return state; }
 
   ChangeResult joinWith(const SyncState &incoming) {
+    if (!incoming.initialized)
+      return ChangeResult::NoChange;
+    if (!state.initialized) {
+      state = incoming;
+      return ChangeResult::Change;
+    }
     bool changed = false;
     for (const IssueTicket &ticket : incoming.issues)
       changed |= insertIssue(state, ticket);
@@ -136,15 +143,19 @@ public:
     return joinWith(static_cast<const SyncLattice &>(rhs).state);
   }
 
-  ChangeResult reset() {
-    if (state.issues.empty() && state.values.empty())
+  ChangeResult setEntryState() {
+    SyncState entry;
+    entry.initialized = true;
+    if (state.initialized && state.issues.empty() && state.values.empty())
       return ChangeResult::NoChange;
-    state = SyncState();
+    state = entry;
     return ChangeResult::Change;
   }
 
   void print(raw_ostream &os) const override {
-    os << "issues=" << state.issues.size() << " values=" << state.values.size();
+    os << "initialized=" << state.initialized
+       << " issues=" << state.issues.size()
+       << " values=" << state.values.size();
   }
 
 private:
@@ -160,12 +171,18 @@ struct TokenWait {
   }
 };
 
-static bool isDpasChainPredecessor(Operation *candidate, DpasOp consumer);
+struct IssueWait {
+  Operation *issue;
+  SWSBTokenMode mode;
 
-// The may-lattice only grows. Inferred waits are therefore applied during
-// local rewrite replay, not analysis; explicit sync operations remain part of
-// analysis because filtering by a fixed wait kind is monotone.
-enum class TransferMode { Analysis, Rewrite };
+  bool operator==(const IssueWait &other) const {
+    return issue == other.issue && mode == other.mode;
+  }
+};
+
+using AllocationPlan = DenseMap<Operation *, unsigned>;
+
+static bool isDpasChainPredecessor(Operation *candidate, DpasOp consumer);
 
 static std::optional<RegisterSpan> getRegisterSpan(Value value) {
   if (RegType type = dyn_cast<RegType>(value.getType())) {
@@ -243,18 +260,9 @@ static void applyWriteWait(SyncState &state) {
   });
 }
 
-static void applyTokenWait(SyncState &state, TokenWait wait);
-
-static void applyWriteWait(SyncState &state, uint32_t sbidMask) {
-  for (unsigned sbid : llvm::seq<unsigned>(0, 32))
-    if (sbidMask & (uint32_t{1} << sbid))
-      applyTokenWait(state,
-                     TokenWait{sbid, SWSBTokenMode::destination});
-}
-
-static void applyTokenWait(SyncState &state, TokenWait wait) {
+static void applyIssueWait(SyncState &state, IssueWait wait) {
   for (IssueTicket &ticket : state.issues) {
-    if (ticket.sbid != wait.sbid)
+    if (ticket.issue != wait.issue)
       continue;
     if (wait.mode == SWSBTokenMode::source)
       ticket.sourcePending = false;
@@ -269,9 +277,10 @@ static void applyTokenWait(SyncState &state, TokenWait wait) {
     return !ticket.sourcePending && !ticket.destinationPending;
   });
   for (ValueTicket &ticket : state.values) {
-    IssueTicket *issue = llvm::find_if(state.issues, [&](const IssueTicket &it) {
-                           return it.issue == ticket.issue;
-                         });
+    IssueTicket *issue =
+        llvm::find_if(state.issues, [&](const IssueTicket &it) {
+          return it.issue == ticket.issue;
+        });
     if (issue == state.issues.end()) {
       ticket.sourcePending = false;
       ticket.destinationPending = false;
@@ -285,24 +294,41 @@ static void applyTokenWait(SyncState &state, TokenWait wait) {
   });
 }
 
-static void requireWait(SmallVectorImpl<TokenWait> &requirements,
-                        TokenWait wait) {
+static void applyTokenWait(SyncState &state, TokenWait wait) {
+  SmallVector<Operation *> matchingIssues;
+  for (const IssueTicket &ticket : state.issues) {
+    FinalSWSB swsb = cast<SWSBInfoOpInterface>(ticket.issue).getFinalSWSB();
+    if (swsb.token == static_cast<int32_t>(wait.sbid))
+      matchingIssues.push_back(ticket.issue);
+  }
+  for (Operation *issue : matchingIssues)
+    applyIssueWait(state, IssueWait{issue, wait.mode});
+}
+
+static void applyWriteWait(SyncState &state, uint32_t sbidMask) {
+  for (unsigned sbid : llvm::seq<unsigned>(0, 32))
+    if (sbidMask & (uint32_t{1} << sbid))
+      applyTokenWait(state, TokenWait{sbid, SWSBTokenMode::destination});
+}
+
+static void requireWait(SmallVectorImpl<IssueWait> &requirements,
+                        IssueWait wait) {
   if (wait.mode == SWSBTokenMode::source &&
       llvm::is_contained(requirements,
-                         TokenWait{wait.sbid, SWSBTokenMode::destination}))
+                         IssueWait{wait.issue, SWSBTokenMode::destination}))
     return;
   if (wait.mode == SWSBTokenMode::destination)
-    llvm::erase(requirements, TokenWait{wait.sbid, SWSBTokenMode::source});
+    llvm::erase(requirements, IssueWait{wait.issue, SWSBTokenMode::source});
   if (!llvm::is_contained(requirements, wait))
     requirements.push_back(wait);
 }
 
-static void requireWait(SmallVectorImpl<TokenWait> &requirements,
+static void requireWait(SmallVectorImpl<IssueWait> &requirements,
                         const IssueTicket &ticket, SWSBTokenMode mode) {
-  requireWait(requirements, TokenWait{ticket.sbid, mode});
+  requireWait(requirements, IssueWait{ticket.issue, mode});
 }
 
-static void requireValue(SmallVectorImpl<TokenWait> &requirements, Value value,
+static void requireValue(SmallVectorImpl<IssueWait> &requirements, Value value,
                          const SyncState &state) {
   std::optional<RegisterSpan> span = getRegisterSpan(value);
   for (const ValueTicket &valueTicket : state.values) {
@@ -321,26 +347,29 @@ static void requireValue(SmallVectorImpl<TokenWait> &requirements, Value value,
   if (!span)
     return;
   for (const IssueTicket &ticket : state.issues)
-    if (ticket.destinationPending && llvm::any_of(ticket.destinations,
-          [&](RegisterSpan destination) { return span->overlaps(destination); }))
+    if (ticket.destinationPending &&
+        llvm::any_of(ticket.destinations, [&](RegisterSpan destination) {
+          return span->overlaps(destination);
+        }))
       requireWait(requirements, ticket, SWSBTokenMode::destination);
 }
 
-static void requireDefinition(SmallVectorImpl<TokenWait> &requirements,
-                              RegisterSpan definition,
-                              const SyncState &state,
+static void requireDefinition(SmallVectorImpl<IssueWait> &requirements,
+                              RegisterSpan definition, const SyncState &state,
                               DpasOp chainedConsumer = nullptr) {
   for (const IssueTicket &ticket : state.issues) {
     if (chainedConsumer &&
         isDpasChainPredecessor(ticket.issue, chainedConsumer))
       continue;
-    if (ticket.sourcePending && llvm::any_of(ticket.sources,
-          [&](RegisterSpan source) { return definition.overlaps(source); }))
+    if (ticket.sourcePending &&
+        llvm::any_of(ticket.sources, [&](RegisterSpan source) {
+          return definition.overlaps(source);
+        }))
       requireWait(requirements, ticket, SWSBTokenMode::source);
-    if (ticket.destinationPending && llvm::any_of(ticket.destinations,
-          [&](RegisterSpan destination) {
-            return definition.overlaps(destination);
-          }))
+    if (ticket.destinationPending &&
+        llvm::any_of(ticket.destinations, [&](RegisterSpan destination) {
+          return definition.overlaps(destination);
+        }))
       requireWait(requirements, ticket, SWSBTokenMode::destination);
   }
 }
@@ -412,9 +441,9 @@ static bool isDpasChainPredecessor(Operation *candidate, DpasOp consumer) {
   return false;
 }
 
-static SmallVector<TokenWait> computeRequirement(Operation *operation,
+static SmallVector<IssueWait> computeRequirement(Operation *operation,
                                                  const SyncState &state) {
-  SmallVector<TokenWait> requirements;
+  SmallVector<IssueWait> requirements;
   if (isa<PayloadPrologueEndOp>(operation)) {
     for (const IssueTicket &ticket : state.issues)
       requireWait(requirements, ticket,
@@ -449,25 +478,11 @@ static SmallVector<TokenWait> computeRequirement(Operation *operation,
   for (Value result : operation->getResults())
     if (std::optional<RegisterSpan> span = getRegisterSpan(result))
       requireDefinition(requirements, *span, state, dpas);
-  if (auto async = dyn_cast<AsyncScoreboardOpInterface>(operation)) {
-    FinalSWSB swsb = cast<SWSBInfoOpInterface>(operation).getFinalSWSB();
-    assert(swsb.token >= 0 && "async issue must have an assigned SBID");
-    for (const IssueTicket &ticket : state.issues) {
-      if (ticket.sbid != static_cast<unsigned>(swsb.token))
-        continue;
-      if (DpasOp dpas = dyn_cast<DpasOp>(operation);
-          dpas && isDpasChainPredecessor(ticket.issue, dpas))
-        continue;
-      requireWait(requirements, ticket,
-                  ticket.destinationPending ? SWSBTokenMode::destination
-                                            : SWSBTokenMode::source);
-    }
-  }
   return requirements;
 }
 
 static void deriveValue(SyncState &state, ValueRange sources,
-                         Value destination) {
+                        Value destination) {
   SmallVector<ValueTicket> derived;
   for (Value source : sources) {
     for (const ValueTicket &ticket : state.values) {
@@ -493,11 +508,7 @@ static void deriveResults(Operation *operation, SyncState &state) {
 
 static void recordIssue(AsyncScoreboardOpInterface operation,
                         SyncState &state) {
-  FinalSWSB swsb = cast<SWSBInfoOpInterface>(operation.getOperation())
-                       .getFinalSWSB();
-  assert(swsb.token >= 0 && swsb.tokenMode == SWSBTokenMode::set &&
-         "async issue must have an assigned SBID");
-  IssueTicket issue{operation.getOperation(), static_cast<unsigned>(swsb.token)};
+  IssueTicket issue{operation.getOperation()};
   issue.sourcePending = true;
   issue.destinationPending = operation.hasAsyncDestination();
   for (Value operand : operation->getOperands())
@@ -511,27 +522,25 @@ static void recordIssue(AsyncScoreboardOpInterface operation,
   for (Value result : operation->getResults()) {
     bool token = isa<MemTokenType>(result.getType());
     bool destination = !token || issue.destinationPending;
-    insertValue(state, ValueTicket{result, issue.issue,
-                                   token && !destination, destination});
+    insertValue(state, ValueTicket{result, issue.issue, token && !destination,
+                                   destination});
   }
 }
 
 template <typename EmitFn>
-static void applyDrain(Operation *operation, SyncState &state,
-                        TransferMode mode, EmitFn emit) {
-  SmallVector<TokenWait> requirements = computeRequirement(operation, state);
+static void applyDrain(Operation *operation, SyncState &state, EmitFn emit) {
+  SmallVector<IssueWait> requirements = computeRequirement(operation, state);
   emit(operation, requirements);
-  for (TokenWait wait : requirements)
-    applyTokenWait(state, wait);
+  for (IssueWait wait : requirements)
+    applyIssueWait(state, wait);
 }
 
 static void observeSync(SyncOp sync, SyncState &state) {
   if (sync.getKind() == SyncKind::nop) {
     FinalSWSB swsb = sync.getFinalSWSB();
     if (swsb.token >= 0 && swsb.tokenMode != SWSBTokenMode::set)
-      applyTokenWait(state,
-                     TokenWait{static_cast<unsigned>(swsb.token),
-                               swsb.tokenMode});
+      applyTokenWait(
+          state, TokenWait{static_cast<unsigned>(swsb.token), swsb.tokenMode});
   } else if (sync.getKind() == SyncKind::allrd)
     applyReadWait(state);
   else if (sync.getKind() == SyncKind::allwr) {
@@ -540,15 +549,13 @@ static void observeSync(SyncOp sync, SyncState &state) {
       applyWriteWait(state, sbidMask);
     else
       applyWriteWait(state);
-  }
-  else if (sync.getKind() == SyncKind::bar)
+  } else if (sync.getKind() == SyncKind::bar)
     applyReadWait(state);
   deriveResults(sync, state);
 }
 
 template <typename EmitFn>
-static void runTransfer(Operation *operation, SyncState &state,
-                        TransferMode mode, EmitFn emit) {
+static void runTransfer(Operation *operation, SyncState &state, EmitFn emit) {
   if (SyncOp sync = dyn_cast<SyncOp>(operation)) {
     observeSync(sync, state);
     return;
@@ -558,12 +565,12 @@ static void runTransfer(Operation *operation, SyncState &state,
     return;
 
   if (isa<RegionBranchOpInterface>(operation)) {
-    applyDrain(operation, state, mode, emit);
+    applyDrain(operation, state, emit);
     return;
   }
 
   if (isa<RegionBranchTerminatorOpInterface, BranchOpInterface>(operation)) {
-    applyDrain(operation, state, mode, emit);
+    applyDrain(operation, state, emit);
     return;
   }
 
@@ -573,7 +580,7 @@ static void runTransfer(Operation *operation, SyncState &state,
     return;
   }
 
-  applyDrain(operation, state, mode, emit);
+  applyDrain(operation, state, emit);
   if (auto async = dyn_cast<AsyncScoreboardOpInterface>(operation);
       async && !isFullDrain(operation))
     recordIssue(async, state);
@@ -666,11 +673,13 @@ public:
   }
 
   void setToEntryState(SyncLattice *lattice) override {
-    propagateIfChanged(lattice, lattice->reset());
+    propagateIfChanged(lattice, lattice->setEntryState());
   }
 
   LogicalResult visitOperation(Operation *operation, const SyncLattice &before,
                                SyncLattice *after) override {
+    if (!before.get().initialized)
+      return success();
     SyncState next = before.get();
     transfer(operation, next);
     propagateIfChanged(after, after->joinWith(next));
@@ -713,8 +722,8 @@ public:
 
 private:
   void transfer(Operation *operation, SyncState &state) {
-    auto noEmit = [](Operation *, MutableArrayRef<TokenWait>) {};
-    runTransfer(operation, state, TransferMode::Analysis, noEmit);
+    auto noEmit = [](Operation *, MutableArrayRef<IssueWait>) {};
+    runTransfer(operation, state, noEmit);
   }
 
   void markCFGSuccessorsLive(Operation *operation, const SyncState &state) {
@@ -773,20 +782,6 @@ static void emitWaits(OpBuilder &builder, Operation *operation,
   }
 }
 
-static void appendIndependentDpasReadWaits(
-    Operation *operation, Operation *next, const SyncState &state,
-    SmallVectorImpl<TokenWait> &requirements) {
-  DpasOp dpas = dyn_cast<DpasOp>(operation);
-  DpasOp nextDpas = dyn_cast_or_null<DpasOp>(next);
-  if (requirements.empty() || !dpas || !nextDpas ||
-      isDpasChainPredecessor(operation, nextDpas))
-    return;
-
-  for (TokenWait wait : computeRequirement(next, state))
-    if (wait.mode == SWSBTokenMode::destination)
-      requireWait(requirements, wait);
-}
-
 static void collectBlocks(Region &region, SmallVectorImpl<Block *> &blocks) {
   for (Block &block : region) {
     blocks.push_back(&block);
@@ -796,7 +791,206 @@ static void collectBlocks(Region &region, SmallVectorImpl<Block *> &blocks) {
   }
 }
 
-static void rewriteWithSolver(func::FuncOp function, DataFlowSolver &solver) {
+static Operation *getDpasChainRoot(Operation *operation) {
+  DpasOp dpas = dyn_cast<DpasOp>(operation);
+  while (dpas) {
+    DpasOp producer = dpas.getAcc().getDefiningOp<DpasOp>();
+    if (!producer)
+      break;
+    dpas = producer;
+  }
+  return dpas ? dpas.getOperation() : operation;
+}
+
+static AllocationPlan buildAllocationPlan(func::FuncOp function,
+                                          DataFlowSolver &solver,
+                                          unsigned sbidCount) {
+  SmallVector<Block *> blocks;
+  collectBlocks(function.getBody(), blocks);
+  llvm::MapVector<Operation *, SmallVector<Operation *>> groups;
+  DenseMap<Operation *, SmallVector<Operation *, 8>> interference;
+
+  for (Block *block : blocks) {
+    for (Operation &operation : *block) {
+      if (!isa<AsyncScoreboardOpInterface>(operation))
+        continue;
+      Operation *root = getDpasChainRoot(&operation);
+      groups[root].push_back(&operation);
+    }
+
+    const SyncLattice *entry =
+        solver.lookupState<SyncLattice>(solver.getProgramPointBefore(block));
+    if (!entry || !entry->get().initialized)
+      continue;
+    for (Operation &operation : *block) {
+      if (!isa<AsyncScoreboardOpInterface>(operation))
+        continue;
+      Operation *root = getDpasChainRoot(&operation);
+      const SyncLattice *before = solver.lookupState<SyncLattice>(
+          solver.getProgramPointBefore(&operation));
+      if (!before || !before->get().initialized)
+        continue;
+      for (const IssueTicket &ticket : before->get().issues) {
+        Operation *incomingRoot = getDpasChainRoot(ticket.issue);
+        if (incomingRoot == root)
+          continue;
+        if (!llvm::is_contained(interference[root], incomingRoot))
+          interference[root].push_back(incomingRoot);
+        if (!llvm::is_contained(interference[incomingRoot], root))
+          interference[incomingRoot].push_back(root);
+      }
+    }
+  }
+
+  DenseMap<Operation *, unsigned> groupTokens;
+  for (auto &[root, members] : groups) {
+    for (Operation *member : members) {
+      FinalSWSB existing =
+          cast<SWSBInfoOpInterface>(member).getFinalSWSB();
+      if (existing.token < 0 ||
+          static_cast<unsigned>(existing.token) >= sbidCount ||
+          existing.tokenMode != SWSBTokenMode::set)
+        continue;
+      groupTokens[root] = existing.token;
+      break;
+    }
+  }
+
+  for (auto &[root, members] : groups) {
+    if (groupTokens.contains(root))
+      continue;
+    uint32_t used = 0;
+    for (Operation *neighbor : interference[root]) {
+      auto token = groupTokens.find(neighbor);
+      if (token != groupTokens.end())
+        used |= uint32_t{1} << token->second;
+    }
+    unsigned selected = 0;
+    while (selected < sbidCount && (used & (uint32_t{1} << selected)))
+      ++selected;
+    if (selected == sbidCount) {
+      std::array<unsigned, 32> conflicts{};
+      for (Operation *neighbor : interference[root]) {
+        auto token = groupTokens.find(neighbor);
+        if (token != groupTokens.end())
+          ++conflicts[token->second];
+      }
+      selected = 0;
+      for (unsigned candidate : llvm::seq<unsigned>(1, sbidCount))
+        if (conflicts[candidate] < conflicts[selected])
+          selected = candidate;
+    }
+    groupTokens[root] = selected;
+  }
+
+  AllocationPlan plan;
+  for (auto &[root, members] : groups) {
+    auto assigned = groupTokens.find(root);
+    assert(assigned != groupTokens.end() &&
+           "every reachable issue group must have an assigned SBID");
+    unsigned token = assigned->second;
+    for (Operation *operation : members) {
+      plan[operation] = token;
+      SWSBInfoOpInterface swsb = cast<SWSBInfoOpInterface>(operation);
+      FinalSWSB final = swsb.getFinalSWSB();
+      final.token = token;
+      final.tokenMode = SWSBTokenMode::set;
+      swsb.setFinalSWSB(final);
+    }
+  }
+  return plan;
+}
+
+static LogicalResult validateExistingSynchronization(func::FuncOp function,
+                                                     unsigned sbidCount) {
+  uint32_t legalMask = sbidCount == 32
+                           ? std::numeric_limits<uint32_t>::max()
+                           : (uint32_t{1} << sbidCount) - 1;
+  DenseMap<Operation *, unsigned> assignedDpasChains;
+  WalkResult result = function.walk([&](Operation *operation) {
+    if (SyncOp sync = dyn_cast<SyncOp>(operation)) {
+      FinalSWSB swsb = sync.getFinalSWSB();
+      if (swsb.token >= 0 && static_cast<unsigned>(swsb.token) >= sbidCount) {
+        sync.emitError("wait names SBID ")
+            << swsb.token << " but this GRF mode exposes " << sbidCount;
+        return WalkResult::interrupt();
+      }
+      if (sync.getSbidMask() & ~legalMask) {
+        sync.emitError("selective wait mask names an unavailable SBID");
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    }
+
+    DpasOp dpas = dyn_cast<DpasOp>(operation);
+    if (!dpas)
+      return WalkResult::advance();
+    FinalSWSB current = dpas.getFinalSWSB();
+    bool currentAssigned = current.token >= 0 &&
+                           static_cast<unsigned>(current.token) < sbidCount &&
+                           current.tokenMode == SWSBTokenMode::set;
+    if (!currentAssigned)
+      return WalkResult::advance();
+    Operation *root = getDpasChainRoot(operation);
+    auto [assigned, inserted] =
+        assignedDpasChains.try_emplace(root, current.token);
+    if (!inserted && assigned->second != static_cast<unsigned>(current.token)) {
+      dpas.emitError("DPAS chain has inconsistent preassigned SBIDs");
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return success(!result.wasInterrupted());
+}
+
+static void appendAllocationWaits(Operation *operation, const SyncState &state,
+                                  const AllocationPlan &plan,
+                                  SmallVectorImpl<IssueWait> &requirements) {
+  if (!isa<AsyncScoreboardOpInterface>(operation))
+    return;
+  auto assigned = plan.find(operation);
+  assert(assigned != plan.end() &&
+         "reachable async issue must have an allocation");
+  unsigned token = assigned->second;
+  for (const IssueTicket &ticket : state.issues) {
+    auto incoming = plan.find(ticket.issue);
+    assert(incoming != plan.end() &&
+           "live incoming issue must have an allocation");
+    if (incoming->second != token)
+      continue;
+    if (DpasOp dpas = dyn_cast<DpasOp>(operation);
+        dpas && isDpasChainPredecessor(ticket.issue, dpas))
+      continue;
+    requireWait(requirements, ticket,
+                ticket.destinationPending ? SWSBTokenMode::destination
+                                          : SWSBTokenMode::source);
+  }
+}
+
+static void requireTokenWait(SmallVectorImpl<TokenWait> &requirements,
+                              TokenWait wait) {
+  if (wait.mode == SWSBTokenMode::source &&
+      llvm::is_contained(requirements,
+                         TokenWait{wait.sbid, SWSBTokenMode::destination}))
+    return;
+  if (wait.mode == SWSBTokenMode::destination)
+    llvm::erase(requirements, TokenWait{wait.sbid, SWSBTokenMode::source});
+  if (!llvm::is_contained(requirements, wait))
+    requirements.push_back(wait);
+}
+
+static void appendNextDestinationWaits(
+    Operation *next, const SyncState &state,
+    SmallVectorImpl<IssueWait> &requirements) {
+  if (!next || requirements.empty())
+    return;
+  for (IssueWait wait : computeRequirement(next, state))
+    if (wait.mode == SWSBTokenMode::destination)
+      requireWait(requirements, wait);
+}
+
+static void rewriteWithSolver(func::FuncOp function, DataFlowSolver &solver,
+                               const AllocationPlan &plan) {
   OpBuilder builder(function.getContext());
   SmallVector<Block *> blocks;
   collectBlocks(function.getBody(), blocks);
@@ -805,19 +999,29 @@ static void rewriteWithSolver(func::FuncOp function, DataFlowSolver &solver) {
     if (const SyncLattice *entry = solver.lookupState<SyncLattice>(
             solver.getProgramPointBefore(block)))
       local = entry->get();
+    if (!local.initialized)
+      continue;
 
     SmallVector<Operation *> operations;
     for (Operation &operation : *block)
       operations.push_back(&operation);
     for (auto [index, operation] : llvm::enumerate(operations)) {
-      auto emit = [&](Operation *target, SmallVector<TokenWait> &requirements) {
-        Operation *next = index + 1 < operations.size() ? operations[index + 1]
-                                                        : nullptr;
-        appendIndependentDpasReadWaits(target, next, local, requirements);
-        if (!requirements.empty())
-          emitWaits(builder, target, requirements);
+      auto emit = [&](Operation *target, SmallVector<IssueWait> &requirements) {
+        Operation *next =
+            index + 1 < operations.size() ? operations[index + 1] : nullptr;
+        appendNextDestinationWaits(next, local, requirements);
+        appendAllocationWaits(target, local, plan, requirements);
+        SmallVector<TokenWait> tokenWaits;
+        for (IssueWait wait : requirements) {
+          auto token = plan.find(wait.issue);
+          assert(token != plan.end() &&
+                 "reachable async issue must have an allocation");
+          requireTokenWait(tokenWaits, TokenWait{token->second, wait.mode});
+        }
+        if (!tokenWaits.empty())
+          emitWaits(builder, target, tokenWaits);
       };
-      runTransfer(operation, local, TransferMode::Rewrite, emit);
+      runTransfer(operation, local, emit);
       if (isa<RegionBranchOpInterface>(operation))
         if (const SyncLattice *post = solver.lookupState<SyncLattice>(
                 solver.getProgramPointAfter(operation)))
@@ -864,9 +1068,10 @@ public:
       changed = true;
     }
     for (const DistanceAccess &access : incoming.accesses) {
-      auto existing = llvm::find_if(state.accesses, [&](const DistanceAccess &it) {
-        return it.producer == access.producer;
-      });
+      auto existing =
+          llvm::find_if(state.accesses, [&](const DistanceAccess &it) {
+            return it.producer == access.producer;
+          });
       if (existing == state.accesses.end()) {
         state.accesses.push_back(access);
         changed = true;
@@ -961,8 +1166,8 @@ static void appendElementSpan(SmallVectorImpl<RegisterSpan> &spans,
   insertSpan(spans, span);
 }
 
-static SmallVector<RegisterSpan, 4>
-getALUSourceSpans(Operation *operation, ALUOpInterface alu) {
+static SmallVector<RegisterSpan, 4> getALUSourceSpans(Operation *operation,
+                                                      ALUOpInterface alu) {
   SmallVector<RegisterSpan, 4> spans;
   for (auto [index, operand] : llvm::enumerate(operation->getOperands())) {
     std::optional<RegisterSpan> storage = getRegisterSpan(operand);
@@ -978,16 +1183,16 @@ getALUSourceSpans(Operation *operation, ALUOpInterface alu) {
     int64_t horizontal = region ? region.getHstride() : 0;
     int64_t subregister = alu.getSourceSubregister(index);
     for (unsigned lane = 0; lane < alu.getExecutionSize(); ++lane) {
-      int64_t element = subregister + lane / width * vertical +
-                        lane % width * horizontal;
+      int64_t element =
+          subregister + lane / width * vertical + lane % width * horizontal;
       appendElementSpan(spans, *storage, element, *elementBytes);
     }
   }
   return spans;
 }
 
-static SmallVector<RegisterSpan, 4>
-getALUDestinationSpans(Operation *operation, ALUOpInterface alu) {
+static SmallVector<RegisterSpan, 4> getALUDestinationSpans(Operation *operation,
+                                                           ALUOpInterface alu) {
   if (operation->getNumResults() == 0)
     return {};
   std::optional<RegisterSpan> storage =
@@ -1010,12 +1215,10 @@ getALUDestinationSpans(Operation *operation, ALUOpInterface alu) {
   return spans;
 }
 
-static bool anyOverlap(ArrayRef<RegisterSpan> lhs,
-                       ArrayRef<RegisterSpan> rhs) {
+static bool anyOverlap(ArrayRef<RegisterSpan> lhs, ArrayRef<RegisterSpan> rhs) {
   return llvm::any_of(lhs, [&](RegisterSpan left) {
-    return llvm::any_of(rhs, [&](RegisterSpan right) {
-      return left.overlaps(right);
-    });
+    return llvm::any_of(
+        rhs, [&](RegisterSpan right) { return left.overlaps(right); });
   });
 }
 
@@ -1071,8 +1274,8 @@ static LogicalResult transferDistance(Operation *operation,
     }
   }
 
-  bool writesAddressRegister = llvm::any_of(
-      operation->getResultTypes(), [](Type type) {
+  bool writesAddressRegister =
+      llvm::any_of(operation->getResultTypes(), [](Type type) {
         ARFType arf = dyn_cast<ARFType>(type);
         return arf && arf.getFile() == ARFFile::a0;
       });
@@ -1135,9 +1338,8 @@ static LogicalResult transferDistance(Operation *operation,
   llvm::erase_if(state.accesses, [&](const DistanceAccess &access) {
     return access.producer == operation;
   });
-  state.accesses.push_back(DistanceAccess{operation, distancePipe, 1,
-                                          std::move(sources),
-                                          std::move(destinations)});
+  state.accesses.push_back(DistanceAccess{
+      operation, distancePipe, 1, std::move(sources), std::move(destinations)});
   return success();
 }
 
@@ -1191,10 +1393,10 @@ public:
   }
 
   void visitRegionBranchControlFlowTransfer(RegionBranchOpInterface,
-                                             std::optional<unsigned>,
-                                             std::optional<unsigned>,
-                                             const DistanceLattice &before,
-                                             DistanceLattice *after) override {
+                                            std::optional<unsigned>,
+                                            std::optional<unsigned>,
+                                            const DistanceLattice &before,
+                                            DistanceLattice *after) override {
     propagateIfChanged(after, after->joinWith(before.get()));
   }
 };
@@ -1236,40 +1438,24 @@ public:
     if (function.isExternal())
       return;
 
-    unsigned nextSBID = 0;
-    function.walk([&](Operation *operation) {
-      if (SyncOp sync = dyn_cast<SyncOp>(operation)) {
-        if (sync.getKind() == SyncKind::allwr && sync.getSbidMask() == 0)
-          nextSBID = 0;
-        return;
-      }
-      AsyncScoreboardOpInterface issue =
-          dyn_cast<AsyncScoreboardOpInterface>(operation);
-      if (!issue)
-        return;
-      SWSBInfoOpInterface swsb = cast<SWSBInfoOpInterface>(operation);
-      FinalSWSB final = swsb.getFinalSWSB();
-      if (DpasOp dpas = dyn_cast<DpasOp>(operation)) {
-        if (auto producer = dpas.getAcc().getDefiningOp<DpasOp>())
-          final.token = producer.getFinalSWSB().token;
-        else
-          final.token = nextSBID++ % 32;
-      } else {
-        final.token = nextSBID++ % 32;
-      }
-      final.tokenMode = SWSBTokenMode::set;
-      swsb.setFinalSWSB(final);
-    });
-
+    constexpr unsigned defaultSBIDCount = 16;
+    constexpr unsigned largeGRFSBIDCount = 32;
+    IntegerAttr grfCount =
+        function->getAttrOfType<IntegerAttr>(kGrfCountAttrName);
+    unsigned sbidCount = grfCount && grfCount.getInt() > 128 ? largeGRFSBIDCount
+                                                              : defaultSBIDCount;
+    if (failed(validateExistingSynchronization(function, sbidCount)))
+      return signalPassFailure();
     DominanceInfo dominance(function);
     DataFlowSolver solver;
     loadBaselineAnalyses(solver);
     solver.load<SyncAnalysis>(dominance);
     if (failed(solver.initializeAndRun(function)))
       return signalPassFailure();
+    AllocationPlan plan = buildAllocationPlan(function, solver, sbidCount);
     if (failed(assignDistanceDependencies(function)))
       return signalPassFailure();
-    rewriteWithSolver(function, solver);
+    rewriteWithSolver(function, solver, plan);
   }
 };
 

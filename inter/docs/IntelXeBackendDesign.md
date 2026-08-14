@@ -913,12 +913,17 @@ after this pass.
 - Dense forward dataflow tracks exact physical GRF/ARF read/write footprints,
   per-pipe producers, send source-read retirement, send destination completion,
   DPAS read/accumulator windows, and region/loop state.
-- The pass allocates and reuses hardware SBIDs `0..31`. It frees a token only
-  after all represented source/destination obligations complete, propagates
-  state across branches/joins/backedges, and inserts `.src`, `.dst`, distance,
-  or `sync` dependencies. More than 32 sends is a normal stress case, not an
-  encoder failure. If a structured merge or token pressure cannot be
-  represented, drain conservatively and continue.
+- The pass allocates and reuses hardware SBIDs `0..15` in 128-GRF mode and
+  `0..31` in 256-GRF mode. A converged issue-identity lattice first determines
+  logical interference across branches, joins, and backedges; deterministic
+  coloring then produces an immutable physical allocation plan. Legal existing
+  assignments remain pinned so existing selective waits keep their meaning.
+  The pass frees an obligation only after all represented source/destination
+  phases complete and inserts `.src`, `.dst`, distance, or `sync` dependencies.
+  More than 32 sends is a normal stress case, not an encoder failure. When all
+  legal IDs are live, the allocator selectively waits for one ID and reuses it.
+  Loop-carried obligations remain live until their next physical consumer or
+  definition requires retirement.
 - DPAS dependencies include the systolic pipeline, destructive accumulator
   chain, source-read window, read suppression, and interleaved send completion.
 - Output is final SWSB attributes on physical instructions. A verifier then

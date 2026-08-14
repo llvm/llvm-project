@@ -730,3 +730,300 @@ func.func @distance_payload_bypass() {
       -> !xemachine.reg<16, 8>
   return
 }
+
+// Xe2 exposes 16 SBIDs in 128-GRF mode. The seventeenth asynchronous issue
+// selectively retires and reuses SBID 0 rather than naming unavailable SBID 16
+// or draining unrelated tokens.
+// CHECK-LABEL: func.func @sbid_wrap_128_grf
+// CHECK: xemachine.store_a64 {{.*}}swsbToken = 0
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 1
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 2
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 3
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 4
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 5
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 6
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 7
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 8
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 9
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 10
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 11
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 12
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 13
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 14
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 15
+// CHECK: xemachine.sync nop {{.*}}swsbToken = 0{{.*}}swsbTokenMode = 2
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 0
+func.func @sbid_wrap_128_grf() attributes {xemachine.grf_count = 128 : i32} {
+  %root = xemachine.token
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %data = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  %store0 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store1 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store2 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store3 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store4 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store5 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store6 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store7 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store8 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store9 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store10 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store11 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store12 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store13 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store14 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store15 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store16 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  return
+}
+
+// A completed source phase immediately releases its SBID for the next issue.
+// CHECK-LABEL: func.func @sbid_early_free
+// CHECK: xemachine.store_a64 {{.*}}swsbToken = 0
+// CHECK-NEXT: [[ZERO:%.*]] = xemachine.imm 0
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbToken = 0{{.*}}swsbTokenMode = 2
+// CHECK-NEXT: xemachine.mov [[ZERO]]
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 0
+func.func @sbid_early_free() attributes {xemachine.grf_count = 128 : i32} {
+  %root = xemachine.token
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %data = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  %store0 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %zero = xemachine.imm 0 : i32
+  %replacement = xemachine.mov %zero : (!xemachine.imm, i32)
+      -> !xemachine.reg<16, 4>
+  %store1 = xemachine.store_a64 %address data %replacement dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  return
+}
+
+// The larger GRF mode exposes all 32 SBIDs. The first 32 outstanding issues
+// are distinct, and the 33rd selectively retires one token.
+// CHECK-LABEL: func.func @sbid_pressure_256_grf
+// CHECK: xemachine.store_a64 {{.*}}swsbToken = 0
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 1
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 2
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 3
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 4
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 5
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 6
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 7
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 8
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 9
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 10
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 11
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 12
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 13
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 14
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 15
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 16
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 17
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 18
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 19
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 20
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 21
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 22
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 23
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 24
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 25
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 26
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 27
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 28
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 29
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 30
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 31
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbToken = 0{{.*}}swsbTokenMode = 2
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 0
+func.func @sbid_pressure_256_grf() attributes {xemachine.grf_count = 256 : i32} {
+  %root = xemachine.token
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %data = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  %store0 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store1 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store2 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store3 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store4 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store5 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store6 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store7 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store8 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store9 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store10 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store11 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store12 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store13 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store14 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store15 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store16 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store17 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store18 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store19 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store20 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store21 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store22 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store23 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store24 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store25 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store26 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store27 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store28 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store29 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store30 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store31 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store32 = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  return
+}
+
+// Unreachable issues still receive legal static IDs, but need no wait replay.
+// CHECK-LABEL: func.func @sbid_unreachable
+// CHECK: cf.br ^bb2
+// CHECK: ^bb1:
+// CHECK: xemachine.store_a64 {{.*}}swsbToken = 0
+// CHECK: ^bb2:
+// CHECK: xemachine.store_a64 {{.*}}swsbToken = 0
+func.func @sbid_unreachable() {
+  cf.br ^live
+^dead:
+  %dead_root = xemachine.token
+  %dead_address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %dead_data = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  %dead_store = xemachine.store_a64 %dead_address data %dead_data dep %dead_root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  return
+^live:
+  %root = xemachine.token
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %data = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  %store = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  return
+}
+
+// Mutually exclusive issues may share an ID, while their joined successor
+// receives an ID absent from either incoming path.
+// CHECK-LABEL: func.func @sbid_cfg_join
+// CHECK: ^bb1:
+// CHECK: xemachine.store_a64 {{.*}}swsbToken = 0
+// CHECK: ^bb2:
+// CHECK: xemachine.store_a64 {{.*}}swsbToken = 0
+// CHECK: ^bb3:
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 1
+func.func @sbid_cfg_join(%condition: i1) {
+  %root = xemachine.token
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %data = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  cf.cond_br %condition, ^then, ^else
+^then:
+  %then_store = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  cf.br ^join
+^else:
+  %else_store = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  cf.br ^join
+^join:
+  %joined_store = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  return
+}
+
+// A backedge makes the same static issue live at its next execution. It keeps
+// one legal ID and retires that ID before reissue.
+// CHECK-LABEL: func.func @sbid_cfg_backedge
+// CHECK: ^bb1:
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbToken = 0{{.*}}swsbTokenMode = 2
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 0
+func.func @sbid_cfg_backedge(%condition: i1) {
+  %root = xemachine.token
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %data = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  cf.br ^loop
+^loop:
+  %store = xemachine.store_a64 %address data %data dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  cf.cond_br %condition, ^loop, ^exit
+^exit:
+  return
+}
+
+// A legal assignment referenced by an existing selective wait remains pinned;
+// otherwise recoloring would change the wait's meaning across the block edge.
+// CHECK-LABEL: func.func @sbid_existing_wait_cfg
+// CHECK: xemachine.store_a64 {{.*}}swsbToken = 1
+// CHECK-NEXT: xemachine.store_a64 {{.*}}swsbToken = 0
+// CHECK-NEXT: xemachine.sync nop {{.*}}swsbToken = 0{{.*}}swsbTokenMode = 3
+// CHECK-NEXT: cf.br ^bb1
+// CHECK: ^bb1:
+// CHECK-NEXT: [[ZERO:%.*]] = xemachine.imm 0
+// CHECK-NEXT: xemachine.mov [[ZERO]]
+func.func @sbid_existing_wait_cfg() {
+  %root = xemachine.token
+  %address = xemachine.archreg 20 : !xemachine.reg<64, 20>
+  %data_a = xemachine.archreg 4 : !xemachine.reg<16, 4>
+  %data_b = xemachine.archreg 8 : !xemachine.reg<16, 8>
+  %store_a = xemachine.store_a64 %address data %data_a dep %root
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 4>) -> !xemachine.mem.token
+  %store_b = xemachine.store_a64 %address data %data_b dep %root
+      {swsbToken = 0 : i32, swsbTokenMode = 1 : i32}
+      : (!xemachine.reg<64, 20>, !xemachine.reg<16, 8>) -> !xemachine.mem.token
+  %wait = xemachine.sync nop
+      {swsbToken = 0 : i32, swsbTokenMode = 3 : i32}
+      : !xemachine.mem.token
+  cf.br ^next
+^next:
+  %zero = xemachine.imm 0 : i32
+  %overwrite = xemachine.mov %zero : (!xemachine.imm, i32)
+      -> !xemachine.reg<16, 8>
+  return
+}

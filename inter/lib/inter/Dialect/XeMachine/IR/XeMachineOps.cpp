@@ -131,6 +131,15 @@ DEFINE_SWSB_INTERFACE(DpasOp)
 LogicalResult SyncOp::verify() {
   if (getSbidMask() != 0 && getKind() != SyncKind::allwr)
     return emitOpError("selective SBID mask requires allwr");
+  FinalSWSB swsb = getFinalSWSB();
+  if (swsb.token >= 0 &&
+      (getKind() != SyncKind::nop ||
+       (swsb.tokenMode != SWSBTokenMode::source &&
+        swsb.tokenMode != SWSBTokenMode::destination)))
+    return emitOpError(
+        "token wait requires sync.nop with source or destination mode");
+  if (swsb.token < 0 && swsb.tokenMode != SWSBTokenMode::none)
+    return emitOpError("token mode requires a nonnegative token");
   return success();
 }
 
