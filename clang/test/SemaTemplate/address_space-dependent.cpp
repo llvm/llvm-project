@@ -130,3 +130,17 @@ struct EntryTy {
 ASPtrTy<1> x;
 EntryTy<2> y;
 }
+
+namespace gh196982 {
+template <int AS>
+void trailing() {
+  void *p [[clang::address_space(AS)]]; // expected-warning {{applying attribute 'clang::address_space' to a declaration is deprecated; apply it to the type instead}}
+  void *q __attribute__((address_space(AS)));
+  int r[2] __attribute__((address_space(AS)));
+}
+
+void invalidOperand() {
+  void *p [[clang::address_space(undeclared())]]; // expected-error {{use of undeclared identifier 'undeclared'}} \
+                                                 // expected-warning {{applying attribute 'clang::address_space' to a declaration is deprecated; apply it to the type instead}}
+}
+}

@@ -6343,11 +6343,20 @@ namespace {
   };
 } // end anonymous namespace
 
-static void
-fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
-                                 const ParsedAttributesView &Attrs) {
-  for (const ParsedAttr &AL : Attrs) {
-    if (AL.getKind() == ParsedAttr::AT_AddressSpace) {
+static void fillDependentAddressSpaceTypeLoc(ASTContext &Context,
+                                             DependentAddressSpaceTypeLoc DASTL,
+                                             const Declarator &D,
+                                             const DeclaratorChunk &Chunk) {
+  // An attribute written after the declarator-id appertains to the declared
+  // entity, so it is applied to the outermost type instead of to the chunk
+  // that is being visited.
+  const ParsedAttributesView *AttrLists[] = {&Chunk.getAttrs(),
+                                             &D.getAttributes()};
+  for (const ParsedAttributesView *Attrs : AttrLists) {
+    for (const ParsedAttr &AL : *Attrs) {
+      if (AL.getKind() != ParsedAttr::AT_AddressSpace || AL.getNumArgs() != 1 ||
+          !AL.isArgExpr(0))
+        continue;
       DASTL.setAttrNameLoc(AL.getLoc());
       DASTL.setAttrExprOperand(AL.getArgAsExpr(0));
       DASTL.setAttrOperandParensRange(SourceRange());
@@ -6355,8 +6364,7 @@ fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
     }
   }
 
-  llvm_unreachable(
-      "no address_space attribute found at the expected location!");
+  DASTL.initializeLocal(Context, DASTL.getTypePtr()->getAttributeLoc());
 }
 
 /// Create and instantiate a TypeSourceInfo with type source information.
@@ -6422,7 +6430,7 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
 
       case TypeLoc::DependentAddressSpace: {
         auto TL = CurrTL.castAs<DependentAddressSpaceTypeLoc>();
-        fillDependentAddressSpaceTypeLoc(TL, D.getTypeObject(i).getAttrs());
+        fillDependentAddressSpaceTypeLoc(S.Context, TL, D, D.getTypeObject(i));
         CurrTL = TL.getPointeeTypeLoc().getUnqualifiedLoc();
         break;
       }
