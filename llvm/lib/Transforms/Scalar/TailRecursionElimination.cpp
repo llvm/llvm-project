@@ -60,6 +60,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
@@ -89,11 +90,56 @@ using namespace llvm;
 STATISTIC(NumEliminated, "Number of tail calls removed");
 STATISTIC(NumRetDuped,   "Number of return duplicated");
 STATISTIC(NumAccumAdded, "Number of accumulators introduced");
+STATISTIC(NumTREPreventedCold,
+          "Number of tail calls/recursion eliminations prevented due to cold "
+          "calling convention or attribute");
 
-static cl::opt<bool> ForceDisableBFI(
+static cl::opt<bool> DisableEntryCountRecompute(
     "tre-disable-entrycount-recompute", cl::init(false), cl::Hidden,
     cl::desc("Force disabling recomputing of function entry count, on "
              "successful tail recursion elimination."));
+
+static cl::opt<bool> DisableTailCallElimForColdCalls(
+    "disable-tail-call-elim-for-cold-calls", cl::Hidden, cl::init(false),
+    cl::desc("Disable tail call elimination and optimization for cold calls or "
+             "in cold functions"));
+
+static bool shouldDisableTailCallsForCold(const CallBase *CB,
+                                          const Function *Caller,
+                                          const ProfileSummaryInfo *PSI,
+                                          BlockFrequencyInfo *BFI) {
+  if (!DisableTailCallElimForColdCalls)
+    return false;
+
+  if (CB && CB->isMustTailCall())
+    return false;
+
+  if (Caller && (Caller->hasFnAttribute(Attribute::Cold) ||
+                 Caller->getCallingConv() == CallingConv::Cold))
+    return true;
+
+  if (!PSI || !PSI->hasProfileSummary())
+    return false;
+
+  // We require both the function entry and the call site/block/callee to be
+  // cold.
+  // 1. Checking that the function entry is cold ensures we don't disable tail
+  //    call elimination in hot functions (with calls on cold conditional
+  //    paths), which would force stack frame setup and teardown on hot paths.
+  // 2. Checking that the call site/block/callee is also cold ensures that if a
+  //    function has a cold entry count but contains a hot loop, we don't
+  //    disable tail call elimination for calls within that hot loop.
+  if (Caller && PSI->isFunctionEntryCold(Caller) && CB) {
+    if (CB->hasFnAttr(Attribute::Cold) ||
+        CB->getCallingConv() == CallingConv::Cold)
+      return true;
+    if (BFI && (PSI->isColdCallSite(*CB, BFI) ||
+                PSI->isColdBlock(CB->getParent(), BFI)))
+      return true;
+  }
+
+  return false;
+}
 
 /// Scan the specified function for alloca instructions.
 /// If it contains any dynamic allocas, returns false.
@@ -194,7 +240,8 @@ struct AllocaDerivedValueTracker {
 };
 } // namespace
 
-static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
+static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
+                      ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
 
@@ -258,10 +305,13 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
 
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
       // "kcfi".
-      bool IsNoTail = CI->isNoTailCall() ||
+      bool DisableForCold = shouldDisableTailCallsForCold(CI, &F, PSI, BFI);
+      bool IsNoTail = CI->isNoTailCall() || DisableForCold ||
                       CI->hasOperandBundlesOtherThan(
                           {LLVMContext::OB_clang_arc_attachedcall,
                            LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi});
+      if (!CI->isNoTailCall() && DisableForCold)
+        ++NumTREPreventedCold;
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed
@@ -374,29 +424,118 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
   return !is_contained(I->operands(), CI);
 }
 
-static bool canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
-  if (!I->isAssociative() || !I->isCommutative())
+// Return true if I is a unary accumulator recurrence: a chain of
+// applications of a unary function `g` composed with itself,
+// `g(g(...g(Base)...))`, which is equivalent to a single application of the
+// N-times-composed function when `g` is pure. Neither associative nor
+// commutative, this differs from the ordinary accumulator recurrence handled
+// below, which requires I to be associative and commutative.
+//
+// TODO: Generalize this beyond shifts by a constant amount to arbitrary pure
+// unary functions (e.g., `f(x) = x == 0 ? Base : g(f(x - 1))` for any pure
+// unary `g`).
+static bool isUnaryAccumulatorRecurrence(Instruction *I) {
+  if (!I->isShift())
     return false;
+
+  // A chain of shifts by a constant amount C is equivalent to a single shift
+  // by the sum of the amounts:
+  //     ... (Base << C) << C) ... << C == Base << (C * Iterations)
+  // This relation applies to left shifts as well as arithmetic/logical right
+  // shifts when the shift amount is a constant.
+  return isa<ConstantInt>(I->getOperand(1));
+}
+
+// Find the base-case return value for function F, given the accumulator
+// recursion instruction AccRecInstr that is about to be eliminated. Every
+// return other than the one fed by AccRecInstr survives the transformation and
+// will be rewritten to return the accumulator, so all of them have to yield the
+// same base-case constant. Return that constant, or nullptr on failure.
+//
+// FIXME: There is a room for improvement here in the future, e.g., consider
+// non-constant values and multiple base cases -- e.g., we want to be able to
+// handle code like:
+// ```
+// int f(int x) {
+//  if (x == 1) return 1;
+//  if (x == 10) return 10;
+//  return f(x-1) << 1;
+// }
+// ```
+static Constant *findBaseCaseRetConstant(Function &F,
+                                         Instruction *AccRecInstr) {
+  Constant *BaseCaseVal = nullptr;
+
+  for (BasicBlock &BB : F) {
+    auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
+    if (!RI || !RI->getReturnValue())
+      continue;
+
+    Value *RV = RI->getReturnValue();
+
+    // This is the recursive case being turned into a loop: the return goes
+    // away along with AccRecInstr.
+    if (RV == AccRecInstr)
+      continue;
+
+    // Anything else has to be the base case. In particular a return still
+    // computing from a recursive call (e.g. a second recursion site that is
+    // not eliminated) must be rejected: returning the accumulator in its place
+    // would drop that computation.
+    auto *C = dyn_cast<Constant>(RV);
+    if (!C)
+      return nullptr;
+
+    if (!BaseCaseVal)
+      BaseCaseVal = C;
+    else if (BaseCaseVal != C)
+      return nullptr;
+  }
+
+  return BaseCaseVal;
+}
+
+// This function checks whether the instruction I can be used
+// to perform accumulator recursion elimination for the
+// call instruction CI.
+static Constant *canTransformAccumulatorRecursion(Instruction *I,
+                                                  CallInst *CI) {
+  bool IsUnaryAccumulatorRecurrence = isUnaryAccumulatorRecurrence(I);
+  if ((!I->isAssociative() || !I->isCommutative()) &&
+      !IsUnaryAccumulatorRecurrence)
+    return nullptr;
 
   assert(I->getNumOperands() >= 2 &&
          "Associative/commutative operations should have at least 2 args!");
 
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-    // Accumulators must have an identity.
-    if (!ConstantExpr::getIntrinsicIdentity(II->getIntrinsicID(), I->getType()))
-      return false;
-  }
+  Constant *AccInitVal = nullptr;
+  if (IsUnaryAccumulatorRecurrence) {
+    // For unary accumulator recurrences, we require that the recursive call
+    // is always on the first operand.
+    if (I->getOperand(0) != CI)
+      return nullptr;
 
-  // Exactly one operand should be the result of the call instruction.
-  if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
-      (I->getOperand(0) != CI && I->getOperand(1) != CI))
-    return false;
+    // findTRECandidate guarantees CI is a recursive call to its own
+    // function, so scan the enclosing function for the base-case return.
+    AccInitVal = findBaseCaseRetConstant(*CI->getFunction(), /*AccRecInstr=*/I);
+    if (!AccInitVal)
+      return nullptr;
+  } else {
+    AccInitVal = ConstantExpr::getIdentity(I, I->getType());
+    if (!AccInitVal)
+      return nullptr;
+
+    // Exactly one operand should be the result of the call instruction.
+    if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
+        (I->getOperand(0) != CI && I->getOperand(1) != CI))
+      return nullptr;
+  }
 
   // The only user of this instruction we allow is a single return instruction.
   if (!I->hasOneUse() || !isa<ReturnInst>(I->user_back()))
-    return false;
+    return nullptr;
 
-  return true;
+  return AccInitVal;
 }
 
 namespace {
@@ -407,6 +546,8 @@ class TailRecursionEliminator {
   OptimizationRemarkEmitter *ORE;
   DomTreeUpdater &DTU;
   BlockFrequencyInfo *const BFI;
+  ProfileSummaryInfo *const PSI;
+  const bool UpdateFunctionEntryCount;
   const uint64_t OrigEntryBBFreq;
   const uint64_t OrigEntryCount;
 
@@ -436,19 +577,23 @@ class TailRecursionEliminator {
   // The instruction doing the accumulating.
   Instruction *AccumulatorRecursionInstr = nullptr;
 
+  Constant *AccumulatorInitialValue = nullptr;
+
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
-                          DomTreeUpdater &DTU, BlockFrequencyInfo *BFI)
-      : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI),
+                          DomTreeUpdater &DTU, BlockFrequencyInfo *BFI,
+                          ProfileSummaryInfo *PSI,
+                          bool UpdateFunctionEntryCount)
+      : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI), PSI(PSI),
+        UpdateFunctionEntryCount(UpdateFunctionEntryCount),
         OrigEntryBBFreq(
             BFI ? BFI->getBlockFreq(&F.getEntryBlock()).getFrequency() : 0U),
-        OrigEntryCount(F.getEntryCount() ? F.getEntryCount()->getCount() : 0) {
+        OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0) {
     if (BFI) {
       // The assert is meant as API documentation for the caller.
-      assert((OrigEntryCount != 0 && OrigEntryBBFreq != 0) &&
-             "If a BFI was provided, the function should have both an entry "
-             "count that is non-zero and an entry basic block with a non-zero "
-             "frequency.");
+      assert(OrigEntryBBFreq != 0 &&
+             "If a BFI was provided, the function should have an entry "
+             "basic block with a non-zero frequency.");
     }
   }
 
@@ -471,7 +616,8 @@ class TailRecursionEliminator {
 public:
   static bool eliminate(Function &F, const TargetTransformInfo *TTI,
                         AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
-                        DomTreeUpdater &DTU, BlockFrequencyInfo *BFI);
+                        DomTreeUpdater &DTU, BlockFrequencyInfo *BFI,
+                        ProfileSummaryInfo *PSI, bool UpdateFunctionEntryCount);
 };
 } // namespace
 
@@ -497,7 +643,7 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
 
   assert((!CI->isTailCall() || !CI->isNoTailCall()) &&
          "Incompatible call site attributes(Tail,NoTail)");
-  if (!CI->isTailCall())
+  if (!CI->isTailCall() || shouldDisableTailCallsForCold(CI, &F, PSI, BFI))
     return nullptr;
 
   // As a special case, detect code like this:
@@ -594,9 +740,7 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   for (pred_iterator PI = PB; PI != PE; ++PI) {
     BasicBlock *P = *PI;
     if (P == &F.getEntryBlock()) {
-      Constant *Identity =
-          ConstantExpr::getIdentity(AccRecInstr, AccRecInstr->getType());
-      AccPN->addIncoming(Identity, P);
+      AccPN->addIncoming(AccumulatorInitialValue, P);
     } else {
       AccPN->addIncoming(AccPN, P);
     }
@@ -667,15 +811,22 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
       continue;
 
     // If we can't move the instruction above the call, it might be because it
-    // is an associative and commutative operation that could be transformed
-    // using accumulator recursion elimination.  Check to see if this is the
-    // case, and if so, remember which instruction accumulates for later.
-    if (AccPN || !canTransformAccumulatorRecursion(&*BBI, CI))
+    // is an (associative and commutative) or unary accumulator recurrence
+    // arithmetic operation that could be transformed using accumulator
+    // recursion elimination. Check to see if this is the case, and if so,
+    // remember which instruction accumulates for later.
+    Constant *AccInitVal = canTransformAccumulatorRecursion(&*BBI, CI);
+
+    if (AccPN || !AccInitVal)
       return false; // We cannot eliminate the tail recursion!
 
     // Yes, this is accumulator recursion.  Remember which instruction
     // accumulates.
     AccRecInstr = &*BBI;
+
+    // Keep track of the base case (i.e., initial value) of the accumulator
+    // return value if any.
+    AccumulatorInitialValue = AccInitVal;
   }
 
   BasicBlock *BB = Ret->getParent();
@@ -760,7 +911,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   CI->eraseFromParent();   // Remove call.
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
-  if (OrigEntryBBFreq) {
+  if (!DisableEntryCountRecompute && UpdateFunctionEntryCount &&
+      OrigEntryBBFreq) {
     assert(F.getEntryCount().has_value());
     // This pass is not expected to remove BBs, only add an entry BB. For that
     // reason, and because the BB here isn't the new entry BB, the BFI lookup is
@@ -771,7 +923,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
         static_cast<double>(OrigEntryBBFreq);
     auto ToSubtract =
         static_cast<uint64_t>(std::round(RelativeBBFreq * OrigEntryCount));
-    auto OldEntryCount = F.getEntryCount()->getCount();
+    auto OldEntryCount = *F.getEntryCount();
     if (OldEntryCount <= ToSubtract) {
       LLVM_DEBUG(
           errs() << "[TRE] The entrycount attributable to the recursive call, "
@@ -779,7 +931,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
                  << ", should be strictly lower than the function entry count, "
                  << OldEntryCount << "\n");
     } else {
-      F.setEntryCount(OldEntryCount - ToSubtract, F.getEntryCount()->getType());
+      F.setEntryCount(OldEntryCount - ToSubtract);
     }
   }
   return true;
@@ -800,6 +952,17 @@ void TailRecursionEliminator::cleanupAndFinalize() {
   }
 
   if (RetPN) {
+    Instruction *AccRecInstr = AccumulatorRecursionInstr;
+    auto MaterializeAccumulator = [&](Value *OtherVal,
+                                      BasicBlock::iterator InsertPt) {
+      Instruction *New = AccRecInstr->clone();
+      New->setName("accumulator.ret.tr");
+      New->setOperand(AccRecInstr->getOperand(0) == AccPN, OtherVal);
+      New->insertBefore(InsertPt);
+      New->dropLocation();
+      return New;
+    };
+
     if (RetSelects.empty()) {
       // If we didn't insert any select instructions, then we know we didn't
       // store a return value and we can remove the PHI nodes we inserted.
@@ -812,19 +975,23 @@ void TailRecursionEliminator::cleanupAndFinalize() {
       if (AccPN) {
         // We need to insert a copy of our accumulator instruction before any
         // return in the function, and return its result instead.
-        Instruction *AccRecInstr = AccumulatorRecursionInstr;
         for (BasicBlock &BB : F) {
           ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
           if (!RI)
             continue;
 
-          Instruction *AccRecInstrNew = AccRecInstr->clone();
-          AccRecInstrNew->setName("accumulator.ret.tr");
-          AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
-                                     RI->getOperand(0));
-          AccRecInstrNew->insertBefore(RI->getIterator());
-          AccRecInstrNew->dropLocation();
-          RI->setOperand(0, AccRecInstrNew);
+          if (isUnaryAccumulatorRecurrence(AccRecInstr)) {
+            // Base-case initialization: the accumulator PHI already holds the
+            // final result, so return it directly.
+            RI->setOperand(0, AccPN);
+          } else {
+            // Since the accumulator starts with the identity value, before the
+            // return we need to apply the accumulation instruction one more
+            // time to combine the last value with the result of the recursive
+            // call.
+            RI->setOperand(0, MaterializeAccumulator(RI->getOperand(0),
+                                                     RI->getIterator()));
+          }
         }
       }
     } else {
@@ -846,15 +1013,13 @@ void TailRecursionEliminator::cleanupAndFinalize() {
       if (AccPN) {
         // We need to insert a copy of our accumulator instruction before any
         // of the selects we inserted, and select its result instead.
-        Instruction *AccRecInstr = AccumulatorRecursionInstr;
         for (SelectInst *SI : RetSelects) {
-          Instruction *AccRecInstrNew = AccRecInstr->clone();
-          AccRecInstrNew->setName("accumulator.ret.tr");
-          AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
-                                     SI->getFalseValue());
-          AccRecInstrNew->insertBefore(SI->getIterator());
-          AccRecInstrNew->dropLocation();
-          SI->setFalseValue(AccRecInstrNew);
+          if (isUnaryAccumulatorRecurrence(AccRecInstr)) {
+            SI->setFalseValue(AccPN);
+          } else {
+            SI->setFalseValue(
+                MaterializeAccumulator(SI->getFalseValue(), SI->getIterator()));
+          }
         }
       }
     }
@@ -891,7 +1056,9 @@ bool TailRecursionEliminator::processBlock(BasicBlock &BB) {
 
     eliminateCall(CI);
     return true;
-  } else if (isa<ReturnInst>(TI)) {
+  }
+
+  if (isa<ReturnInst>(TI)) {
     CallInst *CI = findTRECandidate(&BB);
 
     if (CI)
@@ -901,17 +1068,16 @@ bool TailRecursionEliminator::processBlock(BasicBlock &BB) {
   return false;
 }
 
-bool TailRecursionEliminator::eliminate(Function &F,
-                                        const TargetTransformInfo *TTI,
-                                        AliasAnalysis *AA,
-                                        OptimizationRemarkEmitter *ORE,
-                                        DomTreeUpdater &DTU,
-                                        BlockFrequencyInfo *BFI) {
+bool TailRecursionEliminator::eliminate(
+    Function &F, const TargetTransformInfo *TTI, AliasAnalysis *AA,
+    OptimizationRemarkEmitter *ORE, DomTreeUpdater &DTU,
+    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+    bool UpdateFunctionEntryCount) {
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
   bool MadeChange = false;
-  MadeChange |= markTails(F, ORE);
+  MadeChange |= markTails(F, ORE, PSI, BFI);
 
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
@@ -922,7 +1088,8 @@ bool TailRecursionEliminator::eliminate(Function &F,
     return MadeChange;
 
   // Change any tail recursive calls to loops.
-  TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU, BFI);
+  TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU, BFI, PSI,
+                              UpdateFunctionEntryCount);
 
   for (BasicBlock &BB : F)
     MadeChange |= TRE.processBlock(BB);
@@ -965,7 +1132,7 @@ struct TailCallElim : public FunctionPass {
         F, &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
         &getAnalysis<AAResultsWrapperPass>().getAAResults(),
         &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(), DTU,
-        /*BFI=*/nullptr);
+        /*BFI=*/nullptr, /*PSI=*/nullptr, /*UpdateFunctionEntryCount=*/false);
   }
 };
 } // namespace
@@ -991,10 +1158,11 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
   // This must come first. It needs the 2 analyses, meaning, if it came after
   // the lines asking for the cached result, should they be nullptr (which, in
   // the case of the PDT, is likely), updates to the trees would be missed.
-  auto *BFI = (!ForceDisableBFI && UpdateFunctionEntryCount &&
-               F.getEntryCount().has_value() && F.getEntryCount()->getCount())
+  auto *BFI = F.getEntryCount().has_value()
                   ? &AM.getResult<BlockFrequencyAnalysis>(F)
                   : nullptr;
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
   auto *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
@@ -1002,8 +1170,8 @@ PreservedAnalyses TailCallElimPass::run(Function &F,
   // UpdateStrategy based on some test results. It is feasible to switch the
   // UpdateStrategy to Lazy if we find it profitable later.
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Eager);
-  bool Changed =
-      TailRecursionEliminator::eliminate(F, &TTI, &AA, &ORE, DTU, BFI);
+  bool Changed = TailRecursionEliminator::eliminate(
+      F, &TTI, &AA, &ORE, DTU, BFI, PSI, UpdateFunctionEntryCount);
 
   if (!Changed)
     return PreservedAnalyses::all();

@@ -1,28 +1,30 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports the !cir.long_double wrapper and the f16 and f128 types.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR -DLDTY=cir.double
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR -DLDTY=double
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-64 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG -DLDTY=double
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR -DLDTY=cir.f80
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR -DLDTY=x86_fp80
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-80 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG -DLDTY=x86_fp80
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR -DLDTY=cir.f128
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR -DLDTY=fp128
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -mlong-double-128 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG -DLDTY=fp128
 
 extern "C" long double do_pre_inc(long double d) {
   // CIR-LABEL: @do_pre_inc(
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>, ["d", init]
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_pre_inc(
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
@@ -48,8 +50,8 @@ extern "C" long double do_pre_inc(long double d) {
 }
 extern "C" long double do_post_inc(long double d) {
   // CIR-LABEL: @do_post_inc(
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>, ["d", init]
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_post_inc(
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
@@ -76,8 +78,8 @@ extern "C" long double do_post_inc(long double d) {
 
 extern "C" long double do_pre_dec(long double d) {
   // CIR-LABEL: @do_pre_dec(
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>, ["d", init]
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_pre_dec(
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
@@ -103,8 +105,8 @@ extern "C" long double do_pre_dec(long double d) {
 }
 extern "C" long double do_post_dec(long double d) {
   // CIR-LABEL: @do_post_dec(
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>, ["d", init]
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !cir.long_double<![[LDTY]]>, !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_post_dec(
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]

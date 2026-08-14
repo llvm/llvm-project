@@ -30,10 +30,12 @@
     _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                             \
     _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                             \
     _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                                                             \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++26-extensions")                                                             \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                               \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                               \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                               \
-    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                                                               \
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++26-extensions")
 #  define _LIBCPP_POP_EXTENSION_DIAGNOSTICS _LIBCPP_DIAGNOSTIC_POP
 #  define _LIBCPP_PUSH_ABI_PRAGMA_DIAGNOSTICS                                                                          \
     _LIBCPP_DIAGNOSTIC_PUSH _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpragma-clang-attribute")                               \
@@ -46,15 +48,20 @@
 #  define _LIBCPP_POP_ABI_PRAGMA_DIAGNOSTICS
 #endif
 
-#define _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS                                                                           \
-  _LIBCPP_PUSH_ABI_PRAGMA_DIAGNOSTICS                                                                                  \
-  _Pragma(_LIBCPP_TOSTRING(clang attribute _LibcxxExplicitABIAnnotations.push(                                         \
-      __attribute__((__exclude_from_explicit_instantiation__,                                                          \
-                     __visibility__("hidden"),                                                                         \
-                     __abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE)))),                                           \
-      apply_to = function))) _LIBCPP_POP_ABI_PRAGMA_DIAGNOSTICS
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS                                                                         \
+    _LIBCPP_PUSH_ABI_PRAGMA_DIAGNOSTICS                                                                                \
+    _Pragma(_LIBCPP_TOSTRING(clang attribute _LibcxxExplicitABIAnnotations.push(                                       \
+        __attribute__((__exclude_from_explicit_instantiation__,                                                        \
+                       __visibility__("hidden"),                                                                       \
+                       __abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE)))),                                         \
+        apply_to = function))) _LIBCPP_POP_ABI_PRAGMA_DIAGNOSTICS
 
-#define _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS _Pragma("clang attribute _LibcxxExplicitABIAnnotations.pop")
+#  define _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS _Pragma("clang attribute _LibcxxExplicitABIAnnotations.pop")
+#else
+#  define _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+#  define _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+#endif
 
 // clang-format off
 

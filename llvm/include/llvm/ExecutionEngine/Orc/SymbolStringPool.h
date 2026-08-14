@@ -274,11 +274,7 @@ inline SymbolStringPtr SymbolStringPool::intern(StringRef S) {
 
 inline void SymbolStringPool::clearDeadEntries() {
   std::lock_guard<std::mutex> Lock(PoolMutex);
-  for (auto I = Pool.begin(), E = Pool.end(); I != E;) {
-    auto Tmp = I++;
-    if (Tmp->second == 0)
-      Pool.erase(Tmp);
-  }
+  Pool.remove_if([](PoolMapEntry &E) { return E.getValue() == 0; });
 }
 
 inline bool SymbolStringPool::empty() const {

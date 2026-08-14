@@ -68,7 +68,6 @@ void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
     for (const std::unique_ptr<DWARFUnit> &CU :
          ObjectContexts.back()->InputDWARFFile.Dwarf->compile_units()) {
       DWARFDie CUDie = CU->getUnitDIE();
-      OverallNumberOfCU++;
 
       if (!CUDie)
         continue;
@@ -147,12 +146,22 @@ Error DWARFLinkerImpl::link() {
       DWARFDie UnitDie = OrigCU->getUnitDIE();
 
       if (!Language) {
-        if (std::optional<DWARFFormValue> Val =
-                UnitDie.find(dwarf::DW_AT_language)) {
-          uint16_t LangVal = dwarf::toUnsigned(Val, 0);
-          if (isODRLanguage(LangVal))
-            Language = LangVal;
-        }
+        if (std::optional<uint64_t> LangVal = UnitDie.getLanguage())
+          if (isODRLanguage(*LangVal))
+            Language = static_cast<uint16_t>(*LangVal);
+      }
+    }
+
+    // Clang module units decide their ODR availability from their own
+    // language, so they have to be part of this scan as well. A module unit
+    // can be the only ODR unit of a link, and any unit which deduplicates
+    // types requires the artificial type unit to exist.
+    for (const LinkContext::RefModuleUnit &Module :
+         Context->ModulesCompileUnits) {
+      if (!Language) {
+        if (std::optional<uint16_t> LangVal = Module.Unit->getLanguage())
+          if (isODRLanguage(*LangVal))
+            Language = *LangVal;
       }
     }
   }
@@ -175,12 +184,16 @@ Error DWARFLinkerImpl::link() {
     });
   }
 
-  // Set parallel options.
-  if (GlobalData.getOptions().Threads == 0)
-    llvm::parallel::strategy = optimal_concurrency(OverallNumberOfCU);
-  else
+  // Set this process-global once. link() runs per architecture and dsymutil
+  // may run those links concurrently, so assigning it from each would be a
+  // data race; the thread count is the same for every architecture, so the
+  // first assignment suffices. Size the executor from that thread count rather
+  // than the per-architecture CU count, which is moot once it is shared.
+  static llvm::once_flag ParallelStrategyFlag;
+  llvm::call_once(ParallelStrategyFlag, [&] {
     llvm::parallel::strategy =
         hardware_concurrency(GlobalData.getOptions().Threads);
+  });
 
   // Link object files.
   if (GlobalData.getOptions().Threads == 1) {
@@ -192,17 +205,16 @@ Error DWARFLinkerImpl::link() {
         GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
     }
   } else {
-    DefaultThreadPool Pool(llvm::parallel::strategy);
+    assert(ThreadPool && "setThreadPool() must be called before link()");
+    ThreadPoolTaskGroup Group(*ThreadPool);
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts)
-      Pool.async([&]() {
+      Group.async([&]() {
         // Link object file.
         if (Error Err = Context->link(ArtificialTypeUnit.get()))
           GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
         if (Error Err = Context->unloadInput())
           GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
       });
-
-    Pool.wait();
   }
 
   // Merge staged parseable Swift interface entries into the shared map. Done

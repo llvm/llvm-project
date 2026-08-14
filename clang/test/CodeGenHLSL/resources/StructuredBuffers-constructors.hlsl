@@ -32,7 +32,7 @@ export void foo() {
 // with explicit binding
 // CHECK: define internal {{.*}}void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
-// CHECK: call void @hlsl::StructuredBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+// CHECK: call {{(spir_func )?}}void @hlsl::StructuredBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} @Buf1, i32 noundef 10, i32 noundef 2, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf1Str]])
 
 // Buf1 initialization part 2 - body of StructuredBuffer<float>::::__createFromBinding
@@ -45,18 +45,19 @@ export void foo() {
 // CHECK-DXIL-SAME: @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %[[Tmp1]], i32 0, i32 0
 // CHECK-DXIL: store target("dx.RawBuffer", float, 0, 0) %[[Handle1]], ptr %__handle, align 4
-// CHECK: call void @hlsl::StructuredBuffer<float>::StructuredBuffer(hlsl::StructuredBuffer<float> const&)(ptr {{.*}} %[[RetValue1]], ptr {{.*}} %[[Tmp1]])
+// CHECK: call {{(spir_func )?}}void @hlsl::StructuredBuffer<float>::StructuredBuffer(hlsl::StructuredBuffer<float> const&)(ptr {{.*}} %[[RetValue1]], ptr {{.*}} %[[Tmp1]])
 
 // Buf2 initialization part 1 - global init function that calls RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter
 // CHECK: define internal {{.*}}void @__cxx_global_var_init.1()
 // CHECK-NEXT: entry:
-// CHECK: call void @hlsl::RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
+// CHECK: call {{(spir_func )?}}void @hlsl::RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
 // CHECK-SAME: (ptr {{.*}} @Buf2, i32 noundef 0, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf2Str]], i32 noundef 1)
 
 // Buf2 initialization part 2 - body of RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter
-// CHECK: define linkonce_odr hidden void @hlsl::RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::RWStructuredBuffer<float>::__createFromImplicitBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
 // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align {{(4|8)}} %[[RetValue2:.*]], i32 noundef %orderId, 
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name, i32 noundef %counterOrderId)
+// CHECK-SPV: %[[ConvTok:.*]] = call token @llvm.experimental.convergence.entry()
 // CHECK: %[[Tmp2:.*]] = alloca %"class.hlsl::RWStructuredBuffer"
 // CHECK-DXIL: %[[Handle2:.*]] = call target("dx.RawBuffer", float, 1, 0)
 // CHECK-DXIL-SAME: @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f32_1_0t(
@@ -73,25 +74,26 @@ export void foo() {
 // CHECK-SPV: %[[HandlePtr:.*]] = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %[[Tmp2]], i32 0, i32 0
 // CHECK-SPV: %[[LoadedHandle:.*]] = load target("spirv.VulkanBuffer", [0 x float], 12, 1), ptr %[[HandlePtr]], align 8
 // CHECK-SPV: %[[CounterHandle:.*]] = call target("spirv.VulkanBuffer", i32, 12, 1) @llvm.spv.resource.counterhandlefromimplicitbinding
+// CHECK-SPV-SAME: [ "convergencectrl"(token %[[ConvTok]]) ]
 // CHECK-SPV: %[[CounterHandlePtr:.*]] = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %[[Tmp2]], i32 0, i32 1
 // CHECK-SPV-NEXT: store target("spirv.VulkanBuffer", i32, 12, 1) %[[CounterHandle]], ptr %[[CounterHandlePtr]], align 8
-// CHECK: call void @hlsl::RWStructuredBuffer<float>::RWStructuredBuffer(hlsl::RWStructuredBuffer<float> const&)(ptr {{.*}} %[[RetValue2]], ptr {{.*}} %[[Tmp2]])
+// CHECK: call {{(spir_func )?}}void @hlsl::RWStructuredBuffer<float>::RWStructuredBuffer(hlsl::RWStructuredBuffer<float> const&)(ptr {{.*}} %[[RetValue2]], ptr {{.*}} %[[Tmp2]])
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by 
 // AppendStructuredBuffer<float> C1 default constructor
 // CHECK: define {{.*}}void @foo()
 // CHECK-NEXT: entry:
 // CHECK: %Buf3 = alloca %"class.hlsl::AppendStructuredBuffer", align {{4|8}}
-// CHECK-NEXT: call void @hlsl::AppendStructuredBuffer<float>::AppendStructuredBuffer()(ptr {{.*}} %Buf3)
+// CHECK-NEXT: call {{(spir_func )?}}void @hlsl::AppendStructuredBuffer<float>::AppendStructuredBuffer()(ptr {{.*}} %Buf3)
 
 // Buf3 initialization part 2 - body of AppendStructuredBuffer<float> default C1 constructor that calls
 // the default C2 constructor
-// CHECK: define linkonce_odr hidden void @hlsl::StructuredBuffer<float>::StructuredBuffer()(ptr {{.*}} %this)
-// CHECK: call void @hlsl::StructuredBuffer<float>::StructuredBuffer()(ptr {{.*}} %this1)
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::StructuredBuffer<float>::StructuredBuffer()(ptr {{.*}} %this)
+// CHECK: call {{(spir_func )?}}void @hlsl::StructuredBuffer<float>::StructuredBuffer()(ptr {{.*}} %this1)
 
 // Buf3 initialization part 3 - body of AppendStructuredBuffer<float> default C2 constructor that
 // initializes handle to poison
-// CHECK: define linkonce_odr hidden void @hlsl::StructuredBuffer<float>::StructuredBuffer()(ptr {{.*}} %this)
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::StructuredBuffer<float>::StructuredBuffer()(ptr {{.*}} %this)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::AppendStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-DXIL: store target("dx.RawBuffer", float, 1, 0) poison, ptr %__handle, align 4
 

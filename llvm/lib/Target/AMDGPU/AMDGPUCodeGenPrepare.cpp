@@ -101,6 +101,7 @@ public:
   Function &F;
   const GCNSubtarget &ST;
   const AMDGPUTargetMachine &TM;
+  const TargetTransformInfo &TTI;
   const TargetLibraryInfo *TLI;
   const UniformityInfo &UA;
   const DataLayout &DL;
@@ -114,10 +115,11 @@ public:
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
 
   AMDGPUCodeGenPrepareImpl(Function &F, const AMDGPUTargetMachine &TM,
+                           const TargetTransformInfo &TTI,
                            const TargetLibraryInfo *TLI, AssumptionCache *AC,
                            const DominatorTree *DT, const UniformityInfo &UA)
-      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), UA(UA),
-        DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
+      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TTI(TTI), TLI(TLI),
+        UA(UA), DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
                              DenormalMode::getPreserveSign()) {}
 
@@ -182,14 +184,15 @@ public:
   unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
                          unsigned MaxDivBits, bool Signed) const;
 
-  /// Expands 24 bit div or rem.
-  Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den,
-                        bool IsDiv, bool IsSigned) const;
+  /// Expands div or rem by using floating-point operations.
+  /// Operands must be in the range [-0x400000,0x3FFFFF]
+  Value *expandDivRemToFloat(IRBuilder<> &Builder, BinaryOperator &I,
+                             Value *Num, Value *Den, bool IsDiv,
+                             bool IsSigned) const;
 
-  Value *expandDivRem24Impl(IRBuilder<> &Builder, BinaryOperator &I,
-                            Value *Num, Value *Den, unsigned NumBits,
-                            bool IsDiv, bool IsSigned) const;
+  Value *expandDivRemToFloatImpl(IRBuilder<> &Builder, BinaryOperator &I,
+                                 Value *Num, Value *Den, unsigned NumBits,
+                                 bool IsDiv, bool IsSigned) const;
 
   /// Expands 32 bit div or rem.
   Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
@@ -278,6 +281,7 @@ public:
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
 
     // FIXME: Division expansion needs to preserve the dominator tree.
     if (!ExpandDiv64InIR)
@@ -737,7 +741,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
   bool IsNegative = false;
 
   // TODO: Handle other numerator values with arcp.
-  if (CLHS->isExactlyValue(1.0) || (IsNegative = CLHS->isExactlyValue(-1.0))) {
+  if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
     // Add in the sqrt flags.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(DivFMF | SqrtFMF);
@@ -778,8 +782,7 @@ AMDGPUCodeGenPrepareImpl::optimizeWithRcp(IRBuilder<> &Builder, Value *Num,
 
   if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
     bool IsNegative = false;
-    if (CLHS->isExactlyValue(1.0) ||
-        (IsNegative = CLHS->isExactlyValue(-1.0))) {
+    if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
       Value *Src = Den;
 
       if (HasFP32DenormalFlush || FMF.approxFunc()) {
@@ -842,7 +845,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
 
   bool NumIsOne = false;
   if (const ConstantFP *CNum = dyn_cast<ConstantFP>(Num)) {
-    if (CNum->isExactlyValue(+1.0) || CNum->isExactlyValue(-1.0))
+    if (CNum->isOne() || CNum->isMinusOne())
       NumIsOne = true;
   }
 
@@ -1055,50 +1058,45 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   return DivBits;
 }
 
-// The fractional part of a float is enough to accurately represent up to
-// a 24-bit signed integer.
-Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
-                                                BinaryOperator &I, Value *Num,
-                                                Value *Den, bool IsDiv,
-                                                bool IsSigned) const {
-  unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned);
+Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
+                                                     BinaryOperator &I,
+                                                     Value *Num, Value *Den,
+                                                     bool IsDiv,
+                                                     bool IsSigned) const {
+  unsigned DivBits = getDivNumBits(I, Num, Den, 23, IsSigned);
 
-  // v_rcp_f32(float(X)) can have an error of 1 ulp.
-  // This can cause expandDivRem24Impl to sometimes calculate Y/X incorrectly
-  // when abs(Y)>0x800000.
-  // For example,
-  // (0xbf2758/0xbf2759) erroneously produces 1 instead of 0.
-  // (0xe3170d/0x000c32) erroneously produces 4767 instead of 4766.
-  //
-  // Note that for DivBits==24 && IsSigned, Y is in the range
-  // [-0x800000:0x7FFFFF]. abs(Y) is at most
-  // 0x800000 so it cannot hit this issue.
-  if (DivBits > (IsSigned ? 24 : 23))
+  if (DivBits > (IsSigned ? 23 : 22))
     return nullptr;
-  return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
+  return expandDivRemToFloatImpl(Builder, I, Num, Den, DivBits, IsDiv,
+                                 IsSigned);
 }
 
-Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
+Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
     IRBuilder<> &Builder, BinaryOperator &I, Value *Num, Value *Den,
     unsigned DivBits, bool IsDiv, bool IsSigned) const {
+
+  // v_rcp_f32(float(X)) can have an error of 1 ulp.
+  // This would cause incorrect calculation of Y/X if:
+  //   Y = (0x7FFFFF/X)*(X-0)-1
+  // were allowed.
+  //
+  // For example,
+  // (0x7FF6D3/0x000FE7) would erroneously produce 2060 instead of 2059.
+  // (0x7FF8F5/0x007EFB) would erroneously produce 258 instead of 257.
+  //
+  // Thus, we conservatively restrict expandDivRemToFloatImpl to
+  // [-0x400000,0x3FFFFF] for IsSigned
+  // [ 0x000000,0x3FFFFF] for !IsSigned.
+  assert(0 < DivBits && DivBits <= (IsSigned ? 23 : 22) &&
+         "abs(Num) must be <= 0x400000 for expandDivRemToFloatImpl to work "
+         "correctly");
+
   Type *I32Ty = Builder.getInt32Ty();
   Num = Builder.CreateTrunc(Num, I32Ty);
   Den = Builder.CreateTrunc(Den, I32Ty);
 
   Type *F32Ty = Builder.getFloatTy();
   ConstantInt *One = Builder.getInt32(1);
-  Value *JQ = One;
-
-  if (IsSigned) {
-    // char|short jq = ia ^ ib;
-    JQ = Builder.CreateXor(Num, Den);
-
-    // jq = jq >> (bitsize - 2)
-    JQ = Builder.CreateAShr(JQ, Builder.getInt32(30));
-
-    // jq = jq | 0x1
-    JQ = Builder.CreateOr(JQ, One);
-  }
 
   // int ia = (int)LHS;
   Value *IA = Num;
@@ -1111,67 +1109,42 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
                        : Builder.CreateUIToFP(IA, F32Ty);
 
   // float fb = (float)ib;
-  Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
-                       : Builder.CreateUIToFP(IB,F32Ty);
+  Value *FB = IsSigned ? Builder.CreateSIToFP(IB, F32Ty)
+                       : Builder.CreateUIToFP(IB, F32Ty);
 
   Value *RCP = Builder.CreateIntrinsic(Intrinsic::amdgcn_rcp,
                                        Builder.getFloatTy(), {FB});
+
+  // The calculation:
+  //   fq = fa*recip(fb)
+  // may be too small due to the 1ulp accuracy in the recip
+  // operation and rounding issues.  Since fq is truncated to produce
+  // an integer value it may be too small by one.  This is
+  // dealt with by incrementing fa by 1ulp:
+  //   fq = (fa+1ulp)*recip(fb)
+  // This will increase fa's magnitude by at most 0.5
+  // (i.e. when fabs(fa)==0x400000 the LSB of the mantissa represents 0.5).
+  // Thus, this method is safe since fa must be incremented by at least 1.0
+  // for the quotient to increase by one.
+
+  Value *FABits = Builder.CreateBitCast(FA, I32Ty);
+  Value *FABitsInc = Builder.CreateAdd(FABits, One);
+  FA = Builder.CreateBitCast(FABitsInc, F32Ty);
+
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
   Value *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
-  auto *FQI = dyn_cast<Instruction>(FQ);
-  if (FQI)
-    FQI->copyFastMathFlags(Builder.getFastMathFlags());
-
-  // float fqneg = -fq;
-  Value *FQNeg = Builder.CreateFNeg(FQ);
-
-  // float fr = mad(fqneg, fb, fa);
-  auto FMAD = !ST.hasMadMacF32Insts()
-                  ? Intrinsic::fma
-                  : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-  Value *FR =
-      Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQI);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
-  // fr = fabs(fr);
-  FR = Builder.CreateFAbs(FR, FQI);
-
-  // fb = fabs(fb);
-  FB = Builder.CreateFAbs(FB, FQI);
-
-  // int cv = fr >= fb;
-  Value *CV = Builder.CreateFCmpOGE(FR, FB);
-
-  // jq = (cv ? jq : 0);
-  JQ = Builder.CreateSelect(CV, JQ, Builder.getInt32(0));
-
-  // dst = iq + jq;
-  Value *Div = Builder.CreateAdd(IQ, JQ);
-
-  Value *Res = Div;
+  Value *Res = IQ;
   if (!IsDiv) {
     // Rem needs compensation, it's easier to recompute it
-    Value *Rem = Builder.CreateMul(Div, Den);
+    Value *Rem = Builder.CreateMul(IQ, Den);
     Res = Builder.CreateSub(Num, Rem);
-  }
-
-  if (DivBits != 0 && DivBits < 32) {
-    // Extend in register from the number of bits this divide really is.
-    if (IsSigned) {
-      int InRegBits = 32 - DivBits;
-
-      Res = Builder.CreateShl(Res, InRegBits);
-      Res = Builder.CreateAShr(Res, InRegBits);
-    } else {
-      ConstantInt *TruncMask
-        = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
-      Res = Builder.CreateAnd(Res, TruncMask);
-    }
   }
 
   return Res;
@@ -1255,7 +1228,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
     }
   }
 
-  if (Value *Res = expandDivRem24(Builder, I, X, Y, IsDiv, IsSigned)) {
+  if (Value *Res = expandDivRemToFloat(Builder, I, X, Y, IsDiv, IsSigned)) {
     return IsSigned ? Builder.CreateSExtOrTrunc(Res, Ty) :
                       Builder.CreateZExtOrTrunc(Res, Ty);
   }
@@ -1364,20 +1337,14 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     return nullptr;
 
   Value *Narrowed = nullptr;
-  // v_rcp_f32(float(X)) can have an error of 1 ulp.
-  // This can cause expandDivRem24Impl to sometimes calculate Y/X incorrectly
-  // when abs(Y)>0x800000.
-  // For example,
-  // (0xbf2758/0xbf2759) erroneously produces 1 instead of 0.
-  // (0xe3170d/0x000c32) erroneously produces 4767 instead of 4766.
-  //
-  // Note that for NumDivBits==24 && IsSigned, Y is in the range
-  // [-0x800000:0x7FFFFF]. abs(Y) is at most
-  // 0x800000 so it cannot hit this issue.
-  if (NumDivBits <= (IsSigned ? 24 : 23)) {
-    Narrowed = expandDivRem24Impl(Builder, I, Num, Den, NumDivBits,
-                                  IsDiv, IsSigned);
-  } else if (NumDivBits <= 32) {
+  if (NumDivBits <= (IsSigned ? 23 : 22)) {
+    Narrowed = expandDivRemToFloatImpl(Builder, I, Num, Den, NumDivBits, IsDiv,
+                                       IsSigned);
+  } else if (NumDivBits <= (IsSigned ? 31 : 32)) {
+    // Do not use 32-bit division if dividend may be -2147483648.
+    // Otherwise 32-bit division cannot be used safely.
+    // -2147483648/1 and -2147483648/-1 are not equal,
+    // but they produce the same lower 32-bit result.
     Narrowed = expandDivRem32(Builder, I, Num, Den);
   }
 
@@ -1442,7 +1409,6 @@ bool AMDGPUCodeGenPrepareImpl::tryNarrowMathIfNoOverflow(Instruction *I) {
   NewType = I->getType()->getWithNewBitWidth(NewBit);
 
   // Old cost
-  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Opc, OldType, TTI::TCK_RecipThroughput);
   // New cost of new op
@@ -1912,7 +1878,8 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   // operations with most elements being "undef". This inhibits a lot of
   // optimization opportunities and can result in unreasonably high register
   // pressure and the inevitable stack spilling.
-  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption)
+  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption ==
+                             cl::boolOrDefault::BOU_TRUE)
     return false;
 
   FixedVectorType *FVT = dyn_cast<FixedVectorType>(I.getType());
@@ -2289,6 +2256,8 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
+  const TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   const TargetLibraryInfo *TLI =
       &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   AssumptionCache *AC =
@@ -2297,17 +2266,18 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   const UniformityInfo &UA =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  return AMDGPUCodeGenPrepareImpl(F, TM, TLI, AC, DT, UA).run();
+  return AMDGPUCodeGenPrepareImpl(F, TM, TTI, TLI, AC, DT, UA).run();
 }
 
 PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
                                                 FunctionAnalysisManager &FAM) {
   const AMDGPUTargetMachine &ATM = static_cast<const AMDGPUTargetMachine &>(TM);
+  const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   const TargetLibraryInfo *TLI = &FAM.getResult<TargetLibraryAnalysis>(F);
   AssumptionCache *AC = &FAM.getResult<AssumptionAnalysis>(F);
   const DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   const UniformityInfo &UA = FAM.getResult<UniformityInfoAnalysis>(F);
-  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TLI, AC, DT, UA);
+  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TTI, TLI, AC, DT, UA);
   if (!Impl.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA = PreservedAnalyses::none();
@@ -2320,13 +2290,15 @@ INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)
 
 /// Create a workitem.id.x intrinsic call with range metadata.
 CallInst *AMDGPUCodeGenPrepareImpl::createWorkitemIdX(IRBuilder<> &B) const {
-  CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+  CallInst *Tid =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::amdgcn_workitem_id_x, {});
   ST.makeLIDRangeMetadata(Tid);
   return Tid;
 }

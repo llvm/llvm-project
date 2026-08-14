@@ -22,7 +22,7 @@
 #include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_NATIVE_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
 #include "src/__support/sign.h"                    // Sign
 #include "src/__support/uint128.h"
@@ -807,12 +807,14 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   else if constexpr (cpp::is_same_v<UnqualT, float16>)
     return FPType::IEEE754_Binary16;
 #endif
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   else if constexpr (cpp::is_same_v<UnqualT, float128>)
     return FPType::IEEE754_Binary128;
 #endif
   else if constexpr (cpp::is_same_v<UnqualT, bfloat16>)
     return FPType::BFloat16;
+  else if constexpr (cpp::is_same_v<UnqualT, Float128>)
+    return FPType::IEEE754_Binary128;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }

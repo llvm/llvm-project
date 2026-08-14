@@ -29,7 +29,7 @@ Using Clang as a Compiler
    ThreadSafetyAnalysis
    LifetimeSafety
    SafeBuffers
-   ScalableStaticAnalysisFramework/index
+   ScalableStaticAnalysis/index
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    AddressSanitizer
@@ -126,7 +126,7 @@ Design Documents
    PCHInternals
    ItaniumMangleAbiTags
    ControlFlowIntegrityDesign
-   HardwareAssistedAddressSanitizerDesign.rst
+   HardwareAssistedAddressSanitizerDesign
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
 
@@ -135,4 +135,3 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`search`
-

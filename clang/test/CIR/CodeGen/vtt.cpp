@@ -46,17 +46,17 @@ void f(D *d) {}
 // Trigger vtable and VTT emission for D.
 void D::y() {}
 
-// CIR-COMMON: !rec_A2Ebase = !cir.struct<"A.base" packed {!cir.vptr, !s32i}>
-// CIR-COMMON: !rec_B2Ebase = !cir.struct<"B.base" packed {!cir.vptr, !s32i}>
-// CIR-COMMON: !rec_C2Ebase = !cir.struct<"C.base" {!cir.vptr, !s64i}>
-// CIR-COMMON: !rec_A = !cir.struct<class "A" packed padded {!cir.vptr, !s32i, !cir.array<!u8i x 4>}>
-// CIR-COMMON: !rec_B = !cir.struct<class "B" packed padded {!cir.vptr, !s32i, !cir.array<!u8i x 4>, !rec_A2Ebase, !cir.array<!u8i x 4>}>
-// CIR-COMMON: !rec_C = !cir.struct<class "C" {!cir.vptr, !s64i, !rec_A2Ebase}>
-// CIR-COMMON: !rec_D = !cir.struct<class "D" {!rec_B2Ebase, !rec_C2Ebase, !s64i, !rec_A2Ebase}>
+// CIR-COMMON: !rec_A2Ebase = !cir.struct<"A.base" packed {data !cir.vptr, data !s32i}>
+// CIR-COMMON: !rec_B2Ebase = !cir.struct<"B.base" packed {data !cir.vptr, data !s32i}>
+// CIR-COMMON: !rec_C2Ebase = !cir.struct<"C.base" {data !cir.vptr, data !s64i}>
+// CIR-COMMON: !rec_A = !cir.struct<class "A" packed padded {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-COMMON: !rec_B = !cir.struct<class "B" packed padded {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>, data !rec_A2Ebase, pad !cir.array<!u8i x 4>}>
+// CIR-COMMON: !rec_C = !cir.struct<class "C" {data !cir.vptr, data !s64i, data !rec_A2Ebase}>
+// CIR-COMMON: !rec_D = !cir.struct<class "D" {data !rec_B2Ebase, data !rec_C2Ebase, data !s64i, data !rec_A2Ebase}>
 
-// CIR-RTTI:   ![[REC_TYPE_INFO_VTABLE:.*]]= !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>, !u32i, !u32i, !cir.ptr<!u8i>, !s64i, !cir.ptr<!u8i>, !s64i}>
-// CIR-COMMON: ![[REC_D_VTABLE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 5>, !cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 4>}>
-// CIR-COMMON: ![[REC_B_OR_C_IN_D_VTABLE:.*]]= !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-RTTI:   ![[REC_TYPE_INFO_VTABLE:.*]]= !cir.struct<{data !cir.ptr<!u8i>, data !cir.ptr<!u8i>, data !u32i, data !u32i, data !cir.ptr<!u8i>, data !s64i, data !cir.ptr<!u8i>, data !s64i}>
+// CIR-COMMON: ![[REC_D_VTABLE:.*]] = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 5>, data !cir.array<!cir.ptr<!u8i> x 4>, data !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-COMMON: ![[REC_B_OR_C_IN_D_VTABLE:.*]]= !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 4>, data !cir.array<!cir.ptr<!u8i> x 4>}>
 
 // Vtable for D
 
@@ -277,8 +277,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1BC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_B>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -343,8 +343,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1CC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_C>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -409,8 +409,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1DC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_D>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -480,7 +480,7 @@ D::D() {}
 
 // CIR-COMMON:      cir.func {{.*}} @_ZN1AC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_A>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[VPTR:.*]] = cir.vtable.address_point(@_ZTV1A, address_point = <index = 0, offset = 2>) : !cir.vptr
@@ -488,7 +488,7 @@ D::D() {}
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
 // LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr {{.*}} %[[THIS_ARG:.*]]){{.*}} {
-// LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1A, i64 16), ptr %[[THIS]]
@@ -499,7 +499,7 @@ D::D() {}
 
 // CIR-COMMON:      cir.func {{.*}} @_ZN1DC1Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_D>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[A_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [40] -> !cir.ptr<!rec_A>

@@ -14,11 +14,10 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "flang/Optimizer/Support/FatalError.h"
-#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeRange.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <cmath>
 
 #define DEBUG_TYPE "flang-codegen-target"
 
@@ -1009,13 +1008,39 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     return marshal;
   }
 
+  /// AAPCS64 "Parameter passing rules" B.4: "If the argument type is a
+  /// Composite Type that is larger than 16 bytes, then the argument is copied
+  /// to memory allocated by the caller and the argument is replaced by a
+  /// pointer to the copy." Marking such an argument `byval` instead would let
+  /// the target lower it as a by-value aggregate, which does not match this
+  /// rule.
+  CodeGenSpecifics::Marshalling passIndirectly(mlir::Location loc,
+                                               mlir::Type ty) const {
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign =
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap);
+    // The pointee is the caller's copy, so the alignment reported for the
+    // pointer is the natural alignment of the aggregate.
+    marshal.emplace_back(
+        fir::ReferenceType::get(ty),
+        AT{sizeAndAlign.second, /*byval=*/false, /*sret=*/false,
+           /*append=*/false, /*intExt=*/AT::IntegerExtension::None,
+           /*indirect=*/true});
+    return marshal;
+  }
+
   CodeGenSpecifics::Marshalling
   structType(mlir::Location loc, fir::RecordType type, bool isResult) const {
     NRegs nregs = usedRegsForRecordType(loc, type);
 
-    // If the type needs no registers it must need to be passed on the stack
-    if (nregs.n == 0)
-      return passOnTheStack(loc, type, isResult);
+    // If the type needs no registers it is too large to be passed in
+    // registers. As an argument it is passed indirectly; as a result it is
+    // returned via the caller-provided indirect result buffer (sret).
+    if (nregs.n == 0) {
+      if (isResult)
+        return passOnTheStack(loc, type, /*isResult=*/true);
+      return passIndirectly(loc, type);
+    }
 
     CodeGenSpecifics::Marshalling marshal;
 
@@ -1897,11 +1922,10 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 
 // Instantiate the overloaded target instance based on the triple value.
 // TODO: Add other targets to this file as needed.
-std::unique_ptr<fir::CodeGenSpecifics>
-fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
-                           KindMapping &&kindMap, llvm::StringRef targetCPU,
-                           mlir::LLVM::TargetFeaturesAttr targetFeatures,
-                           const mlir::DataLayout &dl) {
+std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
+    mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
+    llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
+    llvm::StringRef targetABI, const mlir::DataLayout &dl) {
   switch (trp.getArch()) {
   default:
     break;
@@ -1909,50 +1933,60 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
     if (trp.isOSWindows())
       return std::make_unique<TargetI386Win>(ctx, std::move(trp),
                                              std::move(kindMap), targetCPU,
-                                             targetFeatures, dl);
+                                             targetFeatures, targetABI, dl);
     else
       return std::make_unique<TargetI386>(ctx, std::move(trp),
                                           std::move(kindMap), targetCPU,
-                                          targetFeatures, dl);
+                                          targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::x86_64:
     if (trp.isOSWindows())
       return std::make_unique<TargetX86_64Win>(ctx, std::move(trp),
                                                std::move(kindMap), targetCPU,
-                                               targetFeatures, dl);
+                                               targetFeatures, targetABI, dl);
     else
       return std::make_unique<TargetX86_64>(ctx, std::move(trp),
                                             std::move(kindMap), targetCPU,
-                                            targetFeatures, dl);
+                                            targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::aarch64:
-    return std::make_unique<TargetAArch64>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    return std::make_unique<TargetAArch64>(ctx, std::move(trp),
+                                           std::move(kindMap), targetCPU,
+                                           targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::ppc:
     return std::make_unique<TargetPPC>(ctx, std::move(trp), std::move(kindMap),
-                                       targetCPU, targetFeatures, dl);
+                                       targetCPU, targetFeatures, targetABI,
+                                       dl);
   case llvm::Triple::ArchType::ppc64:
-    return std::make_unique<TargetPPC64>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    return std::make_unique<TargetPPC64>(ctx, std::move(trp),
+                                         std::move(kindMap), targetCPU,
+                                         targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::ppc64le:
-    return std::make_unique<TargetPPC64le>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
+                                           std::move(kindMap), targetCPU,
+                                           targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::sparc:
-    return std::make_unique<TargetSparc>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    return std::make_unique<TargetSparc>(ctx, std::move(trp),
+                                         std::move(kindMap), targetCPU,
+                                         targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::sparcv9:
-    return std::make_unique<TargetSparcV9>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    return std::make_unique<TargetSparcV9>(ctx, std::move(trp),
+                                           std::move(kindMap), targetCPU,
+                                           targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::riscv64:
-    return std::make_unique<TargetRISCV64>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
-  case llvm::Triple::ArchType::amdgcn:
-    return std::make_unique<TargetAMDGPU>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    return std::make_unique<TargetRISCV64>(ctx, std::move(trp),
+                                           std::move(kindMap), targetCPU,
+                                           targetFeatures, targetABI, dl);
+  case llvm::Triple::ArchType::amdgpu:
+    return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
+                                          std::move(kindMap), targetCPU,
+                                          targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::nvptx64:
-    return std::make_unique<TargetNVPTX>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    return std::make_unique<TargetNVPTX>(ctx, std::move(trp),
+                                         std::move(kindMap), targetCPU,
+                                         targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::loongarch64:
-    return std::make_unique<TargetLoongArch64>(
-        ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    return std::make_unique<TargetLoongArch64>(ctx, std::move(trp),
+                                               std::move(kindMap), targetCPU,
+                                               targetFeatures, targetABI, dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }
@@ -1960,9 +1994,11 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
 std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
     mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
     llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
-    const mlir::DataLayout &dl, llvm::StringRef tuneCPU) {
-  std::unique_ptr<fir::CodeGenSpecifics> CGS = fir::CodeGenSpecifics::get(
-      ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+    llvm::StringRef targetABI, const mlir::DataLayout &dl,
+    llvm::StringRef tuneCPU) {
+  std::unique_ptr<fir::CodeGenSpecifics> CGS =
+      fir::CodeGenSpecifics::get(ctx, std::move(trp), std::move(kindMap),
+                                 targetCPU, targetFeatures, targetABI, dl);
 
   CGS->tuneCPU = tuneCPU;
   return CGS;

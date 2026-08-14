@@ -81,7 +81,7 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_10: # %else_branch
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    leaq -1(%rax), %r25
+; CHECK-NEXT:    decq %rax, %r25
 ; CHECK-NEXT:    testb $1, %r24b
 ; CHECK-NEXT:    movq %r25, 16(%rbx) # 8-byte Spill
 ; CHECK-NEXT:    je .LBB0_11

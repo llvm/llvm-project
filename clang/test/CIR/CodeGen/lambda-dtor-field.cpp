@@ -18,7 +18,7 @@ void capture_one(S s) {
 }
 
 // CIR-LABEL: @_Z11capture_one1S
-// CIR:         %[[LAM:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
+// CIR:         %[[LAM:.*]] = cir.alloca "lam" {{.*}} init : !cir.ptr<!rec_anon{{.*}}>
 // CIR:         %[[FIELD:.*]] = cir.get_member %[[LAM]][0] {name = "s"}
 // CIR:         cir.call @_ZN1SC1ERKS_(%[[FIELD]],
 // CIR:         cir.cleanup.scope {
@@ -34,15 +34,17 @@ void capture_one(S s) {
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FIELD1]])
 // LLVM:   ret void
 
+// TODO(cir): CIR marks the indirect parameter byref and drops noundef where
+// classic CodeGen emits a plain noundef pointer.
 // LLVM-LABEL: define dso_local void @_Z11capture_one1S(
-// LLVM:   %[[S_ALLOCA:.*]] = alloca %struct.S
+// LLVM-SAME:    ptr byref(%struct.S) align 4 %[[S_ARG:[^,)]+]])
 // LLVM:   %[[LAM1:.*]] = alloca %[[LAM_TY_1]]
 // LLVM:   %[[F1:.*]] = getelementptr inbounds nuw %[[LAM_TY_1]], ptr %[[LAM1]], i32 0, i32 0
-// LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[F1]], ptr {{.*}} %[[S_ALLOCA]])
+// LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[F1]], ptr {{.*}} %[[S_ARG]])
 // LLVM:   call void @"_ZZ11capture_one1SEN3$_0D1Ev"(ptr {{.*}} %[[LAM1]])
 // LLVM:   ret void
 
-// OGCG-LABEL: define dso_local void @_Z11capture_one1S(
+// OGCG-LABEL: define dso_local void @_Z11capture_one1S(ptr{{.*}} align 4 {{.*}}%{{[^,)]+}})
 // OGCG:   %[[LAM1:.*]] = alloca %[[LAM_TY_1:.*]], align 4
 // OGCG:   %[[FIELD1:.*]] = getelementptr inbounds nuw %[[LAM_TY_1]], ptr %[[LAM1]], i32 0, i32 0
 // OGCG:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FIELD1]], ptr {{.*}} %s)
@@ -54,7 +56,7 @@ void capture_two(S a, S b) {
 }
 
 // CIR-LABEL: @_Z11capture_two1SS_
-// CIR:         %[[LAM2:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
+// CIR:         %[[LAM2:.*]] = cir.alloca "lam" {{.*}} init : !cir.ptr<!rec_anon{{.*}}>
 // CIR:         %[[FA:.*]] = cir.get_member %[[LAM2]][0] {name = "a"}
 // CIR:         cir.call @_ZN1SC1ERKS_(%[[FA]],
 // CIR:         cir.cleanup.scope {
@@ -80,19 +82,18 @@ void capture_two(S a, S b) {
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA_D]])
 // LLVM:   ret void
 
-// LLVM-LABEL: define dso_local void @_Z11capture_two1SS_(%struct.S {{.*}}, %struct.S {{.*}}) #{{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:   %[[A_ALLOCA:.*]] = alloca %struct.S
-// LLVM:   %[[B_ALLOCA:.*]] = alloca %struct.S
+// LLVM-LABEL: define dso_local void @_Z11capture_two1SS_(
+// LLVM-SAME:    ptr byref(%struct.S) align 4 %[[A_ARG:[^,)]+]], ptr byref(%struct.S) align 4 %[[B_ARG:[^,)]+]]) #{{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[LAM2:.*]] = alloca %[[LAM_TY_2]]
 // LLVM:   %[[FA:.*]] = getelementptr inbounds nuw %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 0
-// LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FA]], ptr {{.*}} %[[A_ALLOCA]])
+// LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FA]], ptr {{.*}} %[[A_ARG]])
 // LLVM:   %[[FB:.*]] = getelementptr inbounds nuw %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 1
-// LLVM:   invoke void @_ZN1SC1ERKS_(ptr {{.*}} %[[FB]], ptr {{.*}} %[[B_ALLOCA]])
+// LLVM:   invoke void @_ZN1SC1ERKS_(ptr {{.*}} %[[FB]], ptr {{.*}} %[[B_ARG]])
 // LLVM:           to label %{{.*}} unwind label %{{.*}}
 // LLVM:   call void @"_ZZ11capture_two1SS_EN3$_0D1Ev"(ptr {{.*}} %[[LAM2]])
 // LLVM:   ret void
 
-// OGCG-LABEL: define dso_local void @_Z11capture_two1SS_(ptr noundef %a, ptr noundef %b){{.*}}personality ptr @__gxx_personality_v0
+// OGCG-LABEL: define dso_local void @_Z11capture_two1SS_(ptr {{.*}} noundef {{.*}}%a, ptr {{.*}} noundef {{.*}}%b){{.*}}personality ptr @__gxx_personality_v0
 // OGCG:   %[[LAM2:.*]] = alloca %[[LAM_TY_2:.*]], align 4
 // OGCG:   %[[FA:.*]] = getelementptr inbounds nuw %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 0
 // OGCG:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FA]], ptr {{.*}} %a)
@@ -107,7 +108,7 @@ void capture_mixed(int n, S s) {
 }
 
 // CIR-LABEL: @_Z13capture_mixedi1S
-// CIR:         %[[LAM3:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
+// CIR:         %[[LAM3:.*]] = cir.alloca "lam" {{.*}} init : !cir.ptr<!rec_anon{{.*}}>
 // CIR:         %[[FN:.*]] = cir.get_member %[[LAM3]][0] {name = "n"}
 // CIR:         cir.load
 // CIR:         cir.store
@@ -127,18 +128,18 @@ void capture_mixed(int n, S s) {
 // LLVM:   ret void
 
 // LLVM-LABEL: define dso_local void @_Z13capture_mixedi1S(
+// LLVM-SAME:    i32 {{[^,)]*}} %{{[^,)]+}}, ptr byref(%struct.S) align 4 %[[S_ARG2:[^,)]+]])
 // LLVM:   %[[N_ALLOCA:.*]] = alloca i32
-// LLVM:   %[[S_ALLOCA2:.*]] = alloca %struct.S
 // LLVM:   %[[LAM3:.*]] = alloca %[[LAM_TY_3]]
 // LLVM:   %[[FN:.*]] = getelementptr inbounds nuw %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 0
 // LLVM:   %[[NVAL:.*]] = load i32, ptr %[[N_ALLOCA]]
 // LLVM:   store i32 %[[NVAL]], ptr %[[FN]]
 // LLVM:   %[[FS:.*]] = getelementptr inbounds nuw %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 1
-// LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FS]], ptr {{.*}} %[[S_ALLOCA2]])
+// LLVM:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FS]], ptr {{.*}} %[[S_ARG2]])
 // LLVM:   call void @"_ZZ13capture_mixedi1SEN3$_0D1Ev"(ptr {{.*}} %[[LAM3]])
 // LLVM:   ret void
 
-// OGCG-LABEL: define dso_local void @_Z13capture_mixedi1S(
+// OGCG-LABEL: define dso_local void @_Z13capture_mixedi1S(i32{{.*}} %{{[^,)]+}}, ptr{{.*}} align 4 {{.*}}%{{[^,)]+}})
 // OGCG:   %[[LAM3:.*]] = alloca %[[LAM_TY_3:.*]], align 4
 // OGCG:   %[[FN:.*]] = getelementptr inbounds nuw %[[LAM_TY_3]], ptr %[[LAM3]], i32 0, i32 0
 // OGCG:   %[[NVAL:.*]] = load i32, ptr %n.addr
@@ -154,8 +155,8 @@ void capture_local() {
 }
 
 // CIR-LABEL: @_Z13capture_localv
-// CIR:         %[[S4:.*]] = cir.alloca !rec_S, {{.*}} ["s", init]
-// CIR:         %[[LAM4:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
+// CIR:         %[[S4:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
+// CIR:         %[[LAM4:.*]] = cir.alloca "lam" {{.*}} init : !cir.ptr<!rec_anon{{.*}}>
 // CIR:         cir.call @_ZN1SC1Ev(%[[S4]])
 // CIR:         cir.cleanup.scope {
 // CIR:           %[[FL:.*]] = cir.get_member %[[LAM4]][0] {name = "s"}
@@ -214,8 +215,8 @@ void stmt_expr_return(bool cond) {
 }
 
 // CIR-LABEL: @_Z16stmt_expr_returnb
-// CIR:         %[[LAM5:.*]] = cir.alloca !rec_anon{{.*}}, {{.*}} ["lam", init]
-// CIR:         %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.isactive"]
+// CIR:         %[[LAM5:.*]] = cir.alloca "lam" {{.*}} init : !cir.ptr<!rec_anon{{.*}}>
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:         %[[FA5:.*]] = cir.get_member %[[LAM5]][0] {name = "a"}
 // CIR:         cir.call @_ZN1SC1Ei(%[[FA5]],
 // CIR:         %[[TRUE:.*]] = cir.const #true
@@ -250,7 +251,7 @@ void stmt_expr_return(bool cond) {
 // LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[FA5_D]])
 // LLVM:   ret void
 
-// LLVM-LABEL: define dso_local void @_Z16stmt_expr_returnb({{.*}}) {{.*}} personality ptr @__gxx_personality_v0 {
+// LLVM-LABEL: define dso_local void @_Z16stmt_expr_returnb(i1 noundef zeroext %{{[^,)]+}}) {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[LAM5:.*]] = alloca %[[LAM_TY_5]]
 // LLVM:   %[[ACTIVE_ALLOCA:.*]] = alloca i8
 // LLVM:   %[[FA5:.*]] = getelementptr inbounds nuw %[[LAM_TY_5]], ptr %[[LAM5]], i32 0, i32 0

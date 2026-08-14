@@ -640,10 +640,12 @@ static bool areAllUsesEqual(Instruction *I) {
 /// either forms a cycle or is terminated by a trivially dead instruction,
 /// delete it.  If that makes any of its operands trivially dead, delete them
 /// too, recursively.  Return true if a change was made.
-bool llvm::RecursivelyDeleteDeadPHINode(PHINode *PN,
-                                        const TargetLibraryInfo *TLI,
-                                        llvm::MemorySSAUpdater *MSSAU) {
+bool llvm::RecursivelyDeleteDeadPHINode(
+    PHINode *PN, const TargetLibraryInfo *TLI, llvm::MemorySSAUpdater *MSSAU,
+    SmallPtrSetImpl<PHINode *> *KnownNonDeadPHIs) {
   SmallPtrSet<Instruction*, 4> Visited;
+  SmallVector<PHINode *, 8> VisitedPHIs;
+
   for (Instruction *I = PN; areAllUsesEqual(I) && !I->mayHaveSideEffects();
        I = cast<Instruction>(*I->user_begin())) {
     if (I->use_empty())
@@ -657,7 +659,18 @@ bool llvm::RecursivelyDeleteDeadPHINode(PHINode *PN,
       (void)RecursivelyDeleteTriviallyDeadInstructions(I, TLI, MSSAU);
       return true;
     }
+
+    if (PHINode *CurPN = dyn_cast<PHINode>(I)) {
+      if (KnownNonDeadPHIs && KnownNonDeadPHIs->contains(CurPN))
+        break;
+      VisitedPHIs.push_back(CurPN);
+    }
   }
+
+  if (KnownNonDeadPHIs)
+    for (PHINode *VisitedPN : VisitedPHIs)
+      KnownNonDeadPHIs->insert(VisitedPN);
+
   return false;
 }
 
@@ -2017,8 +2030,6 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                Builder, Offset);
 }
 
-/// Where possible to salvage debug information for \p I do so.
-/// If not possible mark undef.
 void llvm::salvageDebugInfo(Instruction &I) {
   SmallVector<DbgVariableRecord *, 1> DPUsers;
   findDbgUsers(&I, DPUsers);
@@ -2040,7 +2051,8 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   SmallVector<uint64_t, 16> Ops;
   Value *NewV = salvageDebugInfoImpl(*I, CurrentLocOps, Ops, AdditionalValues);
 
-  // Check if the salvage failed.
+  // Keep an address we cannot salvage. If I is deleted, its remaining metadata
+  // use is replaced with poison.
   if (!NewV)
     return;
 
@@ -2070,6 +2082,8 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
   bool Salvaged = false;
 
   for (auto *DVR : DPUsers) {
+    // replaceVariableLocationOp also updates a matching dbg.assign address, so
+    // salvage the address before changing the variable location.
     if (DVR->isDbgAssign()) {
       if (DVR->getAddress() == &I) {
         salvageDbgAssignAddress(DVR);
@@ -2107,8 +2121,8 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
           DIExpression::appendOpsToArg(SalvagedExpr, Ops, LocNo, StackValue);
       LocItr = std::find(++LocItr, DVRLocation.end(), &I);
     }
-    // salvageDebugInfoImpl should fail on examining the first element of
-    // DbgUsers, or none of them.
+    // The failure conditions in salvageDebugInfoImpl do not depend on
+    // CurrentLocOps, so failure can only occur on the first occurrence.
     if (!Op0)
       break;
 
@@ -2130,7 +2144,7 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
       // unreasonably large number of values.
       DVR->setKillLocation();
     }
-    LLVM_DEBUG(dbgs() << "SALVAGE: " << DVR << '\n');
+    LLVM_DEBUG(dbgs() << "SALVAGE: " << *DVR << '\n');
     Salvaged = true;
   }
 
@@ -2670,7 +2684,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
 }
 
 static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
-                            DomTreeUpdater *DTU = nullptr) {
+                            DomTreeUpdater *DTU, bool FoldInstsToUnreachable) {
   SmallVector<BasicBlock*, 128> Worklist;
   BasicBlock *BB = &F.front();
   Worklist.push_back(BB);
@@ -2679,177 +2693,185 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
   do {
     BB = Worklist.pop_back_val();
 
-    // Do a quick scan of the basic block, turning any obviously unreachable
+    // Do a scan of the basic block, turning any obviously unreachable
     // instructions into LLVM unreachable insts.  The instruction combining pass
     // canonicalizes unreachable insts into stores to null or undef.
-    for (Instruction &I : *BB) {
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        Value *Callee = CI->getCalledOperand();
-        // Handle intrinsic calls.
-        if (Function *F = dyn_cast<Function>(Callee)) {
-          auto IntrinsicID = F->getIntrinsicID();
-          // Assumptions that are known to be false are equivalent to
-          // unreachable. Also, if the condition is undefined, then we make the
-          // choice most beneficial to the optimizer, and choose that to also be
-          // unreachable.
-          if (IntrinsicID == Intrinsic::assume) {
-            if (match(CI->getArgOperand(0), m_CombineOr(m_Zero(), m_Undef()))) {
-              // Don't insert a call to llvm.trap right before the unreachable.
-              changeToUnreachable(CI, false, DTU);
-              Changed = true;
-              break;
-            }
-          } else if (IntrinsicID == Intrinsic::experimental_guard) {
-            // A call to the guard intrinsic bails out of the current
-            // compilation unit if the predicate passed to it is false. If the
-            // predicate is a constant false, then we know the guard will bail
-            // out of the current compile unconditionally, so all code following
-            // it is dead.
-            //
-            // Note: unlike in llvm.assume, it is not "obviously profitable" for
-            // guards to treat `undef` as `false` since a guard on `undef` can
-            // still be useful for widening.
-            if (match(CI->getArgOperand(0), m_Zero()))
-              if (!isa<UnreachableInst>(CI->getNextNode())) {
-                changeToUnreachable(CI->getNextNode(), false, DTU);
+    // Note that it traverses the whole instruction list, so it may incur
+    // significant performance overhead.
+    if (FoldInstsToUnreachable) {
+      for (Instruction &I : *BB) {
+        if (auto *CI = dyn_cast<CallInst>(&I)) {
+          Value *Callee = CI->getCalledOperand();
+          // Handle intrinsic calls.
+          if (Function *F = dyn_cast<Function>(Callee)) {
+            auto IntrinsicID = F->getIntrinsicID();
+            // Assumptions that are known to be false are equivalent to
+            // unreachable. Also, if the condition is undefined, then we make
+            // the choice most beneficial to the optimizer, and choose that to
+            // also be unreachable.
+            if (IntrinsicID == Intrinsic::assume) {
+              if (match(CI->getArgOperand(0),
+                        m_CombineOr(m_Zero(), m_Undef()))) {
+                // Don't insert a call to llvm.trap right before the
+                // unreachable.
+                changeToUnreachable(CI, false, DTU);
                 Changed = true;
                 break;
               }
+            } else if (IntrinsicID == Intrinsic::experimental_guard) {
+              // A call to the guard intrinsic bails out of the current
+              // compilation unit if the predicate passed to it is false. If the
+              // predicate is a constant false, then we know the guard will bail
+              // out of the current compile unconditionally, so all code
+              // following it is dead.
+              //
+              // Note: unlike in llvm.assume, it is not "obviously profitable"
+              // for guards to treat `undef` as `false` since a guard on `undef`
+              // can still be useful for widening.
+              if (match(CI->getArgOperand(0), m_Zero()))
+                if (!isa<UnreachableInst>(CI->getNextNode())) {
+                  changeToUnreachable(CI->getNextNode(), false, DTU);
+                  Changed = true;
+                  break;
+                }
+            }
+          } else if ((isa<ConstantPointerNull>(Callee) &&
+                      !NullPointerIsDefined(CI->getFunction(),
+                                            cast<PointerType>(Callee->getType())
+                                                ->getAddressSpace())) ||
+                     isa<UndefValue>(Callee)) {
+            changeToUnreachable(CI, false, DTU);
+            Changed = true;
+            break;
           }
-        } else if ((isa<ConstantPointerNull>(Callee) &&
-                    !NullPointerIsDefined(CI->getFunction(),
-                                          cast<PointerType>(Callee->getType())
-                                              ->getAddressSpace())) ||
-                   isa<UndefValue>(Callee)) {
-          changeToUnreachable(CI, false, DTU);
-          Changed = true;
-          break;
+          if (CI->doesNotReturn() && !CI->isMustTailCall()) {
+            // If we found a call to a no-return function, insert an unreachable
+            // instruction after it.  Make sure there isn't *already* one there
+            // though.
+            if (!isa<UnreachableInst>(CI->getNextNode())) {
+              // Don't insert a call to llvm.trap right before the unreachable.
+              changeToUnreachable(CI->getNextNode(), false, DTU);
+              Changed = true;
+            }
+            break;
+          }
+        } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+          // Store to undef and store to null are undefined and used to signal
+          // that they should be changed to unreachable by passes that can't
+          // modify the CFG.
+
+          // Don't touch volatile stores.
+          if (SI->isVolatile())
+            continue;
+
+          Value *Ptr = SI->getOperand(1);
+
+          if (isa<UndefValue>(Ptr) ||
+              (isa<ConstantPointerNull>(Ptr) &&
+               !NullPointerIsDefined(SI->getFunction(),
+                                     SI->getPointerAddressSpace()))) {
+            changeToUnreachable(SI, false, DTU);
+            Changed = true;
+            break;
+          }
         }
-        if (CI->doesNotReturn() && !CI->isMustTailCall()) {
-          // If we found a call to a no-return function, insert an unreachable
-          // instruction after it.  Make sure there isn't *already* one there
-          // though.
-          if (!isa<UnreachableInst>(CI->getNextNode())) {
-            // Don't insert a call to llvm.trap right before the unreachable.
-            changeToUnreachable(CI->getNextNode(), false, DTU);
+      }
+
+      Instruction *Terminator = BB->getTerminator();
+      if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
+        // Turn invokes that call 'nounwind' functions into ordinary calls.
+        Value *Callee = II->getCalledOperand();
+        if ((isa<ConstantPointerNull>(Callee) &&
+             !NullPointerIsDefined(BB->getParent())) ||
+            isa<UndefValue>(Callee)) {
+          changeToUnreachable(II, false, DTU);
+          Changed = true;
+        } else {
+          if (II->doesNotReturn() &&
+              !isa<UnreachableInst>(II->getNormalDest()->front())) {
+            // If we found an invoke of a no-return function,
+            // create a new empty basic block with an `unreachable` terminator,
+            // and set it as the normal destination for the invoke,
+            // unless that is already the case.
+            // Note that the original normal destination could have other uses.
+            BasicBlock *OrigNormalDest = II->getNormalDest();
+            OrigNormalDest->removePredecessor(II->getParent());
+            LLVMContext &Ctx = II->getContext();
+            BasicBlock *UnreachableNormalDest = BasicBlock::Create(
+                Ctx, OrigNormalDest->getName() + ".unreachable",
+                II->getFunction(), OrigNormalDest);
+            Reachable.resize(II->getFunction()->getMaxBlockNumber());
+            auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
+            UI->setDebugLoc(DebugLoc::getTemporary());
+            II->setNormalDest(UnreachableNormalDest);
+            if (DTU)
+              DTU->applyUpdates(
+                  {{DominatorTree::Delete, BB, OrigNormalDest},
+                   {DominatorTree::Insert, BB, UnreachableNormalDest}});
             Changed = true;
           }
-          break;
+          if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
+            if (II->use_empty() && !II->mayHaveSideEffects()) {
+              // jump to the normal destination branch.
+              BasicBlock *NormalDestBB = II->getNormalDest();
+              BasicBlock *UnwindDestBB = II->getUnwindDest();
+              UncondBrInst::Create(NormalDestBB, II->getIterator());
+              UnwindDestBB->removePredecessor(II->getParent());
+              II->eraseFromParent();
+              if (DTU)
+                DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
+            } else
+              changeToCall(II, DTU);
+            Changed = true;
+          }
         }
-      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        // Store to undef and store to null are undefined and used to signal
-        // that they should be changed to unreachable by passes that can't
-        // modify the CFG.
+      } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
+        // Remove catchpads which cannot be reached.
+        struct CatchPadDenseMapInfo {
+          static unsigned getHashValue(CatchPadInst *CatchPad) {
+            return static_cast<unsigned>(hash_combine_range(
+                CatchPad->value_op_begin(), CatchPad->value_op_end()));
+          }
 
-        // Don't touch volatile stores.
-        if (SI->isVolatile()) continue;
+          static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
+            return LHS->isIdenticalTo(RHS);
+          }
+        };
 
-        Value *Ptr = SI->getOperand(1);
-
-        if (isa<UndefValue>(Ptr) ||
-            (isa<ConstantPointerNull>(Ptr) &&
-             !NullPointerIsDefined(SI->getFunction(),
-                                   SI->getPointerAddressSpace()))) {
-          changeToUnreachable(SI, false, DTU);
-          Changed = true;
-          break;
-        }
-      }
-    }
-
-    Instruction *Terminator = BB->getTerminator();
-    if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
-      // Turn invokes that call 'nounwind' functions into ordinary calls.
-      Value *Callee = II->getCalledOperand();
-      if ((isa<ConstantPointerNull>(Callee) &&
-           !NullPointerIsDefined(BB->getParent())) ||
-          isa<UndefValue>(Callee)) {
-        changeToUnreachable(II, false, DTU);
-        Changed = true;
-      } else {
-        if (II->doesNotReturn() &&
-            !isa<UnreachableInst>(II->getNormalDest()->front())) {
-          // If we found an invoke of a no-return function,
-          // create a new empty basic block with an `unreachable` terminator,
-          // and set it as the normal destination for the invoke,
-          // unless that is already the case.
-          // Note that the original normal destination could have other uses.
-          BasicBlock *OrigNormalDest = II->getNormalDest();
-          OrigNormalDest->removePredecessor(II->getParent());
-          LLVMContext &Ctx = II->getContext();
-          BasicBlock *UnreachableNormalDest = BasicBlock::Create(
-              Ctx, OrigNormalDest->getName() + ".unreachable",
-              II->getFunction(), OrigNormalDest);
-          Reachable.resize(II->getFunction()->getMaxBlockNumber());
-          auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
-          UI->setDebugLoc(DebugLoc::getTemporary());
-          II->setNormalDest(UnreachableNormalDest);
+        SmallDenseMap<BasicBlock *, int, 8> NumPerSuccessorCases;
+        // Set of unique CatchPads.
+        SmallDenseMap<CatchPadInst *, detail::DenseSetEmpty, 4,
+                      CatchPadDenseMapInfo,
+                      detail::DenseSetPair<CatchPadInst *>>
+            HandlerSet;
+        detail::DenseSetEmpty Empty;
+        for (CatchSwitchInst::handler_iterator I = CatchSwitch->handler_begin(),
+                                               E = CatchSwitch->handler_end();
+             I != E; ++I) {
+          BasicBlock *HandlerBB = *I;
           if (DTU)
-            DTU->applyUpdates(
-                {{DominatorTree::Delete, BB, OrigNormalDest},
-                 {DominatorTree::Insert, BB, UnreachableNormalDest}});
-          Changed = true;
-        }
-        if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
-          if (II->use_empty() && !II->mayHaveSideEffects()) {
-            // jump to the normal destination branch.
-            BasicBlock *NormalDestBB = II->getNormalDest();
-            BasicBlock *UnwindDestBB = II->getUnwindDest();
-            UncondBrInst::Create(NormalDestBB, II->getIterator());
-            UnwindDestBB->removePredecessor(II->getParent());
-            II->eraseFromParent();
+            ++NumPerSuccessorCases[HandlerBB];
+          auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHIIt());
+          if (!HandlerSet.insert({CatchPad, Empty}).second) {
             if (DTU)
-              DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
-          } else
-            changeToCall(II, DTU);
-          Changed = true;
+              --NumPerSuccessorCases[HandlerBB];
+            CatchSwitch->removeHandler(I);
+            --I;
+            --E;
+            Changed = true;
+          }
+        }
+        if (DTU) {
+          std::vector<DominatorTree::UpdateType> Updates;
+          for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+            if (I.second == 0)
+              Updates.push_back({DominatorTree::Delete, BB, I.first});
+          DTU->applyUpdates(Updates);
         }
       }
-    } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
-      // Remove catchpads which cannot be reached.
-      struct CatchPadDenseMapInfo {
-        static unsigned getHashValue(CatchPadInst *CatchPad) {
-          return static_cast<unsigned>(hash_combine_range(
-              CatchPad->value_op_begin(), CatchPad->value_op_end()));
-        }
 
-        static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
-          return LHS->isIdenticalTo(RHS);
-        }
-      };
-
-      SmallDenseMap<BasicBlock *, int, 8> NumPerSuccessorCases;
-      // Set of unique CatchPads.
-      SmallDenseMap<CatchPadInst *, detail::DenseSetEmpty, 4,
-                    CatchPadDenseMapInfo, detail::DenseSetPair<CatchPadInst *>>
-          HandlerSet;
-      detail::DenseSetEmpty Empty;
-      for (CatchSwitchInst::handler_iterator I = CatchSwitch->handler_begin(),
-                                             E = CatchSwitch->handler_end();
-           I != E; ++I) {
-        BasicBlock *HandlerBB = *I;
-        if (DTU)
-          ++NumPerSuccessorCases[HandlerBB];
-        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHIIt());
-        if (!HandlerSet.insert({CatchPad, Empty}).second) {
-          if (DTU)
-            --NumPerSuccessorCases[HandlerBB];
-          CatchSwitch->removeHandler(I);
-          --I;
-          --E;
-          Changed = true;
-        }
-      }
-      if (DTU) {
-        std::vector<DominatorTree::UpdateType> Updates;
-        for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
-          if (I.second == 0)
-            Updates.push_back({DominatorTree::Delete, BB, I.first});
-        DTU->applyUpdates(Updates);
-      }
+      Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);
     }
-
-    Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);
     for (BasicBlock *Successor : successors(BB)) {
       if (!Reachable[Successor->getNumber()]) {
         Worklist.push_back(Successor);
@@ -2899,9 +2921,10 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 /// if they are in a dead cycle.  Return true if a change was made, false
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
-                                   MemorySSAUpdater *MSSAU) {
+                                   MemorySSAUpdater *MSSAU,
+                                   bool FoldInstsToUnreachable) {
   SmallVector<bool, 16> Reachable(F.getMaxBlockNumber());
-  bool Changed = markAliveBlocks(F, Reachable, DTU);
+  bool Changed = markAliveBlocks(F, Reachable, DTU, FoldInstsToUnreachable);
 
   // Are there any blocks left to actually delete?
   SmallSetVector<BasicBlock *, 8> BlocksToRemove;
@@ -3054,9 +3077,8 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                                            MDNode::toCaptureComponents(KMD)));
         break;
       case LLVMContext::MD_alloc_token:
-        // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD != JMD)
-          K->setMetadata(Kind, nullptr);
+        if (!AAOnly && KMD != JMD)
+          K->setMetadata(Kind, MDNode::getMergedAllocTokenMetadata(KMD, JMD));
         break;
       }
   }
@@ -3941,6 +3963,11 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
       // gcroot is a special case, since it requires a constant argument which
       // isn't also required to be a simple ConstantInt.
       if (CB.getIntrinsicID() == Intrinsic::gcroot)
+        return false;
+
+      // threadlocal_address is a special case as it requires its only
+      // argument to be a thread local global.
+      if (CB.getIntrinsicID() == Intrinsic::threadlocal_address)
         return false;
 
       // Some intrinsic operands are required to be immediates.
