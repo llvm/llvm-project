@@ -11729,6 +11729,15 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_grainsize:
     C = new (Context) OMPGrainsizeClause();
     break;
+  case llvm::omp::OMPC_graph_id:
+    C = new (Context) OMPGraphIdClause();
+    break;
+  case llvm::omp::OMPC_graph_reset:
+    C = new (Context) OMPGraphResetClause();
+    break;
+  case llvm::omp::OMPC_replayable:
+    C = new (Context) OMPReplayableClause();
+    break;
   case llvm::omp::OMPC_num_tasks:
     C = new (Context) OMPNumTasksClause();
     break;
@@ -12033,6 +12042,11 @@ void OMPClauseReader::VisitOMPDetachClause(OMPDetachClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPReplayableClause(OMPReplayableClause *C) {
   C->setCondition(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
@@ -12654,6 +12668,16 @@ void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
 void OMPClauseReader::VisitOMPPriorityClause(OMPPriorityClause *C) {
   VisitOMPClauseWithPreInit(C);
   C->setPriority(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPGraphIdClause(OMPGraphIdClause *C) {
+  C->setId(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPGraphResetClause(OMPGraphResetClause *C) {
+  C->setCondition(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 
