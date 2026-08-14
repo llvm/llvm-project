@@ -952,15 +952,15 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     if (SafeUDivMode) {
       // Make sure the UDiv's divisor is guaranteed to not be zero/poison, to
       // avoid UB.
-      Type *RHSTy = RHSExpr->getType();
+      Type *Ty = UDiv->getType();
       bool GuaranteedNotPoison =
           ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
       if (!GuaranteedNotPoison)
-        RHS = Builder.createScalarFreeze(RHS, RHSTy, DL);
+        RHS = Builder.createScalarFreeze(RHS, Ty, DL);
       if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
         RHS = Builder.createScalarIntrinsic(
-            Intrinsic::umax, {RHS, Builder.getPlan().getConstantInt(RHSTy, 1)},
-            RHSTy, DL);
+            Intrinsic::umax, {RHS, Builder.getPlan().getConstantInt(Ty, 1)}, Ty,
+            DL);
     }
     return Builder.createNaryOp(Instruction::UDiv, {LHS, RHS},
                                 VPIRFlags::getDefaultFlags(Instruction::UDiv),
@@ -1040,20 +1040,23 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     bool IsSequential = S->getSCEVType() == scSequentialUMinExpr;
     Type *ResultTy = MinMax->getType();
     bool PrevSafeMode = SafeUDivMode;
-    VPValue *Result = nullptr;
-    for (const auto &[I, SCEVOp] : enumerate(reverse(MinMax->operands()))) {
-      bool MayShortCircuit = IsSequential && I != MinMax->getNumOperands() - 1;
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEV *SCEVOp : reverse(MinMax->operands())) {
+      bool MayShortCircuit =
+          IsSequential && Ops.size() != MinMax->getNumOperands() - 1;
       SafeUDivMode = MayShortCircuit || PrevSafeMode;
-      VPValue *Op = tryToExpand(SCEVOp);
+      VPValue *OpV = tryToExpand(SCEVOp);
       SafeUDivMode = PrevSafeMode;
-      if (!Op)
+      if (!OpV)
         return nullptr;
       if (MayShortCircuit)
-        Op = Builder.createScalarFreeze(Op, ResultTy, DL);
-      Result = Result ? Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
-                                                      ResultTy, DL)
-                      : Op;
+        OpV = Builder.createScalarFreeze(OpV, ResultTy, DL);
+      Ops.push_back(OpV);
     }
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createScalarIntrinsic(IntrinsicID, {Result, Op},
+                                             ResultTy, DL);
     return Result;
   }
   default:
