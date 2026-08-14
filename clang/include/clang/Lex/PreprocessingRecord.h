@@ -192,7 +192,7 @@ class Token;
     /// The definition of the macro being expanded. May return null if
     /// this is a builtin macro.
     MacroDefinitionRecord *getDefinition() const {
-      return NameOrDef.dyn_cast<MacroDefinitionRecord *>();
+      return dyn_cast<MacroDefinitionRecord *>(NameOrDef);
     }
 
     // Implement isa/cast/dyncast/etc.

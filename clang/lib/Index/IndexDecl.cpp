@@ -213,7 +213,7 @@ public:
     llvm::PointerUnion<ClassTemplateDecl *,
                        ClassTemplatePartialSpecializationDecl *>
         Template = CTSD->getSpecializedTemplateOrPartial();
-    if (const auto *CTD = Template.dyn_cast<ClassTemplateDecl *>()) {
+    if (const auto *CTD = dyn_cast<ClassTemplateDecl *>(Template)) {
       const CXXRecordDecl *Pattern = CTD->getTemplatedDecl();
       bool TypeOverride = isa<TypeDecl>(D);
       for (const NamedDecl *ND : Pattern->lookup(D->getDeclName())) {

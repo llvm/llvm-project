@@ -2096,10 +2096,10 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   VisitExpr(E);
   Record.push_back(E->getNumObjects());
   for (auto &Obj : E->getObjects()) {
-    if (auto *BD = Obj.dyn_cast<BlockDecl *>()) {
+    if (auto *BD = dyn_cast<BlockDecl *>(Obj)) {
       Record.push_back(serialization::COK_Block);
       Record.AddDeclRef(BD);
-    } else if (auto *CLE = Obj.dyn_cast<CompoundLiteralExpr *>()) {
+    } else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(Obj)) {
       Record.push_back(serialization::COK_CompoundLiteral);
       Record.AddStmt(CLE);
     }

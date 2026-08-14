@@ -6650,7 +6650,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
           // specialization. If so, record which one.
           auto From = Spec->getInstantiatedFrom();
           if (auto PartialSpec =
-                From.dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
+                  dyn_cast<ClassTemplatePartialSpecializationDecl *>(From)) {
             Record.push_back(true);
             Record.AddDeclRef(PartialSpec);
             Record.AddTemplateArgumentList(

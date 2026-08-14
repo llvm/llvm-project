@@ -60,9 +60,9 @@ struct Lattice {
 };
 
 static SourceLocation GetFactLoc(CausingFactType F) {
-  if (const auto *UF = F.dyn_cast<const UseFact *>())
+  if (const auto *UF = dyn_cast<const UseFact *>(F))
     return UF->getUseExpr()->getExprLoc();
-  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+  if (const auto *OEF = dyn_cast<const OriginEscapesFact *>(F)) {
     if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
       return ReturnEsc->getReturnExpr()->getExprLoc();
     if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
