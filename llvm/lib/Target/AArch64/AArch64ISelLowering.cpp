@@ -10368,6 +10368,18 @@ static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
   return true;
 }
 
+/// Returns the ZA state save/use marker node necessary for \p CallAttrs.
+static std::optional<unsigned>
+getZAMarkerForCall(const SMECallAttrs &CallAttrs) {
+  if (CallAttrs.requiresZASave())
+    return AArch64ISD::REQUIRES_ZA_SAVE;
+  if (CallAttrs.requiresPreservingZT0())
+    return AArch64ISD::REQUIRES_ZT0_SAVE;
+  if (CallAttrs.caller().hasZAState() || CallAttrs.caller().hasZT0State())
+    return AArch64ISD::INOUT_ZA_USE;
+  return std::nullopt;
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -10443,13 +10455,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   SMECallAttrs CallAttrs =
       getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
 
-  std::optional<unsigned> ZAMarkerNode;
-  if (CallAttrs.requiresZASave())
-    ZAMarkerNode = AArch64ISD::REQUIRES_ZA_SAVE;
-  else if (CallAttrs.requiresPreservingZT0())
-    ZAMarkerNode = AArch64ISD::REQUIRES_ZT0_SAVE;
-  else if (CallAttrs.caller().hasZAState() || CallAttrs.caller().hasZT0State())
-    ZAMarkerNode = AArch64ISD::INOUT_ZA_USE;
+  std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(CallAttrs);
 
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
@@ -11604,6 +11610,7 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
   SMECallAttrs TLSCallAttrs(FuncInfo->getSMEFnAttrs(), {}, SMEAttrs::Normal);
+  std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(TLSCallAttrs);
   bool RequiresSMChange = TLSCallAttrs.requiresSMChange();
 
   auto ChainAndGlue = [](SDValue Chain) -> std::pair<SDValue, SDValue> {
@@ -11623,9 +11630,9 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
       Opcode, DL, NodeTys, Glue ? ArrayRef(Ops) : ArrayRef(Ops).drop_back()));
 
-  if (TLSCallAttrs.requiresZASave())
-    std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
-        AArch64ISD::REQUIRES_ZA_SAVE, DL, NodeTys, {Chain, Chain.getValue(1)}));
+  if (ZAMarkerNode)
+    std::tie(Chain, Glue) = ChainAndGlue(
+        DAG.getNode(*ZAMarkerNode, DL, NodeTys, {Chain, Chain.getValue(1)}));
 
   if (RequiresSMChange)
     std::tie(Chain, Glue) =
