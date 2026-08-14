@@ -1,8 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -target-feature +avx512vbmi2 -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding -triple x86_64-unknown-linux-gnu -fclangir -target-feature +avx512vbmi2 -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -target-feature +avx512vbmi2 -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding -triple x86_64-unknown-linux-gnu -fclangir -target-feature +avx512vbmi2 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 // RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512vbmi2 -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
 // RUN: FileCheck --check-prefixes=OGCG --input-file=%t.ll %s
