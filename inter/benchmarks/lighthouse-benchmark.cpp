@@ -74,11 +74,11 @@ static bool selectDevice(const char *requiredName, ze_driver_handle_t &driver,
 }
 
 int main(int argc, char **argv) {
-  if (argc != 10 ||
+  if ((argc != 10 && argc != 11) ||
       (std::string(argv[1]) != "inter" && std::string(argv[1]) != "igc")) {
     fprintf(stderr,
             "usage: %s inter|igc <zebin> <device> <warmups> <batches> "
-            "<iterations> <size> <reduction-size> <kernel>\n",
+            "<iterations> <size> <reduction-size> <kernel> [padding-k-tiles]\n",
             argv[0]);
     return 1;
   }
@@ -88,6 +88,7 @@ int main(int argc, char **argv) {
   const int iterations = std::atoi(argv[6]);
   const int64_t size = std::atoll(argv[7]);
   const int64_t k = std::atoll(argv[8]);
+  const int64_t paddingKTiles = argc == 11 ? std::atoll(argv[10]) : 0;
   if (warmups < 1 || batches < 1 || iterations < 1) {
     fprintf(stderr, "warmups, batches, and iterations must be positive\n");
     return 1;
@@ -100,8 +101,15 @@ int main(int argc, char **argv) {
     fprintf(stderr, "reduction size must be a positive multiple of 32\n");
     return 1;
   }
+  if (paddingKTiles < 0) {
+    fprintf(stderr, "padding K tiles must be nonnegative\n");
+    return 1;
+  }
   const int64_t m = size;
   const int64_t n = size;
+  const int64_t operandElements = m * k;
+  const int64_t paddedOperandElements =
+      operandElements + paddingKTiles * 32 * m;
 
   ZE_CHECK(zeInit(ZE_INIT_FLAG_GPU_ONLY));
   ze_driver_handle_t driver = nullptr;
@@ -141,9 +149,11 @@ int main(int argc, char **argv) {
   void *bStorage = nullptr;
   void *cStorage = nullptr;
   ZE_CHECK(zeMemAllocShared(context, &deviceAlloc, &hostAlloc,
-                            m * k * sizeof(_Float16), 64, device, &aStorage));
+                            paddedOperandElements * sizeof(_Float16), 64,
+                            device, &aStorage));
   ZE_CHECK(zeMemAllocShared(context, &deviceAlloc, &hostAlloc,
-                            k * n * sizeof(_Float16), 64, device, &bStorage));
+                            paddedOperandElements * sizeof(_Float16), 64,
+                            device, &bStorage));
   ZE_CHECK(zeMemAllocShared(context, &deviceAlloc, &hostAlloc,
                             m * n * sizeof(float), 64, device, &cStorage));
   auto *a = static_cast<_Float16 *>(aStorage);
@@ -167,6 +177,8 @@ int main(int argc, char **argv) {
     for (int64_t column = 0; column < n; ++column)
       b[inner * n + column] =
           static_cast<_Float16>(rhsSigns[inner] * columnSigns[column]);
+  std::fill(a + operandElements, a + paddedOperandElements, _Float16{0});
+  std::fill(b + operandElements, b + paddedOperandElements, _Float16{0});
   std::fill(c, c + m * n, std::numeric_limits<float>::quiet_NaN());
 
   if (inter) {

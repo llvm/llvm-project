@@ -36,5 +36,7 @@ The OpenCL reference mirrors the Lighthouse operations and cache policy. Its
 messages, matching the cached prefetch contract in the Inter input.
 
 Use `--drop-loop-prefetch` to remove the two loop-ahead prefetches from both
-compiler inputs. This is required for shapes that expose the final out-of-range
-prefetch while conditional async-token handling is unavailable.
+compiler inputs and measure their performance impact. The original final
+prefetch is out of logical bounds but is ignored by the 2D block I/O contract.
+Use `--padding-k-tiles 1` to extend the physical A/B allocations without
+changing their logical block2D descriptor dimensions.

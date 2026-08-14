@@ -142,6 +142,7 @@ def measure(
     size: int,
     reduction_size: int,
     timeout: float,
+    padding_k_tiles: int,
 ) -> float:
     output = run(
         [
@@ -155,6 +156,7 @@ def measure(
             str(size),
             str(reduction_size),
             "payload_kernel",
+            str(padding_k_tiles),
         ],
         capture=True,
         timeout=timeout,
@@ -182,11 +184,14 @@ def main() -> int:
     parser.add_argument("--iterations", type=int, default=1000)
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument("--drop-loop-prefetch", action="store_true")
+    parser.add_argument("--padding-k-tiles", type=int, default=0)
     args = parser.parse_args()
     if min(args.runs, args.warmups, args.batches, args.iterations) < 1:
         parser.error("run counts must be positive")
     if args.timeout <= 0:
         parser.error("--timeout must be positive")
+    if args.padding_k_tiles < 0:
+        parser.error("--padding-k-tiles must be nonnegative")
     if args.size < 64 or args.size % 64:
         parser.error("--size must be a positive multiple of 64")
     if args.reduction_size < 32 or args.reduction_size % 32:
@@ -210,6 +215,7 @@ def main() -> int:
         f"iterations={args.iterations} timestamp=level-zero-kernel "
         f"timeout={args.timeout:g}s "
         f"loop_prefetch={'off' if args.drop_loop_prefetch else 'on'} "
+        f"padding_k_tiles={args.padding_k_tiles} "
         f"ocloc={ocloc_version}"
     )
     samples: dict[str, list[float]] = {"inter": [], "igc": []}
@@ -229,6 +235,7 @@ def main() -> int:
                     args.size,
                     args.reduction_size,
                     args.timeout,
+                    args.padding_k_tiles,
                 )
             )
 
