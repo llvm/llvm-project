@@ -241,3 +241,31 @@ bb2:
 exit:
   ret i8 20
 }
+
+declare i8 @get()
+
+define i1 @uge_zero_no_function_args() {
+; CHECK-LABEL: @uge_zero_no_function_args(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = call i8 @get()
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %x = call i8 @get()
+  %c = icmp uge i8 %x, 0
+  ret i1 %c
+}
+
+define i1 @ule_zero_no_function_args() {
+; CHECK-LABEL: @ule_zero_no_function_args(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = call i8 @get()
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i8 0, [[X]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %x = call i8 @get()
+  %c = icmp ule i8 0, %x
+  ret i1 %c
+}
