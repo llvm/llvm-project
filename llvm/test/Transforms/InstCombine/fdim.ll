@@ -69,7 +69,7 @@ define double @fdim_undef1() {
 
 define double @fdim_inf_ninf() {
 ; CHECK-LABEL: define double @fdim_inf_ninf() {
-; CHECK-NEXT:    ret double 0x7FF0000000000000
+; CHECK-NEXT:    ret double +inf
 ;
   %dim = call double @fdim(double 0x7FF0000000000000, double 0x8000000000000000 )
   ret double %dim
@@ -77,9 +77,17 @@ define double @fdim_inf_ninf() {
 
 define double @fdim_inf() {
 ; CHECK-LABEL: define double @fdim_inf() {
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %dim = call double @fdim(double 0x7FF0000000000000, double 0x7FF0000000000000)
+  ret double %dim
+}
+
+define double @fdim_ninf() {
+; CHECK-LABEL: define double @fdim_ninf() {
+; CHECK-NEXT:    ret double 0.000000e+00
+;
+  %dim = call double @fdim(double 0xFFF0000000000000, double 0xFFF0000000000000)
   ret double %dim
 }
 
@@ -91,9 +99,10 @@ define double @fdim_nzero() {
   ret double %dim
 }
 
-define double @fdim_strictfp() {
-; CHECK-LABEL: define double @fdim_strictfp() {
-; CHECK-NEXT:    [[DIM:%.*]] = call double @fdim(double 1.000000e+01, double 8.000000e+00) #[[ATTR1:[0-9]+]]
+define double @fdim_strictfp() strictfp {
+; CHECK-LABEL: define double @fdim_strictfp(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[DIM:%.*]] = call double @fdim(double 1.000000e+01, double 8.000000e+00) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[DIM]]
 ;
   %dim = call double @fdim(double 10.0, double 8.0) strictfp
@@ -102,7 +111,7 @@ define double @fdim_strictfp() {
 
 define double @fdim_nan1() {
 ; CHECK-LABEL: define double @fdim_nan1() {
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double +qnan
 ;
   %dim = call double @fdim(double 10.0, double 0x7FF8000000000000)
   ret double %dim
@@ -111,7 +120,7 @@ define double @fdim_nan1() {
 
 define double @fdim_nan2() {
 ; CHECK-LABEL: define double @fdim_nan2() {
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double +qnan
 ;
   %dim = call double @fdim(double 0x7FF8000000000000, double 1.4)
   ret double %dim
@@ -119,7 +128,7 @@ define double @fdim_nan2() {
 
 define double @fdim_snan1() {
 ; CHECK-LABEL: define double @fdim_snan1() {
-; CHECK-NEXT:    ret double 0x7FFC000000000000
+; CHECK-NEXT:    ret double +nan(0x4000000000000)
 ;
   %dim = call double @fdim(double 0x7FF4000000000000, double 1.4)
   ret double %dim
@@ -127,7 +136,7 @@ define double @fdim_snan1() {
 
 define double @fdim_snan2() {
 ; CHECK-LABEL: define double @fdim_snan2() {
-; CHECK-NEXT:    ret double 0x7FFC000000000000
+; CHECK-NEXT:    ret double +nan(0x4000000000000)
 ;
   %dim = call double @fdim(double 1.7, double 0x7FF4000000000000)
   ret double %dim

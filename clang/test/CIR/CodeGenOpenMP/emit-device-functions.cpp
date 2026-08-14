@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 

@@ -15,7 +15,7 @@
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[ADD]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -35,7 +35,7 @@
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -216,7 +216,7 @@ _Float16 _Complex add_half_cc(_Float16 _Complex a, _Float16 _Complex b) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[ADD1]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP3:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP3]]
 //
@@ -241,7 +241,7 @@ _Float16 _Complex add_half_cc(_Float16 _Complex a, _Float16 _Complex b) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP3:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP3]]
 //
@@ -655,7 +655,7 @@ _Float16 _Complex add2_haff_ccc(_Float16 _Complex a, _Float16 _Complex b, _Float
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[SUB]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -675,7 +675,7 @@ _Float16 _Complex add2_haff_ccc(_Float16 _Complex a, _Float16 _Complex b, _Float
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -854,7 +854,7 @@ _Float16 _Complex sub_half_cc(_Float16 _Complex a, _Float16 _Complex b) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[MUL]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -874,7 +874,7 @@ _Float16 _Complex sub_half_cc(_Float16 _Complex a, _Float16 _Complex b) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -1096,7 +1096,7 @@ _Float16 _Complex mul_half_cc(_Float16 _Complex a, _Float16 _Complex b) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[DIV]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -1116,7 +1116,7 @@ _Float16 _Complex mul_half_cc(_Float16 _Complex a, _Float16 _Complex b) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -1187,7 +1187,7 @@ _Float16 _Complex div_half_cr(_Float16 _Complex a, _Float16 b) {
 // AVX-NEXT:    [[B_REAL:%.*]] = load half, ptr [[B_REALP]], align 2
 // AVX-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[B]], i32 0, i32 1
 // AVX-NEXT:    [[B_IMAG:%.*]] = load half, ptr [[B_IMAGP]], align 2
-// AVX-NEXT:    [[CALL:%.*]] = call <2 x half> @__divhc3(half noundef [[TMP0]], half noundef 0xH0000, half noundef [[B_REAL]], half noundef [[B_IMAG]]) #[[ATTR1]]
+// AVX-NEXT:    [[CALL:%.*]] = call <2 x half> @__divhc3(half noundef [[TMP0]], half noundef 0.000000e+00, half noundef [[B_REAL]], half noundef [[B_IMAG]]) #[[ATTR1]]
 // AVX-NEXT:    store <2 x half> [[CALL]], ptr [[COERCE]], align 2
 // AVX-NEXT:    [[COERCE_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[COERCE]], i32 0, i32 0
 // AVX-NEXT:    [[COERCE_REAL:%.*]] = load half, ptr [[COERCE_REALP]], align 2
@@ -1318,7 +1318,7 @@ _Float16 _Complex div_half_cc(_Float16 _Complex a, _Float16 _Complex b) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[TMP2]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP3:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP3]]
 //
@@ -1340,7 +1340,7 @@ _Float16 _Complex div_half_cc(_Float16 _Complex a, _Float16 _Complex b) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[TMP2]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP3:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP3]]
 //
@@ -1367,7 +1367,7 @@ _Float16 _Complex addcompound_half_rr(_Float16 a, _Float16 c) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[TMP1]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -1393,7 +1393,7 @@ _Float16 _Complex addcompound_half_rr(_Float16 a, _Float16 c) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[TMP1]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP2]]
 //
@@ -1553,7 +1553,7 @@ _Float16 _Complex addcompound_half_cc(_Float16 _Complex a, _Float16 _Complex c) 
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[FNEG]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1569,7 +1569,7 @@ _Float16 _Complex addcompound_half_cc(_Float16 _Complex a, _Float16 _Complex c) 
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1630,7 +1630,7 @@ _Float16 _Complex MinusOp_c(_Float16 _Complex a) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[TMP0]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1645,7 +1645,7 @@ _Float16 _Complex MinusOp_c(_Float16 _Complex a) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1702,7 +1702,7 @@ _Float16 _Complex PlusOp_c(_Float16 _Complex a) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[TMP0]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1717,7 +1717,7 @@ _Float16 _Complex PlusOp_c(_Float16 _Complex a) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1735,7 +1735,7 @@ _Float16 _Complex RealOp_r(_Float16 a) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[TMP0]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1751,7 +1751,7 @@ _Float16 _Complex RealOp_r(_Float16 a) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP0]]
 //
@@ -1767,8 +1767,8 @@ _Float16 _Complex RealOp_c(_Float16 _Complex a) {
 // AVX-NEXT:    [[TMP0:%.*]] = load half, ptr [[A_ADDR]], align 2
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_REALP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1781,8 +1781,8 @@ _Float16 _Complex RealOp_c(_Float16 _Complex a) {
 // X86-NEXT:    [[EXT:%.*]] = fpext half [[TMP0]] to float
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_REALP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1800,7 +1800,7 @@ _Float16 _Complex ImagOp_r(_Float16 a) {
 // AVX-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // AVX-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // AVX-NEXT:    store half [[TMP0]], ptr [[RETVAL_REALP]], align 2
-// AVX-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// AVX-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // AVX-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // AVX-NEXT:    ret <2 x half> [[TMP1]]
 //
@@ -1816,7 +1816,7 @@ _Float16 _Complex ImagOp_r(_Float16 a) {
 // X86-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // X86-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // X86-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
-// X86-NEXT:    store half 0xH0000, ptr [[RETVAL_IMAGP]], align 2
+// X86-NEXT:    store half 0.000000e+00, ptr [[RETVAL_IMAGP]], align 2
 // X86-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr [[RETVAL]], align 2
 // X86-NEXT:    ret <2 x half> [[TMP0]]
 //

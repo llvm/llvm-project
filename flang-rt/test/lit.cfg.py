@@ -16,21 +16,11 @@ def shjoin(args, sep=" "):
 # name: The name of this test suite.
 config.name = "flang-rt"
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0 env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(not use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -78,10 +68,17 @@ if config.osx_sysroot:
     isysroot_flag = ["-isysroot", config.osx_sysroot]
 config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 
+flang_args = []
+if not config.llvm_tree_available:
+    flang_args.append(
+        f"-fintrinsic-modules-path={config.flang_rt_output_resource_mod_dir}"
+    )
+
 tools = [
     ToolSubst(
         "%flang",
         command=config.flang,
+        extra_args=flang_args,
         unresolved="fatal",
     ),
     ToolSubst(
@@ -107,3 +104,11 @@ config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir)
 # For CUDA offloading, additional steps (device linking) and libraries (cudart) are needed.
 if config.flang_rt_experimental_offload_support == "CUDA":
     config.available_features.add("offload-cuda")
+
+if config.flang_rt_fortran_modules:
+    config.available_features.add("fortran-modules")
+
+# Tools that support OBJECT_MODE default to 32-bit on AIX. Set
+# OBJECT_MODE=any to handle both 32-bit and 64-bit objects.
+if "system-aix" in config.available_features:
+    config.environment["OBJECT_MODE"] = "any"

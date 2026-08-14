@@ -52,6 +52,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_starts_ends_with
 #    error "__cpp_lib_ranges_starts_ends_with should not be defined before c++23"
 #  endif
@@ -100,6 +104,10 @@
 
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
@@ -165,6 +173,10 @@
 
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
@@ -239,6 +251,10 @@
 
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_starts_ends_with
@@ -322,6 +338,13 @@
 #  endif
 #  if __cpp_lib_ranges_find_last != 202207L
 #    error "__cpp_lib_ranges_find_last should have the value 202207L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_fold != 202207L
+#    error "__cpp_lib_ranges_fold should have the value 202207L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_ranges_starts_ends_with
@@ -426,6 +449,13 @@
 #  endif
 #  if __cpp_lib_ranges_find_last != 202207L
 #    error "__cpp_lib_ranges_find_last should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_fold != 202207L
+#    error "__cpp_lib_ranges_fold should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_starts_ends_with

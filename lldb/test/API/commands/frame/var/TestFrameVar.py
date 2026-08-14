@@ -170,6 +170,7 @@ class TestFrameVar(TestBase):
 
     @skipIfRemote
     @skipIfWindows  # Windows can't set breakpoints by name 'main' in this case.
+    @skipIf(compiler=no_match("clang"))
     def test_gline_tables_only(self):
         """
         Test that if we build a binary with "-gline-tables-only" that we can
