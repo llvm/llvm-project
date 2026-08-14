@@ -328,10 +328,12 @@ def IntegerVector : Type<
 }
 
 // Vector of type constraints
+def CIR_VectorOfBoolType : CIR_VectorTypeOf<[CIR_AnyBoolType]>;
 def CIR_VectorOfIntType : CIR_VectorTypeOf<[CIR_AnyIntType]>;
 def CIR_VectorOfUIntType : CIR_VectorTypeOf<[CIR_AnyUIntType]>;
 def CIR_VectorOfSIntType : CIR_VectorTypeOf<[CIR_AnySIntType]>;
 def CIR_VectorOfFloatType : CIR_VectorTypeOf<[CIR_AnyFloatType]>;
+def CIR_VectorOfIntOrBoolType : CIR_VectorTypeOf<[CIR_AnyBoolType, CIR_AnyIntType]>;
 
 // Vector or Scalar type constraints
 def CIR_AnyIntOrVecOfIntType
