@@ -6,8 +6,8 @@
 ;; void esc(char*);
 ;; void shortenEnd() {
 ;;   char local[80];                      //        bits    frag
-;;   __builtin_memset(local + 8,  0, 24); // local:  64-160 ( 64, 96)
-;;   __builtin_memset(local + 16, 8, 40); // local: 128-160 (128, 32)
+;;   __builtin_memset(local + 8, 0, 72);  // local:  64-160 ( 64, 96)
+;;   __builtin_memset(local + 4, 8, 64);  // local:  32-160 killed
 ;;   esc(local);
 ;; }
 ;; void shortenStart() {
@@ -16,22 +16,37 @@
 ;;   __builtin_memset(local2, 8, 16); // local2:  0-128  (0, 128)
 ;;   esc(local2);
 ;; }
+;; void shortenEndPartial() {
+;;   char local3[80];                      //         bits    frag
+;;   __builtin_memset(local3 + 8,  0, 8);  // local3:  64-128 (64, 96)
+;;   __builtin_memset(local3 + 12, 8, 4);  // local3:  96-128 ( 96, 32)
+;;   esc(local3);
+;; }
 
 ;; The variables and intrinsics have been adjusted with by hand to test
 ;; what happens when the variable doesn't fill the whole alloca, and
 ;; when offsets are encoded with both the address component of the dbg.assign
 ;; and the address modifying DIExpression.
 
-;; DeadStoreElimination will shorten the first store in shortenEnd from [64,
-;; 192) bits to [64, 128) bits. Variable 'local' has been adjusted to be 160
-;; bits large. Check that we get an unlinked dbg.assign covering the deleted
-;; bits that overlap the dbg.assign's fagment: [128, 160) (offset=128 size=32).
+;; 'local' and 'local3' have both been adjusted to be 160 bits, so the bit
+;; ranges above are the written bytes clamped to the variable.
+
+;; In shortenEnd the killing store starts before the dead one, at local + 4
+;; against local + 8, so despite the name it takes the overwrite-begin path.
+;; shortenEndPartial is the overwrite-end one, and between them they cover
+;; both arms of the offset shortenAssignment computes.
+
+;; DSE shortens the first store in shortenEnd from bytes [8, 80) of 'local' to
+;; [56, 80), so the dead bytes are [8, 56). The dbg.assign's address is
+;; %offset_4_bytes + 4, i.e. local + 8, so its fragment (64, 96) describes
+;; local bytes [8, 20), all of which the dead slice covers. There's no live
+;; part left to describe, so instead of inserting a fragment we unlink the
+;; dbg.assign from the store and kill its address.
 
 ; CHECK: @_Z10shortenEndv
-; CHECK:      #dbg_assign({{.*}}, ptr %local, !DIExpression(),
+; CHECK:      #dbg_assign({{.*}}, ![[VAR:[0-9]+]], !DIExpression(), {{.*}}, ptr %local, !DIExpression(),
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 64, 96), ![[ID:[0-9]+]], ptr %offset_4_bytes, !DIExpression(DW_OP_plus_uconst, 4),
-; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), ![[UniqueID1:[0-9]+]], ptr poison, !DIExpression({{.*}}),
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 96), ![[UniqueID1:[0-9]+]], ptr poison, !DIExpression(DW_OP_plus_uconst, 4),
 
 ;; DSE will shorten the first store in shortenStart from [0, 160) bits to [128,
 ;; 160) bits. Variable 'local2' has been adjusted to be 160 bits.  Check we get
@@ -45,9 +60,24 @@
 ; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2:[0-9]+]], !DIExpression(), ![[ID2]], ptr %local2, !DIExpression(),
 ; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), ![[UniqueID2:[0-9]+]], ptr poison, !DIExpression(),
 
+;; DSE shortens the store in shortenEndPartial from bytes [8, 16) of 'local3'
+;; to [8, 12), so the dead bytes are [12, 16). The dbg.assign's address is
+;; %offset_4_bytes + 4, i.e. local3 + 8, where its fragment (64, 96) starts, so
+;; the dead bytes are variable bits [96, 128). Check we get an unlinked
+;; dbg.assign for (96, 32). Counting the dead store's offset from local3 twice
+;; pushes the slice past the end of the fragment instead, and nothing at all
+;; gets inserted.
+
+; CHECK: @_Z17shortenEndPartialv
+; CHECK:      #dbg_assign({{.*}}, ptr %local3, !DIExpression(),
+; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID3:[0-9]+]]
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR3:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 64, 96), ![[ID3]], ptr %offset_4_bytes, !DIExpression(DW_OP_plus_uconst, 4),
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR3]], !DIExpression(DW_OP_LLVM_fragment, 96, 32), ![[UniqueID3:[0-9]+]], ptr poison, !DIExpression(DW_OP_plus_uconst, 4),
+
 ; CHECK-DAG: ![[ID]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[UniqueID1]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[UniqueID2]] = distinct !DIAssignID()
+; CHECK-DAG: ![[UniqueID3]] = distinct !DIAssignID()
 
 define dso_local void @_Z10shortenEndv() local_unnamed_addr #0 !dbg !7 {
 entry:
@@ -77,6 +107,27 @@ entry:
   call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) %local2, i8 8, i64 16, i1 false), !dbg !42, !DIAssignID !43
   call void @_Z3escPi(ptr noundef nonnull %arraydecay), !dbg !44
   ret void, !dbg !45
+}
+
+;; The killing store starts after the dead one here, so this is the
+;; overwrite-end path, where the dead slice starts at the end of what survives
+;; rather than at the store's own address. The slice also covers only part of
+;; the dbg.assign's fragment, so we get a fragment for the dead part rather
+;; than a kill. The memset is align 4 so DSE doesn't round the removed tail
+;; away; at align 16 it declines to shorten at all.
+define dso_local void @_Z17shortenEndPartialv() local_unnamed_addr #0 !dbg !46 {
+entry:
+  %local3 = alloca [80 x i8], align 16, !DIAssignID !50
+  call void @llvm.dbg.assign(metadata i1 poison, metadata !48, metadata !DIExpression(), metadata !50, metadata ptr %local3, metadata !DIExpression()), !dbg !49
+  %arraydecay = getelementptr inbounds [80 x i8], ptr %local3, i64 0, i64 0, !dbg !53
+  %offset_4_bytes = getelementptr inbounds [80 x i8], ptr %local3, i64 0, i64 4, !dbg !53
+  %offset_8_bytes = getelementptr inbounds [80 x i8], ptr %local3, i64 0, i64 8, !dbg !53
+  call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 %offset_8_bytes, i8 0, i64 8, i1 false), !dbg !53, !DIAssignID !51
+  call void @llvm.dbg.assign(metadata i8 0, metadata !48, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 96), metadata !51, metadata ptr %offset_4_bytes, metadata !DIExpression(DW_OP_plus_uconst, 4)), !dbg !49
+  %offset_12_bytes = getelementptr inbounds [80 x i8], ptr %local3, i64 0, i64 12, !dbg !53
+  call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 %offset_12_bytes, i8 8, i64 4, i1 false), !dbg !54, !DIAssignID !52
+  call void @_Z3escPi(ptr noundef nonnull %arraydecay), !dbg !55
+  ret void, !dbg !56
 }
 
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
@@ -131,4 +182,15 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !43 = distinct !DIAssignID()
 !44 = !DILocation(line: 12, column: 3, scope: !31)
 !45 = !DILocation(line: 13, column: 1, scope: !31)
+!46 = distinct !DISubprogram(name: "shortenEndPartial", linkageName: "_Z17shortenEndPartialv", scope: !1, file: !1, line: 14, type: !8, scopeLine: 14, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !47)
+!47 = !{!48}
+!48 = !DILocalVariable(name: "local3", scope: !46, file: !1, line: 15, type: !12)
+!49 = !DILocation(line: 0, scope: !46)
+!50 = distinct !DIAssignID()
+!51 = distinct !DIAssignID()
+!52 = distinct !DIAssignID()
+!53 = !DILocation(line: 16, column: 3, scope: !46)
+!54 = !DILocation(line: 17, column: 3, scope: !46)
+!55 = !DILocation(line: 18, column: 3, scope: !46)
+!56 = !DILocation(line: 19, column: 1, scope: !46)
 !1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
