@@ -169,6 +169,10 @@ private:
   using LiveInVector = std::vector<RegisterMaskPair>;
   LiveInVector LiveIns;
 
+  /// The virtual registers defined as arguments of this block, fed positionally
+  /// by a SUCC_ARGS operand in each predecessor.
+  SmallVector<Register, 0> BlockArgs;
+
   /// Alignment of the basic block. One if the basic block does not need to be
   /// aligned.
   Align Alignment;
@@ -549,6 +553,28 @@ public:
   LLVM_ABI livein_iterator removeLiveIn(livein_iterator I);
 
   const std::vector<RegisterMaskPair> &getLiveIns() const { return LiveIns; }
+
+  //===--------------------------------------------------------------------===//
+  // Block argument accessors.
+  //===--------------------------------------------------------------------===//
+
+  ArrayRef<Register> getBlockArgs() const { return BlockArgs; }
+
+  unsigned getNumBlockArgs() const { return BlockArgs.size(); }
+  Register getBlockArg(unsigned I) const { return BlockArgs[I]; }
+  bool hasBlockArgs() const { return !BlockArgs.empty(); }
+
+  /// Append a register to this block's argument list and record it as defined
+  /// by this block.
+  LLVM_ABI void addBlockArg(Register Reg);
+
+  LLVM_ABI void clearBlockArgs();
+
+  /// Remove block argument \p I and the matching forwarded operand from every
+  /// predecessor's SUCC_ARGS, preserving the positional correspondence between
+  /// block arguments and SUCC_ARGS operands. A SUCC_ARGS left with no forwarded
+  /// values is erased.
+  LLVM_ABI void removeBlockArgAndUpdateSuccArgs(unsigned I);
 
   class liveout_iterator {
   public:

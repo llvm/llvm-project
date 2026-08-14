@@ -354,6 +354,7 @@ struct MachineVerifier {
   void markReachable(const MachineBasicBlock *MBB);
   void calcRegsPassed();
   void checkPHIOps(const MachineBasicBlock &MBB);
+  void checkBlockArgOps(const MachineBasicBlock &MBB);
 
   void calcRegsRequired();
   void verifyLiveVariables();
@@ -921,6 +922,13 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       }
       regsLive.insert_range(TRI->subregs_inclusive(LI.PhysReg));
     }
+  }
+
+  // Block arguments are defined at block entry.
+  for (Register Arg : MBB->getBlockArgs()) {
+    if (!Arg.isVirtual())
+      report("Block argument must be a virtual register", MBB);
+    regsLive.insert(Arg);
   }
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -3185,7 +3193,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
         }
         if (Bad)
           report("Using an undefined physical register", MO, MONum);
-      } else if (MRI->def_empty(Reg)) {
+      } else if (MRI->def_empty(Reg) && !MRI->isBlockArgDef(Reg)) {
         report("Reading virtual register without a def", MO, MONum);
       } else {
         BBInfo &MInfo = MBBInfoMap[MI->getParent()];
@@ -3523,6 +3531,42 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
   }
 }
 
+// Check the SUCC_ARGS feeders of a block's arguments. Each predecessor must
+// supply exactly one SUCC_ARGS for this block, whose forwarded value count
+// matches the block's argument count.
+void MachineVerifier::checkBlockArgOps(const MachineBasicBlock &MBB) {
+  unsigned NumArgs = MBB.getNumBlockArgs();
+  if (NumArgs == 0)
+    return;
+
+  for (const MachineBasicBlock *Pred : MBB.predecessors()) {
+    const MachineInstr *Found = nullptr;
+    for (const MachineInstr &MI : Pred->succ_args()) {
+      if (MI.getOperand(0).getMBB() != &MBB)
+        continue;
+      if (Found) {
+        report("Multiple SUCC_ARGS for the same successor", &MI);
+        continue;
+      }
+      Found = &MI;
+      unsigned NumForwarded = MI.getNumOperands() - 1;
+      if (NumForwarded != NumArgs) {
+        report("SUCC_ARGS operand count does not match successor block "
+               "argument count",
+               &MI);
+        OS << "SUCC_ARGS forwards " << NumForwarded << " values but "
+           << printMBBReference(MBB) << " has " << NumArgs << " arguments.\n";
+      }
+    }
+    if (!Found) {
+      report("Missing SUCC_ARGS for a block with arguments", &MBB);
+      OS << printMBBReference(*Pred)
+         << " is a predecessor but has no SUCC_ARGS for "
+         << printMBBReference(MBB) << ".\n";
+    }
+  }
+}
+
 static void
 verifyConvergenceControl(const MachineFunction &MF, MachineDominatorTree &DT,
                          std::function<void(const Twine &Message)> FailureCB,
@@ -3550,8 +3594,10 @@ void MachineVerifier::visitMachineFunctionAfter() {
 
   calcRegsPassed();
 
-  for (const MachineBasicBlock &MBB : *MF)
+  for (const MachineBasicBlock &MBB : *MF) {
     checkPHIOps(MBB);
+    checkBlockArgOps(MBB);
+  }
 
   // Now check liveness info if available
   calcRegsRequired();

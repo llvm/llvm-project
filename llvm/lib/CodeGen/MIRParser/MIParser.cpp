@@ -448,6 +448,7 @@ public:
                        MachineBasicBlock *&AddFalthroughFrom);
   bool parseBasicBlockLiveins(MachineBasicBlock &MBB);
   bool parseBasicBlockSuccessors(MachineBasicBlock &MBB);
+  bool parseBasicBlockArguments(MachineBasicBlock &MBB);
 
   bool parseNamedRegister(Register &Reg);
   bool parseVirtualRegister(VRegInfo *&Info);
@@ -957,6 +958,39 @@ bool MIParser::parseBasicBlockSuccessors(MachineBasicBlock &MBB) {
   return false;
 }
 
+bool MIParser::parseBasicBlockArguments(MachineBasicBlock &MBB) {
+  assert(Token.is(MIToken::kw_arguments));
+  lex();
+  if (expectAndConsume(MIToken::colon))
+    return true;
+  if (Token.isNewlineOrEOF()) // Allow an empty list of arguments.
+    return false;
+  do {
+    if (!Token.isRegister())
+      return error("expected a register");
+    Register Reg;
+    VRegInfo *Info;
+    if (parseRegister(Reg, Info))
+      return true;
+    if (!Reg)
+      return error("block argument cannot be $noreg");
+    lex();
+    // A block argument is a plain register definition; subregister indices are
+    // not meaningful here.
+    if (Token.is(MIToken::dot))
+      return error("unexpected subregister index on a block argument");
+    // Parse an optional inline register class, e.g. "%0:gr32".
+    if (consumeIfPresent(MIToken::colon)) {
+      if (!Info)
+        return error("register class specified for a non-virtual register");
+      if (parseRegisterClassOrBank(*Info))
+        return true;
+    }
+    MBB.addBlockArg(Reg);
+  } while (consumeIfPresent(MIToken::comma));
+  return false;
+}
+
 bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
                                MachineBasicBlock *&AddFalthroughFrom) {
   // Skip the definition.
@@ -986,6 +1020,9 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
       ExplicitSuccessors = true;
     } else if (Token.is(MIToken::kw_liveins)) {
       if (parseBasicBlockLiveins(MBB))
+        return true;
+    } else if (Token.is(MIToken::kw_arguments)) {
+      if (parseBasicBlockArguments(MBB))
         return true;
     } else if (consumeIfPresent(MIToken::Newline)) {
       continue;

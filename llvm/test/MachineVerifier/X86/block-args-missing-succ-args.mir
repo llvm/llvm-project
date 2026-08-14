@@ -1,0 +1,17 @@
+# RUN: not --crash llc -mtriple=x86_64-- -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# A predecessor of a block with arguments must supply a SUCC_ARGS for it.
+# CHECK: *** Bad machine code: Missing SUCC_ARGS for a block with arguments ***
+---
+name: missing_succ_args
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  bb.0:
+    successors: %bb.1
+    JMP_1 %bb.1
+
+  bb.1:
+    arguments: %0:gr32
+    RET64 %0
+...

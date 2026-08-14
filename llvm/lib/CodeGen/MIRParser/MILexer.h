@@ -135,6 +135,7 @@ struct MIToken {
     kw_ehfunclet_entry,
     kw_liveins,
     kw_successors,
+    kw_arguments,
     kw_floatpred,
     kw_intpred,
     kw_shufflemask,

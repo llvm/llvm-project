@@ -1,0 +1,20 @@
+# RUN: not --crash llc -mtriple=x86_64-- -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# A SUCC_ARGS whose forwarded value count differs from the successor's block
+# argument count is malformed.
+# CHECK: *** Bad machine code: SUCC_ARGS operand count does not match successor block argument count ***
+---
+name: count_mismatch
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 1
+    SUCC_ARGS %bb.1, %0
+    JMP_1 %bb.1
+
+  bb.1:
+    arguments: %1:gr32, %2:gr32
+    RET64 %1
+...

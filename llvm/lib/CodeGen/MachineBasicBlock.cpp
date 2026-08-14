@@ -1821,6 +1821,40 @@ MachineBasicBlock::getEndClobberMask(const TargetRegisterInfo *TRI) const {
   return isReturnBlock() && !succ_empty() ? TRI->getNoPreservedMask() : nullptr;
 }
 
+void MachineBasicBlock::addBlockArg(Register Reg) {
+  BlockArgs.push_back(Reg);
+  getParent()->getRegInfo().setBlockArgDef(Reg, this);
+}
+
+void MachineBasicBlock::clearBlockArgs() {
+  MachineRegisterInfo &MRI = getParent()->getRegInfo();
+  for (Register Reg : BlockArgs)
+    MRI.clearBlockArgDef(Reg);
+  BlockArgs.clear();
+}
+
+void MachineBasicBlock::removeBlockArgAndUpdateSuccArgs(unsigned I) {
+  assert(I < BlockArgs.size() && "Block argument index out of range");
+  MachineRegisterInfo &MRI = getParent()->getRegInfo();
+  MRI.clearBlockArgDef(BlockArgs[I]);
+  BlockArgs.erase(BlockArgs.begin() + I);
+
+  // Drop the matching forwarded operand (index I + 1, past the successor MBB
+  // operand) from each predecessor's SUCC_ARGS that targets this block. If that
+  // leaves a SUCC_ARGS with no forwarded values (only the successor operand),
+  // erase it.
+  for (MachineBasicBlock *Pred : predecessors()) {
+    for (MachineInstr &MI : make_early_inc_range(Pred->succ_args())) {
+      if (MI.getOperand(0).getMBB() != this)
+        continue;
+      assert(I + 1 < MI.getNumOperands() && "SUCC_ARGS operand count mismatch");
+      MI.removeOperand(I + 1);
+      if (MI.getNumOperands() == 1)
+        MI.eraseFromParent();
+    }
+  }
+}
+
 void MachineBasicBlock::clearLiveIns() {
   LiveIns.clear();
 }
