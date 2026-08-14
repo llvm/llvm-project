@@ -270,6 +270,13 @@ void InstrumentorImpl::linkRuntime() {
       return !GV.hasName() || !GVS.count(GV.getName()) ||
              RuntimeExports.count(GV.getName());
     });
+
+    for (StringRef Name : IConf.RuntimeExportSymbols->getStringList()) {
+      GlobalValue *GV = M.getNamedValue(Name);
+      if (!GV || GV->isDeclarationForLinker() || GV->hasLocalLinkage())
+        continue;
+      GV->setLinkage(GlobalValue::WeakAnyLinkage);
+    }
   };
 
   if (Linker::linkModules(M, std::move(RTM), 0, InternalizeCallback)) {

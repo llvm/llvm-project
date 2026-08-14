@@ -1,8 +1,5 @@
-$runtime_export = comdat any
-$runtime_internal = comdat any
-
-@runtime_export = linkonce_odr global i32 0, comdat, align 4
-@runtime_internal = linkonce_odr global i32 0, comdat, align 4
+@runtime_export = global i32 0, align 4
+@runtime_internal = global i32 0, align 4
 
 define void @__runtime_export_pre_numeric(i32 %size, i32 %id) {
 entry:
