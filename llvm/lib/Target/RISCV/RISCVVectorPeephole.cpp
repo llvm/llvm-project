@@ -799,8 +799,8 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
 ///   %and  = PseudoVMSLT_VV_M1_MASK %cmp1, %c, %d, %cmp1, %vl, %sew, mu
 ///
 /// This works because for a mask-undisturbed masked compare whose passthru is
-/// the same register as its mask %m, the result is %m[i] ? (c cmp d)[i] : %m[i],
-/// which is exactly %m[i] & (c cmp d)[i], i.e. vmand(%m, vmscmp(c, d)).
+/// the same register as its mask %m, the result is %m[i] ? (c cmp d)[i] :
+/// %m[i], which is exactly %m[i] & (c cmp d)[i], i.e. vmand(%m, vmscmp(c, d)).
 ///
 /// Since vmand is commutative it's enough for either operand to be a foldable
 /// comparison; the other operand becomes both the mask and the passthru.
@@ -810,9 +810,9 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
 
   // The masked comparison we create needs its mask (and passthru) in v0, which
   // the original vmand did not require. If the vmand's result has more than one
-  // use then it is an interior mask value rather than a final result feeding v0,
-  // and introducing the v0 requirement tends to add vmv1r.v moves. Only fold
-  // single-use results, where the value coalesces onto v0 for free.
+  // use then it is an interior mask value rather than a final result feeding
+  // v0, and introducing the v0 requirement tends to add vmv1r.v moves. Only
+  // fold single-use results, where the value coalesces onto v0 for free.
   if (!MRI->hasOneUse(MI.getOperand(0).getReg()))
     return false;
 
@@ -834,8 +834,8 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
 
     // Only fold comparisons: entries in the masked pseudo table whose unmasked
     // form has neither a passthru nor a policy operand. This excludes ops like
-    // vmsbf.m/viota.m which share that shape but whose active elements depend on
-    // the mask, so masking them would change their result.
+    // vmsbf.m/viota.m which share that shape but whose active elements depend
+    // on the mask, so masking them would change their result.
     const RISCV::RISCVMaskedPseudoInfo *Info =
         RISCV::lookupMaskedIntrinsicByUnmasked(Cmp.getOpcode());
     if (!Info)
@@ -882,9 +882,9 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
 
     // Only fold if the masked comparison's dest can live in v0. Its mask
     // operand must be v0, and we reuse the mask as the passthru, so if the dest
-    // can also be v0 the whole thing coalesces onto v0 and we save the vmand for
-    // free. For LMUL >= 2 the dest is earlyclobbered into vrnov0, which would
-    // force extra vmv1r.v moves for the mask and result and make this a
+    // can also be v0 the whole thing coalesces onto v0 and we save the vmand
+    // for free. For LMUL >= 2 the dest is earlyclobbered into vrnov0, which
+    // would force extra vmv1r.v moves for the mask and result and make this a
     // regression, so bail out in that case. This check must happen before we
     // mutate any instructions below.
     if (!TII->getRegClass(MaskedDesc, 0)->contains(RISCV::V0))
@@ -894,10 +894,10 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     if (!ensureDominates({&MaskOp, &MinVL}, Cmp))
       continue;
 
-    // The masked comparison's mask operand lives in the VMV0 (v0) class, and its
-    // passthru operand shares the dest's class. Copy the vmand mask into both;
-    // the coalescer collapses these back onto v0, matching the two-instruction
-    // ideal.
+    // The masked comparison's mask operand lives in the VMV0 (v0) class, and
+    // its passthru operand shares the dest's class. Copy the vmand mask into
+    // both; the coalescer collapses these back onto v0, matching the
+    // two-instruction ideal.
     Register MaskV0Reg = MRI->createVirtualRegister(&RISCV::VMV0RegClass);
     BuildMI(*MI.getParent(), Cmp, Cmp.getDebugLoc(),
             TII->get(TargetOpcode::COPY), MaskV0Reg)
@@ -909,9 +909,10 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
         .addReg(MaskReg);
 
     // Build the masked comparison. Its dest reuses vmand's dest; the passthru
-    // (tied to the dest) and mask are both the other vmand operand. Preserve the
-    // source comparison's MI flags (e.g. nofpexcept), which still hold since the
-    // masked comparison operates on a subset of the original active elements.
+    // (tied to the dest) and mask are both the other vmand operand. Preserve
+    // the source comparison's MI flags (e.g. nofpexcept), which still hold
+    // since the masked comparison operates on a subset of the original active
+    // elements.
     Register DestReg = MI.getOperand(0).getReg();
     MachineInstr *Masked =
         BuildMI(*MI.getParent(), Cmp, Cmp.getDebugLoc(), MaskedDesc)
