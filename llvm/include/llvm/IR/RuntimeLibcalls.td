@@ -2002,8 +2002,7 @@ defvar DefaultRuntimeLibcallImpls_longdouble_f128 =
 // FIXME: Ideally we would just use dags everywhere, but for the
 // arm64ec case we need iterable lists so we can add the # prefix
 //
-// The fp128 long double libcalls are removed here and re-added per-target
-// gated on the long double format.
+// The fp128 long double libcalls are added on a per-target basis.
 defvar DefaultRuntimeLibcallImplsBaseList =
 !listremove(
   !listremove(
