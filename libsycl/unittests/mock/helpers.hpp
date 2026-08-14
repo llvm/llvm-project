@@ -22,7 +22,6 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
-#include <cstdlib>
 #include <cstring>
 #include <unordered_map>
 #include <vector>
