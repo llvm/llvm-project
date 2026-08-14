@@ -269,11 +269,6 @@ struct CIRRecordLowering final {
   unsigned packed : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned padded : 1;
-  /// Whether a field was dropped whose data no member can represent.  Reported
-  /// as NYI.  Until that gap is closed the completed type reads as ABI-empty
-  /// when it is not, so the differential asserts below cannot run on it.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned droppedFieldHoldingData : 1;
 
 private:
   // Output fields, consumed by CIRGenTypes::computeRecordLayout.  Private so
@@ -296,7 +291,7 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
           cirGenTypes.getASTContext().getASTRecordLayout(recordDecl)},
       dataLayout{cirGenTypes.getCGModule().getModule()},
       zeroInitializable{true}, zeroInitializableAsBase{true}, packed{packed},
-      padded{false}, droppedFieldHoldingData{false} {}
+      padded{false} {}
 
 void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
                                         CharUnits startOffset,
@@ -404,7 +399,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
     uint64_t startBitOffset, tail = 0;
     // Where the current run's storage member sits in members, so that a named
     // occupant joining the run can promote it to data.
-    size_t runStorageIdx = 0;
+    size_t storageIdx = 0;
     for (; field != fieldEnd && field->isBitField(); ++field) {
       // Zero-width bitfields end runs.
       if (field->isZeroLengthBitField()) {
@@ -424,14 +419,14 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
         // the bitfields it contains get laid out.  The run is only known one
         // field at a time here, so the unit starts out holding no data and is
         // promoted below when a named occupant lands in it.
-        runStorageIdx = members.size();
+        storageIdx = members.size();
         members.push_back(makeStorageInfo(bitsToCharUnits(startBitOffset), type,
                                           cir::RecordMemberKind::Empty));
       }
-      assert(members[runStorageIdx].offset == bitsToCharUnits(startBitOffset) &&
-             "runStorageIdx must name the current run's storage");
+      assert(members[storageIdx].offset == bitsToCharUnits(startBitOffset) &&
+             "storageIdx must name the current run's storage");
       if (!field->isUnnamedBitField())
-        members[runStorageIdx].memberKind = cir::RecordMemberKind::Data;
+        members[storageIdx].memberKind = cir::RecordMemberKind::Data;
       // Bitfields get the offset of their storage but come afterward and remain
       // there after a stable sort.
       members.push_back(MemberInfo(bitsToCharUnits(startBitOffset),
@@ -608,20 +603,20 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
           assert(getSize(type) == accessSize &&
                  "Unclipped access must be clipped");
         }
-        // An unnamed bit-field of any width occupies no ABI class, so a unit
-        // made up of nothing but those is declared storage holding no data.
-        const bool hasNamedOccupant = llvm::any_of(
-            llvm::make_range(begin, bestEnd),
-            [](const FieldDecl *fd) { return !fd->isUnnamedBitField(); });
-        members.push_back(makeStorageInfo(beginOffset, type,
-                                          hasNamedOccupant
-                                              ? cir::RecordMemberKind::Data
-                                              : cir::RecordMemberKind::Empty));
-        for (; begin != bestEnd; ++begin)
+        // An unnamed bit-field of any width occupies no ABI class, so the unit
+        // starts out holding no data and is promoted below when a named
+        // occupant lands in it.
+        const size_t storageIdx = members.size();
+        members.push_back(
+            makeStorageInfo(beginOffset, type, cir::RecordMemberKind::Empty));
+        for (; begin != bestEnd; ++begin) {
+          if (!begin->isUnnamedBitField())
+            members[storageIdx].memberKind = cir::RecordMemberKind::Data;
           if (!begin->isZeroLengthBitField())
             members.push_back(MemberInfo(beginOffset,
                                          MemberInfo::InfoKind::Field, nullptr,
                                          cir::RecordMemberKind::Data, *begin));
+        }
       }
       // Reset to start a new span.
       field = bestEnd;
@@ -666,14 +661,11 @@ void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
       // gap rather than claim an emptiness the record does not have.  The base
       // subobject lowering sees the same field, so only the complete object
       // reports it.
-      if (!isEmptyFieldForABI(astContext, *field)) {
-        if (!nonVirtualBaseType)
-          cirGenTypes.getCGModule().errorNYI(
-              field->getSourceRange(),
-              "[[no_unique_address]] field that is empty for layout but holds "
-              "data for the ABI");
-        droppedFieldHoldingData = true;
-      }
+      if (!nonVirtualBaseType && !isEmptyFieldForABI(astContext, *field))
+        cirGenTypes.getCGModule().errorNYI(
+            field->getSourceRange(),
+            "[[no_unique_address]] field that is empty for layout but holds "
+            "data for the ABI");
       ++field;
     } else {
       // Use base subobject layout for potentially-overlapping fields,
@@ -784,13 +776,10 @@ convertRecordArgPassingKind(RecordArgPassingKind kind) {
 }
 
 /// Whether the member kinds on \p recordTy answer the record's ABI emptiness
-/// the same way the AST predicate does.  A lowering that dropped a field
-/// holding data has no member left to carry that data, so it is exempt.
+/// the same way the AST predicate does.
 [[maybe_unused]] static bool
 marksMatchABIEmptiness(const ASTContext &astContext, const RecordDecl *rd,
-                       cir::RecordType recordTy, bool droppedFieldHoldingData) {
-  if (droppedFieldHoldingData)
-    return true;
+                       cir::RecordType recordTy) {
   return recordTy.isEmptyForABI() ==
          isEmptyRecordForABI(astContext, astContext.getCanonicalTagType(rd));
 }
@@ -840,8 +829,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       // Emptiness is a property of the decl, so the base subobject must answer
       // the same way the complete object does.  The two are not comparable
       // mark by mark: they see different sizes and so different tail padding.
-      assert(marksMatchABIEmptiness(astContext, rd, baseTy,
-                                    baseLowering.droppedFieldHoldingData) &&
+      assert((marksMatchABIEmptiness(astContext, rd, baseTy) ||
+              cgm.getDiags().hasErrorOccurred()) &&
              "base subobject member kinds must reproduce its ABI emptiness");
     }
   }
@@ -857,8 +846,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // answer against the AST predicate on every record CIRGen lays out.  This
   // does not check the individual marks, only what they add up to.  The marks
   // themselves are pinned by clang/test/CIR/CodeGen/record-member-kinds.*.
-  assert(marksMatchABIEmptiness(astContext, rd, *ty,
-                                lowering.droppedFieldHoldingData) &&
+  assert((marksMatchABIEmptiness(astContext, rd, *ty) ||
+          cgm.getDiags().hasErrorOccurred()) &&
          "member kinds must reproduce the ABI emptiness of the record");
 
   // Queue ABI metadata for the module-level cir.record_layouts attribute.
