@@ -6,7 +6,8 @@ SWIFT_OBJC_INTEROP := 1
 
 include Makefile.rules
 
-a.out: main.m libFoo.dylib libBar.dylib
+a.out: main.m libFoo.dylib libBar.dylib \
+       $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) $(MANDATORY_MODULE_BUILD_CFLAGS) -I$(shell pwd) -lFoo -lBar -L$(shell pwd) -o $@ $<
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"

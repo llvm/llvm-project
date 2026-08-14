@@ -13,7 +13,8 @@ all: Framework.framework/Versions/A/Framework a.out
 include Makefile.rules
 
 # The framework is built for plain macOS -- note the macosx -target.
-Framework.framework/Versions/A/Framework: $(SRCDIR)/Framework.swift
+Framework.framework/Versions/A/Framework: $(SRCDIR)/Framework.swift \
+                                          $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	touch Framework.h
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 	    MAKE_DSYM=YES \

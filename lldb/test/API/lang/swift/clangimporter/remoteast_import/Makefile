@@ -12,7 +12,8 @@ LD_EXTRAS += -lLibrary -L.
 
 .PHONY: libLibrary
 
-libLibrary:
+libLibrary: \
+            $(call tool_prereq,$(CC))
 	"$(MAKE)" -f $(SRCDIR)/Library.mk VPATH=$(SRCDIR) -I $(SRCDIR)
 
 clean::

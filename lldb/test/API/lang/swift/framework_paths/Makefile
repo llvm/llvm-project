@@ -7,7 +7,8 @@ all: Direct.framework $(EXE)
 
 include Makefile.rules
 
-Discovered.framework: Discovered.h
+Discovered.framework: Discovered.h \
+                      $(call tool_prereq,$(CC))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=Discovered \
@@ -16,7 +17,8 @@ Discovered.framework: Discovered.h
 		FRAMEWORK_MODULES=$(SRCDIR)/module.modulemap \
 		FRAMEWORK=Discovered
 
-Direct.framework: $(SRCDIR)/Direct.swift.in Discovered.framework
+Direct.framework: $(SRCDIR)/Direct.swift.in Discovered.framework \
+                  $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call MKDIR_P,$(BUILDDIR)/secret_path)
 	$(call CP,$<,$(BUILDDIR)/Direct.swift)
 	mv Discovered.framework $(BUILDDIR)/secret_path

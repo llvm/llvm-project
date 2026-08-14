@@ -11,7 +11,8 @@ LD_EXTRAS := ignored.o
 all: ignored.o $(EXE)
 
 # Artificially inject a wrong SDK into a C file to test that it is being ignored.
-ignored.o: ignored.c
+ignored.o: ignored.c \
+           $(call tool_prereq,$(CC))
 	$(CC) -target $(ARCH)-apple-macos  -c $< -o $@ \
 	  -isysroot $(shell xcrun --sdk iphonesimulator --show-sdk-path)
 

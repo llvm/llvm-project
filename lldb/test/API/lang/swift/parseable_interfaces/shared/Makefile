@@ -22,19 +22,22 @@ setup:
 	$(call CP,$(SRCDIR)/libs/C.swift,libs/CC.swift)
 	$(call ECHO_TO_FILE,'$(SWIFTSDKROOT)',$(BUILDDIR)/sdk-root.txt)
 
-sharedA:
+sharedA: \
+         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) VPATH=$(BUILDDIR) SWIFTSDKROOT="$(SWIFTSDKROOT)" \
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \
 		BASENAME=AA -f $(SRCDIR)/libs/Makefile
 
-sharedB:
+sharedB: \
+         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) VPATH=$(BUILDDIR) SWIFTSDKROOT="$(SWIFTSDKROOT)" \
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \
 		BASENAME=BB SWIFTFLAGS_EXTRAS="-I$(BUILDDIR)" LD_EXTRAS="-L$(BUILDDIR) -lAA" -f $(SRCDIR)/libs/Makefile
 
-sharedC:
+sharedC: \
+         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) VPATH=$(BUILDDIR) SWIFTSDKROOT="$(SWIFTSDKROOT)" \
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \

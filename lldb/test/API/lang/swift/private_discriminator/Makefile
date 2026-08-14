@@ -6,7 +6,8 @@ all: libBuilder.dylib $(EXE)
 
 include Makefile.rules
 
-libGeneric.dylib: $(SRCDIR)/Generic.swift
+libGeneric.dylib: $(SRCDIR)/Generic.swift \
+                  $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=Generic \
@@ -14,7 +15,8 @@ libGeneric.dylib: $(SRCDIR)/Generic.swift
 		DYLIB_MODULENAME=Generic \
 		SWIFTFLAGS_EXTRAS=-enable-library-evolution
 
-libBuilder.dylib: $(SRCDIR)/Builder.swift libGeneric.dylib
+libBuilder.dylib: $(SRCDIR)/Builder.swift libGeneric.dylib \
+                  $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=Builder \

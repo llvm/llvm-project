@@ -12,7 +12,8 @@ all: libMacro.dylib libMacroImpl.dylib $(EXE)
 
 include Makefile.rules
 
-libMacro.dylib:
+libMacro.dylib: \
+                $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) \
@@ -25,7 +26,8 @@ libMacro.dylib:
 		all
 	$(RM) $(BUILDDIR)/Macro.swiftinterface
 
-libMacroImpl.dylib:
+libMacroImpl.dylib: \
+                    $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) \

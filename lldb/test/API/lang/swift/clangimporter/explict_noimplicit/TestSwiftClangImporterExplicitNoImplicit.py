@@ -17,8 +17,11 @@ class TestSwiftClangImporterExplicitNoImplicit(TestBase):
         Test flipping on/off implicit modules.
         """
         self.build()
+        mod_cache = self.getBuildArtifact("IMPLICIT-CLANG-MODULE-CACHE")
+        if os.path.isdir(mod_cache):
+          shutil.rmtree(mod_cache)
         self.expect('settings set symbols.clang-modules-cache-path '
-                    + self.getBuildArtifact("IMPLICIT-CLANG-MODULE-CACHE"))
+                    + mod_cache)
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('main.swift'),
                                           extra_images=['Dylib'])

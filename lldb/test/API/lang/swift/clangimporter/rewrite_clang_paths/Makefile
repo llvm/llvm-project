@@ -7,7 +7,8 @@ BUILDDIR := $(realpath $(shell pwd))
 BOTDIR := $(BUILDDIR)/buildbot
 USERDIR := $(BUILDDIR)/user
 
-a.out: main.m libFoo.dylib
+a.out: main.m libFoo.dylib \
+       $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) $(MANDATORY_MODULE_BUILD_CFLAGS) -I$(shell pwd) -lFoo -L$(shell pwd) -o $@ $<
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"

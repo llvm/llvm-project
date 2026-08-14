@@ -8,7 +8,8 @@ include Makefile.rules
 LD_EXTRAS = -lImpl -L$(BUILDDIR) -Xlinker -add_ast_path -Xlinker Impl.swiftmodule
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 
-ImplB: ImplB.swift
+ImplB: ImplB.swift \
+       $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call ECHO,"Building an out-of-date swift interface")
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
@@ -20,7 +21,8 @@ ImplB: ImplB.swift
 	mv Impl.swiftinterface ImplB.swiftinterface
 	$(call RM,Impl.swiftmodule Impl.private.swiftinterface libImpl.dylib )
 
-ImplA: ImplB ImplA.swift
+ImplA: ImplB ImplA.swift \
+       $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		SWIFTFLAGS_EXTRAS="-I$(BUILDDIR) -enable-library-evolution" \
@@ -33,7 +35,8 @@ ImplA: ImplB ImplA.swift
 	$(call RM,ImplA.swift.o ImplB.swift.o)
 	mv ImplB.swiftinterface Impl.swiftinterface
 
-Postprocess:
+Postprocess: \
+             $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call ECHO,"Compiling Impl.swiftinterfact to Impl.swiftmodule")
 	$(call ECHO_TO_FILE,'import Impl',trigger.swift)
 	$(SWIFT_FE) $(SWIFT_FEFLAGS) -module-cache-path cache -c trigger.swift -o trigger -I.

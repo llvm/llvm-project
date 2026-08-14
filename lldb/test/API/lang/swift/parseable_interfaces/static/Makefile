@@ -17,7 +17,8 @@ setup:
 	$(call CP,$(SRCDIR)/libs/B.swift,libs/BB.swift)
 	$(call CP,$(SRCDIR)/libs/C.swift,libs/CC.swift)
 
-staticA:
+staticA: \
+         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	# Because we override VPATH to point to the build directory, we need to pass
 	# down SWIFTC too (it's default value is relative to VPATH)
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
@@ -26,7 +27,8 @@ staticA:
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \
 		BASENAME=AA -f $(SRCDIR)/libs/Makefile static_only
 
-staticB:
+staticB: \
+         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) VPATH=$(BUILDDIR) \
 		SWIFTSDKROOT=$(SWIFTSDKROOT) \
@@ -34,7 +36,8 @@ staticB:
 		BASENAME=BB SWIFTFLAGS_EXTRAS="-I$(BUILDDIR)" \
 		LD_EXTRAS="-L$(BUILDDIR)" -f $(SRCDIR)/libs/Makefile static_only
 
-staticC:
+staticC: \
+         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) VPATH=$(BUILDDIR) \
 		SWIFTSDKROOT=$(SWIFTSDKROOT) \

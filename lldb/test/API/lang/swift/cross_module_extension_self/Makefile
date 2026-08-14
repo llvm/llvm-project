@@ -9,7 +9,8 @@ include Makefile.rules
 # DYLIB_HIDE_SWIFTMODULE together with no reflection metadata makes it
 # impossible to lay out `self`.
 .PHONY: dylib
-dylib: Lib.swift
+dylib: Lib.swift \
+       $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) -C $(BUILDDIR) VPATH=$(SRCDIR) \
 		CC=$(CC) SWIFTC=$(SWIFTC) ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		DYLIB_HIDE_SWIFTMODULE=YES \

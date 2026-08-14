@@ -6,7 +6,8 @@ all: Dylib $(EXE)
 include Makefile.rules
 
 .PHONY: Dylib
-Dylib:
+Dylib: \
+       $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) \

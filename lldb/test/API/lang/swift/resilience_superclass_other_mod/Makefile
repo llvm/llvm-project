@@ -6,7 +6,8 @@ include Makefile.rules
 LD_EXTRAS = -lModWithClass -L$(BUILDDIR)
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 
-libModWithClass.dylib: ModWithClass.swift libModWithSuper.dylib
+libModWithClass.dylib: ModWithClass.swift libModWithSuper.dylib \
+                       $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=ModWithClass \
@@ -17,7 +18,8 @@ libModWithClass.dylib: ModWithClass.swift libModWithSuper.dylib
 		DYLIB_SWIFT_SOURCES:=ModWithClass.swift \
 		-f $(MAKEFILE_RULES)
 
-libModWithSuper.dylib: ModWithSuper.swift
+libModWithSuper.dylib: ModWithSuper.swift \
+                       $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=ModWithSuper \
