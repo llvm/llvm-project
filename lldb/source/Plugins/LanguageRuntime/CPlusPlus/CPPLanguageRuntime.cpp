@@ -17,6 +17,7 @@
 #include "VerboseTrapFrameRecognizer.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Variable.h"
@@ -247,42 +248,47 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     return optional_info;
 
   uint32_t address_size = process->GetAddressByteSize();
-  Status status;
 
   // First item pointed to by __f_ should be the pointer to the vtable for
   // a __base object.
-  lldb::addr_t vtable_address =
-      process->ReadPointerFromMemory(member_f_pointer_value, status);
+  llvm::Expected<lldb::addr_t> vtable_address_or_err =
+      process->ReadPointerFromMemory(member_f_pointer_value);
+  if (!vtable_address_or_err) {
+    llvm::consumeError(vtable_address_or_err.takeError());
+    return optional_info;
+  }
+  lldb::addr_t vtable_address = *vtable_address_or_err;
 
   ABISP abi_sp = process->GetABI();
   if (abi_sp)
     vtable_address = abi_sp->FixCodeAddress(vtable_address);
 
-  if (status.Fail())
+  llvm::Expected<lldb::addr_t> vtable_address_first_entry_or_err =
+      process->ReadPointerFromMemory(vtable_address + address_size);
+  if (!vtable_address_first_entry_or_err) {
+    llvm::consumeError(vtable_address_first_entry_or_err.takeError());
     return optional_info;
-
-  lldb::addr_t vtable_address_first_entry =
-      process->ReadPointerFromMemory(vtable_address + address_size, status);
+  }
+  lldb::addr_t vtable_address_first_entry = *vtable_address_first_entry_or_err;
 
   if (abi_sp)
     vtable_address_first_entry =
         abi_sp->FixCodeAddress(vtable_address_first_entry);
 
-  if (status.Fail())
-    return optional_info;
-
   lldb::addr_t address_after_vtable = member_f_pointer_value + address_size;
   // As commented above we may not have a function pointer but if we do we will
   // need it.
-  lldb::addr_t possible_function_address =
-      process->ReadPointerFromMemory(address_after_vtable, status);
+  llvm::Expected<lldb::addr_t> possible_function_address_or_err =
+      process->ReadPointerFromMemory(address_after_vtable);
+  if (!possible_function_address_or_err) {
+    llvm::consumeError(possible_function_address_or_err.takeError());
+    return optional_info;
+  }
+  lldb::addr_t possible_function_address = *possible_function_address_or_err;
 
   if (abi_sp)
     possible_function_address =
         abi_sp->FixCodeAddress(possible_function_address);
-
-  if (status.Fail())
-    return optional_info;
 
   Target &target = process->GetTarget();
 
@@ -782,15 +788,11 @@ CPPLanguageRuntime::GetVTableInfoEntry(ValueObject &in_value, bool check_type) {
     return llvm::createStringError(std::errc::invalid_argument,
                                    "failed to get the address of the value");
 
-  Status error;
-  lldb::addr_t vtable_load_addr =
-      process->ReadPointerFromMemory(original_ptr, error);
-
-  if (!error.Success() || vtable_load_addr == LLDB_INVALID_ADDRESS)
-    return llvm::createStringError(
-        std::errc::invalid_argument,
-        "failed to read vtable pointer from memory at 0x%" PRIx64,
-        original_ptr);
+  llvm::Expected<lldb::addr_t> vtable_load_addr_or_err =
+      process->ReadPointerFromMemory(original_ptr);
+  if (!vtable_load_addr_or_err)
+    return vtable_load_addr_or_err.takeError();
+  lldb::addr_t vtable_load_addr = *vtable_load_addr_or_err;
 
   // The vtable load address can have authentication bits with
   // AArch64 targets on Darwin.

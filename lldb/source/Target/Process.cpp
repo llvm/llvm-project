@@ -2516,12 +2516,19 @@ int64_t Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr,
   return fail_value;
 }
 
-addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error) {
+llvm::Expected<addr_t> Process::ReadPointerFromMemory(lldb::addr_t vm_addr) {
   Scalar scalar;
+  Status error;
   if (ReadScalarIntegerFromMemory(vm_addr, GetAddressByteSize(), false, scalar,
-                                  error))
-    return scalar.ULongLong(LLDB_INVALID_ADDRESS);
-  return LLDB_INVALID_ADDRESS;
+                                  error)) {
+    assert(scalar.GetType() == Scalar::e_int &&
+           "a successful read always yields an integer");
+    return scalar.ULongLong();
+  }
+  if (error.Fail())
+    return error.ToError();
+  return llvm::createStringError(
+      "failed to read pointer from memory at 0x%" PRIx64, vm_addr);
 }
 
 llvm::SmallVector<std::optional<addr_t>>

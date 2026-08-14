@@ -13,6 +13,7 @@
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "llvm/Support/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -239,14 +240,15 @@ ItaniumABIRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
 
   size_t ptr_size = m_process->GetAddressByteSize();
   addr_t result_ptr = results.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-  addr_t exception_addr =
-      m_process->ReadPointerFromMemory(result_ptr - ptr_size, error);
+  llvm::Expected<lldb::addr_t> exception_addr =
+      m_process->ReadPointerFromMemory(result_ptr - ptr_size);
 
-  if (!error.Success()) {
+  if (!exception_addr) {
+    llvm::consumeError(exception_addr.takeError());
     return ValueObjectSP();
   }
 
-  lldb_private::formatters::InferiorSizedWord exception_isw(exception_addr,
+  lldb_private::formatters::InferiorSizedWord exception_isw(*exception_addr,
                                                             *m_process);
   ValueObjectSP exception = ValueObject::CreateValueObjectFromData(
       "exception", exception_isw.GetAsData(m_process->GetByteOrder()), exe_ctx,

@@ -1783,7 +1783,7 @@ public:
   int64_t ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size,
                                       int64_t fail_value, Status &error);
 
-  lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error);
+  llvm::Expected<lldb::addr_t> ReadPointerFromMemory(lldb::addr_t vm_addr);
 
   /// Use Process::ReadMemoryRanges to efficiently read multiple pointers from
   /// memory at once.
