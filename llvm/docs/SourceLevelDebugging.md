@@ -489,14 +489,22 @@ Label IDs are local to an expression:
   offset.
 - Branches can go forward, backward, to themselves, or form cycles.
 
-There are a few other restrictions:
+`DIExpression` validation also checks the following:
 
 - Put labels, branches, and skips before `DW_OP_stack_value` and
   `DW_OP_LLVM_fragment`. Only a fragment can follow `DW_OP_stack_value`.
-- `DIArgList`, `DW_OP_LLVM_arg`, and `DW_OP_LLVM_implicit_pointer` are lowered
-  separately, so they can't be used with symbolic control flow.
 - Put `DW_OP_LLVM_tag_offset` before the first label, branch, or skip so it
   applies to every path.
+
+There are also a couple of cases we don't handle yet:
+
+- `DIArgList` and `DW_OP_LLVM_arg` are currently rejected. CodeGen expands each
+  argument before it resolves the label offsets, so there isn't a representation
+  problem here; it mostly needs work handling it in expressions and expression
+  writers.
+- `DW_OP_LLVM_implicit_pointer` bypasses normal expression emission and only
+  handles a single location today. Supporting branches there is a bit more
+  work, since we'll need to work it back into our normal emission order.
 
 We don't check reachability, termination, or stack state where paths meet.
 
@@ -504,6 +512,9 @@ We don't check reachability, termination, or stack state where paths meet.
 and we don't match conversions on different paths. When CodeGen can't emit
 `DW_OP_convert`, it may defer one conversion until it sees the next; if a label,
 branch, or skip would split the pair, CodeGen reports an error.
+
+CodeGen also reports an error if the final branch offset is outside
+`[-32768, 32767]`.
 
 Local expression rewrites stop at labels, branches, and skips; they can still
 add operations to either end, but they don't move, remove, or copy labels.
