@@ -6560,7 +6560,7 @@ static void workshareLoopTargetCallback(
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    WorksharingLoopType LoopType, bool NoLoop) {
+    WorksharingLoopType LoopType, bool NoLoop, bool HasLastiterClause) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   IdentFlag Flag = IdentFlag(0);
@@ -6577,13 +6577,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   }
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize, Flag);
 
-  // Allocate p.lastiter and initialize it to 0.
-  // The actual value will be set inside the loop body if the current iteration
-  // is the last one.
-  Builder.restoreIP(AllocaIP);
-  Value *PLastIter = Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, "p.lastiter");
-  Builder.CreateStore(Builder.getInt32(0), PLastIter);
-  CLI->setLastIter(PLastIter);
+  Value *PLastIter = nullptr;
+  if (HasLastiterClause) {
+    // Allocate p.lastiter and initialize it to 0.
+    // The actual value will be set inside the loop body if the current
+    // iteration is the last one.
+    Builder.restoreIP(AllocaIP);
+    PLastIter =
+        Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, "p.lastiter");
+    Builder.CreateStore(Builder.getInt32(0), PLastIter);
+    CLI->setLastIter(PLastIter);
+  }
 
   auto OI = std::make_unique<OutlineInfo>();
   OI->OuterAllocBB = CLI->getPreheader();
@@ -6613,14 +6617,16 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   ToBeDeleted.push_back(NewLoopCntLoad);
   ToBeDeleted.push_back(NewLoopCnt);
 
-  // Set p.lastiter to 1 if the current iteration is the last one.
-  Builder.restoreIP(CLI->getBody(), CLI->getBody()->getFirstInsertionPt());
-  Value *IsLast = Builder.CreateICmpEQ(
-      NewLoopCntLoad,
-      Builder.CreateSub(CLI->getTripCount(),
-                        ConstantInt::get(CLI->getTripCount()->getType(), 1)));
-  Value *IsLastExt = Builder.CreateZExt(IsLast, Builder.getInt32Ty());
-  Builder.CreateStore(IsLastExt, PLastIter);
+  if (HasLastiterClause) {
+    // Set p.lastiter to 1 if the current iteration is the last one.
+    Builder.restoreIP({CLI->getBody(), CLI->getBody()->getFirstInsertionPt()});
+    Value *IsLast = Builder.CreateICmpEQ(
+        NewLoopCntLoad,
+        Builder.CreateSub(CLI->getTripCount(),
+                          ConstantInt::get(CLI->getTripCount()->getType(), 1)));
+    Value *IsLastExt = Builder.CreateZExt(IsLast, Builder.getInt32Ty());
+    Builder.CreateStore(IsLastExt, PLastIter);
+  }
 
   // Analyse loop body region. Find all input variables which are used inside
   // loop body region.
@@ -6685,9 +6691,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
     WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
-    Value *DistScheduleChunkSize) {
+    Value *DistScheduleChunkSize, bool HasLastiterClause) {
   if (Config.isTargetDevice())
-    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop);
+    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop,
+                                    HasLastiterClause);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
       HasNonmonotonicModifier, HasOrderedClause, DistScheduleChunkSize);
