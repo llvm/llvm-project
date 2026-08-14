@@ -4,7 +4,11 @@
 
 # RUN: %python %S/../../../scripts/clang-explicit-module-build.py -cas-path %t/cas -- %clang_host -c -g -o %t/test.o %t/tu.c -fmodules -gmodules -fmodules-cache-path=%t/module-cache
 # RUN: %clang_host %t/test.o -o %t/main
-# RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s --check-prefix=FAIL
+# The search for a .cas-config walks up the directory tree, so a
+# caching-enabled build directory above %t would otherwise hand this run a
+# CAS. An empty CASPath terminates that search without configuring a CAS.
+# RUN: cp %t/empty-cas-config.template %t/.cas-config
+# RUN: cd %t && %lldb main -s lldb.script 2>&1 | FileCheck %s --check-prefix=FAIL
 # RUN: sed "s|DIR|%/t|g" %t/cas-config.template > %t/.cas-config
 # RUN: cd %t && %lldb main -s lldb.script 2>&1 | FileCheck %s
 
@@ -56,6 +60,11 @@ int main(void) {
   _bottom.top.x = 1;
 
   return 0; // BREAK HERE
+}
+
+//--- empty-cas-config.template
+{
+  "CASPath": ""
 }
 
 //--- cas-config.template
