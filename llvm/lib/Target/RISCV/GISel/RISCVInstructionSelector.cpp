@@ -121,8 +121,8 @@ private:
     RISCVMatInt::InstSeq Seq;
     int64_t Lo12 = 0;
   };
-  std::optional<ConstAddrPlan> computeConstAddrPlan(int64_t CVal,
-                                                    bool IsPrefetch) const;
+  ComplexRendererFns computeConstAddrPlan(int64_t CVal, bool IsPrefetch,
+                                          Register OrigBase) const;
   // Materialize the high part of Plan into a register. If OrigBase is valid,
   // ADD it to the materialized high part (for G_PTR_ADD + large constant).
   Register materializeConstBase(MachineInstrBuilder &MIB,
@@ -670,14 +670,9 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
 
     // Otherwise split the constant into Hi (materialized + added to the base)
     // and Lo12 (folded offset).
-    if (auto Plan = computeConstAddrPlan(RHSC, /*IsPrefetch=*/true)) {
-      ConstAddrPlan PlanVal = *Plan;
-      Register BaseReg = LHS.getReg();
-      return {{[=](MachineInstrBuilder &MIB) {
-                 MIB.addReg(materializeConstBase(MIB, PlanVal, BaseReg));
-               },
-               [=](MachineInstrBuilder &MIB) { MIB.addImm(PlanVal.Lo12); }}};
-    }
+    if (auto Fns =
+            computeConstAddrPlan(RHSC, /*IsPrefetch=*/true, LHS.getReg()))
+      return Fns;
   }
 
   // Bare constant address. IRTranslator emits inttoptr(C) as
@@ -689,13 +684,8 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
   }
   if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
     int64_t CVal = RootDef->getOperand(1).getCImm()->getSExtValue();
-    if (auto Plan = computeConstAddrPlan(CVal, /*IsPrefetch=*/true)) {
-      ConstAddrPlan PlanVal = *Plan;
-      return {{[=](MachineInstrBuilder &MIB) {
-                 MIB.addReg(materializeConstBase(MIB, PlanVal, Register()));
-               },
-               [=](MachineInstrBuilder &MIB) { MIB.addImm(PlanVal.Lo12); }}};
-    }
+    if (auto Fns = computeConstAddrPlan(CVal, /*IsPrefetch=*/true, Register()))
+      return Fns;
   }
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
@@ -1751,56 +1741,16 @@ bool RISCVInstructionSelector::selectImplicitDef(MachineInstr &MI) const {
 
 bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
                                               MachineInstr &MI) const {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-
   if (Imm == 0) {
+    MachineBasicBlock &MBB = *MI.getParent();
+    DebugLoc DL = MI.getDebugLoc();
     BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), DstReg).addReg(RISCV::X0);
     RBI.constrainGenericRegister(DstReg, RISCV::GPRRegClass, *MRI);
     return true;
   }
 
   RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, *Subtarget);
-  unsigned NumInsts = Seq.size();
-  Register SrcReg = RISCV::X0;
-
-  for (unsigned i = 0; i < NumInsts; i++) {
-    Register TmpReg = i < NumInsts - 1
-                          ? MRI->createVirtualRegister(&RISCV::GPRRegClass)
-                          : DstReg;
-    const RISCVMatInt::Inst &I = Seq[i];
-    MachineInstr *Result;
-
-    switch (I.getOpndKind()) {
-    case RISCVMatInt::Imm:
-      // clang-format off
-      Result = BuildMI(MBB, MI, DL, TII.get(I.getOpcode()), TmpReg)
-                   .addImm(I.getImm());
-      // clang-format on
-      break;
-    case RISCVMatInt::RegX0:
-      Result = BuildMI(MBB, MI, DL, TII.get(I.getOpcode()), TmpReg)
-                   .addReg(SrcReg)
-                   .addReg(RISCV::X0);
-      break;
-    case RISCVMatInt::RegReg:
-      Result = BuildMI(MBB, MI, DL, TII.get(I.getOpcode()), TmpReg)
-                   .addReg(SrcReg)
-                   .addReg(SrcReg);
-      break;
-    case RISCVMatInt::RegImm:
-      Result = BuildMI(MBB, MI, DL, TII.get(I.getOpcode()), TmpReg)
-                   .addReg(SrcReg)
-                   .addImm(I.getImm());
-      break;
-    }
-
-    constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
-
-    SrcReg = TmpReg;
-  }
-
-  return true;
+  return materializeInstSeq(DstReg, Seq, MI);
 }
 
 bool RISCVInstructionSelector::materializeInstSeq(
@@ -1849,14 +1799,20 @@ bool RISCVInstructionSelector::materializeInstSeq(
   return true;
 }
 
-std::optional<RISCVInstructionSelector::ConstAddrPlan>
-RISCVInstructionSelector::computeConstAddrPlan(int64_t CVal,
-                                               bool IsPrefetch) const {
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::computeConstAddrPlan(int64_t CVal, bool IsPrefetch,
+                                               Register OrigBase) const {
   // Split the constant into a materialized high part (the base) and
   // a simm12 low part (the offset). For prefetch the low part
   // must additionally be a multiple of 32 (simm12_lsb00000).
   int64_t Lo12 = SignExtend64<12>(CVal);
   int64_t Hi = (uint64_t)CVal - (uint64_t)Lo12;
+  auto emit = [&](ConstAddrPlan Plan) -> ComplexRendererFns {
+    return {{[=](MachineInstrBuilder &MIB) {
+               MIB.addReg(materializeConstBase(MIB, Plan, OrigBase));
+             },
+             [=](MachineInstrBuilder &MIB) { MIB.addImm(Plan.Lo12); }}};
+  };
   if (!Subtarget->is64Bit() || isInt<32>(Hi)) {
     if (IsPrefetch && (Lo12 & 0b11111) != 0)
       return std::nullopt;
@@ -1866,7 +1822,7 @@ RISCVInstructionSelector::computeConstAddrPlan(int64_t CVal,
       Plan.Kind = ConstAddrPlan::LUI;
       Plan.Hi20 = (Hi >> 12) & 0xfffff;
     }
-    return Plan;
+    return emit(std::move(Plan));
   }
 
   // Otherwise ask constant materialization how it would handle the constant
@@ -1884,7 +1840,7 @@ RISCVInstructionSelector::computeConstAddrPlan(int64_t CVal,
   Plan.Kind = ConstAddrPlan::InstSeq;
   Plan.Seq = std::move(Seq);
   Plan.Lo12 = Lo12;
-  return Plan;
+  return emit(std::move(Plan));
 }
 
 Register
