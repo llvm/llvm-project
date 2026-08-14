@@ -1,6 +1,6 @@
 // clang-format off
-// RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && env OMP_DYNAMIC=FALSE KMP_G_DEBUG=1 %not --crash %libomp-run 2>&1 | FileCheck %s
-// REQUIRES: omp_taskgraph_experimental, libomp_debug
+// RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && env OMP_DYNAMIC=FALSE %not --crash %libomp-run 2>&1 | FileCheck %s
+// REQUIRES: omp_taskgraph_experimental
 // clang-format on
 
 #include <atomic>
@@ -45,9 +45,6 @@ int main() {
   return 0;
 }
 
-// CHECK: *** Multiple threads attempting to re-record taskgraph concurrently:
-// CHECK-SAME: graph_id=17
-// CHECK: Assertion failure at kmp_tasking.cpp
-// CHECK-SAME: old_status == KMP_TDG_READY.
-// CHECK: OMP: Error #13: Assertion failure at kmp_tasking.cpp
+// CHECK: OMP: Error #{{[0-9]+}}: {{.*}}multiple threads attempting to re-record
+// CHECK-SAME: taskgraph concurrently for graph_id 17
 // CHECK-NOT: UNEXPECTED SUCCESS

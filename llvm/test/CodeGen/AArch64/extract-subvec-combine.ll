@@ -44,15 +44,14 @@ define <2 x i32> @and_extract_zext_idx2(<4 x i16> %vec) nounwind {
 ; CHECK-SD-LABEL: and_extract_zext_idx2:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_extract_zext_idx2:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %zext = zext <4 x i16> %vec to <4 x i32>
@@ -65,15 +64,14 @@ define <4 x i16> @and_extract_sext_idx4(<8 x i8> %vec) nounwind {
 ; CHECK-SD-LABEL: and_extract_sext_idx4:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_extract_sext_idx4:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
   %sext = sext <8 x i8> %vec to <8 x i16>
@@ -148,14 +146,13 @@ define <2 x i32> @sext_extract_zext_idx2(<4 x i16> %vec) nounwind {
 ; CHECK-SD-LABEL: sext_extract_zext_idx2:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_extract_zext_idx2:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-GI-NEXT:    sshr v0.2s, v0.2s, #16
 ; CHECK-GI-NEXT:    ret
@@ -170,14 +167,13 @@ define <4 x i16> @sext_extract_sext_idx4(<8 x i8> %vec) nounwind {
 ; CHECK-SD-LABEL: sext_extract_sext_idx4:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_extract_sext_idx4:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-GI-NEXT:    ret

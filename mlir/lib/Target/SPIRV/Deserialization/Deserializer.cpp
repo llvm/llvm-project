@@ -356,6 +356,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
+  case spirv::Decoration::Volatile:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single target <id>";
@@ -923,9 +924,18 @@ spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
 std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
-  if (constIt == constantMap.end())
+  if (constIt != constantMap.end())
+    return constIt->getSecond();
+
+  auto replicatedConstIt = constantCompositeReplicateMap.find(id);
+  if (replicatedConstIt == constantCompositeReplicateMap.end())
     return std::nullopt;
-  return constIt->getSecond();
+
+  auto [value, type] = replicatedConstIt->getSecond();
+  auto shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType)
+    return std::nullopt;
+  return std::make_pair(SplatElementsAttr::get(shapedType, value), type);
 }
 
 std::optional<std::pair<Attribute, Type>>
@@ -1912,7 +1922,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, shapedType);
-  } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
+  } else if (isa<spirv::ArrayType, spirv::StructType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
   } else {
@@ -1948,19 +1958,19 @@ LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
   uint32_t resultID = operands[1];
   uint32_t constantID = operands[2];
 
-  std::optional<std::pair<Attribute, Type>> constantInfo =
-      getConstant(constantID);
-  if (constantInfo.has_value()) {
-    constantCompositeReplicateMap.try_emplace(
-        resultID, constantInfo.value().first, resultType);
-    return success();
-  }
-
   std::optional<std::pair<Attribute, Type>> replicatedConstantCompositeInfo =
       getConstantCompositeReplicate(constantID);
   if (replicatedConstantCompositeInfo.has_value()) {
     constantCompositeReplicateMap.try_emplace(
         resultID, replicatedConstantCompositeInfo.value().first, resultType);
+    return success();
+  }
+
+  std::optional<std::pair<Attribute, Type>> constantInfo =
+      getConstant(constantID);
+  if (constantInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, constantInfo.value().first, resultType);
     return success();
   }
 

@@ -65,6 +65,13 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     if (Ty.isIntegerTy())
       return LLT::integer(SizeInBits);
 
+    // Byte values share an LLT with same-sized integers. The byte type's
+    // per-bit poison and pointer-provenance properties are mid-end concepts
+    // that have no MIR-level representation; matching SDAG (which lowers
+    // byte EVT to integer EVT) keeps verifier and target rules unified.
+    if (Ty.isByteTy())
+      return LLT::integer(SizeInBits);
+
     return LLT::scalar(SizeInBits);
   }
 

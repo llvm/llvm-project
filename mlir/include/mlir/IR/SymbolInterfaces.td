@@ -228,12 +228,31 @@ def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
     interface allows for users of symbols to hook into verification and other
     symbol related utilities that are either costly or otherwise disallowed
     within an operation (e.g., recreating symbol users per op verified rather
-    than per symbol table, or querying symbols usage of sibblings).
+    than per symbol table, or querying symbols usage of siblings).
   }];
   let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<"Verify the symbol uses held by this attribute of this operation.",
+      "::llvm::LogicalResult", "verifySymbolUses",
+      (ins "::mlir::Operation *":$op,
+           "::mlir::SymbolTableCollection &":$symbolTable)
+    >,
+  ];
+}
+
+def SymbolUserTypeInterface : TypeInterface<"SymbolUserTypeInterface"> {
+  let description = [{
+    This interface describes a type that may use a `Symbol`. This interface
+    allows types to hook into verification that needs a symbol table, which is
+    costly or otherwise disallowed within type construction and uniquing.
+    `op` is the operation whose verification triggered the check and should be
+    used as the anchor for symbol lookups.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<"Verify the symbol uses held by this type of this operation.",
       "::llvm::LogicalResult", "verifySymbolUses",
       (ins "::mlir::Operation *":$op,
            "::mlir::SymbolTableCollection &":$symbolTable)
