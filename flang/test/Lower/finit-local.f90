@@ -228,11 +228,13 @@ end subroutine
 ! ZERO: fir.zero_bits !fir.logical<1>
 
 ! NAN-LABEL:  func.func @_QPtest_logical1
-! NAN:  fir.zero_bits !fir.logical<1>
+! NAN:  arith.constant -86 : i8
+! NAN:  fir.convert {{.*}} : (i8) -> !fir.logical<1>
 ! NAN:  fir.store {{.*}} : !fir.ref<!fir.logical<1>>
 
 ! HEX-LABEL:  func.func @_QPtest_logical1
-! HEX:  fir.zero_bits !fir.logical<1>
+! HEX:  arith.constant {{.*}} : i8
+! HEX:  fir.convert {{.*}} : (i8) -> !fir.logical<1>
 ! HEX:  fir.store {{.*}} : !fir.ref<!fir.logical<1>>
 
 ! ---------------------------------------------------------------------------
@@ -247,11 +249,13 @@ end subroutine
 ! ZERO: fir.zero_bits !fir.logical<4>
 
 ! NAN-LABEL:  func.func @_QPtest_logical4
-! NAN:  fir.zero_bits !fir.logical<4>
+! NAN:  arith.constant -1431655766 : i32
+! NAN:  fir.convert {{.*}} : (i32) -> !fir.logical<4>
 ! NAN:  fir.store {{.*}} : !fir.ref<!fir.logical<4>>
 
 ! HEX-LABEL:  func.func @_QPtest_logical4
-! HEX:  fir.zero_bits !fir.logical<4>
+! HEX:  arith.constant {{.*}} : i32
+! HEX:  fir.convert {{.*}} : (i32) -> !fir.logical<4>
 ! HEX:  fir.store {{.*}} : !fir.ref<!fir.logical<4>>
 
 ! ---------------------------------------------------------------------------
