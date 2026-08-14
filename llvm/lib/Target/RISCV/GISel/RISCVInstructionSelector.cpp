@@ -82,6 +82,9 @@ private:
   bool selectCopy(MachineInstr &MI) const;
   bool selectImplicitDef(MachineInstr &MI) const;
   bool materializeImm(Register Reg, int64_t Imm, MachineInstr &MI) const;
+  // Emit a constant-materialization instruction sequence.
+  bool materializeInstSeq(Register DstReg, const RISCVMatInt::InstSeq &Seq,
+                          MachineInstr &MI) const;
   bool selectAddr(MachineInstr &MI, bool IsLocal = true,
                   bool IsExternWeak = false) const;
   bool selectSelect(MachineInstr &MI) const;
@@ -108,6 +111,23 @@ private:
   }
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImmLsb00000(MachineOperand &Root) const;
+
+  // Plan for materializing a constant address as (Hi materialization, Lo12
+  // offset). Lo12 is a simm12 that, for prefetch (IsPrefetch), must be
+  // a multiple of 32.
+  struct ConstAddrPlan {
+    enum { X0, LUI, InstSeq } Kind = X0;
+    int64_t Hi20 = 0;
+    RISCVMatInt::InstSeq Seq;
+    int64_t Lo12 = 0;
+  };
+  std::optional<ConstAddrPlan> computeConstAddrPlan(int64_t CVal,
+                                                    bool IsPrefetch) const;
+  // Materialize the high part of Plan into a register. If OrigBase is valid,
+  // ADD it to the materialized high part (for G_PTR_ADD + large constant).
+  Register materializeConstBase(MachineInstrBuilder &MIB,
+                                const ConstAddrPlan &Plan,
+                                Register OrigBase) const;
 
   ComplexRendererFns selectSExtBits(MachineOperand &Root, unsigned Bits) const;
   template <unsigned Bits>
@@ -613,7 +633,14 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
     MachineInstr *LHSDef = MRI->getVRegDef(LHS.getReg());
     MachineInstr *RHSDef = MRI->getVRegDef(RHS.getReg());
     int64_t RHSC = RHSDef->getOperand(1).getCImm()->getSExtValue();
-    if (isInt<12>(RHSC) && (RHSC % 32 == 0)) {
+
+    if (isInt<12>(RHSC)) {
+      // Not a multiple of 32: can't encode, use the address as-is.
+      if ((RHSC & 0b11111) != 0) {
+        return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
+                 [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
+      }
+      // Fold the offset.
       if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
         return {{
             [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
@@ -622,12 +649,57 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
       return {{[=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
                [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
     }
+
+    // Large constant: fold a -2048/2016 adjustment to save an instruction.
+    if ((-2049 >= RHSC && RHSC >= -4096) || (4063 >= RHSC && RHSC >= 2017)) {
+      int64_t Adj = RHSC < 0 ? -2048 : 2016;
+      int64_t AdjustedOffset = RHSC - Adj;
+      Register BaseReg = LHS.getReg();
+      return {{[=](MachineInstrBuilder &MIB) {
+                 Register Tmp = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+                 MachineInstr *Addi =
+                     BuildMI(*MIB->getParent(), *MIB.getInstr(),
+                             MIB->getDebugLoc(), TII.get(RISCV::ADDI), Tmp)
+                         .addReg(BaseReg)
+                         .addImm(AdjustedOffset);
+                 constrainSelectedInstRegOperands(*Addi, TII, TRI, RBI);
+                 MIB.addReg(Tmp);
+               },
+               [=](MachineInstrBuilder &MIB) { MIB.addImm(Adj); }}};
+    }
+
+    // Otherwise split the constant into Hi (materialized + added to the base)
+    // and Lo12 (folded offset).
+    if (auto Plan = computeConstAddrPlan(RHSC, /*IsPrefetch=*/true)) {
+      ConstAddrPlan PlanVal = *Plan;
+      Register BaseReg = LHS.getReg();
+      return {{[=](MachineInstrBuilder &MIB) {
+                 MIB.addReg(materializeConstBase(MIB, PlanVal, BaseReg));
+               },
+               [=](MachineInstrBuilder &MIB) { MIB.addImm(PlanVal.Lo12); }}};
+    }
+  }
+
+  // Bare constant address. IRTranslator emits inttoptr(C) as
+  // G_INTTOPTR(G_CONSTANT); look through the G_INTTOPTR to reach the constant.
+  if (RootDef->getOpcode() == TargetOpcode::G_INTTOPTR) {
+    MachineInstr *SrcDef = MRI->getVRegDef(RootDef->getOperand(1).getReg());
+    if (SrcDef->getOpcode() == TargetOpcode::G_CONSTANT)
+      RootDef = SrcDef;
+  }
+  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    int64_t CVal = RootDef->getOperand(1).getCImm()->getSExtValue();
+    if (auto Plan = computeConstAddrPlan(CVal, /*IsPrefetch=*/true)) {
+      ConstAddrPlan PlanVal = *Plan;
+      return {{[=](MachineInstrBuilder &MIB) {
+                 MIB.addReg(materializeConstBase(MIB, PlanVal, Register()));
+               },
+               [=](MachineInstrBuilder &MIB) { MIB.addImm(PlanVal.Lo12); }}};
+    }
   }
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
-  // TODO: fold large-constant offsets (ADDI adjustment / Hi-Lo12 split) like
-  // SDAG's SelectAddrRegImmLsb00000; load/store share this gap.
 }
 
 /// Returns the RISCVCC::CondCode that corresponds to the CmpInst::Predicate CC.
@@ -1729,6 +1801,129 @@ bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
   }
 
   return true;
+}
+
+bool RISCVInstructionSelector::materializeInstSeq(
+    Register DstReg, const RISCVMatInt::InstSeq &Seq, MachineInstr &MI) const {
+  assert(!Seq.empty() && "materializeInstSeq requires a non-empty sequence");
+
+  MachineBasicBlock &MBB = *MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned NumInsts = Seq.size();
+  Register SrcReg = RISCV::X0;
+
+  for (unsigned i = 0; i < NumInsts; i++) {
+    Register TmpReg = i < NumInsts - 1
+                          ? MRI->createVirtualRegister(&RISCV::GPRRegClass)
+                          : DstReg;
+    const RISCVMatInt::Inst &I = Seq[i];
+    MachineInstr *Result;
+
+    switch (I.getOpndKind()) {
+    case RISCVMatInt::Imm:
+      Result = BuildMI(MBB, MI, DL, TII.get(I.getOpcode()), TmpReg)
+                   .addImm(I.getImm());
+      break;
+    case RISCVMatInt::RegX0:
+      Result = BuildMI(MBB, MI, DL, TII.get(I.getOpcode()), TmpReg)
+                   .addReg(SrcReg)
+                   .addReg(RISCV::X0);
+      break;
+    case RISCVMatInt::RegReg:
+      Result = BuildMI(MBB, MI, DL, TII.get(I.getOpcode()), TmpReg)
+                   .addReg(SrcReg)
+                   .addReg(SrcReg);
+      break;
+    case RISCVMatInt::RegImm:
+      Result = BuildMI(MBB, MI, DL, TII.get(I.getOpcode()), TmpReg)
+                   .addReg(SrcReg)
+                   .addImm(I.getImm());
+      break;
+    }
+
+    constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
+
+    SrcReg = TmpReg;
+  }
+
+  return true;
+}
+
+std::optional<RISCVInstructionSelector::ConstAddrPlan>
+RISCVInstructionSelector::computeConstAddrPlan(int64_t CVal,
+                                               bool IsPrefetch) const {
+  // Split the constant into a materialized high part (the base) and
+  // a simm12 low part (the offset). For prefetch the low part
+  // must additionally be a multiple of 32 (simm12_lsb00000).
+  int64_t Lo12 = SignExtend64<12>(CVal);
+  int64_t Hi = (uint64_t)CVal - (uint64_t)Lo12;
+  if (!Subtarget->is64Bit() || isInt<32>(Hi)) {
+    if (IsPrefetch && (Lo12 & 0b11111) != 0)
+      return std::nullopt;
+    ConstAddrPlan Plan;
+    Plan.Lo12 = Lo12;
+    if (Hi) {
+      Plan.Kind = ConstAddrPlan::LUI;
+      Plan.Hi20 = (Hi >> 12) & 0xfffff;
+    }
+    return Plan;
+  }
+
+  // Otherwise ask constant materialization how it would handle the constant
+  // and fold the trailing ADDI into the offset.
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(CVal, *Subtarget);
+  if (Seq.back().getOpcode() != RISCV::ADDI)
+    return std::nullopt;
+  Lo12 = Seq.back().getImm();
+  if (IsPrefetch && (Lo12 & 0b11111) != 0)
+    return std::nullopt;
+  Seq.pop_back();
+  if (Seq.empty())
+    return std::nullopt;
+  ConstAddrPlan Plan;
+  Plan.Kind = ConstAddrPlan::InstSeq;
+  Plan.Seq = std::move(Seq);
+  Plan.Lo12 = Lo12;
+  return Plan;
+}
+
+Register
+RISCVInstructionSelector::materializeConstBase(MachineInstrBuilder &MIB,
+                                               const ConstAddrPlan &Plan,
+                                               Register OrigBase) const {
+  MachineBasicBlock &MBB = *MIB->getParent();
+  DebugLoc DL = MIB->getDebugLoc();
+  MachineInstr &InsertPt = *MIB.getInstr();
+
+  Register HiReg = RISCV::X0;
+  switch (Plan.Kind) {
+  case ConstAddrPlan::X0:
+    break;
+  case ConstAddrPlan::LUI: {
+    HiReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+    MachineInstr *LUI = BuildMI(MBB, InsertPt, DL, TII.get(RISCV::LUI), HiReg)
+                            .addImm(Plan.Hi20);
+    constrainSelectedInstRegOperands(*LUI, TII, TRI, RBI);
+    break;
+  }
+  case ConstAddrPlan::InstSeq: {
+    HiReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+    materializeInstSeq(HiReg, Plan.Seq, InsertPt);
+    break;
+  }
+  }
+
+  // For G_PTR_ADD + large constant, add the original base to the materialized
+  // high part.
+  if (OrigBase.isValid() && HiReg != RISCV::X0) {
+    Register BaseReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+    MachineInstr *Add = BuildMI(MBB, InsertPt, DL, TII.get(RISCV::ADD), BaseReg)
+                            .addReg(OrigBase)
+                            .addReg(HiReg);
+    constrainSelectedInstRegOperands(*Add, TII, TRI, RBI);
+    return BaseReg;
+  }
+  return OrigBase.isValid() ? OrigBase : HiReg;
 }
 
 bool RISCVInstructionSelector::selectAddr(MachineInstr &MI, bool IsLocal,
