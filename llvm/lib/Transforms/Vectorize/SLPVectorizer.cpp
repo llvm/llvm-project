@@ -31116,22 +31116,28 @@ public:
               RdxFMF.allowContract()) {
             constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
             Type *Ty = VL.front()->getType();
-            IntrinsicCostAttributes ICA(Intrinsic::fmuladd, Ty, {Ty, Ty, Ty},
-                                        RdxFMF);
-            InstructionCost FusionSaving =
+            InstructionCost UnfusedCost =
                 TTI->getArithmeticInstrCost(Instruction::FMul, Ty, CostKind) +
-                TTI->getArithmeticInstrCost(Instruction::FAdd, Ty, CostKind) -
-                TTI->getIntrinsicInstrCost(ICA, CostKind);
-            if (FusionSaving.isValid() && FusionSaving > 0)
-              for (Value *RdxVal : VL) {
-                auto *FMul = dyn_cast<Instruction>(RdxVal);
-                if (FMul && FMul->getOpcode() == Instruction::FMul &&
-                    FMul->hasOneUse() &&
-                    cast<FPMathOperator>(FMul)
-                        ->getFastMathFlags()
-                        .allowContract())
-                  ReductionCost += FusionSaving;
-              }
+                TTI->getArithmeticInstrCost(Instruction::FAdd, Ty, CostKind);
+            for (Value *RdxVal : VL) {
+              auto *FMul = dyn_cast<Instruction>(RdxVal);
+              if (!FMul || FMul->getOpcode() != Instruction::FMul ||
+                  !FMul->hasOneUse())
+                continue;
+              auto *FAdd = dyn_cast<Instruction>(FMul->user_back());
+              if (!FAdd)
+                continue;
+              InstructionsState FAddS(FAdd, FAdd);
+              if (!FAddS.isAddSubLikeOp())
+                continue;
+              InstructionCost FMACost =
+                  canConvertToFMA(FAdd, FAddS, DT, DL, *TTI, TLI);
+              if (!FMACost.isValid())
+                continue;
+              InstructionCost FusionSaving = UnfusedCost - FMACost;
+              if (FusionSaving.isValid() && FusionSaving > 0)
+                ReductionCost += FusionSaving;
+            }
           }
         } else {
           ReductionCost =
