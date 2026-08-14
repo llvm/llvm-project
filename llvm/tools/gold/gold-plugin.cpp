@@ -1220,7 +1220,7 @@ static ld_plugin_status cleanup_hook(void) {
   // Prune cache
   if (!options::cache_dir.empty()) {
     CachePruningPolicy policy = check(parseCachePruningPolicy(options::cache_policy));
-    pruneCache(options::cache_dir, policy);
+    check(pruneCache(options::cache_dir, policy));
   }
 
   return LDPS_OK;

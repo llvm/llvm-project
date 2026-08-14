@@ -22,12 +22,6 @@
 namespace llvm {
 /// Traits for DenseMap.
 template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
-  static inline SmallVector<sandboxir::Value *> getEmptyKey() {
-    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-1});
-  }
-  static inline SmallVector<sandboxir::Value *> getTombstoneKey() {
-    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-2});
-  }
   static unsigned getHashValue(const SmallVector<sandboxir::Value *> &Vec) {
     return hash_combine_range(Vec);
   }
@@ -38,6 +32,10 @@ template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
 };
 
 namespace sandboxir {
+
+class InstrMaps;
+
+using BundleTy = SmallVector<Value *, 4>;
 
 class VecUtils {
 public:
@@ -152,6 +150,16 @@ public:
     }
     return LowestI;
   }
+  /// \Returns the instruction in \p Instrs that is highest in the BB. Expects
+  /// that all instructions are in the same BB.
+  static Instruction *getHighest(ArrayRef<Instruction *> Instrs) {
+    Instruction *HighestI = Instrs.front();
+    for (auto *I : drop_begin(Instrs)) {
+      if (I->comesBefore(HighestI))
+        HighestI = I;
+    }
+    return HighestI;
+  }
   /// \Returns the lowest instruction in \p Vals, or nullptr if no instructions
   /// are found. Skips instructions not in \p BB.
   static Instruction *getLowest(ArrayRef<Value *> Vals, BasicBlock *BB) {
@@ -220,6 +228,14 @@ public:
   }
   /// \Returns the first integer power of 2 that is <= Num.
   LLVM_ABI static unsigned getFloorPowerOf2(unsigned Num);
+
+  /// For each user of lane 0 in \p Bndl, try to form a bundle of matching
+  /// users for all lanes. Returns all complete user bundles found.
+  /// \p Claimed contains instructions that have already been claimed by a
+  /// bundle.
+  LLVM_ABI static SmallVector<BundleTy>
+  getNextUserBundles(ArrayRef<Value *> Bndl, const InstrMaps &IMaps,
+                     SmallPtrSet<Instruction *, 4> &Claimed);
 
   /// Helper struct for `matchPack()`. Describes the instructions and operands
   /// of a pack pattern.

@@ -92,6 +92,11 @@ enum {
   ///        failed match.
   GIM_Try,
 
+  /// GIM_Try only if the feature bits match.
+  /// - OnFail(4) - The MatchTable entry at which to resume if the match fails.
+  /// - Feature(2) - Expected features
+  GIM_Try_CheckFeatures,
+
   /// Switch over the opcode on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID
   /// - LowerBound(2) - numerically minimum opcode supported
@@ -125,10 +130,6 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   GIM_RecordInsn,
   GIM_RecordInsnIgnoreCopies,
-
-  /// Check the feature bits
-  ///   Feature(2) - Expected features
-  GIM_CheckFeatures,
 
   /// Check the opcode on the specified instruction
   /// - InsnID(ULEB128) - Instruction ID

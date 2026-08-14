@@ -4973,7 +4973,7 @@ entry:
 ; CHECK2:       omp_region.body:
 ; CHECK2-NEXT:    br label [[SEQ_PAR_MERGED:%.*]]
 ; CHECK2:       seq.par.merged:
-; CHECK2-NEXT:    [[ADD:%.*]] = fadd float [[TMP2]], 0x40091EB860000000
+; CHECK2-NEXT:    [[ADD:%.*]] = fadd float [[TMP2]], 3.140000e+00
 ; CHECK2-NEXT:    store float [[ADD]], ptr [[LOADGEP_P]], align 4
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split:

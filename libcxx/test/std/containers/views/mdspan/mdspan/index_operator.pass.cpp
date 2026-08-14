@@ -196,9 +196,29 @@ constexpr void test_layout_large() {
   test_iteration(construct_mapping(Layout(), std::extents<int64_t, D, 4, 1, D>(3, 6)));
 }
 
+struct NoCopyIndex {
+  int val = 0;
+  constexpr NoCopyIndex(int v) : val(v) {}
+  constexpr NoCopyIndex(const NoCopyIndex&) = delete;
+  constexpr operator int() const noexcept { return val; }
+};
+
 // mdspan::operator[] casts to index_type before calling mapping
 // mapping requirements only require the index operator to mixed integer types not anything convertible to index_type
-constexpr void test_index_cast_happens() {}
+constexpr void test_index_cast() {
+  std::array data{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  const std::mdspan m{data.data(), std::dextents<int, 1>{10}};
+
+  std::array indices{NoCopyIndex{3}};
+
+  assert(&m[NoCopyIndex{3}] == &data[3]);
+  assert(&m[indices] == &data[3]);
+  assert(&m[std::span{indices}] == &data[3]);
+
+  // LWG3995: Issue with custom index conversion in <mdspan>
+  // NoCopyIndex index(3);
+  // assert(&m[index] == &data[3]);
+}
 
 struct RValueInt {
   constexpr operator int() && noexcept { return 0; }
@@ -213,6 +233,7 @@ constexpr bool test() {
   std::mdspan m(data, std::extents<int, 1>{1});
   TEST_IGNORE_NODISCARD m[RValueInt{}];
 
+  test_index_cast();
   return true;
 }
 
