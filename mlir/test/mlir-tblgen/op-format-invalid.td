@@ -8,8 +8,16 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 def TestDialect : Dialect {
   let name = "test";
 }
+def TestStrictPropertiesDialect : Dialect {
+  let name = "test_strict_properties";
+  let useStrictPropertiesInAssemblyFormat = 1;
+}
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
+  let assemblyFormat = fmt;
+}
+class TestStrictPropertiesFormat_Op<string fmt, list<Trait> traits = []>
+    : Op<TestStrictPropertiesDialect, "format_op", traits> {
   let assemblyFormat = fmt;
 }
 
@@ -36,6 +44,24 @@ def DirectiveAttrDictInvalidC : TestFormat_Op<[{
 def DirectiveAttrDictInvalidD : TestFormat_Op<[{
   type(attr-dict)
 }]>;
+
+// CHECK: error: strict properties in assembly format requires prop-dict
+// CHECK-SAME: unless all inherent attributes and properties are bound in the
+// CHECK-SAME: custom assembly format; missing attribute 'attr'
+def DirectiveAttrDictInvalidE : TestStrictPropertiesFormat_Op<[{
+  attr-dict
+}]> {
+  let arguments = (ins I64Attr:$attr);
+}
+
+// CHECK: error: strict properties in assembly format requires prop-dict
+// CHECK-SAME: unless all inherent attributes and properties are bound in the
+// CHECK-SAME: custom assembly format; missing property 'prop'
+def DirectiveAttrDictInvalidF : TestStrictPropertiesFormat_Op<[{
+  attr-dict
+}]> {
+  let arguments = (ins IntProp<"int64_t">:$prop);
+}
 
 //===----------------------------------------------------------------------===//
 // custom

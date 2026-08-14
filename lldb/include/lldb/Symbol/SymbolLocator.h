@@ -15,10 +15,13 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 
 #include <optional>
+#include <string>
 #include <system_error>
+#include <vector>
 
 namespace lldb_private {
 
@@ -49,6 +52,9 @@ public:
     /// Allow contacting an external symbol server when the local searches come
     /// up empty.
     bool external_lookup = false;
+
+    /// How to name this binary in a progress report.
+    std::string description;
   };
 
   /// What a search found.
@@ -82,12 +88,25 @@ public:
   static llvm::Expected<Result> Locate(const Request &request,
                                        const FileSpecList &search_paths);
 
+  /// The platform hooks run on the calling thread, in order. Only the plugin
+  /// searches may run concurrently.
+  ///
+  /// \return One result per request, in the order the requests were given.
+  static std::vector<llvm::Expected<Result>>
+  Locate(llvm::ArrayRef<Request> requests, const FileSpecList &search_paths,
+         bool parallel);
+
   /// Locate the symbol file for the given UUID on a background thread. This
   /// function returns immediately. Under the hood it uses the debugger's
   /// thread pool to call DownloadObjectAndSymbolFile. If a symbol file is
   /// found, this will notify all target which contain the module with the
   /// given UUID.
   static void DownloadSymbolFileAsync(const UUID &uuid);
+
+private:
+  /// Must stay callable concurrently.
+  static llvm::Expected<Result>
+  LocateWithPlugins(const Request &request, const FileSpecList &search_paths);
 };
 
 } // namespace lldb_private

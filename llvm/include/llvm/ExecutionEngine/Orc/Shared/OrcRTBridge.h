@@ -15,7 +15,6 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/Support/Compiler.h"
 
@@ -46,14 +45,6 @@ LLVM_ABI extern const char *DeregisterJITLoaderGDBAllocActionName;
 LLVM_ABI extern const char *const DispatchName;
 LLVM_ABI extern const char *const DispatchCtxName;
 
-/// Symbol names for the ORC runtime's NativeDylibManager SPS interface.
-inline constexpr char NativeDylibManagerInstanceName[] =
-    "orc_rt_ci_NativeDylibManager_Instance";
-inline constexpr char NativeDylibManagerLoadWrapperName[] =
-    "orc_rt_ci_sps_NativeDylibManager_load";
-inline constexpr char NativeDylibManagerLookupWrapperName[] =
-    "orc_rt_ci_sps_NativeDylibManager_lookup";
-
 /// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
 /// SPS interface.
 struct MachOUnwindInfoRegistrarSymbolNames {
@@ -65,15 +56,6 @@ struct MachOUnwindInfoRegistrarSymbolNames {
 /// StandaloneMachOUnwindInfoRegistrar SPS interface.
 extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
-
-using SPSSimpleExecutorDylibManagerOpenSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 shared::SPSString, uint64_t);
-
-using SPSSimpleExecutorDylibManagerResolveSignature = shared::SPSExpected<
-    shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorAddr>>>(
-    shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-    shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
@@ -101,20 +83,6 @@ using SPSExecutorSharedMemoryMapperServiceDeinitializeSignature =
 using SPSExecutorSharedMemoryMapperServiceReleaseSignature = shared::SPSError(
     shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 
-// SimpleNativeMemoryMap APIs.
-using SPSSimpleRemoteMemoryMapReserveSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 uint64_t);
-using SPSSimpleRemoteMemoryMapInitializeSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 shared::SPSFinalizeRequest);
-using SPSSimpleRemoteMemoryMapDeinitializeSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-using SPSSimpleRemoteMemoryMapReleaseSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-
-using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
-                                      shared::SPSSequence<shared::SPSString>);
 } // end namespace rt
 
 namespace rt_alt {
