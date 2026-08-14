@@ -4748,18 +4748,6 @@ private:
       return Res;
     }
 
-    /// Reordering permutes the operand columns of the tree entries and may
-    /// move an operand between the edges covered and not covered by copyable
-    /// scheduling data, making the computed dependency counts stale. Mark the
-    /// schedule data of the copyable-element instructions for recalculation
-    /// at the next bundle scheduling.
-    void markCopyableDepsForRecalc() {
-      for (const auto &P : ScheduleCopyableDataMapByInst)
-        if (ScheduleData *SD =
-                getScheduleData(const_cast<Instruction *>(P.first)))
-          RecalcCopyableOperandDeps.insert(SD);
-    }
-
     ScheduleCopyableData &addScheduleCopyableData(const EdgeInfo &EI,
                                                   Instruction *I,
                                                   int SchedulingRegionID,
@@ -8219,8 +8207,6 @@ void BoUpSLP::reorderTopToBottom() {
                                                    Mask, MaskOrder);
     }
   }
-  for (const auto &It : BlocksSchedules)
-    It.second->markCopyableDepsForRecalc();
 }
 
 void BoUpSLP::buildReorderableOperands(
@@ -8722,8 +8708,6 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
   if (IgnoreReorder && !VectorizableTree.front()->ReorderIndices.empty() &&
       VectorizableTree.front()->ReuseShuffleIndices.empty())
     VectorizableTree.front()->ReorderIndices.clear();
-  for (const auto &It : BlocksSchedules)
-    It.second->markCopyableDepsForRecalc();
 }
 
 Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
