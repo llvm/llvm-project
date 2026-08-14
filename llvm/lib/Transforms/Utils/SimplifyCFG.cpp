@@ -5800,7 +5800,8 @@ static bool mergeCompatibleUnreachableCalls(BasicBlock *BB,
     return false;
 
   auto *CI = dyn_cast<CallInst>(&BB->front());
-  if (!CI || CI->arg_empty() || CI->isMustTailCall() || CI->isInlineAsm())
+  if (!CI || CI->arg_empty() || CI->isMustTailCall() || CI->isInlineAsm() ||
+      CI->cannotMerge() || CI->isConvergent())
     return false;
 
   Function *Callee = CI->getCalledFunction();
@@ -5813,7 +5814,8 @@ static bool mergeCompatibleUnreachableCalls(BasicBlock *BB,
 
   for (User *U : Callee->users()) {
     auto *OtherCI = dyn_cast<CallInst>(U);
-    if (!OtherCI || OtherCI == CI || OtherCI->getFunction() != CurrentFn)
+    if (!OtherCI || OtherCI == CI || OtherCI->getFunction() != CurrentFn ||
+        OtherCI->cannotMerge() || OtherCI->isConvergent())
       continue;
 
     BasicBlock *OtherBB = OtherCI->getParent();
