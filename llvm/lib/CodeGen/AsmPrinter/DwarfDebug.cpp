@@ -1116,9 +1116,9 @@ static bool isLangCaseSensitive(const DISourceLanguageName &Lang) {
   case dwarf::DW_LANG_Fortran18:
   case dwarf::DW_LANG_Fortran23:
   case dwarf::DW_LANG_Pascal83:
-  return false;
+    return false;
   default:
-  return true;
+    return true;
   }
 }
 
