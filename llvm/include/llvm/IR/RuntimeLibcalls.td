@@ -2196,7 +2196,7 @@ def isWindowsArm64EC : RuntimeLibcallAvailability<(all_of IsWindowsArm64EC)>;
 def isAArch64_ILP64
     : RuntimeLibcallAvailability<(all_of IsAArch64_ILP64)>;
 
-// frexpl/ldexpl/exp10l are added separately with their own OS guards.
+// frexpl/ldexpl/exp10l are added separately based on the Target Triple.
 defvar AArch64LongDoubleF128Body =
     !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
                 [frexpl_f128, ldexpl_f128, exp10l_f128]);
