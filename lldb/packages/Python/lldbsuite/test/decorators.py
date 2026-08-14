@@ -1262,6 +1262,109 @@ def requirePlatform(oslist):
     )
 
 
+def requireNotPlatform(oslist):
+    """Mark the item as inherently inapplicable to the listed target platforms.
+
+    Unlike `skipIfPlatform`, the listed platforms are reported as UNSUPPORTED
+    rather than SKIPPED.
+    """
+    return unittest.skipIf(
+        lldbplatformutil.getPlatform() in oslist,
+        UnsupportedReason("unsupported on %s" % (", ".join(oslist))),
+    )
+
+
+def requireDarwin(func):
+    """Mark the item as inherently Darwin-only (Mach-O, debug maps, Darwin
+    kernel/runtime APIs, ...). Non-Darwin targets report UNSUPPORTED."""
+    return requirePlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+
+
+def requireNotDarwin(func):
+    """Mark the item as inherently inapplicable to Darwin targets."""
+    return requireNotPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+
+
+def requireLinux(func):
+    """Mark the item as inherently Linux-only (procfs, Linux-specific syscalls,
+    ...). Other targets report UNSUPPORTED."""
+    return requirePlatform(["linux"])(func)
+
+
+def requireNotLinux(func):
+    """Mark the item as inherently inapplicable to Linux targets."""
+    return requireNotPlatform(["linux"])(func)
+
+
+def requireWindows(func):
+    """Mark the item as inherently Windows-only (PE/COFF, Win32 APIs, ...).
+    Other targets report UNSUPPORTED."""
+    return requirePlatform(["windows"])(func)
+
+
+def requireNotWindows(func):
+    """Mark the item as inherently inapplicable to Windows targets.
+
+    Use this for tests built on POSIX-only concepts: fork/exec semantics,
+    POSIX signals, ptrace, ELF/Mach-O specifics, shell pipelines, and so on.
+    """
+    return requireNotPlatform(["windows"])(func)
+
+
+def requirePOSIX(func):
+    """Mark the item as requiring a POSIX target.
+
+    A shorthand for `requireNotWindows` that reads better on tests whose
+    dependency is POSIX semantics generally rather than anything about
+    Windows specifically.
+    """
+    return requireNotPlatform(["windows"])(func)
+
+
+def requireSignals(func):
+    """Mark the item as requiring POSIX signal support on the target."""
+    return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
+
+
+def requireNotWasm(func):
+    """Mark the item as inherently inapplicable to WebAssembly targets.
+
+    WebAssembly has no processes, no signals, no shared libraries and no
+    ptrace-style debugging, so a large amount of the test suite can never
+    apply to it.
+    """
+    return requireNotPlatform(["wasip1", "wasi"])(func)
+
+
+def requireHostPlatform(oslist):
+    """Mark the item as runnable only on the listed *host* platforms."""
+    return unittest.skipUnless(
+        lldbplatformutil.getHostPlatform() in oslist,
+        UnsupportedReason("requires one of %s as host" % (", ".join(oslist))),
+    )
+
+
+def requireDarwinHost(func):
+    """Mark the item as requiring a Darwin host, regardless of target.
+
+    Use for tests that drive host-side Darwin facilities: `xcrun`, the
+    simulator runtimes, dsymutil, the LLDB.framework layout, and so on.
+    """
+    return requireHostPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+
+
+def skipIfTargetDoesNotSupportThreads():
+    """Skip tests that require thread support (e.g. pthreads)."""
+    platform = lldbplatformutil.getPlatform()
+    # WASI targets ending in "-threads" (e.g. wasip1-threads) support threads;
+    # other WASI targets (e.g. wasip1, wasip2) do not.
+    no_threads = platform.startswith("wasi") and not platform.endswith("threads")
+    return unittest.skipIf(
+        no_threads,
+        "threads are not supported on %s" % platform,
+    )
+
+
 def requireNotPlatform(oslist: list, reason: Optional[str] = None):
     """Mark the item as inherently inapplicable to the listed target platforms.
 
