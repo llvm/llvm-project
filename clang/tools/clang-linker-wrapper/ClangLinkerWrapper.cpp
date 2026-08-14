@@ -1261,6 +1261,12 @@ searchLibraryBaseName(StringRef Name, StringRef Root,
     if (std::optional<std::string> File =
             findFile(Dir, Root, "lib" + Name + ".a"))
       return File;
+    // Windows linkers also accept the MinGW and the MSVC spelling of a library.
+    if (std::optional<std::string> File =
+            findFile(Dir, Root, "lib" + Name + ".dll.a"))
+      return File;
+    if (std::optional<std::string> File = findFile(Dir, Root, Name + ".lib"))
+      return File;
   }
   return std::nullopt;
 }
@@ -1274,6 +1280,15 @@ std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
   if (Input.ends_with(".lib"))
     return findFromSearchPaths(Input, Root, SearchPaths);
   return searchLibraryBaseName(Input, Root, SearchPaths);
+}
+
+/// Search for an input file given by name, e.g. `foo.lib`. COFF linkers use
+/// this in place of `-lfoo` and look it up in \p SearchPaths.
+std::optional<std::string> searchInput(StringRef Input, StringRef Root,
+                                       ArrayRef<StringRef> SearchPaths) {
+  if (sys::fs::exists(Input))
+    return std::string(Input);
+  return findFromSearchPaths(Input, Root, SearchPaths);
 }
 
 /// In verbose mode we need to replay the extracted files so the user can
@@ -1350,6 +1365,11 @@ getDeviceInput(const ArgList &Args) {
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path, OPT_libpath))
     LibraryPaths.push_back(Arg->getValue());
 
+  // Only `link.exe` style linkers search for their input files.
+  SmallVector<StringRef> InputPaths;
+  for (const opt::Arg *Arg : Args.filtered(OPT_libpath))
+    InputPaths.push_back(Arg->getValue());
+
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
@@ -1358,8 +1378,9 @@ getDeviceInput(const ArgList &Args) {
   SmallVector<OffloadFile> ObjectFilesToExtract;
   SmallVector<OffloadFile> ArchiveFilesToExtract;
   DenseMap<StringRef, StringRef> SourceForImage;
-  for (const opt::Arg *Arg : Args.filtered(
-           OPT_INPUT, OPT_library, OPT_whole_archive, OPT_no_whole_archive)) {
+  for (const opt::Arg *Arg :
+       Args.filtered(OPT_INPUT, OPT_library, OPT_wholearchive_file,
+                     OPT_whole_archive, OPT_no_whole_archive)) {
     if (Arg->getOption().matches(OPT_whole_archive) ||
         Arg->getOption().matches(OPT_no_whole_archive)) {
       WholeArchive = Arg->getOption().matches(OPT_whole_archive);
@@ -1369,7 +1390,7 @@ getDeviceInput(const ArgList &Args) {
     std::optional<std::string> Filename =
         Arg->getOption().matches(OPT_library)
             ? searchLibrary(Arg->getValue(), Root, LibraryPaths)
-            : std::string(Arg->getValue());
+            : searchInput(Arg->getValue(), Root, InputPaths);
 
     if (!Filename && Arg->getOption().matches(OPT_library))
       return createStringError("unable to find library -l%s", Arg->getValue());
@@ -1377,6 +1398,10 @@ getDeviceInput(const ArgList &Args) {
     if (!Filename || !sys::fs::exists(*Filename) ||
         sys::fs::is_directory(*Filename))
       continue;
+
+    // Unlike `--whole-archive`, `/wholearchive:` applies to a single library.
+    bool ExtractWholeArchive =
+        WholeArchive || Arg->getOption().matches(OPT_wholearchive_file);
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(*Filename);
@@ -1397,7 +1422,7 @@ getDeviceInput(const ArgList &Args) {
             Binary.getBinary()->getMemoryBufferRef().getBufferIdentifier(),
             Saver.save(StringRef(*Filename)));
       if (identify_magic(Buffer.getBuffer()) == file_magic::archive &&
-          !WholeArchive)
+          !ExtractWholeArchive)
         ArchiveFilesToExtract.emplace_back(std::move(Binary));
       else
         ObjectFilesToExtract.emplace_back(std::move(Binary));
