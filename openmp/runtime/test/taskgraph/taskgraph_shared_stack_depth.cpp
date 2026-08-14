@@ -2,8 +2,22 @@
 // RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t
 // RUN: env OMP_NUM_THREADS=4 %libomp-run 2>&1 | FileCheck %s
 // REQUIRES: omp_taskgraph_experimental
-// XFAIL: *
 // clang-format on
+
+// This test exercises a non-lexically-nested replayable task that captures
+// 'payload' and 'seed' as 'firstprivate' (without the OpenMP 6.0 'saved'
+// modifier).  Per OpenMP 6.0 [14.3], when a variable referenced in a
+// replayable construct does not exist in the enclosing data environment
+// of the taskgraph construct, the saved data environment in the
+// taskgraph record is used as the enclosing data environment for that
+// variable.  Both 'payload' and 'seed' live in run_taskgraph's stack
+// frame, not in main's, so the spec mandates the saved-data-environment
+// fallback - i.e. the snapshot captured at recording time is what every
+// replay observes, independent of the call-stack depth of the replay.
+//
+// In the current libomp implementation that snapshot lives in the
+// task descriptor's '.kmp_privates.t' tail struct, which persists for
+// the lifetime of the taskgraph record, so this test passes naturally.
 
 #include <cstdio>
 
