@@ -59,16 +59,17 @@ namespace iscopyable1 {
 // Kernel entry point template definition.
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {}
+void kernel_single_task(T t) {} // expected-error {{'NotTriviallyCopyable' is not device copyable}} \
+                                // expected-note {{within parameter 't' of type 'NotTriviallyCopyable' declared here}}
 
 void test() {
-  DeviceCopyable a;
-  kernel_single_task<KN<1>>(a);
+  DefinitelyCopyable a;
+  kernel_single_task<KN<3>>(a);
 
   NotTriviallyCopyable b;
-  kernel_single_task<KN<2>>(b);
+  kernel_single_task<KN<2>>(b); // expected-note {{in instantiation of function template specialization 'iscopyable1::kernel_single_task<KN<2>, NotTriviallyCopyable>' requested here}}
 
-  DefinitelyCopyable c;
-  kernel_single_task<KN<3>>(c);
+  DeviceCopyable c;
+  kernel_single_task<KN<1>>(c);
 }
 } // namespace iscopyable1

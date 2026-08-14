@@ -68,6 +68,23 @@ struct copyable {
   ~copyable();
 };
 
+namespace sycl {
+
+template <bool B>
+struct bool_constant {
+  static constexpr bool value = B;
+};
+
+template <typename T>
+struct is_device_copyable : bool_constant<false> {};
+
+// define copyable as is_device_copyable since copyable isn't actually
+// is_trivially_copyable due to custom destructor:
+template<>
+struct is_device_copyable<copyable> : bool_constant<true> {};
+
+} // namespace sycl
+
 namespace std {
 template<typename T> constexpr T &&move(T &val) { return static_cast<T&&>(val); }
 template<class T>

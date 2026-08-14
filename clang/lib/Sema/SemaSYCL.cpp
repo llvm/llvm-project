@@ -681,16 +681,20 @@ NamespaceDecl *getSyclNamespace(Sema &SemaRef, SourceLocation Loc) {
   return NamespaceResult.getAsSingle<NamespaceDecl>();
 }
 
-bool lookupIsDeviceCopyable(Sema &SemaRef, QualType &Ty, SourceLocation Loc) {
-  // No need to lookup anything if trivially copyable already
-  ASTContext &Ctx = SemaRef.getASTContext();
-  if (Ty.isTriviallyCopyableType(Ctx)) {
-    return true;
-  }
+struct DeviceCopyableResult {
+  bool copyable;
+  // PD contains a(n):
+  // - error, if queried type is not copyable.
+  // - warning, if queried type is marked copyable but detected to be non-device
+  //   copyable.
+  std::optional<PartialDiagnostic> PD;
+};
 
+bool isMarkedDeviceCopyable(Sema &SemaRef, const QualType &Ty, SourceLocation Loc) {
+  ASTContext &Ctx = SemaRef.getASTContext();
   // TODO too slow; cache this
   NamespaceDecl *SyclNamespace = getSyclNamespace(SemaRef, Loc);
-  if (nullptr == SyclNamespace) {
+  if (!SyclNamespace) {
     // TODO Decide if I throw error or just let it pass
     // - Throw error: Assumes the SYCL namespace must exist
     // - Let it pass: Assumes that the SYCL namespace might not necessarily be
@@ -784,6 +788,35 @@ bool lookupIsDeviceCopyable(Sema &SemaRef, QualType &Ty, SourceLocation Loc) {
   return IDCValue.getBoolValue();
 }
 
+// TODO should these results be cached?
+DeviceCopyableResult isDeviceCopyable(Sema &SemaRef, const QualType &Ty, SourceLocation Loc) {
+  // No need to lookup anything if trivially copyable already
+  ASTContext &Ctx = SemaRef.getASTContext();
+  if (Ty.isTriviallyCopyableType(Ctx))
+    return {true, /*PD=*/std::nullopt};
+  
+  bool markedCopyable = isMarkedDeviceCopyable(SemaRef, Ty, Loc);
+  if (const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+    // Set all lambdas as copyable: Future traversal passes will determine
+    // whether or not the parameters/capture of the lambda are actually 
+    // copyable.
+    if (RD->isLambda())
+      return {true, /*PD=*/std::nullopt};
+    // TODO confirm:
+    // - does RD have at least one eligible copy constructor, move constructor, copy assignment operator, or move assignment operator?
+    //   - for each of aforementioned, ensure it is public
+    //   - confirm each does a bitwise copy (perhaps not possible, up to the user to enforce)
+    // - confirm it has a non deleted destructor
+    //   - does the destructor have "no effect"? (perhaps not possible, up to user to enforce)
+  }
+  // TODO subsequent base classes shouldn't be checked for not device copyable
+
+  if (!markedCopyable)
+    return { false, PartialDiagnostic(diag::err_sycl_kernel_param_not_device_copyable, SemaRef.Context.getDiagAllocator()) << Ty };
+  return {true, /*PD=*/std::nullopt};
+}
+
+
 class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   SemaSYCL &SemaSYCLRef;
   bool IsValid = true;
@@ -841,7 +874,7 @@ public:
   void checkParameter(const ParmVarDecl *PVD) {
     ObjectAccessPath.push_back(PVD);
     // Check the immediate type of the parameter.
-    if (checkType(PVD->getType())) {
+    if (checkType(PVD->getType()) && checkDeviceCopyable(PVD->getType())) {
       // If type checking wasn't short circuited, visit subobjects to check
       // them.
       visit(PVD->getType());
@@ -857,7 +890,8 @@ public:
 
   bool visitFieldDeclPre(const FieldDecl *FD) {
     ObjectAccessPath.push_back(FD);
-    return checkType(FD->getType());
+    return checkType(FD->getType()) && checkDeviceCopyable(FD->getType());
+    // TODO: do we need to check if a class's fields are deviceCopyable?
   }
 
   // Returns true if subobjects should be visited and false otherwise.
@@ -886,18 +920,7 @@ public:
       return false;
     }
 
-    DiagDetails Detail = getObjectAccessDiagDetails(ObjectAccessPath.back());
-
-    if (!lookupIsDeviceCopyable(SemaSYCLRef.SemaRef, Ty, Detail.Loc)) {
-      SemaSYCLRef.Diag(Detail.Loc,
-                        diag::err_sycl_kernel_param_not_device_copyable)
-          << Ty;
-      emitObjectAccessPathNotes();
-
-      IsValid = false;
-      return false;
-    }
-    // TODO the issue with this logic:
+    // TODO
     // - if a class is marked as copyable, I should STOP descending into the class's subfields
     //   - we STOP because the user's declaration that a class is copyable should overwrite
     //     the results of future traversals; we shouldn't descend any further 
@@ -909,7 +932,6 @@ public:
     // - if a class is not marked as copyable, _then_ descend into the class's subfields
     //   - this is current behavior
 
-
     // TODO Issue warning if type is obviously not copyable
     // ... you can do this by making some sort of dict for memoizing whether or
     // not a field/known type is not copyable
@@ -917,33 +939,30 @@ public:
     // TODO Do I care about deep traversal + checking if every subfield within a
     // class is conformant?
     // TODO Do I at least need to dive into the lambdas
+    return true;
+  }
 
-    // TODO I am not sure that parmVar guarantees base argument; we might be
-    // better off checking the objectaccess vector instead, althoug there has
-    // to be a better way to do this
+  bool checkDeviceCopyable(QualType Ty) {
+    auto DirectParent = ObjectAccessPath.back();
+    QualType Type = Ty;
 
-    //// ???: I don't think I need this check, it should be up to the logic of
-    //// this function to stop traversing 
-    // if (const ParmVarDecl *parmVar =
-    //         dyn_cast<const ParmVarDecl *>(DirectParent)) {
-    //   // TODO don't need this check, we can check after it failed I guess
-    //   const CXXRecordDecl *RD = Ty.getNonReferenceType()->getAsCXXRecordDecl();
-    //   if (RD && !RD->isLambda() && (RD->isClass() || RD->isStruct())) {
-    //     if (!lookupIsDeviceCopyable(SemaSYCLRef.SemaRef, Ty,
-    //                                 parmVar->getLocation())) {
-    //       SemaSYCLRef.Diag(parmVar->getLocation(),
-    //                        diag::err_sycl_kernel_param_not_device_copyable)
-    //           << Ty;
-    //       emitObjectAccessPathNotes();
-
-    //       IsValid = false;
-    //       return false;
-    //     }
-    //     // TODO Issue warning if type is obviously not copyable
-    //     // ... but what does that mean? And how thorough do I want to check,
-    //     // even if the user has already marked it copyable?
-    //   }
-    // }
+    DiagDetails Detail = getObjectAccessDiagDetails(DirectParent);
+    // Since references are allowed as direct kernel parameters, we need to
+    // explicitly check the referenced type:
+    if (Ty->isReferenceType() && isa<const ParmVarDecl *>(DirectParent)) {
+      Type = Ty->getPointeeType();
+    }
+    const DeviceCopyableResult DCR = isDeviceCopyable(SemaSYCLRef.SemaRef, Type, Detail.Loc);
+    if (DCR.PD) {
+      // Emit diagnostics if any were generated.
+      SemaSYCLRef.Diag(Detail.Loc, DCR.PD.value());
+      emitObjectAccessPathNotes();
+    }
+    if (!DCR.copyable) {
+      assert(DCR.PD && "DeviceCopyableResult must emit an explanatory diagnostic if Ty is not device copyable");
+      IsValid = false;
+      return false;
+    }
     return true;
   }
 
