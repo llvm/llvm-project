@@ -21,6 +21,9 @@
 // Very slow when run in qemu.
 // REQUIRES: long_tests
 
+// missing lgamma_r
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <random>
 #include <cassert>
 #include <cmath>
