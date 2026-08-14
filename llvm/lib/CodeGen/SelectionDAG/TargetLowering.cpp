@@ -322,6 +322,23 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                              OldRHS, Chain);
 }
 
+/// Select the libcall and the condition code to test its result against 0 for
+/// an ordered floating-point compare. \p BoolLC is the boolean helper (result
+/// is 0/1). \p TriStateLC is the per-predicate three-way helper and \p
+/// GenericLC the generic single-symbol three-way helper (both return -1/0/1,
+/// tested against 0 with \p TriStateCC). The boolean form is preferred, then
+/// the per-predicate three-way, then the generic three-way.
+static std::pair<RTLIB::Libcall, ISD::CondCode>
+selectFPCmpLibcall(const LibcallLoweringInfo &Libcalls, RTLIB::Libcall BoolLC,
+                   RTLIB::Libcall TriStateLC, RTLIB::Libcall GenericLC,
+                   ISD::CondCode TriStateCC) {
+  if (Libcalls.getLibcallImpl(BoolLC) != RTLIB::Unsupported)
+    return {BoolLC, ISD::SETNE};
+  if (Libcalls.getLibcallImpl(TriStateLC) != RTLIB::Unsupported)
+    return {TriStateLC, TriStateCC};
+  return {GenericLC, TriStateCC};
+}
+
 void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                                          SDValue &NewLHS, SDValue &NewRHS,
                                          ISD::CondCode &CCCode,
@@ -338,100 +355,110 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
   // Expand into one or more soft-fp libcall(s).
   RTLIB::Libcall LC1 = RTLIB::UNKNOWN_LIBCALL, LC2 = RTLIB::UNKNOWN_LIBCALL;
+  ISD::CondCode CC1 = ISD::SETCC_INVALID, CC2 = ISD::SETCC_INVALID;
   bool ShouldInvertCC = false;
+
+  // Expand a compare libcall family name (e.g. OEQ, FCMP3_PRED_OEQ) to the
+  // RTLIB::Libcall for VT.
+#define FP_CMP_LIBCALL(BASE)                                                   \
+  RTLIB::getFPLibCall(VT, RTLIB::BASE##_F32, RTLIB::BASE##_F64,                \
+                      RTLIB::UNKNOWN_LIBCALL, RTLIB::BASE##_F128,              \
+                      RTLIB::BASE##_PPCF128)
+
   switch (CCCode) {
   case ISD::SETEQ:
   case ISD::SETOEQ:
-    LC1 = (VT == MVT::f32) ? RTLIB::OEQ_F32 :
-          (VT == MVT::f64) ? RTLIB::OEQ_F64 :
-          (VT == MVT::f128) ? RTLIB::OEQ_F128 : RTLIB::OEQ_PPCF128;
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ), FP_CMP_LIBCALL(FCMP3_PRED_OEQ),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETEQ);
     break;
   case ISD::SETNE:
   case ISD::SETUNE:
-    LC1 = (VT == MVT::f32) ? RTLIB::UNE_F32 :
-          (VT == MVT::f64) ? RTLIB::UNE_F64 :
-          (VT == MVT::f128) ? RTLIB::UNE_F128 : RTLIB::UNE_PPCF128;
-    // Some ABIs (e.g. AEABI) only provide an ordered-equal compare; obtain
-    // not-equal (UNE = !OEQ) by inverting the result of that call.
-    if (getLibcallImpl(LC1) == RTLIB::Unsupported) {
-      LC1 = (VT == MVT::f32)    ? RTLIB::OEQ_F32
-            : (VT == MVT::f64)  ? RTLIB::OEQ_F64
-            : (VT == MVT::f128) ? RTLIB::OEQ_F128
-                                : RTLIB::OEQ_PPCF128;
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(UNE), FP_CMP_LIBCALL(FCMP3_PRED_UNE),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETNE);
+    // Some ABIs (e.g. AEABI) provide neither a not-equal nor a three-way
+    // compare; obtain not-equal (UNE = !OEQ) by inverting ordered-equal.
+    if (DAG.getLibcalls().getLibcallImpl(LC1) == RTLIB::Unsupported) {
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ),
+          FP_CMP_LIBCALL(FCMP3_PRED_OEQ), FP_CMP_LIBCALL(FCMP3), ISD::SETEQ);
       ShouldInvertCC = true;
     }
     break;
   case ISD::SETGE:
   case ISD::SETOGE:
-    LC1 = (VT == MVT::f32) ? RTLIB::OGE_F32 :
-          (VT == MVT::f64) ? RTLIB::OGE_F64 :
-          (VT == MVT::f128) ? RTLIB::OGE_F128 : RTLIB::OGE_PPCF128;
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OGE), FP_CMP_LIBCALL(FCMP3_PRED_OGE),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETGE);
     break;
   case ISD::SETLT:
   case ISD::SETOLT:
-    LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-          (VT == MVT::f64) ? RTLIB::OLT_F64 :
-          (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OLT), FP_CMP_LIBCALL(FCMP3_PRED_OLT),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETLT);
     break;
   case ISD::SETLE:
   case ISD::SETOLE:
-    LC1 = (VT == MVT::f32) ? RTLIB::OLE_F32 :
-          (VT == MVT::f64) ? RTLIB::OLE_F64 :
-          (VT == MVT::f128) ? RTLIB::OLE_F128 : RTLIB::OLE_PPCF128;
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OLE), FP_CMP_LIBCALL(FCMP3_PRED_OLE),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETLE);
     break;
   case ISD::SETGT:
   case ISD::SETOGT:
-    LC1 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-          (VT == MVT::f64) ? RTLIB::OGT_F64 :
-          (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OGT), FP_CMP_LIBCALL(FCMP3_PRED_OGT),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETGT);
     break;
   case ISD::SETO:
     ShouldInvertCC = true;
     [[fallthrough]];
   case ISD::SETUO:
-    LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
-          (VT == MVT::f64) ? RTLIB::UO_F64 :
-          (VT == MVT::f128) ? RTLIB::UO_F128 : RTLIB::UO_PPCF128;
+    // Unordered is a boolean everywhere (__unordXf2 returns 0/1).
+    LC1 = FP_CMP_LIBCALL(UO);
+    CC1 = ISD::SETNE;
     break;
   case ISD::SETONE:
     // SETONE = O && UNE
     ShouldInvertCC = true;
     [[fallthrough]];
   case ISD::SETUEQ:
-    LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
-          (VT == MVT::f64) ? RTLIB::UO_F64 :
-          (VT == MVT::f128) ? RTLIB::UO_F128 : RTLIB::UO_PPCF128;
-    LC2 = (VT == MVT::f32) ? RTLIB::OEQ_F32 :
-          (VT == MVT::f64) ? RTLIB::OEQ_F64 :
-          (VT == MVT::f128) ? RTLIB::OEQ_F128 : RTLIB::OEQ_PPCF128;
+    LC1 = FP_CMP_LIBCALL(UO);
+    CC1 = ISD::SETNE;
+    std::tie(LC2, CC2) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ), FP_CMP_LIBCALL(FCMP3_PRED_OEQ),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETEQ);
     break;
   default:
-    // Invert CC for unordered comparisons
+    // Invert CC for unordered comparisons, handled by the ordered inverse.
     ShouldInvertCC = true;
     switch (CCCode) {
     case ISD::SETULT:
-      LC1 = (VT == MVT::f32) ? RTLIB::OGE_F32 :
-            (VT == MVT::f64) ? RTLIB::OGE_F64 :
-            (VT == MVT::f128) ? RTLIB::OGE_F128 : RTLIB::OGE_PPCF128;
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OGE),
+          FP_CMP_LIBCALL(FCMP3_PRED_OGE), FP_CMP_LIBCALL(FCMP3), ISD::SETGE);
       break;
     case ISD::SETULE:
-      LC1 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-            (VT == MVT::f64) ? RTLIB::OGT_F64 :
-            (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OGT),
+          FP_CMP_LIBCALL(FCMP3_PRED_OGT), FP_CMP_LIBCALL(FCMP3), ISD::SETGT);
       break;
     case ISD::SETUGT:
-      LC1 = (VT == MVT::f32) ? RTLIB::OLE_F32 :
-            (VT == MVT::f64) ? RTLIB::OLE_F64 :
-            (VT == MVT::f128) ? RTLIB::OLE_F128 : RTLIB::OLE_PPCF128;
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OLE),
+          FP_CMP_LIBCALL(FCMP3_PRED_OLE), FP_CMP_LIBCALL(FCMP3), ISD::SETLE);
       break;
     case ISD::SETUGE:
-      LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-            (VT == MVT::f64) ? RTLIB::OLT_F64 :
-            (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OLT),
+          FP_CMP_LIBCALL(FCMP3_PRED_OLT), FP_CMP_LIBCALL(FCMP3), ISD::SETLT);
       break;
-    default: llvm_unreachable("Do not know how to soften this setcc!");
+    default:
+      llvm_unreachable("Do not know how to soften this setcc!");
     }
   }
+
+#undef FP_CMP_LIBCALL
 
   // Use the target specific return value for comparison lib calls.
   EVT RetVT = getCmpLibcallReturnType();
@@ -444,13 +471,12 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
 
-  RTLIB::LibcallImpl LC1Impl = getLibcallImpl(LC1);
-  if (LC1Impl == RTLIB::Unsupported) {
+  if (DAG.getLibcalls().getLibcallImpl(LC1) == RTLIB::Unsupported) {
     reportFatalUsageError(
         "no libcall available to soften floating-point compare");
   }
 
-  CCCode = getSoftFloatCmpLibcallPredicate(LC1Impl);
+  CCCode = CC1;
   if (ShouldInvertCC) {
     assert(RetVT.isInteger());
     CCCode = getSetCCInverse(CCCode, RetVT);
@@ -460,8 +486,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     // Update Chain.
     Chain = Call.second;
   } else {
-    RTLIB::LibcallImpl LC2Impl = getLibcallImpl(LC2);
-    if (LC2Impl == RTLIB::Unsupported) {
+    if (DAG.getLibcalls().getLibcallImpl(LC2) == RTLIB::Unsupported) {
       reportFatalUsageError(
           "no libcall available to soften floating-point compare");
     }
@@ -478,7 +503,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
     SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
-    CCCode = getSoftFloatCmpLibcallPredicate(LC2Impl);
+    CCCode = CC2;
     if (ShouldInvertCC)
       CCCode = getSetCCInverse(CCCode, RetVT);
     NewLHS = DAG.getSetCC(dl, SetCCVT, Call2.first, NewRHS, CCCode);
@@ -1617,28 +1642,16 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // (or (and X, C1), (and (or X, Y), C2)) -> (or (and X, C1|C2), (and Y, C2))
     // TODO: Use SimplifyMultipleUseDemandedBits to peek through masks.
-    if (Op0.getOpcode() == ISD::AND && Op1.getOpcode() == ISD::AND &&
-        Op0->hasOneUse() && Op1->hasOneUse()) {
-      // Attempt to match all commutations - m_c_Or would've been useful!
-      for (int I = 0; I != 2; ++I) {
-        SDValue X = Op.getOperand(I).getOperand(0);
-        SDValue C1 = Op.getOperand(I).getOperand(1);
-        SDValue Alt = Op.getOperand(1 - I).getOperand(0);
-        SDValue C2 = Op.getOperand(1 - I).getOperand(1);
-        if (Alt.getOpcode() == ISD::OR) {
-          for (int J = 0; J != 2; ++J) {
-            if (X == Alt.getOperand(J)) {
-              SDValue Y = Alt.getOperand(1 - J);
-              if (SDValue C12 = TLO.DAG.FoldConstantArithmetic(ISD::OR, dl, VT,
-                                                               {C1, C2})) {
-                SDValue MaskX = TLO.DAG.getNode(ISD::AND, dl, VT, X, C12);
-                SDValue MaskY = TLO.DAG.getNode(ISD::AND, dl, VT, Y, C2);
-                return TLO.CombineTo(
-                    Op, TLO.DAG.getNode(ISD::OR, dl, VT, MaskX, MaskY));
-              }
-            }
-          }
-        }
+    SDValue X, Y, C1, C2;
+    if (sd_match(Op, m_Or(m_OneUse(m_And(m_Value(X), m_Value(C1))),
+                          m_OneUse(m_And(m_Or(m_Deferred(X), m_Value(Y)),
+                                         m_Value(C2)))))) {
+      if (SDValue C12 =
+              TLO.DAG.FoldConstantArithmetic(ISD::OR, dl, VT, {C1, C2})) {
+        SDValue MaskX = TLO.DAG.getNode(ISD::AND, dl, VT, X, C12);
+        SDValue MaskY = TLO.DAG.getNode(ISD::AND, dl, VT, Y, C2);
+        return TLO.CombineTo(Op,
+                             TLO.DAG.getNode(ISD::OR, dl, VT, MaskX, MaskY));
       }
     }
 
@@ -3412,7 +3425,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
             continue;
           for (unsigned SrcElt = 0; SrcElt != NumSrcElts; ++SrcElt) {
             unsigned Elt = Scale * SrcElt + SubElt;
-            if (DemandedElts[Elt])
+            // A wholly-undef source lane is reported as undef below; don't also
+            // flag it as zero, keeping the undef and zero sets disjoint.
+            if (DemandedElts[Elt] && !SrcUndef[SrcElt])
               KnownZero.setBit(Elt);
           }
         }
@@ -3979,6 +3994,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   }
+
   assert((KnownUndef & KnownZero) == 0 && "Elements flagged as undef AND zero");
 
   // Constant fold all undef cases.
@@ -13836,6 +13852,51 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getZExtOrTrunc(Sub, DL, VT);
 }
 
+SDValue TargetLowering::expandVectorMatch(SDNode *N, SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue Source = N->getOperand(0);
+  SDValue Needle = N->getOperand(1);
+  SDValue Mask = N->getOperand(2);
+  EVT SourceVT = Source.getValueType();
+  EVT NeedleVT = Needle.getValueType();
+  EVT ResVT = N->getValueType(0);
+  EVT CmpVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SourceVT);
+
+  assert(NeedleVT.isFixedLengthVector() && "Needle must be a fixed vector");
+
+  SDValue Ret = DAG.getConstant(0, DL, CmpVT);
+  EVT NeedleEltVT = NeedleVT.getVectorElementType();
+  for (unsigned I = 0, E = NeedleVT.getVectorNumElements(); I != E; ++I) {
+    SDValue Splat;
+    if (NeedleVT == SourceVT) {
+      // Prefer a shuffle over scalar extracts + splat for fixed vectors.
+      Splat = DAG.getVectorShuffle(
+          SourceVT, DL, Needle, DAG.getUNDEF(SourceVT),
+          SmallVector<int>(NeedleVT.getVectorNumElements(), I));
+    } else {
+      SDValue NeedleElt = DAG.getExtractVectorElt(DL, NeedleEltVT, Needle, I);
+      Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, SourceVT, NeedleElt);
+    }
+    SDValue Cmp = DAG.getSetCC(DL, CmpVT, Source, Splat, ISD::SETEQ);
+    Ret = DAG.getNode(ISD::OR, DL, CmpVT, Ret, Cmp);
+  }
+
+  EVT UseVT = ResVT;
+  // If the result is immediately truncated, only extend to that type (to avoid
+  // unnecessary sign/zero extends).
+  if (N->hasOneUse() && N->user_begin()->getOpcode() == ISD::TRUNCATE)
+    UseVT = N->user_begin()->getValueType(0);
+
+  Mask = DAG.getBoolExtOrTrunc(Mask, DL, UseVT, Mask.getValueType());
+  Ret = DAG.getBoolExtOrTrunc(Ret, DL, UseVT, Ret.getValueType());
+
+  Ret = DAG.getNode(ISD::AND, DL, UseVT, Ret, Mask);
+  if (UseVT != ResVT)
+    Ret = DAG.getNode(ISD::ANY_EXTEND, DL, ResVT, Ret);
+  return Ret;
+}
+
 SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
                                                SelectionDAG &DAG) const {
   SDLoc DL(N);
@@ -13858,6 +13919,10 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
     break;
   case ISD::PARTIAL_REDUCE_SMLA:
     ExtOpcLHS = ExtOpcRHS = ISD::SIGN_EXTEND;
+    break;
+  case ISD::PARTIAL_REDUCE_SUMLA:
+    ExtOpcLHS = ISD::SIGN_EXTEND;
+    ExtOpcRHS = ISD::ZERO_EXTEND;
     break;
   case ISD::PARTIAL_REDUCE_FMLA:
     ExtOpcLHS = ExtOpcRHS = ISD::FP_EXTEND;

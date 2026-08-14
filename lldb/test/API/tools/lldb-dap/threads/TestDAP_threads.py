@@ -2,13 +2,13 @@
 Test lldb-dap threads request
 """
 
-from lldbsuite.test.decorators import skipIfTargetDoesNotSupportThreads
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StoppedReason, ThreadsArgs
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class TestDAP_threads(DAPTestCaseBase):
     def test_correct_thread(self):
         """

@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-extensive
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: libcpp-hardening-mode=none || libcpp-hardening-mode=fast
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // template<class F> function_ref(F* f) noexcept;
 // Preconditions: f is not a null pointer.

@@ -119,11 +119,57 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
   if (Depth >= getMaxDepth())
     return false;
 
+  const APInt ScalarDemandedElts(1, 1);
   MachineInstr &MI = *MRI.getVRegDef(R);
 
   switch (MI.getOpcode()) {
   default:
     break;
+
+  case TargetOpcode::G_BUILD_VECTOR: {
+    for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
+      if (!DemandedElts[I])
+        continue;
+      if (!isKnownNeverZero(MO.getReg(), ScalarDemandedElts, Depth + 1))
+        return false;
+    }
+    return true;
+  }
+
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    LLT VecTy = MRI.getType(InVec);
+    if (VecTy.isScalableVector())
+      break;
+    unsigned NumSrcElts = VecTy.getNumElements();
+    // An out-of-range constant index produces poison. Keep all lanes demanded,
+    // which is poison-safe and matches SelectionDAG's conservative behavior.
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    if (auto Idx = getIConstantVRegVal(Extract.getIndexReg(), MRI)) {
+      if (Idx->ult(NumSrcElts))
+        DemandedSrcElts = APInt::getOneBitSet(NumSrcElts, Idx->getZExtValue());
+    }
+    return isKnownNeverZero(InVec, DemandedSrcElts, Depth + 1);
+  }
+
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    GShuffleVector &Shuf = cast<GShuffleVector>(MI);
+    LLT SrcTy = MRI.getType(Shuf.getSrc1Reg());
+    if (SrcTy.isScalableVector())
+      break;
+    APInt DemandedLHS, DemandedRHS;
+    if (!getShuffleDemandedElts(SrcTy.getNumElements(), Shuf.getMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+    if (!DemandedLHS.isZero() &&
+        !isKnownNeverZero(Shuf.getSrc1Reg(), DemandedLHS, Depth + 1))
+      return false;
+    if (!DemandedRHS.isZero() &&
+        !isKnownNeverZero(Shuf.getSrc2Reg(), DemandedRHS, Depth + 1))
+      return false;
+    return true;
+  }
 
   case TargetOpcode::G_OR:
     return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
@@ -359,6 +405,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     if (Overflow)
       break;
     Known.Zero.setHighBits(MaxValue.countl_zero());
+    break;
+  }
+  case TargetOpcode::G_VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = MI.getOperand(1).getCImm()->getValue();
+    Known = getVScaleRange(&F, BitWidth).multiply(Multiplier).toKnownBits();
     break;
   }
   case TargetOpcode::G_CONSTANT: {
@@ -797,10 +849,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       return; // TODO: Handle vector->subelement unmerges
 
     // Figure out the result operand index
-    unsigned DstIdx = 0;
-    for (; DstIdx != NumOps - 1 && MI.getOperand(DstIdx).getReg() != R;
-         ++DstIdx)
-      ;
+    unsigned DstIdx = MI.findRegisterDefOperandIdx(R, nullptr);
 
     APInt SubDemandedElts = DemandedElts;
     if (SrcTy.isVector()) {
@@ -2370,6 +2419,23 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_ROTL:
+  case TargetOpcode::G_ROTR: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Tmp = computeNumSignBits(SrcReg, DemandedElts, Depth + 1);
+    auto MaybeAmt =
+        isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
+    FirstAnswer =
+        SignBitsOps::rot(Tmp, TyBits, MaybeAmt, Opcode == TargetOpcode::G_ROTR);
+    break;
+  }
+  case TargetOpcode::G_SAVGFLOOR:
+  case TargetOpcode::G_SAVGCEIL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    FirstAnswer = computeNumSignBitsMin(Src1, Src2, DemandedElts, Depth + 1);
+    break;
+  }
   case TargetOpcode::G_SREM: {
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero. The magnitude of the result should be less than or
@@ -2509,6 +2575,36 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return TyBits; // All bits are sign bits.
     if (BC == TargetLowering::ZeroOrOneBooleanContent)
       return TyBits - 1; // Every always-zero bit is a sign bit.
+    break;
+  }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    unsigned NumOps = MI.getNumOperands();
+    Register SrcReg = MI.getOperand(NumOps - 1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    if ((SrcTy.isVector() && SrcTy.getScalarType() != DstTy.getScalarType()) ||
+        (SrcTy.isScalar() && DstTy.isVector()))
+      break;
+
+    // Figure out the result operand index
+    unsigned DstIdx = MI.findRegisterDefOperandIdx(R, nullptr);
+
+    APInt SubDemandedElts = DemandedElts;
+    unsigned DstLanes = DstTy.isVector() ? DstTy.getNumElements() : 1;
+    if (SrcTy.isVector()) {
+      SubDemandedElts =
+          DemandedElts.zext(SrcTy.getNumElements()).shl(DstIdx * DstLanes);
+    }
+
+    unsigned SrcOpKnown =
+        computeNumSignBits(SrcReg, SubDemandedElts, Depth + 1);
+    if (SrcTy.isVector()) {
+      FirstAnswer = SrcOpKnown;
+    } else if (SrcOpKnown >= (MI.getNumOperands() - DstIdx - 2) * TyBits) {
+      FirstAnswer = SrcOpKnown >= (MI.getNumOperands() - DstIdx - 1) * TyBits
+                        ? TyBits
+                        : SrcOpKnown % TyBits;
+    }
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR: {
@@ -2716,8 +2812,9 @@ GISelValueTrackingPrinterPass::run(MachineFunction &MF,
           continue;
         KnownBits Known = VTA.getKnownBits(Reg);
         unsigned SignedBits = VTA.computeNumSignBits(Reg);
+        bool IsKnownNeverZero = VTA.isKnownNeverZero(Reg);
         OS << "  " << MO << " KnownBits:" << Known << " SignBits:" << SignedBits
-           << '\n';
+           << " IsKnownNeverZero:" << IsKnownNeverZero << '\n';
       };
     }
   }
