@@ -3266,6 +3266,10 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   assert(!cir::MissingFeatures::opFuncColdHotAttr());
 }
 
+// Maps an AST address space to the OpenCL logical address space kind recorded
+// in kernel argument metadata. This mapping is independent of the target
+// address space map, allowing consumers to distinguish OpenCL logical address
+// spaces even when the target maps them to the same address space.
 static cir::LangAddressSpace
 getOpenCLKernelArgAddressSpace(LangAS addressSpace) {
   switch (addressSpace) {
@@ -3282,6 +3286,8 @@ getOpenCLKernelArgAddressSpace(LangAS addressSpace) {
   case LangAS::opencl_global_host:
     return cir::LangAddressSpace::OffloadGlobalHost;
   default:
+    // All other AST address spaces, including target-specific ones, use the
+    // OpenCL metadata default, which lowers to SPIR address space ID 0.
     return cir::LangAddressSpace::Default;
   }
 }
@@ -3291,6 +3297,8 @@ void CIRGenModule::emitOpenCLKernelArgMetadata(cir::FuncOp func,
   assert(fd && "expected a kernel function declaration");
   const PrintingPolicy &policy = getASTContext().getPrintingPolicy();
 
+  // Create arrays that represent the kernel argument metadata. Each array has
+  // one value per kernel argument, in source order.
   SmallVector<mlir::Attribute> addressQuals;
   SmallVector<mlir::Attribute> accessQuals;
   SmallVector<mlir::Attribute> argTypeNames;
@@ -3326,6 +3334,8 @@ void CIRGenModule::emitOpenCLKernelArgMetadata(cir::FuncOp func,
       return typeName;
     };
 
+    // Type metadata preserves source spelling, while base type metadata uses
+    // canonical spelling without typedefs.
     if (type->isPointerType()) {
       QualType pointeeType = type->getPointeeType();
       addressQuals.push_back(cir::LangAddressSpaceAttr::get(

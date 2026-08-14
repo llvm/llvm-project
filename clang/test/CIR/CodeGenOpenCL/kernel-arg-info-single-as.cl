@@ -1,5 +1,5 @@
-// Test that OpenCL kernel argument metadata preserves semantic address spaces
-// even if the target has only one address space like x86_64 does.
+// Test that OpenCL kernel argument metadata preserves OpenCL logical address
+// spaces even if the target has only one address space like x86_64 does.
 // RUN: %clang_cc1 %s -fclangir -cl-std=CL2.0 -triple x86_64-unknown-linux-gnu -emit-cir -o %t.cir
 // RUN: FileCheck %s --input-file=%t.cir --check-prefix=CIR
 
