@@ -3,10 +3,10 @@
 !
 ! REQUIRES: flang-supports-f128-math
 !
-! RUN: bbc -emit-hlfir -finit-local=zero  -o - %s | FileCheck --check-prefix=ZERO  %s
-! RUN: bbc -emit-hlfir -finit-local=nan   -o - %s | FileCheck --check-prefix=NAN   %s
-! RUN: bbc -emit-hlfir -finit-local=snan  -o - %s | FileCheck --check-prefix=SNAN  %s
-! RUN: bbc -emit-hlfir -finit-local=0xAA  -o - %s | FileCheck --check-prefix=HEX   %s
+! RUN: %flang_fc1 -emit-hlfir -finit-local=zero  %s -o - | FileCheck --check-prefix=ZERO  %s
+! RUN: %flang_fc1 -emit-hlfir -finit-local=nan   %s -o - | FileCheck --check-prefix=NAN   %s
+! RUN: %flang_fc1 -emit-hlfir -finit-local=snan  %s -o - | FileCheck --check-prefix=SNAN  %s
+! RUN: %flang_fc1 -emit-hlfir -finit-local=0xAA  %s -o - | FileCheck --check-prefix=HEX   %s
 
 ! ---------------------------------------------------------------------------
 ! REAL(16) -- 16-byte FP (f128); hex uses 128-bit APInt splat + bitcast
