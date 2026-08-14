@@ -12,8 +12,6 @@
 
 // Test that we properly provide the trivial copy operations by default.
 
-// FreeBSD still provides the old ABI for std::pair.
-// XFAIL: freebsd
 // ADDITIONAL_COMPILE_FLAGS: -Wno-invalid-offsetof
 
 #include <utility>
