@@ -10,6 +10,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Utility/FileSpecList.h"
 
 #include "llvm/Support/VirtualFileSystem.h"
@@ -69,6 +70,41 @@ bool DownloadObjectAndSymbolFile(ModuleSpec &, Status &error, bool force_lookup,
 }
 
 SymbolLocator *CreateSymbolLocator() { return nullptr; }
+
+/// A platform that answers out of an index of its own, the way
+/// PlatformDarwinKernel answers for kexts.
+class IndexedPlatform : public Platform {
+public:
+  IndexedPlatform() : Platform(/*is_host_platform=*/false) {}
+
+  llvm::StringRef GetPluginName() override { return "indexed"; }
+  llvm::StringRef GetDescription() override { return "test platform"; }
+  std::vector<ArchSpec> GetSupportedArchitectures(const ArchSpec &) override {
+    return {};
+  }
+  lldb::ProcessSP Attach(ProcessAttachInfo &, Debugger &, Target *,
+                         Status &) override {
+    return nullptr;
+  }
+  void CalculateTrapHandlerSymbolNames() override {}
+  UserIDResolver &GetUserIDResolver() override {
+    return UserIDResolver::GetNoopResolver();
+  }
+
+  std::optional<ModuleSpec> FindModuleFiles(const ModuleSpec &spec,
+                                            const FileSpecList &,
+                                            StatisticsMap &) override {
+    ++find_module_files_calls;
+    if (!m_answer)
+      return {};
+    ModuleSpec found(spec);
+    found.GetFileSpec() = *m_answer;
+    return found;
+  }
+
+  std::optional<FileSpec> m_answer;
+  unsigned find_module_files_calls = 0;
+};
 
 class SymbolLocatorTest : public testing::Test {
 public:
@@ -198,4 +234,38 @@ TEST_F(SymbolLocatorTest, AnErrnoFromTheSymbolServerIsNotAPlainMiss) {
   llvm::Error error = result.takeError();
   EXPECT_FALSE(error.isA<SymbolLocator::NotFound>());
   llvm::consumeError(std::move(error));
+}
+
+TEST_F(SymbolLocatorTest, ThePlatformAnswersBeforeThePlugins) {
+  auto platform = std::make_shared<IndexedPlatform>();
+  platform->m_answer = m_binary;
+
+  SymbolLocator::Request request;
+  request.platform = platform;
+
+  llvm::Expected<SymbolLocator::Result> result =
+      SymbolLocator::Locate(request, FileSpecList());
+
+  ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+  EXPECT_EQ(1u, platform->find_module_files_calls);
+  EXPECT_EQ(m_binary, result->module_spec.GetFileSpec());
+  EXPECT_FALSE(g_calls.located_symbol_file);
+  EXPECT_FALSE(g_calls.located_object_file);
+  EXPECT_FALSE(g_calls.downloaded);
+}
+
+TEST_F(SymbolLocatorTest, ThePluginsRunWhenThePlatformHasNothingToSay) {
+  auto platform = std::make_shared<IndexedPlatform>();
+  platform->m_answer = std::nullopt;
+  g_object_file = m_binary;
+
+  SymbolLocator::Request request;
+  request.platform = platform;
+
+  llvm::Expected<SymbolLocator::Result> result =
+      SymbolLocator::Locate(request, FileSpecList());
+
+  ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+  EXPECT_EQ(1u, platform->find_module_files_calls);
+  EXPECT_TRUE(g_calls.located_object_file);
 }
