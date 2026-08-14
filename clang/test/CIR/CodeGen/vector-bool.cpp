@@ -17,8 +17,8 @@ void constant_vec_bool() {
 // CIR: %[[CONST_VEC:.*]] = cir.const #cir.const_vector<[#true, #false, #true, #false, #true, #false, #true, #false]> : !cir.vector<8 x !cir.bool>
 // CIR: cir.store {{.*}} %[[CONST_VEC]], %[[A_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i8, align 1
-// LLVM: store i8 85, ptr %[[A_ADDR]], align 1
+// SHARED: %[[A_ADDR:.*]] = alloca i8, align 1
+// SHARED: store i8 85, ptr %[[A_ADDR]], align 1
 
 void vec_bool_without_padding_needed() {
   v8b a;
