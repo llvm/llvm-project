@@ -4955,20 +4955,18 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   return Changed;
 }
 
-/// Returns true if every use of \p CI is an equality (eq/ne) comparison
-/// against the constant zero. strcmp(x, y) == 0, strncmp(x, y, n) == 0,
-/// memcmp(x, y, n) == 0, and bcmp(x, y, n) == 0 all hold under exactly the
-/// same condition as their argument-swapped counterparts (the compared
-/// ranges are equal), even though the concrete nonzero return value of
-/// these functions is implementation-defined and may differ when the
-/// pointer arguments are swapped. So this property is what makes it safe to
-/// treat such a call as interchangeable with its argument-swapped sibling.
-static bool isOnlyUsedInZeroEqualityComparisons(CallInst *CI) {
+/// True if every use of \p CI is an equality or signed-ordering comparison
+/// against zero. Only the sign of a nonzero strcmp/strncmp/memcmp/bcmp
+/// result is specified, so these are the only predicates whose truth value
+/// survives a sign flip (via CmpInst::getSwappedPredicate()). Unsigned
+/// predicates are excluded: e.g. "x <u 0" is always false regardless of
+/// sign.
+static bool isOnlyUsedInSignAgnosticZeroComparisons(CallInst *CI) {
   if (CI->use_empty())
     return false;
   return all_of(CI->users(), [CI](User *U) {
     auto *Cmp = dyn_cast<ICmpInst>(U);
-    if (!Cmp || !Cmp->isEquality())
+    if (!Cmp || !(Cmp->isEquality() || Cmp->isSigned()))
       return false;
     Value *Other =
         Cmp->getOperand(0) == CI ? Cmp->getOperand(1) : Cmp->getOperand(0);
@@ -4976,12 +4974,10 @@ static bool isOnlyUsedInZeroEqualityComparisons(CallInst *CI) {
   });
 }
 
-/// Returns true if no instruction strictly between \p Dominator and
-/// \p Dominated may write to memory, so the two calls are guaranteed to see
-/// the same memory contents. Only the common shapes that matter in practice
-/// are handled: the two calls share a basic block, or \p Dominated's block
-/// is reached directly (and only) from \p Dominator's block, as happens for
-/// short-circuiting `&&`/`||`.
+/// True if no instruction between \p Dominator and \p Dominated may write
+/// to memory. Only handles the two shapes that matter in practice: same
+/// basic block, or \p Dominated's block reached directly and only from
+/// \p Dominator's block (short-circuiting `&&`/`||`).
 static bool isFreeOfIntermediateWrites(CallInst *Dominator,
                                        CallInst *Dominated) {
   BasicBlock *DominatorBB = Dominator->getParent();
@@ -5009,14 +5005,13 @@ static bool isFreeOfIntermediateWrites(CallInst *Dominator,
   return true;
 }
 
-/// strcmp(x, y) == 0, strncmp(x, y, n) == 0, memcmp(x, y, n) == 0, and
-/// bcmp(x, y, n) == 0 are all commutative. They hold precisely when the
-/// compared ranges are equal, regardless of which pointer is passed first.
-/// When we find two such calls in the same function whose pointer
-/// arguments are swapped, and whose results are only ever compared for
-/// equality with zero, fold away the one that is dominated by the other
-/// (memory permitting), exposing the redundancy that ordinary CSE cannot
-/// see because the two calls are not literally identical instructions.
+/// Swapping the pointer arguments of strcmp/strncmp/memcmp/bcmp negates the
+/// sign of a nonzero result and leaves a zero result unchanged. Given two
+/// such calls in the same function with swapped arguments, fold away
+/// whichever is dominated by the other (memory permitting), reusing the
+/// dominating call's result with its comparisons' predicates swapped to
+/// match. Ordinary CSE can't see this redundancy since the calls aren't
+/// literally identical instructions.
 Instruction *InstCombinerImpl::foldCommutativeCmpLibCall(CallInst &CI) {
   LibFunc Func;
   if (!TLI.getLibFunc(CI, Func))
@@ -5032,18 +5027,13 @@ Instruction *InstCombinerImpl::foldCommutativeCmpLibCall(CallInst &CI) {
     return nullptr;
   }
 
-  if (!isOnlyUsedInZeroEqualityComparisons(&CI))
-    return nullptr;
-
   Function *Callee = CI.getCalledFunction();
   Value *A = CI.getArgOperand(0);
   Value *B = CI.getArgOperand(1);
   if (A == B)
     return nullptr;
 
-  // ConstantData (null, poison, ...) does not maintain a use list, and may
-  // in any case be shared by an unbounded number of unrelated instructions,
-  // so it isn't useful to search its users for a matching call.
+  // ConstantData (null, poison, ...) has no use list to search.
   if (!A->hasUseList())
     return nullptr;
 
@@ -5051,13 +5041,17 @@ Instruction *InstCombinerImpl::foldCommutativeCmpLibCall(CallInst &CI) {
     auto *Other = dyn_cast<CallInst>(U);
     if (!Other || Other == &CI || Other->getCalledFunction() != Callee)
       continue;
+    // A may be a global shared across functions, so Other may not be in CI's
+    // function; DominatorTree queries below require it to be.
+    if (Other->getFunction() != CI.getFunction())
+      continue;
     if (Other->getArgOperand(0) != B || Other->getArgOperand(1) != A)
       continue;
     if (CI.arg_size() == 3 && Other->getArgOperand(2) != CI.getArgOperand(2))
       continue;
-    if (!isOnlyUsedInZeroEqualityComparisons(Other))
-      continue;
 
+    // Only Dominated needs safely-reinterpretable uses; Dominator is left
+    // untouched, so its other uses don't matter.
     CallInst *Dominator, *Dominated;
     if (DT.dominates(&CI, Other)) {
       Dominator = &CI;
@@ -5069,13 +5063,29 @@ Instruction *InstCombinerImpl::foldCommutativeCmpLibCall(CallInst &CI) {
       continue;
     }
 
+    if (!isOnlyUsedInSignAgnosticZeroComparisons(Dominated))
+      continue;
+
     if (!isFreeOfIntermediateWrites(Dominator, Dominated))
       continue;
 
-    if (Dominated == &CI)
-      return replaceInstUsesWith(CI, Dominator);
+    // Point each comparison at Dominator instead, swapping its predicate to
+    // compensate for the sign flip (a no-op for eq/ne).
+    for (Use &U2 : make_early_inc_range(Dominated->uses())) {
+      auto *Cmp = cast<ICmpInst>(U2.getUser());
+      Cmp->setPredicate(Cmp->getSwappedPredicate());
+      replaceUse(U2, Dominator);
+      Worklist.pushUsersToWorkList(*Cmp);
+      Worklist.push(Cmp);
+    }
 
-    replaceInstUsesWith(*Dominated, Dominator);
+    // Dominated is now unused. Don't erase it here if it's CI:
+    // eraseInstFromFunction() returns nullptr, which the caller would read
+    // as "no change" and keep using the now-freed CI. Returning &CI lets
+    // the main loop's "modified in place" path erase it once dead instead.
+    if (Dominated == &CI)
+      return &CI;
+
     eraseInstFromFunction(*Dominated);
     return nullptr;
   }
