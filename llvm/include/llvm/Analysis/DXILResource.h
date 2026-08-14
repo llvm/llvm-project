@@ -415,8 +415,8 @@ public:
   ResourceInfo(uint32_t Space, uint32_t LowerBound, uint32_t Size,
                TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
-      : Binding{0, Space, LowerBound, Size},
-        HandleTy(HandleTy), Name(Name), Symbol(Symbol) {}
+      : Binding{0, Space, LowerBound, Size}, HandleTy(HandleTy), Name(Name),
+        Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.BindingID = ID; }
 
