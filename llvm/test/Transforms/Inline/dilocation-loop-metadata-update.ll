@@ -47,10 +47,10 @@ entry:
 !7 = !DILocation(line: 6, column: 3, scope: !3)
 !8 = !DILocation(line: 7, column: 22, scope: !3)
 !9 = !{!"llvm.loop.mustprogress"}
-!10 = !{!"llvm.loop.distribute.enable", i1 true}
+!10 = !{!"llvm.loop.distribute.enable"}
 !11 = !{!"llvm.loop.distribute.followup_all", !7, !8, !9, !12, !13, !14}
 !12 = !{!"llvm.loop.vectorize.width", i32 8}
-!13 = !{!"llvm.loop.vectorize.enable", i1 true}
+!13 = !{!"llvm.loop.vectorize.enable"}
 !14 = !{!"llvm.loop.vectorize.followup_all", !7, !8, !9, !15, !16}
 !15 = !{!"llvm.loop.isvectorized"}
 !16 = !{!"llvm.loop.unroll.count", i32 1}
@@ -66,10 +66,10 @@ entry:
 ; CHECK: [[META7]] = !DILocation(line: 6, column: 3, scope: [[DBG3]])
 ; CHECK: [[META8]] = !DILocation(line: 7, column: 22, scope: [[DBG3]])
 ; CHECK: [[META9]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META10]] = !{!"llvm.loop.distribute.enable", i1 true}
+; CHECK: [[META10]] = !{!"llvm.loop.distribute.enable"}
 ; CHECK: [[META11]] = !{!"llvm.loop.distribute.followup_all", [[META7]], [[META8]], [[META9]], [[META12:![0-9]+]], [[META13:![0-9]+]], [[META14:![0-9]+]]}
 ; CHECK: [[META12]] = !{!"llvm.loop.vectorize.width", i32 8}
-; CHECK: [[META13]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[META13]] = !{!"llvm.loop.vectorize.enable"}
 ; CHECK: [[META14]] = !{!"llvm.loop.vectorize.followup_all", [[META7]], [[META8]], [[META9]], [[META15:![0-9]+]], [[META16:![0-9]+]]}
 ; CHECK: [[META15]] = !{!"llvm.loop.isvectorized"}
 ; CHECK: [[META16]] = !{!"llvm.loop.unroll.count", i32 1}

@@ -44,6 +44,11 @@ RValue ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return RValue::getIgnored();
 }
 
+RValue ABIInfo::EmitZOSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty, AggValueSlot Slot) const {
+  return RValue::getIgnored();
+}
+
 bool ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
   return false;
 }

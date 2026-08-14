@@ -343,6 +343,14 @@ attributes {__parallel_region_boundary_for_test} {
   return
 }
 
+// CHECK-LABEL: @non_workgroup_barrier_retained
+func.func @non_workgroup_barrier_retained()
+attributes {__parallel_region_boundary_for_test} {
+  // CHECK: gpu.barrier scope <subgroup>
+  gpu.barrier scope <subgroup>
+  return
+}
+
 // CHECK-LABEL: @empty_barrrier_retained
 func.func @empty_barrrier_retained()
 attributes {__parallel_region_boundary_for_test} {

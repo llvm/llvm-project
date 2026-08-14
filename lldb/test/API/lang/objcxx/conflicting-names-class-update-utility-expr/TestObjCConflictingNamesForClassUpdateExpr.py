@@ -17,10 +17,7 @@ class TestCase(TestBase):
         function.
         """
 
-        self.build()
-        lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.mm")
-        )
+        self.build_and_run()
 
         # First check our side effect variable is in its initial state.
         self.expect_expr("called_function", result_summary='"none"')
