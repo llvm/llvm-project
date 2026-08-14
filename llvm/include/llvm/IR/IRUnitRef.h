@@ -58,18 +58,20 @@ template <> struct IRUnitKindTraits<MachineFunction> {
 /// A type-erased reference to the IR unit a pass or analysis is running on,
 /// together with the kind of IR unit it refers to.
 class IRUnitRef {
+  template <typename To, typename From, typename Enable> friend struct CastInfo;
+
   const void *Ptr;
   IRUnitKind Kind;
+
+  /// Which kind of IR unit is wrapped.
+  IRUnitKind getKind() const { return Kind; }
+
+  /// The wrapped IR unit, type-erased.
+  const void *getPointer() const { return Ptr; }
 
 public:
   template <typename IRUnitT, IRUnitKind K = IRUnitKindTraits<IRUnitT>::Kind>
   IRUnitRef(const IRUnitT &IR) : Ptr(&IR), Kind(K) {}
-
-  /// Which kind of IR unit is wrapped. Prefer isa/cast/dyn_cast.
-  IRUnitKind getKind() const { return Kind; }
-
-  /// The wrapped IR unit, type-erased. Prefer isa/cast/dyn_cast.
-  const void *getPointer() const { return Ptr; }
 };
 
 static_assert(!std::is_constructible_v<IRUnitRef, std::nullptr_t>,
