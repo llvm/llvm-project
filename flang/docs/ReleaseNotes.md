@@ -92,7 +92,7 @@ page](https://llvm.org/releases/).
 - Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
   sections. Supported formats are `zlib`, `zstd`, and `none`.
 
-- Added `-finit-local=<val>` to initialize automatic (local, stack-allocated)
+- Added `-finit-local=<val>` to initialize automatic local
   variables that have no explicit or default initialization. Accepted values
   are `zero`, `nan`, `snan`, and `0x<hex-byte>` (e.g. `0xAA`). The gfortran
   compatibility alias `-finit-local-zero` is equivalent to `-finit-local=zero`.

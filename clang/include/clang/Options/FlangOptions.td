@@ -399,10 +399,6 @@ defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
   NegFlag<SetFalse, [], [], "Do not zero initialize globals without default initialization">>;
 
-// -finit-local=<zero|nan|snan|0x<hex>>
-// Initialize automatic (local, stack) variables that have no explicit or
-// default initialization.  -finit-local-zero is a GFortran compatibility alias
-// for -finit-local=zero.
 def finit_local_EQ : Joined<["-"], "finit-local=">,
   Group<f_Group>,
   Visibility<[FC1Option, FlangOption]>,
