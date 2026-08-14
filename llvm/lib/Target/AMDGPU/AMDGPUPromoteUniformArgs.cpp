@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// For non-entry AMDGPU functions, pointer arguments are passed in VGPRs unless
-// marked \c inreg. When such an argument is actually uniform across the
-// wavefront at every visible call site, passing it in VGPRs forces every lane
-// to carry the same value and can inflate register pressure. This pass promotes
-// provably-uniform pointer arguments of internal callees to \c inreg (SGPR
-// passing) on the definition and at each direct call site.
+// Promote provably-uniform pointer arguments of internal callees to \c inreg
+// (SGPR passing) on the definition and at every direct call site. Uniformity is
+// established conservatively: an operand is uniform if it is an always-uniform
+// instruction (per TargetTransformInfo) or an argument that every visible
+// caller forwards from another uniform value. A full \c UniformityInfo-based
+// check is a planned follow-up.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Attributes.h"
@@ -39,8 +38,8 @@ STATISTIC(NumPromotedInRegArgs,
 STATISTIC(NumPromotedInRegFuncs,
           "Number of functions with a promoted uniform pointer argument");
 
-static cl::opt<bool> EnablePromoteUniformPointerArgs(
-    "amdgpu-promote-uniform-pointer-args", cl::Hidden, cl::init(true),
+static cl::opt<bool> EnablePromoteUniformArgs(
+    "amdgpu-enable-promote-uniform-args", cl::Hidden, cl::init(true),
     cl::desc("Promote provably uniform internal pointer arguments to inreg"));
 
 namespace {
@@ -79,25 +78,14 @@ static bool isEligibleInRegUniformCallee(const Function &F) {
   return true;
 }
 
-static bool argForwardedByMustTail(const Argument &A) {
-  SmallVector<const Value *, 8> Worklist;
-  SmallPtrSet<const Value *, 8> Visited;
-  Worklist.push_back(&A);
-  while (!Worklist.empty()) {
-    const Value *V = Worklist.pop_back_val();
-    if (!Visited.insert(V).second)
-      continue;
-    for (const User *U : V->users()) {
-      if (const auto *CB = dyn_cast<CallBase>(U)) {
+// musttail requires the enclosing function's parameter ABI (including inreg) to
+// match positionally, so skip promotion for any function containing one.
+static bool hasMustTailCall(const Function &F) {
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB)
+      if (const auto *CB = dyn_cast<CallBase>(&I))
         if (CB->isMustTailCall())
           return true;
-        continue;
-      }
-      if (isa<BitCastInst, GetElementPtrInst, AddrSpaceCastInst, PHINode,
-              SelectInst>(U))
-        Worklist.push_back(cast<Instruction>(U));
-    }
-  }
   return false;
 }
 
@@ -134,38 +122,97 @@ static bool calleeCastsArgToPrivate(const Argument &A) {
         continue;
       }
       if (const auto *II = dyn_cast<IntrinsicInst>(U)) {
-        if (II->getIntrinsicID() == Intrinsic::amdgcn_addrspacecast_nonnull) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::amdgcn_addrspacecast_nonnull:
           if (II->getType()->getPointerAddressSpace() ==
               AMDGPUAS::PRIVATE_ADDRESS)
             return true;
           Worklist.push_back(II);
+          break;
+        case Intrinsic::ptrmask:
+        case Intrinsic::launder_invariant_group:
+        case Intrinsic::strip_invariant_group:
+          Worklist.push_back(II);
+          break;
+        default:
+          break;
         }
         continue;
       }
-      if (isa<GetElementPtrInst, BitCastInst, PHINode, SelectInst>(U))
+      if (isa<GetElementPtrInst, BitCastInst, PHINode, SelectInst, FreezeInst>(
+              U))
         Worklist.push_back(U);
     }
   }
   return false;
 }
 
-static bool collectCallSites(Function &F, SmallVectorImpl<CallBase *> &Calls) {
-  for (User *U : F.users()) {
-    auto *CB = dyn_cast<CallBase>(U);
-    if (!CB || CB->getCalledFunction() != &F)
-      return false;
-    if (CB->isMustTailCall())
-      return false;
-    if (isa<InvokeInst>(CB))
-      return false;
-    Calls.push_back(CB);
+static bool isTriviallyUniformArg(
+    const Argument *Arg,
+    function_ref<TargetTransformInfo &(const Function &)> GetTTI,
+    SmallPtrSetImpl<const Argument *> &Visited);
+
+static bool isTriviallyUniformOperand(
+    const Value *V,
+    function_ref<TargetTransformInfo &(const Function &)> GetTTI,
+    SmallPtrSetImpl<const Argument *> &Visited) {
+  if (const auto *Arg = dyn_cast<Argument>(V))
+    return isTriviallyUniformArg(Arg, GetTTI, Visited);
+
+  if (const auto *I = dyn_cast<Instruction>(V)) {
+    const TargetTransformInfo &TTI = GetTTI(*I->getFunction());
+    return TTI.getValueUniformity(V) == ValueUniformity::AlwaysUniform;
   }
-  return !Calls.empty();
+
+  return false;
+}
+
+static bool isTriviallyUniformArg(
+    const Argument *Arg,
+    function_ref<TargetTransformInfo &(const Function &)> GetTTI,
+    SmallPtrSetImpl<const Argument *> &Visited) {
+  if (Arg->hasInRegAttr())
+    return true;
+
+  const Function *F = Arg->getParent();
+  if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
+    return AMDGPU::isArgPassedInSGPR(Arg);
+
+  // Only direct-call-only internal callees have fully visible callers; an
+  // indirect or address-taken caller could pass a divergent value we never see.
+  if (!isEligibleInRegUniformCallee(*F))
+    return false;
+
+  // Path-based cycle guard: a (mutually) recursive chain that forwards the
+  // argument back to itself cannot be proven here and must terminate. The
+  // argument is removed on the way out so a diamond-shaped call graph can still
+  // reach the same argument through an independent path.
+  if (!Visited.insert(Arg).second)
+    return false;
+
+  bool HasCallSite = false;
+  bool AllUniform = true;
+  for (const User *U : F->users()) {
+    const auto *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledFunction() != F)
+      continue;
+    HasCallSite = true;
+    if (!isTriviallyUniformOperand(CB->getArgOperand(Arg->getArgNo()), GetTTI,
+                                   Visited)) {
+      AllUniform = false;
+      break;
+    }
+  }
+  Visited.erase(Arg);
+  return HasCallSite && AllUniform;
 }
 
 static bool promoteUniformPointerArgsToInReg(Module &M,
                                              ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto GetTTI = [&FAM](const Function &F) -> TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(const_cast<Function &>(F));
+  };
   bool Changed = false;
   bool RoundChanged = true;
   while (RoundChanged) {
@@ -174,15 +221,25 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
       if (!isEligibleInRegUniformCallee(F))
         continue;
 
+      // Promoting any argument changes F's ABI attributes, which a musttail
+      // call in F's body would then no longer match positionally. Skip
+      // conservatively.
+      if (hasMustTailCall(F))
+        continue;
+
+      // isEligibleInRegUniformCallee guarantees every user is a direct,
+      // non-musttail, non-invoke call to F, so we can just gather them.
       SmallVector<CallBase *, 8> Calls;
-      if (!collectCallSites(F, Calls))
+      for (User *U : F.users())
+        if (auto *CB = dyn_cast<CallBase>(U);
+            CB && CB->getCalledFunction() == &F)
+          Calls.push_back(CB);
+      if (Calls.empty())
         continue;
 
       bool FuncChanged = false;
       for (Argument &A : F.args()) {
         if (!canPromoteArgToInReg(A))
-          continue;
-        if (argForwardedByMustTail(A))
           continue;
         if (calleeCastsArgToPrivate(A))
           continue;
@@ -195,16 +252,8 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
             break;
           }
 
-          Function *Caller = CB->getFunction();
-          UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(*Caller);
-          if (UI.isDivergentAtUse(CB->getArgOperandUse(A.getArgNo()))) {
-            AllUniform = false;
-            break;
-          }
-
-          const TargetTransformInfo &TTI =
-              FAM.getResult<TargetIRAnalysis>(*Caller);
-          if (TTI.getValueUniformity(ArgOp) == ValueUniformity::NeverUniform) {
+          SmallPtrSet<const Argument *, 4> VisitedArgs;
+          if (!isTriviallyUniformOperand(ArgOp, GetTTI, VisitedArgs)) {
             AllUniform = false;
             break;
           }
@@ -241,8 +290,7 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
 
 PreservedAnalyses AMDGPUPromoteUniformArgsPass::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
-  if (!EnablePromoteUniformPointerArgs ||
-      !Triple(M.getTargetTriple()).isAMDGCN())
+  if (!EnablePromoteUniformArgs || !Triple(M.getTargetTriple()).isAMDGCN())
     return PreservedAnalyses::all();
   if (!promoteUniformPointerArgsToInReg(M, AM))
     return PreservedAnalyses::all();
