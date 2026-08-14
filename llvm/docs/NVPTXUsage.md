@@ -2254,6 +2254,188 @@ functionality as described in the `tile` mode intrinsics above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor).
 
+#### '`llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override*.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+; override.addr
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.1d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+; override.addr.dim (1D only)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.1d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i64 %ch, i1 %flag_ch)
+
+; override.addr.dim.stride (2D and higher)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.stride.2d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+; scatter4 + override.addr (2D only)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.scatter4.override.addr.2d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override*.[1-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.[1-5]d.*` set of PTX instructions qualified with the `.override::*` qualifiers.
+These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `tile` mode, while overriding specific properties of the opaque tensor-map object with explicit instruction operands.
+
+The `.override::*` qualifiers allow certain tensor-map properties to be ignored and instead supplied as explicit operands.
+The supported override variants are:
+
+- `override.addr` (`.override::global_address`): The global base address from the tensor-map is ignored and the explicit `ptr addrspace(1) %override_addr` operand is used instead.
+  The address must be 16B aligned; otherwise a runtime error is raised.
+  The memory range `[%override_addr, %override_addr + 128 KiB)` must be allocated and accessible during execution; otherwise the behavior is undefined.
+
+- `override.addr.dim` (`.override::global_address` + `.override::global_dim`, 1D only): Overrides the base address and the tensor global dimension.
+  The `i16 %ts0` operand specifies the new tensor size.
+  This variant requires the `tile` load mode; the base address override is mandatory when overriding attributes.
+  The tensor start coordinates must be zero; otherwise the behavior is undefined.
+
+- `override.addr.dim.stride` (`.override::global_address` + `.override::global_dim_stride`, 2D and higher): Overrides the base address, the tensor global dimensions, and the global strides.
+  The `i16 %ts0 ... i16 %ts{dim-1}` operands specify the new tensor sizes, the `i32 %stride0 ... i32 %stride{dim-2}` operands specify the lower strides, and the `i16 %upper_stride` operand specifies the upper stride.
+  The effective global stride is computed as `global_stride[i] = ((%stride{i} + (%upper_stride{i} << 32)) << 4)`.
+  This variant requires the `tile` load mode; the base address override is mandatory when overriding attributes.
+  The tensor start coordinates must be zero; otherwise the behavior is undefined.
+
+The `scatter4.override.addr` variant combines the `tile.scatter4` mode (2D only) with the base address override.
+In `tile.scatter4` mode, a single 2D source tensor is divided into four rows in the 2D destination tensor.
+The first coordinate `i32 %x0` denotes the column index followed by four coordinates indicating the four row-indices.
+For more information on `scatter4` mode, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes).
+
+- The last argument to these intrinsics is a boolean flag indicating support for cache_hint.
+  This flag argument must be a compile-time constant.
+  When set, it indicates a valid cache_hint (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX instruction.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.3d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.[3-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.im2col_no_offs.[3-5]d.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
+These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `im2col` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
+The address must be 16B aligned and the memory range `[%override_addr, %override_addr + 128 KiB)` must be allocated and accessible during execution; otherwise the behavior is undefined.
+The override address semantics and the last boolean flag argument have the same functionality as described in the `s2g.tile` override intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.3d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.[3-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.im2col_no_offs::w.[3-5]d.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
+These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `im2col_w` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
+The override address semantics and the last boolean flag argument have the same functionality as described in the `s2g.tile` override intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override*.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+; override.addr
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.1d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+; override.addr.dim (1D only)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.1d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i64 %ch, i32 %red_op, i1 %flag_ch)
+
+; override.addr.dim.stride (2D and higher)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.stride.2d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override*.[1-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.[1-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::*` qualifiers.
+These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `tile` mode, while overriding specific properties of the opaque tensor-map object with explicit instruction operands.
+The three override variants (`override.addr`, `override.addr.dim`, and `override.addr.dim.stride`) have the same semantics as described in the `s2g.tile` override intrinsics above.
+
+The `i32 %red_op` argument selects the reduction operation to perform.
+It must be a compile-time constant in the half-open range `[0, 8)`, with the following encoding:
+
+| `red_op` | Reduction Operation |
+|:--------:|:--------------------|
+|    0     |   `add`             |
+|    1     |   `min`             |
+|    2     |   `max`             |
+|    3     |   `inc`             |
+|    4     |   `dec`             |
+|    5     |   `and`             |
+|    6     |   `or`              |
+|    7     |   `xor`             |
+
+The symbolic LLVM IR annotation for `red_op` and the PTX reduction suffix use the same canonical operator spelling.
+
+- The last argument to these intrinsics is a boolean flag indicating support for cache_hint.
+  This flag argument must be a compile-time constant.
+  When set, it indicates a valid cache_hint (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX instruction.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.3d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.[3-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs.[3-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
+These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `im2col` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
+The `i32 %red_op` argument, the override address semantics, and the last boolean flag argument have the same functionality as described in the `reduce.tile` override intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.3d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.[3-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs::w.[3-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
+These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `im2col_w` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
+The `i32 %red_op` argument, the override address semantics, and the last boolean flag argument have the same functionality as described in the `reduce.tile` override intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
+
 ### Warp Group Intrinsics
 
 #### '`llvm.nvvm.wgmma.fence.sync.aligned`'
