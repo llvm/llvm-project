@@ -10,6 +10,7 @@ include "inter/Dialect/Inter/IR/XWTypes.td"
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
@@ -20,7 +21,8 @@ class XW_Op<string mnemonic, list<Trait> traits = []>
 
 def XW_CacheStateResource : Resource<"::xw::CacheStateResource">;
 
-def XW_ConstantOp : XW_Op<"constant", [ConstantLike, Pure]> {
+def XW_ConstantOp : XW_Op<"constant", [ConstantLike, Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let arguments = (ins TypedAttrInterface:$value);
   let results = (outs AnyType:$result);
   let hasCustomAssemblyFormat = 1;
@@ -65,7 +67,8 @@ def XW_FreezeOp : XW_Op<"freeze", [AllTypesMatch<["source", "result"]>]> {
   let hasVerifier = 1;
 }
 
-def XW_BinaryOp : XW_Op<"binary", [Pure, Elementwise]> {
+def XW_BinaryOp : XW_Op<"binary", [Pure, Elementwise,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let arguments = (ins XW_BinaryKindEnum:$kind, AnyType:$lhs, AnyType:$rhs,
       DefaultValuedAttr<Arith_IntegerOverflowAttr,
           "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags);
@@ -76,7 +79,8 @@ def XW_BinaryOp : XW_Op<"binary", [Pure, Elementwise]> {
   let hasVerifier = 1;
 }
 
-def XW_CastOp : XW_Op<"cast", [Pure, Elementwise]> {
+def XW_CastOp : XW_Op<"cast", [Pure, Elementwise,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let arguments = (ins XW_CastKindEnum:$kind, AnyType:$source,
       OptionalAttr<DictionaryAttr>:$policy,
       DefaultValuedAttr<Arith_IntegerOverflowAttr,
@@ -137,7 +141,8 @@ def XW_DpasOp : XW_Op<"dpas", [Pure]> {
   let hasVerifier = 1;
 }
 
-def XW_CmpIOp : XW_Op<"cmpi", [Pure, Elementwise]> {
+def XW_CmpIOp : XW_Op<"cmpi", [Pure, Elementwise,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let arguments = (ins Arith_CmpIPredicateAttr:$predicate, AnyType:$lhs,
                        AnyType:$rhs);
   let results = (outs AnyType:$result);

@@ -7,6 +7,7 @@ add_mlir_library(InterTransforms
   InterPrepareCountedLoops.cpp
   InterConvertLLVMToXW.cpp
   InterRefineDistribution.cpp
+  InterNarrowIntegerRanges.cpp
   InterExpandArithmetic.cpp
   InterInferMemoryTokens.cpp
   InterInsertSync.cpp

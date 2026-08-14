@@ -4,11 +4,13 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <array>
 #include <optional>
 
 using namespace mlir;
@@ -272,6 +274,19 @@ LogicalResult ConstantOp::verify() {
 
 OpFoldResult ConstantOp::fold(FoldAdaptor) { return getValue(); }
 
+void ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                   SetIntRangeFn setResultRange) {
+  IntegerAttr value = dyn_cast<IntegerAttr>(getValue());
+  Type type = getPayloadType(getType());
+  if (!value || !type.isIntOrIndex())
+    return;
+  unsigned width = ConstantIntRanges::getStorageBitwidth(type);
+  if (width == 0)
+    return;
+  setResultRange(getResult(), ConstantIntRanges::constant(
+                                  value.getValue().sextOrTrunc(width)));
+}
+
 LogicalResult SplatOp::verify() {
   if (getSource().getType() !=
       cast<SimdType>(getResult().getType()).getElementType())
@@ -349,6 +364,84 @@ LogicalResult BinaryOp::verify() {
   if (result->cardinality != expected)
     return emitOpError("result shape must match the broadcast operand shape");
   return verifyCardinalities(getOperation());
+}
+
+namespace {
+static unsigned getIntegerBitWidth(Type type) {
+  return ConstantIntRanges::getStorageBitwidth(getPayloadType(type));
+}
+
+static ConstantIntRanges normalizeRange(const ConstantIntRanges &range,
+                                        unsigned width) {
+  if (range.smin().getBitWidth() == width)
+    return range;
+  return ConstantIntRanges::maxRange(width);
+}
+
+static intrange::OverflowFlags
+convertOverflowFlags(arith::IntegerOverflowFlags flags) {
+  intrange::OverflowFlags result = intrange::OverflowFlags::None;
+  if (bitEnumContainsAny(flags, arith::IntegerOverflowFlags::nsw))
+    result |= intrange::OverflowFlags::Nsw;
+  if (bitEnumContainsAny(flags, arith::IntegerOverflowFlags::nuw))
+    result |= intrange::OverflowFlags::Nuw;
+  return result;
+}
+} // namespace
+
+void BinaryOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                 SetIntRangeFn setResultRange) {
+  unsigned width = getIntegerBitWidth(getType());
+  if (width == 0 || argRanges.size() != 2)
+    return;
+  std::array<ConstantIntRanges, 2> ranges = {
+      normalizeRange(argRanges[0], width), normalizeRange(argRanges[1], width)};
+  intrange::OverflowFlags flags = convertOverflowFlags(getOverflowFlags());
+  ConstantIntRanges result = ConstantIntRanges::maxRange(width);
+  switch (getKind()) {
+  case BinaryKind::AddI:
+    result = intrange::inferAdd(ranges, flags);
+    break;
+  case BinaryKind::SubI:
+    result = intrange::inferSub(ranges, flags);
+    break;
+  case BinaryKind::MulI:
+    result = intrange::inferMul(ranges, flags);
+    break;
+  case BinaryKind::ShLI:
+    result = intrange::inferShl(ranges, flags);
+    break;
+  case BinaryKind::ShRUI:
+    result = intrange::inferShrU(ranges);
+    break;
+  case BinaryKind::ShRSI:
+    result = intrange::inferShrS(ranges);
+    break;
+  case BinaryKind::AndI:
+    result = intrange::inferAnd(ranges);
+    break;
+  case BinaryKind::OrI:
+    result = intrange::inferOr(ranges);
+    break;
+  case BinaryKind::XOrI:
+    result = intrange::inferXor(ranges);
+    break;
+  case BinaryKind::DivUI:
+    result = intrange::inferDivU(ranges);
+    break;
+  case BinaryKind::DivSI:
+    result = intrange::inferDivS(ranges);
+    break;
+  case BinaryKind::RemUI:
+    result = intrange::inferRemU(ranges);
+    break;
+  case BinaryKind::RemSI:
+    result = intrange::inferRemS(ranges);
+    break;
+  case BinaryKind::MulHUI:
+    break;
+  }
+  setResultRange(getResult(), result);
 }
 
 OpFoldResult BinaryOp::fold(FoldAdaptor adaptor) {
@@ -594,6 +687,36 @@ LogicalResult CastOp::verify() {
   return verifyCardinalities(getOperation());
 }
 
+void CastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               SetIntRangeFn setResultRange) {
+  if (getKind() != CastKind::IntConvert || argRanges.empty())
+    return;
+  unsigned sourceWidth = getIntegerBitWidth(getSource().getType());
+  unsigned resultWidth = getIntegerBitWidth(getType());
+  if (sourceWidth == 0 || resultWidth == 0)
+    return;
+  ConstantIntRanges source = normalizeRange(argRanges.front(), sourceWidth);
+  if (resultWidth < sourceWidth) {
+    setResultRange(getResult(), intrange::truncRange(source, resultWidth));
+    return;
+  }
+  if (resultWidth == sourceWidth) {
+    setResultRange(getResult(), source);
+    return;
+  }
+  DictionaryAttr policy = getPolicyAttr();
+  auto extension =
+      policy
+          ? dyn_cast_or_null<CastExtensionPolicyAttr>(policy.get("extension"))
+          : CastExtensionPolicyAttr();
+  if (!extension)
+    return;
+  if (extension.getValue() == CastExtension::Zero)
+    setResultRange(getResult(), intrange::extUIRange(source, resultWidth));
+  else
+    setResultRange(getResult(), intrange::extSIRange(source, resultWidth));
+}
+
 LogicalResult BitcastOp::verify() {
   auto getBits = [&](Type type) -> FailureOr<int64_t> {
     if (SimdType simd = dyn_cast<SimdType>(type))
@@ -621,6 +744,15 @@ LogicalResult BitcastOp::verify() {
 OpFoldResult CastOp::fold(FoldAdaptor) {
   if (getSource().getType() == getType())
     return getSource();
+  CastOp extension = getSource().getDefiningOp<CastOp>();
+  if (getKind() == CastKind::IntConvert && extension &&
+      getOverflowFlags() == arith::IntegerOverflowFlags::none &&
+      extension.getKind() == CastKind::IntConvert &&
+      getNumberBitWidth(getPayloadType(getType())) ==
+          getNumberBitWidth(getPayloadType(extension.getSource().getType())) &&
+      getNumberBitWidth(getPayloadType(getSource().getType())) >
+          getNumberBitWidth(getPayloadType(getType())))
+    return extension.getSource();
   return {};
 }
 
@@ -691,6 +823,24 @@ static LogicalResult verifyComparison(Operation *op, Type lhsType, Type rhsType,
 LogicalResult CmpIOp::verify() {
   return verifyComparison(getOperation(), getLhs().getType(),
                           getRhs().getType(), getResult().getType(), false);
+}
+
+void CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               SetIntRangeFn setResultRange) {
+  if (argRanges.size() != 2 || !getType().isInteger(1))
+    return;
+  intrange::CmpPredicate predicate =
+      static_cast<intrange::CmpPredicate>(getPredicate());
+  std::optional<bool> value =
+      intrange::evaluatePred(predicate, argRanges[0], argRanges[1]);
+  APInt minimum = APInt::getZero(1);
+  APInt maximum = APInt::getAllOnes(1);
+  if (value == true)
+    minimum = maximum;
+  else if (value == false)
+    maximum = minimum;
+  setResultRange(getResult(),
+                 ConstantIntRanges::fromUnsigned(minimum, maximum));
 }
 LogicalResult CmpFOp::verify() {
   return verifyComparison(getOperation(), getLhs().getType(),

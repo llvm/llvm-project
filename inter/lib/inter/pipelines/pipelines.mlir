@@ -31,9 +31,13 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %r4a = transform.apply_registered_pass "canonicalize" to %r4
         : (!transform.any_op) -> !transform.any_op
-    %r4b = transform.apply_registered_pass "inter-expand-arithmetic" to %r4a
+    %r4b = transform.apply_registered_pass "inter-narrow-integer-ranges" to %r4a
         : (!transform.any_op) -> !transform.any_op
-    %r5 = transform.apply_registered_pass "canonicalize" to %r4b
+    %r4c = transform.apply_registered_pass "canonicalize" to %r4b
+        : (!transform.any_op) -> !transform.any_op
+    %r4d = transform.apply_registered_pass "inter-expand-arithmetic" to %r4c
+        : (!transform.any_op) -> !transform.any_op
+    %r5 = transform.apply_registered_pass "canonicalize" to %r4d
         : (!transform.any_op) -> !transform.any_op
     %r6 = transform.apply_registered_pass "cse" to %r5
         : (!transform.any_op) -> !transform.any_op

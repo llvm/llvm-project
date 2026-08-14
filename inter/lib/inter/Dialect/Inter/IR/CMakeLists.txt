@@ -9,6 +9,7 @@ add_mlir_dialect_library(InterXW
   MLIRArithDialect
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
+  MLIRInferIntRangeInterface
   MLIRIR
   MLIRSideEffectInterfaces
   MLIRSupport

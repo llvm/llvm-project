@@ -53,6 +53,12 @@ def RefineDistribution : Pass<"inter-refine-distribution", "::mlir::ModuleOp"> {
                         "kernel SIMD width">];
 }
 
+def NarrowIntegerRanges
+    : Pass<"inter-narrow-integer-ranges", "::mlir::ModuleOp"> {
+  let summary = "narrow proven scalar XW integer computations";
+  let dependentDialects = ["xw::XWDialect", "mlir::scf::SCFDialect"];
+}
+
 def ExpandArithmetic : Pass<"inter-expand-arithmetic", "::mlir::ModuleOp"> {
   let summary = "expand generic XW arithmetic before machine selection";
   let dependentDialects = ["xw::XWDialect"];

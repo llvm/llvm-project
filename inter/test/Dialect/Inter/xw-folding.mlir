@@ -76,3 +76,15 @@ func.func @simd_power_of_two(%arg0: !xw.simd<i32, 16>)
       : !xw.simd<i32, 16>, i32 -> !xw.simd<i32, 16>
   return %div, %rem : !xw.simd<i32, 16>, !xw.simd<i32, 16>
 }
+
+// CHECK-LABEL: func.func @integer_cast_chain
+// CHECK: %[[EXTENDED:.*]] = xw.cast intconvert %arg0 policy
+// CHECK-NEXT: %[[FLAGGED:.*]] = xw.cast intconvert %[[EXTENDED]] overflow<nuw>
+// CHECK-NEXT: return %arg0, %[[FLAGGED]] : i32, i32
+func.func @integer_cast_chain(%arg0: i32) -> (i32, i32) {
+  %extended = xw.cast intconvert %arg0
+      policy {extension = #xw.cast_extension<sign>} : i32 -> i64
+  %plain = xw.cast intconvert %extended : i64 -> i32
+  %flagged = xw.cast intconvert %extended overflow<nuw> : i64 -> i32
+  return %plain, %flagged : i32, i32
+}
