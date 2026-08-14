@@ -2460,6 +2460,49 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   return Sqrt;
 }
 
+/// Use cube root in place of pow(x, 2/3).
+Value *LibCallSimplifier::replacePowWithCbrt(CallInst *Pow, IRBuilderBase &B) {
+  Value *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
+  Module *Mod = Pow->getModule();
+  Type *Ty = Pow->getType();
+
+  // cbrt() has no vector version; only handle scalar float/double.
+  if (Ty->isVectorTy())
+    return nullptr;
+
+  // pow(-0.0, 2/3) = +0.0; cbrt(-0.0) * cbrt(-0.0) = +0.0.
+  // pow(-inf, 2/3) = +inf; cbrt(-inf) * cbrt(-inf) = +inf.
+  // pow(-val, 2/3) =  nan; cbrt(-val) * cbrt(-val) = num.
+  // For regular numbers, rounding may cause the results to differ.
+  // Therefore, we require { nnan ninf nsz afn } for this transform.
+  if (!Pow->hasNoNaNs() || !Pow->hasNoInfs() || !Pow->hasNoSignedZeros() ||
+      !Pow->hasApproxFunc())
+    return nullptr;
+
+  const APFloat *ExpoF;
+  if (!match(Expo, m_APFloat(ExpoF)))
+    return nullptr;
+
+  bool ExpoIsTwoThirds =
+      (Ty->isFloatTy() && ExpoF->isExactlyValue(2.0f / 3.0f)) ||
+      (Ty->isDoubleTy() && ExpoF->isExactlyValue(2.0 / 3.0));
+  if (!ExpoIsTwoThirds)
+    return nullptr;
+
+  // Do not create a cbrt() libcall if the target does not have it.
+  if (!hasFloatFn(Mod, TLI, Ty, LibFunc_cbrt, LibFunc_cbrtf, LibFunc_cbrtl))
+    return nullptr;
+
+  AttributeList NoAttrs; // Attributes are only meaningful on the original call.
+  Value *Cbrt = emitUnaryFloatFnCall(Base, TLI, LibFunc_cbrt, LibFunc_cbrtf,
+                                     LibFunc_cbrtl, B, NoAttrs);
+  if (!Cbrt)
+    return nullptr;
+
+  // pow(X, 2/3) --> cbrt(X) * cbrt(X)
+  return copyFlags(*Pow, B.CreateFMul(Cbrt, Cbrt));
+}
+
 static Value *createPowWithIntegerExponent(Value *Base, Value *Expo, Module *M,
                                            IRBuilderBase &B) {
   Value *Args[] = {Base, Expo};
@@ -2509,6 +2552,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
 
   if (Value *Sqrt = replacePowWithSqrt(Pow, B))
     return Sqrt;
+
+  if (Value *Cbrt = replacePowWithCbrt(Pow, B))
+    return Cbrt;
 
   // If we can approximate pow:
   // pow(x, n) -> powi(x, n) * sqrt(x) if n has exactly a 0.5 fraction
