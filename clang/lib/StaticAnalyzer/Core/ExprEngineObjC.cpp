@@ -31,7 +31,7 @@ void ExprEngine::VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *Ex,
 void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
                                              ExplodedNode *Pred,
                                              ExplodedNodeSet &Dst) {
-  getCheckerManager().runCheckersForPreStmt(Dst, Pred, S, *this);
+  Dst.insert(Pred);
 }
 
 void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,

@@ -1166,6 +1166,7 @@ static bool justRunCheckersAsPreVisit(const Stmt *S) {
   case Stmt::CXXDefaultInitExprClass:
   case Stmt::CXXStdInitializerListExprClass:
   case Expr::ObjCArrayLiteralClass:
+  case Stmt::ObjCAtSynchronizedStmtClass:
   case Expr::ObjCDictionaryLiteralClass:
   case Expr::ObjCBoxedExprClass:
   case Stmt::AtomicExprClass:
