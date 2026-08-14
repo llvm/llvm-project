@@ -64,10 +64,8 @@ struct VPlanTransforms {
     unsigned Instance;
     std::string NumberedPassName;
 
-    if ([](auto &...Options) {
-          return (((Options.getNumOccurrences() > 0) || ...));
-        }(VPlanPrintBeforeAll, VPlanPrintAfterAll, VPlanPrintBeforePasses,
-          VPlanPrintAfterPasses)) {
+    if (VPlanPrintBeforeAll || VPlanPrintAfterAll ||
+        !VPlanPrintBeforePasses.empty() || !VPlanPrintAfterPasses.empty()) {
       Instance = ++PassCounter[{Fn, PassName}];
 
       NumberedPassName = Instance == 1
