@@ -1888,6 +1888,52 @@ struct float16complex_s f_ret_float16complex_s(void) {
   return (struct float16complex_s){1.0};
 }
 
+// CHECK-LABEL: define{{.*}} i64 @f_ucharcomplex(i64 %x.coerce)
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local i16 @f_ucharcomplex
+// ILP32-ILP32F-ILP32D-SAME: (i16 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+unsigned char __complex__ f_ucharcomplex(unsigned char __complex__ x) { return x; }
+
+// CHECK-LABEL: define{{.*}} i64 @f_ushortcomplex(i64 %x.coerce)
+// ILP32-ILP32F-ILP32D-LABEL: define dso_local i32 @f_ushortcomplex
+// ILP32-ILP32F-ILP32D-SAME: (i32 noundef [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D:  entry:
+//
+unsigned short __complex__ f_ushortcomplex(unsigned short __complex__ x) { return x; }
+
+struct ucharcomplex_s {
+  unsigned char __complex__ c;
+};
+// CHECK-LABEL: define{{.*}} i64 @f_ucharcomplex_s(i64 %x.coerce)
+// ILP32-LABEL: define dso_local i16 @f_ucharcomplex_s
+// ILP32-SAME: (i16 [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { i8, i8 } @f_ucharcomplex_s
+// ILP32F-ILP32D-SAME: (i8 [[TMP0:%.*]], i8 [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
+//
+struct ucharcomplex_s f_ucharcomplex_s(struct ucharcomplex_s x) {
+  return x;
+}
+
+struct ushortcomplex_s {
+  unsigned short __complex__ c;
+};
+// CHECK-LABEL: define{{.*}} i64 @f_ushortcomplex_s(i64 %x.coerce)
+// ILP32-LABEL: define dso_local i32 @f_ushortcomplex_s
+// ILP32-SAME: (i32 [[X_COERCE:%.*]]) #[[ATTR0]] {
+// ILP32:  entry:
+//
+// ILP32F-ILP32D-LABEL: define dso_local { i16, i16 } @f_ushortcomplex_s
+// ILP32F-ILP32D-SAME: (i16 [[TMP0:%.*]], i16 [[TMP1:%.*]]) #[[ATTR0]] {
+// ILP32F-ILP32D:  entry:
+//
+struct ushortcomplex_s f_ushortcomplex_s(struct ushortcomplex_s x) {
+  return x;
+}
+
 // Test single or two-element structs that need flattening. e.g. those
 // containing nested structs, _Float16 in small arrays, zero-length structs etc.
 
