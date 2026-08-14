@@ -442,8 +442,8 @@ static mlir::Type adjustGlobalStructTypeForInit(
   for (auto [idx, member] : llvm::enumerate(initMembers)) {
     if (idx >= origBody.size())
       break;
-    mlir::Type adjusted = adjustGlobalTypeForInit(
-        origBody[idx], member, converter, dataLayout);
+    mlir::Type adjusted =
+        adjustGlobalTypeForInit(origBody[idx], member, converter, dataLayout);
     unsigned adjustedAlign = dataLayout.getTypeABIAlignment(adjusted);
 
     if (adjusted != origBody[idx]) {
@@ -467,8 +467,7 @@ static mlir::Type adjustGlobalStructTypeForInit(
         // alignment between this field and the padding.
         uint64_t difference = origOffset - curOffset;
         newBody.push_back(mlir::LLVM::LLVMArrayType::get(
-            mlir::IntegerType::get(structTy.getContext(), 8),
-            difference));
+            mlir::IntegerType::get(structTy.getContext(), 8), difference));
         paddingAddedIndexes.push_back(idx);
         curOffset = origOffset;
       }
@@ -624,15 +623,15 @@ std::optional<mlir::Attribute> lowerConstRecordAttr(
   }
 
   // The lowered LLVM type may have more fields than the CIR record has members
-  // for a few reasons: 
-  // 1- a union lowers to { active-member, [pad x i8]). 
+  // for a few reasons:
+  // 1- a union lowers to { active-member, [pad x i8]).
   // 2- A struct that contains such a union can have its alignment changed too,
   //    so it needs tail padding to fill that in.
-  // 3- A struct containing a union whose initializer doesn't use the highest-aligned
-  // field will have to prepend a bit of padding, such as struct { i32, union {
-  // i64, i32 } }.  Typically the union gets lowered to a struct { i64 } (as i64
-  // has the greatest alignment), but if the init causes it to be the i32(or any
-  // such smaller field) we have to prepend it with padding: 
+  // 3- A struct containing a union whose initializer doesn't use the
+  // highest-aligned field will have to prepend a bit of padding, such as struct
+  // { i32, union { i64, i32 } }.  Typically the union gets lowered to a struct
+  // { i64 } (as i64 has the greatest alignment), but if the init causes it to
+  // be the i32(or any such smaller field) we have to prepend it with padding:
   // struct { i32, [4 x i8], struct { i32 }}
   // instead of (with no init):
   // struct { i32, struct { i64 }}
@@ -646,7 +645,7 @@ std::optional<mlir::Attribute> lowerConstRecordAttr(
   // causing problems.
   for (unsigned paddedElt : llvm::reverse(paddingAddedIndexes))
     loweredMembers.insert(loweredMembers.begin() + paddedElt,
-        mlir::LLVM::ZeroAttr::get(constRecord.getContext()));
+                          mlir::LLVM::ZeroAttr::get(constRecord.getContext()));
 
   // Any remaining difference will be the union/struct padding case. We don't
   // have a great handle/way to tell when to zero-vs-undef init, so always
