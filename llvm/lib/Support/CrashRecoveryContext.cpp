@@ -15,6 +15,9 @@
 #include <cassert>
 #include <mutex>
 #include <setjmp.h>
+#ifdef __APPLE__
+#include <sys/resource.h>
+#endif
 
 using namespace llvm;
 

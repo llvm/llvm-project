@@ -32,6 +32,7 @@ int __attribute__((target("arch=clearwaterforest"))) foo(void) {return 26;}
 int __attribute__((target("arch=diamondrapids"))) foo(void) {return 27;}
 int __attribute__((target("arch=wildcatlake"))) foo(void) {return 28;}
 int __attribute__((target("arch=novalake"))) foo(void) {return 29;}
+int __attribute__((target("apxf"))) foo(void) {return 30;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {
@@ -209,6 +210,8 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret i32 28
 // ITANIUM: define{{.*}} i32 @foo.arch_novalake()
 // ITANIUM: ret i32 29
+// ITANIUM: define{{.*}} i32 @foo.apxf()
+// ITANIUM: ret i32 30
 // ITANIUM: define{{.*}} i32 @foo()
 // ITANIUM: ret i32 2
 // ITANIUM: define{{.*}} i32 @bar()
@@ -272,6 +275,8 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: ret i32 28
 // WINDOWS: define dso_local i32 @foo.arch_novalake()
 // WINDOWS: ret i32 29
+// WINDOWS: define dso_local i32 @foo.apxf()
+// WINDOWS: ret i32 30
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
@@ -280,6 +285,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: define weak_odr ptr @foo.resolver() #[[ATTR_RESOLVER:[0-9]+]] 
 // LINUX-SAME: comdat
 // ITANIUM: call void @__cpu_indicator_init()
+// ITANIUM: ret ptr @foo.apxf
 // ITANIUM: ret ptr @foo.arch_sandybridge
 // ITANIUM: ret ptr @foo.arch_ivybridge
 // ITANIUM: ret ptr @foo.sse4.2
@@ -287,6 +293,7 @@ void calls_pr50025c(void) { pr50025c(); }
 
 // WINDOWS: define weak_odr dso_local i32 @foo.resolver() #[[ATTR_RESOLVER:[0-9]+]] comdat
 // WINDOWS: call void @__cpu_indicator_init()
+// WINDOWS: call i32 @foo.apxf
 // WINDOWS: call i32 @foo.arch_sandybridge
 // WINDOWS: call i32 @foo.arch_ivybridge
 // WINDOWS: call i32 @foo.sse4.2
@@ -334,10 +341,10 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call void @foo_decls
 
 // ITANIUM: define{{.*}} void @bar4()
-// ITANIUM: call void @foo_multi.ifunc(i32 noundef 1, double noundef 5.{{[0+e]*}})
+// ITANIUM: call void @foo_multi.ifunc(i32 noundef 1, double noundef 5.000000e+00{{[0+e]*}})
 
 // WINDOWS: define dso_local void @bar4()
-// WINDOWS: call void @foo_multi.resolver(i32 noundef 1, double noundef 5.{{[0+e]*}})
+// WINDOWS: call void @foo_multi.resolver(i32 noundef 1, double noundef 5.000000e+00{{[0+e]*}})
 
 // ITANIUM: define weak_odr ptr @foo_multi.resolver() #[[ATTR_RESOLVER]] 
 // LINUX-SAME: comdat

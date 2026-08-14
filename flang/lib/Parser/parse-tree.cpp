@@ -12,11 +12,9 @@
 #include "flang/Common/indirection.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/tools.h"
-#include "flang/Parser/user-state.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 namespace Fortran::parser {
 

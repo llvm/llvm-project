@@ -88,10 +88,13 @@ public:
                                    const ExceptionRecord &record) override;
   void OnCreateThread(const HostThread &thread) override;
   void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
-  void OnLoadDll(const ModuleSpec &module_spec,
-                 lldb::addr_t module_addr) override;
-  void OnUnloadDll(lldb::addr_t module_addr) override;
-  void OnDebugString(const std::string &string) override;
+  DllEventAction OnLoadDll(const ModuleSpec &module_spec,
+                           lldb::addr_t module_addr,
+                           lldb::tid_t thread_id) override;
+  DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                             lldb::tid_t thread_id) override;
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
@@ -108,6 +111,12 @@ public:
   void SetPseudoConsoleHandle() override;
 
 protected:
+  /// Block until the stdio read thread has surfaced everything currently
+  /// buffered in the ConPTY/pipe to the process's STDOUT cache.
+  void DrainProcessStdout();
+
+  size_t PutSTDIN(const char *src, size_t src_len, Status &error) override;
+
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
   Status DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
@@ -124,6 +133,8 @@ private:
   std::map<lldb::break_id_t, WatchpointInfo> m_watchpoints;
   std::vector<lldb::break_id_t> m_watchpoint_ids;
   std::shared_ptr<PTY> m_pty;
+  bool m_pending_halt = false;
+  bool m_expecting_loader_int3 = false;
 };
 } // namespace lldb_private
 

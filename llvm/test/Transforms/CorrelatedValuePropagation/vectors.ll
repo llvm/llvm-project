@@ -390,3 +390,44 @@ define <2 x i16> @insertelement_constexpr() {
   %ins = insertelement <2 x i16> poison, i16 ptrtoint (ptr @g to i16), i32 0
   ret <2 x i16> %ins
 }
+
+; Cannot infer nowrap flags, as shufflevector moves the wrapping lane (0 - 1) to a position
+; where the select condition is true.
+define <2 x i16> @select_of_shufflevector() {
+; CHECK-LABEL: define <2 x i16> @select_of_shufflevector() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V:%.*]] = bitcast <1 x i32> splat (i32 1) to <2 x i16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i16> [[V]], zeroinitializer
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i16> zeroinitializer, [[V]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[NEG]], <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[CMP]], <2 x i16> [[SHUFFLE]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    ret <2 x i16> [[SELECT]]
+;
+entry:
+  %v = bitcast <1 x i32> <i32 1> to <2 x i16>
+  %cmp = icmp eq <2 x i16> %v, zeroinitializer
+  %neg = sub <2 x i16> zeroinitializer, %v
+  %shuffle = shufflevector <2 x i16> %neg, <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 0>
+  %select = select <2 x i1> %cmp, <2 x i16> %shuffle, <2 x i16> zeroinitializer
+  ret <2 x i16> %select
+}
+
+; Could infer nowrap flags, as shufflevector reads the non-wrapping lane, yet conservatively do not.
+define <2 x i16> @select_of_shufflevector_2() {
+; CHECK-LABEL: define <2 x i16> @select_of_shufflevector_2() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V:%.*]] = bitcast <1 x i32> splat (i32 1) to <2 x i16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i16> [[V]], zeroinitializer
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i16> zeroinitializer, [[V]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[NEG]], <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> [[CMP]], <2 x i16> [[SHUFFLE]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    ret <2 x i16> [[SELECT]]
+;
+entry:
+  %v = bitcast <1 x i32> <i32 1> to <2 x i16>
+  %cmp = icmp eq <2 x i16> %v, zeroinitializer
+  %neg = sub <2 x i16> zeroinitializer, %v
+  %shuffle = shufflevector <2 x i16> %neg, <2 x i16> zeroinitializer, <2 x i32> <i32 1, i32 0>
+  %select = select <2 x i1> %cmp, <2 x i16> %shuffle, <2 x i16> zeroinitializer
+  ret <2 x i16> %select
+}
