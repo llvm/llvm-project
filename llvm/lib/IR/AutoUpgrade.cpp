@@ -1467,8 +1467,8 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static bool getDefaultArgUpgradeInfo(
-    Function *F, Intrinsic::ID IID, SmallVectorImpl<Type *> &OverloadTys) {
+static bool getDefaultArgUpgradeInfo(Function *F, Intrinsic::ID IID,
+                                     SmallVectorImpl<Type *> &OverloadTys) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
     return false;
@@ -1507,8 +1507,8 @@ static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
 
       StringRef CandidateName = Candidate.getName();
       StringRef Suffix = F->getName();
-      if (!Suffix.consume_front(CandidateName) ||
-          !Suffix.consume_front(".") || Suffix.empty())
+      if (!Suffix.consume_front(CandidateName) || !Suffix.consume_front(".") ||
+          Suffix.empty())
         continue;
 
       unsigned UniqueID;
@@ -1519,8 +1519,7 @@ static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
       if (!getDefaultArgUpgradeInfo(F, CandidateIID, CandidateOverloadTys))
         continue;
 
-      if (!BestMatch ||
-          CandidateName.size() > BestMatch->getName().size()) {
+      if (!BestMatch || CandidateName.size() > BestMatch->getName().size()) {
         BestMatch = &Candidate;
         IID = CandidateIID;
         BestOverloadTys = std::move(CandidateOverloadTys);
@@ -1534,8 +1533,7 @@ static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
 
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   unsigned FullArgCount = FirstDefault + Defaults.size();
-  NewFn =
-      Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
   assert(NewFn->arg_size() == FullArgCount &&
          "default argument table does not match intrinsic signature");
   return true;
