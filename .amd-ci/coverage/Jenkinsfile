@@ -13,12 +13,22 @@ import hudson.model.Result
 String actualHead = env.CHANGE_BRANCH ?: env.BRANCH_NAME
 String githubUrl = 'https://github.amd.com/cpu-compilers/llvm-project'
 Boolean isPrBranch = env.CHANGE_BRANCH != null
+String upstreamBranch = 'upstream-main'
+String stagingBranch = 'amd-staging'
+String actualTarget = env.CHANGE_TARGET ?: env.BRANCH_NAME
 
 String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
 String successResultStr = Result.SUCCESS, notBuiltResultStr = Result.NOT_BUILT
 String oneStr = '1'
 String instrumentationScript = 'aocc-essentials/build_essentials/llvm_instrumentation.sh'
 String reportIndex = 'index.html'
+String gitHubAppCredsId = 'Jenkins-AOCC-nonER'
+String gitTool = 'LinuxGit2.45'
+String gitPathEnv = (
+    'PATH=/proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/git-2.45.2-ilh23rcg/bin:' +
+        '/usr/sbin:/usr/bin:/bin'
+)
+String mainBranchName = 'main'
 
 List propsList = [
     disableConcurrentBuilds(abortPrevious: true),
@@ -75,13 +85,58 @@ timeout(time: 6, unit: 'HOURS') {
                 String referenceRepo = env.JENKINS_REMOTE_GIT_CACHE ?: 'NoSuchReferenceRepo'
                 cleanWs(deleteDirs: true)
 
+                // On upstream-main, aocc-essentials is not in-tree; sparse-clone
+                // it from amd-staging via aocc-devops before the main checkout
+                // (mirrors .amd-ci/upstream/Jenkinsfile prepare stage).
+                if (actualTarget == upstreamBranch) {
+                    dir('aocc-devops') {
+                        checkout(
+                            changelog: false,
+                            scm: scmGit(
+                                gitTool: gitTool,
+                                branches: [[name: mainBranchName]],
+                                extensions: [
+                                    cloneOption(
+                                        reference: referenceRepo + '/aocc-devops.git'
+                                    )
+                                ],
+                                userRemoteConfigs: [
+                                    [
+                                        credentialsId: gitHubAppCredsId,
+                                        url: 'https://github.amd.com/cpu-compilers/aocc-devops.git'
+                                    ]
+                                ]
+                            )
+                        )
+                    }
+                    withCredentials([
+                        gitUsernamePassword(
+                            credentialsId: gitHubAppCredsId,
+                            gitToolName: gitTool
+                        )
+                    ]) {
+                        withEnv([gitPathEnv]) {
+                            sh(
+                                label: 'clone-essentials',
+                                script: (
+                                    'set +x; . aocc-devops/utils.sh && ' +
+                                        'export BRANCH_NAME=' + stagingBranch + ' && ' +
+                                        'sparse_clone_essentials && ' +
+                                        'mv llvm-project/aocc-essentials . && ' +
+                                        'rm -rf llvm-project'
+                                )
+                            )
+                        }
+                    }
+                }
+
                 // groovylint-disable-next-line NoDef, VariableTypeRequired
                 def gitVars = null
                 dir('llvm-project') {
                     gitVars = checkout(
                         changelog: true,
                         scm: scmGit(
-                            gitTool: 'LinuxGit2.45',
+                            gitTool: gitTool,
                             branches: [[name: actualHead]],
                             browser: github(githubUrl),
                             extensions: [
@@ -93,7 +148,7 @@ timeout(time: 6, unit: 'HOURS') {
                             ],
                             userRemoteConfigs: [
                                 [
-                                    credentialsId: 'Jenkins-AOCC-nonER',
+                                    credentialsId: gitHubAppCredsId,
                                     refspec: (
                                         '+refs/heads/' + actualHead + ':' +
                                             'refs/remotes/origin/' + actualHead
@@ -124,7 +179,7 @@ timeout(time: 6, unit: 'HOURS') {
             }
 
             // Resolve aocc-essentials path
-            // In-tree on amd-staging branches; cloned separately on upstream-main
+            // In-tree on amd-staging branches; at workspace root on upstream-main
             String inTreeScript = 'llvm-project/' + instrumentationScript
             String essScript
             if (fileExists(inTreeScript)) {
