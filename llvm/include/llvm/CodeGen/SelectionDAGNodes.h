@@ -234,26 +234,19 @@ public:
   /// Return true if there are no nodes using value ResNo of Node.
   inline bool use_empty() const;
 
-  /// Return true if there is exactly one node using value ResNo of Node.
+  /// Return true if there is exactly one node using value ResNo of Node, in
+  /// exactly one operand.
   inline bool hasOneUse() const;
+
+  /// Return true if there is exactly one node using value ResNo of Node, in
+  /// potentially multiple operands.
+  inline bool hasOneUser() const;
 };
 
-template<> struct DenseMapInfo<SDValue> {
-  static inline SDValue getEmptyKey() {
-    SDValue V;
-    V.ResNo = -1U;
-    return V;
-  }
-
-  static inline SDValue getTombstoneKey() {
-    SDValue V;
-    V.ResNo = -2U;
-    return V;
-  }
-
+template <> struct DenseMapInfo<SDValue> {
   static unsigned getHashValue(const SDValue &Val) {
-    return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
-            (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();
+    return DenseMapInfo<const void *>::getHashValue(Val.getNode()) +
+           Val.getResNo();
   }
 
   static bool isEqual(const SDValue &LHS, const SDValue &RHS) {
@@ -1232,7 +1225,6 @@ protected:
       : NodeType(Opc), ValueList(VTs.VTs), NumValues(VTs.NumVTs),
         IROrder(Order), debugLoc(std::move(dl)) {
     memset(&RawSDNodeBits, 0, sizeof(RawSDNodeBits));
-    assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
     assert(NumValues == VTs.NumVTs &&
            "NumValues wasn't wide enough for its operands!");
   }
@@ -1329,6 +1321,13 @@ inline bool SDValue::use_empty() const {
 
 inline bool SDValue::hasOneUse() const {
   return Node->hasNUsesOfValue(1, ResNo);
+}
+
+inline bool SDValue::hasOneUser() const {
+  auto Uses = make_filter_range(Node->uses(),
+                                [this](SDUse &U) { return U.get() == *this; });
+  auto Users = map_range(Uses, [](SDUse &U) { return U.getUser(); });
+  return all_equal(Users);
 }
 
 inline const DebugLoc &SDValue::getDebugLoc() const {
@@ -1482,6 +1481,11 @@ public:
   /// Returns the Ranges that describes the dereference.
   const MDNode *getRanges() const { return getMemOperand()->getRanges(); }
 
+  /// Returns the cache hint metadata for this memory access.
+  const MDNode *getMemCacheHint() const {
+    return getMemOperand()->getMemCacheHint();
+  }
+
   /// Returns the synchronization scope ID for this memory operation.
   SyncScope::ID getSyncScopeID() const {
     return getMemOperand()->getSyncScopeID();
@@ -1568,21 +1572,24 @@ public:
     refineAlignment(ArrayRef(NewMMO));
   }
 
-  /// Refine range metadata for all MMOs. The NewMMOs array must parallel
-  /// memoperands(). For each pair, if ranges differ, the stored range is
-  /// cleared.
-  void refineRanges(ArrayRef<MachineMemOperand *> NewMMOs) {
+  /// Refine LLVM IR metadata for all MMOs. The NewMMOs array must parallel
+  /// memoperands(). For each pair, if metadata differs, the stored metadata is
+  /// cleared conservatively.
+  void refineMMOMetadata(ArrayRef<MachineMemOperand *> NewMMOs) {
     ArrayRef<MachineMemOperand *> MMOs = memoperands();
     assert(NewMMOs.size() == MMOs.size() && "MMO count mismatch");
-    // FIXME: Union the ranges instead?
     for (auto [MMO, NewMMO] : zip(MMOs, NewMMOs)) {
+      // FIXME: Union the ranges instead?
       if (MMO->getRanges() && MMO->getRanges() != NewMMO->getRanges())
         MMO->clearRanges();
+      if (MMO->getMemCacheHint() &&
+          MMO->getMemCacheHint() != NewMMO->getMemCacheHint())
+        MMO->clearMemCacheHint();
     }
   }
 
-  void refineRanges(MachineMemOperand *NewMMO) {
-    refineRanges(ArrayRef(NewMMO));
+  void refineMMOMetadata(MachineMemOperand *NewMMO) {
+    refineMMOMetadata(ArrayRef(NewMMO));
   }
 
   const SDValue &getChain() const { return getOperand(0); }
@@ -1893,6 +1900,12 @@ public:
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Value->isZero(); }
 
+  /// Return true if the value is positive zero.
+  bool isPosZero() const { return Value->isPosZero(); }
+
+  /// Return true if the value is negative zero.
+  bool isNegZero() const { return Value->isNegZero(); }
+
   /// Return true if the value is a NaN.
   bool isNaN() const { return Value->isNaN(); }
 
@@ -1901,6 +1914,12 @@ public:
 
   /// Return true if the value is negative.
   bool isNegative() const { return Value->isNegative(); }
+
+  /// Returns true if this value is exactly +1.0.
+  bool isOne() const { return Value->isOne(); }
+
+  /// Returns true if this value is exactly -1.0.
+  bool isMinusOne() const { return Value->isMinusOne(); }
 
   /// We don't rely on operator== working on double values, as
   /// it returns true for things that are clearly not equal, like -0.0 and 0.0.
