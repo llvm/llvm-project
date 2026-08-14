@@ -290,10 +290,7 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
 
   for (auto [BB, Succ0, Succ1] : Branches) {
 #ifndef NDEBUG
-    assert((Incoming.insert(BB).second ||
-            isa<CallBrInst>(BB->getTerminator()) ||
-            isa<SwitchInst>(BB->getTerminator())) &&
-           "Duplicate entry for incoming block.");
+    assert(Incoming.insert(BB).second && "Duplicate entry for incoming block.");
 #endif
     if (Succ0)
       Outgoing.insert(Succ0);
@@ -394,7 +391,7 @@ BasicBlock *ControlFlowHub::finalizeAsSwitch(
     Value *Condition = redirectToHub(BB, Succ0, Succ1, Guard);
     Value *IncomingId = nullptr;
 
-    if (Succ0 && Succ1) {
+    if (Succ0 && Succ1 && Succ0 != Succ1) {
       Value *Id0 = ConstantInt::get(
           Int32Ty, std::distance(Outgoing.begin(), find(Outgoing, Succ0)));
       Value *Id1 = ConstantInt::get(
