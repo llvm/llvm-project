@@ -9262,10 +9262,9 @@ define amdgpu_kernel void @canonicalize_fmin_legacy(ptr addrspace(1) %out, float
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s3
-; SI-SDAG-NEXT:    v_min_legacy_f32_e32 v0, s2, v0
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
-; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-SDAG-NEXT:    v_min_legacy_f32_e32 v0, s2, v0
 ; SI-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-SDAG-NEXT:    s_endpgm
 ;
@@ -9378,7 +9377,6 @@ define amdgpu_kernel void @med3_fmin_legacy(ptr addrspace(1) %out, float %a, flo
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s3
 ; SI-SDAG-NEXT:    v_min_legacy_f32_e32 v0, s2, v0
-; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
 ; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
