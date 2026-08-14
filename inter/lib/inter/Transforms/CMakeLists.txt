@@ -1,6 +1,7 @@
 add_mlir_library(InterTransforms
   InterSelect.cpp
   InterCoalesceTuples.cpp
+  InterReuseBlock2DPayloads.cpp
   InterImportLLVM.cpp
   InterDiscoverCacheControls.cpp
   InterCanonicalizeBlock2DABI.cpp

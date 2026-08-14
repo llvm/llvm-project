@@ -49,6 +49,8 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %funcs1 = transform.apply_registered_pass "inter-coalesce-tuples" to %funcs0
         : (!transform.any_op) -> !transform.any_op
+    %funcs2 = transform.apply_registered_pass "inter-reuse-block2d-payloads" to %funcs1
+        : (!transform.any_op) -> !transform.any_op
     %r9 = transform.apply_registered_pass "loop-invariant-code-motion" to %r8
         : (!transform.any_op) -> !transform.any_op
     transform.yield %r9 : !transform.any_op

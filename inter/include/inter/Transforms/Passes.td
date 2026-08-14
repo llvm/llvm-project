@@ -84,6 +84,12 @@ def CoalesceTuples : Pass<"inter-coalesce-tuples", "::mlir::func::FuncOp"> {
   let dependentDialects = ["inter::xemachine::XeMachineDialect"];
 }
 
+def ReuseBlock2DPayloads : Pass<"inter-reuse-block2d-payloads",
+                                "::mlir::func::FuncOp"> {
+  let summary = "reuse block2D payloads through immediate send offsets";
+  let dependentDialects = ["inter::xemachine::XeMachineDialect"];
+}
+
 def InsertSync : Pass<"inter-insert-sync", "::mlir::func::FuncOp"> {
   let summary = "materialize machine sync operations with dense dataflow";
   let dependentDialects = ["inter::xemachine::XeMachineDialect"];

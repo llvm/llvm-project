@@ -109,71 +109,54 @@ L0:
 (W)     mov (1|M0)               r13.4<1>:ud   0x7F:ud
         mov (2|M0)               r13.0<1>:ud   r10.0<1;1,0>:ud
 (W)     mov (1|M0)               r10.0<1>:ud   r14.0<0;1,0>:q
-(W)     mov (1|M0)               r29.0<1>:ud   r5.0<0;1,0>:q
-(W)     mov (1|M0)               r30.0<1>:ud   0xF0F:ud
-(W)     mov (1|M0)               r31.0<1>:ud   0xF0F:ud
-(W)     mov (32|M0)              r32.0<1>:ud   r16.0<1;1,0>:ud                  {A@7}
-(W)     mov (32|M0)              r34.0<1>:ud   r18.0<1;1,0>:ud                  {A@5}
-(W)     mov (32|M0)              r36.0<1>:ud   r20.0<1;1,0>:ud                  {A@3}
-(W)     mov (32|M0)              r38.0<1>:ud   r22.0<1;1,0>:ud                  {A@1}
-L1872:
-(W)     add (1|M0)               r40.0<1>:ud   r15.0<0;1,0>:ud   0x20:ud              {I@2}
-(W)     add (1|M0)               r41.0<1>:ud   r27.0<0;1,0>:ud   r15.0<0;1,0>:ud  {I@3}
-(W)     add (1|M0)               r42.0<1>:ud   r11.0<0;1,0>:ud   r15.0<0;1,0>:ud  {I@4}
-(W)     add (1|M0)               r43.0<1>:ud   r6.0<0;1,0>:ud    r40.0<0;1,0>:ud  {I@3}
-        sync.nop                             null                             {$5.src}
-        mov (16|M0)              r44.0<1>:ud   r26.0<1;1,0>:ud
-        mov (1|M0)               r44.6<1>:ud   r43.0<1;1,0>:ud                  {I@2}
-        mov (1|M0)               r44.7<1>:ud   r28.0<1;1,0>:ud
-(W)     add (1|M0)               r43.0<1>:ud   r7.0<0;1,0>:ud    r40.0<0;1,0>:ud  {I@7}
-(W)     add (1|M0)               r40.0<1>:ud   r41.0<0;1,0>:ud   0x10:ud              {I@7}
-(W)     add (1|M0)               r45.0<1>:ud   r42.0<0;1,0>:ud   0x10:ud              {I@7}
-(W)     send.ugm (1|M0)          null     r44  null:0  0x0            0x02080203           {I@4,$5} // wr:1+0, rd:0; load_block2d.ugm.d16.a64.ca.ca
+(W)     mov (1|M0)               r29.0<1>:ud   0xF0F:ud
+(W)     mov (32|M0)              r30.0<1>:ud   r16.0<1;1,0>:ud                  {A@7}
+(W)     mov (32|M0)              r32.0<1>:ud   r18.0<1;1,0>:ud                  {A@5}
+(W)     mov (32|M0)              r34.0<1>:ud   r20.0<1;1,0>:ud                  {A@3}
+(W)     mov (32|M0)              r36.0<1>:ud   r22.0<1;1,0>:ud                  {A@1}
+L1840:
         sync.nop                             null                             {$6.src}
-        mov (16|M0)              r46.0<1>:ud   r13.0<1;1,0>:ud
-        mov (1|M0)               r46.5<1>:ud   r43.0<1;1,0>:ud                  {I@4}
-        mov (1|M0)               r46.6<1>:ud   r12.0<1;1,0>:ud
-(W)     send.ugm (1|M0)          null     r46  null:0  0x0            0x02080203           {I@1,$6} // wr:1+0, rd:0; load_block2d.ugm.d16.a64.ca.ca
-        mov (16|M0)              r43.0<1>:ud   r13.0<1;1,0>:ud
-        mov (1|M0)               r43.5<1>:ud   r41.0<1;1,0>:ud
-        mov (1|M0)               r43.6<1>:ud   r10.0<1;1,0>:ud
-        sync.nop                             null                             {$13.src}
-(W)     send.ugm (1|M0)          r47      r43  null:0  0x0            0x02400203           {I@1,$7} // wr:1+0, rd:4; load_block2d.ugm.d16.a64
-        sync.nop                             null                             {$3.src}
-        mov (16|M0)              r9.0<1>:ud    r13.0<1;1,0>:ud
-        mov (1|M0)               r9.5<1>:ud    r40.0<1;1,0>:ud
-        mov (1|M0)               r9.6<1>:ud    r10.0<1;1,0>:ud
-(W)     send.ugm (1|M0)          r51      r9  null:0  0x0            0x02400203           {I@1,$8} // wr:1+0, rd:4; load_block2d.ugm.d16.a64
-        sync.nop                             null                             {$4.src}
-        mov (16|M0)              r25.0<1>:ud   r13.0<1;1,0>:ud
-        mov (1|M0)               r25.5<1>:ud   r41.0<1;1,0>:ud
-        mov (1|M0)               r25.6<1>:ud   r29.0<1;1,0>:ud
-        sync.nop                             null                             {$14.src}
-(W)     send.ugm (1|M0)          r55      r25  null:0  0x0            0x02400203           {I@1,$9} // wr:1+0, rd:4; load_block2d.ugm.d16.a64
-        mov (16|M0)              r41.0<1>:ud   r13.0<1;1,0>:ud
-        mov (1|M0)               r41.5<1>:ud   r40.0<1;1,0>:ud
-        mov (1|M0)               r41.6<1>:ud   r29.0<1;1,0>:ud
-(W)     send.ugm (1|M0)          r59      r41  null:0  0x0            0x02400203           {I@1,$10} // wr:1+0, rd:4; load_block2d.ugm.d16.a64
-        mov (16|M0)              r40.0<1>:ud   r26.0<1;1,0>:ud
-        mov (1|M0)               r40.6<1>:ud   r42.0<1;1,0>:ud
-        mov (1|M0)               r40.7<1>:ud   r30.0<1;1,0>:ud
-(W)     send.ugm (1|M0)          r63      r40  null:0  0x0            0x02800283           {I@1,$11} // wr:1+0, rd:8; load_block2d.ugm.d16v.a64
+(W)     add (1|M0)               r38.0<1>:ud   r15.0<0;1,0>:ud   0x20:ud              {I@2}
+(W)     add (1|M0)               r39.0<1>:ud   r27.0<0;1,0>:ud   r15.0<0;1,0>:ud  {I@3}
+(W)     add (1|M0)               r40.0<1>:ud   r11.0<0;1,0>:ud   r15.0<0;1,0>:ud  {I@4}
+(W)     add (1|M0)               r41.0<1>:ud   r6.0<0;1,0>:ud    r38.0<0;1,0>:ud  {I@3}
+        sync.nop                             null                             {$5.src}
         mov (16|M0)              r42.0<1>:ud   r26.0<1;1,0>:ud
-        mov (1|M0)               r42.6<1>:ud   r45.0<1;1,0>:ud
-        mov (1|M0)               r42.7<1>:ud   r31.0<1;1,0>:ud
-(W)     send.ugm (1|M0)          r71      r42  null:0  0x0            0x02800283           {I@1,$12} // wr:1+0, rd:8; load_block2d.ugm.d16v.a64
+        mov (1|M0)               r42.6<1>:ud   r41.0<1;1,0>:ud                  {I@2}
+        mov (1|M0)               r42.7<1>:ud   r28.0<1;1,0>:ud
+(W)     add (1|M0)               r41.0<1>:ud   r7.0<0;1,0>:ud    r38.0<0;1,0>:ud  {I@7}
+(W)     send.ugm (1|M0)          null     r42  null:0  0x0            0x02080203           {I@2,$5} // wr:1+0, rd:0; load_block2d.ugm.d16.a64.ca.ca
+        mov (16|M0)              r38.0<1>:ud   r13.0<1;1,0>:ud
+        mov (1|M0)               r38.5<1>:ud   r41.0<1;1,0>:ud                  {I@2}
+        mov (1|M0)               r38.6<1>:ud   r12.0<1;1,0>:ud
+(W)     send.ugm (1|M0)          null     r38  null:0  0x0            0x02080203           {I@1,$6} // wr:1+0, rd:0; load_block2d.ugm.d16.a64.ca.ca
+        mov (16|M0)              r41.0<1>:ud   r13.0<1;1,0>:ud
+        mov (1|M0)               r41.5<1>:ud   r39.0<1;1,0>:ud
+        mov (1|M0)               r41.6<1>:ud   r10.0<1;1,0>:ud
+        sync.nop                             null                             {$13.src}
+(W)     send.ugm (1|M0)          r43      r41  null:0  0x0            0x02400203           {I@1,$7} // wr:1+0, rd:4; load_block2d.ugm.d16.a64
+(W)     send.ugm (1|M0)          r47      r41  null:0  0x10000            0x02400203           {I@1,$8} // wr:1+0, rd:4; load_block2d.ugm.d16.a64.flat[A+(0x10,0x0)]
+        sync.nop                             null                             {$14.src}
+(W)     send.ugm (1|M0)          r51      r41  null:0  0x2000000            0x02400203           {I@1,$9} // wr:1+0, rd:4; load_block2d.ugm.d16.a64.flat[A+(0x0,0x8)]
+(W)     send.ugm (1|M0)          r55      r41  null:0  0x2010000            0x02400203           {I@1,$10} // wr:1+0, rd:4; load_block2d.ugm.d16.a64.flat[A+(0x10,0x8)]
+        sync.nop                             null                             {$3.src}
+        mov (16|M0)              r9.0<1>:ud    r26.0<1;1,0>:ud
+        mov (1|M0)               r9.6<1>:ud    r40.0<1;1,0>:ud
+        mov (1|M0)               r9.7<1>:ud    r29.0<1;1,0>:ud
+(W)     send.ugm (1|M0)          r59      r9  null:0  0x0            0x02800283           {I@1,$11} // wr:1+0, rd:8; load_block2d.ugm.d16v.a64
+(W)     send.ugm (1|M0)          r67      r9  null:0  0x4000000            0x02800283           {I@1,$12} // wr:1+0, rd:8; load_block2d.ugm.d16v.a64.flat[A+(0x0,0x10)]
         sync.nop                             null                             {A@1}
         sync.allwr                           ($7,$9,$11,$13,$14)
-        dpas.8x8 (16|M0)         r16:f         r16:f             r63:hf            r47.0:hf         {$13}
-        dpas.8x8 (16|M0)         r32:f         r32:f             r63:hf            r55.0:hf         {$14}
+        dpas.8x8 (16|M0)         r16:f         r16:f             r59:hf            r43.0:hf         {$13}
+        dpas.8x8 (16|M0)         r30:f         r30:f             r59:hf            r51.0:hf         {$14}
         sync.nop                             null                             {A@1}
         sync.allwr                           ($8,$10,$12)
-        dpas.8x8 (16|M0)         r16:f         r16:f             r71:hf            r51.0:hf         {$13}
-        dpas.8x8 (16|M0)         r32:f         r32:f             r71:hf            r59.0:hf         {$14}
+        dpas.8x8 (16|M0)         r16:f         r16:f             r67:hf            r47.0:hf         {$13}
+        dpas.8x8 (16|M0)         r30:f         r30:f             r67:hf            r55.0:hf         {$14}
 (W)     add (1|M0)               r15.0<1>:ud   r15.0<1;1,0>:ud   0x20:ud
         cmp (1|M0)    (lt)f0.0   null<1>:ud    r15.0<1;1,0>:d    64:d               {I@1}
-(W&f0.0) jmpi                                L1872
-L2768:
+(W&f0.0) jmpi                                L1840
+L2496:
 (W)     mov (1|M0)               r6.0<1>:ud    r14.0<0;1,0>:q
 (W)     mov (1|M0)               r7.0<1>:q     r8.6<0;1,0>:q
 (W)     mov (16|M0)              r8.0<1>:ud    0x0:ud
@@ -191,9 +174,10 @@ L2768:
 (W)     mov (1|M0)               r8.6<1>:ud    r5.0<0;1,0>:q
         sync.nop                             null                             {$14.dst}
         sync.nop                             null                             {$15.src}
-(W)     send.ugm (1|M0)          null     r8  r32:8  0x0            0x02000407           {I@1,$16} // wr:1+8, rd:0; store_block2d.ugm.d32.a64
+(W)     send.ugm (1|M0)          null     r8  r30:8  0x0            0x02000407           {I@1,$16} // wr:1+8, rd:0; store_block2d.ugm.d32.a64
+        sync.nop                             null                             {$4.src}
         sync.nop                             null                             {$5.src}
         sync.nop                             null                             {$6.src}
         sync.nop                             null                             {$16.src}
 (W)     send.gtwy (1|M0)         null     r0  null:0  0x0            0x02000010           {EOT,$17} // wr:1+0, rd:0; end of thread
-L3120:
+L2864:
