@@ -8,9 +8,7 @@
 //
 // This program tries to reduce an IR test case for a given interesting-ness
 // test. It runs multiple delta debugging passes in order to minimize the input
-// file. It's worth noting that this is a part of the bugpoint redesign
-// proposal, and thus a *temporary* tool that will eventually be integrated
-// into the bugpoint tool itself.
+// file.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +20,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -137,6 +136,11 @@ static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   const StringRef ToolName(Argv[0]);
+
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
   cl::ParseCommandLineOptions(

@@ -57,6 +57,7 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include <algorithm>
@@ -624,6 +625,12 @@ optMain(int argc, char **argv,
     return 1;
   }
 
+  // Manually assign GUIDs -- updateVCallVisibilityInModule accesses GUIDs, and
+  // there's no way to specify it in the pass pipeline since this runs before
+  // any pass given on the command line.
+  if (hasWholeProgramVisibility(/*WholeProgramVisibilityEnabledInLTO=*/false))
+    AssignGUIDPass::runOnModule(*M);
+
   // Enable testing of whole program devirtualization on this module by invoking
   // the facility for updating public visibility to linkage unit visibility when
   // specified by an internal option. This is normally done during LTO which is
@@ -680,7 +687,7 @@ optMain(int argc, char **argv,
     TuneCPUStr = codegen::getTuneCPUStr();
     FeaturesStr = codegen::getFeaturesStr();
     Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
-        codegen::createTargetMachineForTriple(ModuleTriple.str(),
+        codegen::createTargetMachineForTriple(ModuleTriple,
                                               GetCodeGenOptLevel());
     if (auto E = ExpectedTM.takeError()) {
       errs() << argv[0] << ": WARNING: failed to create target machine for '"

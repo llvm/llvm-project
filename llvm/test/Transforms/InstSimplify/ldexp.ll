@@ -3,7 +3,7 @@
 
 define float @ldexp_f32_undef_undef() {
 ; CHECK-LABEL: @ldexp_f32_undef_undef(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %call = call float @llvm.ldexp.f32.i32(float undef, i32 undef)
   ret float %call
@@ -78,7 +78,7 @@ define void @ldexp_f32_val0(i32 %y) {
 ; CHECK-LABEL: @ldexp_f32_val0(
 ; CHECK-NEXT:    store volatile float 0.000000e+00, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float -0.000000e+00, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +qnan, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %zero = call float @llvm.ldexp.f32.i32(float 0.0, i32 %y)
@@ -94,10 +94,10 @@ define void @ldexp_f32_val0(i32 %y) {
 
 define void @ldexp_f32_val_infinity(i32 %y) {
 ; CHECK-LABEL: @ldexp_f32_val_infinity(
-; CHECK-NEXT:    store volatile float 0x7FF0000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFF0000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF0000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFF0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +inf, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -inf, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +inf, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -inf, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %inf = call float @llvm.ldexp.f32.i32(float 0x7ff0000000000000, i32 %y)
@@ -119,10 +119,10 @@ define void @ldexp_f32_val_infinity(i32 %y) {
 ; Technically this depends on the ieee_mode in the mode register.
 define void @ldexp_f32_val_nan(i32 %y) {
 ; CHECK-LABEL: @ldexp_f32_val_nan(
-; CHECK-NEXT:    store volatile float 0x7FF8001000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFF8000100000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF8000020000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFFFFFFFE0000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +nan(0x80), ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -nan(0x8), ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +nan(0x1), ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -nan(0x3FFFFF), ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %plus.qnan = call float @llvm.ldexp.f32.i32(float 0x7ff0001000000000, i32 %y)
@@ -142,15 +142,15 @@ define void @ldexp_f32_val_nan(i32 %y) {
 
 define void @ldexp_f32_val_nan_strictfp_maytrap(i32 %y) #0 {
 ; CHECK-LABEL: @ldexp_f32_val_nan_strictfp_maytrap(
-; CHECK-NEXT:    [[PLUS_QNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x7FF0001000000000, i32 [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[PLUS_QNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float +snan(0x80), i32 [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    store volatile float [[PLUS_QNAN]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[NEG_QNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0xFFF0000100000000, i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[NEG_QNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float -snan(0x8), i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[NEG_QNAN]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[PLUS_SNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x7FF0000020000000, i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[PLUS_SNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float +snan(0x1), i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[PLUS_SNAN]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[NEG_SNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0xFFF7FFFFE0000000, i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[NEG_SNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float -snan(0x3FFFFF), i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[NEG_SNAN]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +qnan, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %plus.qnan = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x7ff0001000000000, i32 %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #0
@@ -174,16 +174,16 @@ define void @ldexp_f32_val_nan_strictfp_maytrap(i32 %y) #0 {
 
 define void @ldexp_f32_val_nan_strictfp_strict(i32 %y) #0 {
 ; CHECK-LABEL: @ldexp_f32_val_nan_strictfp_strict(
-; CHECK-NEXT:    [[PLUS_QNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x7FF0001000000000, i32 [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[PLUS_QNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float +snan(0x80), i32 [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[PLUS_QNAN]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[NEG_QNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0xFFF0000100000000, i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[NEG_QNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float -snan(0x8), i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[NEG_QNAN]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[PLUS_SNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x7FF0000020000000, i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[PLUS_SNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float +snan(0x1), i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[PLUS_SNAN]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[NEG_SNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0xFFF7FFFFE0000000, i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[NEG_SNAN:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float -snan(0x3FFFFF), i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[NEG_SNAN]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[UNDEF:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float undef, i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +qnan, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %plus.qnan = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x7ff0001000000000, i32 %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -244,7 +244,7 @@ define void @ldexp_f32_undef_strictfp(float %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[UNDEF_EXP:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float [[X:%.*]], i32 undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[UNDEF_EXP]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float [[X]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF8000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +qnan, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float poison, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float poison, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float undef, ptr addrspace(1) undef, align 4
@@ -275,9 +275,9 @@ define void @ldexp_f32_0_strictfp(float %x) #0 {
 ; CHECK-NEXT:    store volatile float [[UNKNOWN_ZERO]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[UNKNOWN_UNDEF:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float [[X]], i32 undef, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[UNKNOWN_UNDEF]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[DENORMAL_0:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x380FFFFFC0000000, i32 0, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[DENORMAL_0:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float f0x007FFFFF, i32 0, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[DENORMAL_0]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[DENORMAL_1:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x380FFFFFC0000000, i32 1, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[DENORMAL_1:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float f0x007FFFFF, i32 1, metadata !"round.dynamic", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[DENORMAL_1]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -311,19 +311,19 @@ define void @ldexp_f32() {
 ; CHECK-NEXT:    store volatile float 4.000000e+00, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float 8.000000e+00, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float 5.000000e-01, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x3810000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x3800000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x47E0000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x7FF0000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0x00800000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0x00400000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0x7F000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float +inf, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float -2.000000e+00, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float -4.000000e+00, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float -8.000000e+00, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    store volatile float -5.000000e-01, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0xB810000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0xB800000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0xC7E0000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0xFFF0000000000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x44D5000000000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0x80800000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0x80400000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0xFF000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float -inf, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0x66A80000, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %one.one = call float @llvm.ldexp.f32.i32(float 1.0, i32 1)
@@ -385,8 +385,8 @@ define void @ldexp_f32() {
 ; considers this.
 define void @ldexp_f32_denormal() {
 ; CHECK-LABEL: @ldexp_f32_denormal(
-; CHECK-NEXT:    store volatile float 0x380FFFFFC0000000, ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    store volatile float 0x381FFFFFC0000000, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0x007FFFFF, ptr addrspace(1) undef, align 4
+; CHECK-NEXT:    store volatile float f0x00FFFFFE, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
   %denormal.0 = call float @llvm.ldexp.f32.i32(float 0x380FFFFFC0000000, i32 0)
@@ -402,7 +402,7 @@ define void @ldexp_f64() {
 ; CHECK-LABEL: @ldexp_f64(
 ; CHECK-NEXT:    store volatile double 2.000000e+00, ptr addrspace(1) undef, align 8
 ; CHECK-NEXT:    store volatile double 4.000000e+00, ptr addrspace(1) undef, align 8
-; CHECK-NEXT:    store volatile double 0x44D5000000000000, ptr addrspace(1) undef, align 8
+; CHECK-NEXT:    store volatile double f0x44D5000000000000, ptr addrspace(1) undef, align 8
 ; CHECK-NEXT:    ret void
 ;
   %one.one = call double @llvm.ldexp.f64.i32(double 1.0, i32 1)
@@ -419,9 +419,9 @@ define void @ldexp_f64() {
 
 define void @ldexp_f16() {
 ; CHECK-LABEL: @ldexp_f16(
-; CHECK-NEXT:    store volatile half 0xH4000, ptr addrspace(1) undef, align 2
-; CHECK-NEXT:    store volatile half 0xH4400, ptr addrspace(1) undef, align 2
-; CHECK-NEXT:    store volatile half 0xH7C00, ptr addrspace(1) undef, align 2
+; CHECK-NEXT:    store volatile half 2.000000e+00, ptr addrspace(1) undef, align 2
+; CHECK-NEXT:    store volatile half 4.000000e+00, ptr addrspace(1) undef, align 2
+; CHECK-NEXT:    store volatile half +inf, ptr addrspace(1) undef, align 2
 ; CHECK-NEXT:    ret void
 ;
   %one.one = call half @llvm.ldexp.f16.i32(half 1.0, i32 1)
@@ -438,11 +438,11 @@ define void @ldexp_f16() {
 
 define void @ldexp_ppcf128() {
 ; CHECK-LABEL: @ldexp_ppcf128(
-; CHECK-NEXT:    store volatile ppc_fp128 0xMFFF00000000000000000000000000000, ptr addrspace(1) undef, align 16
-; CHECK-NEXT:    store volatile ppc_fp128 0xMFFFC0000000000000000000000000000, ptr addrspace(1) undef, align 16
-; CHECK-NEXT:    store volatile ppc_fp128 0xM3FD00000000000000000000000000000, ptr addrspace(1) undef, align 16
-; CHECK-NEXT:    store volatile ppc_fp128 0xM41700000000000000000000000000000, ptr addrspace(1) undef, align 16
-; CHECK-NEXT:    store volatile ppc_fp128 0xMC0700000000000000000000000000000, ptr addrspace(1) undef, align 16
+; CHECK-NEXT:    store volatile ppc_fp128 -inf, ptr addrspace(1) undef, align 16
+; CHECK-NEXT:    store volatile ppc_fp128 -nan(0x4000000000000), ptr addrspace(1) undef, align 16
+; CHECK-NEXT:    store volatile ppc_fp128 2.500000e-01, ptr addrspace(1) undef, align 16
+; CHECK-NEXT:    store volatile ppc_fp128 f0x00000000000000004170000000000000, ptr addrspace(1) undef, align 16
+; CHECK-NEXT:    store volatile ppc_fp128 -2.560000e+02, ptr addrspace(1) undef, align 16
 ; CHECK-NEXT:    ret void
 ;
   %neginf = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 0xMFFF00000000000000000000000000000, i32 0)
@@ -465,9 +465,9 @@ define void @ldexp_ppcf128() {
 
 define void @constant_fold_ldexp_f32_val_strictfp(i32 %y) #0 {
 ; CHECK-LABEL: @constant_fold_ldexp_f32_val_strictfp(
-; CHECK-NEXT:    [[SNAN_MAY_TRAP:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x7FF0000020000000, i32 3, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
+; CHECK-NEXT:    [[SNAN_MAY_TRAP:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float +snan(0x1), i32 3, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[SNAN_MAY_TRAP]], ptr addrspace(1) undef, align 4
-; CHECK-NEXT:    [[SNAN_MAY_NOT_TRAP:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 0x7FF0000020000000, i32 3, metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    [[SNAN_MAY_NOT_TRAP:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float +snan(0x1), i32 3, metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[SNAN_MAY_NOT_TRAP]], ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    [[UNKNOWN_ROUNDING:%.*]] = call float @llvm.experimental.constrained.ldexp.f32.i32(float 2.500000e+00, i32 42, metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[UNKNOWN_ROUNDING]], ptr addrspace(1) undef, align 4

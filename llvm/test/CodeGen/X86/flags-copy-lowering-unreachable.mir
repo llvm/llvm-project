@@ -1,0 +1,29 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=x86-flags-copy-lowering -verify-machineinstrs -o - %s | FileCheck %s
+#
+# An EFLAGS copy stranded in a block that is unreachable from the entry must
+# not trip the "Unlowered EFLAGS copy!" assertion. The pass collects copies to
+# lower with a reverse-post-order traversal, which only visits reachable
+# blocks, so such copies are intentionally left in place (a later pass removes
+# the unreachable block). The verification at the end of the pass must use the
+# same notion of reachability.
+---
+name:            stranded_eflags_copy
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    RET 0
+
+  ; bb.1 has no predecessors, so it is unreachable from bb.0. The save/recheck
+  ; EFLAGS copies below are left untouched rather than crashing the pass.
+  bb.1:
+    ; CHECK-LABEL: bb.1:
+    ; CHECK: %1:gr64 = COPY $eflags
+    ; CHECK: $eflags = COPY %1
+    %0:gr64 = IMPLICIT_DEF
+    TEST64rr %0, %0, implicit-def $eflags
+    %1:gr64 = COPY $eflags
+    TEST64rr %0, %0, implicit-def $eflags
+    $eflags = COPY %1
+    SETCCm $noreg, 1, $noreg, 0, $noreg, 4, implicit $eflags :: (store (s8) into `ptr null`)
+    RET 0
+...

@@ -10,7 +10,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %9 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "cond"}
     %10 = omp.map.info var_ptr(%arg0 : !llvm.ptr, f32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "var"}
     %11 = omp.map.info var_ptr(%arg1 : !llvm.ptr, f32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "val"}
-    omp.target if(%8) nowait map_entries(%10 -> %arg3, %11 -> %arg4 : !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) if(%8) nowait map_entries(%10 -> %arg3, %11 -> %arg4 : !llvm.ptr, !llvm.ptr) {
       %12 = llvm.load %arg4 : !llvm.ptr -> f32
       llvm.store %12, %arg3 : f32, !llvm.ptr
       omp.terminator

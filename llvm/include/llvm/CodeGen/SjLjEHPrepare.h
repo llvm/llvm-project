@@ -20,7 +20,7 @@ class SjLjEHPreparePass : public RequiredPassInfoMixin<SjLjEHPreparePass> {
 
 public:
   explicit SjLjEHPreparePass(const TargetMachine *TM) : TM(TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

@@ -52,7 +52,7 @@ define double @test_sinh_undef() {
 
 define double @test_sinh_snan() {
 ; CHECK-LABEL: define double @test_sinh_snan() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double 0x7FF0000000000001)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double +snan(0x1))
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.sinh.f64(double 0x7ff0000000000001)
@@ -61,7 +61,7 @@ define double @test_sinh_snan() {
 
 define double @test_sinh_qnan() {
 ; CHECK-LABEL: define double @test_sinh_qnan() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double +qnan)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.sinh.f64(double 0x7ff8000000000000)
@@ -70,7 +70,7 @@ define double @test_sinh_qnan() {
 
 define double @test_sinh_pos_inf() {
 ; CHECK-LABEL: define double @test_sinh_pos_inf() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double 0x7FF0000000000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double +inf)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.sinh.f64(double 0x7ff0000000000000)
@@ -79,7 +79,7 @@ define double @test_sinh_pos_inf() {
 
 define double @test_sinh_neg_inf() {
 ; CHECK-LABEL: define double @test_sinh_neg_inf() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double 0xFFF0000000000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.sinh.f64(double -inf)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.sinh.f64(double 0xfff0000000000000)
@@ -137,7 +137,7 @@ define double @test_cosh_undef() {
 
 define double @test_cosh_snan() {
 ; CHECK-LABEL: define double @test_cosh_snan() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double 0x7FF0000000000001)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double +snan(0x1))
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.cosh.f64(double 0x7ff0000000000001)
@@ -146,7 +146,7 @@ define double @test_cosh_snan() {
 
 define double @test_cosh_qnan() {
 ; CHECK-LABEL: define double @test_cosh_qnan() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double +qnan)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.cosh.f64(double 0x7ff8000000000000)
@@ -155,7 +155,7 @@ define double @test_cosh_qnan() {
 
 define double @test_cosh_pos_inf() {
 ; CHECK-LABEL: define double @test_cosh_pos_inf() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double 0x7FF0000000000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double +inf)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.cosh.f64(double 0x7ff0000000000000)
@@ -164,7 +164,7 @@ define double @test_cosh_pos_inf() {
 
 define double @test_cosh_neg_inf() {
 ; CHECK-LABEL: define double @test_cosh_neg_inf() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double 0xFFF0000000000000)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.cosh.f64(double -inf)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = call double @llvm.cosh.f64(double 0xfff0000000000000)

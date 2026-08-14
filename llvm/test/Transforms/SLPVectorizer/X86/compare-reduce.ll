@@ -10,7 +10,7 @@ define void @reduce_compare(ptr nocapture %A, i32 %n) {
 ; CHECK-LABEL: @reduce_compare(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -21,8 +21,8 @@ define void @reduce_compare(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], <double 7.000000e+00, double 4.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP5]], <double 5.000000e+00, double 9.000000e+00>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[CMP11:%.*]] = fcmp ogt double [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
