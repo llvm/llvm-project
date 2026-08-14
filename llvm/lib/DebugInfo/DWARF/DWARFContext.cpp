@@ -1025,7 +1025,7 @@ void DWARFContext::dump(
     for (const auto &U : Units) {
       // For dumping of DWOs, remember if unit is already holding its context in
       // memory
-      const bool HadDWO = U->getDWO();
+      bool HadDWO = U->getDWO();
       if (DumpOffset) {
         U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
