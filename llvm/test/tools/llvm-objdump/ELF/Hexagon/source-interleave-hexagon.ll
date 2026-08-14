@@ -1,6 +1,6 @@
 ;  RUN: sed -e "s,SRC_COMPDIR,%p/Inputs,g" %s > %t.ll
 ;  RUN: llc  -o %t.o -filetype=obj -mtriple=hexagon-unknown-elf  %t.ll
-;  RUN: llvm-objdump  -d -l %t.o | FileCheck --check-prefix="LINES" %t.ll
+;  RUN: llvm-objdump  -d -l %t.o | FileCheck --check-prefix="LINES" -DSEP=%{fs-sep} %t.ll
 ;  RUN: llvm-objdump  -d -S %t.o | FileCheck --check-prefix="SOURCE" %t.ll
 ; ModuleID = 'source-interleave-hexagon.bc'
 source_filename = "source-interleave-hexagon.c"
@@ -67,9 +67,10 @@ attributes #1 = { nounwind readnone }
 !23 = !DILocation(line: 8, column: 3, scope: !14)
 ; LINES: <main>:
 ; LINES-NEXT: main():
-;; Source paths are normalized to the host separator, which is '/' on POSIX and
-;; '\' on Windows, so match either.
-; LINES-NEXT: Inputs{{[/\\]}}source-interleave-hexagon.c:6
+;; The compilation directory is spelled with '/', so on Windows the recorded
+;; path mixes separators. It is normalized to the host separator before being
+;; printed, and [[SEP]] is that separator, not "either of the two".
+; LINES-NEXT: Inputs[[SEP]]source-interleave-hexagon.c:6
 
 ; SOURCE: <main>:
 ; SOURCE-NEXT: int main() {

@@ -751,7 +751,6 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
       normalizeSourcePath(NormalizedName);
       LineInfo.FileName = std::string(NormalizedName);
     }
-
   } else if (!WarnedInvalidDebugInfo) {
     WarnedInvalidDebugInfo = true;
     // TODO Untested.
