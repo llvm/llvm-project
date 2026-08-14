@@ -3341,7 +3341,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       C.getPointerType(PrivatesQTy).withConst().withRestrict(),
       ImplicitParamKind::Other);
   Args.push_back(TaskPrivatesArg);
-  llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, unsigned> PrivateVarsPos;
+  llvm::SmallDenseMap<CanonicalDeclPtr<const VarDecl>, unsigned> PrivateVarsPos;
   unsigned Counter = 1;
   for (const Expr *E : Data.PrivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
@@ -3439,8 +3439,10 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     // For VarDecls, lookup by the VarDecl from Original.
     const VarDecl *LookupVD;
     if (Privates[Counter].second.OriginalRef) {
-      const Decl *OrigDecl = cast<DeclRefExpr>(
-          Privates[Counter].second.OriginalRef)->getDecl()->getCanonicalDecl();
+      const Decl *OrigDecl =
+          cast<DeclRefExpr>(Privates[Counter].second.OriginalRef)
+              ->getDecl()
+              ->getCanonicalDecl();
       if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
         LookupVD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
       } else {

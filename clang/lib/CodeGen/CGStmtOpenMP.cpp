@@ -1754,15 +1754,13 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     if (isaOMPArraySectionExpr && Type->isVariablyModifiedType()) {
       // Store the address of the original variable associated with the LHS
       // implicit variable.
-      PrivateScope.addPrivate(LHSVD,
-                              RedCG.getSharedLValue(Count).getAddress());
+      PrivateScope.addPrivate(LHSVD, RedCG.getSharedLValue(Count).getAddress());
       PrivateScope.addPrivate(RHSVD, GetAddrOfLocalVar(PrivateVD));
     } else if ((isaOMPArraySectionExpr && Type->isScalarType()) ||
                isa<ArraySubscriptExpr>(IRef)) {
       // Store the address of the original variable associated with the LHS
       // implicit variable.
-      PrivateScope.addPrivate(LHSVD,
-                              RedCG.getSharedLValue(Count).getAddress());
+      PrivateScope.addPrivate(LHSVD, RedCG.getSharedLValue(Count).getAddress());
       PrivateScope.addPrivate(RHSVD,
                               GetAddrOfLocalVar(PrivateVD).withElementType(
                                   ConvertTypeForMem(RHSVD->getType())));
