@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/Dialect/Analysis/CIRBasicAliasAnalysis.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -22,6 +23,27 @@ using namespace cir;
 //===----------------------------------------------------------------------===//
 
 static constexpr unsigned MaxLookupDepth = 6;
+
+static mlir::Operation *getIdentifiedObject(mlir::Value value,
+                                            bool &mayAliasOtherGlobal) {
+  mayAliasOtherGlobal = false;
+
+  if (auto alloca = value.getDefiningOp<cir::AllocaOp>())
+    return alloca.getOperation();
+
+  auto address = value.getDefiningOp<cir::GetGlobalOp>();
+  if (!address)
+    return nullptr;
+
+  auto global = mlir::SymbolTable::lookupNearestSymbolFrom<cir::GlobalOp>(
+      address.getOperation(), address.getNameAttr());
+  if (!global)
+    return nullptr;
+
+  mayAliasOtherGlobal =
+      global.getAliasee() || cir::isInterposableLinkage(global.getLinkage());
+  return global.getOperation();
+}
 
 mlir::Value CIRBasicAliasAnalysis::getUnderlyingObject(mlir::Value val) {
   LDBG() << "Getting underlying object for: " << val;
@@ -134,10 +156,6 @@ CIRBasicAliasAnalysis::ObjectRelation
 CIRBasicAliasAnalysis::classifyObjects(mlir::Value lhs, mlir::Value rhs) {
   LDBG() << "Checking if " << lhs << " and " << rhs << " are distinct objects";
 
-  // Two values are distinct allocations if they originate from different
-  // cir.alloca operations (or other allocation ops) in the same function.
-  // TODO: Extend to cover global addresses, function arguments with noalias,
-  // and heap allocations.
   mlir::Value lhsObj = getUnderlyingObject(lhs);
   mlir::Value rhsObj = getUnderlyingObject(rhs);
 
@@ -146,10 +164,28 @@ CIRBasicAliasAnalysis::classifyObjects(mlir::Value lhs, mlir::Value rhs) {
     return ObjectRelation::Identical;
   }
 
-  // Different cir.alloca ops in the same function cannot alias.
-  if (mlir::isa_and_nonnull<cir::AllocaOp>(lhsObj.getDefiningOp()) &&
-      mlir::isa_and_nonnull<cir::AllocaOp>(rhsObj.getDefiningOp())) {
-    LDBG() << "Different cir.alloca ops in the same function, distinct";
+  auto lhsGlobal = lhsObj.getDefiningOp<cir::GetGlobalOp>();
+  auto rhsGlobal = rhsObj.getDefiningOp<cir::GetGlobalOp>();
+  if (lhsGlobal && rhsGlobal &&
+      lhsGlobal.getNameAttr() == rhsGlobal.getNameAttr()) {
+    LDBG() << "Same global object";
+    return ObjectRelation::Identical;
+  }
+
+  bool lhsMayAliasOtherGlobal;
+  bool rhsMayAliasOtherGlobal;
+  mlir::Operation *lhsObject =
+      getIdentifiedObject(lhsObj, lhsMayAliasOtherGlobal);
+  mlir::Operation *rhsObject =
+      getIdentifiedObject(rhsObj, rhsMayAliasOtherGlobal);
+  if (lhsObject && rhsObject) {
+    if (lhsGlobal && rhsGlobal &&
+        (lhsMayAliasOtherGlobal || rhsMayAliasOtherGlobal)) {
+      LDBG() << "Global object may resolve to another global";
+      return ObjectRelation::Unknown;
+    }
+
+    LDBG() << "Different identified objects";
     return ObjectRelation::Distinct;
   }
 

@@ -63,3 +63,62 @@ cir.func @arg_and_alloca_no_alias(%p: !cir.ptr<!s32i>)
   %local = cir.alloca "local" align(4) : !cir.ptr<!s32i> {test.ptr = "local"}
   cir.return
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "global_objects"
+// CHECK-DAG: first_ref_a#0 <-> first_ref_b#0: MustAlias
+// CHECK-DAG: first_ref_a#0 <-> second_ref#0: NoAlias
+// CHECK-DAG: first_ref_b#0 <-> second_ref#0: NoAlias
+// CHECK-DAG: first_ref_a#0 <-> stack#0: NoAlias
+// CHECK-DAG: first_ref_b#0 <-> stack#0: NoAlias
+// CHECK-DAG: second_ref#0 <-> stack#0: NoAlias
+
+!s32i = !cir.int<s, 32>
+cir.global external dso_local @first_global = #cir.int<1> : !s32i
+cir.global external dso_local @second_global = #cir.int<2> : !s32i
+cir.func @global_objects() {
+  %first_ref_a = cir.get_global @first_global : !cir.ptr<!s32i> {test.ptr = "first_ref_a"}
+  %first_ref_b = cir.get_global @first_global : !cir.ptr<!s32i> {test.ptr = "first_ref_b"}
+  %second_ref = cir.get_global @second_global : !cir.ptr<!s32i> {test.ptr = "second_ref"}
+  %stack = cir.alloca "stack" align(4) : !cir.ptr<!s32i> {test.ptr = "stack"}
+  cir.return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "global_alias"
+// CHECK-DAG: target_ref#0 <-> alias_ref#0: MayAlias
+// CHECK-DAG: target_ref#0 <-> unrelated_ref#0: NoAlias
+// CHECK-DAG: alias_ref#0 <-> unrelated_ref#0: MayAlias
+// CHECK-DAG: alias_ref#0 <-> stack#0: NoAlias
+
+!s32i = !cir.int<s, 32>
+cir.global internal @target_global = #cir.int<1> : !s32i
+cir.global external @target_alias alias(@target_global) : !s32i
+cir.global internal @unrelated_global = #cir.int<2> : !s32i
+cir.func @global_alias() {
+  %target_ref = cir.get_global @target_global : !cir.ptr<!s32i> {test.ptr = "target_ref"}
+  %alias_ref = cir.get_global @target_alias : !cir.ptr<!s32i> {test.ptr = "alias_ref"}
+  %unrelated_ref = cir.get_global @unrelated_global : !cir.ptr<!s32i> {test.ptr = "unrelated_ref"}
+  %stack = cir.alloca "stack" align(4) : !cir.ptr<!s32i> {test.ptr = "stack"}
+  cir.return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "interposable_global"
+// CHECK-DAG: weak_ref_a#0 <-> weak_ref_b#0: MustAlias
+// CHECK-DAG: weak_ref_a#0 <-> internal_ref#0: MayAlias
+// CHECK-DAG: weak_ref_a#0 <-> stack#0: NoAlias
+
+!s32i = !cir.int<s, 32>
+cir.global weak @weak_global = #cir.int<1> : !s32i
+cir.global internal @internal_global = #cir.int<2> : !s32i
+cir.func @interposable_global() {
+  %weak_ref_a = cir.get_global @weak_global : !cir.ptr<!s32i> {test.ptr = "weak_ref_a"}
+  %weak_ref_b = cir.get_global @weak_global : !cir.ptr<!s32i> {test.ptr = "weak_ref_b"}
+  %internal_ref = cir.get_global @internal_global : !cir.ptr<!s32i> {test.ptr = "internal_ref"}
+  %stack = cir.alloca "stack" align(4) : !cir.ptr<!s32i> {test.ptr = "stack"}
+  cir.return
+}
