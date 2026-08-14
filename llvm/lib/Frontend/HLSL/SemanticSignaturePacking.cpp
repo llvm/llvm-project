@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/bit.h"
 #include <algorithm>
 #include <array>
@@ -458,9 +459,8 @@ Error llvm::hlsl::packSignaturePrefixStable(
           ? MaxGeometryStreams
           : 1;
 
-  std::array<std::array<SignatureRow, MaxSignatureRows>, MaxGeometryStreams>
-      Rows;
-  std::array<ClipCullState, MaxGeometryStreams> ClipCullStates;
+  SmallVector<std::array<SignatureRow, MaxSignatureRows>, 1> Rows(StreamCount);
+  SmallVector<ClipCullState, 1> ClipCullStates(StreamCount);
 
   for (SemanticSignatureElement &Element : Elements) {
     assert(Element.StartRow == UnallocatedRow &&
