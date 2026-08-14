@@ -150,7 +150,7 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
                mi_match(FalseReg, MRI,
                         m_GFMul(m_GFCstOrSplat(MulConstant),
                                 m_SpecificReg(TrueReg)))) {
-      if (!MulConstant || !MulConstant->Value.isExactlyValue(-1.0))
+      if (!MulConstant || !MulConstant->Value.isMinusOne())
         return false;
     } else if (!AreNegatedConstantsOrSplats(TrueReg, FalseReg))
       return false;
@@ -182,7 +182,6 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   if (TrueInstr->getOpcode() == TargetOpcode::G_FNEG ||
       TrueInstr->getOpcode() == TargetOpcode::G_FMUL)
     std::swap(TrueReg, FalseReg);
-  MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
 
   Register ResultReg = MI.getOperand(0).getReg();
   Builder.setInstrAndDebugLoc(MI);
@@ -191,27 +190,7 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
       .addUse(DotOperand1)  // I
       .addUse(DotOperand2); // Ng
 
-  SPIRVGlobalRegistry *GR =
-      MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
-  auto RemoveAllUses = [&](Register Reg) {
-    SmallVector<MachineInstr *, 4> UsesToErase;
-    for (auto &UseMI : MRI.use_instructions(Reg))
-      UsesToErase.push_back(&UseMI);
-
-    // calling eraseFromParent to early invalidates the iterator.
-    for (auto *MIToErase : UsesToErase)
-      MIToErase->eraseFromParent();
-  };
-
-  RemoveAllUses(CondReg); // remove all uses of FCMP Result
-  GR->invalidateMachineInstr(CondInstr);
-  CondInstr->eraseFromParent(); // remove FCMP instruction
-  RemoveAllUses(DotReg);        // remove all uses of spv_fdot/G_FMUL Result
-  GR->invalidateMachineInstr(DotInstr);
-  DotInstr->eraseFromParent(); // remove spv_fdot/G_FMUL instruction
-  RemoveAllUses(FalseReg);
-  GR->invalidateMachineInstr(FalseInstr);
-  FalseInstr->eraseFromParent();
+  MI.eraseFromParent();
 }
 
 bool SPIRVCombinerHelper::matchMatrixTranspose(MachineInstr &MI) const {
@@ -227,7 +206,8 @@ void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
 
   Builder.setInstrAndDebugLoc(MI);
 
-  if (Rows == 1 && Cols == 1) {
+  // A 1xN or Nx1 transpose is a pure reshape.
+  if (Rows == 1 || Cols == 1) {
     Builder.buildCopy(ResReg, InReg);
     MI.eraseFromParent();
     return;
@@ -333,11 +313,9 @@ Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
   return DotRes;
 }
 
-SmallVector<Register, 16>
-SPIRVCombinerHelper::computeDotProducts(const SmallVector<Register, 4> &RowsA,
-                                        const SmallVector<Register, 4> &ColsB,
-                                        SPIRVTypeInst SpvVecType,
-                                        SPIRVGlobalRegistry *GR) const {
+SmallVector<Register, 16> SPIRVCombinerHelper::computeDotProducts(
+    ArrayRef<Register> RowsA, ArrayRef<Register> ColsB,
+    SPIRVTypeInst SpvVecType, SPIRVGlobalRegistry *GR) const {
   SmallVector<Register, 16> ResultScalars;
   for (uint32_t J = 0; J < ColsB.size(); ++J) {
     for (uint32_t I = 0; I < RowsA.size(); ++I) {
@@ -397,6 +375,9 @@ void SPIRVCombinerHelper::applyMatrixMultiply(MachineInstr &MI) const {
   SmallVector<Register, 16> ResultScalars =
       computeDotProducts(RowsA, ColsB, SpvVecType, GR);
 
-  Builder.buildBuildVector(ResReg, ResultScalars);
+  if (ResultScalars.size() == 1)
+    Builder.buildCopy(ResReg, ResultScalars[0]);
+  else
+    Builder.buildBuildVector(ResReg, ResultScalars);
   MI.eraseFromParent();
 }

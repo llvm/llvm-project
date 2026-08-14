@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
-; RUN: not llc -mtriple=amdgcn -mcpu=bonaire < %s 2>&1 | FileCheck -enable-var-scope -check-prefixes=INVALID %s
-; RUN: not llc -mtriple=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck -enable-var-scope -check-prefixes=INVALID %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
+; RUN: not llc -mtriple=amdgpu7.04 < %s 2>&1 | FileCheck -enable-var-scope -check-prefixes=INVALID %s
+; RUN: not llc -mtriple=amdgpu6.00 < %s 2>&1 | FileCheck -enable-var-scope -check-prefixes=INVALID %s
 
 ; GCN-LABEL: {{^}}s_input_output_v8f16
 ; GCN: s_mov_b32 s[0:3], -1

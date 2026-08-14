@@ -32,6 +32,13 @@ struct StdAllocatorCaller {
   explicit operator bool() { return Call; }
 };
 
+// FIXME: Create one for the "checking potential constant expression"
+// evaluation.
+enum class EvaluationKind : uint8_t {
+  None,
+  Dtor, /// We're checking for constant destruction of a global variable.
+};
+
 /// Interpreter context.
 class InterpState final : public State, public SourceMapper {
 public:
@@ -54,8 +61,6 @@ public:
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override { return &BottomFrame; }
-
   bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
 
@@ -127,6 +132,38 @@ public:
   /// diagnoses and returns \c false.
   bool noteStep(CodePtr OpPC);
 
+  bool initializingBlock(const Block *B) const {
+    for (PtrView V : InitializingPtrs)
+      if (V.block() == B)
+        return true;
+    return false;
+  }
+
+  bool lifetimeStartedInEvaluation(const Block *B) const {
+    if (EvalKind == EvaluationKind::None)
+      return B->getEvalID() == EvalID;
+
+    if (EvalKind == EvaluationKind::Dtor) {
+      assert(EvaluatingDecl);
+      if (B->getDescriptor()->asVarDecl() == EvaluatingDecl)
+        return EvaluatingDecl->getType().isConstQualified();
+    }
+    return false;
+  }
+
+  /// Return if we're checking if a global variable has a constant destructor.
+  bool checkingConstantDestruction() const {
+    return EvalKind == EvaluationKind::Dtor;
+  }
+  /// Return if we're checking if a global variable has a constant destructor
+  /// and the given pointer is pointing to the variable we're checking that for.
+  bool checkingConstantDestruction(const Pointer &Ptr) const {
+    return checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl());
+  }
+  bool checkingConstantDestruction(const VarDecl *VD) const {
+    return EvalKind == EvaluationKind::Dtor && VD == EvaluatingDecl;
+  }
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -140,6 +177,7 @@ private:
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 
 public:
+  CodePtr PC;
   /// Reference to the module containing all bytecode.
   Program &P;
   /// Temporary stack.
@@ -162,8 +200,11 @@ public:
   /// ID identifying this evaluation.
   const unsigned EvalID;
 
+  EvaluationKind EvalKind = EvaluationKind::None;
+
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
+  bool PrevDiagsEmitted = false;
 #ifndef NDEBUG
   unsigned SpeculationDepth = 0;
 #endif
@@ -176,7 +217,7 @@ public:
 
   /// List of blocks we're currently running either constructors or destructors
   /// for.
-  llvm::SmallVector<const Block *> InitializingBlocks;
+  llvm::SmallVector<PtrView> InitializingPtrs;
 };
 
 class InterpStateCCOverride final {

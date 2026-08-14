@@ -13,34 +13,14 @@
 #ifndef ORC_RT_ALLOCACTION_H
 #define ORC_RT_ALLOCACTION_H
 
+#include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/WrapperFunction.h"
+#include "orc-rt/scope_exit.h"
 
 #include <vector>
 
 namespace orc_rt {
-namespace detail {
-
-template <typename Handler>
-struct AAHandlerTraits
-    : public AAHandlerTraits<
-          decltype(&std::remove_cv_t<std::remove_reference_t<Handler>>::
-                   operator())> {};
-
-template <typename... ArgTs>
-struct AAHandlerTraits<WrapperFunctionBuffer(ArgTs...)> {
-  typedef std::tuple<ArgTs...> ArgTuple;
-};
-
-template <typename Class, typename... ArgTs>
-struct AAHandlerTraits<WrapperFunctionBuffer (Class::*)(ArgTs...)>
-    : public AAHandlerTraits<WrapperFunctionBuffer(ArgTs...)> {};
-
-template <typename Class, typename... ArgTs>
-struct AAHandlerTraits<WrapperFunctionBuffer (Class::*)(ArgTs...) const>
-    : public AAHandlerTraits<WrapperFunctionBuffer(ArgTs...)> {};
-
-} // namespace detail
 
 /// An AllocActionFn is a function that takes an argument blob and returns an
 /// empty WrapperFunctionBuffer on success, or an out-of-band error on failure.
@@ -49,15 +29,16 @@ typedef orc_rt_WrapperFunctionBuffer (*AllocActionFn)(const char *ArgData,
 
 struct AllocActionFunction {
 
-  template <typename Deserializer, typename Handler>
+  template <typename Deserializer, typename Serializer, typename Handler>
   static WrapperFunctionBuffer handle(const char *ArgData, size_t ArgSize,
-                                      Deserializer &&D, Handler &&H) {
-    typename detail::AAHandlerTraits<Handler>::ArgTuple Args;
+                                      Deserializer &&D, Serializer &&S,
+                                      Handler &&H) {
+    typename CallableArgInfo<Handler>::args_tuple_type Args;
     if (!D.deserialize(ArgData, ArgSize, Args))
       return WrapperFunctionBuffer::createOutOfBandError(
           "Could not deserialize allocation action argument buffer");
 
-    return std::apply(std::forward<Handler>(H), std::move(Args));
+    return S.serialize(std::apply(std::forward<Handler>(H), std::move(Args)));
   }
 };
 
@@ -94,11 +75,45 @@ struct AllocActionPair {
 ///
 /// Both finalize and dealloc actions are permitted to be null (i.e. have a
 /// null action function) in which case they are ignored.
-[[nodiscard]] Expected<std::vector<AllocAction>>
-runFinalizeActions(std::vector<AllocActionPair> AAPs);
+template <typename ReportErrorFn>
+Expected<std::vector<AllocAction>>
+runFinalizeActions(std::vector<AllocActionPair> AAPs,
+                   ReportErrorFn &&ReportError) {
+  std::vector<AllocAction> DeallocActions;
+  auto RunDeallocActions = scope_exit([&]() {
+    while (!DeallocActions.empty()) {
+      auto B = DeallocActions.back()();
+      if (auto *ErrMsg = B.getOutOfBandError())
+        ReportError(make_error<StringError>(ErrMsg));
+      DeallocActions.pop_back();
+    }
+  });
+
+  for (auto &AAP : AAPs) {
+    if (AAP.Finalize) {
+      auto B = AAP.Finalize();
+      if (const char *ErrMsg = B.getOutOfBandError())
+        return make_error<StringError>(ErrMsg);
+    }
+    if (AAP.Dealloc)
+      DeallocActions.push_back(std::move(AAP.Dealloc));
+  }
+
+  RunDeallocActions.release();
+  return DeallocActions;
+}
 
 /// Run the given deallocation actions in revwerse order.
-void runDeallocActions(std::vector<AllocAction> DAAs);
+template <typename ReportErrorFn>
+void runDeallocActions(std::vector<AllocAction> DAAs,
+                       ReportErrorFn &&ReportError) {
+  while (!DAAs.empty()) {
+    auto B = DAAs.back()();
+    if (const char *ErrMsg = B.getOutOfBandError())
+      ReportError(make_error<StringError>(ErrMsg));
+    DAAs.pop_back();
+  }
+}
 
 } // namespace orc_rt
 

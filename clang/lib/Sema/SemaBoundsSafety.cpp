@@ -28,12 +28,11 @@ getCountAttrKind(bool CountInBytes, bool OrNull) {
 
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
-  // An unnamed struct is anonymous struct only if it's not instantiated.
-  // However, the struct may not be fully processed yet to determine
+  // An unnamed struct is treated as anonymous struct at this point.
+  // A struct may not be fully processed yet to determine
   // whether it's anonymous or not. In that case, this function treats it as
   // an anonymous struct and tries to find a named parent.
-  while (RD && (RD->isAnonymousStructOrUnion() ||
-                (!RD->isCompleteDefinition() && RD->getName().empty()))) {
+  while (RD && (RD->isAnonymousStructOrUnion() || RD->getName().empty())) {
     const auto *Parent = dyn_cast<RecordDecl>(RD->getParent());
     if (!Parent)
       break;
@@ -104,7 +103,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
   // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
   // when `FieldTy->isArrayType()`.
   bool ShouldWarn = false;
-  if (PointeeTy->isAlwaysIncompleteType() && !CountInBytes) {
+  if (!CountInBytes && PointeeTy->isAlwaysIncompleteType()) {
     // In general using `counted_by` or `counted_by_or_null` on
     // pointers where the pointee is an incomplete type are problematic. This is
     // because it isn't possible to compute the pointer's bounds without knowing
@@ -153,7 +152,8 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
   } else if (PointeeTy->isFunctionType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
-  } else if (PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
+  } else if (!CountInBytes &&
+             PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
     if (FieldTy->isArrayType() && !getLangOpts().BoundsSafety) {
       // This is a workaround for the Linux kernel that has already adopted
       // `counted_by` on a FAM where the pointee is a struct with a FAM. This

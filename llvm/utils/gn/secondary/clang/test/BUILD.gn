@@ -164,6 +164,7 @@ group("test") {
     "//clang/tools/clang-refactor",
     "//clang/tools/clang-repl",
     "//clang/tools/clang-scan-deps",
+    "//clang/tools/clang-ssaf-analyzer",
     "//clang/tools/clang-ssaf-format",
     "//clang/tools/clang-ssaf-linker",
     "//clang/tools/clang-sycl-linker",

@@ -26,7 +26,7 @@ func.func @_QQmain() {
   %7:2 = hlfir.declare %6 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
   %16 = omp.map.info var_ptr(%7#1 : !fir.ref<!record_t>, !record_t) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<!record_t> {name = "dst_record"}
   %17 = omp.map.info var_ptr(%7#1 : !fir.ref<!record_t>, !record_t) map_clauses(implicit, tofrom) capture(ByRef) mapper(@record_mapper) -> !fir.ref<!record_t> {name = "dst_record_with_mapper"}
-  omp.target map_entries(%16 -> %arg0, %17 -> %arg1 : !fir.ref<!record_t>, !fir.ref<!record_t>) {
+  omp.target kernel_type(generic) map_entries(%16 -> %arg0, %17 -> %arg1 : !fir.ref<!record_t>, !fir.ref<!record_t>) {
     %20:2 = hlfir.declare %arg0 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
     %21:2 = hlfir.declare %arg1 {uniq_name = "_QFEdst_record"} : (!fir.ref<!record_t>) -> (!fir.ref<!record_t>, !fir.ref<!record_t>)
 
@@ -43,7 +43,7 @@ func.func @_QQmain() {
 
 // CHECK: %[[UPPER_BOUND:.*]] = arith.subi %{{.*}}#1, %{{c1.*}} : index
 
-// CHECK: %[[BOUNDS:.*]] = omp.map.bounds 
+// CHECK: %[[BOUNDS:.*]] = omp.map.bounds
 // CHECK-SAME: lower_bound(%{{c0.*}} : index) upper_bound(%[[UPPER_BOUND]] : index)
 // CHECK-SAME: extent(%{{.*}}#1 : index) stride(%{{.*}}#2 : index)
 // CHECK-SAME: start_idx(%{{.*}}#0 : index) {stride_in_bytes = true}
@@ -57,8 +57,13 @@ func.func @_QQmain() {
 
 // CHECK: %[[FIELD_MAP:.*]] = omp.map.info var_ptr(
 // CHECK-SAME: %[[FIELD_COORD]] : {{.*}}) map_clauses(
-// CHECK-SAME: implicit, to) capture(ByRef) ->
+// CHECK-SAME: always, implicit, to) capture(ByRef) ->
 // CHECK-SAME: {{.*}} {name = "dst_record.to_implicitly_map.implicit_map"}
+
+// CHECK: %[[ATTACH_MAP:.*]] = omp.map.info var_ptr(
+// CHECK-SAME: %[[FIELD_COORD]] : {{.*}}) map_clauses(
+// CHECK-SAME: attach, ref_ptr, ref_ptee) capture(ByRef)
+// CHECK-SAME: var_ptr_ptr(%[[BASE_ADDR]] : {{.*}}
 
 // CHECK: %[[RECORD_MAP:.*]] = omp.map.info var_ptr(
 // CHECK-SAME: %[[RECORD_DECL]]#1 : {{.*}}) map_clauses(
@@ -71,6 +76,7 @@ func.func @_QQmain() {
 // Implicit field mapping is the same as for the non-mapper case.
 // CHECK: omp.map.info
 // CHECK: omp.map.info
+// CHECK: omp.map.info
 
 // Verify that partial-map is not set if the map info op uses a user-defined (or
 // compiler-emitted) mapper.
@@ -80,7 +86,7 @@ func.func @_QQmain() {
 // CHECK-SAME: members(%{{.*}}, %{{.*}} : [1], [1, 0] : {{.*}}) -> {{.*}}> {name =
 // CHECK-SAME: "dst_record_with_mapper"}
 
-// CHECK: omp.target map_entries(
+// CHECK: omp.target kernel_type(generic) map_entries(
 // CHECK-SAME: %[[RECORD_MAP]] -> %{{[^[:space:]]+}},
 // CHECK-SAME: %[[FIELD_MAP]] -> %{{[^[:space:]]+}},
 // CHECK-SAME: %[[FIELD_BASE_ADDR_MAP]] -> %{{[^[:space:]]+}}

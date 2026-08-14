@@ -310,6 +310,17 @@ bool SBValue::SetValueFromCString(const char *value_str, lldb::SBError &error) {
   return success;
 }
 
+bool SBValue::CanSetValue() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return false;
+
+  return value_sp->CanSetValue();
+}
+
 lldb::SBTypeFormat SBValue::GetTypeFormat() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -382,6 +393,33 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
   return synthetic;
 }
 
+void SBValue::SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic) {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  lldb::ScriptedSyntheticChildrenSP synthetic_sp(synthetic.GetSP());
+  if (value_sp) {
+    value_sp->SetSyntheticChildrenOverride(synthetic_sp);
+  }
+}
+
+lldb::SBScriptObject SBValue::GetTypeSyntheticImplementation() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+
+  auto frontend = value_sp->GetSyntheticChildrenFrontEnd();
+  if (!frontend)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+
+  return lldb::SBScriptObject(frontend->GetImplementation(),
+                              eScriptLanguageDefault);
+}
+
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
                                            SBType type) {
   LLDB_INSTRUMENT_VA(this, name, offset, type);
@@ -437,7 +475,7 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
     new_value_sp = value_sp->CreateChildValueObjectFromExpression(
         name, expression, exe_ctx, options.ref());
     if (new_value_sp)
-      new_value_sp->SetName(ConstString(name));
+      new_value_sp->SetName(name);
   }
   sb_value.SetSP(new_value_sp);
   return sb_value;
@@ -595,6 +633,20 @@ SBValue::GetChildMemberWithName(const char *name,
   SBValue sb_value;
   sb_value.SetSP(child_sp, use_dynamic_value, GetPreferSyntheticValue());
 
+  return sb_value;
+}
+
+lldb::SBValue SBValue::GetParent() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBValue sb_value;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (value_sp) {
+    ValueObject *parent = value_sp->GetParent();
+    if (parent)
+      sb_value.SetSP(parent->GetSP());
+  }
   return sb_value;
 }
 
@@ -1104,7 +1156,7 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
                                 value_sp.get());
 
   if (name)
-    res_val_sp->SetName(ConstString(name));
+    res_val_sp->SetName(name);
 
   SBValue result;
   result.SetSP(res_val_sp, options.GetFetchDynamicValue());
@@ -1314,7 +1366,7 @@ lldb::SBValue SBValue::Clone(const char *new_name) {
   lldb::ValueObjectSP value_sp(GetSP(locker));
 
   if (value_sp)
-    return lldb::SBValue(value_sp->Clone(ConstString(new_name)));
+    return lldb::SBValue(value_sp->Clone(new_name));
   else
     return lldb::SBValue();
 }

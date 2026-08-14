@@ -85,13 +85,6 @@ public:
       return V;
     }
 
-    static LocalVarDef tombstoneValue() {
-      LocalVarDef V;
-      std::memset(&V, 0xff, sizeof(LocalVarDef));
-      V.InMemory = 0;
-      return V;
-    }
-
     unsigned hashValue() const {
       uint64_t H = 0;
       std::memcpy(&H, this, sizeof(uint64_t));
@@ -259,6 +252,8 @@ private:
   // belong in. A null local scope represents the global scope.
   typedef SmallVector<CVGlobalVariable, 1> GlobalVariableList;
   DenseMap<const DIScope*, std::unique_ptr<GlobalVariableList> > ScopeGlobals;
+  DenseMap<const DIGlobalVariableExpression *, const GlobalVariable *>
+      GlobalMap;
 
   // Array of global variables which  need to be emitted into a COMDAT section.
   SmallVector<CVGlobalVariable, 1> ComdatVariables;
@@ -411,6 +406,8 @@ private:
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
   void collectGlobalVariableInfo();
+  void
+  collectGlobalOrStaticLocalVariableInfo(const DIGlobalVariableExpression *GVE);
   void collectVariableInfo(const DISubprogram *SP);
 
   void collectVariableInfoFromMFTable(DenseSet<InlinedEntity> &Processed);
@@ -554,14 +551,6 @@ public:
 };
 
 template <> struct DenseMapInfo<CodeViewDebug::LocalVarDef> {
-
-  static inline CodeViewDebug::LocalVarDef getEmptyKey() {
-    return CodeViewDebug::LocalVarDef::emptyValue();
-  }
-
-  static inline CodeViewDebug::LocalVarDef getTombstoneKey() {
-    return CodeViewDebug::LocalVarDef::tombstoneValue();
-  }
 
   static unsigned getHashValue(const CodeViewDebug::LocalVarDef &DR) {
     return DR.hashValue();
