@@ -558,6 +558,37 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP unroll_full operation
+//===----------------------------------------------------------------------===//
+
+def UnrollFullOp : OpenMPTransform_Op<"unroll_full", []> {
+  let summary = "OpenMP full unroll operation";
+  let description = [{
+    Represents a `#pragma omp unroll full` construct introduced in OpenMP 5.1.
+
+    The operation has one applyee and no generatees. The applyee is fully
+    unrolled, so it must have a compile-time constant trip count. Because no
+    loop remains afterwards, there is no generatee and no further
+    loop-associated transformation can be chained onto it.
+
+    The lowering is implemented using `OpenMPIRBuilder::unrollLoopFull`.
+
+    Assembly formats:
+      omp.unroll_full(%cli)
+      omp.unroll_full(%cli) -> ()
+  }];
+
+  let arguments = (ins CanonicalLoopInfoType:$applyee);
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$cli)>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // OpenMP unroll_partial operation
 //===----------------------------------------------------------------------===//
 
@@ -1997,8 +2028,16 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture", traits = [
         omp.atomic.write ...
         omp.terminator
       }
+
+      omp.atomic.capture {
+        omp.atomic.read ...
+        omp.atomic.compare ...
+        omp.terminator
+      }
     ```
   }] # clausesDescription;
+
+  let arguments = !con(clausesArgs, (ins UnitAttr:$fail_only));
 
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);
@@ -2015,6 +2054,10 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture", traits = [
     /// Returns the `atomic.update` operation inside the region, if any.
     /// Otherwise, it returns nullptr.
     AtomicUpdateOp getAtomicUpdateOp();
+
+    /// Returns the `atomic.compare` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicCompareOp getAtomicCompareOp();
   }] # clausesExtraClassDeclaration;
 
   let hasRegionVerifier = 1;

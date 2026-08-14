@@ -560,8 +560,10 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
                                         DeadSliceSizeInBits, Assign,
                                         NewFragment) ||
         !NewFragment) {
-      // We couldn't calculate the intersecting fragment for some reason. Be
-      // cautious and unlink the whole assignment from the store.
+      // Either the intersection couldn't be worked out, or it covers the
+      // entire variable region described by the record. Full coverage leaves
+      // NewFragment empty rather than making calculateFragmentIntersect fail,
+      // so unlink the whole assignment from the store in both cases.
       Assign->setKillAddress();
       Assign->setAssignId(GetDeadLink());
       continue;

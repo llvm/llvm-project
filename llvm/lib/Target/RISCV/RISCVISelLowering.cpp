@@ -17884,7 +17884,7 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     // MULH*/MULHR*: shift amount must be element size, only for i16/i32
     if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
       return SDValue();
-    if (!Subtarget.is64Bit() && (VT == MVT::v2i32 || VT == MVT::v4i16))
+    if (!Subtarget.is64Bit() && VT == MVT::v4i16)
       return SDValue();
     if (IsRounding) {
       if (LHSIsSExt && RHSIsSExt) {
@@ -17910,6 +17910,21 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
           std::swap(A, B);
       } else
         return SDValue();
+    }
+
+    // RV32 has scalar rounded multiply-high instructions, but no paired form.
+    // Split v2i32 while the widening multiply shape is still visible.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      if (!IsRounding)
+        return SDValue();
+      SDLoc DL(N);
+      SDValue ALo = DAG.getExtractVectorElt(DL, MVT::i32, A, 0);
+      SDValue AHi = DAG.getExtractVectorElt(DL, MVT::i32, A, 1);
+      SDValue BLo = DAG.getExtractVectorElt(DL, MVT::i32, B, 0);
+      SDValue BHi = DAG.getExtractVectorElt(DL, MVT::i32, B, 1);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, ALo, BLo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, AHi, BHi);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
     break;
   }
@@ -20416,6 +20431,13 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
     // their operand types
     if (VT.getScalarSizeInBits() > SrcVT.getScalarSizeInBits() * 2 ||
         VT.getScalarSizeInBits() * 2 < SrcVT.getScalarSizeInBits())
+      return SDValue();
+
+    // If we'll need to write FRM, don't fold unless the src has a single use.
+    // This avoids potentially writing FRM multiple times. RTZ has a dedicated
+    // instruction and DYN uses the current FRM, so neither needs a write.
+    if (FRM != RISCVFPRndMode::RTZ && FRM != RISCVFPRndMode::DYN &&
+        !Src.hasOneUse())
       return SDValue();
 
     // Make fixed-length vectors scalable first
@@ -27626,12 +27648,12 @@ ISD::NodeType RISCVTargetLowering::getExtendForAtomicRMWArg(unsigned Op) const {
 }
 
 Register RISCVTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return RISCV::X10;
 }
 
 Register RISCVTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return RISCV::X11;
 }
 

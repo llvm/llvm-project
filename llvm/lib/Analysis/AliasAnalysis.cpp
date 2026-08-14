@@ -786,8 +786,9 @@ INITIALIZE_PASS(ExternalAAWrapperPass, "external-aa", "External Alias Analysis",
                 false, true)
 
 ImmutablePass *
-llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback) {
-  return new ExternalAAWrapperPass(std::move(Callback));
+llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback,
+                                  bool RunEarly) {
+  return new ExternalAAWrapperPass(std::move(Callback), RunEarly);
 }
 
 AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {}

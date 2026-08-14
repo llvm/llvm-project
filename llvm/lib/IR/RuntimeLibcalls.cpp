@@ -9,8 +9,10 @@
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -24,6 +26,7 @@ using namespace RTLIB;
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
+#define GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL
 #include "llvm/IR/RuntimeLibcalls.inc"
 
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
@@ -38,7 +41,8 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   if (ExceptionModel == ExceptionHandling::None)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
-  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
+  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName,
+               TT.getDefaultLongDoubleFormat());
 
   // TODO: Tablegen should generate these sets
   switch (VecLib) {
@@ -101,9 +105,11 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   }
 }
 
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
-    : RuntimeLibcallsInfo(M.getTargetTriple()) {
-  // TODO: Consider module flags
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M) {
+  // TODO: Consider the remaining module flags.
+  const Triple &TT = M.getTargetTriple();
+  initLibcalls(TT, TT.getDefaultExceptionHandling(), FloatABI::Default,
+               EABI::Default, /*ABIName=*/"", M.getLongDoubleFormat());
 }
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
@@ -111,9 +117,10 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
-                                       EABI EABIVersion, StringRef ABIName) {
+                                       EABI EABIVersion, StringRef ABIName,
+                                       LongDoubleFormat LongDoubleFormat) {
   setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
-                              ABIName);
+                              ABIName, LongDoubleFormat);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
