@@ -5300,8 +5300,6 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
-  assert((as == NVVMMemorySpace::Generic || as == NVVMMemorySpace::Shared) &&
-         "expected generic or shared memory address");
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2

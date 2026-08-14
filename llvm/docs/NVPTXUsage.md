@@ -2819,6 +2819,7 @@ overloaded pointer argument may use generic or shared memory address space;
 a shared pointer emits the `.shared::cta` qualifier. The `.cg1` and `.cg2`
 variants generate `cta_group::1` and `cta_group::2` variants of the instruction
 respectively. The `.exclusive` variants claim ownership of the allocation permit.
+No other allocation may exist at the same time as an exclusive allocation.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 
