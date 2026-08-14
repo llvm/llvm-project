@@ -1308,15 +1308,15 @@ define void @histogram_nxv16i8(<vscale x 16 x ptr> %buckets, <vscale x 16 x i1> 
 
 define void @histogram_v2i64(<2 x ptr> %buckets, <2 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v2i64'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:14 SizeLat:8 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:15 Lat:24 SizeLat:18 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v2i64'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:14 SizeLat:8 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:15 Lat:24 SizeLat:18 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v2i64'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:14 SizeLat:8 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:15 Lat:24 SizeLat:18 for: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %buckets, i64 1, <2 x i1> %mask)
@@ -1325,15 +1325,15 @@ define void @histogram_v2i64(<2 x ptr> %buckets, <2 x i1> %mask) {
 
 define void @histogram_v4i32(<4 x ptr> %buckets, <4 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v4i32'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:14 Lat:28 SizeLat:16 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:30 Lat:48 SizeLat:36 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v4i32'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:14 Lat:28 SizeLat:16 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:30 Lat:48 SizeLat:36 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v4i32'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:14 Lat:28 SizeLat:16 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:30 Lat:48 SizeLat:36 for: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> %buckets, i32 1, <4 x i1> %mask)
@@ -1342,15 +1342,15 @@ define void @histogram_v4i32(<4 x ptr> %buckets, <4 x i1> %mask) {
 
 define void @histogram_v8i16(<8 x ptr> %buckets, <8 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v8i16'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:28 Lat:56 SizeLat:32 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:60 Lat:96 SizeLat:72 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v8i16'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:28 Lat:56 SizeLat:32 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:60 Lat:96 SizeLat:72 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v8i16'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:28 Lat:56 SizeLat:32 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:60 Lat:96 SizeLat:72 for: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> %buckets, i16 1, <8 x i1> %mask)
@@ -1359,15 +1359,15 @@ define void @histogram_v8i16(<8 x ptr> %buckets, <8 x i1> %mask) {
 
 define void @histogram_v16i8(<16 x ptr> %buckets, <16 x i1> %mask) {
 ; CHECK-VSCALE-1-LABEL: 'histogram_v16i8'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:56 Lat:112 SizeLat:64 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:120 Lat:192 SizeLat:144 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-VSCALE-2-LABEL: 'histogram_v16i8'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:56 Lat:112 SizeLat:64 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:120 Lat:192 SizeLat:144 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'histogram_v16i8'
-; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:56 Lat:112 SizeLat:64 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:120 Lat:192 SizeLat:144 for: call void @llvm.experimental.vector.histogram.add.v16p0.i8(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.v16p0.i64(<16 x ptr> %buckets, i8 1, <16 x i1> %mask)
