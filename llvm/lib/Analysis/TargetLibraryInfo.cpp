@@ -1079,12 +1079,82 @@ static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
   return FTy.getReturnType() == SizedPtrTy;
 }
 
+static bool isValidDivAggregateType(Type *Ty, Type *ElementTy) {
+  if (auto *StructTy = dyn_cast<StructType>(Ty))
+    return StructTy->getNumElements() == 2 &&
+           StructTy->getElementType(0) == ElementTy &&
+           StructTy->getElementType(1) == ElementTy;
+
+  if (auto *ArrayTy = dyn_cast<ArrayType>(Ty))
+    return ArrayTy->getNumElements() == 2 &&
+           ArrayTy->getElementType() == ElementTy;
+
+  return false;
+}
+
+static bool isValidDivReturnType(Type *Ty, Type *ElementTy) {
+  if (auto *IntegerTy = dyn_cast<IntegerType>(Ty))
+    return IntegerTy->getBitWidth() == 2 * ElementTy->getIntegerBitWidth();
+
+  if (auto *StructTy = dyn_cast<StructType>(Ty))
+    if (StructTy->getNumElements() == 1)
+      if (auto *IntegerTy = dyn_cast<IntegerType>(StructTy->getElementType(0)))
+        return IntegerTy->getBitWidth() == 2 * ElementTy->getIntegerBitWidth();
+
+  return isValidDivAggregateType(Ty, ElementTy);
+}
+
+static bool isValidProtoForDiv(const FunctionType &FTy, LibFunc F,
+                               unsigned IntBits) {
+  if (FTy.isFunctionVarArg())
+    return false;
+
+  unsigned ArgOffset = 0;
+  if (FTy.getReturnType()->isVoidTy()) {
+    if (FTy.getNumParams() != 3 || !FTy.getParamType(0)->isPointerTy())
+      return false;
+    ArgOffset = 1;
+  } else if (FTy.getNumParams() != 2) {
+    return false;
+  }
+
+  auto *ElementTy = dyn_cast<IntegerType>(FTy.getParamType(ArgOffset));
+  if (!ElementTy || FTy.getParamType(ArgOffset + 1) != ElementTy)
+    return false;
+
+  FuncArgTypeID ElementTypeID;
+  switch (F) {
+  case LibFunc_div:
+    ElementTypeID = Int;
+    break;
+  case LibFunc_ldiv:
+    ElementTypeID = Long;
+    break;
+  case LibFunc_lldiv:
+    ElementTypeID = LLong;
+    break;
+  default:
+    llvm_unreachable("not a div-family libcall");
+  }
+  if (!matchType(ElementTypeID, ElementTy, IntBits, /*SizeTBits=*/0))
+    return false;
+
+  Type *ReturnTy = FTy.getReturnType();
+  if (ReturnTy->isVoidTy())
+    return true;
+  return isValidDivReturnType(ReturnTy, ElementTy);
+}
+
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
                                                    LibFunc F,
                                                    const Module &M) const {
   unsigned NumParams = FTy.getNumParams();
 
   switch (F) {
+  case LibFunc_div:
+  case LibFunc_ldiv:
+  case LibFunc_lldiv:
+    return isValidProtoForDiv(FTy, F, getIntSize());
     // Special handling for <complex.h> functions:
   case LibFunc_cabs:
   case LibFunc_cabsf:
@@ -1206,7 +1276,19 @@ bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
     return false;
 
   F = FDecl.LibFuncCache;
-  return isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M);
+  if (!isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M))
+    return false;
+
+  if ((F == LibFunc_div || F == LibFunc_ldiv || F == LibFunc_lldiv) &&
+      FDecl.getReturnType()->isVoidTy()) {
+    const Argument *SRet = FDecl.getArg(0);
+    if (!SRet->hasStructRetAttr())
+      return false;
+    return isValidDivAggregateType(SRet->getParamStructRetType(),
+                                   FDecl.getFunctionType()->getParamType(1));
+  }
+
+  return true;
 }
 
 bool TargetLibraryInfoImpl::getLibFunc(unsigned int Opcode, Type *Ty,

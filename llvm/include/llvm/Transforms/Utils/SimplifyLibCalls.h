@@ -222,6 +222,7 @@ private:
   Value *optimizeFFS(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFls(CallInst *CI, IRBuilderBase &B);
   Value *optimizeAbs(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeDiv(CallInst *CI, IRBuilderBase &B);
   Value *optimizeIsDigit(CallInst *CI, IRBuilderBase &B);
   Value *optimizeIsAscii(CallInst *CI, IRBuilderBase &B);
   Value *optimizeToAscii(CallInst *CI, IRBuilderBase &B);

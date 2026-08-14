@@ -726,6 +726,9 @@ def cosl : TargetLibCall<"cosl", LDbl, [LDbl]>;
 /// char *ctermid(char *s);
 def ctermid : TargetLibCall<"ctermid", Ptr, [Ptr]>;
 
+/// div_t div(int numer, int denom);
+def div : TargetLibCall<"div", ? /* Checked manually. */>;
+
 /// double erf(double x);
 def erf : TargetLibCall<"erf", Dbl, [Dbl]>;
 
@@ -1092,8 +1095,14 @@ def ldexpf : TargetLibCall<"ldexpf", Flt, [Flt, Int]>;
 /// long double ldexpl(long double x, int n);
 def ldexpl : TargetLibCall<"ldexpl", LDbl, [LDbl, Int]>;
 
+/// ldiv_t ldiv(long int numer, long int denom);
+def ldiv : TargetLibCall<"ldiv", ? /* Checked manually. */>;
+
 /// long long int llabs(long long int j);
 def llabs : TargetLibCall<"llabs", LLong, [LLong]>;
+
+/// lldiv_t lldiv(long long int numer, long long int denom);
+def lldiv : TargetLibCall<"lldiv", ? /* Checked manually. */>;
 
 /// double log(double x);
 def log : TargetLibCall<"log", Dbl, [Dbl]>;

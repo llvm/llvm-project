@@ -41,6 +41,7 @@
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
 #include <cmath>
+#include <utility>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -3282,6 +3283,65 @@ Value *LibCallSimplifier::optimizeAbs(CallInst *CI, IRBuilderBase &B) {
   return B.CreateSelect(IsNeg, NegX, X);
 }
 
+static Value *createDivResult(IRBuilderBase &B, const DataLayout &DL,
+                              Type *ResultTy, Value *Quot, Value *Rem) {
+  if (auto *IntegerResultTy = dyn_cast<IntegerType>(ResultTy)) {
+    Value *Low = Quot;
+    Value *High = Rem;
+    if (DL.isBigEndian())
+      std::swap(Low, High);
+
+    Low = B.CreateZExt(Low, IntegerResultTy, "div.low");
+    High = B.CreateZExt(High, IntegerResultTy, "div.high");
+    High = B.CreateShl(High, Quot->getType()->getIntegerBitWidth(),
+                       "div.high.shift");
+    return B.CreateOr(Low, High, "div.result");
+  }
+
+  if (auto *StructResultTy = dyn_cast<StructType>(ResultTy);
+      StructResultTy && StructResultTy->getNumElements() == 1) {
+    Value *Packed =
+        createDivResult(B, DL, StructResultTy->getElementType(0), Quot, Rem);
+    return B.CreateInsertValue(PoisonValue::get(ResultTy), Packed, 0,
+                               "div.result.insert");
+  }
+
+  Value *Result = PoisonValue::get(ResultTy);
+  if (isa<StructType, ArrayType>(ResultTy)) {
+    Result = B.CreateInsertValue(Result, Quot, 0, "div.quot.insert");
+    return B.CreateInsertValue(Result, Rem, 1, "div.rem.insert");
+  }
+
+  llvm_unreachable("unexpected div result type");
+}
+
+Value *LibCallSimplifier::optimizeDiv(CallInst *CI, IRBuilderBase &B) {
+  Function *Callee = CI->getCalledFunction();
+  if (!Callee || CI->getFunctionType() != Callee->getFunctionType())
+    return nullptr;
+
+  bool UsesSRet = CI->getType()->isVoidTy();
+  unsigned ArgOffset = UsesSRet ? 1 : 0;
+  if (UsesSRet) {
+    if (!CI->hasStructRetAttr() ||
+        CI->getParamStructRetType(0) != Callee->getParamStructRetType(0))
+      return nullptr;
+  }
+
+  Value *Numer = CI->getArgOperand(ArgOffset);
+  Value *Denom = CI->getArgOperand(ArgOffset + 1);
+  Value *Quot = B.CreateSDiv(Numer, Denom, "div.quot");
+  Value *Rem = B.CreateSRem(Numer, Denom, "div.rem");
+
+  if (!UsesSRet)
+    return createDivResult(B, DL, CI->getType(), Quot, Rem);
+
+  Type *ResultTy = CI->getParamStructRetType(0);
+  Value *Result = createDivResult(B, DL, ResultTy, Quot, Rem);
+  B.CreateStore(Result, CI->getArgOperand(0));
+  return CI;
+}
+
 Value *LibCallSimplifier::optimizeIsDigit(CallInst *CI, IRBuilderBase &B) {
   // isdigit(c) -> (c-'0') <u 10
   Value *Op = CI->getArgOperand(0);
@@ -4316,6 +4376,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     case LibFunc_labs:
     case LibFunc_llabs:
       return optimizeAbs(CI, Builder);
+    case LibFunc_div:
+    case LibFunc_ldiv:
+    case LibFunc_lldiv:
+      return optimizeDiv(CI, Builder);
     case LibFunc_isdigit:
       return optimizeIsDigit(CI, Builder);
     case LibFunc_isascii:

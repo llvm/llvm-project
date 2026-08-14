@@ -14,20 +14,52 @@ declare [2 x i64] @lldiv(i64, i64)
 declare { i32, i64 } @"\01lldiv"(i64, i64)
 
 define i64 @div_packed(i32 %numer, i32 %denom) {
-; CHECK-LABEL: define i64 @div_packed(
-; CHECK-SAME: i32 [[NUMER:%.*]], i32 [[DENOM:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call i64 @div(i32 [[NUMER]], i32 [[DENOM]])
-; CHECK-NEXT:    ret i64 [[RESULT]]
+; LITTLE-LABEL: define i64 @div_packed(
+; LITTLE-SAME: i32 [[NUMER:%.*]], i32 [[DENOM:%.*]]) {
+; LITTLE-NEXT:    [[DIV_QUOT:%.*]] = sdiv i32 [[NUMER]], [[DENOM]]
+; LITTLE-NEXT:    [[DIV_REM:%.*]] = srem i32 [[NUMER]], [[DENOM]]
+; LITTLE-NEXT:    [[DIV_LOW:%.*]] = zext i32 [[DIV_QUOT]] to i64
+; LITTLE-NEXT:    [[DIV_HIGH:%.*]] = zext i32 [[DIV_REM]] to i64
+; LITTLE-NEXT:    [[DIV_HIGH_SHIFT:%.*]] = shl nuw i64 [[DIV_HIGH]], 32
+; LITTLE-NEXT:    [[DIV_RESULT:%.*]] = or disjoint i64 [[DIV_HIGH_SHIFT]], [[DIV_LOW]]
+; LITTLE-NEXT:    ret i64 [[DIV_RESULT]]
+;
+; BIG-LABEL: define i64 @div_packed(
+; BIG-SAME: i32 [[NUMER:%.*]], i32 [[DENOM:%.*]]) {
+; BIG-NEXT:    [[DIV_QUOT:%.*]] = sdiv i32 [[NUMER]], [[DENOM]]
+; BIG-NEXT:    [[DIV_REM:%.*]] = srem i32 [[NUMER]], [[DENOM]]
+; BIG-NEXT:    [[DIV_LOW:%.*]] = zext i32 [[DIV_REM]] to i64
+; BIG-NEXT:    [[DIV_HIGH:%.*]] = zext i32 [[DIV_QUOT]] to i64
+; BIG-NEXT:    [[DIV_HIGH_SHIFT:%.*]] = shl nuw i64 [[DIV_HIGH]], 32
+; BIG-NEXT:    [[DIV_RESULT:%.*]] = or disjoint i64 [[DIV_HIGH_SHIFT]], [[DIV_LOW]]
+; BIG-NEXT:    ret i64 [[DIV_RESULT]]
 ;
   %result = call i64 @div(i32 %numer, i32 %denom)
   ret i64 %result
 }
 
 define { i64 } @div_packed_wrapper(i32 %numer, i32 %denom) {
-; CHECK-LABEL: define { i64 } @div_packed_wrapper(
-; CHECK-SAME: i32 [[NUMER:%.*]], i32 [[DENOM:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call { i64 } @"\01div"(i32 [[NUMER]], i32 [[DENOM]])
-; CHECK-NEXT:    ret { i64 } [[RESULT]]
+; LITTLE-LABEL: define { i64 } @div_packed_wrapper(
+; LITTLE-SAME: i32 [[NUMER:%.*]], i32 [[DENOM:%.*]]) {
+; LITTLE-NEXT:    [[DIV_QUOT:%.*]] = sdiv i32 [[NUMER]], [[DENOM]]
+; LITTLE-NEXT:    [[DIV_REM:%.*]] = srem i32 [[NUMER]], [[DENOM]]
+; LITTLE-NEXT:    [[DIV_LOW:%.*]] = zext i32 [[DIV_QUOT]] to i64
+; LITTLE-NEXT:    [[DIV_HIGH:%.*]] = zext i32 [[DIV_REM]] to i64
+; LITTLE-NEXT:    [[DIV_HIGH_SHIFT:%.*]] = shl nuw i64 [[DIV_HIGH]], 32
+; LITTLE-NEXT:    [[DIV_RESULT:%.*]] = or disjoint i64 [[DIV_HIGH_SHIFT]], [[DIV_LOW]]
+; LITTLE-NEXT:    [[DIV_RESULT_INSERT:%.*]] = insertvalue { i64 } poison, i64 [[DIV_RESULT]], 0
+; LITTLE-NEXT:    ret { i64 } [[DIV_RESULT_INSERT]]
+;
+; BIG-LABEL: define { i64 } @div_packed_wrapper(
+; BIG-SAME: i32 [[NUMER:%.*]], i32 [[DENOM:%.*]]) {
+; BIG-NEXT:    [[DIV_QUOT:%.*]] = sdiv i32 [[NUMER]], [[DENOM]]
+; BIG-NEXT:    [[DIV_REM:%.*]] = srem i32 [[NUMER]], [[DENOM]]
+; BIG-NEXT:    [[DIV_LOW:%.*]] = zext i32 [[DIV_REM]] to i64
+; BIG-NEXT:    [[DIV_HIGH:%.*]] = zext i32 [[DIV_QUOT]] to i64
+; BIG-NEXT:    [[DIV_HIGH_SHIFT:%.*]] = shl nuw i64 [[DIV_HIGH]], 32
+; BIG-NEXT:    [[DIV_RESULT:%.*]] = or disjoint i64 [[DIV_HIGH_SHIFT]], [[DIV_LOW]]
+; BIG-NEXT:    [[DIV_RESULT_INSERT:%.*]] = insertvalue { i64 } poison, i64 [[DIV_RESULT]], 0
+; BIG-NEXT:    ret { i64 } [[DIV_RESULT_INSERT]]
 ;
   %result = call { i64 } @"\01div"(i32 %numer, i32 %denom)
   ret { i64 } %result
@@ -36,7 +68,10 @@ define { i64 } @div_packed_wrapper(i32 %numer, i32 %denom) {
 define { i64, i64 } @ldiv_struct(i64 %numer, i64 %denom) {
 ; CHECK-LABEL: define { i64, i64 } @ldiv_struct(
 ; CHECK-SAME: i64 [[NUMER:%.*]], i64 [[DENOM:%.*]]) {
-; CHECK-NEXT:    [[DIV_REM_INSERT:%.*]] = call { i64, i64 } @ldiv(i64 [[NUMER]], i64 [[DENOM]])
+; CHECK-NEXT:    [[DIV_QUOT:%.*]] = sdiv i64 [[NUMER]], [[DENOM]]
+; CHECK-NEXT:    [[DIV_REM:%.*]] = srem i64 [[NUMER]], [[DENOM]]
+; CHECK-NEXT:    [[DIV_QUOT_INSERT:%.*]] = insertvalue { i64, i64 } poison, i64 [[DIV_QUOT]], 0
+; CHECK-NEXT:    [[DIV_REM_INSERT:%.*]] = insertvalue { i64, i64 } [[DIV_QUOT_INSERT]], i64 [[DIV_REM]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[DIV_REM_INSERT]]
 ;
   %result = call { i64, i64 } @ldiv(i64 %numer, i64 %denom)
@@ -46,7 +81,10 @@ define { i64, i64 } @ldiv_struct(i64 %numer, i64 %denom) {
 define [2 x i64] @lldiv_array(i64 %numer, i64 %denom) {
 ; CHECK-LABEL: define [2 x i64] @lldiv_array(
 ; CHECK-SAME: i64 [[NUMER:%.*]], i64 [[DENOM:%.*]]) {
-; CHECK-NEXT:    [[DIV_REM_INSERT:%.*]] = call [2 x i64] @lldiv(i64 [[NUMER]], i64 [[DENOM]])
+; CHECK-NEXT:    [[DIV_QUOT:%.*]] = sdiv i64 [[NUMER]], [[DENOM]]
+; CHECK-NEXT:    [[DIV_REM:%.*]] = srem i64 [[NUMER]], [[DENOM]]
+; CHECK-NEXT:    [[DIV_QUOT_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[DIV_QUOT]], 0
+; CHECK-NEXT:    [[DIV_REM_INSERT:%.*]] = insertvalue [2 x i64] [[DIV_QUOT_INSERT]], i64 [[DIV_REM]], 1
 ; CHECK-NEXT:    ret [2 x i64] [[DIV_REM_INSERT]]
 ;
   %result = call [2 x i64] @lldiv(i64 %numer, i64 %denom)
@@ -56,7 +94,11 @@ define [2 x i64] @lldiv_array(i64 %numer, i64 %denom) {
 define void @ldiv_sret(ptr %result, i32 %numer, i32 %denom) {
 ; CHECK-LABEL: define void @ldiv_sret(
 ; CHECK-SAME: ptr [[RESULT:%.*]], i32 [[NUMER:%.*]], i32 [[DENOM:%.*]]) {
-; CHECK-NEXT:    call void @"\01ldiv"(ptr sret([[DIV_SRET:%.*]]) [[RESULT]], i32 [[NUMER]], i32 [[DENOM]])
+; CHECK-NEXT:    [[DIV_QUOT:%.*]] = sdiv i32 [[NUMER]], [[DENOM]]
+; CHECK-NEXT:    [[DIV_REM:%.*]] = srem i32 [[NUMER]], [[DENOM]]
+; CHECK-NEXT:    store i32 [[DIV_QUOT]], ptr [[RESULT]], align 4
+; CHECK-NEXT:    [[RESULT_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[RESULT]], i64 4
+; CHECK-NEXT:    store i32 [[DIV_REM]], ptr [[RESULT_REPACK1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   call void @"\01ldiv"(ptr sret(%div_sret) %result, i32 %numer, i32 %denom)
@@ -94,6 +136,3 @@ define i64 @no_builtin(i32 %numer, i32 %denom) {
 }
 
 attributes #0 = { nobuiltin }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; BIG: {{.*}}
-; LITTLE: {{.*}}
