@@ -604,6 +604,16 @@ TEST_F(GOFFObjectFileTest, TXTConstruct) {
   GOFFData[Pos + 30] = (char)0xde;
   GOFFData[Pos + 31] = (char)0xf0;
 
+  // RLD record.
+  Pos = addNewRecord();
+  GOFFData[Pos] = (char)0x03;
+  GOFFData[Pos + 1] = (char)0x20;
+  GOFFData[Pos + 5] = (char)0x14;  // Length.
+  GOFFData[Pos + 10] = (char)0x04; // Target Length.
+  GOFFData[Pos + 17] = (char)0x03; // R-id.
+  GOFFData[Pos + 21] = (char)0x02; // P-id.
+  GOFFData[Pos + 25] = (char)0x04; // Offset.
+
   // END record.
   addEndRecord();
 
@@ -632,6 +642,21 @@ TEST_F(GOFFObjectFileTest, TXTConstruct) {
   ASSERT_THAT_EXPECTED(SectionContent, Succeeded());
   StringRef Contents = SectionContent.get();
   EXPECT_EQ(Contents, "\x12\x34\x56\x78\x9a\xbc\xde\xf0");
+
+  auto Relocations = Section.relocations();
+  ASSERT_EQ(std::distance(Relocations.begin(), Relocations.end()), 1);
+  RelocationRef Relocation = *Relocations.begin();
+  SymbolRef TargetSymbol = *Relocation.getSymbol();
+  Expected<StringRef> TargetSymbolNameOrErr =
+      GOFFObj->getSymbolName(TargetSymbol);
+  ASSERT_THAT_EXPECTED(TargetSymbolNameOrErr, Succeeded());
+  StringRef TargetSymbolName = TargetSymbolNameOrErr.get();
+  EXPECT_EQ(TargetSymbolName, "var#c");
+  SmallString<16> RelTypeName;
+  Relocation.getTypeName(RelTypeName);
+  EXPECT_EQ(RelTypeName, "R_00040000");
+  uint64_t Offset = Relocation.getOffset();
+  EXPECT_EQ(Offset, 4u);
 }
 
 TEST_F(GOFFObjectFileTest, GlobalSymbols) {
