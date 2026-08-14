@@ -302,12 +302,12 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
 class ValueCheck:
     def __init__(
         self,
-        name: string = None,
-        value: string = None,
-        type: string = None,
-        summary: string = None,
+        name: str = None,
+        value: str = None,
+        type: str = None,
+        summary: str = None,
         children: [ValueCheck] = None,
-        dereference: boolean = None,
+        dereference: bool = None,
         valobj: lldb.SBValue = None,
     ):
         """
