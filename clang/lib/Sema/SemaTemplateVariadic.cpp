@@ -446,7 +446,7 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
   if (sema::CapturingScopeInfo *CSI = getEnclosingLambdaOrBlock()) {
     for (auto &Pack : Unexpanded) {
       auto DeclaresThisPack = [&](NamedDecl *LocalPack) {
-        if (auto *TTPT = Pack.first.dyn_cast<const TemplateTypeParmType *>()) {
+        if (auto *TTPT = dyn_cast<const TemplateTypeParmType *>(Pack.first)) {
           auto *TTPD = dyn_cast<TemplateTypeParmDecl>(LocalPack);
           return TTPD && TTPD->getTypeForDecl() == TTPT;
         }
@@ -498,10 +498,10 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
 
   for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
     IdentifierInfo *Name = nullptr;
-    if (const TemplateTypeParmType *TTP
-          = Unexpanded[I].first.dyn_cast<const TemplateTypeParmType *>())
+    if (const TemplateTypeParmType *TTP =
+            dyn_cast<const TemplateTypeParmType *>(Unexpanded[I].first))
       Name = TTP->getIdentifier();
-    else if (NamedDecl *ND = Unexpanded[I].first.dyn_cast<NamedDecl *>())
+    else if (NamedDecl *ND = dyn_cast<NamedDecl *>(Unexpanded[I].first))
       Name = ND->getIdentifier();
 
     if (Name && NamesKnown.insert(Name).second)
@@ -576,7 +576,7 @@ bool Sema::DiagnoseUnexpandedParameterPackInRequiresExpr(RequiresExpr *RE) {
   llvm::SmallPtrSet<NamedDecl *, 8> ParmSet(llvm::from_range, Parms);
   SmallVector<UnexpandedParameterPack, 2> UnexpandedParms;
   for (auto Parm : Unexpanded)
-    if (ParmSet.contains(Parm.first.dyn_cast<NamedDecl *>()))
+    if (ParmSet.contains(dyn_cast<NamedDecl *>(Parm.first)))
       UnexpandedParms.push_back(Parm);
   if (UnexpandedParms.empty())
     return false;
@@ -861,13 +861,12 @@ bool Sema::CheckParameterPacksForExpansion(
     FunctionParmPackExpr *BindingPack = nullptr;
     std::optional<unsigned> NumPrecomputedArguments;
 
-    if (auto *TTP = ParmPack.first.dyn_cast<const TemplateTypeParmType *>()) {
+    if (auto *TTP = dyn_cast<const TemplateTypeParmType *>(ParmPack.first)) {
       Depth = TTP->getDepth();
       Index = TTP->getIndex();
       Name = TTP->getIdentifier();
-    } else if (auto *TST =
-                   ParmPack.first
-                       .dyn_cast<const TemplateSpecializationType *>()) {
+    } else if (auto *TST = dyn_cast<const TemplateSpecializationType *>(
+                   ParmPack.first)) {
       assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
       // Delay expansion, substitution is required to know the size.
       ShouldExpand = false;
@@ -882,9 +881,8 @@ bool Sema::CheckParameterPacksForExpansion(
                                                     : EllipsisLoc,
                   diag::err_unsupported_builtin_template_pack_expansion)
              << TST->getTemplateName();
-    } else if (auto *S =
-                   ParmPack.first
-                       .dyn_cast<const SubstBuiltinTemplatePackType *>()) {
+    } else if (auto *S = dyn_cast<const SubstBuiltinTemplatePackType *>(
+                   ParmPack.first)) {
       Name = nullptr;
       NumPrecomputedArguments = S->getNumArgs();
     } else {
@@ -1074,20 +1072,17 @@ UnsignedOrNone Sema::getNumArgumentsInExpansionFromUnexpanded(
     unsigned Index;
 
     if (const TemplateTypeParmType *TTP =
-            Unexpanded[I].first.dyn_cast<const TemplateTypeParmType *>()) {
+            dyn_cast<const TemplateTypeParmType *>(Unexpanded[I].first)) {
       Depth = TTP->getDepth();
       Index = TTP->getIndex();
-    } else if (auto *TST =
-                   Unexpanded[I]
-                       .first.dyn_cast<const TemplateSpecializationType *>()) {
+    } else if (auto *TST = dyn_cast<const TemplateSpecializationType *>(
+                   Unexpanded[I].first)) {
       // This is a dependent pack, we are not ready to expand it yet.
       assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
       (void)TST;
       return std::nullopt;
-    } else if (auto *PST =
-                   Unexpanded[I]
-                       .first
-                       .dyn_cast<const SubstBuiltinTemplatePackType *>()) {
+    } else if (auto *PST = dyn_cast<const SubstBuiltinTemplatePackType *>(
+                   Unexpanded[I].first)) {
       assert((!Result || *Result == PST->getNumArgs()) &&
              "inconsistent pack sizes");
       Result = PST->getNumArgs();

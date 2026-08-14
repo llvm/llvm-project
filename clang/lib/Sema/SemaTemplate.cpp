@@ -5964,7 +5964,7 @@ bool Sema::CheckTemplateArgumentList(
       llvm::SmallVector<UnexpandedParameterPack> Unexpanded;
       collectUnexpandedParameterPacks(TL.getPatternLoc(), Unexpanded);
       for (const auto &UPP : Unexpanded) {
-        auto *TST = UPP.first.dyn_cast<const TemplateSpecializationType *>();
+        auto *TST = dyn_cast<const TemplateSpecializationType *>(UPP.first);
         if (!TST)
           continue;
         assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
@@ -11896,10 +11896,10 @@ private:
       return;
 
     auto From = SD->getSpecializedTemplateOrPartial();
-    if (auto *TD = From.dyn_cast<ClassTemplateDecl *>())
+    if (auto *TD = dyn_cast<ClassTemplateDecl *>(From))
       checkTemplate(TD);
     else if (auto *TD =
-                 From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+                 dyn_cast<ClassTemplatePartialSpecializationDecl *>(From)) {
       if (!CheckDeclaration(TD))
         diagnose(TD, true);
       checkTemplate(TD);
@@ -11912,10 +11912,10 @@ private:
       return;
 
     auto From = SD->getSpecializedTemplateOrPartial();
-    if (auto *TD = From.dyn_cast<VarTemplateDecl *>())
+    if (auto *TD = dyn_cast<VarTemplateDecl *>(From))
       checkTemplate(TD);
     else if (auto *TD =
-                 From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+                 dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
       if (!CheckDeclaration(TD))
         diagnose(TD, true);
       checkTemplate(TD);

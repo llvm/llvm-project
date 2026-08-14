@@ -5335,7 +5335,7 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
       // that required a substituion first.
       bool SawPackTypes =
           llvm::any_of(Unexpanded, [](UnexpandedParameterPack P) {
-            return P.first.dyn_cast<const SubstBuiltinTemplatePackType *>();
+            return dyn_cast<const SubstBuiltinTemplatePackType *>(P.first);
           });
       if (!SawPackTypes) {
         Info.Expand = false;

@@ -308,11 +308,11 @@ public:
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
-    if (const auto *EscapeExpr = Target.dyn_cast<const Expr *>())
+    if (const auto *EscapeExpr = dyn_cast<const Expr *>(Target))
       S.Diag(EscapeExpr->getBeginLoc(),
              diag::note_lifetime_safety_suggestion_returned_here)
           << EscapeExpr->getSourceRange();
-    else if (const auto *EscapeField = Target.dyn_cast<const FieldDecl *>())
+    else if (const auto *EscapeField = dyn_cast<const FieldDecl *>(Target))
       S.Diag(EscapeField->getLocation(),
              diag::note_lifetime_safety_escapes_to_field_here)
           << EscapeField->getSourceRange();

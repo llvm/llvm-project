@@ -6557,7 +6557,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                          VarTemplatePartialSpecializationDecl *> PatternPtr =
           VarSpec->getSpecializedTemplateOrPartial();
       if (VarTemplatePartialSpecializationDecl *Partial =
-          PatternPtr.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(PatternPtr))
         cast<VarTemplateSpecializationDecl>(Var)->setInstantiationOf(
             Partial, &VarSpec->getTemplateInstantiationArgs());
 
@@ -6995,7 +6995,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // declarations to their instantiations.
     if (CurrentInstantiationScope) {
       if (auto Found = CurrentInstantiationScope->findInstantiationOf(D)) {
-        if (Decl *FD = Found->dyn_cast<Decl *>()) {
+        if (Decl *FD = dyn_cast<Decl *>(*Found)) {
           if (auto *BD = dyn_cast<BindingDecl>(FD);
               BD && BD->isParameterPack() && ArgPackSubstIndex) {
             return BD->getBindingPackDecls()[*ArgPackSubstIndex];

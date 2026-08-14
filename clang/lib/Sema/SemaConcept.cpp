@@ -1318,7 +1318,7 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction.IsSatisfied = true;
     return false;
   }
-  const auto *Template = Entity.dyn_cast<const NamedDecl *>();
+  const auto *Template = dyn_cast<const NamedDecl *>(Entity);
   if (!Template) {
     return ::CheckConstraintSatisfaction(
         *this, nullptr, AssociatedConstraints, TemplateArgsLists,
@@ -2047,9 +2047,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
 static void diagnoseUnsatisfiedConstraintExpr(
     Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
     bool First, concepts::NestedRequirement *Req) {
-  if (auto *Diag =
-          Record
-              .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
+  if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(Record)) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
           << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
@@ -2551,8 +2549,7 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   }
 
   // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
-  const NamedDecl *ND =
-      ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
+  const NamedDecl *ND = dyn_cast<const NamedDecl *>(ConstrainedDeclOrNestedReq);
   auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
   if (CacheEntry == NormalizationCache.end()) {
     auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
