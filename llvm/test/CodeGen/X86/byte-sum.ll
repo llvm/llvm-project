@@ -71,17 +71,16 @@ define i32 @byte_sum_v16_i32() nounwind {
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rcx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB0_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX2-NEXT:    vpsadbw (%rcx,%rax), %xmm1, %xmm3
-; AVX2-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpsadbw (%rcx,%rax), %xmm0, %xmm2
+; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    addq $16, %rax
 ; AVX2-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; AVX2-NEXT:    jne .LBB0_1
 ; AVX2-NEXT:  # %bb.2: # %middle.block
-; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -101,14 +100,14 @@ define i32 @byte_sum_v16_i32() nounwind {
 ; AVX512BW-NEXT:    .p2align 4
 ; AVX512BW-NEXT:  .LBB0_1: # %vector.body
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512BW-NEXT:    vpsadbw (%rcx,%rax), %xmm1, %xmm2
-; AVX512BW-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpsadbw (%rcx,%rax), %xmm0, %xmm2
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    addq $16, %rax
 ; AVX512BW-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; AVX512BW-NEXT:    jne .LBB0_1
 ; AVX512BW-NEXT:  # %bb.2: # %middle.block
-; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
+; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512BW-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -241,17 +240,16 @@ define i32 @byte_sum_v32_i32() nounwind {
 ; AVX512BW-NEXT:    xorl %eax, %eax
 ; AVX512BW-NEXT:    movq a@GOTPCREL(%rip), %rcx
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512BW-NEXT:    .p2align 4
 ; AVX512BW-NEXT:  .LBB1_1: # %vector.body
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512BW-NEXT:    vpsadbw (%rcx,%rax), %ymm1, %ymm3
-; AVX512BW-NEXT:    vpaddd %zmm2, %zmm3, %zmm2
+; AVX512BW-NEXT:    vpsadbw (%rcx,%rax), %ymm0, %ymm2
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    addq $32, %rax
 ; AVX512BW-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; AVX512BW-NEXT:    jne .LBB1_1
 ; AVX512BW-NEXT:  # %bb.2: # %middle.block
-; AVX512BW-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -528,17 +526,16 @@ define i64 @byte_sum_v16_i64() nounwind {
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    movq a@GOTPCREL(%rip), %rcx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB3_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX2-NEXT:    vpsadbw (%rcx,%rax), %xmm1, %xmm3
-; AVX2-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpsadbw (%rcx,%rax), %xmm0, %xmm2
+; AVX2-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    addq $16, %rax
 ; AVX2-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; AVX2-NEXT:    jne .LBB3_1
 ; AVX2-NEXT:  # %bb.2: # %middle.block
-; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm1
+; AVX2-NEXT:    vpaddq %ymm0, %ymm1, %ymm1
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -555,17 +552,16 @@ define i64 @byte_sum_v16_i64() nounwind {
 ; AVX512BW-NEXT:    xorl %eax, %eax
 ; AVX512BW-NEXT:    movq a@GOTPCREL(%rip), %rcx
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512BW-NEXT:    .p2align 4
 ; AVX512BW-NEXT:  .LBB3_1: # %vector.body
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512BW-NEXT:    vpsadbw (%rcx,%rax), %xmm1, %xmm3
-; AVX512BW-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; AVX512BW-NEXT:    vpsadbw (%rcx,%rax), %xmm0, %xmm2
+; AVX512BW-NEXT:    vpaddq %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    addq $16, %rax
 ; AVX512BW-NEXT:    cmpq $1024, %rax # imm = 0x400
 ; AVX512BW-NEXT:    jne .LBB3_1
 ; AVX512BW-NEXT:  # %bb.2: # %middle.block
-; AVX512BW-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512BW-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
