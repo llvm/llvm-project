@@ -4278,8 +4278,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
 
     // guard constant vector elements must begin with a type.
     if (Lex.getKind() == lltok::APSInt)
-      return error(Lex.getLoc(), "unexpected vector type; constant vector "
-                                 "elements should not repeat the type");
+      return error(Lex.getLoc(), "constant vector elements must begin with a type");
 
     bool isPackedStruct = EatIfPresent(lltok::lbrace);
 
