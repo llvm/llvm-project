@@ -6,8 +6,8 @@
 ; RUN:   | FileCheck %s -check-prefix NOMAP
 
 ; Check that the bitcode reader handles this too.
-; RUN: llvm-as -o %t1.bc <%s
-; RUN: llvm-as -o %t2.bc <%S/Inputs/dicompositetype-unique.ll
+; RUN: llvm-as -disable-debug-info-type-map -o %t1.bc <%s
+; RUN: llvm-as -disable-debug-info-type-map -o %t2.bc <%S/Inputs/dicompositetype-unique.ll
 ; RUN: llvm-link -S -o - %t1.bc %t2.bc \
 ; RUN:   | FileCheck %s -check-prefix CHECK -check-prefix FORWARD
 ; RUN: llvm-link -S -o - %t2.bc %t1.bc \
