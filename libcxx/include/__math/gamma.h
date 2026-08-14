@@ -62,17 +62,19 @@ inline _LIBCPP_HIDE_FROM_ABI double tgamma(_A1 __x) _NOEXCEPT {
 // declare it differently in the first place: instead use `asm` to get the compiler to call the right
 // function.
 
-#if defined(_LIBCPP_MSVCRT_LIKE) // reentrant version is not available on Windows
+#ifdef _WIN32 // reentrant version is not available on Windows
 
 inline _LIBCPP_HIDE_FROM_ABI double __lgamma_r(double __d) _NOEXCEPT { return __builtin_lgamma(__d); }
 
 #else
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #  if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("_lgamma_r");
 #  else
 double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("lgamma_r");
 #  endif
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 inline _LIBCPP_HIDE_FROM_ABI double __lgamma_r(double __d) _NOEXCEPT {
   int __sign;

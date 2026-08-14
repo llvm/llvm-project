@@ -242,9 +242,9 @@ subroutine test_cache_2d_loop_vars()
 ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_cache_2d_loop_varsEi"}
 ! CHECK: fir.store %[[I_IV]] to %[[I_DECL]]#0 : !fir.ref<i32>
 ! Inner loop j (non-acc loop, fir.do_loop)
-! CHECK: fir.do_loop %[[J_IV:.*]] = {{.*}} iter_args(%[[J_ITER:.*]] = {{.*}})
+! CHECK: fir.do_loop %[[J_IV:.*]] = {{.*}} to {{.*}} step {{.*}} : i32 {
 ! Inner loop iterator j is stored to j variable
-! CHECK: fir.store %[[J_ITER]] to %[[J_REF:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[J_IV]] to %[[J_REF:.*]] : !fir.ref<i32>
 ! Dimension 1 bounds from j: lowerbound = j-1, upperbound = j
 ! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
 ! Dimension 2 bounds from i: lowerbound = i-1, upperbound = i
@@ -783,3 +783,61 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPfull_array_cache()
 ! CHECK: acc.cache var(%{{.*}}) bounds(%{{.*}})
+
+! Caching a section of an array with a non-unit lower bound produces a
+! box-typed acc.cache. The cache descriptor's extents and strides are decided
+! later by cache materialization, so the cached symbol must be re-declared with
+! the ORIGINAL lower bound ONLY -- a fir.shift, never a fir.shape_shift. A
+! fir.shape_shift would re-impose the host array's extents on the descriptor and
+! defeat the materialized (possibly packed) layout.
+subroutine test_cache_nonunit_lb_box()
+  integer :: arr(10:20)
+  integer :: i
+
+  !$acc loop
+  do i = 10, 20
+    !$acc cache(arr(12:18))
+    arr(i) = i
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_nonunit_lb_box()
+! The host array is declared with its full shape: lower bound 10, extent 11.
+! CHECK: %[[LB:.*]] = arith.constant 10 : index
+! CHECK: %[[EXT:.*]] = arith.constant 11 : index
+! CHECK: %[[SHAPE:.*]] = fir.shape_shift %[[LB]], %[[EXT]] : (index, index) -> !fir.shapeshift<1>
+! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE]]) {uniq_name = "_QFtest_cache_nonunit_lb_boxEarr"} : (!fir.ref<!fir.array<11xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<11xi32>>, !fir.ref<!fir.array<11xi32>>)
+! CHECK: %[[CACHE:.*]] = acc.cache var(%[[ARR]]#0 : !fir.box<!fir.array<11xi32>>) bounds(%{{.*}}) -> !fir.box<!fir.array<11xi32>> {name = "arr(12:18)"
+! The cached re-declaration reuses the SAME lower bound (10) with NO extent: a
+! fir.shift on %[[LB]], never a fir.shape_shift.
+! CHECK-NOT: fir.shape_shift
+! CHECK: %[[SHIFT:.*]] = fir.shift %[[LB]] : (index) -> !fir.shift<1>
+! CHECK: hlfir.declare %[[CACHE]](%[[SHIFT]]) {uniq_name = "_QFtest_cache_nonunit_lb_boxEarr"} : (!fir.box<!fir.array<11xi32>>, !fir.shift<1>) -> (!fir.box<!fir.array<11xi32>>, !fir.box<!fir.array<11xi32>>)
+
+! Same property for an assumed-shape array (runtime descriptor): the cached
+! re-declaration uses a multi-dimensional fir.shift (lower bounds only), so the
+! rebox preserves the descriptor's extents/strides instead of reshaping them.
+subroutine test_cache_assumed_shape_box(arr)
+  real(8) :: arr(0:, 0:)
+  integer :: i
+
+  !$acc loop
+  do i = 1, 10
+    !$acc cache(arr(3:8, 0:4))
+    arr(i, 0) = arr(i, 1)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_assumed_shape_box(
+! Both declared lower bounds are 0 (arr(0:,0:)):
+! CHECK: %[[C0A:.*]] = arith.constant 0 : i64
+! CHECK: %[[LB0:.*]] = fir.convert %[[C0A]] : (i64) -> index
+! CHECK: %[[C0B:.*]] = arith.constant 0 : i64
+! CHECK: %[[LB1:.*]] = fir.convert %[[C0B]] : (i64) -> index
+! CHECK: %[[ARR:.*]]:2 = hlfir.declare %arg0(%{{.*}}) dummy_scope %{{.*}} {{.*}}uniq_name = "_QFtest_cache_assumed_shape_boxEarr"}
+! CHECK: %[[CACHE:.*]] = acc.cache var(%[[ARR]]#0 : !fir.box<!fir.array<?x?xf64>>) bounds(%{{.*}}, %{{.*}}) -> !fir.box<!fir.array<?x?xf64>> {name = "arr(3:8,0:4)"
+! The cached re-declaration reuses the SAME two lower bounds (0, 0) with no
+! extents: a fir.shift on %[[LB0]], %[[LB1]], never a fir.shape_shift.
+! CHECK-NOT: fir.shape_shift
+! CHECK: %[[SHIFT:.*]] = fir.shift %[[LB0]], %[[LB1]] : (index, index) -> !fir.shift<2>
+! CHECK: hlfir.declare %[[CACHE]](%[[SHIFT]]) {uniq_name = "_QFtest_cache_assumed_shape_boxEarr"} : (!fir.box<!fir.array<?x?xf64>>, !fir.shift<2>) -> (!fir.box<!fir.array<?x?xf64>>, !fir.box<!fir.array<?x?xf64>>)

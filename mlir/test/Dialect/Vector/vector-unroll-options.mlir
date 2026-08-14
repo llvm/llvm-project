@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -test-vector-unrolling-patterns=unroll-based-on-type | FileCheck %s
-// RUN: mlir-opt %s -test-vector-unrolling-patterns="unroll-based-on-type unroll-order=2,0,1"  | FileCheck %s --check-prefix=ORDER
-// RUN: mlir-opt %s -test-vector-unrolling-patterns="unroll-based-on-type unroll-order=0,3,1,2" | FileCheck %s --check-prefix=BATCHED
+// RUN: mlir-opt %s -test-vector-unrolling-patterns=unroll-based-on-type -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-vector-unrolling-patterns="unroll-based-on-type unroll-order=2,0,1" -split-input-file | FileCheck %s --check-prefix=ORDER
+// RUN: mlir-opt %s -test-vector-unrolling-patterns="unroll-based-on-type unroll-order=0,3,1,2" -split-input-file | FileCheck %s --check-prefix=BATCHED
 
 func.func @vector_contract_f32(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
                           %init : vector<8x8xf32>) -> vector<8x8xf32> {
@@ -150,7 +150,7 @@ func.func @vector_contract_f32(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
 
 //       ORDER:   return
 
-
+// -----
 
 func.func @vector_contract_f16(%lhs : vector<8x8xf16>, %rhs : vector<8x8xf16>,
                           %init : vector<8x8xf16>) -> vector<8x8xf16> {
@@ -181,12 +181,16 @@ func.func @vector_contract_f16(%lhs : vector<8x8xf16>, %rhs : vector<8x8xf16>,
 //  CHECK-SAME:     vector<4x4xf16>, vector<4x4xf16> into vector<4x4xf16>
 //       CHECK:   return
 
+// -----
+
 func.func @vector_fma(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %c: vector<4x4xf32>) -> vector<4x4xf32> {
   %0 = vector.fma %a, %b, %c: vector<4x4xf32>
   return %0 : vector<4x4xf32>
 }
 //   CHECK-LABEL: func @vector_fma
 // CHECK-COUNT-4: vector.fma %{{.+}}, %{{.+}}, %{{.+}} : vector<2x2xf32>
+
+// -----
 
 func.func @vector_fma_3d(%a: vector<3x2x2xf32>) -> vector<3x2x2xf32>{
   %0 = vector.fma %a, %a, %a : vector<3x2x2xf32>
@@ -221,6 +225,8 @@ func.func @vector_fma_3d(%a: vector<3x2x2xf32>) -> vector<3x2x2xf32>{
 //       CHECK:   %[[I2:.*]] = vector.insert_strided_slice %[[FMA2]], %[[I1]] {offsets = [2, 0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<3x2x2xf32>
 //       CHECK:   return %[[I2]] : vector<3x2x2xf32>
 
+// -----
+
 func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
   %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [1] : vector<4x6xf32> to vector<4xf32>
   return %0 : vector<4xf32>
@@ -245,6 +251,8 @@ func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> 
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R5]], %[[V1]] {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
 //       CHECK:   return %[[V2]] : vector<4xf32>
 
+// -----
+
 func.func @vector_multi_reduction_scalar(%v: vector<4x2xf32>, %acc: f32) -> f32 {
   %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [0, 1] : vector<4x2xf32> to f32
   return %0 : f32
@@ -256,6 +264,8 @@ func.func @vector_multi_reduction_scalar(%v: vector<4x2xf32>, %acc: f32) -> f32 
 //       CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x2xf32> to vector<2x2xf32>
 //       CHECK:   %[[R1:.*]] = vector.multi_reduction <add>, %[[S1]], %[[R0]] [0, 1] : vector<2x2xf32> to f32
 //       CHECK:   return %[[R1]] : f32
+
+// -----
 
 func.func @vector_reduction(%v : vector<8xf32>) -> f32 {
   %0 = vector.reduction <add>, %v : vector<8xf32> into f32
@@ -275,6 +285,8 @@ func.func @vector_reduction(%v : vector<8xf32>) -> f32 {
 //       CHECK:   %[[r3:.*]] = vector.reduction <add>, %[[s3]]
 //       CHECK:   %[[add3:.*]] = arith.addf %[[add2]], %[[r3]]
 //       CHECK:   return %[[add3]]
+
+// -----
 
 func.func @vector_transpose(%v : vector<2x4x3x8xf32>) -> vector<2x3x8x4xf32> {
   %t = vector.transpose %v, [0, 2, 3, 1] : vector<2x4x3x8xf32> to vector<2x3x8x4xf32>
@@ -337,6 +349,7 @@ func.func @vector_contract_batched(%lhs: vector<8x8x4xf32>, %rhs: vector<8x8x4xf
 //      BATCHED-NOT: vector.contract
 //          BATCHED: return
 
+// -----
 
 func.func @vector_broadcast(%v: vector<4xf32>) -> vector<4x4xf32> {
   %0 = vector.broadcast %v : vector<4xf32> to vector<4x4xf32>
@@ -360,6 +373,8 @@ func.func @vector_broadcast(%v: vector<4xf32>) -> vector<4x4xf32> {
 //       CHECK: [[r3:%.+]] = vector.insert_strided_slice [[b3]], [[r2]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 //       CHECK: return [[r3]] : vector<4x4xf32>
 
+// -----
+
 func.func @vector_broadcast_with_leading_unit_dim(%v: vector<1x4xf32>) -> vector<4x4xf32> {
   %0 = vector.broadcast %v : vector<1x4xf32> to vector<4x4xf32>
   return %0 : vector<4x4xf32>
@@ -381,6 +396,8 @@ func.func @vector_broadcast_with_leading_unit_dim(%v: vector<1x4xf32>) -> vector
 //       CHECK: [[b3:%.+]] = vector.broadcast [[s3]] : vector<1x2xf32> to vector<2x2xf32>
 //       CHECK: [[r3:%.+]] = vector.insert_strided_slice [[b3]], [[r2]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 //       CHECK: return [[r3]] : vector<4x4xf32>
+
+// -----
 
 func.func @vector_broadcast_with_tailing_unit_dim(%v: vector<4x1xf32>) -> vector<4x4xf32> {
   %0 = vector.broadcast %v : vector<4x1xf32> to vector<4x4xf32>
@@ -404,6 +421,7 @@ func.func @vector_broadcast_with_tailing_unit_dim(%v: vector<4x1xf32>) -> vector
 //       CHECK: [[r3:%.+]] = vector.insert_strided_slice [[b3]], [[r2]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
 //       CHECK: return [[r3]] : vector<4x4xf32>
 
+// -----
 
 func.func @vector_load_2D(%mem: memref<4x4xf16>) -> vector<4x4xf16> {
   %c0 = arith.constant 0 : index
@@ -426,6 +444,7 @@ func.func @vector_load_2D(%mem: memref<4x4xf16>) -> vector<4x4xf16> {
   // CHECK: %[[V7:.*]] = vector.insert_strided_slice %[[V6]], %[[V5]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf16> into vector<4x4xf16>
   // CHECK: return %[[V7]] : vector<4x4xf16>
 
+// -----
 
 func.func @vector_store_2D(%mem: memref<4x4xf16>, %v: vector<4x4xf16>) {
   %c0 = arith.constant 0 : index
@@ -446,6 +465,7 @@ func.func @vector_store_2D(%mem: memref<4x4xf16>, %v: vector<4x4xf16>) {
   // CHECK: %[[V3:.*]] = vector.extract_strided_slice %[[ARG1]] {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x4xf16> to vector<2x2xf16>
   // CHECK: vector.store %[[V3]], %[[ARG0]][%[[C2]], %[[C2]]] : memref<4x4xf16>, vector<2x2xf16>
 
+// -----
 
 func.func @vector_step() -> vector<32xindex> {
     %0 = vector.step : vector<32xindex>
@@ -466,6 +486,7 @@ func.func @vector_step() -> vector<32xindex> {
 // CHECK: %[[INS3:.*]] = vector.insert_strided_slice %[[ADD3]], %[[INS2]] {offsets = [24], strides = [1]} : vector<8xindex> into vector<32xindex>
 // CHECK: return %[[INS3]] : vector<32xindex>
 
+// -----
 
 func.func @elementwise_3D_to_2D(%v1: vector<2x2x2xf32>, %v2: vector<2x2x2xf32>) -> vector<2x2x2xf32> {
   %0 = arith.addf %v1, %v2 : vector<2x2x2xf32>
@@ -488,6 +509,7 @@ func.func @elementwise_3D_to_2D(%v1: vector<2x2x2xf32>, %v2: vector<2x2x2xf32>) 
 //       CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[ADD1]], %[[I0]] {offsets = [1, 0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<2x2x2xf32>
 //       CHECK:   return %[[I1]] : vector<2x2x2xf32>
 
+// -----
 
 func.func @elementwise_4D_to_2D(%v1: vector<2x2x2x2xf32>, %v2: vector<2x2x2x2xf32>) -> vector<2x2x2x2xf32> {
   %0 = arith.addf %v1, %v2 : vector<2x2x2x2xf32>
@@ -498,6 +520,8 @@ func.func @elementwise_4D_to_2D(%v1: vector<2x2x2x2xf32>, %v2: vector<2x2x2x2xf3
 // CHECK-COUNT-4:   arith.addf %{{.*}}, %{{.*}} : vector<2x2xf32>
 // CHECK-NOT: arith.addf
 // CHECK: return
+
+// -----
 
 func.func @vector_create_mask(%size1: index, %size2: index) -> vector<16x16xi1> {
   %0 = vector.create_mask %size1, %size2 : vector<16x16xi1>
@@ -539,6 +563,8 @@ func.func @vector_create_mask(%size1: index, %size2: index) -> vector<16x16xi1> 
 //       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[MASK11]], %[[INS10]] {offsets = [8, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
 //       CHECK:   return %[[INS11]] : vector<16x16xi1>
 
+// -----
+
 func.func @vector_create_mask_constant_dim_sizes() -> vector<16x16xi1> {
   %cst16 = arith.constant 16 : index
   %0 = vector.create_mask %cst16, %cst16 : vector<16x16xi1>
@@ -553,6 +579,8 @@ func.func @vector_create_mask_constant_dim_sizes() -> vector<16x16xi1> {
 // CHECK:   %[[S2:.*]] = vector.insert_strided_slice %[[CST_0]], %[[S1]] {offsets = [8, 0], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
 // CHECK:   %[[S3:.*]] = vector.insert_strided_slice %[[CST_0]], %[[S2]] {offsets = [8, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
 // CHECK:   return %[[S3]] : vector<16x16xi1>
+
+// -----
 
 func.func @vector_constant_mask() -> vector<16x16xi1> {
   %0 = vector.constant_mask [12, 10] : vector<16x16xi1>
@@ -572,6 +600,8 @@ func.func @vector_constant_mask() -> vector<16x16xi1> {
 //       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[MASK11]], %[[INS10]] {offsets = [8, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
 //       CHECK:   return %[[INS11]] : vector<16x16xi1>
 
+// -----
+
 func.func @shape_cast_1D(%v: vector<16xf32>) -> vector<2x2x4xf32> {
   %0 = vector.shape_cast %v : vector<16xf32> to vector<2x2x4xf32>
   return %0 : vector<2x2x4xf32>
@@ -588,6 +618,7 @@ func.func @shape_cast_1D(%v: vector<16xf32>) -> vector<2x2x4xf32> {
 // CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [1, 0, 0], strides = [1, 1]} : vector<2x4xf32> into vector<2x2x4xf32>
 // CHECK:   return %[[I1]] : vector<2x2x4xf32>
 
+// -----
 
 func.func @shape_cast_2D(%v: vector<8x2xf32>) -> vector<4x4xf32> {
   %0 = vector.shape_cast %v : vector<8x2xf32> to vector<4x4xf32>
@@ -605,6 +636,7 @@ func.func @shape_cast_2D(%v: vector<8x2xf32>) -> vector<4x4xf32> {
 // CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [2, 0], strides = [1, 1]} : vector<2x4xf32> into vector<4x4xf32>
 // CHECK:   return %[[I1]] : vector<4x4xf32>
 
+// -----
 
 // This is a negative test case to ensure that such shape casts are not unrolled
 // because the targetShape (2x4) is not contiguous in result vector
@@ -618,6 +650,7 @@ func.func @negative_shape_cast_target_shape_not_contiguous(%v: vector<64xf32>) -
 // CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<64xf32> to vector<8x8xf32>
 // CHECK:   return %[[SC]] : vector<8x8xf32>
 
+// -----
 
 // This is negative test case to ensure that such shape casts are not unrolled
 // because it cannot determine the extractShape from source vector (8x3)
@@ -632,6 +665,7 @@ func.func @negative_shape_cast_source_shape_not_determinable(%v: vector<8x3xf32>
 // CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<8x3xf32> to vector<6x4xf32>
 // CHECK:   return %[[SC]] : vector<6x4xf32>
 
+// -----
 
 // TargetShape is [1x16]
 func.func @shape_cast_leading_unit_dim(%v: vector<32xf32>) -> vector<1x32xf32> {
@@ -650,6 +684,7 @@ func.func @shape_cast_leading_unit_dim(%v: vector<32xf32>) -> vector<1x32xf32> {
 // CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [0, 16], strides = [1, 1]} : vector<1x16xf32> into vector<1x32xf32>
 // CHECK:   return %[[I1]] : vector<1x32xf32>
 
+// -----
 
 // TargetShape is [1x1]
 func.func @shape_cast_with_all_unit_target_shape(%v: vector<2xf32>) -> vector<2x1xf32> {
@@ -667,6 +702,76 @@ func.func @shape_cast_with_all_unit_target_shape(%v: vector<2xf32>) -> vector<2x
 // CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<1xf32> to vector<1x1xf32>
 // CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [1, 0], strides = [1, 1]} : vector<1x1xf32> into vector<2x1xf32>
 // CHECK:   return %[[I1]] : vector<2x1xf32>
+
+
+// Target tile [8, 1, 4] is strided in result <8x1x32> but contiguous per
+// reassociation group (8|32 -> 8x1|32). TargetShape is [8, 1, 4].
+func.func @shape_cast_multi_group_rank_increasing(%v: vector<8x32xf32>) -> vector<8x1x32xf32> {
+  %0 = vector.shape_cast %v : vector<8x32xf32> to vector<8x1x32xf32>
+  return %0 : vector<8x1x32xf32>
+}
+
+// CHECK-LABEL: func @shape_cast_multi_group_rank_increasing
+// CHECK-SAME: (%[[V:.*]]: vector<8x32xf32>) -> vector<8x1x32xf32> {
+// CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<8x1x32xf32>
+// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0], sizes = [8, 4], strides = [1, 1]} : vector<8x32xf32> to vector<8x4xf32>
+// CHECK:   %[[SC0:.*]] = vector.shape_cast %[[S0]] : vector<8x4xf32> to vector<8x1x4xf32>
+// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[SC0]], %[[CST]] {offsets = [0, 0, 0], strides = [1, 1, 1]} : vector<8x1x4xf32> into vector<8x1x32xf32>
+// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 4], sizes = [8, 4], strides = [1, 1]} : vector<8x32xf32> to vector<8x4xf32>
+// CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<8x4xf32> to vector<8x1x4xf32>
+// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [0, 0, 4], strides = [1, 1, 1]} : vector<8x1x4xf32> into vector<8x1x32xf32>
+// CHECK:   return
+
+
+// Target tile [2, 2] is strided in result <4x4> but contiguous per
+// reassociation group (2x2|4 -> 4|4). TargetShape is [2, 2].
+func.func @shape_cast_multi_group_rank_decreasing(%v: vector<2x2x4xf32>) -> vector<4x4xf32> {
+  %0 = vector.shape_cast %v : vector<2x2x4xf32> to vector<4x4xf32>
+  return %0 : vector<4x4xf32>
+}
+
+// CHECK-LABEL: func @shape_cast_multi_group_rank_decreasing
+// CHECK-SAME: (%[[V:.*]]: vector<2x2x4xf32>) -> vector<4x4xf32> {
+// CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<4x4xf32>
+// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x4xf32> to vector<1x2x2xf32>
+// CHECK:   %[[SC0:.*]] = vector.shape_cast %[[S0]] : vector<1x2x2xf32> to vector<2x2xf32>
+// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[SC0]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0, 0, 2], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x4xf32> to vector<1x2x2xf32>
+// CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<1x2x2xf32> to vector<2x2xf32>
+// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [0, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK:   %[[S2:.*]] = vector.extract_strided_slice %[[V]] {offsets = [1, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x4xf32> to vector<1x2x2xf32>
+// CHECK:   %[[SC2:.*]] = vector.shape_cast %[[S2]] : vector<1x2x2xf32> to vector<2x2xf32>
+// CHECK:   %[[I2:.*]] = vector.insert_strided_slice %[[SC2]], %[[I1]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK:   %[[S3:.*]] = vector.extract_strided_slice %[[V]] {offsets = [1, 0, 2], sizes = [1, 2, 2], strides = [1, 1, 1]} : vector<2x2x4xf32> to vector<1x2x2xf32>
+// CHECK:   %[[SC3:.*]] = vector.shape_cast %[[S3]] : vector<1x2x2xf32> to vector<2x2xf32>
+// CHECK:   %[[I3:.*]] = vector.insert_strided_slice %[[SC3]], %[[I2]] {offsets = [2, 2], strides = [1, 1]} : vector<2x2xf32> into vector<4x4xf32>
+// CHECK:   return %[[I3]] : vector<4x4xf32>
+
+// Negative multi-group case: target tile [2, 2, 2] is not contiguous within
+// the result reassociation group [8, 4], so the cast is left un-unrolled.
+func.func @negative_shape_cast_multi_group_target_not_contiguous(%v: vector<2x32xf32>) -> vector<2x8x4xf32> {
+  %0 = vector.shape_cast %v : vector<2x32xf32> to vector<2x8x4xf32>
+  return %0 : vector<2x8x4xf32>
+}
+
+// CHECK-LABEL: func @negative_shape_cast_multi_group_target_not_contiguous
+// CHECK-SAME: (%[[V:.*]]: vector<2x32xf32>) -> vector<2x8x4xf32> {
+// CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<2x32xf32> to vector<2x8x4xf32>
+// CHECK:   return %[[SC]] : vector<2x8x4xf32>
+
+
+// Negative multi-group case: the target tile [2, 4] is contiguous within the result
+// group [24], but its elements cannot be extracted contiguously from the
+// source group [8, 3], so the cast is left un-unrolled.
+func.func @negative_shape_cast_multi_group_source_not_determinable(%v: vector<2x8x3xf32>) -> vector<2x24xf32> {
+  %0 = vector.shape_cast %v : vector<2x8x3xf32> to vector<2x24xf32>
+  return %0 : vector<2x24xf32>
+}
+
+// CHECK-LABEL: func @negative_shape_cast_multi_group_source_not_determinable
+// CHECK-SAME: (%[[V:.*]]: vector<2x8x3xf32>) -> vector<2x24xf32> {
+// CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<2x8x3xf32> to vector<2x24xf32>
+// CHECK:   return %[[SC]] : vector<2x24xf32>
 
 // -----
 

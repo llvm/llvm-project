@@ -8,28 +8,17 @@
 
 #include "src/unistd/rmdir.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/rmdir.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include "hdr/fcntl_macros.h"
-#include <sys/syscall.h> // For syscall numbers.
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, rmdir, (const char *path)) {
-#ifdef SYS_rmdir
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_rmdir, path);
-#elif defined(SYS_unlinkat)
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_unlinkat, AT_FDCWD, path,
-                                              AT_REMOVEDIR);
-#else
-#error "rmdir and unlinkat syscalls not available."
-#endif
-
-  if (ret < 0) {
-    libc_errno = -ret;
+  ErrorOr<int> ret = linux_syscalls::rmdir(path);
+  if (!ret) {
+    libc_errno = ret.error();
     return -1;
   }
   return 0;
