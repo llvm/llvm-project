@@ -5697,14 +5697,11 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (OffsetVal == 0) {
       // This is already sign / zero extended, so try to fold away extra BFEs.
-      unsigned SignBits =  Signed ? (32 - WidthVal + 1) : (32 - WidthVal);
-
-      unsigned OpSignBits = DAG.ComputeNumSignBits(BitsFrom);
-      if (OpSignBits >= SignBits)
-        return BitsFrom;
-
       EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), WidthVal);
       if (Signed) {
+        if (DAG.ComputeNumSignBits(BitsFrom) >= 32 - WidthVal + 1)
+          return BitsFrom;
+
         // This is a sign_extend_inreg. Replace it to take advantage of existing
         // DAG Combines. If not eliminated, we will match back to BFE during
         // selection.
@@ -5714,6 +5711,10 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
         return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i32, BitsFrom,
                            DAG.getValueType(SmallVT));
       }
+
+      if (DAG.MaskedValueIsZero(BitsFrom,
+                                APInt::getHighBitsSet(32, 32 - WidthVal)))
+        return BitsFrom;
 
       return DAG.getZeroExtendInReg(BitsFrom, DL, SmallVT);
     }
