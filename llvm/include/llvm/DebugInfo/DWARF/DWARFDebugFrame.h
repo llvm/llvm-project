@@ -72,11 +72,16 @@ public:
   const CFIProgram &cfis() const { return CFIs; }
   CFIProgram &cfis() { return CFIs; }
 
-  /// Section offset at which this entry's CFI instructions begin. Recorded by
-  /// parse() even when the CFI program itself is not parsed, so the program can
-  /// be parsed on demand later via cfis().parse(Data, ..., getEndOffset()).
+  /// Section offset at which this entry's CFI instructions begin, recorded so a
+  /// program left undecoded can be parsed on demand later via
+  /// cfis().parse(Data, ..., getEndOffset()).
   uint64_t getCFIStartOffset() const { return CFIStartOffset; }
   void setCFIStartOffset(uint64_t O) { CFIStartOffset = O; }
+
+  /// Whether this entry's CFI instruction program has been decoded. False for
+  /// an entry whose program parse() was told to skip.
+  bool isCFIProgramParsed() const { return CFIsParsed; }
+  void setCFIProgramParsed() { CFIsParsed = true; }
 
   /// Section offset one past the end of this entry (exclusive end of its CFI
   /// instructions).
@@ -103,6 +108,9 @@ protected:
 
   /// Section offset at which this entry's CFI instructions begin.
   uint64_t CFIStartOffset = 0;
+
+  /// Whether CFIs holds the decoded CFI instruction program.
+  bool CFIsParsed = false;
 
   CFIProgram CFIs;
 };
@@ -218,8 +226,17 @@ class DWARFDebugFrame {
   std::vector<std::unique_ptr<dwarf::FrameEntry>> Entries;
   using iterator = pointee_iterator<decltype(Entries)::const_iterator>;
 
+  /// Section contents, retained by parse() when it was asked to leave the CFI
+  /// instruction programs undecoded, so that they can be parsed on demand.
+  std::unique_ptr<DWARFDataExtractor> Data;
+
   /// Return the entry at the given offset or nullptr.
   dwarf::FrameEntry *getEntryAtOffset(uint64_t Offset) const;
+
+  /// Make sure CFIs of \p Entry are fully parsed, then dump the entry.
+  /// Failure to decode the CFI is reported through \p DumpOpts.
+  void dumpEntry(dwarf::FrameEntry &Entry, raw_ostream &OS,
+                 DIDumpOptions DumpOpts) const;
 
 public:
   // If IsEH is true, assume it is a .eh_frame section. Otherwise,
@@ -238,11 +255,16 @@ public:
   /// frame section contents to be parsed.
   ///
   /// If \p ParseCFIProgram is false, the CFI instruction program of each entry
-  /// is not decoded; each entry still records where its instructions begin (see
-  /// FrameEntry::getCFIStartOffset()) so callers can parse individual programs
-  /// on demand. This avoids materializing every entry's instructions when only
-  /// a subset (or none) is needed, which can be a large memory saving.
+  /// is not decoded; callers can parse individual programs on demand through
+  /// parseCFIProgram(), as long as \p Data stays valid.
   LLVM_ABI Error parse(DWARFDataExtractor Data, bool ParseCFIProgram = true);
+
+  /// Decode the CFI instruction program of \p Entry if parse() was told to
+  /// skip it.
+  LLVM_ABI Error parseCFIProgram(dwarf::FrameEntry &Entry) const;
+
+  /// Decode all the CFI instruction programs that parse() was told to skip.
+  LLVM_ABI Error parseAllCFIPrograms() const;
 
   /// Return whether the section has any entries.
   bool empty() const { return Entries.empty(); }

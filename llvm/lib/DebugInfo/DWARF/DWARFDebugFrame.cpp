@@ -203,6 +203,11 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
   uint64_t Offset = 0;
   DenseMap<uint64_t, CIE *> CIEs;
 
+  // Retain the section contents so that the programs left undecoded below can
+  // be parsed on demand later.
+  if (!ParseCFIProgram)
+    this->Data = std::make_unique<DWARFDataExtractor>(Data);
+
   while (Data.isValidOffset(Offset)) {
     uint64_t StartOffset = Offset;
 
@@ -218,6 +223,9 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
       auto Cie = std::make_unique<CIE>(
           IsDWARF64, StartOffset, 0, 0, SmallString<8>(), 0, 0, 0, 0, 0,
           SmallString<8>(), 0, 0, std::nullopt, std::nullopt, Arch);
+      // A terminator has no instructions: it is fully parsed either way.
+      Cie->setCFIStartOffset(Offset);
+      Cie->setCFIProgramParsed();
       CIEs[StartOffset] = Cie.get();
       Entries.push_back(std::move(Cie));
       break;
@@ -385,11 +393,11 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
                                    LSDAAddress, Arch));
     }
 
-    // Optionally skip the CFI instruction program without decoding it.
+    // Record where this entry's CFI instructions begin, so that a program left
+    // undecoded below can be parsed on demand later.
+    Entries.back()->setCFIStartOffset(Offset);
+
     if (!ParseCFIProgram) {
-      // Record where this entry's CFI instructions begin so they can be parsed
-      // on demand later.
-      Entries.back()->setCFIStartOffset(Offset);
       Offset = EndStructureOffset;
       continue;
     }
@@ -397,6 +405,7 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
     if (Error E =
             Entries.back()->cfis().parse(Data, &Offset, EndStructureOffset))
       return E;
+    Entries.back()->setCFIProgramParsed();
 
     if (Offset != EndStructureOffset)
       return createStringError(
@@ -416,16 +425,66 @@ FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
   return nullptr;
 }
 
+Error DWARFDebugFrame::parseCFIProgram(FrameEntry &Entry) const {
+  if (Entry.isCFIProgramParsed())
+    return Error::success();
+
+  if (!Data)
+    return createStringError(
+        errc::invalid_argument,
+        "cannot parse the instructions of the entry at 0x%" PRIx64
+        " on demand: the section contents were not retained",
+        Entry.getOffset());
+
+  uint64_t Offset = Entry.getCFIStartOffset();
+  const uint64_t EndOffset = Entry.getEndOffset();
+  assert(Offset >= Entry.getOffset() && Offset <= EndOffset &&
+         "entry does not know where its instructions begin");
+  DWARFDataExtractor EntryData = *Data;
+  Entry.setCFIProgramParsed();
+  if (Error E = Entry.cfis().parse(EntryData, &Offset, EndOffset))
+    return E;
+
+  if (Offset != EndOffset)
+    return createStringError(errc::invalid_argument,
+                             "parsing entry instructions at 0x%" PRIx64
+                             " failed",
+                             Entry.getOffset());
+
+  return Error::success();
+}
+
+Error DWARFDebugFrame::parseAllCFIPrograms() const {
+  for (const auto &Entry : Entries)
+    if (Error E = parseCFIProgram(*Entry))
+      return E;
+  return Error::success();
+}
+
+void DWARFDebugFrame::dumpEntry(FrameEntry &Entry, raw_ostream &OS,
+                                DIDumpOptions DumpOpts) const {
+  if (const auto *Fde = dyn_cast<FDE>(&Entry))
+    if (const CIE *Cie = Fde->getLinkedCIE())
+      if (FrameEntry *CieEntry = getEntryAtOffset(Cie->getOffset()))
+        if (Error E = parseCFIProgram(*CieEntry))
+          DumpOpts.RecoverableErrorHandler(std::move(E));
+
+  if (Error E = parseCFIProgram(Entry))
+    DumpOpts.RecoverableErrorHandler(std::move(E));
+
+  Entry.dump(OS, DumpOpts);
+}
+
 void DWARFDebugFrame::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                            std::optional<uint64_t> Offset) const {
   DumpOpts.IsEH = IsEH;
   if (Offset) {
     if (auto *Entry = getEntryAtOffset(*Offset))
-      Entry->dump(OS, DumpOpts);
+      dumpEntry(*Entry, OS, DumpOpts);
     return;
   }
 
   OS << "\n";
   for (const auto &Entry : Entries)
-    Entry->dump(OS, DumpOpts);
+    dumpEntry(*Entry, OS, DumpOpts);
 }
