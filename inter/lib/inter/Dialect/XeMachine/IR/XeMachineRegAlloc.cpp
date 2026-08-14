@@ -239,9 +239,9 @@ static LogicalResult finalizeComponents(func::FuncOp function,
       if (definition)
         component.allowFixedOverlap |=
             definition->hasAttr(kAllowFixedOverlapAttrName);
-      component.start =
-          std::min(component.start, getDefinitionPosition(value, state));
-      component.end = std::max(component.end, component.start);
+      int64_t definitionPosition = getDefinitionPosition(value, state);
+      component.start = std::min(component.start, definitionPosition);
+      component.end = std::max(component.end, definitionPosition);
       for (OpOperand &use : value.getUses())
         component.end =
             std::max(component.end, state.positions.lookup(use.getOwner()));
