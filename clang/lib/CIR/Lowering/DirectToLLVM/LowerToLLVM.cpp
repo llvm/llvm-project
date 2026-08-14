@@ -803,6 +803,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
 // ConstArrayAttr visitor
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Type llvmTy = converter->convertType(attr.getType());
+  mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
+  llvmTy = adjustGlobalTypeForInit(llvmTy, attr, *converter, dataLayout);
   mlir::Location loc = parentOp->getLoc();
   mlir::Value result;
 
@@ -812,13 +814,10 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
           lowerConstArrayAttr(attr, symbolTables, converter))
     return mlir::LLVM::ConstantOp::create(rewriter, loc, llvmTy, *denseAttr);
 
-  if (attr.hasTrailingZeros()) {
-    mlir::Type arrayTy = attr.getType();
-    result = mlir::LLVM::ZeroOp::create(rewriter, loc,
-                                        converter->convertType(arrayTy));
-  } else {
+  if (attr.hasTrailingZeros())
+    result = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmTy);
+  else
     result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
-  }
 
   // Iteratively lower each constant element of the array.
   if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts())) {
