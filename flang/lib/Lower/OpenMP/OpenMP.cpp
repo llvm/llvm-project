@@ -6887,6 +6887,23 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
   return &eval.getNestedEvaluations().back();
 }
 
+static bool hasContentFollowingAssociatedDo(
+    lower::pft::Evaluation &eval, lower::pft::Evaluation &loopEval) {
+  auto &nested = eval.getNestedEvaluations();
+  auto loopIt = llvm::find_if(
+      nested, [&](lower::pft::Evaluation &e) { return &e == &loopEval; });
+  assert(loopIt != nested.end() && "associated loop not nested");
+  return llvm::any_of(
+      llvm::make_range(std::next(loopIt), nested.end()),
+      [](lower::pft::Evaluation &e) {
+        // PFTBuilder adds a source-less CONTINUE as the exit target when an
+        // executable directive's region ends with a construct.
+        bool isSyntheticExit =
+            e.getIf<parser::ContinueStmt>() && e.position.empty();
+        return !e.isEndStmt() && !isSyntheticExit;
+      });
+}
+
 static bool hasDirectiveAssociation(llvm::omp::Directive directive,
                                     llvm::omp::Association association) {
   return llvm::any_of(llvm::omp::getLeafConstructsOrSelf(directive),
@@ -7220,6 +7237,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
       lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(eval);
       if (!loopEval)
         TODO(variantLoc, "loop-associated METADIRECTIVE without associated DO");
+      if (hasContentFollowingAssociatedDo(eval, *loopEval))
+        TODO(variantLoc,
+             "loop-associated METADIRECTIVE with content following the "
+             "associated DO");
       // Unstructured loops own PFT blocks that cannot be reused by begin/end
       // metadirectives or alternate ENTRY lowering without independent block
       // mappings. Keep Part 2 conservative for all such loops.
