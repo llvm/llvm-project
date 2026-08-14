@@ -179,6 +179,9 @@ features cannot lower the translation-unit ABI level;
 
 ### Non-comprehensive list of changes in this release
 
+- Clang tools now resolve tool names without a path in compilation databases
+  through `PATH`.
+
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
