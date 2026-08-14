@@ -577,7 +577,7 @@
     descriptor::Clause(
       "graph_id",
       {
-        {60, {{{Property::Unique}}, "graph_id", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "graph_id", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::Unique}}, "graph_id", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
@@ -587,7 +587,7 @@
     descriptor::Clause(
       "graph_reset",
       {
-        {60, {{{Property::Unique}}, "graph_reset", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "graph_reset", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::Unique}}, "graph_reset", {Directive::OMPD_taskgraph}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
@@ -832,7 +832,7 @@
     descriptor::Clause(
       "looprange",
       {
-        {60, {{{Property::Unique}}, "looprange", {Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {}}},
+        {60, {{{Property::Unique}}, "looprange", {Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::Unique}}, "looprange", {Directive::OMPD_fuse}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
@@ -1228,7 +1228,7 @@
     descriptor::Clause(
       "replayable",
       {
-        {60, {{{}}, "replayable", {Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
+        {60, {{{Property::Unique}}, "replayable", {Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
         {61, {{{Property::Unique}}, "replayable", {Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}}},
       }
     ),
