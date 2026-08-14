@@ -371,7 +371,7 @@ enum class ResourceCounterDirection {
 class ResourceInfo {
 public:
   struct ResourceBinding {
-    uint32_t BindingID;
+    uint32_t BindingID = 0;
     uint32_t Space;
     uint32_t LowerBound;
     uint32_t Size;
@@ -415,7 +415,7 @@ public:
   ResourceInfo(uint32_t Space, uint32_t LowerBound, uint32_t Size,
                TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
-      : Binding{ResourceBinding{0, Space, LowerBound, Size}},
+      : Binding{0, Space, LowerBound, Size},
         HandleTy(HandleTy), Name(Name), Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.BindingID = ID; }

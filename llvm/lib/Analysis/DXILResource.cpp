@@ -800,7 +800,7 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
   }
 
   OS << "  Binding:\n"
-     << "    Record ID: " << Binding.BindingID << "\n"
+     << "    Binding ID: " << Binding.BindingID << "\n"
      << "    Space: " << Binding.Space << "\n"
      << "    Lower Bound: " << Binding.LowerBound << "\n"
      << "    Size: " << Binding.Size << "\n";
