@@ -20663,7 +20663,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
     // Structured bindings with conditional modifier are currently not
     // supported.
     if (LPKind == OMPC_LASTPRIVATE_conditional && isa<BindingDecl>(D)) {
-      Diag(ELoc, diag::err_omp_unsupported_on_binding) << 4;
+      Diag(ELoc, diag::err_omp_unsupported_on_binding) << 1;
       Diag(D->getLocation(), diag::note_defined_here) << D;
       continue;
     }

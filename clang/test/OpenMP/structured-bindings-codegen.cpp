@@ -702,6 +702,16 @@ void test_private_plus_lastprivate() {
     b = a;
   }
 }
+
+void test_target_map_orig_use_binding() {
+  Point p{1, 2};
+  auto [a, b] = p;
+#pragma omp target map(tofrom: p)
+  {
+    p.x = 1;
+    a = 2;
+  }
+}
 #endif
 //.
 // CHECK: @.offload_sizes = private unnamed_addr constant [3 x i64] [i64 12, i64 12, i64 0]
