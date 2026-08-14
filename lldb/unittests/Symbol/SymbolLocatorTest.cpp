@@ -7,16 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/SymbolLocator.h"
+#include "TestingSupport/TestUtilities.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Utility/FileSpecList.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
+
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -24,10 +32,17 @@ using namespace lldb_private;
 namespace {
 
 /// Which steps of the search ran, so a test can tell where an answer came from.
+/// Written from every thread of a batch, so the flags have to be atomic.
 struct LocatorCalls {
-  bool located_symbol_file = false;
-  bool located_object_file = false;
-  bool downloaded = false;
+  std::atomic<bool> located_symbol_file = false;
+  std::atomic<bool> located_object_file = false;
+  std::atomic<bool> downloaded = false;
+
+  void Clear() {
+    located_symbol_file = false;
+    located_object_file = false;
+    downloaded = false;
+  }
 };
 
 LocatorCalls g_calls;
@@ -42,6 +57,13 @@ std::optional<FileSpec> g_symbol_file;
 /// an errno rather than a message.
 bool g_symbol_server_errno = false;
 
+/// When set, the fake locator only answers for requests carrying a UUID.
+bool g_only_with_uuid = false;
+
+/// Run by the fake locator, to let a test hold every search of a batch open at
+/// once.
+std::function<void()> g_barrier;
+
 std::optional<FileSpec> LocateExecutableSymbolFile(const ModuleSpec &,
                                                    const FileSpecList &) {
   g_calls.located_symbol_file = true;
@@ -50,7 +72,11 @@ std::optional<FileSpec> LocateExecutableSymbolFile(const ModuleSpec &,
 
 std::optional<ModuleSpec> LocateExecutableObjectFile(const ModuleSpec &spec) {
   g_calls.located_object_file = true;
+  if (g_barrier)
+    g_barrier();
   if (!g_object_file)
+    return {};
+  if (g_only_with_uuid && !spec.GetUUID().IsValid())
     return {};
   ModuleSpec located(spec);
   located.GetFileSpec() = *g_object_file;
@@ -113,6 +139,11 @@ public:
         m_fs(new llvm::vfs::InMemoryFileSystem()) {}
 
   void SetUp() override {
+    // The batch runs on the debugger's thread pool. Debugger::Initialize takes
+    // an argument, so SubsystemRAII cannot call it.
+    std::call_once(TestUtilities::g_debugger_initialize_flag,
+                   []() { Debugger::Initialize(nullptr); });
+
     // Locate reports a binary it cannot find as an error, so a test that wants
     // a hit has to point the fake locator at a file that exists.
     FileSystem::Initialize(m_fs);
@@ -120,10 +151,12 @@ public:
     m_fs->addFileNoOwn(m_binary.GetPath(), 0, m_empty_buffer);
     m_fs->addFileNoOwn(m_symbols.GetPath(), 0, m_empty_buffer);
 
-    g_calls = LocatorCalls();
+    g_calls.Clear();
     g_object_file = std::nullopt;
     g_symbol_file = std::nullopt;
     g_symbol_server_errno = false;
+    g_only_with_uuid = false;
+    g_barrier = nullptr;
     ASSERT_TRUE(PluginManager::RegisterPlugin(
         "test", "test symbol locator", CreateSymbolLocator,
         LocateExecutableObjectFile, LocateExecutableSymbolFile,
@@ -131,6 +164,7 @@ public:
   }
 
   void TearDown() override {
+    g_barrier = nullptr;
     PluginManager::UnregisterPlugin(CreateSymbolLocator);
     HostInfo::Terminate();
     FileSystem::Terminate();
@@ -143,6 +177,10 @@ public:
   FileSpec m_binary = FileSpec("/binary", FileSpec::Style::posix);
   FileSpec m_symbols = FileSpec("/binary.dSYM", FileSpec::Style::posix);
 };
+
+std::vector<SymbolLocator::Request> MakeRequests(size_t count) {
+  return std::vector<SymbolLocator::Request>(count);
+}
 
 } // namespace
 
@@ -268,4 +306,103 @@ TEST_F(SymbolLocatorTest, ThePluginsRunWhenThePlatformHasNothingToSay) {
   ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
   EXPECT_EQ(1u, platform->find_module_files_calls);
   EXPECT_TRUE(g_calls.located_object_file);
+}
+
+TEST_F(SymbolLocatorTest, TheBatchSearchesEveryRequest) {
+  g_object_file = m_binary;
+  std::vector<SymbolLocator::Request> requests = MakeRequests(8);
+
+  std::vector<llvm::Expected<SymbolLocator::Result>> results =
+      SymbolLocator::Locate(requests, FileSpecList(), /*parallel=*/true);
+
+  ASSERT_EQ(requests.size(), results.size());
+  for (llvm::Expected<SymbolLocator::Result> &result : results) {
+    ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+    EXPECT_EQ(m_binary, result->module_spec.GetFileSpec());
+  }
+}
+
+TEST_F(SymbolLocatorTest, TheBatchKeepsResultsInRequestOrder) {
+  // Every other request is one the locator will answer, so the results can only
+  // line up with the requests if the order is kept.
+  g_object_file = m_binary;
+  g_only_with_uuid = true;
+  std::vector<SymbolLocator::Request> requests = MakeRequests(6);
+  for (auto [i, request] : llvm::enumerate(requests))
+    if (i % 2 == 0)
+      request.module_spec.GetUUID() = UUID("0123456789ABCDEF", 16);
+
+  std::vector<llvm::Expected<SymbolLocator::Result>> results =
+      SymbolLocator::Locate(requests, FileSpecList(), /*parallel=*/true);
+
+  ASSERT_EQ(requests.size(), results.size());
+  for (auto [i, result] : llvm::enumerate(results)) {
+    if (i % 2 == 0)
+      EXPECT_THAT_EXPECTED(result, llvm::Succeeded()) << "request " << i;
+    else
+      EXPECT_THAT_EXPECTED(result, llvm::Failed()) << "request " << i;
+  }
+}
+
+TEST_F(SymbolLocatorTest, TheBatchSearchesConcurrently) {
+  // A serial batch could never get every task inside the locator at once. No
+  // more tasks than the pool can run, or the ones left queued would hang it.
+  const size_t num_requests =
+      std::min<size_t>(4, Debugger::GetThreadPool().getMaxConcurrency());
+  if (num_requests < 2)
+    GTEST_SKIP() << "the thread pool runs one task at a time";
+
+  std::mutex mutex;
+  std::condition_variable cv;
+  size_t arrived = 0;
+  bool everyone_arrived = false;
+
+  g_barrier = [&] {
+    std::unique_lock<std::mutex> lock(mutex);
+    if (++arrived == num_requests) {
+      everyone_arrived = true;
+      cv.notify_all();
+      return;
+    }
+    // Assert on what the waiter observed, not on the count: a late arrival
+    // would set the flag either way.
+    bool released = cv.wait_for(lock, std::chrono::seconds(10),
+                                [&] { return everyone_arrived; });
+    EXPECT_TRUE(released) << "the batch did not run concurrently";
+  };
+
+  std::vector<SymbolLocator::Request> requests = MakeRequests(num_requests);
+  std::vector<llvm::Expected<SymbolLocator::Result>> results =
+      SymbolLocator::Locate(requests, FileSpecList(), /*parallel=*/true);
+  for (llvm::Expected<SymbolLocator::Result> &result : results)
+    if (!result)
+      llvm::consumeError(result.takeError());
+
+  EXPECT_EQ(num_requests, arrived);
+}
+
+TEST_F(SymbolLocatorTest, TheSerialBatchGivesTheSameAnswers) {
+  g_object_file = m_binary;
+  std::vector<SymbolLocator::Request> requests = MakeRequests(4);
+
+  std::vector<llvm::Expected<SymbolLocator::Result>> parallel =
+      SymbolLocator::Locate(requests, FileSpecList(), /*parallel=*/true);
+  std::vector<llvm::Expected<SymbolLocator::Result>> serial =
+      SymbolLocator::Locate(requests, FileSpecList(), /*parallel=*/false);
+
+  ASSERT_EQ(parallel.size(), serial.size());
+  for (auto [p, s] : llvm::zip_equal(parallel, serial)) {
+    EXPECT_THAT_EXPECTED(p, llvm::Succeeded());
+    EXPECT_THAT_EXPECTED(s, llvm::Succeeded());
+    if (p && s)
+      EXPECT_EQ(p->module_spec.GetFileSpec(), s->module_spec.GetFileSpec());
+  }
+}
+
+TEST_F(SymbolLocatorTest, AnEmptyBatchIsNoWork) {
+  std::vector<llvm::Expected<SymbolLocator::Result>> results =
+      SymbolLocator::Locate({}, FileSpecList(), /*parallel=*/true);
+
+  EXPECT_TRUE(results.empty());
+  EXPECT_FALSE(g_calls.located_object_file);
 }
