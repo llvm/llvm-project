@@ -418,12 +418,6 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
-  VPInstruction *createScalarLoad(Type *ResultTy, VPValue *Addr, DebugLoc DL,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstruction(Instruction::Load, Addr, {},
-                                                  Metadata, DL, "", ResultTy));
-  }
-
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
                                   std::optional<VPIRFlags> Flags = std::nullopt,
