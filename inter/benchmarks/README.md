@@ -35,8 +35,9 @@ The OpenCL reference mirrors the Lighthouse operations and cache policy. Its
 2D prefetch builtins compile to cached `load_block2d.ugm.d16.a64.ca.ca`
 messages, matching the cached prefetch contract in the Inter input.
 
-Use `--drop-loop-prefetch` to remove the two loop-ahead prefetches from both
-compiler inputs and measure their performance impact. The original final
-prefetch is out of logical bounds but is ignored by the 2D block I/O contract.
+Use `--drop-loop-prefetch` to remove the B-stream loop-ahead prefetch from both
+compiler inputs and measure its performance impact. The frozen Inter input
+skips the final one-past hint because it has no future read to accelerate; the
+OpenCL reference leaves it for IGC to discard under the 2D block I/O contract.
 Use `--padding-k-tiles 1` to extend the physical A/B allocations without
 changing their logical block2D descriptor dimensions.

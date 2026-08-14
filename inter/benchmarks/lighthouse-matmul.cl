@@ -32,9 +32,6 @@ kernel void payload_kernel(global half *a, global half *b, global float *c) {
 
 #ifndef DROP_LOOP_PREFETCH
     intel_sub_group_2d_block_prefetch_16b_8r16x1c(
-        a, REDUCTION_SIZE * 2, MATRIX_SIZE, REDUCTION_SIZE * 2,
-        (int2)(inner + 32, row));
-    intel_sub_group_2d_block_prefetch_16b_8r16x1c(
         b, MATRIX_SIZE * 2, REDUCTION_SIZE, MATRIX_SIZE * 2,
         (int2)(column, inner + 32));
 #endif

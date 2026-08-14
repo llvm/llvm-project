@@ -92,16 +92,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     cf.cond_br %79, ^bb2, ^bb3
   ^bb2:  // pred: ^bb1
     %80 = llvm.add %76, %12 : i64
+    %prefetch_next = llvm.icmp "slt" %80, %2 : i64
+    cf.cond_br %prefetch_next, ^bb4, ^bb5
+  ^bb4:  // pred: ^bb2
     %81 = llvm.add %58, %80 : i64
     %82 = llvm.trunc %81 : i64 to i32
     %83 = llvm.insertelement %63, %13[%0 : i32] : vector<2xi32>
     %84 = llvm.insertelement %82, %83[%1 : i32] : vector<2xi32>
     llvm.call spir_funccc @_Z45intel_sub_group_2d_block_prefetch_16b_8r16x1cPU3AS1viiiDv2_i(%65, %15, %5, %15, %84) {memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind, xw.cache_control = {l1 = #xw.cache_policy<cached>, l3 = #xw.cache_policy<cached>}} : (!llvm.ptr<1> {llvm.nonnull}, i32, i32, i32, vector<2xi32>) -> ()
-    %85 = llvm.add %39, %80 : i64
-    %86 = llvm.trunc %85 : i64 to i32
-    %87 = llvm.insertelement %86, %13[%0 : i32] : vector<2xi32>
-    %88 = llvm.insertelement %44, %87[%1 : i32] : vector<2xi32>
-    llvm.call spir_funccc @_Z45intel_sub_group_2d_block_prefetch_16b_8r16x1cPU3AS1viiiDv2_i(%45, %7, %7, %7, %88) {memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind, xw.cache_control = {l1 = #xw.cache_policy<cached>, l3 = #xw.cache_policy<cached>}} : (!llvm.ptr<1> {llvm.nonnull}, i32, i32, i32, vector<2xi32>) -> ()
+    cf.br ^bb5
+  ^bb5:  // 2 preds: ^bb2, ^bb4
     %89 = llvm.add %71, %76 : i64
     %90 = llvm.trunc %89 : i64 to i32
     %91 = llvm.trunc %72 : i64 to i32

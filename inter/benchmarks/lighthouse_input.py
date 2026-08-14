@@ -21,9 +21,6 @@ def specialize_inter_source(
         "(%45, %7, %7, %7, %47)": (
             "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %47)"
         ),
-        "(%45, %7, %7, %7, %88)": (
-            "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %88)"
-        ),
         "(%45, %7, %7, %7, %93, %94)": (
             "(%45, %reduction_bytes, %matrix_size, %reduction_bytes, %93, %94)"
         ),
@@ -50,6 +47,10 @@ def specialize_inter_source(
         ),
         '%79 = llvm.icmp "slt" %76, %2 : i64': (
             '%79 = llvm.icmp "slt" %76, %reduction_bound : i64'
+        ),
+        '%prefetch_next = llvm.icmp "slt" %80, %2 : i64': (
+            '%prefetch_next = '
+            'llvm.icmp "slt" %80, %reduction_bound : i64'
         ),
         "(%149, %18, %7, %18, %152, %153)": (
             "(%149, %18, %matrix_size, %18, %152, %153)"
@@ -79,6 +80,6 @@ def drop_loop_prefetches(source_text: str) -> str:
             removed += 1
             continue
         lines.append(line)
-    if removed != 2:
-        raise ValueError(f"expected two loop prefetches, found {removed}")
+    if removed != 1:
+        raise ValueError(f"expected one loop prefetch, found {removed}")
     return "\n".join(lines) + "\n"
