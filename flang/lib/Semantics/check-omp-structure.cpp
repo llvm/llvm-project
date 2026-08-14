@@ -4598,6 +4598,27 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Aligned &x) {
   // 2.8.1 TODO: list-item attribute check
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Default &x) {
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto &modifiers{OmpGetModifiers(x.v)};
+  auto *maybeCategory{
+      OmpGetUniqueModifier<parser::OmpVariableCategory>(modifiers)};
+  if (maybeCategory) {
+    using VariableCategory = parser::OmpVariableCategory;
+    VariableCategory::Value category{maybeCategory->v};
+    llvm::omp::Version tryVersion;
+    if (version < 60) {
+      tryVersion = llvm::omp::Version(60);
+    }
+    if (tryVersion) {
+      context_.Say(GetContext().clauseSource,
+          "%s is not allowed in %s, %s"_warn_en_US,
+          parser::ToUpperCaseLetters(VariableCategory::EnumToString(category)),
+          ThisVersion(version), TryVersion(tryVersion));
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   using ImplicitBehavior = parser::OmpDefaultmapClause::ImplicitBehavior;

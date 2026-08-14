@@ -59,7 +59,8 @@ protected:
     parser::CharBlock directiveSource;
     T directive;
     Scope &scope;
-    Symbol::Flag defaultDSA{Symbol::Flag::AccShared}; // TODOACC
+    std::map<parser::OmpVariableCategory::Value, Symbol::Flag> defaultDSA{
+        {parser::OmpVariableCategory::Value::All, Symbol::Flag::AccShared}};
     std::map<const Symbol *, Symbol::Flag> objectWithDSA;
     std::map<const Symbol *, Symbol::Flags> commonBlockClauseFlags;
     std::map<parser::OmpVariableCategory::Value,
@@ -105,8 +106,18 @@ protected:
       parser::OmpDefaultmapClause::ImplicitBehavior ImpBehav) {
     GetContext().defaultMap[VarCat] = ImpBehav;
   }
-  void SetContextDefaultDSA(Symbol::Flag flag) {
-    GetContext().defaultDSA = flag;
+  void SetContextDefaultDSA(Symbol::Flag flag,
+      parser::OmpVariableCategory::Value VarCat =
+          parser::OmpVariableCategory::Value::All) {
+    GetContext().defaultDSA = {{VarCat, flag}};
+  }
+  Symbol::Flag DefaultDSAForSymbol(
+      const DirContext &dirContext, const Symbol &symbol) {
+    for (auto defaults : dirContext.defaultDSA) {
+      if (omp::DefaultMapCategoryMatchesSymbol(defaults.first, symbol)) {
+        return defaults.second;
+      }
+    }
   }
   void AddToContextObjectWithDSA(
       const Symbol &symbol, Symbol::Flag flag, DirContext &context) {
@@ -1870,9 +1881,10 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
           // adjust the symbol within the region
           // TODO: why didn't name resolution set the right name originally?
           name.symbol = found;
-        } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
-          // 2.5.14. Pre-OpenACC-3.2 behavior: implicit scalars warn instead of
-          // error unless strict mode is enabled.
+        } else if (DefaultDSAForSymbol(GetContext(), symbol) ==
+            Symbol::Flag::AccNone) {
+          // 2.5.14. Pre-OpenACC-3.2 behavior: implicit scalars warn instead
+          // of error unless strict mode is enabled.
           if (IsAccScalar(symbol) &&
               !context_.IsEnabled(
                   common::LanguageFeature::OpenAccDefaultNoneScalarsStrict)) {
@@ -2540,20 +2552,32 @@ void OmpAttributeVisitor::Post(const parser::OmpClause::Defaultmap &x) {
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
   // The DEFAULT clause may also be used on METADIRECTIVE. In that case
   // there is nothing to do.
+  using VariableCategory = parser::OmpVariableCategory;
   using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  VariableCategory::Value varCategory;
+
+  auto dsa{std::get<DataSharingAttribute>(x.t)};
+  auto &modifiers{OmpGetModifiers(x)};
+  auto *maybeCategory{
+      OmpGetUniqueModifier<parser::OmpVariableCategory>(modifiers)};
+  if (maybeCategory)
+    varCategory = maybeCategory->v;
+  else
+    varCategory = VariableCategory::Value::All;
+
   if (!dirContext_.empty()) {
-    switch (x.v) {
+    switch (dsa) {
     case DataSharingAttribute::Private:
-      SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
+      SetContextDefaultDSA(Symbol::Flag::OmpPrivate, varCategory);
       break;
     case DataSharingAttribute::Firstprivate:
-      SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
+      SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate, varCategory);
       break;
     case DataSharingAttribute::Shared:
-      SetContextDefaultDSA(Symbol::Flag::OmpShared);
+      SetContextDefaultDSA(Symbol::Flag::OmpShared, varCategory);
       break;
     case DataSharingAttribute::None:
-      SetContextDefaultDSA(Symbol::Flag::OmpNone);
+      SetContextDefaultDSA(Symbol::Flag::OmpNone, varCategory);
       break;
     }
   }
@@ -2752,7 +2776,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       }
     }
     if (dsa.none() && crayPtrDSA.none() &&
-        dirContext.defaultDSA == Symbol::Flag::OmpNone) {
+        DefaultDSAForSymbol(dirContext, *symbol) == Symbol::Flag::OmpNone) {
       checkDefaultNone = true;
     }
     bool hasDefaultNoneError{false};
@@ -2825,18 +2849,19 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     //      Ideally, lowering should be changed and all implicit symbols
     //      should be marked with OmpImplicit.
 
-    if (dirContext.defaultDSA == Symbol::Flag::OmpPrivate ||
-        dirContext.defaultDSA == Symbol::Flag::OmpFirstPrivate ||
-        dirContext.defaultDSA == Symbol::Flag::OmpShared ||
-        (dirContext.defaultDSA == Symbol::Flag::OmpNone &&
+    if (DefaultDSAForSymbol(dirContext, *symbol) == Symbol::Flag::OmpPrivate ||
+        DefaultDSAForSymbol(dirContext, *symbol) ==
+            Symbol::Flag::OmpFirstPrivate ||
+        DefaultDSAForSymbol(dirContext, *symbol) == Symbol::Flag::OmpShared ||
+        (DefaultDSAForSymbol(dirContext, *symbol) == Symbol::Flag::OmpNone &&
             !hasDefaultNoneError)) {
       // 1) default
       // Allowed only with parallel, teams and task generating constructs.
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
-      dsa = {dirContext.defaultDSA};
-      if (dirContext.defaultDSA != Symbol::Flag::OmpNone) {
+      dsa = {DefaultDSAForSymbol(dirContext, *symbol)};
+      if (DefaultDSAForSymbol(dirContext, *symbol) != Symbol::Flag::OmpNone) {
         makeSymbol(dsa);
       }
       PRINT_IMPLICIT_RULE("1) default");
@@ -2890,67 +2915,6 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
   }
 }
 
-static bool IsOpenMPPointer(const Symbol &symbol) {
-  if (IsPointer(symbol) || IsBuiltinCPtr(symbol))
-    return true;
-  return false;
-}
-
-static bool IsOpenMPAggregate(const Symbol &symbol) {
-  if (IsAllocatable(symbol) || IsOpenMPPointer(symbol))
-    return false;
-
-  const auto *type{symbol.GetType()};
-  // OpenMP categorizes Fortran characters as aggregates.
-  if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
-    return true;
-
-  if (const auto *det{symbol.GetUltimate()
-              .detailsIf<Fortran::semantics::ObjectEntityDetails>()})
-    if (det->IsArray())
-      return true;
-
-  if (type->AsDerived())
-    return true;
-
-  if (IsDeferredShape(symbol) || IsAssumedRank(symbol) ||
-      IsAssumedShape(symbol))
-    return true;
-  return false;
-}
-
-static bool IsOpenMPScalar(const Symbol &symbol) {
-  if (IsOpenMPAggregate(symbol) || IsOpenMPPointer(symbol) ||
-      IsAllocatable(symbol))
-    return false;
-  const auto *type{symbol.GetType()};
-  if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
-      (type->category() ==
-              Fortran::semantics::DeclTypeSpec::Category::Numeric ||
-          type->category() ==
-              Fortran::semantics::DeclTypeSpec::Category::Logical))
-    return true;
-  return false;
-}
-
-static bool DefaultMapCategoryMatchesSymbol(
-    parser::OmpVariableCategory::Value category, const Symbol &symbol) {
-  using VarCat = parser::OmpVariableCategory::Value;
-  switch (category) {
-  case VarCat::Scalar:
-    return IsOpenMPScalar(symbol);
-  case VarCat::Allocatable:
-    return IsAllocatable(symbol);
-  case VarCat::Aggregate:
-    return IsOpenMPAggregate(symbol);
-  case VarCat::Pointer:
-    return IsOpenMPPointer(symbol);
-  case VarCat::All:
-    return true;
-  }
-  return false;
-}
-
 // For OpenMP constructs, check all the data-refs within the constructs
 // and adjust the symbol for each Name if necessary
 void OmpAttributeVisitor::Post(const parser::Name &name) {
@@ -2989,10 +2953,12 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
           for (auto defaults : dMap) {
             if (defaults.second ==
                 parser::OmpDefaultmapClause::ImplicitBehavior::None) {
-              if (DefaultMapCategoryMatchesSymbol(defaults.first, *found)) {
+              if (omp::DefaultMapCategoryMatchesSymbol(
+                      defaults.first, *found)) {
                 if (!IsObjectWithDSA(*symbol)) {
                   context_.Say(name.source,
-                      "The DEFAULTMAP(NONE) clause requires that '%s' must be "
+                      "The DEFAULTMAP(NONE) clause requires that '%s' must "
+                      "be "
                       "listed in a "
                       "data-sharing attribute, data-mapping attribute, or is_device_ptr clause"_err_en_US,
                       symbol->name());

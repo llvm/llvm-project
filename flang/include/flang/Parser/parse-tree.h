@@ -4604,8 +4604,10 @@ struct OmpApplyClause {
 //    SHARED | NONE |                               // since 4.5
 //    PRIVATE | FIRSTPRIVATE                        // since 5.0
 struct OmpDefaultClause {
-  ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
-  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, DataSharingAttribute);
+  ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None);
+  TUPLE_CLASS_BOILERPLATE(OmpDefaultClause);
+  MODIFIER_BOILERPLATE(OmpVariableCategory);
+  std::tuple<DataSharingAttribute, MODIFIERS()> t;
 };
 
 // Ref: [4.5:103-107], [5.0:324-325], [5.1:357-358], [5.2:161-162]

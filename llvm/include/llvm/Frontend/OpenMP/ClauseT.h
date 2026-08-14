@@ -513,8 +513,9 @@ struct CountsT {
 template <typename T, typename I, typename E> //
 struct DefaultT {
   ENUM(DataSharingAttribute, Firstprivate, None, Private, Shared);
-  using WrapperTrait = std::true_type;
-  DataSharingAttribute v;
+  ENUM(VariableCategory, All, Scalar, Aggregate, Pointer, Allocatable);
+  using TupleTrait = std::true_type;
+  std::tuple<DataSharingAttribute, OPT(VariableCategory)> t;
 };
 
 // V5.2: [5.8.7] `defaultmap` clause
