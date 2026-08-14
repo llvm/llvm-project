@@ -6,28 +6,28 @@
 ; RUN: opt -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t -S -o - %s | FileCheck --check-prefixes=RETP %s
 ; RUN: opt -passes='wholeprogramdevirt,default<O3>' -whole-program-visibility -wholeprogramdevirt-summary-action=export -wholeprogramdevirt-read-summary=%S/Inputs/export.yaml -wholeprogramdevirt-write-summary=%t  -S -o - %s | FileCheck --check-prefixes=O3 %s
 
-; RETP: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) !prof !11
-; RETP: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) !prof !11
-; RETP: define internal void @branch_funnel(ptr nest %0, ...) !prof !10
-; RETP: define internal void @branch_funnel.1(ptr nest %0, ...) !prof !10 
-; RETP: !10 = !{!"function_entry_count", i64 1000}
-; RETP: !11 = !{!"function_entry_count", i64 3000}
+; RETP: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) !prof ![[PROF1:[0-9]+]]
+; RETP: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) !prof ![[PROF1]]
+; RETP: define internal void @branch_funnel(ptr nest %0, ...) !prof ![[PROF2:[0-9]+]]
+; RETP: define internal void @branch_funnel.1(ptr nest %0, ...) !prof ![[PROF2]]
+; RETP: ![[PROF2]] = !{!"function_entry_count", i64 1000}
+; RETP: ![[PROF1]] = !{!"function_entry_count", i64 3000}
 
-; NORETP: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) !prof !11
-; NORETP: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) !prof !11
-; NORETP: define internal void @branch_funnel(ptr nest %0, ...) !prof !11
-; NORETP: define internal void @branch_funnel.1(ptr nest %0, ...) !prof !11
-; NORETP: !11 = !{!"unknown", !"wholeprogramdevirt"}
+; NORETP: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) !prof ![[PROF1:[0-9]+]]
+; NORETP: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) !prof ![[PROF1]]
+; NORETP: define internal void @branch_funnel(ptr nest %0, ...) !prof ![[PROF1]]
+; NORETP: define internal void @branch_funnel.1(ptr nest %0, ...) !prof ![[PROF1]]
+; NORETP: ![[PROF1]] = !{!"unknown", !"wholeprogramdevirt"}
 
-; O3: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof !11
-; O3: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof !11
-; O3: define internal void @branch_funnel(ptr nest %0, ...) unnamed_addr #5 !prof !10
-; O3: define internal void @branch_funnel.1(ptr nest %0, ...) unnamed_addr #5 !prof !10
-; O3: define hidden void @__typeid_typeid3_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof !12
-; O3: define hidden void @__typeid_typeid3_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof !12
-; O3: !10 = !{!"function_entry_count", i64 1000}
-; O3: !11 = !{!"function_entry_count", i64 3000}
-; O3: !12 = !{!"unknown", !"wholeprogramdevirt"}
+; O3: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof ![[PROF1:[0-9]+]]
+; O3: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof ![[PROF1]]
+; O3: define internal void @branch_funnel(ptr nest %0, ...) unnamed_addr #5 !prof ![[PROF2:[0-9]+]]
+; O3: define internal void @branch_funnel.1(ptr nest %0, ...) unnamed_addr #5 !prof ![[PROF2]]
+; O3: define hidden void @__typeid_typeid3_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof ![[PROF3:[0-9]+]]
+; O3: define hidden void @__typeid_typeid3_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof ![[PROF3]]
+; O3: ![[PROF2]] = !{!"function_entry_count", i64 1000}
+; O3: ![[PROF1]] = !{!"function_entry_count", i64 3000}
+; O3: ![[PROF3]] = !{!"unknown", !"wholeprogramdevirt"}
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"

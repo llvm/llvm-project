@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -o /dev/null %s
-; Verify we don't crash on DISubprogram without a type.
+; Verify we don't crash on a DISubprogram with an empty struct type.
 
 target triple = "x86_64-apple-darwin"
 
@@ -14,4 +14,6 @@ define void @test() !dbg !4 {
 !1 = !DIFile(filename: "test.cpp", directory: "/tmp")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
-!4 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 1, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+!4 = distinct !DISubprogram(name: "test", scope: !1, file: !1, line: 1, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, type: !6)
+!5 = !{null}
+!6 = !DISubroutineType(types: !5)

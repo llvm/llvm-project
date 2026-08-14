@@ -151,7 +151,7 @@ ATemplatedClass2 test2(list);
 //
 // CHECK:      FunctionTemplateDecl {{.*}} <deduction guide for ATemplatedClass2>
 // CHECK-NEXT: |-TemplateTemplateParmDecl {{.*}} depth 0 index 0 T2
-// CHECK-NEXT: | `-TemplateTypeParmDecl {{.*}} typename depth 0 index 0
+// CHECK-NEXT: | `-TemplateTypeParmDecl {{.*}} typename depth 1 index 0
 // CHECK-NEXT: |-TypeTraitExpr {{.*}} 'bool' __is_deducible
 
 } // namespace GH90209

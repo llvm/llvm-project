@@ -4,7 +4,7 @@ endif()
 
 add_custom_target(libc_unittest_tests)
 
-add_libc_unittest(
+add_libc_test(
   testfilter_test
   SUITE
     libc_unittest_tests
