@@ -83,6 +83,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
@@ -8432,6 +8433,13 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
     if (Changed) {
       LAIs->clear();
 
+      // If CycleAnalysis was cached by a prior pass (e.g. DSE), it now holds
+      // stale pointers to blocks that may have been deleted during
+      // vectorization. Clear it so that BlockFrequencyAnalysis (if requested
+      // for a later loop) recomputes it fresh.
+      if (FAM->getCachedResult<CycleAnalysis>(F))
+        FAM->clearAnalysis<CycleAnalysis>(F);
+
 #ifndef NDEBUG
       if (VerifySCEV)
         SE->verify();
@@ -8462,6 +8470,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  FAM = &AM;
   GetBFI = [&AM, &F]() -> BlockFrequencyInfo & {
     return AM.getResult<BlockFrequencyAnalysis>(F);
   };

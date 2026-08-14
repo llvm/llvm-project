@@ -539,7 +539,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                    TargetMachine &TM) {
 
   // Register a callback for disabling passes.
-  PIC.registerShouldRunOptionalPassCallback([](StringRef P, const Any &) {
+  PIC.registerShouldRunOptionalPassCallback([](StringRef P, IRUnitRef) {
 
 #define DISABLE_PASS(Option, Name)                                             \
   if (Option && P.contains(#Name))                                             \

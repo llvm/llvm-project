@@ -199,6 +199,24 @@ lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
   }
 }
 
+static mlir::Value
+emitBoolVecConversion(mlir::ConversionPatternRewriter &rewriter,
+                      mlir::Value srcVec, unsigned numElementsDst) {
+  auto srcTy = mlir::cast<mlir::VectorType>(srcVec.getType());
+  unsigned numElementsSrc = srcTy.getNumElements();
+  if (numElementsSrc == numElementsDst)
+    return srcVec;
+
+  SmallVector<int32_t, 8> mask(numElementsDst, -1);
+  for (unsigned i : llvm::seq(std::min(numElementsDst, numElementsSrc)))
+    mask[i] = i;
+
+  mlir::Location loc = srcVec.getLoc();
+  auto poison = mlir::LLVM::PoisonOp::create(rewriter, loc, srcVec.getType());
+  return mlir::LLVM::ShuffleVectorOp::create(rewriter, loc, srcVec, poison,
+                                             mask);
+}
+
 /// Emits the value from memory as expected by its users. Should be called when
 /// the memory represetnation of a CIR type is not equal to its scalar
 /// representation.
@@ -216,9 +234,15 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
   // Convert the `iN` back to boolean vectors
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(op.getType())) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
-      mlir::Type mlirVecTy = converter.convertType(vecTy);
-      return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), mlirVecTy,
-                                           value);
+      auto rawIntTy = mlir::cast<mlir::IntegerType>(value.getType());
+      auto paddedVecTy =
+          cir::VectorType::get(vecTy.getElementType(), rawIntTy.getWidth());
+      mlir::Type mlirVecTy = converter.convertType(paddedVecTy);
+      // Bitcast iP --> <P x i1>.
+      auto v = mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(),
+                                             mlirVecTy, value);
+      // Shuffle <P x i1> --> <N x i1> (N is the actual bit size).
+      return emitBoolVecConversion(rewriter, v, vecTy.getSize());
     }
   }
 
@@ -251,6 +275,7 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
       uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
       auto resultTy = mlir::IntegerType::get(origType.getContext(), bytePadded);
+      value = emitBoolVecConversion(rewriter, value, resultTy.getWidth());
       return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), resultTy,
                                            value);
     }
@@ -723,6 +748,58 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrInfoAttr blockAddrInfo) {
   return blockAddressOp;
 }
 
+/// BlockAddrDiffAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
+  assert(blockInfoAddr &&
+         "block address lowering requires LLVMBlockAddressInfo");
+  // A block-address difference initializer is lowered to the difference of the
+  // two block addresses: trunc(ptrtoint(lhs) - ptrtoint(rhs)). Just like a
+  // single block address, each referenced block tag may not have been emitted
+  // yet, in which case it is recorded as unresolved and patched up later in
+  // resolveBlockAddressOp.
+  mlir::Location loc = parentOp->getLoc();
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+  mlir::MLIRContext *ctx = rewriter.getContext();
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+
+  auto emitBlockAddr = [&](mlir::StringAttr label) -> mlir::Value {
+    auto info = cir::BlockAddrInfoAttr::get(
+        ctx, blockAddrDiff.getFunc().getValue(), label.getValue());
+    mlir::LLVM::BlockTagOp matchLabel = blockInfoAddr->lookupBlockTag(info);
+    mlir::LLVM::BlockTagAttr tagAttr =
+        matchLabel ? matchLabel.getTag() : mlir::LLVM::BlockTagAttr{};
+    auto blkAddr = mlir::LLVM::BlockAddressAttr::get(
+        ctx, blockAddrDiff.getFunc(), tagAttr);
+    auto addrOp =
+        mlir::LLVM::BlockAddressOp::create(rewriter, loc, ptrTy, blkAddr);
+    if (!matchLabel)
+      blockInfoAddr->addUnresolvedBlockAddress(addrOp, info);
+    return addrOp;
+  };
+
+  mlir::Value lhsAddr = emitBlockAddr(blockAddrDiff.getLhsLabel());
+  mlir::Value rhsAddr = emitBlockAddr(blockAddrDiff.getRhsLabel());
+
+  // Compute the difference in a pointer-sized integer, then truncate to the
+  // initializer's type. LLVM is sensitive about the exact format of the
+  // address-of-label difference, so the truncation must happen after the
+  // subtraction.
+  mlir::Type intptrTy =
+      rewriter.getIntegerType(layout.getTypeSizeInBits(ptrTy));
+  mlir::Value lhsInt =
+      mlir::LLVM::PtrToIntOp::create(rewriter, loc, intptrTy, lhsAddr);
+  mlir::Value rhsInt =
+      mlir::LLVM::PtrToIntOp::create(rewriter, loc, intptrTy, rhsAddr);
+  mlir::Value diffVal =
+      mlir::LLVM::SubOp::create(rewriter, loc, lhsInt, rhsInt);
+
+  mlir::Type resultTy = converter->convertType(blockAddrDiff.getType());
+  mlir::Value result = diffVal;
+  if (resultTy != intptrTy)
+    result = mlir::LLVM::TruncOp::create(rewriter, loc, resultTy, diffVal);
+  return result;
+}
+
 // ConstArrayAttr visitor
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Type llvmTy = converter->convertType(attr.getType());
@@ -801,9 +878,11 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstVectorAttr attr) {
     } else if (auto floatAttr = mlir::dyn_cast<cir::FPAttr>(elementAttr)) {
       mlirAttr = rewriter.getFloatAttr(
           converter->convertType(floatAttr.getType()), floatAttr.getValue());
+    } else if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(elementAttr)) {
+      mlirAttr = rewriter.getBoolAttr(boolAttr.getValue());
     } else {
-      llvm_unreachable(
-          "vector constant with an element that is neither an int nor a float");
+      llvm_unreachable("vector constant with an element that is neither an "
+                       "int, a float, or a bool");
     }
     mlirValues.push_back(mlirAttr);
   }
@@ -2868,10 +2947,12 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     cir::GlobalOp op, mlir::Attribute init,
     mlir::ConversionPatternRewriter &rewriter) const {
   // TODO: Generalize this handling when more types are needed here.
-  assert((isa<cir::BlockAddrInfoAttr, cir::ConstArrayAttr, cir::ConstRecordAttr,
-              cir::ConstVectorAttr, cir::ConstPtrAttr, cir::ConstComplexAttr,
-              cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
-              cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(init)));
+  assert(
+      (isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr, cir::ConstArrayAttr,
+           cir::ConstRecordAttr, cir::ConstVectorAttr, cir::ConstPtrAttr,
+           cir::ConstComplexAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
+           cir::UndefAttr, cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
+          init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
@@ -3000,11 +3081,12 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         return mlir::success();
       }
       return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
-    } else if (mlir::isa<cir::BlockAddrInfoAttr, cir::ConstVectorAttr,
-                         cir::ConstRecordAttr, cir::ConstPtrAttr,
-                         cir::ConstComplexAttr, cir::GlobalViewAttr,
-                         cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
-                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
+    } else if (mlir::isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
+                         cir::ConstVectorAttr, cir::ConstRecordAttr,
+                         cir::ConstPtrAttr, cir::ConstComplexAttr,
+                         cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
+                         cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
+                   init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.

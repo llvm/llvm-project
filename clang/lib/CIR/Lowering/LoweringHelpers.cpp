@@ -216,6 +216,25 @@ static bool containsPoison(mlir::Attribute attr) {
   return false;
 }
 
+/// Block-address attributes (address-of-label and label differences) are
+/// lowered to relocation expressions that cannot be materialized as part of a
+/// dense/aggregate constant attribute; they require the per-element
+/// insertvalue region lowering. Return true if \p attr contains any such
+/// element.
+static bool containsBlockAddress(mlir::Attribute attr) {
+  if (mlir::isa<cir::BlockAddrInfoAttr, cir::BlockAddrDiffAttr>(attr))
+    return true;
+  if (auto elts = mlir::dyn_cast<mlir::ArrayAttr>(attr))
+    return llvm::any_of(elts, containsBlockAddress);
+  if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(attr)) {
+    if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
+      return false;
+    if (auto elts = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts()))
+      return llvm::any_of(elts, containsBlockAddress);
+  }
+  return false;
+}
+
 static std::optional<mlir::Attribute> lowerConstRecordMemberAttr(
     mlir::Attribute attr, mlir::SymbolTableCollection &symbolTables,
     const mlir::TypeConverter *converter, mlir::ModuleOp moduleOp);
@@ -238,6 +257,11 @@ std::optional<mlir::Attribute> lowerConstArrayAttr(
   }
 
   if (containsPoison(constArr))
+    return std::nullopt;
+
+  // Block-address initializers cannot be represented as a dense/aggregate
+  // constant attribute; fall back to the per-element insertvalue lowering.
+  if (containsBlockAddress(constArr))
     return std::nullopt;
 
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))

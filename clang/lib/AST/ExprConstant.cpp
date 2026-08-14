@@ -8742,8 +8742,9 @@ public:
   }
 
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E) {
-    CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::Reinterpret;
+    if (E->getCastKind() != CK_PointerToIntegral)
+      CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << diag::ConstexprInvalidCastKind::Reinterpret;
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
   bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
@@ -20053,7 +20054,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_PointerToIntegral: {
-    CCEDiag(E, diag::note_constexpr_invalid_cast)
+    CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
 
@@ -20062,6 +20063,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
 
     if (LV.getLValueBase()) {
+      CCEDiag(E, diag::note_constexpr_has_lvalue) << E->getSourceRange();
       // Only allow based lvalue casts if they are lossless.
       // FIXME: Allow a larger integer size than the pointer size, and allow
       // narrowing back down to pointer width in subsequent integral casts.
@@ -22044,7 +22046,6 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     // destruction.
     return false;
   }
-
   return true;
 }
 
@@ -22727,14 +22728,15 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 }
 
 /// Evaluate an expression as a C++11 integral constant expression.
-static bool EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx,
-                                                    const Expr *E,
-                                                    llvm::APSInt *Value) {
+static bool
+EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx, const Expr *E,
+                                        llvm::APSInt *Value,
+                                        bool AllowRelaxedEval = false) {
   if (!E->getType()->isIntegralOrUnscopedEnumerationType())
     return false;
 
   APValue Result;
-  if (!E->isCXX11ConstantExpr(Ctx, &Result))
+  if (!E->isCXX11ConstantExpr(Ctx, &Result, AllowRelaxedEval))
     return false;
 
   if (!Result.isInt())
@@ -22760,7 +22762,8 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx) const {
 }
 
 std::optional<llvm::APSInt>
-Expr::getIntegerConstantExpr(const ASTContext &Ctx) const {
+Expr::getIntegerConstantExpr(const ASTContext &Ctx,
+                             bool AllowRelaxedEval) const {
   if (isValueDependent()) {
     // Expression evaluator can't succeed on a dependent expression.
     return std::nullopt;
@@ -22768,7 +22771,8 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx) const {
 
   if (Ctx.getLangOpts().CPlusPlus11) {
     APSInt Value;
-    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value))
+    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value,
+                                                AllowRelaxedEval))
       return Value;
     return std::nullopt;
   }
@@ -22798,7 +22802,8 @@ bool Expr::isCXX98IntegralConstantExpr(const ASTContext &Ctx) const {
   return CheckICE(this, Ctx).Kind == IK_ICE;
 }
 
-bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
+bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
+                               bool AllowRelaxedEval) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -22817,6 +22822,8 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
   // Build evaluation settings.
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+  SmallVector<PartialDiagnosticAt> MSRelaxedDiag;
+  Status.ExtendedDiag = AllowRelaxedEval ? &MSRelaxedDiag : nullptr;
 
   bool IsConstExpr =
       ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&
