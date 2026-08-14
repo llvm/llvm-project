@@ -16,9 +16,9 @@ define i32 @reduced(<4 x i16> %vecins, i32 %conv) {
 ; CHECK-NEXT:    str d0, [sp, #8]
 ; CHECK-NEXT:    ldrh w11, [x8]
 ; CHECK-NEXT:    add w11, w11, #1
-; CHECK-NEXT:    and w12, w11, #0xffff
+; CHECK-NEXT:    and w11, w11, #0xffff
 ; CHECK-NEXT:    cmp w11, w9
-; CHECK-NEXT:    ccmp w12, w10, #4, ne
+; CHECK-NEXT:    ccmp w11, w10, #4, ne
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %sw.bb
 ; CHECK-NEXT:    mov w0, wzr
@@ -75,7 +75,7 @@ define i32 @original() {
 ; CHECK-NEXT:    lsr x13, x13, #61
 ; CHECK-NEXT:    cmp x13, #1
 ; CHECK-NEXT:    rev16 w13, w14
-; CHECK-NEXT:    b.ne .LBB1_5
+; CHECK-NEXT:    b.ne .LBB1_4
 ; CHECK-NEXT:  // %bb.2: // %lbl_br68
 ; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    mov v0.h[0], w13
@@ -85,25 +85,22 @@ define i32 @original() {
 ; CHECK-NEXT:    add x15, sp, #8
 ; CHECK-NEXT:    bfi x15, x14, #1, #2
 ; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldrsh w14, [x15]
-; CHECK-NEXT:    cmp w14, #1
-; CHECK-NEXT:    add w14, w14, w10
-; CHECK-NEXT:    cset w15, lt
-; CHECK-NEXT:    cmp w14, w11
-; CHECK-NEXT:    strb w15, [x8, :lo12:g19]
-; CHECK-NEXT:    b.eq .LBB1_4
-; CHECK-NEXT:  // %bb.3: // %lbl_br68
-; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    ldrsh w15, [x15]
+; CHECK-NEXT:    add w14, w15, w10
+; CHECK-NEXT:    cmp w15, #1
 ; CHECK-NEXT:    and w15, w14, #0xffff
-; CHECK-NEXT:    cmp w15, w12
+; CHECK-NEXT:    cset w16, lt
+; CHECK-NEXT:    cmp w15, w11
+; CHECK-NEXT:    strb w16, [x8, :lo12:g19]
+; CHECK-NEXT:    ccmp w15, w12, #4, ne
 ; CHECK-NEXT:    b.ne .LBB1_1
-; CHECK-NEXT:  .LBB1_4: // %sw.bb
+; CHECK-NEXT:  // %bb.3: // %sw.bb
 ; CHECK-NEXT:    adrp x8, g30
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    strh w13, [x8, :lo12:g30]
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_5: // %if.end
+; CHECK-NEXT:  .LBB1_4: // %if.end
 ; CHECK-NEXT:    adrp x8, g30
 ; CHECK-NEXT:    strh w13, [x8, :lo12:g30]
 ; CHECK-NEXT:    bl abort
