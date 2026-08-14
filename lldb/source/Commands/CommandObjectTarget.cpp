@@ -62,6 +62,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
+
 #include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -3155,9 +3157,11 @@ public:
             "add'.\n"
             "The module to replace is found by the new file's UUID, or by its "
             "basename if it has no UUID. Use --old-path when neither picks a "
-            "single module, and --force to replace a module whose UUID does "
-            "not match the new file's.",
-            "target modules replace [--old-path <path>] [--force] <path>",
+            "single module. Only placeholder modules, which core files create "
+            "for files they could not find, are replaced by default.",
+            "target modules replace [--old-path <path>] "
+            "[--allow-uuid-mismatch] "
+            "[--force] <path>",
             eCommandRequiresTarget | eCommandTryTargetAPILock |
                 eCommandProcessMustBePaused) {
     AddSimpleArgumentList(eArgTypePath, eArgRepeatPlain);
@@ -3184,6 +3188,9 @@ public:
       case 'f':
         m_force = true;
         break;
+      case 'm':
+        m_allow_uuid_mismatch = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -3193,6 +3200,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_old_path.clear();
       m_force = false;
+      m_allow_uuid_mismatch = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -3201,6 +3209,7 @@ public:
 
     std::string m_old_path;
     bool m_force = false;
+    bool m_allow_uuid_mismatch = false;
   };
 
 protected:
@@ -3322,14 +3331,36 @@ protected:
     // symbols would not describe the memory the target has.
     const UUID &old_uuid = old_module_sp->GetUUID();
     const UUID &new_uuid = new_module_spec.GetUUID();
-    if (!m_options.m_force && old_uuid.IsValid() && new_uuid.IsValid() &&
-        old_uuid != new_uuid) {
+    if (!m_options.m_allow_uuid_mismatch && old_uuid.IsValid() &&
+        new_uuid.IsValid() && old_uuid != new_uuid) {
       result.AppendErrorWithFormatv(
           "'{0}' has UUID {1}, which does not match UUID {2} of the module it "
-          "would replace, '{3}'. Use the --force option to replace it anyway",
+          "would replace, '{3}'. Use the --allow-uuid-mismatch option to "
+          "replace it anyway",
           new_file_spec.GetPath(), new_uuid.GetAsString(),
           old_uuid.GetAsString(), old_module_sp->GetFileSpec().GetPath());
       return;
+    }
+
+    // Only placeholders are safe to replace. A placeholder has no symbols or
+    // types, so nothing in the session came from it. A real module may have
+    // given some out already. Those never get updated, so the session would
+    // be left using a mix of old and new.
+    if (!m_options.m_force) {
+      ObjectFile *old_object_file = old_module_sp->GetObjectFile();
+      const bool is_unused_placeholder =
+          old_object_file &&
+          old_object_file->GetPluginName() ==
+              ObjectFilePlaceholder::GetPluginNameStatic() &&
+          !old_module_sp->GetSymbolFileFileSpec();
+      if (!is_unused_placeholder) {
+        result.AppendErrorWithFormatv(
+            "'{0}' is not an unused placeholder module, so replacing it may "
+            "leave stale types or values behind. Use the --force option to "
+            "replace it anyway",
+            old_module_sp->GetFileSpec());
+        return;
+      }
     }
 
     if (!new_module_spec.GetArchitecture().IsValid())
