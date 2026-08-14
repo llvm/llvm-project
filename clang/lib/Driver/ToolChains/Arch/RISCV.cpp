@@ -425,17 +425,20 @@ riscv::getRISCVTuneCPU(const Driver &D, const llvm::opt::ArgList &Args,
     TuneCPU = TuneCPU.slice(0, Idx);
   }
 
+  if (TuneFeatures && !TFString.empty()) {
+    if (auto E = llvm::RISCV::parseTuneFeatureString(TuneCPU, TFString,
+                                                     *TuneFeatures)) {
+      D.Diag(diag::err_drv_invalid_riscv_mtune_string)
+          << 1 << TFString << llvm::toString(std::move(E));
+      return std::nullopt;
+    }
+  }
+
+  // Apply -mtune=native after applying features. Not all features apply to
+  // all CPUs so an -mtune=native:<feature> may fail depending on what the
+  // native was expanded to.
   if (TuneCPU == "native")
     TuneCPU = llvm::sys::getHostCPUName();
-
-  if (!TuneFeatures || TFString.empty())
-    return TuneCPU;
-  if (auto E = llvm::RISCV::parseTuneFeatureString(TuneCPU, TFString,
-                                                   *TuneFeatures)) {
-    D.Diag(diag::err_drv_invalid_riscv_mtune_string)
-        << 1 << TFString << llvm::toString(std::move(E));
-    return std::nullopt;
-  }
 
   return TuneCPU;
 }
