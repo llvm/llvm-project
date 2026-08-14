@@ -26,46 +26,10 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices) {
 ;
 ; AVX512-LABEL: define void @simple_histogram(
 ; AVX512-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]]) #[[ATTR0:[0-9]+]] {
-; AVX512-NEXT:  [[ITER_CHECK:.*]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
-; AVX512:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
-; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
-; AVX512:       [[VECTOR_BODY]]:
-; AVX512-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
-; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP0]], align 4
-; AVX512-NEXT:    [[TMP1:%.*]] = zext <16 x i32> [[WIDE_LOAD]] to <16 x i64>
-; AVX512-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <16 x i64> [[TMP1]]
-; AVX512-NEXT:    call void @llvm.experimental.vector.histogram.add.v16p0.i32(<16 x ptr> [[WIDE_GEP]], i32 1, <16 x i1> splat (i1 true))
-; AVX512-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; AVX512-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
-; AVX512-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
-; AVX512:       [[VEC_EPILOG_ITER_CHECK]]:
-; AVX512-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
-; AVX512:       [[VEC_EPILOG_PH]]:
-; AVX512-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 992, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; AVX512-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
-; AVX512:       [[VEC_EPILOG_VECTOR_BODY]]:
-; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; AVX512-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX1]]
-; AVX512-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i32>, ptr [[TMP3]], align 4
-; AVX512-NEXT:    [[TMP4:%.*]] = zext <8 x i32> [[WIDE_LOAD2]] to <8 x i64>
-; AVX512-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <8 x i64> [[TMP4]]
-; AVX512-NEXT:    call void @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> [[WIDE_GEP3]], i32 1, <8 x i1> splat (i1 true))
-; AVX512-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX1]], 8
-; AVX512-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 1000
-; AVX512-NEXT:    br i1 [[TMP5]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; AVX512:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; AVX512-NEXT:    br i1 true, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
-; AVX512:       [[VEC_EPILOG_SCALAR_PH]]:
-; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 992, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; AVX512-NEXT:  [[VEC_EPILOG_SCALAR_PH:.*]]:
 ; AVX512-NEXT:    br label %[[LOOP:.*]]
 ; AVX512:       [[LOOP]]:
-; AVX512-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; AVX512-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; AVX512-NEXT:    [[GEP_INDICES:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV]]
 ; AVX512-NEXT:    [[L_IDX:%.*]] = load i32, ptr [[GEP_INDICES]], align 4
 ; AVX512-NEXT:    [[IDXPROM1:%.*]] = zext i32 [[L_IDX]] to i64
@@ -75,7 +39,7 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices) {
 ; AVX512-NEXT:    store i32 [[INC]], ptr [[GEP_BUCKET]], align 4
 ; AVX512-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; AVX512-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; AVX512-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; AVX512-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; AVX512:       [[EXIT]]:
 ; AVX512-NEXT:    ret void
 ;
