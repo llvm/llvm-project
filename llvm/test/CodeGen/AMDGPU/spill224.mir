@@ -26,7 +26,7 @@ body: |
   ; SPILLED-NEXT:   S_NOP 1
   ; SPILLED-NEXT: {{  $}}
   ; SPILLED-NEXT: bb.2:
-  ; SPILLED-NEXT:   $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10 = SI_SPILL_S224_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s224) from %stack.0, align 4, addrspace 5)
+  ; SPILLED-NEXT:   $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10 = SI_SPILL_S224_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr32 :: (load (s224) from %stack.0, align 4, addrspace 5)
   ; SPILLED-NEXT:   S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10
   ;
   ; EXPANDED-LABEL: name: spill_restore_sgpr224

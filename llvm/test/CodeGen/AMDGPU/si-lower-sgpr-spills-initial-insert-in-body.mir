@@ -60,7 +60,7 @@ body:             |
     S_BRANCH %bb.4
   bb.2:
     liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
-    renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     $sgpr10 = S_MOV_B32 1
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     S_BRANCH %bb.3
