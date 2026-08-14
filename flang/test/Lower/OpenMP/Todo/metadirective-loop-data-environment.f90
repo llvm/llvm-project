@@ -26,7 +26,7 @@
 ! DATA-SHARING: not yet implemented: data-sharing clause in loop-associated METADIRECTIVE variant
 ! EAGER: not yet implemented: loop-associated METADIRECTIVE with eager privatization
 ! ENCLOSING: not yet implemented: loop-associated METADIRECTIVE nested in an OpenMP data environment
-! SELECTED: not yet implemented: data-environment construct in METADIRECTIVE variant
+! SELECTED: not yet implemented: loop-associated METADIRECTIVE nested in an OpenMP data environment
 
 !--- parallel-do.f90
 subroutine test_parallel_do(n, a)

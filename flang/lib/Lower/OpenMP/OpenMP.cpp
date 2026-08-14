@@ -6947,118 +6947,12 @@ hasUnsupportedDataEnvironmentDirective(const ConstructQueue &queue) {
   });
 }
 
-static bool
-hasMetadirectiveStaticStorageDuration(const semantics::Symbol &sym) {
-  const semantics::Symbol &ultimate{sym.GetUltimate()};
-  return semantics::IsSaved(ultimate) ||
-         ultimate.test(semantics::Symbol::Flag::InCommonBlock);
-}
-
-static bool isMetadirectiveRegionLocal(const semantics::Symbol &sym,
-                                       const semantics::Scope &scope) {
-  const semantics::Symbol &ultimate{sym.GetUltimate()};
-  return ultimate.owner() != scope && scope.Contains(ultimate.owner()) &&
-         !hasMetadirectiveStaticStorageDuration(ultimate);
-}
-
-static bool isSharedBySelectedMetadirective(const semantics::Symbol &sym,
-                                            const ConstructQueue &queue) {
-  const semantics::Symbol &ultimate{sym.GetUltimate()};
-  for (const auto &item : queue) {
-    for (const Clause &ompClause : item.clauses) {
-      if (const auto *defaultClause =
-              std::get_if<clause::Default>(&ompClause.u)) {
-        if (defaultClause->v == clause::Default::DataSharingAttribute::Shared)
-          return true;
-      } else if (const auto *sharedClause =
-                     std::get_if<clause::Shared>(&ompClause.u)) {
-        if (llvm::any_of(sharedClause->v, [&](const Object &object) {
-              return object.sym() && &object.sym()->GetUltimate() == &ultimate;
-            }))
-          return true;
-      }
-    }
-  }
-  return false;
-}
-
-static bool
-hasSequentialLoopIVRequiringMetadirectiveDSA(lower::pft::Evaluation &eval,
-                                             unsigned version) {
-  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations()) {
-    if (const auto *ompConstruct = nested.getIf<parser::OpenMPConstruct>()) {
-      llvm::omp::Directive dir{
-          parser::omp::GetOmpDirectiveName(*ompConstruct).v};
-      if (llvm::omp::allParallelSet.test(dir) ||
-          llvm::omp::taskGeneratingSet.test(dir) ||
-          llvm::omp::allTargetSet.test(dir) ||
-          (version >= 52 && llvm::omp::allTeamsSet.test(dir)))
-        continue;
-    }
-    if (nested.getIf<parser::DoConstruct>() &&
-        getIterationVariableSymbol(nested))
-      return true;
-    if (nested.hasNestedEvaluations() &&
-        hasSequentialLoopIVRequiringMetadirectiveDSA(nested, version))
-      return true;
-  }
-  return false;
-}
-
-static bool hasUnsupportedBlockDataEnvironment(const ConstructQueue &queue,
-                                               lower::pft::Evaluation &eval,
-                                               const semantics::Scope &scope,
-                                               unsigned version) {
-  if (hasUnsupportedDataEnvironmentDirective(queue) &&
-      hasSequentialLoopIVRequiringMetadirectiveDSA(eval, version))
-    return true;
-
-  bool hasTask{llvm::any_of(queue, [](const auto &item) {
-    return llvm::omp::taskGeneratingSet.test(item.id);
-  })};
-  if (!hasTask)
-    return false;
-
-  bool hasUnsupportedCapture{false};
-  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations()) {
-    lower::pft::visitAllSymbols(nested, [&](const semantics::Symbol &symbol) {
-      if (hasUnsupportedCapture || !semantics::omp::IsPrivatizable(symbol) ||
-          isMetadirectiveRegionLocal(symbol, scope))
-        return;
-      // DSA flags are symbol-wide and may come from an unselected variant or a
-      // nested construct. Trust only sharing stated by the selected queue.
-      if (!hasMetadirectiveStaticStorageDuration(symbol) &&
-          !isSharedBySelectedMetadirective(symbol, queue))
-        hasUnsupportedCapture = true;
-    });
-  }
-  return hasUnsupportedCapture;
-}
-
 static bool hasUnsupportedDataSharingClause(const ConstructQueue &queue,
                                             unsigned version) {
   return llvm::any_of(queue, [version](const auto &item) {
     return llvm::any_of(item.clauses, [version](const Clause &ompClause) {
       return std::holds_alternative<clause::Default>(ompClause.u) ||
              llvm::omp::isDataSharingAttributeClause(ompClause.id, version);
-    });
-  });
-}
-
-static bool
-hasUnsupportedMetadirectiveHostAssociationClause(const ConstructQueue &queue,
-                                                 unsigned version) {
-  return llvm::any_of(queue, [version](const auto &item) {
-    return llvm::any_of(item.clauses, [version](const Clause &ompClause) {
-      if (const auto *defaultClause =
-              std::get_if<clause::Default>(&ompClause.u)) {
-        using DataSharingAttribute = clause::Default::DataSharingAttribute;
-        return defaultClause->v == DataSharingAttribute::Private ||
-               defaultClause->v == DataSharingAttribute::Firstprivate;
-      }
-      return llvm::omp::isPrivatizingClause(ompClause.id, version) ||
-             ompClause.id == llvm::omp::Clause::OMPC_copyin ||
-             ompClause.id == llvm::omp::Clause::OMPC_copyprivate;
     });
   });
 }
@@ -7297,19 +7191,10 @@ static void genMetadirective(lower::AbstractConverter &converter,
 
     bool hasLoopAssociation =
         hasDirectiveAssociation(queue, llvm::omp::Association::LoopNest);
-    if (!hasLoopAssociation &&
-        hasUnsupportedMetadirectiveHostAssociationClause(queue, ompVersion))
-      TODO(variantLoc, "METADIRECTIVE block variant with a clause requiring "
-                       "variant-local host association");
-
     if (hasLoopAssociation && hasUnsupportedDataEnvironmentDirective(queue))
       TODO(variantLoc,
            "data-environment construct in loop-associated METADIRECTIVE "
            "variant");
-    if (!hasLoopAssociation &&
-        hasUnsupportedBlockDataEnvironment(
-            queue, eval, semaCtx.FindScope(spec->source), ompVersion))
-      TODO(variantLoc, "data-environment construct in METADIRECTIVE variant");
 
     if (hasLoopAssociation) {
       // Name resolution cannot give a metadirective variant its own DSA
