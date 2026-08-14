@@ -18,6 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
@@ -62,7 +63,7 @@ TEST(InstrumentorTest, RunsHookBeforeRuntimeLink) {
   int FD;
   ASSERT_FALSE(sys::fs::createTemporaryFile("instrumentor-runtime", "ll", FD,
                                             RuntimePath));
-  auto RemoveRuntime = make_scope_exit([&] { sys::fs::remove(RuntimePath); });
+  scope_exit RemoveRuntime([&] { sys::fs::remove(RuntimePath); });
 
   raw_fd_ostream OS(FD, true);
   OS << "@runtime_marker = global i32 0\n";
@@ -80,7 +81,7 @@ TEST(InstrumentorTest, RunsHookBeforeRuntimeLink) {
 
   PreRuntimeLinkConfig Config(RuntimePath);
   ModuleAnalysisManager MAM;
-  InstrumentorPass Pass(nullptr, &Config);
+  InstrumentorPass Pass(/*FS=*/nullptr, &Config, /*IIRB=*/nullptr);
   Pass.run(*M, MAM);
 
   GlobalVariable *HookSawRuntime = M->getNamedGlobal("hook_saw_runtime");
