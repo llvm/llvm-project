@@ -407,6 +407,13 @@ struct LLVM_ABI InstrumentationConfig {
   /// Populate the instrumentation opportunities.
   virtual void populate(InstrumentorIRBuilderTy &IIRB);
 
+  /// Allow embedded users to extend the module after instrumentation and before
+  /// runtime bitcode linking.
+  virtual bool instrumentBeforeRuntimeLink(Module &,
+                                           InstrumentorIRBuilderTy &) {
+    return false;
+  }
+
   /// Get the runtime prefix for the instrumentation runtime functions.
   StringRef getRTName() const { return RuntimePrefix->getString(); }
 

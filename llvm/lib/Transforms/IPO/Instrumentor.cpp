@@ -540,6 +540,8 @@ bool InstrumentorImpl::instrument() {
   for (Function &Fn : M)
     Changed |= instrumentFunction(Fn);
 
+  Changed |= IConf.instrumentBeforeRuntimeLink(M, IIRB);
+
   linkRuntime();
 
   return Changed;
