@@ -1108,21 +1108,15 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
 }
 
 Error LLJIT::applyTargetConfig(Module &M) {
-  if (M.getTargetTriple().empty()) {
+  if (M.getTargetTriple().empty())
     M.setTargetTriple(TT);
-  } else if (!M.getTargetTriple().isCompatibleWith(TT)) {
-    return make_error<StringError>("added module has an incompatible triple: " +
-                                       M.getTargetTriple().str() +
-                                       " (module) vs " + TT.str() + " (jit)",
-                                   inconvertibleErrorCode());
-  }
 
   if (M.getDataLayout().isDefault())
     M.setDataLayout(DL);
 
   if (M.getDataLayout() != DL)
     return make_error<StringError>(
-        "added module has an incompatible data layout: " +
+        "Added modules have incompatible data layouts: " +
             M.getDataLayout().getStringRepresentation() + " (module) vs " +
             DL.getStringRepresentation() + " (jit)",
         inconvertibleErrorCode());

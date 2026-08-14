@@ -99,7 +99,7 @@ TEST_F(InterpreterExtensionsTest, CustomCrossJIT) {
   if (!IsARMTargetRegistered())
     GTEST_SKIP();
 
-  std::string TargetTriple = "armv6-unknown-none-eabi";
+  std::string TargetTriple = "armv6-none-eabi";
 
   IncrementalCompilerBuilder CB;
   CB.SetTargetTriple(TargetTriple);
