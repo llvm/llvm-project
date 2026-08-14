@@ -208,8 +208,10 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
           fieldTypes.push_back(fieldCIR);
         }
         // Coercion types are plain register tuples, not the source record.
-        return cir::StructType::get(ctx, fieldTypes, /*packed=*/false,
-                                    /*padded=*/false, /*is_class=*/false);
+        return cir::StructType::get(
+            ctx, fieldTypes, /*packed=*/false,
+            /*padded=*/false, /*is_class=*/false,
+            cir::RecordType::getAllDataKinds(fieldTypes));
       })
       .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
 }
@@ -780,17 +782,8 @@ void CallConvLoweringPass::runOnOperation() {
   // cached as the next one to visit.
   SmallVector<cir::CIRCallOpInterface> indirectCalls;
   moduleOp.walk([&](cir::CIRCallOpInterface c) {
-    cir::FuncType calleeTy = indirectCalleeType(c);
-    if (!calleeTy)
-      return;
-    // A cir.try_call is in this walk so that a variadic one reaches the
-    // ellipsis accounting below.  CIRABIRewriteContext cannot rebuild a
-    // cir.try_call at all, so a non-variadic one has never been rewritten
-    // here.  Keep it out rather than start reporting a gap that has nothing
-    // to do with the ellipsis.
-    if (!calleeTy.isVarArg() && isa<cir::TryCallOp>(c.getOperation()))
-      return;
-    indirectCalls.push_back(c);
+    if (indirectCalleeType(c))
+      indirectCalls.push_back(c);
   });
   for (cir::CIRCallOpInterface c : indirectCalls) {
     // classification-attr mode injects a per-function classification, which
