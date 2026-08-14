@@ -31,9 +31,8 @@ template <typename T> static constexpr bool needsCtor() {
                 std::is_same_v<T, Integral<32, false>> ||
                 std::is_same_v<T, Integral<64, true>> ||
                 std::is_same_v<T, Integral<64, false>> ||
-                std::is_same_v<T, Integral<64, false>> ||
-                std::is_same_v<T, IntegralAP<false>> ||
                 std::is_same_v<T, IntegralAP<true>> ||
+                std::is_same_v<T, IntegralAP<false>> ||
                 std::is_same_v<T, Floating> || std::is_same_v<T, Boolean>)
     return false;
 
@@ -280,7 +279,7 @@ static BlockDtorFn getDtorArrayPrim(PrimType Type) {
 }
 
 /// Primitives.
-Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type,
                        MetadataSize MD, bool IsConst, bool IsTemporary,
                        bool IsMutable, bool IsVolatile)
     : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)), Size(ElemSize),
@@ -293,7 +292,7 @@ Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
 }
 
 /// Primitive arrays.
-Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type,
                        MetadataSize MD, size_t NumElems, bool IsConst,
                        bool IsTemporary, bool IsMutable, bool IsVolatile)
     : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)),
@@ -307,7 +306,7 @@ Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
 }
 
 /// Primitive unknown-size arrays.
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
+Descriptor::Descriptor(DeclOrExpr D, PrimType Type, MetadataSize MD,
                        bool IsTemporary, bool IsConst, UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
       MDSize(MD.value_or(0)),
@@ -319,7 +318,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
 }
 
 /// Arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy,
+Descriptor::Descriptor(DeclOrExpr D, const Type *SourceTy,
                        const Descriptor *Elem, MetadataSize MD,
                        unsigned NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
@@ -334,7 +333,7 @@ Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy,
 }
 
 /// Unknown-size arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
+Descriptor::Descriptor(DeclOrExpr D, const Descriptor *Elem, MetadataSize MD,
                        bool IsTemporary, UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
       Size(UnknownSizeMark), MDSize(MD.value_or(0)),
@@ -345,7 +344,7 @@ Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
 }
 
 /// Composite records.
-Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
+Descriptor::Descriptor(DeclOrExpr D, const Record *R, MetadataSize MD,
                        bool IsConst, bool IsTemporary, bool IsMutable,
                        bool IsVolatile)
     : Source(D), ElemSize(std::max<size_t>(alignof(void *), R->getFullSize())),
@@ -357,7 +356,7 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
 }
 
 /// Dummy.
-Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
+Descriptor::Descriptor(DeclOrExpr D, MetadataSize MD)
     : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
       AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
       IsTemporary(false) {
@@ -470,17 +469,17 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
 }
 
 SourceLocation Descriptor::getLocation() const {
-  if (auto *D = dyn_cast<const Decl *>(Source))
+  if (auto *D = Source.asDecl())
     return D->getLocation();
-  if (auto *E = dyn_cast<const Expr *>(Source))
+  if (auto *E = Source.asExpr())
     return E->getExprLoc();
   llvm_unreachable("Invalid descriptor type");
 }
 
 SourceInfo Descriptor::getLoc() const {
-  if (const auto *D = dyn_cast<const Decl *>(Source))
+  if (const auto *D = Source.asDecl())
     return SourceInfo(D);
-  if (const auto *E = dyn_cast<const Expr *>(Source))
+  if (const auto *E = Source.asExpr())
     return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
 }

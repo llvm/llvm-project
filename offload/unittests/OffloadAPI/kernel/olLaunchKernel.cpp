@@ -86,7 +86,7 @@ TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
     void *DevAlloc, *HstAlloc;
     size_t Size = LaunchArgs.GroupSize.x * sizeof(uint32_t);
     ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &DevAlloc));
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, Size, &HstAlloc));
+    ASSERT_SUCCESS(olMemAllocHost(Device, Size, &HstAlloc));
 
     void *ArgPtrs[] = {&DevAlloc};
     size_t ArgSizes[] = {sizeof(DevAlloc)};
@@ -355,7 +355,7 @@ TEST_P(olLaunchKernelSingleCounterSyncEventTest, SuccessTwoQueues) {
   ASSERT_SUCCESS(olSyncQueue(Queue));
 
   ol_queue_handle_t Queue2 = nullptr;
-  ASSERT_SUCCESS(olCreateQueue(Device, &Queue2));
+  ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue2));
 
   // For the explanation of the reasoning behind particular values assigned to
   // parameters, see the comment in the Success test from the same test suite

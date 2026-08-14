@@ -65,6 +65,10 @@ jobs:
     needs:
       - validate-tag
       - release-create
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/release-documentation.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
@@ -99,6 +103,7 @@ jobs:
       id-token: write # Requred for pypi publishing
     needs:
       - validate-tag
+    if: ${{ !contains(needs.validate-tag.outputs.release-version, 'rc') }}
     environment: pypi
     steps:
       - name: Checkout LLVM
@@ -135,15 +140,9 @@ jobs:
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: lit-${{ inputs.release-version }}-release-binary
+          name: lit-${{ needs.validate-tag.outputs.release-version }}-release-binary
           path: |
             llvm/utils/lit/dist
-
-      - name: Upload lit to test.pypi.org
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          packages-dir: llvm/utils/lit/dist/
 
       - name: Upload lit to pypi.org
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0

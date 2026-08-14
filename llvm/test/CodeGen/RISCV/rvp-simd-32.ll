@@ -2304,6 +2304,42 @@ define <4 x i8> @test_vselect_v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
   ret <4 x i8> %res
 }
 
+define <4 x i8> @test_ppaire_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_ppaire_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppaire.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_ppaireo_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_ppaireo_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppaireo.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_ppairoe_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_ppairoe_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppairoe.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 1, i32 4, i32 3, i32 6>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_ppairo_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_ppairo_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppairo.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x i8> %res
+}
+
 define <2 x i16> @test_bswap_v2i16(<2 x i16> %a) {
 ; CHECK-LABEL: test_bswap_v2i16:
 ; CHECK:       # %bb.0:
@@ -2706,6 +2742,61 @@ define <2 x i16> @test_riscv_pzext_b_v2i16(<2 x i16> %a) {
 ; CHECK-NEXT:    pzext.h.b a0, a0
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.pzext.b.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
+; Packed multiply high
+define <2 x i16> @test_pmulh_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulh_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulh.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulh.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhr_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhr_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhr.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhr.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhu_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhu.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhru_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhru_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhru.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhru.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhsu_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhsu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhsu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhsu.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulhrsu_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
+; CHECK-LABEL: test_pmulhrsu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulhrsu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulhrsu.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
   ret <2 x i16> %res
 }
 

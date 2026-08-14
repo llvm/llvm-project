@@ -78,6 +78,11 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
 
+  // InsertedOverflowChecks caches Values for reuse, so must track RAUW.
+  DenseMap<std::tuple<Value *, Value *, Instruction *>,
+           std::pair<TrackingVH<Value>, TrackingVH<Value>>>
+      InsertedOverflowChecks;
+
   // InsertedValues only flags inserted instructions so needs no RAUW.
   DenseSet<AssertingVH<Value>> InsertedValues;
   DenseSet<AssertingVH<Value>> InsertedPostIncValues;
@@ -211,6 +216,7 @@ public:
   /// places within the same BasicBlock can do so.
   void clear() {
     InsertedExpressions.clear();
+    InsertedOverflowChecks.clear();
     InsertedValues.clear();
     InsertedPostIncValues.clear();
     ReusedValues.clear();
@@ -514,8 +520,6 @@ private:
   Value *visitVScale(SCEVUseT<const SCEVVScale *> S);
 
   Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
-
-  Value *visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S);
 
   Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);
 
