@@ -257,6 +257,10 @@ unsigned SPIRVNonSemanticDebugHandler::toNSDISrcLang(unsigned DwarfSrcLang) {
   }
 }
 
+// Collect distinct DILocations from LLVM IR. DebugLine pre-emission and MIR
+// lookups assume every machine-instruction debug location already appeared
+// here; a codegen-only location would not be collected and emission will be
+// skipped.
 static void collectUniqueDebugLocations(const Module &M,
                                         SetVector<const DILocation *> &Out) {
   for (const Function &F : M) {
@@ -1261,13 +1265,14 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   MCRegister ColStartReg = I32ConstantCache.lookup(Col);
   MCRegister ColEndReg = I32ConstantCache.lookup(Col + 1);
 
-  // Pre-emit walks IR instruction and debug-program-record locations; MIR is
-  // expected to reuse those same locations (or carry none). A miss here means
-  // codegen attached a source position that never appeared in the module IR.
-  assert(SrcReg.isValid() && LineReg.isValid() && ColStartReg.isValid() &&
-         ColEndReg.isValid() &&
-         "DebugLine operands must be pre-emitted in "
-         "emitNonSemanticGlobalDebugInfo()");
+  // The elements of each collected DILocation (DebugSource, line/column
+  // constants) are pre-emitted from LLVM-IR instruction !dbg attachments and
+  // debug-program records; MIR is expected to reuse those same locations (or
+  // carry none). A lookup miss means codegen attached a source position whose
+  // elements were never pre-emitted, and debug-line emission is skipped.
+  if (!SrcReg.isValid() || !LineReg.isValid() || !ColStartReg.isValid() ||
+      !ColEndReg.isValid())
+    return;
 
   // Current location matches the one of the current state, no new DebugLine
   // region is needed.
