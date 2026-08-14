@@ -1168,7 +1168,10 @@ private:
       // Same-iteration scalar flow/anti dependences between adjacent loops are
       // preserved by placing FC0's body before FC1's body in the fused loop.
       // This enables fusing accumulation chains such as:
-      //   for (i) A[i] = ...;  for (i) A[i] += ...;
+      //   for (i)
+      //     A[i] = ...;
+      //   for (i)
+      //     A[i] += ...;
       unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
       if (!(CurDir & Dependence::DVEntry::GT) &&
           !(CurDir & Dependence::DVEntry::LT)) {
