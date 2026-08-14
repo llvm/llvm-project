@@ -11,7 +11,7 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpec.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/NativeDylibManagerSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 
 namespace llvm {
@@ -47,14 +47,10 @@ public:
 
 namespace {
 
-using OpenSpec =
-    rt::sps::ProxySpec<EPCGenericDylibManager::OpenProxy,
-                       rt::SPSSimpleExecutorDylibManagerOpenSignature,
-                       rt::NativeDylibManagerLoadWrapperName>;
-using ResolveSpec =
-    rt::sps::ProxySpec<EPCGenericDylibManager::ResolveProxy,
-                       rt::SPSSimpleExecutorDylibManagerResolveSignature,
-                       rt::NativeDylibManagerLookupWrapperName>;
+using OpenSpec = rt::sps::ProxySpec<EPCGenericDylibManager::OpenProxy,
+                                    rt::sps_ci::DylibMgrOpen>;
+using ResolveSpec = rt::sps::ProxySpec<EPCGenericDylibManager::ResolveProxy,
+                                       rt::sps_ci::DylibMgrResolve>;
 
 } // namespace
 
@@ -65,7 +61,8 @@ Expected<EPCGenericDylibManager> EPCGenericDylibManager::Create(JITDylib &JD) {
   // first argument to each call, not a wrapper to proxy.
   if (auto Err = lookupAndRecordAddrs(
           ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {{ES.intern(rt::NativeDylibManagerInstanceName), &B.Instance}}))
+          {{ES.intern(rt::sps_ci::NativeDylibManagerInstanceName),
+            &B.Instance}}))
     return std::move(Err);
   // The proxies resolve to the specs' default (NativeDylibManager) names.
   if (auto Err = rt::buildProxies(JD, rt::proxyInit<OpenSpec>(&B.Open),

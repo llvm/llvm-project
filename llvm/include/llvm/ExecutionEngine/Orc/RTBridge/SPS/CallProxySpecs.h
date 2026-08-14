@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SPS ProxySpecs (signatures, controller-interface names, and dispatch) for the
-// CallProxies.
+// SPS ProxySpecs for the CallProxies: each binds a Proxy to its
+// controller-interface descriptor in Shared/SPSCI/CallSPSCI.h, which supplies
+// the wrapper name and wire signature.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,42 +17,30 @@
 
 #include "llvm/ExecutionEngine/Orc/RTBridge/CallProxies.h"
 #include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpec.h"
-
-#include <cstdint>
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/CallSPSCI.h"
 
 namespace llvm::orc::rt::sps {
 
-using CallMainSPSSig = int64_t(shared::SPSExecutorAddr,
-                               shared::SPSSequence<shared::SPSString>);
-inline constexpr char CallMainCIName[] = "orc_rt_ci_sps_call_main";
 /// SPS proxy for rt::CallMainProxy: runs a main-like function
 /// (int(int argc, char *argv[])) in the executor.
-using CallMainProxySpec =
-    ProxySpec<rt::CallMainProxy, CallMainSPSSig, CallMainCIName>;
+using CallMainProxySpec = ProxySpec<rt::CallMainProxy, sps_ci::CallMain>;
 
-using CallVoidVoidSPSSig = void(shared::SPSExecutorAddr);
-inline constexpr char CallVoidVoidCIName[] = "orc_rt_ci_sps_call_void_void";
 /// SPS proxy for rt::CallVoidVoidProxy: runs a void() function in the executor.
 /// WARNING: This Proxy is experimental and may be removed.
 using CallVoidVoidProxySpec =
-    ProxySpec<rt::CallVoidVoidProxy, CallVoidVoidSPSSig, CallVoidVoidCIName>;
+    ProxySpec<rt::CallVoidVoidProxy, sps_ci::CallVoidVoid>;
 
-using CallInt32VoidSPSSig = int32_t(shared::SPSExecutorAddr);
-inline constexpr char CallInt32VoidCIName[] = "orc_rt_ci_sps_call_int32_void";
 /// SPS proxy for rt::CallInt32VoidProxy: runs an int32_t() function in the
 /// executor.
 /// WARNING: This Proxy is experimental and may be removed.
 using CallInt32VoidProxySpec =
-    ProxySpec<rt::CallInt32VoidProxy, CallInt32VoidSPSSig, CallInt32VoidCIName>;
+    ProxySpec<rt::CallInt32VoidProxy, sps_ci::CallInt32Void>;
 
-using CallInt32Int32SPSSig = int32_t(shared::SPSExecutorAddr, int32_t);
-inline constexpr char CallInt32Int32CIName[] = "orc_rt_ci_sps_call_int32_int32";
 /// SPS proxy for rt::CallInt32Int32Proxy: runs an int32_t(int32_t) function in
 /// the executor.
 /// WARNING: This Proxy is experimental and may be removed.
 using CallInt32Int32ProxySpec =
-    ProxySpec<rt::CallInt32Int32Proxy, CallInt32Int32SPSSig,
-              CallInt32Int32CIName>;
+    ProxySpec<rt::CallInt32Int32Proxy, sps_ci::CallInt32Int32>;
 
 } // namespace llvm::orc::rt::sps
 

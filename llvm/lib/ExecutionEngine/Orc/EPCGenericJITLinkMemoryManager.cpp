@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/RTBridge/SPS/GenericMemoryManagerProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 
 #include <limits>
 
@@ -84,13 +85,15 @@ private:
 Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
 EPCGenericJITLinkMemoryManager::Create(JITDylib &JD) {
   namespace sps = rt::sps;
+  namespace sps_ci = rt::sps_ci;
   auto &ES = JD.getExecutionSession();
   Bindings B;
   // Instance is the executor-side allocator object -- a data symbol passed as
   // the first argument to each call, not a wrapper to proxy.
   if (auto Err = lookupAndRecordAddrs(
           ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {{ES.intern(sps::MemMgrInstanceCIName), &B.Instance}}))
+          {{ES.intern(sps_ci::SimpleNativeMemoryMapInstanceName),
+            &B.Instance}}))
     return std::move(Err);
   // The proxies resolve to the specs' default (SimpleNativeMemoryMap) names.
   if (auto Err = rt::buildProxies(

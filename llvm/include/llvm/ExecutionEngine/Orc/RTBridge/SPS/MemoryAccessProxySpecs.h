@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SPS ProxySpecs (signatures, controller-interface names, and dispatch) for the
-// MemoryAccessProxies.
+// SPS ProxySpecs for the MemoryAccessProxies: each binds a Proxy to its
+// controller-interface descriptor in Shared/SPSCI/MemoryAccessSPSCI.h, which
+// supplies the wrapper name and wire signature.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,107 +17,36 @@
 
 #include "llvm/ExecutionEngine/Orc/RTBridge/MemoryAccessProxies.h"
 #include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpec.h"
-#include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
-
-#include <cstdint>
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/MemoryAccessSPSCI.h"
 
 namespace llvm::orc::rt::sps {
 
-using MemWriteUInt8sSPSSig =
-    void(shared::SPSSequence<shared::SPSMemoryAccessUInt8Write>);
-inline constexpr char MemWriteUInt8sCIName[] = "orc_rt_ci_sps_mem_write_uint8s";
 using MemWriteUInt8sProxySpec =
-    ProxySpec<rt::MemWriteUInt8sProxy, MemWriteUInt8sSPSSig,
-              MemWriteUInt8sCIName>;
-
-using MemWriteUInt16sSPSSig =
-    void(shared::SPSSequence<shared::SPSMemoryAccessUInt16Write>);
-inline constexpr char MemWriteUInt16sCIName[] =
-    "orc_rt_ci_sps_mem_write_uint16s";
+    ProxySpec<rt::MemWriteUInt8sProxy, sps_ci::MemWriteUInt8s>;
 using MemWriteUInt16sProxySpec =
-    ProxySpec<rt::MemWriteUInt16sProxy, MemWriteUInt16sSPSSig,
-              MemWriteUInt16sCIName>;
-
-using MemWriteUInt32sSPSSig =
-    void(shared::SPSSequence<shared::SPSMemoryAccessUInt32Write>);
-inline constexpr char MemWriteUInt32sCIName[] =
-    "orc_rt_ci_sps_mem_write_uint32s";
+    ProxySpec<rt::MemWriteUInt16sProxy, sps_ci::MemWriteUInt16s>;
 using MemWriteUInt32sProxySpec =
-    ProxySpec<rt::MemWriteUInt32sProxy, MemWriteUInt32sSPSSig,
-              MemWriteUInt32sCIName>;
-
-using MemWriteUInt64sSPSSig =
-    void(shared::SPSSequence<shared::SPSMemoryAccessUInt64Write>);
-inline constexpr char MemWriteUInt64sCIName[] =
-    "orc_rt_ci_sps_mem_write_uint64s";
+    ProxySpec<rt::MemWriteUInt32sProxy, sps_ci::MemWriteUInt32s>;
 using MemWriteUInt64sProxySpec =
-    ProxySpec<rt::MemWriteUInt64sProxy, MemWriteUInt64sSPSSig,
-              MemWriteUInt64sCIName>;
-
-using MemWritePointersSPSSig =
-    void(shared::SPSSequence<shared::SPSMemoryAccessPointerWrite>);
-inline constexpr char MemWritePointersCIName[] =
-    "orc_rt_ci_sps_mem_write_pointers";
+    ProxySpec<rt::MemWriteUInt64sProxy, sps_ci::MemWriteUInt64s>;
 using MemWritePointersProxySpec =
-    ProxySpec<rt::MemWritePointersProxy, MemWritePointersSPSSig,
-              MemWritePointersCIName>;
-
-using MemWriteBuffersSPSSig =
-    void(shared::SPSSequence<shared::SPSMemoryAccessBufferWrite>);
-inline constexpr char MemWriteBuffersCIName[] =
-    "orc_rt_ci_sps_mem_write_buffers";
+    ProxySpec<rt::MemWritePointersProxy, sps_ci::MemWritePointers>;
 using MemWriteBuffersProxySpec =
-    ProxySpec<rt::MemWriteBuffersProxy, MemWriteBuffersSPSSig,
-              MemWriteBuffersCIName>;
-
-using MemReadUInt8sSPSSig =
-    shared::SPSSequence<uint8_t>(shared::SPSSequence<shared::SPSExecutorAddr>);
-inline constexpr char MemReadUInt8sCIName[] = "orc_rt_ci_sps_mem_read_uint8s";
+    ProxySpec<rt::MemWriteBuffersProxy, sps_ci::MemWriteBuffers>;
 using MemReadUInt8sProxySpec =
-    ProxySpec<rt::MemReadUInt8sProxy, MemReadUInt8sSPSSig, MemReadUInt8sCIName>;
-
-using MemReadUInt16sSPSSig =
-    shared::SPSSequence<uint16_t>(shared::SPSSequence<shared::SPSExecutorAddr>);
-inline constexpr char MemReadUInt16sCIName[] = "orc_rt_ci_sps_mem_read_uint16s";
+    ProxySpec<rt::MemReadUInt8sProxy, sps_ci::MemReadUInt8s>;
 using MemReadUInt16sProxySpec =
-    ProxySpec<rt::MemReadUInt16sProxy, MemReadUInt16sSPSSig,
-              MemReadUInt16sCIName>;
-
-using MemReadUInt32sSPSSig =
-    shared::SPSSequence<uint32_t>(shared::SPSSequence<shared::SPSExecutorAddr>);
-inline constexpr char MemReadUInt32sCIName[] = "orc_rt_ci_sps_mem_read_uint32s";
+    ProxySpec<rt::MemReadUInt16sProxy, sps_ci::MemReadUInt16s>;
 using MemReadUInt32sProxySpec =
-    ProxySpec<rt::MemReadUInt32sProxy, MemReadUInt32sSPSSig,
-              MemReadUInt32sCIName>;
-
-using MemReadUInt64sSPSSig =
-    shared::SPSSequence<uint64_t>(shared::SPSSequence<shared::SPSExecutorAddr>);
-inline constexpr char MemReadUInt64sCIName[] = "orc_rt_ci_sps_mem_read_uint64s";
+    ProxySpec<rt::MemReadUInt32sProxy, sps_ci::MemReadUInt32s>;
 using MemReadUInt64sProxySpec =
-    ProxySpec<rt::MemReadUInt64sProxy, MemReadUInt64sSPSSig,
-              MemReadUInt64sCIName>;
-
-using MemReadPointersSPSSig = shared::SPSSequence<shared::SPSExecutorAddr>(
-    shared::SPSSequence<shared::SPSExecutorAddr>);
-inline constexpr char MemReadPointersCIName[] =
-    "orc_rt_ci_sps_mem_read_pointers";
+    ProxySpec<rt::MemReadUInt64sProxy, sps_ci::MemReadUInt64s>;
 using MemReadPointersProxySpec =
-    ProxySpec<rt::MemReadPointersProxy, MemReadPointersSPSSig,
-              MemReadPointersCIName>;
-
-using MemReadBuffersSPSSig = shared::SPSSequence<shared::SPSSequence<uint8_t>>(
-    shared::SPSSequence<shared::SPSExecutorAddrRange>);
-inline constexpr char MemReadBuffersCIName[] = "orc_rt_ci_sps_mem_read_buffers";
+    ProxySpec<rt::MemReadPointersProxy, sps_ci::MemReadPointers>;
 using MemReadBuffersProxySpec =
-    ProxySpec<rt::MemReadBuffersProxy, MemReadBuffersSPSSig,
-              MemReadBuffersCIName>;
-
-using MemReadStringsSPSSig = shared::SPSSequence<shared::SPSString>(
-    shared::SPSSequence<shared::SPSExecutorAddr>);
-inline constexpr char MemReadStringsCIName[] = "orc_rt_ci_sps_mem_read_strings";
+    ProxySpec<rt::MemReadBuffersProxy, sps_ci::MemReadBuffers>;
 using MemReadStringsProxySpec =
-    ProxySpec<rt::MemReadStringsProxy, MemReadStringsSPSSig,
-              MemReadStringsCIName>;
+    ProxySpec<rt::MemReadStringsProxy, sps_ci::MemReadStrings>;
 
 } // namespace llvm::orc::rt::sps
 
