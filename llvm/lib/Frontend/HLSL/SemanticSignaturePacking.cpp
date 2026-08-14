@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -132,36 +133,47 @@ getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind,
   case dxbc::PSV::SemanticKind::Arbitrary:
     switch (ShaderStage) {
     case Triple::EnvironmentType::Vertex:
+      // A vertex shader input element is laid out by the input assembler and
+      // not by this algorithm.
       return IsOutput ? SemanticCategory::Arbitrary
                       : SemanticCategory::NotPacked;
     case Triple::EnvironmentType::Hull:
     case Triple::EnvironmentType::Domain:
       return SemanticCategory::Arbitrary;
     case Triple::EnvironmentType::Geometry:
-      return IsPatchConstOrPrim ? SemanticCategory::NotPacked
-                                : SemanticCategory::Arbitrary;
+      assert(!IsPatchConstOrPrim && "a geometry shader has no patch constant "
+                                    "or primitive signature");
+      return SemanticCategory::Arbitrary;
     case Triple::EnvironmentType::Pixel:
-      return IsInput ? SemanticCategory::Arbitrary
-                     : SemanticCategory::NotPacked;
+      assert(IsInput && "an arbitrary semantic is not valid in a pixel shader "
+                        "output");
+      return SemanticCategory::Arbitrary;
     case Triple::EnvironmentType::Mesh:
-      return IsInput ? SemanticCategory::NotPacked
-                     : SemanticCategory::Arbitrary;
+      // A mesh shader has no input signature.
+      assert(!IsInput && "an arbitrary semantic is not valid in a mesh shader "
+                         "input");
+      return SemanticCategory::Arbitrary;
     default:
-      return SemanticCategory::NotPacked;
+      llvm_unreachable("arbitrary semantic is invalid for the shader stage");
     }
 
   case dxbc::PSV::SemanticKind::Position:
-    if (ShaderStage == Triple::EnvironmentType::Vertex)
+    switch (ShaderStage) {
+    case Triple::EnvironmentType::Vertex:
       return IsInput ? SemanticCategory::Arbitrary
                      : SemanticCategory::SystemValue;
-    return ShaderStage == Triple::EnvironmentType::Pixel && IsInput
-               ? SemanticCategory::SystemValue
-               : SemanticCategory::NotPacked;
+    case Triple::EnvironmentType::Pixel:
+      assert(IsInput && "position is not valid in a pixel shader output");
+      return SemanticCategory::SystemValue;
+    default:
+      llvm_unreachable("position semantic is not supported for the "
+                       "shader stage");
+    }
 
   case dxbc::PSV::SemanticKind::VertexID:
-    return ShaderStage == Triple::EnvironmentType::Vertex && IsInput
-               ? SemanticCategory::SystemValue
-               : SemanticCategory::NotPacked;
+    assert(ShaderStage == Triple::EnvironmentType::Vertex && IsInput &&
+           "vertex id is only valid in a vertex shader input");
+    return SemanticCategory::SystemValue;
 
   case dxbc::PSV::SemanticKind::RenderTargetArrayIndex:
     return SemanticCategory::SystemValue;
@@ -180,15 +192,22 @@ getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind,
       return IsPatchConstOrPrim ? SemanticCategory::Arbitrary
                                 : SemanticCategory::CullClip;
     case Triple::EnvironmentType::Geometry:
-      return IsPatchConstOrPrim ? SemanticCategory::NotPacked
-                                : SemanticCategory::CullClip;
+      assert(!IsPatchConstOrPrim && "a geometry shader has no patch constant "
+                                    "or primitive signature");
+      return SemanticCategory::CullClip;
     case Triple::EnvironmentType::Pixel:
-      return IsInput ? SemanticCategory::CullClip : SemanticCategory::NotPacked;
+      assert(IsInput && "a clip/cull distance semantic is not valid in a pixel "
+                        "shader output");
+      return SemanticCategory::CullClip;
     case Triple::EnvironmentType::Mesh:
-      return IsOutput ? SemanticCategory::CullClip
-                      : SemanticCategory::NotPacked;
+      // A mesh shader has no input signature and a clip/cull distance is a
+      // vertex and not a primitive attribute.
+      assert(IsOutput && "a clip/cull distance semantic is only valid in a "
+                         "mesh shader output");
+      return SemanticCategory::CullClip;
     default:
-      return SemanticCategory::NotPacked;
+      llvm_unreachable("clip/cull distance semantic is invalid for the "
+                       "shader stage");
     }
 
   case dxbc::PSV::SemanticKind::TessFactor:
@@ -198,9 +217,8 @@ getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind,
     return Rows > 1 ? SemanticCategory::TessFactor
                     : SemanticCategory::SystemValue;
 
-  // Semantics that are not packed into a signature register, either because
-  // they are accessed through a dedicated intrinsic, or because their location
-  // is not assigned by this algorithm.
+  // Semantics that are accessed through a dedicated intrinsic and so do not
+  // reserve any signature space.
   case dxbc::PSV::SemanticKind::SampleIndex:
   case dxbc::PSV::SemanticKind::DispatchThreadID:
   case dxbc::PSV::SemanticKind::GroupID:
@@ -208,11 +226,28 @@ getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind,
   case dxbc::PSV::SemanticKind::GroupThreadID:
     return SemanticCategory::NotPacked;
 
-  // As each semantic is added to the frontend, it should be added to this
-  // categorization
-  default:
-    return SemanticCategory::NotPacked;
+  // Semantics that are not yet supported by the frontend. As each semantic is
+  // added to the frontend, it should be moved out of this list and into the
+  // categorization above.
+  case dxbc::PSV::SemanticKind::InstanceID:
+  case dxbc::PSV::SemanticKind::ViewPortArrayIndex:
+  case dxbc::PSV::SemanticKind::OutputControlPointID:
+  case dxbc::PSV::SemanticKind::DomainLocation:
+  case dxbc::PSV::SemanticKind::GSInstanceID:
+  case dxbc::PSV::SemanticKind::Coverage:
+  case dxbc::PSV::SemanticKind::InnerCoverage:
+  case dxbc::PSV::SemanticKind::Target:
+  case dxbc::PSV::SemanticKind::Depth:
+  case dxbc::PSV::SemanticKind::DepthLessEqual:
+  case dxbc::PSV::SemanticKind::DepthGreaterEqual:
+  case dxbc::PSV::SemanticKind::StencilRef:
+  case dxbc::PSV::SemanticKind::ViewID:
+  case dxbc::PSV::SemanticKind::Barycentrics:
+  case dxbc::PSV::SemanticKind::ShadingRate:
+  case dxbc::PSV::SemanticKind::CullPrimitive:
+    llvm_unreachable("semantic kind is not supported by the frontend");
   }
+  llvm_unreachable("invalid semantic kind");
 }
 
 static unsigned getComponentWidth(dxil::ElementType ComponentType,
