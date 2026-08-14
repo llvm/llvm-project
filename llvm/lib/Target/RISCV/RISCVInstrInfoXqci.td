@@ -1685,7 +1685,7 @@ def : SelectQCbi<SETLT, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>
 def : SelectQCbi<SETGE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
 def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
 def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
-} // append Predicates = [NoShortForwardBranch]
+} // append Predicates = [NoVendorXqcibiOrNoShortForwardBranch]
 } // Predicates = [HasVendorXqcibi, IsRV32]
 
 def QC_EXTXForm : SDNodeXForm<imm, [{
