@@ -30,7 +30,7 @@ bool ConstraintSystem::eliminateUsingFM() {
   assert(!Constraints.empty() &&
          "should only be called for non-empty constraint systems");
 
-  unsigned LastIdx = NumVariables - 1;
+  unsigned LastIdx = NumVariables;
 
   // First, either remove the variable in place if it is 0 or add the row to
   // RemainingRows and remove it from the system.
@@ -155,13 +155,13 @@ bool ConstraintSystem::eliminateUsingFM() {
 }
 
 bool ConstraintSystem::mayHaveSolutionImpl() {
-  while (!Constraints.empty() && NumVariables > 1) {
+  while (!Constraints.empty() && NumVariables > 0) {
     if (!eliminateUsingFM())
       return true;
   }
 
-  // All variables have been eliminated, so all remaining rows are of the form
-  // 'c >= 0'.
+  assert((Constraints.empty() || NumVariables == 0) &&
+         "non-empty system must have all variables eliminated");
   return all_of(Constraints,
                 [](ArrayRef<Entry> R) { return getConstant(R) >= 0; });
 }
@@ -189,7 +189,7 @@ void ConstraintSystem::dump() const {
   for (const auto &Row : Constraints) {
     SmallVector<std::string, 16> Parts;
     for (const Entry &E : Row) {
-      if (E.Id >= NumVariables)
+      if (E.Id > NumVariables)
         break;
       if (E.Id == 0)
         continue;
@@ -203,8 +203,8 @@ void ConstraintSystem::dump() const {
         Coefficient = std::to_string(E.Coefficient) + " * ";
       Parts.push_back(Coefficient + Name);
     }
-    // assert(!Parts.empty() && "need to have at least some parts");
-    dbgs() << join(Parts, " + ") << " <= " << getConstant(Row) << "\n";
+    LLVM_DEBUG(dbgs() << join(Parts, " + ") << " <= " << getConstant(Row)
+                      << "\n");
   }
 #endif
 }
@@ -256,16 +256,15 @@ ConstraintSystem::getSubSystem(ArrayRef<Entry> R) const {
     OldToNew[Id] = NextIdx++;
 
   // Build new compact set of rows.
-  SubSystem.NumVariables = NextIdx;
+  SubSystem.NumVariables = NextIdx - 1;
   for (const RowTy &Row : Constraints) {
     if (!SharesVariable(Row))
       continue;
     RowTy NewRow;
     for (const Entry &E : Row) {
-      if (!E.Id)
-        NewRow.emplace_back(E.Coefficient, E.Id);
-      else if (unsigned New = OldToNew[E.Id])
-        NewRow.emplace_back(E.Coefficient, New);
+      unsigned New = OldToNew[E.Id];
+      assert((E.Id == 0) == (New == 0) && "constant entry must be preserved");
+      NewRow.emplace_back(E.Coefficient, New);
     }
     SubSystem.Constraints.push_back(std::move(NewRow));
   }

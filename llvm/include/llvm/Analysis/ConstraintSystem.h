@@ -30,17 +30,19 @@ public:
         : Coefficient(Coefficient), Id(Id) {}
   };
 
-  /// A single constraint, storing only entries with non-zero coefficients,
-  /// ordered by increasing variable index.
+  /// A single constraint of the form 'c >= v1 * c1 + ... + vn * cn'.
   using RowTy = SmallVector<Entry, 8>;
 
 private:
-  /// Returns the coefficient of the variable with index \p Id in \p R, which
-  /// must be the last entry of \p R if present, and 0 otherwise.
   static int64_t getLastCoefficient(ArrayRef<Entry> R, uint16_t Id) {
     if (R.empty() || R.back().Id != Id)
       return 0;
     return R.back().Coefficient;
+  }
+
+  /// Returns true if \p R has an entry for the constant part.
+  static bool hasConstantEntry(ArrayRef<Entry> R) {
+    return !R.empty() && R.front().Id == 0;
   }
 
   /// Returns true if \p R does not have an entry for any variable, i.e. it is
@@ -52,11 +54,11 @@ private:
   /// Returns the constant part of \p R, which is 0 if \p R does not have an
   /// entry for it.
   static int64_t getConstant(ArrayRef<Entry> R) {
-    if (R.empty() || R.front().Id != 0)
-      return 0;
-    return R.front().Coefficient;
+    return hasConstantEntry(R) ? R.front().Coefficient : 0;
   }
 
+  /// Number of variables in the system, not counting the constant part. The
+  /// variables use the indices 1 to NumVariables.
   size_t NumVariables = 0;
 
   /// Current linear constraints in the system.
@@ -88,14 +90,14 @@ public:
   ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
       : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
 
-  /// Add \p R to the system, where \p NumCols is the number of columns of \p R.
-  bool addRow(ArrayRef<Entry> R, size_t NumCols) {
+  bool addRow(ArrayRef<Entry> R, size_t NumVars) {
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
     if (isConstantOnly(R))
       return false;
 
-    NumVariables = std::max(NumCols, NumVariables);
+    assert(NumVars >= R.back().Id && "NumVars must cover all variables in R");
+    NumVariables = std::max(NumVars, NumVariables);
     // Only keep non-zero coefficients; in particular drop the entry for the
     // constant part if it is 0.
     RowTy &NewRow = Constraints.emplace_back();
@@ -114,7 +116,7 @@ public:
   LLVM_ABI bool mayHaveSolution();
 
   static RowTy negate(RowTy R) {
-    assert(!R.empty() && R.front().Id == 0 && "row must have a constant entry");
+    assert(hasConstantEntry(R) && "row must have a constant entry");
     // The negated constraint R is obtained by multiplying by -1 and adding 1 to
     // the constant.
     if (AddOverflow(R[0].Coefficient, int64_t(1), R[0].Coefficient))
@@ -123,8 +125,8 @@ public:
     return negateOrEqual(std::move(R));
   }
 
-  /// Multiplies each coefficient in the given row by -1. Does not modify the
-  /// original row.
+  /// Multiplies each coefficient in the given row by -1. Returns an empty row
+  /// on overflow. Does not modify the original row.
   ///
   /// \param R The row of coefficients to be negated.
   static RowTy negateOrEqual(RowTy R) {
@@ -135,12 +137,12 @@ public:
     return R;
   }
 
-  /// Converts the given row to form a strict less than inequality. Does not
-  /// modify the original row.
+  /// Converts the given row to form a strict less than inequality. Returns an
+  /// empty row on overflow. Does not modify the original row.
   ///
   /// \param R The row of coefficients to be converted.
   static RowTy toStrictLessThan(RowTy R) {
-    assert(!R.empty() && R.front().Id == 0 && "row must have a constant entry");
+    assert(hasConstantEntry(R) && "row must have a constant entry");
     // The strict less than is obtained by subtracting 1 from the constant.
     if (SubOverflow(R[0].Coefficient, int64_t(1), R[0].Coefficient))
       return {};
@@ -163,7 +165,7 @@ public:
 
   void popLastConstraint() { Constraints.pop_back(); }
   void popLastNVariables(unsigned N) {
-    assert(NumVariables > N);
+    assert(NumVariables >= N);
     NumVariables -= N;
   }
 

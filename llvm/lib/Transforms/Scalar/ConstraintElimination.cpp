@@ -217,20 +217,23 @@ struct StackEntry {
 struct ConstraintTy {
   RowTy Coefficients;
 
-  /// Number of columns the constraint is defined over, i.e. the number of
-  /// variables of the system it was built for plus one for the constant.
-  unsigned NumCols = 0;
+  /// Number of variables the constraint is defined over.
+  unsigned NumVars = 0;
 
   bool IsSigned = false;
 
   ConstraintTy() = default;
 
-  ConstraintTy(RowTy Coefficients, unsigned NumCols, bool IsSigned, bool IsEq,
+  ConstraintTy(RowTy Coefficients, unsigned NumVars, bool IsSigned, bool IsEq,
                bool IsNe)
-      : Coefficients(std::move(Coefficients)), NumCols(NumCols),
+      : Coefficients(std::move(Coefficients)), NumVars(NumVars),
         IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {}
 
-  bool empty() const { return NumCols == 0; }
+  bool empty() const { return Coefficients.empty(); }
+
+  /// Returns true if the constraint does not reference any variable, i.e. it is
+  /// of the form 'c >= 0'.
+  bool isConstantOnly() const { return Coefficients.size() < 2; }
 
   bool isEq() const { return IsEq; }
 
@@ -268,7 +271,7 @@ public:
     // Add Arg > -1 constraints to unsigned system for all function arguments.
     for (Value *Arg : FunctionArgs)
       UnsignedCS.addRow({Entry(0, 0), Entry(-1, Value2Index.at(Arg))},
-                        Value2Index.size() + 1);
+                        Value2Index.size());
   }
 
   DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
@@ -774,7 +777,6 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   // Build result constraint, by first adding all coefficients from A and then
   // subtracting all coefficients from B.
   RowTy R(1, Entry(0, 0));
-  // Returns a reference to the coefficient for the variable with index Idx.
   auto GetCoefficient = [&R](unsigned Idx) -> int64_t & {
     // The entry for Idx, or the place to insert it at, is the first entry with
     // an index >= Idx.
@@ -805,12 +807,11 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   erase_if(R, [](const Entry &E) { return E.Id != 0 && E.Coefficient == 0; });
 
   // Remove any new variable without a coefficient in the row.
-  if (R.back().Id >= Value2Index.size())
-    NewVariables.resize(R.back().Id - Value2Index.size());
+  unsigned NumV2I = Value2Index.size();
+  NewVariables.truncate(R.back().Id > NumV2I ? R.back().Id - NumV2I : 0);
 
-  return ConstraintTy(std::move(R),
-                      Value2Index.size() + NewVariables.size() + 1, IsSigned,
-                      IsEq, IsNe);
+  return ConstraintTy(std::move(R), Value2Index.size() + NewVariables.size(),
+                      IsSigned, IsEq, IsNe);
 }
 
 ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
@@ -822,9 +823,8 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
   if ((Pred == CmpInst::ICMP_ULE && Op0 == NullC) ||
       (Pred == CmpInst::ICMP_UGE && Op1 == NullC)) {
     // Return constraint that's trivially true.
-    return ConstraintTy(RowTy(1, Entry(0, 0)),
-                        getValue2Index(false).size() + 1, /*IsSigned=*/false,
-                        /*IsEq=*/false, /*IsNe=*/false);
+    return ConstraintTy(RowTy(1, Entry(0, 0)), /*NumVars=*/0,
+                        /*IsSigned=*/false, /*IsEq=*/false, /*IsNe=*/false);
   }
 
   // If both operands are known to be non-negative, change signed predicates to
@@ -960,7 +960,7 @@ void ConstraintInfo::transferToOtherSystem(
 static void dumpConstraint(ArrayRef<Entry> C,
                            const DenseMap<Value *, unsigned> &Value2Index) {
   ConstraintSystem CS(Value2Index);
-  CS.addRow(C, Value2Index.size() + 1);
+  CS.addRow(C, Value2Index.size());
   CS.dump();
 }
 #endif
@@ -1876,7 +1876,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
              dbgs() << "'\n");
   auto &CSToUse = getCS(R.IsSigned);
-  bool Added = CSToUse.addRow(R.Coefficients, R.NumCols);
+  bool Added = CSToUse.addRow(R.Coefficients, R.NumVars);
   if (!Added)
     return;
 
@@ -1902,7 +1902,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
     for (Value *V : NewVariables) {
       // Add V > -1 constraints for all new variables.
       CSToUse.addRow({Entry(0, 0), Entry(-1, Value2Index.at(V))},
-                     Value2Index.size() + 1);
+                     Value2Index.size());
       DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                               SmallVector<Value *, 2>());
     }
@@ -1913,7 +1913,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
     for (Entry &E : R.Coefficients)
       if (MulOverflow(E.Coefficient, int64_t(-1), E.Coefficient))
         return;
-    CSToUse.addRow(R.Coefficients, R.NumCols);
+    CSToUse.addRow(R.Coefficients, R.NumVars);
 
     DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                             SmallVector<Value *, 2>());
@@ -1961,8 +1961,9 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
                               ConstraintInfo &Info) {
     auto R = Info.getConstraintForSolving(Pred, A, B);
-    // Nothing can be proven if the system has no variables.
-    if (R.NumCols < 2)
+    // Nothing can be proven if the constraint has no variables. This also
+    // covers rows that could not be decomposed, which are empty.
+    if (R.isConstantOnly())
       return false;
 
     auto &CSToUse = Info.getCS(R.IsSigned);

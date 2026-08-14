@@ -29,7 +29,7 @@ static RowTy toRow(ArrayRef<int64_t> R) {
 
 /// Add the dense coefficient vector \p R to \p CS.
 static void addVariableRow(ConstraintSystem &CS, ArrayRef<int64_t> R) {
-  CS.addRow(toRow(R), R.size());
+  CS.addRow(toRow(R), R.size() - 1);
 }
 
 /// Returns true if the condition described by the dense coefficient vector \p R
