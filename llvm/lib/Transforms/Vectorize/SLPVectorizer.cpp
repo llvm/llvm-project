@@ -14382,18 +14382,44 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
   SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL);
 
-  InstructionsState OpS = getSameOpcode(Operands.front(), TLI);
-  if (!OpS.valid())
+  // The fmul may sit on either side of the add/sub. Look past operand 0 only
+  // for chains that do not allow reassociation. A reassociative chain can be
+  // vectorized into a vector fmul feeding a reduction, which is usually
+  // better than the scalar fma chain this check protects.
+  bool AllowReassoc = any_of(VL, [](Value *V) {
+    auto *FPCI = dyn_cast<FPMathOperator>(V);
+    return FPCI && FPCI->getFastMathFlags().allowReassoc();
+  });
+  auto GetFMulOperandIdx = [&]() -> std::optional<unsigned> {
+    for (unsigned Idx : seq<unsigned>(0, AllowReassoc ? 1 : Operands.size())) {
+      InstructionsState CandS = getSameOpcode(Operands[Idx], TLI);
+      if (!CandS.valid() || CandS.isAltShuffle() ||
+          CandS.getOpcode() != Instruction::FMul)
+        continue;
+      if (!CheckForContractable(Operands[Idx]))
+        continue;
+      return Idx;
+    }
+    return std::nullopt;
+  };
+  std::optional<unsigned> FMulIdx = GetFMulOperandIdx();
+  if (!FMulIdx)
     return InstructionCost::getInvalid();
-
-  if (OpS.isAltShuffle() || OpS.getOpcode() != Instruction::FMul)
-    return InstructionCost::getInvalid();
-  if (!CheckForContractable(Operands.front()))
-    return InstructionCost::getInvalid();
+  InstructionsState OpS = getSameOpcode(Operands[*FMulIdx], TLI);
   // Compare the costs.
   InstructionCost FMulPlusFAddCost = 0;
   InstructionCost FMACost = 0;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  // Price the fmul as not fused with its user. Passing a context instruction
+  // would let targets that model the fusion discount the unfused side of the
+  // comparison as well.
+  auto GetUnfusedFMulCost = [&](Instruction *I) {
+    TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
+    TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
+    return TTI.getArithmeticInstrCost(Instruction::FMul, I->getType(), CostKind,
+                                      Op1Info, Op2Info,
+                                      {I->getOperand(0), I->getOperand(1)});
+  };
   FastMathFlags FMF;
   FMF.set();
   for (Value *V : VL) {
@@ -14406,7 +14432,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
   }
   unsigned NumOps = 0;
-  for (auto [V, Op] : zip(VL, Operands.front())) {
+  for (auto [V, Op] : zip(VL, Operands[*FMulIdx])) {
     if (S.isCopyableElement(V))
       continue;
     auto *I = dyn_cast<Instruction>(Op);
@@ -14420,7 +14446,9 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     ++NumOps;
     if (auto *FPCI = dyn_cast<FPMathOperator>(I))
       FMF &= FPCI->getFastMathFlags();
-    FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
+    FMulPlusFAddCost += I->getOpcode() == Instruction::FMul
+                            ? GetUnfusedFMulCost(I)
+                            : TTI.getInstructionCost(I, CostKind);
   }
   Type *Ty = VL.front()->getType();
   IntrinsicCostAttributes ICA(Intrinsic::fmuladd, Ty, {Ty, Ty, Ty}, FMF);
@@ -15225,7 +15253,8 @@ void BoUpSLP::transformNodes() {
         break;
       // This node is a fmuladd node.
       E.CombinedOp = TreeEntry::FMulAdd;
-      TreeEntry *FMulEntry = getOperandEntry(&E, 0);
+      TreeEntry *FMulEntry =
+          getOperandEntry(&E, IsOneUseVectorFMulOperand(LHS) ? 0 : 1);
       if (FMulEntry->UserTreeIndex &&
           FMulEntry->State == TreeEntry::Vectorize) {
         // The FMul node is part of the combined fmuladd node.
