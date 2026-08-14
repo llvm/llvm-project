@@ -49,10 +49,10 @@
 #  include <bits/mbstate_t.h> // works for Android
 #elif __has_include_next(<wchar.h>)
 // When this header is built as its own Clang module, the #include_next below can resolve back to
-// // libc++'s own <wchar.h> instead of the C library's one, since the lookup starts over from the
-// // beginning of the search path. libc++'s <wchar.h> forwards to the C library's one, but it would
-// // also emit its inline wcschr() & friends overloads into this module, in addition to the module
-// // owning <cwchar>. Tell it to provide only the C library declarations.
+// libc++'s own <wchar.h> instead of the C library's one, since the lookup starts over from the
+// beginning of the search path. libc++'s <wchar.h> forwards to the C library's one, but it would
+// also emit its inline wcschr() & friends overloads into this module, in addition to the module
+// owning <cwchar>. Tell it to provide only the C library declarations.
 #  define _LIBCPP_WCHAR_H_SYSTEM_HEADER_ONLY
 #  include_next <wchar.h> // use the C standard provider of mbstate_t if present
 #  undef _LIBCPP_WCHAR_H_SYSTEM_HEADER_ONLY
