@@ -194,8 +194,14 @@ public:
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "",
                               Type *ResultTy = nullptr) {
-    VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
+    VPInstruction *NewVPInst;
+    // TODO: Remove once VPInstructionWithType is subsumed by VPInstruction.
+    if (Instruction::isCast(Opcode))
+      NewVPInst = tryInsertInstruction(new VPInstructionWithType(
+          Opcode, Operands, ResultTy, Flags, MD, DL, Name));
+    else
+      NewVPInst = tryInsertInstruction(
+          new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -393,13 +399,6 @@ public:
                                      const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
-  }
-
-  VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
-                                          DebugLoc DL,
-                                          const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Instruction::Load, Addr, ResultTy, {}, Metadata, DL));
   }
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
