@@ -35,8 +35,10 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 26
 
 // static_packed_bounded_iter is a bounded, contiguous iterator that is aware of its container's (compile-time) maximum
-// capacity. It reuses the bottom unused bits of a pointer to keep track of its current position.
-// This only applies if the container's maximum range can fit inside (2 ^ available_bits) - 1
+// capacity. It packs the bottom bits of the base pointer with an offset that tracks the iterator's current position.
+// To retrieve the current pointer, we mask off the bottom bits to get the base pointer, and add its offset.
+// This only applies if the container's maximum range can fit inside the representable range of those bottom
+// bits, so (2 ^ available_bits) - 1
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -50,7 +52,7 @@ consteval bool __range_fits_in_alignment(size_t __alignment, size_t __num_elems)
 }
 
 template <class _Ptr, class _Tag, size_t _RangeCapacity>
-  requires(is_pointer_v<_Ptr> && std::__range_fits_in_alignment(_LIBCPP_ALIGNOF(iter_value_t<_Ptr>), _RangeCapacity))
+  requires(is_pointer_v<_Ptr> && std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr>), _RangeCapacity))
 class __static_packed_bounded_iterator {
 public:
   using iterator_category = iterator_traits<_Ptr>::iterator_category;
@@ -61,25 +63,25 @@ public:
   using value_type        = iter_value_t<_Ptr>;
 
 private:
-  static constexpr uintptr_t __count_mask_ = (1 << std::countr_zero(_LIBCPP_ALIGNOF(value_type))) - 1;
-  static constexpr uintptr_t __ptr_mask_   = ~__count_mask_;
+  static constexpr uintptr_t __CountMask = (1 << std::countr_zero(alignof(value_type))) - 1;
+  static constexpr uintptr_t __PtrMask   = ~__CountMask;
 
   union {
     pointer __ptr_;
     alignas(pointer) uintptr_t __data_;
   };
 
-  uintptr_t __count() const { return __data_ & __count_mask_; }
+  size_t __count() const { return __data_ & __CountMask; }
 
   constexpr _Ptr __current() const {
     if consteval {
       return __ptr_;
     } else {
-      return std::bit_cast<pointer>(__data_ & __ptr_mask_) + __count();
+      return std::bit_cast<pointer>(__data_ & __PtrMask) + __count();
     }
   }
 
-  constexpr void __update(difference_type __n) {
+  constexpr void __increment(difference_type __n) {
     if consteval {
       __ptr_ += __n;
     } else {
@@ -114,7 +116,7 @@ public:
           "__static_packed_bounded_iterator::operator*: Attempt to dereference an iterator at the end");
     }
 
-    return *(__current());
+    return *__current();
   }
 
   constexpr decltype(auto) operator->() const noexcept {
@@ -134,7 +136,7 @@ public:
           "__static_packed_bounded_iterator::operator++: Attempt to advance an iterator past the end");
     }
 
-    __update(1);
+    __increment(1);
 
     return *this;
   }
@@ -152,7 +154,7 @@ public:
           "__static_packed_bounded_iterator::operator--: Attempt to rewind an iterator past the start");
     }
 
-    __update(-1);
+    __increment(-1);
 
     return *this;
   }
@@ -165,42 +167,51 @@ public:
 
   constexpr __static_packed_bounded_iterator& operator+=(difference_type __n) noexcept {
     if !consteval {
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          (static_cast<difference_type>(__count()) + __n) >= 0,
-          "__static_packed_bounded_iterator::operator+=: Attempt to rewind an iterator past the start");
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          static_cast<size_t>(__count() + __n) <= _RangeCapacity,
-          "__static_packed_bounded_iterator::operator+=: Attempt to advance an iterator past the end");
+      if (__n < 0) {
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            __count() >= -__n,
+            "__static_packed_bounded_iterator::operator+=: Attempt to rewind an iterator past the start");
+      } else {
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            static_cast<size_t>(__count() + __n) <= _RangeCapacity,
+            "__static_packed_bounded_iterator::operator+=: Attempt to advance an iterator past the end");
+      }
     }
 
-    __update(__n);
+    __increment(__n);
 
     return *this;
   }
 
   constexpr __static_packed_bounded_iterator& operator-=(difference_type __n) noexcept {
     if !consteval {
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          (static_cast<difference_type>(__count()) - __n) >= 0,
-          "__static_packed_bounded_iterator::operator-=: Attempt to rewind an iterator past the start");
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          static_cast<size_t>(__count() - __n) <= _RangeCapacity,
-          "__static_packed_bounded_iterator::operator-=: Attempt to advance an iterator past the end");
+      if (__n > 0) {
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            __count() >= __n,
+            "__static_packed_bounded_iterator::operator-=: Attempt to rewind an iterator past the start");
+      } else {
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            static_cast<size_t>(__count() - __n) <= _RangeCapacity,
+            "__static_packed_bounded_iterator::operator-=: Attempt to advance an iterator past the end");
+      }
     }
 
-    __update(-__n);
+    __increment(-__n);
 
     return *this;
   }
 
   [[nodiscard]] constexpr decltype(auto) operator[](difference_type __n) const noexcept {
     if !consteval {
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          (static_cast<difference_type>(__count()) + __n) >= 0,
-          "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator past the start");
-      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-          static_cast<size_t>(__count() + __n) < _RangeCapacity,
-          "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator at or past the end");
+      if (__n < 0) {
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            __count() >= -__n,
+            "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator past the start");
+      } else {
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+            static_cast<size_t>(__count() + __n) <= _RangeCapacity,
+            "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator at or past the end");
+      }
     }
     return *(*this + __n);
   }
