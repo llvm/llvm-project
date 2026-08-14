@@ -2444,8 +2444,13 @@ private:
                                  selectedData, Value(), *selectedDependency);
     if (valueResult)
       values[valueResult] = send.getDst();
-    values[tokenResult] = send.getToken();
-    memoryToken = send.getToken();
+    Value token = send.getToken();
+    if (isa<xw::Block2DPrefetchOp>(operation))
+      token = AfterOp::create(*builder, *location, MemTokenType::get(context),
+                              token)
+                  .getToken();
+    values[tokenResult] = token;
+    memoryToken = token;
     return success();
   }
 

@@ -46,20 +46,46 @@ static SmallVector<MemoryEffects::EffectInstance> getEffects(Operation *op) {
 
 static bool isBarrier(Operation *op) { return isa<xw::BarrierOp>(op); }
 
+static bool isDefaultMemoryEffect(MemoryEffects::EffectInstance effect) {
+  return effect.getResource() == SideEffects::DefaultResource::get();
+}
+
 static bool hasWrite(Operation *op) {
   return llvm::any_of(getEffects(op), [](MemoryEffects::EffectInstance effect) {
-    return isa<MemoryEffects::Write, MemoryEffects::Free>(effect.getEffect());
+    return isDefaultMemoryEffect(effect) &&
+           isa<MemoryEffects::Write, MemoryEffects::Free>(effect.getEffect());
   });
 }
 
 static SmallVector<Value> getLocations(Operation *op) {
   SmallVector<Value> locations;
   for (MemoryEffects::EffectInstance effect : getEffects(op))
-    if (isa<MemoryEffects::Read, MemoryEffects::Write, MemoryEffects::Free>(
+    if (isDefaultMemoryEffect(effect) &&
+        isa<MemoryEffects::Read, MemoryEffects::Write, MemoryEffects::Free>(
             effect.getEffect()))
       if (Value value = effect.getValue())
         locations.push_back(value);
   return locations;
+}
+
+static bool hasRead(Operation *op) {
+  return llvm::any_of(getEffects(op), [](MemoryEffects::EffectInstance effect) {
+    return isDefaultMemoryEffect(effect) &&
+           isa<MemoryEffects::Read>(effect.getEffect());
+  });
+}
+
+static bool mayAlias(Operation *lhs, Operation *rhs,
+                     AliasAnalysis &aliasAnalysis) {
+  SmallVector<Value> lhsLocations = getLocations(lhs);
+  SmallVector<Value> rhsLocations = getLocations(rhs);
+  if (lhsLocations.empty() || rhsLocations.empty())
+    return true;
+  return llvm::any_of(lhsLocations, [&](Value lhsLocation) {
+    return llvm::any_of(rhsLocations, [&](Value rhsLocation) {
+      return !aliasAnalysis.alias(lhsLocation, rhsLocation).isNo();
+    });
+  });
 }
 
 static bool hasHazard(Operation *prior, Operation *current,
@@ -68,15 +94,45 @@ static bool hasHazard(Operation *prior, Operation *current,
     return true;
   if (!hasWrite(prior) && !hasWrite(current))
     return false;
-  SmallVector<Value> priorLocations = getLocations(prior);
-  SmallVector<Value> currentLocations = getLocations(current);
-  if (priorLocations.empty() || currentLocations.empty())
-    return true;
-  return llvm::any_of(priorLocations, [&](Value lhs) {
-    return llvm::any_of(currentLocations, [&](Value rhs) {
-      return !aliasAnalysis.alias(lhs, rhs).isNo();
-    });
-  });
+  return mayAlias(prior, current, aliasAnalysis);
+}
+
+static void appendPlan(DenseMap<unsigned, SmallVector<unsigned>> &plans,
+                       const DenseMap<Operation *, unsigned> &identifiers,
+                       Operation *operation, Operation *predecessor) {
+  unsigned identifier = identifiers.lookup(operation);
+  unsigned predecessorIdentifier = identifiers.lookup(predecessor);
+  if (identifier && predecessorIdentifier &&
+      !llvm::is_contained(plans[identifier], predecessorIdentifier))
+    plans[identifier].push_back(predecessorIdentifier);
+}
+
+static void
+planPrefetchDependencies(Block &block, ArrayRef<Operation *> incoming,
+                         const DenseMap<Operation *, unsigned> &identifiers,
+                         DenseMap<unsigned, SmallVector<unsigned>> &plans,
+                         AliasAnalysis &aliasAnalysis) {
+  SmallVector<Operation *> pending(incoming);
+  for (Operation &operation : block.without_terminator()) {
+    if (isa<xw::Block2DPrefetchOp>(operation)) {
+      pending.push_back(&operation);
+      continue;
+    }
+    if (isXWMemoryOperation(&operation) && hasRead(&operation)) {
+      llvm::erase_if(pending, [&](Operation *prefetch) {
+        if (!mayAlias(prefetch, &operation, aliasAnalysis))
+          return false;
+        appendPlan(plans, identifiers, &operation, prefetch);
+        return true;
+      });
+    }
+    if (!isStructuredOperation(&operation))
+      continue;
+    for (Region &region : operation.getRegions())
+      if (!region.empty())
+        planPrefetchDependencies(region.front(), pending, identifiers, plans,
+                                 aliasAnalysis);
+  }
 }
 
 static void appendUnique(SmallVectorImpl<Value> &values, Value value) {
@@ -142,7 +198,8 @@ private:
         Value token = rewriteMemory(operation, incoming);
         if (barrier)
           frontier.clear();
-        frontier.push_back(token);
+        if (!isa<xw::Block2DPrefetchOp>(operation))
+          frontier.push_back(token);
         continue;
       }
       if (!structured.contains(operation))
@@ -385,6 +442,8 @@ struct InferMemoryTokens final
             plans[identifier].push_back(predecessor);
         }
       }
+      planPrefetchDependencies(function.getBody().front(), {}, identifiers,
+                               plans, aliasAnalysis);
 
       TokenRewriter(function.getContext(), identifiers, plans, structured)
           .rewriteFunction(function);

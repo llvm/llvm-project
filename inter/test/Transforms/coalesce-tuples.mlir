@@ -51,6 +51,34 @@ module {
         -> !xemachine.reg<32, -1>
     return
   }
+
+  func.func @do_not_share_across_loop(
+      %base: !xemachine.reg<16, -1>, %flag: !xemachine.arf<f, 2, 0>) {
+    %zero = xemachine.imm 0 : i32
+    %before_common0 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %before_common1 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %before = xemachine.update_tuple
+        %base, %before_common0, %before_common1 {offsets = [3, 7]}
+        : (!xemachine.reg<16, -1>, !xemachine.reg<1, -1>,
+           !xemachine.reg<1, -1>) -> !xemachine.reg<16, -1>
+    xemachine.uniform_loop () {
+      xemachine.continue_if %flag : !xemachine.arf<f, 2, 0>
+    } : () -> ()
+    %after_common0 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %after_common1 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %after = xemachine.update_tuple
+        %base, %after_common0, %after_common1 {offsets = [3, 7]}
+        : (!xemachine.reg<16, -1>, !xemachine.reg<1, -1>,
+           !xemachine.reg<1, -1>) -> !xemachine.reg<16, -1>
+    %joined = xemachine.tuple_from_elements %before, %after
+        : (!xemachine.reg<16, -1>, !xemachine.reg<16, -1>)
+        -> !xemachine.reg<32, -1>
+    return
+  }
 }
 
 // CHECK-LABEL: func.func @factor_common_fields
@@ -66,3 +94,9 @@ module {
 // CHECK: [[SHARED:%.*]] = xemachine.update_tuple %arg0, [[COMMON]], %arg1 {offsets = [2, 5]}
 // CHECK-NOT: xemachine.update_tuple
 // CHECK: xemachine.tuple_from_elements [[SHARED]], [[SHARED]]
+
+// CHECK-LABEL: func.func @do_not_share_across_loop
+// CHECK: [[BEFORE:%.*]] = xemachine.update_tuple
+// CHECK: xemachine.uniform_loop
+// CHECK: [[AFTER:%.*]] = xemachine.update_tuple
+// CHECK: xemachine.tuple_from_elements [[BEFORE]], [[AFTER]]

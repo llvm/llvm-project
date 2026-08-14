@@ -26,10 +26,11 @@ module {
 // CHECK-LABEL: func.func @block2d
 // CHECK: xemachine.imm 1807 : i32
 // CHECK: xemachine.update_tuple
-// CHECK: xemachine.send ugm {{.*}}desc = 34079235
+// CHECK: %[[PREFETCH:.*]], %[[PREFETCH_TOKEN:.*]] = xemachine.send ugm {{.*}}desc = 34079235
+// CHECK: %[[ISSUED:.*]] = xemachine.after %[[PREFETCH_TOKEN]]
 // CHECK: xemachine.imm 1807 : i32
 // CHECK: xemachine.update_tuple
-// CHECK: xemachine.send ugm {{.*}}desc = 37749251
+// CHECK: xemachine.send ugm {{.*}}dep %[[ISSUED]] {{.*}}desc = 37749251
 // CHECK: xemachine.imm 1807 : i32
 // CHECK: xemachine.update_tuple
 // CHECK: xemachine.send ugm {{.*}}data {{.*}}desc = 33555463

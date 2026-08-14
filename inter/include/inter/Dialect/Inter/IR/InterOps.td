@@ -18,6 +18,8 @@ class XW_Op<string mnemonic, list<Trait> traits = []>
   let cppNamespace = "::xw";
 }
 
+def XW_CacheStateResource : Resource<"::xw::CacheStateResource">;
+
 def XW_ConstantOp : XW_Op<"constant", [ConstantLike, Pure]> {
   let arguments = (ins TypedAttrInterface:$value);
   let results = (outs AnyType:$result);
@@ -340,7 +342,8 @@ class XW_Block2DOp<string mnemonic, list<Trait> traits = []>
                        I64Attr:$blocks, UnitAttr:$transpose, UnitAttr:$vnni,
                        Optional<XW_MemToken>:$dependency);
 }
-def XW_Block2DPrefetchOp : XW_Block2DOp<"block2d_prefetch"> {
+def XW_Block2DPrefetchOp : XW_Block2DOp<"block2d_prefetch",
+    [MemoryEffects<[MemWrite<XW_CacheStateResource>]>]> {
   let results = (outs XW_MemToken:$token);
   let assemblyFormat = "$base `[` $x `,` $y `]` `surface` `(` $surface_width `,` $surface_height `,` $surface_pitch `)` (`after` $dependency^)? attr-dict `:` functional-type(operands, results)";
   let hasVerifier = 1;

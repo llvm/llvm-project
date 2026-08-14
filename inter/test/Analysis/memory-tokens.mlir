@@ -301,3 +301,122 @@ func.func @alias_hazards_and_barrier(%value: !xw.simd<i32, 16>) attributes {
 // CHECK: xw.load {{.*}} after %[[STORE_A]]
 // CHECK: %[[JOIN:.*]] = xw.join {{.*}}%[[STORE_A]]{{.*}}%[[STORE_B]]
 // CHECK: xw.barrier %[[JOIN]]
+
+// -----
+
+func.func @prefetch_next_aliasing_read(%base: !xw.ptr<#xw.global>) attributes {
+    xw.simd_width = 16 : i32} {
+  %c0 = xw.constant 0 : i32
+  %c128 = xw.constant 128 : i32
+  %prefetch = xw.block2d_prefetch %base[%c0, %c0]
+      surface(%c128, %c128, %c128) {
+        block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+        element_bits = 16 : i64
+      } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32) -> !xw.mem.token
+  %first, %first_token = xw.block2d_read %base[%c0, %c0]
+      surface(%c128, %c128, %c128) {
+        block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+        element_bits = 16 : i64
+      } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+      -> (!xw.simd<vector<8xi16>, 16>, !xw.mem.token)
+  %second, %second_token = xw.block2d_read %base[%c0, %c0]
+      surface(%c128, %c128, %c128) {
+        block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+        element_bits = 16 : i64
+      } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+      -> (!xw.simd<vector<8xi16>, 16>, !xw.mem.token)
+  return
+}
+
+// CHECK-LABEL: func.func @prefetch_next_aliasing_read
+// CHECK: %[[PREFETCH:.*]] = xw.block2d_prefetch
+// CHECK: %{{.*}}, %[[FIRST:.*]] = xw.block2d_read {{.*}} after %[[PREFETCH]]
+// CHECK: xw.block2d_read
+// CHECK-NOT: after %[[PREFETCH]]
+
+// -----
+
+func.func @prefetch_skips_non_aliasing_read() attributes {
+    xw.simd_width = 16 : i32} {
+  %a = xw.alloc() {bytesize = 65536 : i64, align = 64 : i64}
+      : !xw.ptr<#xw.local>
+  %b = xw.alloc() {bytesize = 65536 : i64, align = 64 : i64}
+      : !xw.ptr<#xw.local>
+  %global_a = xw.addrspace_cast %a
+      : !xw.ptr<#xw.local> -> !xw.ptr<#xw.global>
+  %global_b = xw.addrspace_cast %b
+      : !xw.ptr<#xw.local> -> !xw.ptr<#xw.global>
+  %zero = xw.constant 0 : i32
+  %size = xw.constant 128 : i32
+  %prefetch = xw.block2d_prefetch %global_a[%zero, %zero]
+      surface(%size, %size, %size) {
+        block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+        element_bits = 16 : i64
+      } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32) -> !xw.mem.token
+  %other, %other_token = xw.block2d_read %global_b[%zero, %zero]
+      surface(%size, %size, %size) {
+        block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+        element_bits = 16 : i64
+      } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+      -> (!xw.simd<vector<8xi16>, 16>, !xw.mem.token)
+  %matching, %matching_token = xw.block2d_read %global_a[%zero, %zero]
+      surface(%size, %size, %size) {
+        block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+        element_bits = 16 : i64
+      } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+      -> (!xw.simd<vector<8xi16>, 16>, !xw.mem.token)
+  return
+}
+
+// CHECK-LABEL: func.func @prefetch_skips_non_aliasing_read
+// CHECK: %[[PREFETCH:.*]] = xw.block2d_prefetch
+// CHECK: xw.block2d_read %{{.*}}
+// CHECK-NOT: after %[[PREFETCH]]
+// CHECK: xw.block2d_read {{.*}} after %[[PREFETCH]]
+
+// -----
+
+func.func @prefetch_before_loop(%base: !xw.ptr<#xw.global>) attributes {
+    xw.simd_width = 16 : i32} {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %zero = xw.constant 0 : i32
+  %size = xw.constant 128 : i32
+  %prefetch = xw.block2d_prefetch %base[%zero, %zero]
+      surface(%size, %size, %size) {
+        block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+        element_bits = 16 : i64
+      } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32) -> !xw.mem.token
+  scf.for %i = %c0 to %c2 step %c1 {
+    %first, %first_token = xw.block2d_read %base[%zero, %zero]
+        surface(%size, %size, %size) {
+          block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+          element_bits = 16 : i64
+        } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+        -> (!xw.simd<vector<8xi16>, 16>, !xw.mem.token)
+    %second, %second_token = xw.block2d_read %base[%zero, %zero]
+        surface(%size, %size, %size) {
+          block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+          element_bits = 16 : i64
+        } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+        -> (!xw.simd<vector<8xi16>, 16>, !xw.mem.token)
+  }
+  %after, %after_token = xw.block2d_read %base[%zero, %zero]
+      surface(%size, %size, %size) {
+        block_height = 8 : i64, block_width = 16 : i64, blocks = 1 : i64,
+        element_bits = 16 : i64
+      } : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+      -> (!xw.simd<vector<8xi16>, 16>, !xw.mem.token)
+  return
+}
+
+// CHECK-LABEL: func.func @prefetch_before_loop
+// CHECK: %[[PREFETCH:.*]] = xw.block2d_prefetch
+// CHECK: scf.for {{.*}} iter_args(%[[ITER:.*]] = {{.*}})
+// CHECK: %[[JOIN:.*]] = xw.join %[[PREFETCH]], %[[ITER]]
+// CHECK: xw.block2d_read {{.*}} after %[[JOIN]]
+// CHECK: xw.block2d_read {{.*}} after %[[ITER]]
+// CHECK-NOT: after %[[PREFETCH]]
+// CHECK: %[[AFTER_JOIN:.*]] = xw.join {{.*}}%[[PREFETCH]]
+// CHECK: xw.block2d_read {{.*}} after %[[AFTER_JOIN]]

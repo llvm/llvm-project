@@ -18,6 +18,17 @@
 #define GET_TYPEDEF_CLASSES
 #include "inter/Dialect/Inter/IR/XWTypes.h.inc"
 
+namespace xw {
+
+class CacheStateResource
+    : public mlir::SideEffects::Resource::Base<CacheStateResource> {
+public:
+  llvm::StringRef getName() const final { return "<XW cache state>"; }
+  bool isAddressable() const final { return false; }
+};
+
+} // namespace xw
+
 #define GET_OP_CLASSES
 #include "inter/Dialect/Inter/IR/XWOps.h.inc"
 

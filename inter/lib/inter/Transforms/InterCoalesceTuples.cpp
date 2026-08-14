@@ -1,6 +1,7 @@
 // Factor common XeMachine tuple updates before register allocation.
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineRegionFlow.h"
 #include "inter/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -102,7 +103,25 @@ static void eraseDeadProducerTree(Value value) {
     eraseDeadProducerTree(operand);
 }
 
-static void factorBlock(Block &block) {
+static bool crossesRepetitiveRegion(UpdateTupleOp from, UpdateTupleOp to,
+                                    const RegionFlow &regionFlow) {
+  for (Operation *operation = from->getNextNode(); operation && operation != to;
+       operation = operation->getNextNode()) {
+    WalkResult found = operation->walk([&](Operation *nested) {
+      const RegionFlow::Branch *branch = regionFlow.lookup(nested);
+      if (branch && llvm::any_of(branch->regions, [&](Region *region) {
+            return regionFlow.isRepetitive(region);
+          }))
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    if (found.wasInterrupted())
+      return true;
+  }
+  return false;
+}
+
+static void factorBlock(Block &block, const RegionFlow &regionFlow) {
   SmallVector<UpdateTupleOp> updates;
   for (Operation &operation : block)
     if (UpdateTupleOp update = dyn_cast<UpdateTupleOp>(operation))
@@ -117,6 +136,7 @@ static void factorBlock(Block &block) {
     for (UpdateTupleOp candidate : updates) {
       if (candidate == reference || consumed.contains(candidate) ||
           !reference->isBeforeInBlock(candidate) ||
+          crossesRepetitiveRegion(reference, candidate, regionFlow) ||
           candidate.getResult().getType() != reference.getResult().getType() ||
           !areEquivalentValues(reference.getBase(), candidate.getBase()))
         continue;
@@ -135,6 +155,7 @@ static void factorBlock(Block &block) {
       if (candidate != reference && candidate != bestMatch &&
           !consumed.contains(candidate) &&
           reference->isBeforeInBlock(candidate) &&
+          !crossesRepetitiveRegion(reference, candidate, regionFlow) &&
           candidate.getResult().getType() == reference.getResult().getType() &&
           areEquivalentValues(reference.getBase(), candidate.getBase()) &&
           hasCommonUpdates(reference, candidate, commonIndices))
@@ -193,7 +214,8 @@ class CoalesceTuplesPass
     : public inter::impl::CoalesceTuplesBase<CoalesceTuplesPass> {
 public:
   void runOnOperation() override {
-    getOperation().walk([](Block *block) { factorBlock(*block); });
+    RegionFlow regionFlow(getOperation());
+    getOperation().walk([&](Block *block) { factorBlock(*block, regionFlow); });
   }
 };
 
