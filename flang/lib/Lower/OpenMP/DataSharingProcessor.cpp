@@ -684,14 +684,71 @@ void DataSharingProcessor::collectSymbols(
 
 void DataSharingProcessor::collectDefaultSymbols() {
   using DataSharingAttribute = omp::clause::Default::DataSharingAttribute;
+  using VariableCategory = omp::clause::Default::VariableCategory;
   for (const omp::Clause &clause : clauses) {
     if (const auto *defaultClause =
             std::get_if<omp::clause::Default>(&clause.u)) {
-      if (defaultClause->v == DataSharingAttribute::Private)
-        collectSymbols(semantics::Symbol::Flag::OmpPrivate, &defaultSymbols);
-      else if (defaultClause->v == DataSharingAttribute::Firstprivate)
-        collectSymbols(semantics::Symbol::Flag::OmpFirstPrivate,
-                       &defaultSymbols);
+      auto &dsa{std::get<DataSharingAttribute>(defaultClause->t)};
+      auto &varcat{std::get<1>(defaultClause->t)};
+
+      llvm::SetVector<const semantics::Symbol *> allSymbols;
+      semantics::Symbol::Flag flag;
+      if (dsa == DataSharingAttribute::Private) {
+        flag = semantics::Symbol::Flag::OmpPrivate;
+        converter.collectSymbolSet(eval, allSymbols,
+                                   semantics::Symbol::Flag::OmpPrivate,
+                                   /*collectSymbols=*/true,
+                                   /*collectHostAssociatedSymbols=*/true);
+      } else if (dsa == DataSharingAttribute::Firstprivate) {
+
+        flag = semantics::Symbol::Flag::OmpFirstPrivate;
+        converter.collectSymbolSet(eval, allSymbols,
+                                   semantics::Symbol::Flag::OmpFirstPrivate,
+                                   /*collectSymbols=*/true,
+                                   /*collectHostAssociatedSymbols=*/true);
+      }
+      if (!allSymbols.empty()) {
+        for (const auto *symbol : allSymbols) {
+          switch (varcat.value_or(VariableCategory::All)) {
+          case VariableCategory::All:
+            break;
+          case VariableCategory::Scalar:
+            if (!semantics::omp::DefaultMapCategoryMatchesSymbol(
+                    parser::OmpVariableCategory::Value::Scalar, *symbol)) {
+              allSymbols.remove(symbol);
+            }
+            break;
+          case VariableCategory::Aggregate:
+            if (!semantics::omp::DefaultMapCategoryMatchesSymbol(
+                    parser::OmpVariableCategory::Value::Aggregate, *symbol)) {
+              allSymbols.remove(symbol);
+            }
+            break;
+          case VariableCategory::Allocatable:
+            if (!semantics::omp::DefaultMapCategoryMatchesSymbol(
+                    parser::OmpVariableCategory::Value::Allocatable, *symbol)) {
+              allSymbols.remove(symbol);
+            }
+            break;
+          case VariableCategory::Pointer:
+            if (!semantics::omp::DefaultMapCategoryMatchesSymbol(
+                    parser::OmpVariableCategory::Value::Pointer, *symbol)) {
+              allSymbols.remove(symbol);
+            }
+            break;
+          }
+        }
+      } else {
+        continue;
+      }
+      llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
+      collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
+      for (auto *symbol : allSymbols) {
+        if (visitor.isSymbolDefineBy(symbol, eval)) {
+          symbolsInNestedRegions.remove(symbol);
+        }
+      }
+      collectPrivatizedSymbols(flag, allSymbols, symbolsInNestedRegions);
     }
   }
 }

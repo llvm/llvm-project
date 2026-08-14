@@ -645,7 +645,8 @@ TEST_F(OpenMPDecompositionTest, Default1) {
   omp::List<omp::Clause> Clauses{
       {OMPC_default,
        omp::clause::Default{
-           omp::clause::Default::DataSharingAttribute::Firstprivate}},
+           {omp::clause::Default::DataSharingAttribute::Firstprivate,
+            omp::clause::Default::VariableCategory::All}}},
   };
 
   omp::ConstructDecomposition Dec(AnyVersion, Helper,
@@ -655,9 +656,9 @@ TEST_F(OpenMPDecompositionTest, Default1) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  ASSERT_EQ(Dir0, "parallel default(0)"); // (31)
-  ASSERT_EQ(Dir1, "masked");              // (31)
-  ASSERT_EQ(Dir2, "taskloop default(0)"); // (31)
+  ASSERT_EQ(Dir0, "parallel default(0, 0)"); // (31)
+  ASSERT_EQ(Dir1, "masked");                 // (31)
+  ASSERT_EQ(Dir2, "taskloop default(0, 0)"); // (31)
 }
 
 // THREAD_LIMIT

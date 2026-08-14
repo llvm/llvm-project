@@ -48,6 +48,14 @@ using Fortran::parser::omp::is_range_v;
 using Fortran::parser::omp::LoopNestIterator;
 using Fortran::parser::omp::LoopRange;
 
+bool DefaultMapCategoryMatchesSymbol(
+    parser::OmpVariableCategory::Value category, const Symbol &symbol);
+
+bool IsOpenMPPointer(const Symbol &symbol);
+
+bool IsOpenMPAggregate(const Symbol &symbol);
+bool IsOpenMPScalar(const Symbol &symbol);
+
 template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
   return U(t);
 }

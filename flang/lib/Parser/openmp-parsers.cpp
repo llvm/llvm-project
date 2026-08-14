@@ -1114,6 +1114,9 @@ TYPE_PARSER(sourced(
 TYPE_PARSER(
     sourced(construct<OmpDoacross::Modifier>(Parser<OmpDependenceType>{})))
 
+TYPE_PARSER(sourced(
+    construct<OmpDefaultClause::Modifier>(Parser<OmpVariableCategory>{})))
+
 TYPE_PARSER(sourced( //
     construct<OmpDependClause::TaskDep::Modifier>(Parser<OmpIterator>{}) ||
     construct<OmpDependClause::TaskDep::Modifier>(
@@ -1340,7 +1343,8 @@ TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
     "NONE" >> pure(OmpDefaultClause::DataSharingAttribute::None)))
 
 TYPE_PARSER(construct<OmpDefaultClause>(
-    Parser<OmpDefaultClause::DataSharingAttribute>{}))
+    Parser<OmpDefaultClause::DataSharingAttribute>{},
+    maybe(":" >> nonemptyList(Parser<OmpDefaultClause::Modifier>{}))))
 
 TYPE_PARSER(construct<OmpDefaultVariantClause>(
     indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))

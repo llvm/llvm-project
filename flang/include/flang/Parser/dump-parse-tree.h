@@ -604,6 +604,7 @@ public:
   NODE(parser, OmpDeclareVariantDirective)
   NODE(parser, OmpDefaultClause)
   NODE_ENUM(OmpDefaultClause, DataSharingAttribute)
+  NODE(OmpDefaultClause, Modifier)
   NODE(parser, OmpDefaultmapClause)
   NODE(parser, OmpDefaultVariantClause)
   NODE(OmpDefaultmapClause, Modifier)

@@ -54,7 +54,8 @@ bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec) {
     return false;
   }
   const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
-  return defaultClause.v.v == DataSharingAttribute::None;
+  return std::get<DataSharingAttribute>(defaultClause.v.t) ==
+      DataSharingAttribute::None;
 }
 
 bool HasNestedPrivateDSA(const Symbol &symbol, const Scope &scope) {
@@ -73,9 +74,10 @@ bool HasNestedPrivateDSA(const Symbol &symbol, const Scope &scope) {
 class MetadirectiveDefaultNoneChecker {
 public:
   MetadirectiveDefaultNoneChecker(SemanticsContext &context, const Scope &scope,
-      const SymbolSourceMap &explicitDSA, UnorderedSymbolSet &diagnosed)
+      const SymbolSourceMap &explicitDSA, UnorderedSymbolSet &diagnosed,
+      std::list<parser::OmpVariableCategory::Value> &varcat)
       : context_{context}, scope_{scope}, explicitDSA_{explicitDSA},
-        diagnosed_{diagnosed} {}
+        diagnosed_{diagnosed}, varcat_{varcat} {}
 
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
@@ -116,6 +118,17 @@ public:
 
     const Symbol &symbol{*name.symbol};
     const Symbol &ultimate{symbol.GetUltimate()};
+
+    bool isDefaultNoneCat = false;
+    for (auto &cat : varcat_) {
+      isDefaultNoneCat =
+          isDefaultNoneCat || DefaultMapCategoryMatchesSymbol(cat, symbol);
+    }
+
+    if (!isDefaultNoneCat) {
+      return true;
+    }
+
     // Variables declared inside the associated loop without static storage are
     // predetermined private.
     bool isNonStaticLocal{ultimate.owner() != scope_ &&
@@ -158,6 +171,7 @@ private:
   UnorderedSymbolSet loopIndices_;
   int declarativeNesting_{0};
   int expressionNesting_{0};
+  std::list<parser::OmpVariableCategory::Value> varcat_;
 };
 
 } // namespace
@@ -165,11 +179,27 @@ private:
 void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
     const parser::OmpDirectiveSpecification &spec,
     const parser::DoConstruct &rootLoop, UnorderedSymbolSet &diagnosed) {
-  if (!HasDefaultNone(spec)) {
+
+  using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  using VariableCategory = parser::OmpVariableCategory;
+  const parser::OmpClause *clause{
+      parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_default)};
+  if (!clause) {
     return;
   }
+  const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
 
+  VariableCategory::Value varCategory;
   SymbolSourceMap explicitDSA;
+  auto *maybeCategory = OmpGetUniqueModifier<parser::OmpVariableCategory>(
+      std::get<1>(defaultClause.v.t));
+  if (maybeCategory) {
+    varCategory = maybeCategory->v;
+  } else {
+    varCategory = VariableCategory::Value::All;
+  }
+  std::list<VariableCategory::Value> varcat{varCategory};
+
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (const parser::OmpClause &clause : spec.Clauses().v) {
     if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
@@ -182,7 +212,7 @@ void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
 
   const Scope &scope{context_.FindScope(*parser::GetSource(rootLoop))};
   MetadirectiveDefaultNoneChecker checker{
-      context_, scope, explicitDSA, diagnosed};
+      context_, scope, explicitDSA, diagnosed, varcat};
   parser::Walk(rootLoop, checker);
 }
 
