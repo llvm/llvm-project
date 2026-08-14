@@ -1014,7 +1014,9 @@ std::optional<HoverInfo> getHoverContents(const SelectionTree::Node *N,
 std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   HoverInfo HI;
 
-  if (llvm::isa<RootSignatureAttr>(A)) {
+  if (AST.getLangOpts().HLSL && llvm::isa<RootSignatureAttr>(A)) {
+    // We do not use pretty print here because it would expose the internal
+    // string/macro representation instead of the original source attribute.
     HI.Name = "RootSignature";
     HI.Documentation = Attr::getDocumentation(A->getKind()).str();
     return HI;

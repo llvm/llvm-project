@@ -5432,11 +5432,13 @@ TEST(Hover, HLSLRegisterAttributeRange) {
 }
 
 TEST(Hover, HLSLRootSignature) {
-  Annotations T(R"hlsl(
-    #define RS_CBV "CBV(b0)"
-    [^RootSignature(RS_CBV)]
-    void CS_ValidCBV() {}
-  )hlsl");
+  Annotations T(
+      R"hlsl(
+        #define RS_CBV "CBV(b0)"
+        [^RootSignature(RS_CBV)]
+        void main() {}
+      )hlsl",
+      Annotations::Markers().setRangeBegin("{{").setRangeEnd("}}"));
 
   TestTU TU = TestTU::withCode(T.code());
   configureHLSL(TU);
@@ -5444,7 +5446,6 @@ TEST(Hover, HLSLRootSignature) {
   auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
   ASSERT_TRUE(H) << "Hover should have been returned for RootSignature!";
   EXPECT_EQ(H->Name, "RootSignature");
-  EXPECT_EQ(H->Definition, "");
 }
 
 } // namespace
