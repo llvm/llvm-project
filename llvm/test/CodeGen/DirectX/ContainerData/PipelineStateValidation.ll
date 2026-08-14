@@ -13,7 +13,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 !dx.valver = !{!0}
 
-!0 = !{i32 1, i32 7}
+!0 = !{i32 1, i32 8}
 
 ; DXC: - Name:            PSV0
 ; DXC:     Size:            76
