@@ -88,6 +88,19 @@ RecordLayoutAttr getRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 /// Same lookup as getRecordLayout, but returns a null attribute instead of
 /// asserting when the record has no layout entry.
 RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
+RecordLayoutAttr getRecordLayout(mlir::ModuleOp module, mlir::StringAttr name);
+
+/// Returns whether the module is an offload container, i.e. whether it carries
+/// the cir.offload.container unit attribute.  See CIR_OffloadKindAttr for the
+/// structure such a module is required to have.
+bool isOffloadContainer(mlir::ModuleOp module);
+
+/// Returns the host module of an offload container.
+mlir::ModuleOp getOffloadHostModule(mlir::ModuleOp container);
+
+/// Returns the device modules of an offload container, in container order.
+llvm::iterator_range<mlir::Block::op_iterator<mlir::ModuleOp>>
+getOffloadDeviceModules(mlir::ModuleOp container);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when
