@@ -8,7 +8,8 @@ all: $(FRAMEWORKS) dylib $(EXE)
 
 include Makefile.rules
 
-lib%.a: %.swift
+lib%.a: %.swift \
+        $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=static \
 		SWIFT_SOURCES=$(patsubst lib%.a,%.swift,$@) \
@@ -27,7 +28,8 @@ lib%.a: %.swift
 	mv $(BUILDDIR)/$(patsubst lib%.a,%.swiftmodule,$<) $(BUILDDIR)/$@/Modules/$(patsubst lib%.a,%.swiftmodule,$<)/$(ARCH)-apple-macos.swiftmodule
 	mv $(BUILDDIR)/$(patsubst lib%.a,%.swiftinterface,$<) $(BUILDDIR)/$@/Modules/
 
-dylib: Dylib.swift
+dylib: Dylib.swift \
+       $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=Dylib \
 		DYLIB_SWIFT_SOURCES=Dylib.swift \

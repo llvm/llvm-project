@@ -10,7 +10,8 @@ include Makefile.rules
 
 objc.o: libLibrary.dylib
 
-libLibrary.dylib: Library.swift
+libLibrary.dylib: Library.swift \
+                  $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_SWIFT_SOURCES=Library.swift \
 		DYLIB_NAME=Library \

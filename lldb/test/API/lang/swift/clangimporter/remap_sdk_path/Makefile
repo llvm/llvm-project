@@ -5,7 +5,8 @@ include Makefile.rules
 
 BUILD_SDK := $(BUILDDIR)/LocalSDK/$(shell basename $(SDKROOT))
 
-$(EXE): $(SWIFT_SOURCES)
+$(EXE): $(SWIFT_SOURCES) \
+        $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call RM_RF,$(BUILDDIR)/LocalSDK)
 	$(call ECHO,"Symlinking iOS SDK into build directory as a fake macOS SDK")
 	$(call MKDIR_P,$(BUILDDIR)/LocalSDK)

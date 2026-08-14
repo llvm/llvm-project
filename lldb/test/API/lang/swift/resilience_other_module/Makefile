@@ -6,7 +6,8 @@ include Makefile.rules
 LD_EXTRAS = -lWithDebInfo -lWithoutDebInfo -L$(BUILDDIR)
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 
-libWithDebInfo.dylib: WithDebInfo.swift
+libWithDebInfo.dylib: WithDebInfo.swift \
+                      $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=WithDebInfo \
@@ -16,7 +17,8 @@ libWithDebInfo.dylib: WithDebInfo.swift
 		DYLIB_SWIFT_SOURCES:=WithDebInfo.swift \
 		-f $(MAKEFILE_RULES)
 
-libWithoutDebInfo.dylib: WithoutDebInfo.swift
+libWithoutDebInfo.dylib: WithoutDebInfo.swift \
+                         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=WithoutDebInfo \

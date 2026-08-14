@@ -10,7 +10,8 @@ all: OtherArch.framework/Versions/A/OtherArch $(EXE)
 
 include Makefile.rules
 
-OtherArch.framework/Versions/A/OtherArch: $(SRCDIR)/OtherArch.swift
+OtherArch.framework/Versions/A/OtherArch: $(SRCDIR)/OtherArch.swift \
+                                          $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	touch OtherArch.h
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 	    MAKE_DSYM=YES \

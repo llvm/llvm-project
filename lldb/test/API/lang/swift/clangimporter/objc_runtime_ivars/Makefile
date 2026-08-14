@@ -5,7 +5,8 @@ all: aTestFramework.framework/Versions/A/aTestFramework a.out a.out.dSYM
 
 include Makefile.rules
 
-aTestFramework.framework/Versions/A/aTestFramework : aTestFramework.mm
+aTestFramework.framework/Versions/A/aTestFramework : aTestFramework.mm \
+                                                    $(call tool_prereq,$(CXX_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		MAKE_DSYM=YES DYLIB_ONLY=YES \
 		FRAMEWORK=aTestFramework DYLIB_CXX_SOURCES=aTestFramework.mm \

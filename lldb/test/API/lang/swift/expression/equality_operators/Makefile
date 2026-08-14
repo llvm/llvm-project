@@ -7,7 +7,8 @@ all: libfooey.dylib three
 
 include Makefile.rules
 
-libfooey.dylib: one.swift two.swift
+libfooey.dylib: one.swift two.swift \
+                $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		MAKE_DSYM=YES DYLIB_ONLY=YES DYLIB_NAME=fooey \
 		DYLIB_SWIFT_SOURCES="one.swift two.swift" \

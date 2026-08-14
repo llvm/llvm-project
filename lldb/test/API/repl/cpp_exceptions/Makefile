@@ -6,7 +6,8 @@ all: sdkroot.txt libWrapper.dylib a.out
 
 include Makefile.rules
 
-libCppLib.dylib: CppLib/CppLib.cpp
+libCppLib.dylib: CppLib/CppLib.cpp \
+                 $(call tool_prereq,$(CXX_PATH))
 	$(call MKDIR_P,CppLib)
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=CppLib DYLIB_ONLY=YES CXXFLAGS_EXTRAS=-fPIC \
@@ -16,7 +17,8 @@ ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -f -s - "$@"
 endif
 
-libWrapper.dylib: libCppLib.dylib
+libWrapper.dylib: libCppLib.dylib \
+                  $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=Wrapper DYLIB_SWIFT_SOURCES=wrapper.swift \
 		LD_EXTRAS="$(LD_EXTRAS)" \

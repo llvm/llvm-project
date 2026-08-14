@@ -11,7 +11,8 @@ SWIFTFLAGS_EXTRAS = \
 
 TestFramework.framework: TestFramework.swift TestFramework.h \
                          TestFramework_Private.h \
-                         module.modulemap module.private.modulemap
+                         module.modulemap module.private.modulemap \
+                         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) -C $(BUILDDIR) VPATH=$(VPATH) \
 		MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \

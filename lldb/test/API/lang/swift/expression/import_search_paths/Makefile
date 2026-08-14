@@ -14,7 +14,8 @@ all: libDirect $(EXE)
 
 include Makefile.rules
 
-libHidden: $(SRCDIR)/hidden/Indirect.swift
+libHidden: $(SRCDIR)/hidden/Indirect.swift \
+           $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call MKDIR_P,$(BUILDDIR)/hidden)
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		-C $(BUILDDIR)/hidden VPATH=$(SRCDIR)/hidden \
@@ -25,7 +26,8 @@ libHidden: $(SRCDIR)/hidden/Indirect.swift
 		SWIFTFLAGS_EXTRAS="-gnone" \
 		MAKE_DSYM=NO
 
-libDirect: $(SRCDIR)/Direct.swift libHidden
+libDirect: $(SRCDIR)/Direct.swift libHidden \
+           $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=Direct \

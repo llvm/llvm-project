@@ -16,7 +16,8 @@ setup:
 	$(call MKDIR_P,libs)
 	$(call CP,$(SRCDIR)/libs/A.swift,libs/AA.swift)
 
-sharedA:
+sharedA: \
+         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=$(DYLIB_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) VPATH=$(BUILDDIR) SWIFTSDKROOT=$(SWIFTSDKROOT) \
 		SWIFT_MODULE_CACHE_FLAGS="$(SWIFT_MODULE_CACHE_FLAGS)" \

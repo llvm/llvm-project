@@ -11,14 +11,16 @@ include Makefile.rules
 a.out: main.swift libNewerTarget.dylib
 
 
-dlopen_module: dlopen_module.m libNewerTarget.dylib
+dlopen_module: dlopen_module.m libNewerTarget.dylib \
+               $(call tool_prereq,$(CC))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		CXX= \
 		OBJC_SOURCES=dlopen_module.m \
 		EXE=dlopen_module \
 		LD_EXTRAS="-framework Foundation -mtargetos=macosx10.8"
 
-lib%.dylib: %.swift
+lib%.dylib: %.swift \
+            $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES \
 		DYLIB_NAME=$(patsubst lib%.dylib,%,$@) \
