@@ -1591,20 +1591,15 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV64-NEXT:    andi sp, sp, -64
 ; RV64-NEXT:    addi a0, sp, 64
 ; RV64-NEXT:    vs8r.v v8, (a0)
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    slli a3, a2, 3
-; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    slli a2, a2, 1
-; RV64-NEXT:    add a3, a0, a3
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a2, a1, 1
 ; RV64-NEXT:    addi a2, a2, -1
-; RV64-NEXT:    vs8r.v v16, (a3)
-; RV64-NEXT:    bltu a2, a1, .LBB70_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a2, a1
-; RV64-NEXT:  .LBB70_2:
-; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    add a1, a0, a1
+; RV64-NEXT:    srli a2, a2, 29
 ; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    vs8r.v v16, (a1)
 ; RV64-NEXT:    fld fa0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    .cfi_def_cfa sp, 80
@@ -1633,13 +1628,6 @@ define double @extractelt_nxv16f64_imm(<vscale x 16 x double> %v) {
 define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %idx) {
 ; RV32-LABEL: extractelt_nxv16f64_idx:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    addi a2, a2, -1
-; RV32-NEXT:    bltu a0, a2, .LBB72_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a0, a2
-; RV32-NEXT:  .LBB72_2:
 ; RV32-NEXT:    addi sp, sp, -80
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
@@ -1648,17 +1636,21 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
-; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    slli a2, a2, 4
-; RV32-NEXT:    sub sp, sp, a2
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 4
+; RV32-NEXT:    sub sp, sp, a1
 ; RV32-NEXT:    andi sp, sp, -64
-; RV32-NEXT:    addi a2, sp, 64
-; RV32-NEXT:    vs8r.v v8, (a2)
-; RV32-NEXT:    slli a1, a1, 3
+; RV32-NEXT:    addi a1, sp, 64
+; RV32-NEXT:    vs8r.v v8, (a1)
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    slli a3, a2, 1
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    and a0, a0, a3
+; RV32-NEXT:    slli a2, a2, 3
+; RV32-NEXT:    add a2, a1, a2
 ; RV32-NEXT:    slli a0, a0, 3
-; RV32-NEXT:    add a1, a2, a1
-; RV32-NEXT:    add a0, a2, a0
-; RV32-NEXT:    vs8r.v v16, (a1)
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    vs8r.v v16, (a2)
 ; RV32-NEXT:    fld fa0, 0(a0)
 ; RV32-NEXT:    addi sp, s0, -80
 ; RV32-NEXT:    .cfi_def_cfa sp, 80
@@ -1672,13 +1664,6 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ;
 ; RV64-LABEL: extractelt_nxv16f64_idx:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a2, a1, 1
-; RV64-NEXT:    addi a2, a2, -1
-; RV64-NEXT:    bltu a0, a2, .LBB72_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:  .LBB72_2:
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
@@ -1687,17 +1672,21 @@ define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %i
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    slli a2, a2, 4
-; RV64-NEXT:    sub sp, sp, a2
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 4
+; RV64-NEXT:    sub sp, sp, a1
 ; RV64-NEXT:    andi sp, sp, -64
-; RV64-NEXT:    addi a2, sp, 64
-; RV64-NEXT:    vs8r.v v8, (a2)
-; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    addi a1, sp, 64
+; RV64-NEXT:    vs8r.v v8, (a1)
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    slli a3, a2, 1
+; RV64-NEXT:    addi a3, a3, -1
+; RV64-NEXT:    and a0, a0, a3
+; RV64-NEXT:    slli a2, a2, 3
+; RV64-NEXT:    add a2, a1, a2
 ; RV64-NEXT:    slli a0, a0, 3
-; RV64-NEXT:    add a1, a2, a1
-; RV64-NEXT:    add a0, a2, a0
-; RV64-NEXT:    vs8r.v v16, (a1)
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    vs8r.v v16, (a2)
 ; RV64-NEXT:    fld fa0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -80
 ; RV64-NEXT:    .cfi_def_cfa sp, 80
