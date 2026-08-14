@@ -85,6 +85,17 @@ struct SpanMixed { int a : 3; int : 0; int : 3; };
 struct SpanEmptyFirst { int : 3; int : 0; int b : 3; };
 // CIR-DAG: !rec_SpanEmptyFirst = !cir.struct<"SpanEmptyFirst" padded {empty !u8i, pad !cir.array<!u8i x 3>, data !u8i, pad !cir.array<!u8i x 3>}>
 
+// One unit covering both of these would need more than one register, so they
+// split into two units that are marked independently.
+struct WideSpanMixed { unsigned long a : 64; unsigned long : 64; };
+// CIR-DAG: !rec_WideSpanMixed = !cir.struct<"WideSpanMixed" {data !u64i, empty !u64i}>
+
+struct WideSpanEmptyFirst { unsigned long : 64; unsigned long b : 64; };
+// CIR-DAG: !rec_WideSpanEmptyFirst = !cir.struct<"WideSpanEmptyFirst" {empty !u64i, data !u64i}>
+
+struct WideSpanAllEmpty { unsigned long : 64; unsigned long : 64; };
+// CIR-DAG: !rec_WideSpanAllEmpty = !cir.struct<"WideSpanAllEmpty" {empty !u64i, empty !u64i}>
+
 union UnnamedBitUnion { int : 8; };
 // CIR-DAG: !rec_UnnamedBitUnion = !cir.union<"UnnamedBitUnion" {empty !u8i}>
 
@@ -119,6 +130,7 @@ void useTypes(HoldsEmpty *, NuaEmpty *, NuaEmptyUnion *, NuaPolyUnion *,
               DerivesBitFieldBase *, HasBitFieldVBase *, ZeroLenEmptyArr *,
               EmptyArr2 *, NuaEmptyArr *, OnlyUnnamedBit *, NamedClipped *,
               NamedFirst *, UnnamedFirst *, SpanMixed *, SpanEmptyFirst *,
+              WideSpanMixed *, WideSpanEmptyFirst *, WideSpanAllEmpty *,
               UnnamedBitUnion *, NoMemberUnion *, Pod *, NearlyEmptyVBase *,
               HasNearlyEmptyVBase *, Clipped *) {}
 
