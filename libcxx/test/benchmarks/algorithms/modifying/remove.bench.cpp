@@ -22,10 +22,7 @@
 int main(int argc, char** argv) {
   auto std_remove    = [](auto first, auto last, auto const& value) { return std::remove(first, last, value); };
   auto std_remove_if = [](auto first, auto last, auto const& value) {
-    return std::remove_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::remove_if(first, last, [&](auto element) { return element == value; });
   };
 
   // Benchmark {std,ranges}::{remove,remove_if} on a sequence of the form xxxxxxxxxxyyyyyyyyyy

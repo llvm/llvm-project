@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIRAffineDialect
   AffineMemoryOpInterfaces.cpp
   AffineOps.cpp
   AffineValueMap.cpp
+  InferIntDivisibilityOpInterfaceImpl.cpp
   InferIntRangeInterfaceImpls.cpp
   ValueBoundsOpInterfaceImpl.cpp
 
@@ -16,6 +17,7 @@ add_mlir_dialect_library(MLIRAffineDialect
   MLIRArithDialect
   MLIRDialectUtils
   MLIRIR
+  MLIRInferIntDivisibilityOpInterface
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface
