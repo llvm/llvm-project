@@ -128,9 +128,6 @@ private:
     /// Address ranges for symbols with sizes (used for assembly file support).
     RangesTy AddressRanges;
 
-    /// Sorted linked start addresses of the symbols with a known size.
-    std::vector<uint64_t> LinkedSymbolStarts;
-
     /// Returns list of valid relocations from \p Relocs,
     /// between \p StartOffset and \p NextOffset.
     ///
@@ -175,21 +172,15 @@ private:
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
       }
-      // Only a sized symbol has a known extent. The ranges stand in for the
-      // high_pc that assembly files lack.
+      // Populate address ranges from debug map symbols that have sizes.
+      // This is used for assembly files where labels may not have high_pc.
       for (const auto &Entry : DMO.symbols()) {
         const auto &Mapping = Entry.getValue();
-        if (!Mapping.Size)
-          continue;
-        LinkedSymbolStarts.push_back(Mapping.BinaryAddress);
-        if (Mapping.ObjectAddress)
+        if (Mapping.Size && Mapping.ObjectAddress)
           AddressRanges.insert(
               {*Mapping.ObjectAddress, *Mapping.ObjectAddress + Mapping.Size},
               int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
       }
-      llvm::sort(LinkedSymbolStarts);
-      LinkedSymbolStarts.erase(llvm::unique(LinkedSymbolStarts),
-                               LinkedSymbolStarts.end());
     }
     ~AddressManager() override { clear(); }
 
@@ -250,22 +241,13 @@ private:
       ValidDebugInfoRelocs.clear();
       ValidDebugAddrRelocs.clear();
       AddressRanges.clear();
-      LinkedSymbolStarts.clear();
     }
 
-    std::optional<SymbolRange>
-    getSymbolRangeForAddress(uint64_t Addr) override {
+    std::optional<AssemblyRange>
+    getAssemblyRangeForAddress(uint64_t Addr) override {
       if (auto Range = AddressRanges.getRangeThatContains(Addr))
-        return SymbolRange(Range->Range.start(), Range->Range.end());
+        return AssemblyRange(Range->Range.start(), Range->Range.end());
       return std::nullopt;
-    }
-
-    std::optional<uint64_t>
-    getNextLinkedSymbolStart(uint64_t LinkedAddr) override {
-      auto It = llvm::lower_bound(LinkedSymbolStarts, LinkedAddr);
-      if (It == LinkedSymbolStarts.end())
-        return std::nullopt;
-      return *It;
     }
   };
 
