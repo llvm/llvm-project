@@ -65,6 +65,14 @@ public:
     }
   };
 
+  // VirtRegMap state parsed from MIR and waiting to be consumed by
+  // VirtRegMap::init().
+  struct PendingVirtRegMapEntry {
+    Register VReg;
+    Register SplitFrom;      // NoReg if absent.
+    MCRegister AssignedPhys; // NoReg if absent.
+  };
+
 private:
   MachineFunction *MF;
   SmallPtrSet<Delegate *, 1> TheDelegates;
@@ -106,6 +114,10 @@ private:
   IndexedMap<std::pair<unsigned, SmallVector<Register, 4>>,
              VirtReg2IndexFunctor>
       RegAllocHints;
+
+  /// Hold the register properties that are used to populate the VirtRegMap
+  /// pass when deserializing from .mir files.
+  SmallVector<PendingVirtRegMapEntry, 0> PendingVirtRegMapEntries;
 
   /// PhysRegUseDefLists - This is an array of the head of the use/def list for
   /// physical registers.
@@ -511,7 +523,16 @@ public:
   /// hasOneUse - Return true if there is exactly one instruction using the
   /// specified register.
   bool hasOneUse(Register RegNo) const {
-    return hasSingleElement(use_operands(RegNo));
+    MachineOperand *Head = getRegUseDefListHead(RegNo);
+    if (!Head)
+      return false;
+    // Prev links are circular, and defs always precede uses.
+    MachineOperand *Tail = Head->Contents.Reg.Prev;
+    if (!Tail->isUse())
+      return false;
+    if (Tail == Head)
+      return true;
+    return Tail->Contents.Reg.Prev->isDef();
   }
 
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the
@@ -798,6 +819,25 @@ public:
   /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
   LLVM_ABI void clearVirtRegs();
 
+  void addPendingVirtRegMapEntry(PendingVirtRegMapEntry Entry) {
+    assert(Entry.VReg.isVirtual());
+    assert(!Entry.SplitFrom.isValid() || Entry.SplitFrom.isVirtual());
+    assert(!Entry.AssignedPhys.isValid() || Entry.AssignedPhys.isPhysical());
+    PendingVirtRegMapEntries.push_back(Entry);
+  }
+
+  ArrayRef<PendingVirtRegMapEntry> getPendingVirtRegMapEntries() const {
+    return PendingVirtRegMapEntries;
+  }
+
+  void clearPendingVirtRegMapEntries() { PendingVirtRegMapEntries.clear(); }
+
+  void copyPendingVirtRegMapEntriesFrom(const MachineRegisterInfo &Other) {
+    assert(getNumVirtRegs() == Other.getNumVirtRegs() &&
+           "expected MachineFunction clone to preserve virtual registers");
+    PendingVirtRegMapEntries = Other.PendingVirtRegMapEntries;
+  }
+
   /// setRegAllocationHint - Specify a register allocation hint for the
   /// specified virtual register. This is typically used by target, and in case
   /// of an earlier hint it will be overwritten.
@@ -866,31 +906,8 @@ public:
 
   /// updateDbgUsersToReg - Update a collection of debug instructions
   /// to refer to the designated register.
-  void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
-                           ArrayRef<MachineInstr *> Users) const {
-    // If this operand is a register, check whether it overlaps with OldReg.
-    // If it does, replace with NewReg.
-    auto UpdateOp = [this, &NewReg, &OldReg](MachineOperand &Op) {
-      if (Op.isReg() &&
-          getTargetRegisterInfo()->regsOverlap(Op.getReg(), OldReg))
-        Op.setReg(NewReg);
-    };
-
-    // Iterate through (possibly several) operands to DBG_VALUEs and update
-    // each. For DBG_PHIs, only one operand will be present.
-    for (MachineInstr *MI : Users) {
-      if (MI->isDebugValue()) {
-        for (auto &Op : MI->debug_operands())
-          UpdateOp(Op);
-        assert(MI->hasDebugOperandForReg(NewReg) &&
-               "Expected debug value to have some overlap with OldReg");
-      } else if (MI->isDebugPHI()) {
-        UpdateOp(MI->getOperand(0));
-      } else {
-        llvm_unreachable("Non-DBG_VALUE, Non-DBG_PHI debug instr updated");
-      }
-    }
-  }
+  LLVM_ABI void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
+                                    ArrayRef<MachineInstr *> Users) const;
 
   /// Return true if the specified register is modified in this function.
   /// This checks that no defining machine operands exist for the register or

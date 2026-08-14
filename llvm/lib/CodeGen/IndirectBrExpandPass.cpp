@@ -135,23 +135,11 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
     if (!IndirectBrSuccs.count(&BB))
       continue;
 
-    auto IsBlockAddressUse = [&](const Use &U) {
-      return isa<BlockAddress>(U.getUser());
-    };
-    auto BlockAddressUseIt = llvm::find_if(BB.uses(), IsBlockAddressUse);
-    if (BlockAddressUseIt == BB.use_end())
-      continue;
-
-    assert(std::none_of(std::next(BlockAddressUseIt), BB.use_end(),
-                        IsBlockAddressUse) &&
-           "There should only ever be a single blockaddress use because it is "
-           "a constant and should be uniqued.");
-
-    auto *BA = cast<BlockAddress>(BlockAddressUseIt->getUser());
+    auto *BA = BlockAddress::lookup(&BB);
 
     // Skip if the constant was formed but ended up not being used (due to DCE
     // or whatever).
-    if (!BA->isConstantUsed())
+    if (!BA || !BA->isConstantUsed())
       continue;
 
     // Compute the index we want to use for this basic block. We can't use zero

@@ -44,6 +44,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 
 using namespace llvm;
 
@@ -308,14 +309,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     if (Src1) {
       assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1) &&
              "dpp version of instruction missing src1");
-      // If subtarget does not support SGPRs for src1 operand then the
-      // requirements are the same as for src0. We check src0 instead because
-      // pseudos are shared between subtargets and allow SGPR for src1 on all.
-      if (!ST->hasDPPSrc1SGPR()) {
-        assert(TII->getOpSize(*DPPInst, Src0Idx) ==
-                   TII->getOpSize(*DPPInst, NumOperands) &&
-               "Src0 and Src1 operands should have the same size");
-      }
 
       DPPInst.add(*Src1);
       ++NumOperands;

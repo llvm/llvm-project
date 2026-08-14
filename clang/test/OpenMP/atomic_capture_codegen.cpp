@@ -553,7 +553,7 @@ int main(void) {
 // CHECK: [[CONV:%.+]] = zext i1 [[BOOL_EXPECTED]] to i32
 // CHECK: [[X_RVAL:%.+]] = sitofp i32 [[CONV]] to x86_fp80
 // CHECK: [[MUL:%.+]] = fmul x86_fp80 [[EXPR]], [[X_RVAL]]
-// CHECK: [[BOOL_DESIRED:%.+]] = fcmp une x86_fp80 [[MUL]], 0xK00000000000000000000
+// CHECK: [[BOOL_DESIRED:%.+]] = fcmp une x86_fp80 [[MUL]], 0.000000e+00
 // CHECK: [[DESIRED:%.+]] = zext i1 [[BOOL_DESIRED]] to i8
 // CHECK: store i8 [[DESIRED]], ptr [[TEMP:%.+]],
 // CHECK: [[DESIRED:%.+]] = load i8, ptr [[TEMP]],

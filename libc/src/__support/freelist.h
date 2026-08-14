@@ -1,15 +1,21 @@
-//===-- Interface for freelist --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Interface for freelist.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREELIST_H
 #define LLVM_LIBC_SRC___SUPPORT_FREELIST_H
 
 #include "block.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -26,15 +32,23 @@ public:
   class Node {
   public:
     /// @returns The block containing this node.
-    LIBC_INLINE const Block *block() const {
-      return Block::from_usable_space(this);
+    LIBC_INLINE BlockRef block() const {
+      return BlockRef::from_usable_space(this);
     }
 
     /// @returns The block containing this node.
-    LIBC_INLINE Block *block() { return Block::from_usable_space(this); }
+    LIBC_INLINE BlockRef block() { return BlockRef::from_usable_space(this); }
 
     /// @returns The inner size of blocks in the list containing this node.
-    LIBC_INLINE size_t size() const { return block()->inner_size(); }
+    LIBC_INLINE size_t size() const { return block().inner_size(); }
+
+  protected:
+    LIBC_INLINE void integrity_check() const {
+      LIBC_HEAP_INTEGRITY_CHECK(next->prev == this,
+                                "FreeList node corruption detected");
+      LIBC_HEAP_INTEGRITY_CHECK(prev->next == this,
+                                "FreeList node corruption detected");
+    }
 
   private:
     // Circularly linked pointers to adjacent nodes.
@@ -58,16 +72,16 @@ public:
   LIBC_INLINE Node *begin() { return begin_; }
 
   /// @returns The first block in the list.
-  LIBC_INLINE Block *front() { return begin_->block(); }
+  LIBC_INLINE BlockRef front() { return begin_->block(); }
 
   /// Push a block to the back of the list.
   /// The block must be large enough to contain a node.
-  LIBC_INLINE void push(Block *block) {
-    LIBC_ASSERT(!block->used() &&
+  LIBC_INLINE void push(BlockRef block) {
+    LIBC_ASSERT(!block.used() &&
                 "only free blocks can be placed on free lists");
-    LIBC_ASSERT(block->inner_size_free() >= sizeof(FreeList) &&
+    LIBC_ASSERT(block.inner_size_free() >= sizeof(FreeList) &&
                 "block too small to accomodate free list node");
-    push(new (block->usable_space()) Node);
+    push(new (block.usable_space()) Node);
   }
 
   /// Push an already-constructed node to the back of the list.
@@ -79,6 +93,9 @@ public:
 
   /// Remove an arbitrary node from the list.
   void remove(Node *node);
+
+  /// Verify integrity of all nodes in the list.
+  void integrity_check() const;
 
 private:
   Node *begin_;

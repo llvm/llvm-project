@@ -340,7 +340,7 @@ define <8 x i16> @abds_const_lhs(<8 x i16> %src1) {
 define <8 x i16> @abds_const_zero(<8 x i16> %src1) {
 ; CHECK-LABEL: abds_const_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    abs v0.4h, v0.4h
 ; CHECK-NEXT:    abs v1.4h, v1.4h
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]

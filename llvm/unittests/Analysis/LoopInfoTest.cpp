@@ -72,7 +72,7 @@ TEST(LoopInfoTest, LoopWithSingleLatch) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -122,7 +122,7 @@ TEST(LoopInfoTest, LoopWithMultipleLatches) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -1397,7 +1397,7 @@ TEST(LoopInfoTest, LoopUniqueExitBlocks) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -1440,7 +1440,7 @@ TEST(LoopInfoTest, LoopNonLatchUniqueExitBlocks) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -1645,4 +1645,47 @@ TEST(LoopInfoTest, TokenLCSSA) {
     EXPECT_FALSE(
         InnerLoop->isRecursivelyLCSSAForm(DT, LI, /*IgnoreTokens*/ false));
   });
+}
+
+TEST(LoopInfoTest, UnreachableBlock) {
+  const char *ModuleStr = "define void @irreducible_loop(i1 %c1, i1 %c2) {\n"
+                          "dummy:\n"
+                          "  br label %entry\n"
+                          "entry:\n"
+                          "  br i1 %c1, label %loop1, label %side_entry\n"
+                          "dead_block:\n"
+                          "  br label %latch1\n"
+                          "loop1:\n"
+                          "  br i1 %c2, label %body1, label %mid\n"
+                          "body1:\n"
+                          "  br label %latch1\n"
+                          "latch1:\n"
+                          "  br label %loop1\n"
+                          "mid:\n"
+                          "  br label %latch2\n"
+                          "latch2:\n"
+                          "  br label %loop1\n"
+                          "side_entry:\n"
+                          "  br label %mid\n"
+                          "}\n";
+
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(ModuleStr, Err, Context);
+  ASSERT_TRUE(M);
+  Function *F = M->getFunction("irreducible_loop");
+  ASSERT_TRUE(F);
+
+  // Delete 'dummy' block so that block 0 is deleted and no block in the CFG has
+  // index 0.
+  BasicBlock *Dummy = &F->getEntryBlock();
+  Dummy->eraseFromParent();
+
+  DominatorTree DT(*F);
+  // This used to hang infinitely in analyze() due to an unvisited block
+  // reaching a latch.
+  LoopInfo LI(DT);
+
+  // Basic verification that a loop was found.
+  EXPECT_FALSE(LI.empty());
 }

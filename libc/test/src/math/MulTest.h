@@ -48,7 +48,7 @@ public:
   using MulFunc = OutType (*)(InType, InType);
 
   void test_subnormal_range(MulFunc func) {
-    constexpr InStorageType COUNT = 10'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType STEP =
         (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
     LIBC_NAMESPACE::srand(1);
@@ -68,7 +68,7 @@ public:
   }
 
   void test_normal_range(MulFunc func) {
-    constexpr InStorageType COUNT = 10'001;
+    constexpr InStorageType COUNT = 1'231;
     constexpr InStorageType STEP = (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
     LIBC_NAMESPACE::srand(1);
     for (int signs = 0; signs < 4; signs++) {

@@ -1420,6 +1420,68 @@ TEST(DIBuilder, CompositeTypes) {
   EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
 }
 
+TEST(DIBuilder, CompositeTypeAnnotations) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
+
+  auto MakeAnnotations = [&](StringRef Tag, StringRef Value) {
+    Metadata *Ops[2] = {MDString::get(Ctx, Tag), MDString::get(Ctx, Value)};
+    SmallVector<Metadata *, 1> Nodes;
+    Nodes.push_back(MDNode::get(Ctx, Ops));
+    return DIB.getOrCreateArray(Nodes);
+  };
+
+  DINodeArray ClassAnnotations = MakeAnnotations("class_tag", "class_value");
+  DICompositeType *Class = DIB.createClassType(
+      CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0, nullptr, nullptr,
+      "ClassUniqueIdentifier", ClassAnnotations);
+  EXPECT_EQ(Class->getAnnotations().get(), ClassAnnotations.get());
+
+  DINodeArray StructAnnotations = MakeAnnotations("struct_tag", "struct_value");
+  DICompositeType *Struct = DIB.createStructType(
+      CU, "MyStruct", F, 0, 8, 8, {}, {}, {}, 0, {}, "StructUniqueIdentifier",
+      nullptr, 0, StructAnnotations);
+  EXPECT_EQ(Struct->getAnnotations().get(), StructAnnotations.get());
+
+  DINodeArray DynStructAnnotations =
+      MakeAnnotations("dyn_struct_tag", "dyn_struct_value");
+  DIScope *SPScope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIVariable *Len = DIB.createAutoVariable(SPScope, "length", F, 0, nullptr,
+                                           false, DINode::FlagZero, 0);
+  DICompositeType *DynStruct = DIB.createStructType(
+      CU, "MyDynStruct", F, 0, Len, 8, DINode::FlagZero, nullptr, {}, 0,
+      nullptr, "DynStructUniqueIdentifier", nullptr, 0, DynStructAnnotations);
+  EXPECT_EQ(DynStruct->getAnnotations().get(), DynStructAnnotations.get());
+
+  DINodeArray UnionAnnotations = MakeAnnotations("union_tag", "union_value");
+  DICompositeType *Union =
+      DIB.createUnionType(CU, "MyUnion", F, 0, 8, 8, {}, {}, 0,
+                          "UnionUniqueIdentifier", UnionAnnotations);
+  EXPECT_EQ(Union->getAnnotations().get(), UnionAnnotations.get());
+
+  DICompositeType *NoAnnotClass =
+      DIB.createClassType(CU, "NoAnnotClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,
+                          nullptr, nullptr, "NoAnnotClassUniqueIdentifier");
+  EXPECT_EQ(NoAnnotClass->getAnnotations().get(), nullptr);
+
+  DICompositeType *NoAnnotStruct =
+      DIB.createStructType(CU, "NoAnnotStruct", F, 0, 8, 8, {}, {}, {}, 0, {},
+                           "NoAnnotStructUniqueIdentifier");
+  EXPECT_EQ(NoAnnotStruct->getAnnotations().get(), nullptr);
+
+  DICompositeType *NoAnnotUnion =
+      DIB.createUnionType(CU, "NoAnnotUnion", F, 0, 8, 8, {}, {}, 0,
+                          "NoAnnotUnionUniqueIdentifier");
+  EXPECT_EQ(NoAnnotUnion->getAnnotations().get(), nullptr);
+}
+
 TEST(DIBuilder, DynamicOffsetAndSize) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);

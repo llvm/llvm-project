@@ -91,4 +91,8 @@
 /* Policy to use for xcselect */
 #cmakedefine CLANG_XCSELECT_HOST_SDK_POLICY ${CLANG_XCSELECT_HOST_SDK_POLICY}
 
+
+/* Enable the experimental new constant interpreter by default */
+#cmakedefine01 CLANG_USE_EXPERIMENTAL_CONST_INTERP
+
 #endif

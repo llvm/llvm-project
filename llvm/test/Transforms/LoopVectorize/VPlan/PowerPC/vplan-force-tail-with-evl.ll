@@ -10,7 +10,6 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
-; CHECK-NEXT: Live-in ir<%N> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
@@ -22,7 +21,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[WIDEN_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[WIDEN_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule vp<[[WIDEN_CAN_IV]]>, vp<[[BTC]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -92,11 +91,11 @@ define void @safe_dep(ptr %p) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%a1> = getelementptr ir<%p>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VPTR1:%.+]]> = vector-pointer ir<%a1>
+; CHECK-NEXT:     vp<[[VPTR1:%.+]]> = vector-pointer i64, ir<%a1>
 ; CHECK-NEXT:     WIDEN ir<%v> = load vp<[[VPTR1]]>
 ; CHECK-NEXT:     CLONE ir<%offset> = add vp<[[STEPS]]>, ir<100>
 ; CHECK-NEXT:     CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
-; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%a2>
+; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer i64, ir<%a2>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%v>
 ; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VTC]]>
