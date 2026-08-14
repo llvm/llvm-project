@@ -12,10 +12,9 @@ declare <vscale x 2 x i1> @llvm.riscv.vmand.nxv2i1.i64(<vscale x 2 x i1>, <vscal
 define <vscale x 2 x i1> @and_icmp(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, i64 %vl) {
 ; CHECK-LABEL: and_icmp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmslt.vv v8, v8, v9
-; CHECK-NEXT:    vmslt.vv v9, v9, v10
-; CHECK-NEXT:    vmand.mm v0, v8, v9
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmslt.vv v0, v9, v10
+; CHECK-NEXT:    vmslt.vv v0, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %m1 = call <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.nxv2i32.i64(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, i64 %vl)
   %m2 = call <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.nxv2i32.i64(<vscale x 2 x i32> %b, <vscale x 2 x i32> %c, i64 %vl)
@@ -27,10 +26,9 @@ define <vscale x 2 x i1> @and_icmp(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b,
 define <vscale x 2 x i1> @and_fcmp(<vscale x 2 x float> %a, <vscale x 2 x float> %b, <vscale x 2 x float> %c, i64 %vl) {
 ; CHECK-LABEL: and_fcmp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmflt.vv v8, v8, v9
-; CHECK-NEXT:    vmflt.vv v9, v9, v10
-; CHECK-NEXT:    vmand.mm v0, v8, v9
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmflt.vv v0, v9, v10
+; CHECK-NEXT:    vmflt.vv v0, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %m1 = call <vscale x 2 x i1> @llvm.riscv.vmflt.nxv2f32.nxv2f32.i64(<vscale x 2 x float> %a, <vscale x 2 x float> %b, i64 %vl)
   %m2 = call <vscale x 2 x i1> @llvm.riscv.vmflt.nxv2f32.nxv2f32.i64(<vscale x 2 x float> %b, <vscale x 2 x float> %c, i64 %vl)
@@ -42,12 +40,10 @@ define <vscale x 2 x i1> @and_fcmp(<vscale x 2 x float> %a, <vscale x 2 x float>
 define <vscale x 2 x i1> @and_icmp_chain(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, <vscale x 2 x i32> %d, i64 %vl) {
 ; CHECK-LABEL: and_icmp_chain:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmslt.vv v12, v9, v10
-; CHECK-NEXT:    vmslt.vv v8, v8, v9
-; CHECK-NEXT:    vmslt.vv v9, v10, v11
-; CHECK-NEXT:    vmand.mm v8, v8, v12
-; CHECK-NEXT:    vmand.mm v0, v8, v9
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmslt.vv v0, v9, v10
+; CHECK-NEXT:    vmslt.vv v0, v8, v9, v0.t
+; CHECK-NEXT:    vmslt.vv v0, v10, v11, v0.t
 ; CHECK-NEXT:    ret
   %m1 = call <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.nxv2i32.i64(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, i64 %vl)
   %m2 = call <vscale x 2 x i1> @llvm.riscv.vmslt.nxv2i32.nxv2i32.i64(<vscale x 2 x i32> %b, <vscale x 2 x i32> %c, i64 %vl)
