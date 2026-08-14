@@ -11,6 +11,7 @@ target triple = "aarch64-none-elf"
 
 define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK-LABEL: 'fmaxnum_reduction_f32'
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
@@ -40,6 +41,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP12]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK:  Cost of 0 for VF 2: IR %max.next.lcssa = phi float [ %max.next, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 1 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
@@ -90,6 +92,7 @@ exit:
 
 define double @fmaxnum_reduction_f64(double %base, i64 %n) {
 ; CHECK-LABEL: 'fmaxnum_reduction_f64'
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to double
@@ -142,8 +145,7 @@ exit:
 
 define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK-LABEL: 'switch_to_cmp'
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: forced scalar %gep = getelementptr i8, ptr %s, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: forced scalar %dst.gep = getelementptr i8, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%c> = phi (add) vp<[[VP3:%[0-9]+]]>, ir<%c.next>
@@ -201,8 +203,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 2: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: forced scalar %gep = getelementptr i8, ptr %s, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: forced scalar %dst.gep = getelementptr i8, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: WIDEN-REDUCTION-PHI ir<%c> = phi (add) vp<[[VP3]]>, ir<%c.next>
@@ -260,8 +261,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 4: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
-; CHECK:  Cost of 1 for VF 8: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 8: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 8: canonical IV increment
 ; CHECK:  Cost of 0 for VF 8: forced scalar %gep = getelementptr i8, ptr %s, i64 %iv
 ; CHECK:  Cost of 0 for VF 8: forced scalar %dst.gep = getelementptr i8, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 8: WIDEN-REDUCTION-PHI ir<%c> = phi (add) vp<[[VP3]]>, ir<%c.next>
@@ -319,8 +319,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 8: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
-; CHECK:  Cost of 1 for VF 16: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 16: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 16: canonical IV increment
 ; CHECK:  Cost of 0 for VF 16: forced scalar %gep = getelementptr i8, ptr %s, i64 %iv
 ; CHECK:  Cost of 0 for VF 16: forced scalar %dst.gep = getelementptr i8, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 16: WIDEN-REDUCTION-PHI ir<%c> = phi (add) vp<[[VP3]]>, ir<%c.next>
@@ -433,8 +432,7 @@ exit:
 
 define void @blend_fcmp_olt_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK-LABEL: 'blend_fcmp_olt_f32'
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
@@ -457,8 +455,7 @@ define void @blend_fcmp_olt_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %c = fcmp olt float %l, 0.000000e+00
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
@@ -511,8 +508,7 @@ exit:
 
 define void @blend_fcmp_uno_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK-LABEL: 'blend_fcmp_uno_f32'
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 2: canonical IV increment
 ; CHECK:  Cost of 0 for VF 2: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
@@ -535,8 +531,7 @@ define void @blend_fcmp_uno_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %c = fcmp uno float %l, 0.000000e+00
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+; CHECK:  Cost of 1 for VF 4: canonical IV increment
 ; CHECK:  Cost of 0 for VF 4: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>

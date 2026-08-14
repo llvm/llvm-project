@@ -79,7 +79,8 @@ for.body:
 define i64 @bar(ptr nocapture %a) {
 ; CHECK-LABEL: bar
 
-; CHECK: Executing best plan with VF=2, UF=8
+; CHECK-PWR8: Executing best plan with VF=2, UF=8
+; CHECK-PWR9: Executing best plan with VF=1, UF=4
 
 entry:
   br label %for.body
