@@ -95,8 +95,15 @@ requiresPinnedDefinition(Value root,
            aliases.getAliases(value)) {
         if (alias.owner != user)
           continue;
-        if (alias.destructive)
+        if (alias.destructive) {
+          // DPAS defines the full accumulator through one SSA continuation.
+          // Pin its live-out definition, not every ancestor in the chain.
+          if (isa<DpasOp>(user)) {
+            forwards = true;
+            continue;
+          }
           return true;
+        }
         pending.push_back(alias.value);
         forwards = true;
       }
@@ -337,22 +344,44 @@ public:
   Xe2RegionSession(ArrayRef<Operation *> operations,
                    const RegisterAliasAnalysis &aliases,
                    const DenseMap<Operation *, int64_t> &positions)
-      : pressureModel(buildPressureModel(operations, aliases, positions)),
+      : operations(operations),
+        pressureModel(buildPressureModel(operations, aliases, positions)),
         nodeCount(operations.size()) {
     SmallVector<unsigned, 16> original;
     llvm::append_range(original, llvm::seq<unsigned>(nodeCount));
     originalPeak = getPeakPressure(original, pressureModel.values, nodeCount);
+    func::FuncOp function = operations.front()->getParentOfType<func::FuncOp>();
+    if (IntegerAttr grfCount =
+            function->getAttrOfType<IntegerAttr>(kGrfCountAttrName))
+      pressureLimit = grfCount.getInt();
   }
 
   bool canSchedulePrefix(ArrayRef<unsigned> prefix) const override {
-    return getPeakPressure(prefix, pressureModel.values, nodeCount) <=
-           originalPeak;
+    unsigned peak = getPeakPressure(prefix, pressureModel.values, nodeCount);
+    if (peak <= originalPeak)
+      return true;
+    if (!pressureLimit || peak > *pressureLimit)
+      return false;
+
+    BitVector scheduled(nodeCount);
+    for (unsigned node : prefix) {
+      unsigned baseline = 0;
+      while (baseline < nodeCount && scheduled.test(baseline))
+        ++baseline;
+      if (node > baseline && isa<DpasOp>(operations[node]) &&
+          isa<DpasOp>(operations[baseline]))
+        return true;
+      scheduled.set(node);
+    }
+    return false;
   }
 
 private:
+  SmallVector<Operation *, 16> operations;
   PressureModel pressureModel;
   unsigned nodeCount;
   unsigned originalPeak;
+  std::optional<unsigned> pressureLimit;
 };
 
 class Xe2ScheduleModel final : public inter::MachineScheduleModel {
@@ -569,8 +598,20 @@ public:
         previewIssue(candidate, candidateDependencies);
     if (failed(baselineBefore) || failed(candidatePreview))
       return failure();
-    if (!candidatePreview->instruction || candidatePreview->stallCycles != 0)
+    if (!candidatePreview->instruction ||
+        candidatePreview->cycle >= baselineBefore->cycle)
       return false;
+    if (candidatePreview->stallCycles != 0) {
+      FailureOr<Xe2InstructionTiming> baselineTiming =
+          getXe2InstructionTiming(baseline);
+      FailureOr<Xe2InstructionTiming> candidateTiming =
+          getXe2InstructionTiming(candidate);
+      if (failed(baselineTiming) || failed(candidateTiming))
+        return failure();
+      if (baselineTiming->issueClass != InstructionIssueClass::systolic ||
+          candidateTiming->issueClass != InstructionIssueClass::systolic)
+        return false;
+    }
 
     Xe2ScheduleState trial = *this;
     if (failed(trial.commitIssue(candidate, candidateDependencies)))
@@ -584,7 +625,8 @@ public:
 
 private:
   int64_t currentCycle = 0;
-  std::array<int64_t, 4> pipeReadyCycle{};
+  std::array<int64_t, static_cast<unsigned>(Xe2IssuePipe::count)>
+      pipeReadyCycle{};
 };
 
 std::unique_ptr<inter::MachineScheduleState>

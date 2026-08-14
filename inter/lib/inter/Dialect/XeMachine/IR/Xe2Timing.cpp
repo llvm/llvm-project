@@ -224,7 +224,6 @@ inter::xemachine::getXe2InstructionTiming(Operation *operation) {
     break;
   case InstructionIssueClass::systolic:
     timing.completionLatency = kDpasRepeat8Latency;
-    timing.occupancy = 8;
     break;
   }
   return timing;
@@ -283,6 +282,8 @@ StringRef inter::xemachine::stringifyXe2IssuePipe(Xe2IssuePipe value) {
     return "send";
   case Xe2IssuePipe::systolic:
     return "systolic";
+  case Xe2IssuePipe::count:
+    llvm_unreachable("issue pipe count has no name");
   }
   llvm_unreachable("unknown issue pipe");
 }

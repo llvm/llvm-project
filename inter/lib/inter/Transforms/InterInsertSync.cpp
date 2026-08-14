@@ -286,17 +286,20 @@ static void applyTokenWait(SyncState &state, TokenWait wait) {
 }
 
 static void requireWait(SmallVectorImpl<TokenWait> &requirements,
-                        const IssueTicket &ticket, SWSBTokenMode mode) {
-  TokenWait wait{ticket.sbid, mode};
-  if (mode == SWSBTokenMode::source &&
+                        TokenWait wait) {
+  if (wait.mode == SWSBTokenMode::source &&
       llvm::is_contained(requirements,
-                         TokenWait{ticket.sbid, SWSBTokenMode::destination}))
+                         TokenWait{wait.sbid, SWSBTokenMode::destination}))
     return;
-  if (mode == SWSBTokenMode::destination)
-    llvm::erase(requirements,
-                TokenWait{ticket.sbid, SWSBTokenMode::source});
+  if (wait.mode == SWSBTokenMode::destination)
+    llvm::erase(requirements, TokenWait{wait.sbid, SWSBTokenMode::source});
   if (!llvm::is_contained(requirements, wait))
     requirements.push_back(wait);
+}
+
+static void requireWait(SmallVectorImpl<TokenWait> &requirements,
+                        const IssueTicket &ticket, SWSBTokenMode mode) {
+  requireWait(requirements, TokenWait{ticket.sbid, mode});
 }
 
 static void requireValue(SmallVectorImpl<TokenWait> &requirements, Value value,
@@ -770,6 +773,20 @@ static void emitWaits(OpBuilder &builder, Operation *operation,
   }
 }
 
+static void appendIndependentDpasReadWaits(
+    Operation *operation, Operation *next, const SyncState &state,
+    SmallVectorImpl<TokenWait> &requirements) {
+  DpasOp dpas = dyn_cast<DpasOp>(operation);
+  DpasOp nextDpas = dyn_cast_or_null<DpasOp>(next);
+  if (requirements.empty() || !dpas || !nextDpas ||
+      isDpasChainPredecessor(operation, nextDpas))
+    return;
+
+  for (TokenWait wait : computeRequirement(next, state))
+    if (wait.mode == SWSBTokenMode::destination)
+      requireWait(requirements, wait);
+}
+
 static void collectBlocks(Region &region, SmallVectorImpl<Block *> &blocks) {
   for (Block &block : region) {
     blocks.push_back(&block);
@@ -792,8 +809,11 @@ static void rewriteWithSolver(func::FuncOp function, DataFlowSolver &solver) {
     SmallVector<Operation *> operations;
     for (Operation &operation : *block)
       operations.push_back(&operation);
-    for (Operation *operation : operations) {
+    for (auto [index, operation] : llvm::enumerate(operations)) {
       auto emit = [&](Operation *target, SmallVector<TokenWait> &requirements) {
+        Operation *next = index + 1 < operations.size() ? operations[index + 1]
+                                                        : nullptr;
+        appendIndependentDpasReadWaits(target, next, local, requirements);
         if (!requirements.empty())
           emitWaits(builder, target, requirements);
       };
@@ -899,6 +919,8 @@ static std::optional<unsigned> getPipeIndex(Xe2IssuePipe pipe) {
   case Xe2IssuePipe::send:
   case Xe2IssuePipe::systolic:
     return std::nullopt;
+  case Xe2IssuePipe::count:
+    llvm_unreachable("issue pipe count is not a pipe");
   }
   llvm_unreachable("unknown Xe2 issue pipe");
 }

@@ -5,6 +5,7 @@ module {
     %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
     %r2 = xemachine.archreg 2 : !xemachine.reg<32, 2>
     %r4 = xemachine.archreg 4 : !xemachine.reg<64, 4>
+    %r8 = xemachine.archreg 8 : !xemachine.reg<128, 8>
     %one = xemachine.imm 1 : i32
     %one64 = xemachine.imm 1 : i64
 
@@ -47,6 +48,10 @@ module {
         src0Region = #xemachine.region<0, 1, 0>}
         : (!xemachine.reg<16, 0>, !xemachine.imm, i32)
         -> !xemachine.arf<a0, 16, 0>
+    %dpas = xemachine.dpas %r4, %r8, %r8 {
+        aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
+        : (!xemachine.reg<64, 4>, !xemachine.reg<128, 8>,
+           !xemachine.reg<128, 8>) -> !xemachine.reg<128, 8>
 
     %root = xemachine.token
     %loaded, %load_token = xemachine.load_a64 %r4 dep %root
@@ -120,6 +125,7 @@ module {
 // CHECK: xemachine.mul class=arithmetic pipe=integer latency=10 occupancy=1 raw-gap=10 war-gap=2 order-gap=1
 // CHECK: xemachine.cmp class=arf-write pipe=integer latency=16 occupancy=2 raw-gap=16 war-gap=2 order-gap=2
 // CHECK: xemachine.and class=arf-write pipe=integer latency=16 occupancy=1 raw-gap=16 war-gap=2 order-gap=1
+// CHECK: xemachine.dpas class=systolic pipe=systolic latency=33 occupancy=2 raw-gap=33 war-gap=2 order-gap=2
 // CHECK: xemachine.load_a64 class=send pipe=send latency=200 occupancy=4 send-read=12 raw-gap=200 war-gap=12 order-gap=12
 // CHECK: xemachine.store_a64 class=send pipe=send latency=200 occupancy=4 send-read=14 raw-gap=200 war-gap=14 order-gap=14
 // CHECK: xemachine.load_slm class=send pipe=send latency=45 occupancy=4 send-read=10 raw-gap=45 war-gap=10 order-gap=10

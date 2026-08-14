@@ -495,6 +495,43 @@ module {
     return
   }
 
+  func.func @interleaved_loop_dpas_chains(
+      %flag: !xemachine.arf<f, 2, 0>) attributes {
+      xemachine.target = #xemachine.target<chip = "bmg">} {
+    %a = xemachine.archreg 20 : !xemachine.reg<64, 20>
+    %b = xemachine.archreg 24 : !xemachine.reg<128, 24>
+    %zero = xemachine.imm 0 : f32
+    %acc0 = xemachine.mov %zero {execSize = 16 : i32}
+        : (!xemachine.imm, f32) -> !xemachine.reg<128, -1>
+    %acc1 = xemachine.mov %zero {execSize = 16 : i32}
+        : (!xemachine.imm, f32) -> !xemachine.reg<128, -1>
+    %loop:2 = xemachine.uniform_loop (%acc0, %acc1) {
+    ^bb0(%iter0: !xemachine.reg<128, -1>,
+         %iter1: !xemachine.reg<128, -1>):
+      %chain0_first = xemachine.dpas %a, %b, %iter0 {
+          aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
+          : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>,
+             !xemachine.reg<128, -1>) -> !xemachine.reg<128, -1>
+      %chain0_second = xemachine.dpas %a, %b, %chain0_first {
+          aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
+          : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>,
+             !xemachine.reg<128, -1>) -> !xemachine.reg<128, -1>
+      %chain1_first = xemachine.dpas %a, %b, %iter1 {
+          aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
+          : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>,
+             !xemachine.reg<128, -1>) -> !xemachine.reg<128, -1>
+      %chain1_second = xemachine.dpas %a, %b, %chain1_first {
+          aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
+          : (!xemachine.reg<64, 20>, !xemachine.reg<128, 24>,
+             !xemachine.reg<128, -1>) -> !xemachine.reg<128, -1>
+      xemachine.continue_if %flag : !xemachine.arf<f, 2, 0>
+          (%chain0_second, %chain1_second
+           : !xemachine.reg<128, -1>, !xemachine.reg<128, -1>)
+    } : (!xemachine.reg<128, -1>, !xemachine.reg<128, -1>)
+        -> (!xemachine.reg<128, -1>, !xemachine.reg<128, -1>)
+    return
+  }
+
   func.func @loop_carry(%flag: !xemachine.arf<f, 2, 0>) attributes {
       xemachine.target = #xemachine.target<chip = "bmg">} {
     %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
@@ -752,6 +789,14 @@ module {
 // CHECK-NEXT: [[CROSS_HIGH:%.*]] = xemachine.mov
 // CHECK-NEXT: [[CROSS_REPLACEMENT:%.*]] = xemachine.tuple_from_elements
 // CHECK-NEXT: xemachine.uniform_loop
+
+// CHECK-LABEL: func.func @interleaved_loop_dpas_chains
+// CHECK: xemachine.uniform_loop
+// CHECK: ^bb0([[LOOP_DPAS_ACC0:%.*]]: {{.*}}, [[LOOP_DPAS_ACC1:%.*]]: {{.*}}):
+// CHECK-NEXT: [[LOOP_DPAS_CHAIN0_FIRST:%.*]] = xemachine.dpas {{.*}}, [[LOOP_DPAS_ACC0]]
+// CHECK-NEXT: [[LOOP_DPAS_CHAIN1_FIRST:%.*]] = xemachine.dpas {{.*}}, [[LOOP_DPAS_ACC1]]
+// CHECK-NEXT: [[LOOP_DPAS_CHAIN0_SECOND:%.*]] = xemachine.dpas {{.*}}, [[LOOP_DPAS_CHAIN0_FIRST]]
+// CHECK-NEXT: [[LOOP_DPAS_CHAIN1_SECOND:%.*]] = xemachine.dpas {{.*}}, [[LOOP_DPAS_CHAIN1_FIRST]]
 
 // CHECK-LABEL: func.func @loop_carry
 // CHECK: xemachine.uniform_loop

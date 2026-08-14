@@ -46,7 +46,14 @@ enum class MachineInstructionKind : uint8_t {
 
 enum class AsyncScoreboardKind : uint8_t { send, dpas };
 
-enum class Xe2IssuePipe : uint8_t { none, integer, floating, send, systolic };
+enum class Xe2IssuePipe : uint8_t {
+  none,
+  integer,
+  floating,
+  send,
+  systolic,
+  count,
+};
 
 enum class Xe2DependencyKind : uint8_t { raw, war, waw, order };
 
