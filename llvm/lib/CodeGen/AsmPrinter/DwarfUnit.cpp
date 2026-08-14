@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <cassert>
 #include <cstdint>
@@ -53,9 +54,7 @@ static dwarf::Form getDataForm(unsigned Size) {
 }
 
 static uint64_t getDataValue(uint64_t Value, unsigned Size) {
-  if (Size == sizeof(Value))
-    return Value;
-  return Value & ((uint64_t(1) << (Size * 8)) - 1);
+  return Value & maskTrailingOnes<uint64_t>(Size * 8);
 }
 
 DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP,
@@ -98,26 +97,31 @@ unsigned DIEDwarfExpression::getTemporaryBufferSize() {
 
 void DIEDwarfExpression::commitTemporaryBuffer() { OutDIE.takeValues(TmpDIE); }
 
-void DIEDwarfExpression::replaceTemporaryBufferData(unsigned Offset,
-                                                    uint64_t Value,
-                                                    unsigned Size) {
-  dwarf::Form Form = getDataForm(Size);
-  // Keep the form so replacing the value doesn't move later labels.
-  unsigned CurrentOffset = 0;
+void DIEDwarfExpression::replaceTemporaryBufferData(unsigned PlaceholderOffset,
+                                                    uint64_t Replacement,
+                                                    unsigned PlaceholderSize) {
+  // Walk the encoded values until the cursor reaches the placeholder.
+  unsigned ByteCursor = 0;
   for (DIEValue &V : TmpDIE.values()) {
     unsigned ValueSize = V.sizeOf(AP.getDwarfFormParams());
-    if (Offset < CurrentOffset + ValueSize) {
-      assert(Offset == CurrentOffset && ValueSize == Size &&
-             V.getType() == DIEValue::isInteger && V.getForm() == Form &&
-             V.getDIEInteger().getValue() == 0 &&
-             "symbolic branch fixup does not match its placeholder");
-      V = DIEValue(V.getAttribute(), V.getForm(),
-                   DIEInteger(getDataValue(Value, Size)));
-      return;
+    unsigned ValueEnd = ByteCursor + ValueSize;
+    if (ValueEnd <= PlaceholderOffset) {
+      ByteCursor = ValueEnd;
+      continue;
     }
-    CurrentOffset += ValueSize;
+
+    // Replace the whole zero placeholder and keep its form, since changing its
+    // encoded size would move every later fixup.
+    assert(PlaceholderOffset == ByteCursor && ValueSize == PlaceholderSize &&
+           V.getType() == DIEValue::isInteger &&
+           V.getForm() == getDataForm(PlaceholderSize) &&
+           V.getDIEInteger().getValue() == 0 &&
+           "symbolic branch fixup does not match its placeholder");
+    V = DIEValue(V.getAttribute(), V.getForm(),
+                 DIEInteger(getDataValue(Replacement, PlaceholderSize)));
+    return;
   }
-  llvm_unreachable("invalid temporary DIE offset");
+  llvm_unreachable("temporary DIE placeholder not found");
 }
 
 bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,

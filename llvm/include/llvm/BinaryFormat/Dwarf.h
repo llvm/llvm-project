@@ -1185,6 +1185,16 @@ inline bool isTlsAddressOp(uint8_t O) {
   return O == DW_OP_form_tls_address || O == DW_OP_GNU_push_tls_address;
 }
 
+/// Return true if Op is a symbolic branch to a label.
+inline bool isSymbolicBranchOp(uint64_t Op) {
+  return Op == DW_OP_LLVM_bra || Op == DW_OP_LLVM_skip;
+}
+
+/// Return true if Op is a symbolic label or branch.
+inline bool isSymbolicControlFlowOp(uint64_t Op) {
+  return Op == DW_OP_LLVM_label || isSymbolicBranchOp(Op);
+}
+
 LLVM_ABI std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// The size of a reference determined by the DWARF 32/64-bit format.

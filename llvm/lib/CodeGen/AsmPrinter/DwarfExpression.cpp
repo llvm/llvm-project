@@ -571,8 +571,7 @@ bool DwarfExpression::addExpression(
   // Iterating over ExprCursor doesn't consume it.
   bool HasSymbolicBranches =
       llvm::any_of(ExprCursor, [](DIExpression::ExprOperand Op) {
-        return Op.getOp() == dwarf::DW_OP_LLVM_bra ||
-               Op.getOp() == dwarf::DW_OP_LLVM_skip;
+        return dwarf::isSymbolicBranchOp(Op.getOp());
       });
 
   SmallVector<LabelOffset, 4> Labels;
@@ -844,6 +843,8 @@ bool DwarfExpression::addExpression(
         report_fatal_error(Twine("DWARF expression branch to label ") +
                            Twine(Fixup.LabelID) + " has no matching label");
 
+      // DW_OP_bra and DW_OP_skip apply the displacement after reading their
+      // two-byte operand, so use the byte after the placeholder as the base.
       int64_t Displacement =
           static_cast<int64_t>(Label->Offset) -
           static_cast<int64_t>(Fixup.PlaceholderOffset + BranchOffsetByteSize);
