@@ -36,6 +36,12 @@ std::string getCanonicalDefaultDeclareMapperName(fir::RecordType recordType) {
   if (kind != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return recordType.getName().str() + llvm::omp::OmpDefaultMapperName;
 
+  // Preserve legacy symbol spelling for non-parameterized types.
+  // Rebuilding through doGenerated() can duplicate module prefixes for
+  // intrinsic-derived names like __fortran_builtins::c_ptr.
+  if (deconstructed.kinds.empty())
+    return recordType.getName().str() + llvm::omp::OmpDefaultMapperName;
+
   llvm::SmallVector<llvm::StringRef> modules;
   llvm::SmallVector<llvm::StringRef> procs;
   modules.reserve(deconstructed.modules.size());

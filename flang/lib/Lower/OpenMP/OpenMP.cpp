@@ -3989,15 +3989,15 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         const semantics::DerivedTypeSpec *typeSpec =
             sym.GetType() ? sym.GetType()->AsDerived() : nullptr;
         if (typeSpec) {
-          std::string mapperIdName;
+          std::string mapperIdName =
+            typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+            if (!semantics::IsIsoCType(typeSpec) &&
+              !typeSpec->parameters().empty()) {
           if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
-                  converter.genType(*typeSpec))) {
+              converter.genType(*typeSpec)))
             mapperIdName =
-                Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
-                    recordType);
-          } else {
-            mapperIdName =
-                typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+              Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
+                recordType);
           }
           if (auto *mapperSym =
                   converter.getCurrentScope().FindSymbol(mapperIdName))
