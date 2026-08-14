@@ -308,6 +308,14 @@ LLVM_ABI bool isSignatureValid(Function *F,
                                SmallVectorImpl<Type *> &OverloadTys,
                                raw_ostream &OS = nulls());
 
+/// Same as previous, but \p FT may omit exactly \p NumMissingTrailingParams
+/// trailing parameters. The omitted parameters must have concrete integer type
+/// so that all overload types can be resolved from the provided signature.
+LLVM_ABI bool isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+                               SmallVectorImpl<Type *> &OverloadTys,
+                               unsigned NumMissingTrailingParams,
+                               raw_ostream &OS = nulls());
+
 // Checks if the intrinsic name matches with its signature and if not
 // returns the declaration with the same signature and remangled name.
 // An existing GlobalValue with the wanted name but with a wrong prototype
