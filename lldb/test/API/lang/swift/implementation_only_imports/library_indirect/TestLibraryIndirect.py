@@ -36,7 +36,7 @@ class TestLibraryIndirect(TestBase):
 
         return info
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_implementation_only_import_library(self):
         """Test `@_implementationOnly import` behind some indirection in a library used by the main executable
@@ -70,7 +70,7 @@ class TestLibraryIndirect(TestBase):
         self.expect("expr container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "0x", "value = (first = 2, second = 3)"])
         self.expect("expr container.wrapped.value", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_impl_only_import_lib_no_lib_module(self):
         """Test `@_implementationOnly import` behind some indirection in a library used by the main executable, after removing the implementation-only library's swiftmodule

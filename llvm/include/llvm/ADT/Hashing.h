@@ -142,9 +142,16 @@ namespace detail {
 /// depend on the particular hash values. On platforms without ASLR, this is
 /// still likely non-deterministic per build.
 inline uint64_t get_execution_seed() {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  return static_cast<uint64_t>(
-      reinterpret_cast<uintptr_t>(&install_fatal_error_handler));
+// FIXME: The Swift toolchain does depend on a fixed seed. several caches
+// persist a `hash_combine` result and compare it against a value recomputed by
+// a later process -- among them the implicit bridging-header PCH file name, the
+// module cache path of a textual interface, and the context hash of the
+// serialized dependency-scanning cache. Until those clients hash with something
+// explicitly stable, keep the seed deterministic downstream.
+//
+#if 0 //LLVM_ENABLE_ABI_BREAKING_CHECKS
+//  return static_cast<uint64_t>(
+//      reinterpret_cast<uintptr_t>(&install_fatal_error_handler));
 #else
   return 0xff51afd7ed558ccdULL;
 #endif

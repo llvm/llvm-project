@@ -182,6 +182,15 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
 
   if (!info.type.IsValid())
     return {};
+
+  // If `self`'s static type is meaningless without dynamic type resolution
+  // there's nothing we can do with it. This does not apply to metatypes (i.e.
+  // `self` in a static method): the expression evaluator can still bind their
+  // generic parameters directly, without relying on dynamic type resolution of
+  // an instance's metadata.
+  if (!info.is_metatype && info.type.IsMeaninglessWithoutDynamicResolution())
+    return {};
+
   return info;
 }
 
@@ -237,7 +246,7 @@ bool SwiftUserExpression::ScanContext(DiagnosticManager &diagnostic_manager,
   innermost_block->AppendVariables(/*can_create*/
                                    true,
                                    /*get_parent_variables*/ true,
-                                   /*stop_if_block_is_inlined_function*/ false,
+                                   /*stop_if_block_is_inlined_function*/ true,
                                    /*filter*/
                                    [&](Variable *var) {
                                      if (!variable_list.Empty())
@@ -422,7 +431,7 @@ static llvm::Error AddVariableInfo(
 
   if (log && is_self)
     if (swift::Type swift_type =
-            llvm::expectedToStdOptional(ast_context.GetSwiftType(target_type))
+            llvm::expectedToOptional(ast_context.GetSwiftType(target_type))
                 .value_or(swift::Type())) {
       std::string s;
       llvm::raw_string_ostream ss(s);
@@ -553,13 +562,24 @@ static llvm::Error RegisterAllVariables(
 /// Check if we can evaluate the expression as generic.
 /// Currently, evaluating expression as a generic has several limitations:
 /// - Only self will be evaluated with unbound generics.
-/// - The Self type can only have one generic parameter. 
+/// - The Self type can only have one generic parameter.
 /// - The Self type has to be the outermost type with unbound generics.
+/// - Every generic parameter in scope has to belong to the outermost type.
 static bool CanEvaluateExpressionWithoutBindingGenericParams(
     const llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &variables,
     const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
     SwiftASTContextForExpressions &scratch_ctx, Block *block,
     StackFrame &stack_frame) {
+  // Only the generic parameters of the outermost type are passed to the
+  // expression, so a context that has generic parameters of its own -- a
+  // generic method of a generic type, for example, whose parameters are at
+  // depth 1 -- cannot be evaluated this way.
+  if (llvm::any_of(variables, [](const auto &variable) {
+        return variable.IsMetadataPointer() &&
+               !variable.IsOutermostMetadataPointer();
+      }))
+    return false;
+
   // First, find the compiler type of self with the generic parameters not
   // bound.
   auto self_var = SwiftExpressionParser::FindSelfVariable(block);
@@ -585,7 +605,7 @@ static bool CanEvaluateExpressionWithoutBindingGenericParams(
     return false;
 
   auto swift_type =
-      llvm::expectedToStdOptional(scratch_ctx.GetSwiftType(self_type))
+      llvm::expectedToOptional(scratch_ctx.GetSwiftType(self_type))
           .value_or(swift::Type());
   if (!swift_type)
     return false;
@@ -683,6 +703,26 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
               .GetFunctionName(Mangled::ePreferMangled);
       m_generic_signature = SwiftLanguageRuntime::GetGenericSignature(
           func_name.GetStringRef(), *ts);
+    }
+
+    // Try to evaluate the expression without self if it is not available.
+    if (m_needs_object_ptr || m_in_static_method) {
+      bool has_self = llvm::any_of(
+          local_variables,
+          [](const SwiftASTManipulator::VariableInfo &variable) {
+            return variable.IsSelf();
+          });
+      if (!has_self) {
+        LLDB_LOG(log, "`self` is not avilable, "
+                      "downgrading to freestanding function");
+        diagnostic_manager.PutString(lldb::eSeverityWarning,
+                                     "'self' is not available in this frame; "
+                                     "evaluating the expression without it");
+        m_needs_object_ptr = false;
+        m_in_static_method = false;
+        m_is_class = false;
+        m_is_weak_self = false;
+      }
     }
 
     if (!SwiftASTManipulator::ShouldBindGenericTypes(

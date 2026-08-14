@@ -5,7 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestSwiftArtificialSubclass(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessObjCInterop
     @swiftTest
     def test(self):

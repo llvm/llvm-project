@@ -17,6 +17,9 @@ import lldbsuite.test.lldbtest as lldbtest
 import os
 
 class TestSwiftMeta(lldbtest.TestBase):
+    # Asserting on the on-disk build layout requires a build directory that is
+    # not shared with the other debug info variants.
+    SHARED_BUILD_TESTCASE = False
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
@@ -24,7 +27,7 @@ class TestSwiftMeta(lldbtest.TestBase):
     def test_swiftDecorator(self):
         self.assertTrue(self.getDebugInfo() != "gmodules")
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     @swiftTest
     def test_swiftBuild(self):
         self.build()

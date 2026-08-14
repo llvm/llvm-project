@@ -14,23 +14,81 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRefForExpressionsProxy.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Symbol/CompileUnit.h"
-#include "llvm/Support/Error.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "llvm/Support/Error.h"
 #include <lldb/lldb-enumerations.h>
 #include <llvm/ADT/StringRef.h>
-
-LLDB_PLUGIN_DEFINE(TypeSystemSwift)
 
 using namespace lldb;
 using namespace lldb_private;
 using llvm::StringRef;
 
+LLDB_PLUGIN_DEFINE(TypeSystemSwift)
+
 TypeSystemSwift::TypeSystemSwift() : TypeSystem() {}
 
 /// TypeSystem Plugin functionality.
 /// \{
+
+/// Returns a fresh proxy for \p module's Target-scoped Swift expression
+/// TypeSystem if \p module is a JIT expression module, or null otherwise.
+///
+/// Expression lldb_private::Modules all share the same TypeSystem for
+/// the lifetime of a Target, so declarations from one expression
+/// remain visible to later ones. Handing that shared object out
+/// directly would let two expression modules' SymbolFiles compete for
+/// its single TypeSystem::SetSymbolFile() binding; the proxy gives
+/// each Module its own binding while still deferring everything else
+/// to the shared TypeSystem.
+///
+/// \verbatim
+///
+///            ┌───────────────┐  ┌─────────┐
+/// 1> 2+2   ─→│Module #1 (JIT)│─→│Proxy #1 │──┐
+///            └───────────────┘  └─────────┘  │
+///                                    ↑       │
+///                                    │       │            Target
+///                             ┌─────────────┐│               │
+///                             │SymbolFile 1 ││               ↓
+///                             └─────────────┘│ ┌───────────────────────────┐
+///                                            │ │          (real)           │
+///            ┌───────────────┐  ┌─────────┐  │ │                           │
+/// 2> foo() ─→│Module #2 (JIT)│─→│Proxy #2 │──┼→│      SwiftASTContext      │
+///            └───────────────┘  └─────────┘  │ │ PersistentExpressionState │
+///                                    ↑       │ └───────────────────────────┘
+///                                    │       │
+///                             ┌─────────────┐│
+///                             │SymbolFile 2 ││
+///                             └─────────────┘│
+///                                            │
+///            ┌───────────────┐  ┌─────────┐  │
+/// 3> bar() ─→│Module #3 (JIT)│─→│Proxy #3 │──┘
+///            └───────────────┘  └─────────┘
+///                                    ↑
+///                                    │
+///                             ┌─────────────┐
+///                             │SymbolFile 3 │
+///                             └─────────────┘
+static TypeSystemSP CreateExpressionModuleProxyIfApplicable(Module &module) {
+  LockedPtr<ObjectFile> objfile = module.GetObjectFileLocked();
+  auto *jit_objfile = llvm::dyn_cast_or_null<ObjectFileJIT>(objfile.get());
+  if (!jit_objfile)
+    return {};
+  TargetSP target_sp = jit_objfile->GetTargetSP();
+  if (!target_sp)
+    return {};
+  TypeSystemSwiftTypeRefForExpressionsSP real =
+      TypeSystemSwiftTypeRefForExpressions::GetForTarget(*target_sp);
+  if (!real)
+    return {};
+  return std::make_shared<TypeSystemSwiftTypeRefForExpressionsProxy>(real);
+}
+
 static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
                                                    Module *module,
                                                    Target *target) {
@@ -40,6 +98,8 @@ static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
   // This should be called with either a target or a module.
   if (module) {
     assert(!target);
+    if (TypeSystemSP proxy = CreateExpressionModuleProxyIfApplicable(*module))
+      return proxy;
     return std::shared_ptr<TypeSystemSwiftTypeRef>(
         new TypeSystemSwiftTypeRef(*module));
   } else if (target) {
@@ -93,14 +153,14 @@ bool TypeSystemSwift::CheckFlagInCU(CompileUnit *cu, const char *flag) {
     if (sym_file->GetCompileOption(flag, value, cu)) {
       LLDB_LOG_VERBOSE(GetLog(LLDBLog::Types),
                        "[CheckFlagInCU] Found flag {0} in CU: {1}", flag,
-                       cu->GetPrimaryFile().GetFilename().AsCString());
+                       cu->GetPrimaryFile().GetFilename());
       return true;
     }
   }
   }
   LLDB_LOG_VERBOSE(GetLog(LLDBLog::Types),
                    "[CheckFlagInCU] Did not find flag {0} in CU: {1}", flag,
-                   cu->GetPrimaryFile().GetFilename().AsCString());
+                   cu->GetPrimaryFile().GetFilename());
   return false;
 }
 
@@ -113,7 +173,8 @@ bool TypeSystemSwift::ShouldEnableEmbeddedSwift(CompileUnit *cu) {
   return CheckFlagInCU(cu, "-enable-embedded-swift");
 }
 
-void TypeSystemSwift::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
+void TypeSystemSwift::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+                           bool show_color) {
   // TODO: What to dump?
 }
 

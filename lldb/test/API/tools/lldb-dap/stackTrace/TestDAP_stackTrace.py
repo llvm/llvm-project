@@ -7,12 +7,12 @@ from typing import List, NamedTuple
 
 from lldbsuite.test.decorators import skipIfWindows
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap.types import (
     LaunchArgs,
     StackFrame,
     StackFrameFormat,
 )
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class _RecurseSource(NamedTuple):
@@ -74,7 +74,7 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         session = self.build_and_create_session()
         source_file = self.getSourcePath("main.c")
         self.recourse_source = _RecurseSource(
-            path=os.path.realpath(source_file),
+            path=source_file,
             end_line=line_number(source_file, "recurse end"),
             call_line=line_number(source_file, "recurse call"),
             invocation_line=line_number(source_file, "recurse invocation"),

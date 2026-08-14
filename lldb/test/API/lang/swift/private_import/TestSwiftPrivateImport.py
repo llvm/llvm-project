@@ -4,7 +4,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftPrivateImport(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipIfLinux  # Fails on Amazon Linux (rdar://183725331)
     @swiftTest
     def test_private_import(self):

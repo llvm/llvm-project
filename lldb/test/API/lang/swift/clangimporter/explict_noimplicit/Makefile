@@ -7,7 +7,8 @@ all: libDylib a.out
 include Makefile.rules
 
 # Note that this is being built with implicit modules!
-libDylib: Dylib.swift
+libDylib: Dylib.swift \
+          $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call MKDIR_P,$(BUILDDIR)/$(shell basename $< .swift))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \

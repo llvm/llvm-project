@@ -159,16 +159,20 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
     // Compute the number of instructions with -fbounds-safety annotation.
     if (any_of(I.getMetadata(LLVMContext::MD_annotation)->operands(),
                [](const MDOperand &Op) {
-                 // skip bounds-safety-missed remarks.
+                 // Annotations are either a MDString or an MDTuple. So extract
+                 // the annotation name from both.
+                 StringRef AnnotationStr;
                  if (!isa<MDString>(Op.get())) {
                    auto *AnnotationTuple = cast<MDTuple>(Op.get());
-                   auto Str =
+                   AnnotationStr =
                        cast<MDString>(AnnotationTuple->getOperand(0).get())
                            ->getString();
-                   if (Str.starts_with("bounds-safety-missed"))
+                   // skip bounds-safety-missed remarks.
+                   if (AnnotationStr.starts_with("bounds-safety-missed"))
                      return false;
+                 } else {
+                   AnnotationStr = cast<MDString>(Op.get())->getString();
                  }
-                 auto AnnotationStr = cast<MDString>(Op.get())->getString();
                  return AnnotationStr.starts_with("bounds-safety");
                }))
       BoundsSafetySummaryCount++;

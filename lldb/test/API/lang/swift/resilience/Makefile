@@ -3,7 +3,8 @@ all: libmod.a.dylib libmod.b.dylib main.a main.b
 
 include Makefile.rules
 
-libmod.%.dylib: mod.%.swift
+libmod.%.dylib: mod.%.swift \
+                $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call LN_SF,$<,mod.swift)
 	$(SWIFTC) $(SWIFTFLAGS) -emit-module -module-name mod mod.swift -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/libmod.$*.dylib -###
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \

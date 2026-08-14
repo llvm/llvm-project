@@ -8,7 +8,8 @@ all: libDylib.dylib a.out
 
 include Makefile.rules
 
-libDylib.dylib: Dylib.swift
+libDylib.dylib: Dylib.swift \
+                $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) \

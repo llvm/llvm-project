@@ -64,20 +64,11 @@ void TestUCountNegFail(void) {
 }
 
 // CHECK-LABEL: define dso_local void @TestCountNegRetFail(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @my_alloc_int(i32 noundef -1) #[[ATTR4]]
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 -4
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[CALL]], i64 4, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[CALL]], [[TMP0]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[CONT2:.*]], label %[[TRAP:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
-// CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       [[CONT2]]:
-// CHECK-NEXT:    ret void
 //
 void TestCountNegRetFail(void) {
   int *local_p = my_alloc_int(-1); //rdar://80808704
@@ -85,7 +76,7 @@ void TestCountNegRetFail(void) {
 }
 
 // CHECK-LABEL: define dso_local void @TestCountIntOK(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @my_alloc_int(i32 noundef 10) #[[ATTR4]]
 // CHECK-NEXT:    ret void

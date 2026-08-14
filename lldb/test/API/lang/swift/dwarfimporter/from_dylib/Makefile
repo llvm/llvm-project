@@ -7,5 +7,6 @@ all: libFoo.dylib $(EXE)
 
 include Makefile.rules
 
-libFoo.dylib: Foo.swift
+libFoo.dylib: Foo.swift \
+              $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=NO VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all

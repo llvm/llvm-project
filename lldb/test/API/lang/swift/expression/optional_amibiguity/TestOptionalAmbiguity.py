@@ -15,7 +15,7 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestOptionalAmbiguity(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_sample_rename_this(self):
         self.build()

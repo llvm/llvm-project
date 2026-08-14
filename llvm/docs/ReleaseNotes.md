@@ -313,6 +313,44 @@ Makes programs 10x faster by doing Special New Thing.
 * `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
 * The Xqcilo pseudos now emit sequences that can be relaxed.
 
+### Changes to the SystemZ Backend
+
+The SystemZ backend now contains initial support to generate code for z/OS using the XPLINK 64 bit
+ABI and emitting the code into GOFF object files:
+
+* Adds support for writing GOFF object files.
+* Adds new class `SystemZHASMAsmStreamer` to emit assembly in HLASM syntax.
+* The temporary GNU AS assembly output is removed; all assembly output is in
+  HLASM syntax, and all z/OS-specific test cases are updated.
+* Jump tables are now emitted into the text section.
+* PPA1 data is now collected and written at the end of the code generation into
+  the text section.
+* The PPA1 now contains the prologue length and the offset to the stack update
+  symbol.
+* Adds a new attribute to control if the symbol name is emitted into the PPA1.
+* Changed the order of caller-saved registers to match legacy compiler.
+* Register R5 is no longer restored, matching the XPLINK specification.
+* Implements stack guard support for XPLINK
+
+Code-generation changes:
+* Add support for the dataflow sanitizer.
+* Add support for the `-mstack-protector-guard=global` and
+  `-mstack-protector-guard-record` command line options.
+* Fix incorrect code generated for the `vec_insert` intrinsic
+   when used with the `vector float` data type.
+
+Performance enhancements:
+* Added a SystemZ-specific pre-RA scheduling strategy with latency-aware
+   heuristics, liveness-reduction, and a minimum-latency-5 filter.
+* Enabled interleaving for vectorized loops and epilogue loop vectorization.
+* Enabled scalar load rematerialization.
+* Cost model improvements to enable better auto-vectorization
+* Improved codegen for minimum/maximum operations.
+* Allow folding memory accesses across basic-block boundaries.
+* Avoid stack overalignment for vector types.
+* Avoid unaligned vector loads/stores in memcpy/memmove/memset lowering.
+* Avoid redundant zero-extension after VLGV[BHF].
+
 ### Changes to the WebAssembly Backend
 
 * WebAssembly reference types are now represented in LLVM IR as the target
@@ -434,6 +472,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added support for hybrid ARM64X object files to `llvm-ar` and `llvm-lib`. When these files are added to
   an archive, they are automatically split into separate native and EC members. Because the resulting members
   are no longer hybrid object files, consumers of these archives do not need to support the hybrid format themselves.
+* `llvm-ar` now supports reading and writing z/OS archives.
 
 ### Changes to LLDB
 

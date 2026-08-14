@@ -83,7 +83,8 @@ bool LLDBImplicitSwiftModuleLoader::findModule(
     std::unique_ptr<llvm::MemoryBuffer> *moduleDocBuffer,
     std::unique_ptr<llvm::MemoryBuffer> *moduleSourceInfoBuffer,
     std::string *CacheKey, bool isCanImportLookup,
-    bool isTestableDependencyLookup, bool &isFramework, bool &isSystemModule) {
+    bool isTestableDependencyLookup, bool &isFramework, bool &isSystemModule,
+    bool isSourceCanImport) {
   assert(false && "pass-through not implemented");
   // This is a protected member and probably also not useful.
   return false;
@@ -103,10 +104,12 @@ std::error_code LLDBImplicitSwiftModuleLoader::findModuleFilesInDirectory(
 }
 bool LLDBImplicitSwiftModuleLoader::canImportModule(
     swift::ImportPath::Module named, swift::SourceLoc loc,
-    ModuleVersionInfo *versionInfo, bool isTestableImport) {
+    ModuleVersionInfo *versionInfo, bool isTestableImport,
+    bool isSourceCanImport) {
   if (enabled() || isSDKOverlay(named))
     return llvm::cast<swift::SerializedModuleLoaderBase>(m_isml.get())
-        ->canImportModule(named, loc, versionInfo, isTestableImport);
+        ->canImportModule(named, loc, versionInfo, isTestableImport,
+                          isSourceCanImport);
   return false;
 }
 

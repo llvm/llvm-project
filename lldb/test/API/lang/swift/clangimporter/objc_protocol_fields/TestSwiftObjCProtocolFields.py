@@ -5,7 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftObjCBaseClassMemberLookup(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test(self):

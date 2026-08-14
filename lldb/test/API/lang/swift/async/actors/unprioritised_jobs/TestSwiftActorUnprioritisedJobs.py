@@ -6,7 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_actor_unprioritised_jobs(self):
         """Verify that an actor exposes its unprioritised jobs (queue)."""

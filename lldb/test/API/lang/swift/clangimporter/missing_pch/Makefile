@@ -8,7 +8,8 @@ all: libFoo.dylib $(EXE)
 include Makefile.rules
 
 OVERLAY := $(BUILDDIR)/overlay.yaml
-lib%.dylib: %.swift
+lib%.dylib: %.swift \
+            $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call ECHO_TO_FILE,'struct S {};',$(BUILDDIR)/header.h)
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \

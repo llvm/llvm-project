@@ -5,19 +5,23 @@
 
 // The dictionary order isn't deterministic, so print the dictionary
 // once per element.
+//
+// This exercises the Dictionary data formatter with a *resilient*
+// (non-@frozen) Foundation value key type. Data is used as a representative
+// resilient Foundation value type.
 
 import Foundation
 
-let x : [URL:Int] = [URL(string: "https://github.com")!: 4, URL(string: "https://apple.com")!: 23]
-// DICT-LABEL: {{x}}: [Foundation.URL : Int] = 2 key/value pairs {
+let x : [Data:Int] = [Data([1, 2, 3]): 40, Data([9]): 230]
+// DICT-LABEL: {{x}}: [Foundation.Data : Int] = 2 key/value pairs {
 // DICT:      [{{[0-1]}}] = {
-// DICT:         key = "https://apple.com"
-// DICT-NEXT:    value = 23
+// DICT:         key = 3 bytes
+// DICT-NEXT:    value = 40
 // DICT-NEXT:  }
 
-let y : [URL:Int] = [URL(string: "https://github.com")!: 4, URL(string: "https://apple.com")!: 23]
-// DICT-LABEL: {{y}}: [Foundation.URL : Int] = 2 key/value pairs {
+let y : [Data:Int] = [Data([1, 2, 3]): 40, Data([9]): 230]
+// DICT-LABEL: {{y}}: [Foundation.Data : Int] = 2 key/value pairs {
 // DICT:       [{{[0-1]}}] = {
-// DICT:          key = "https://github.com"
-// DICT-NEXT:     value = 4
+// DICT:          key = 1 byte
+// DICT-NEXT:     value = 230
 // DICT-NEXT:  }

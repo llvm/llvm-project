@@ -20,7 +20,8 @@ import os
 
 
 class TestSwiftArchetypeResolution(TestBase):
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnLinux # the embedded stdlib's hashing seed needs arc4random_buf, which does not link on Linux.
+    @skipEmbeddedSwiftOnWindows
     @swiftTest
     def test_swift_archetype_resolution(self):
         """Test that archetype-typed objects get resolved to their proper location in memory"""

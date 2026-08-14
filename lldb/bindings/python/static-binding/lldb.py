@@ -485,6 +485,30 @@ eScriptLanguageUnknown = _lldb.eScriptLanguageUnknown
 
 eScriptLanguageDefault = _lldb.eScriptLanguageDefault
 
+eScriptedExtensionInvalid = _lldb.eScriptedExtensionInvalid
+
+eScriptedExtensionOperatingSystem = _lldb.eScriptedExtensionOperatingSystem
+
+eScriptedExtensionScriptedPlatform = _lldb.eScriptedExtensionScriptedPlatform
+
+eScriptedExtensionScriptedProcess = _lldb.eScriptedExtensionScriptedProcess
+
+eScriptedExtensionScriptedBreakpointResolver = _lldb.eScriptedExtensionScriptedBreakpointResolver
+
+eScriptedExtensionScriptedThreadPlan = _lldb.eScriptedExtensionScriptedThreadPlan
+
+eScriptedExtensionScriptedFrameProvider = _lldb.eScriptedExtensionScriptedFrameProvider
+
+eScriptedExtensionScriptedHook = _lldb.eScriptedExtensionScriptedHook
+
+eScriptedExtensionScriptedThread = _lldb.eScriptedExtensionScriptedThread
+
+eScriptedExtensionScriptedFrame = _lldb.eScriptedExtensionScriptedFrame
+
+eScriptedExtensionScriptedStackFrameRecognizer = _lldb.eScriptedExtensionScriptedStackFrameRecognizer
+
+kLastScriptedExtension = _lldb.kLastScriptedExtension
+
 eRegisterKindEHFrame = _lldb.eRegisterKindEHFrame
 r"""the register numbers seen in eh_frame"""
 eRegisterKindDWARF = _lldb.eRegisterKindDWARF
@@ -1161,6 +1185,8 @@ eArgTypeNameMatchStyle = _lldb.eArgTypeNameMatchStyle
 eArgTypePluginDomain = _lldb.eArgTypePluginDomain
 
 eArgTypeBreakpointResolverMask = _lldb.eArgTypeBreakpointResolverMask
+
+eArgTypeScriptedExtension = _lldb.eArgTypeScriptedExtension
 
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 
@@ -2032,6 +2058,8 @@ eCustomCompletion = _lldb.eCustomCompletion
 eThreadIDCompletion = _lldb.eThreadIDCompletion
 
 eManagedPluginCompletion = _lldb.eManagedPluginCompletion
+
+eScriptedExtensionCompletion = _lldb.eScriptedExtensionCompletion
 
 eTerminatorCompletion = _lldb.eTerminatorCompletion
 
@@ -13427,7 +13455,7 @@ class SBTarget(object):
 
     produces: ::
 
-        Watchpoint 1: addr = 0x1034ca048 size = 4 state = enabled type = rw
+        Watchpoint 1: addr = 0x1034ca048, size = 4, state = enabled, type = rw
             declare @ '/Volumes/data/lldb/svn/trunk/test/python_api/watchpoint/main.c:12'
             hit_count = 2     ignore_count = 0
     """
@@ -18399,7 +18427,7 @@ class SBUnixSignals(object):
     def get_unix_signals_list(self):
         signals = []
         for idx in range(0, self.GetNumSignals()):
-            signals.append(self.GetSignalAtIndex(sig))
+            signals.append(self.GetSignalAtIndex(idx))
         return signals
 
     threads = property(get_unix_signals_list, None, doc='''A read only property that returns a list() of valid signal numbers for this platform.''')
@@ -18637,6 +18665,20 @@ class SBValue(object):
         SetValueFromCString(SBValue self, char const * value_str, SBError error) -> bool
         """
         return _lldb.SBValue_SetValueFromCString(self, *args)
+
+    def CanSetValue(self):
+        r"""
+        CanSetValue(SBValue self) -> bool
+
+            Returns whether this value can be modified through SetValueFromCString()
+            or SetData().
+
+            Returns False when the value is not writable. An example would be a
+            variable value reconstructed from debug info via a computation or a constant.
+            A True result does not guarantee a write will succeed; other
+            runtime conditions may still prevent a successful write.
+        """
+        return _lldb.SBValue_CanSetValue(self)
 
     def GetTypeFormat(self):
         r"""GetTypeFormat(SBValue self) -> SBTypeFormat"""

@@ -102,6 +102,8 @@ public:
 
   ArchSpec GetArchitecture() override;
 
+  lldb::TargetSP GetTargetSP() override { return GetTarget(); }
+
   lldb::ModuleSP GetJITModule();
 
   lldb::ModuleSP CreateJITModule(const char *name);

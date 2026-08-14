@@ -37,7 +37,7 @@ class TestLibraryResilient(TestBase):
 
         return info
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @expectedFailureAll(oslist=["windows"]) # Requires Remote Mirrors support
     def test_implementation_only_import_library(self):
@@ -58,7 +58,7 @@ class TestLibraryResilient(TestBase):
         self.expect("expr container", substrs=["(SomeLibrary.ContainsTwoInts)", "other = 10"])
         self.expect("expr container.wrapped", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @expectedFailureAll(oslist=["windows"]) # Requires Remote Mirrors support
     def test_implementation_only_import_library_no_library_module(self):

@@ -33,25 +33,25 @@ class TestSwiftBackwardInteropSteppingStruct(TestBase):
         name = thread.frames[0].GetFunctionName()
         self.assertIn(func, name)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_static_method_step_in_struct(self):
         thread = self.setup("Break here for static method - struct")
         self.check_step_in(thread, "testStaticMethod", "SwiftStruct.swiftStaticMethod")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_static_method_step_over_struct(self):
         thread = self.setup("Break here for static method - struct")
         self.check_step_over(thread, "testStaticMethod")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_getter_step_in_struct(self):
         thread = self.setup("Break here for getter - struct")
         self.check_step_in(thread, "testGetter", "SwiftStruct.swiftProperty.getter")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_getter_step_over_struct(self):
         thread = self.setup("Break here for getter - struct")

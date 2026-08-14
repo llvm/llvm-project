@@ -1,6 +1,7 @@
 all: Dylib.framework
 
-Dylib.framework: Dylib.swift
+Dylib.framework: Dylib.swift \
+                 $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		FRAMEWORK=Dylib \
 		DYLIB_SWIFT_SOURCES=Dylib.swift \

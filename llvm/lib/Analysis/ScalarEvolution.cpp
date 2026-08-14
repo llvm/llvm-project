@@ -2519,26 +2519,37 @@ ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
 
   bool Deduced = false;
 
-  if (OBO->getOpcode() != Instruction::Add &&
-      OBO->getOpcode() != Instruction::Sub &&
-      OBO->getOpcode() != Instruction::Mul)
-    return std::nullopt;
-
+  Instruction::BinaryOps Opcode = (Instruction::BinaryOps)OBO->getOpcode();
   const SCEV *LHS = getSCEV(OBO->getOperand(0));
   const SCEV *RHS = getSCEV(OBO->getOperand(1));
+
+  bool CanUseNSW = true;
+  const APInt *ShiftAmt;
+  // Treat `shl %a, C` as `mul %a, 1 << C`.
+  if (match(OBO, m_Shl(m_Value(), m_APInt(ShiftAmt)))) {
+    unsigned BitWidth = ShiftAmt->getBitWidth();
+    if (ShiftAmt->uge(BitWidth))
+      return std::nullopt;
+    // NSW only transfers if the shift amount is < BitWidth - 1, as INT_MIN * -1
+    // overflows.
+    CanUseNSW = ShiftAmt->ult(BitWidth - 1);
+    Opcode = Instruction::Mul;
+    RHS = getConstant(APInt::getOneBitSet(BitWidth, ShiftAmt->getZExtValue()));
+  } else if (Opcode != Instruction::Add && Opcode != Instruction::Sub &&
+             Opcode != Instruction::Mul) {
+    return std::nullopt;
+  }
 
   const Instruction *CtxI =
       UseContextForNoWrapFlagInference ? dyn_cast<Instruction>(OBO) : nullptr;
   if (!OBO->hasNoUnsignedWrap() &&
-      willNotOverflow((Instruction::BinaryOps)OBO->getOpcode(),
-                      /* Signed */ false, LHS, RHS, CtxI)) {
+      willNotOverflow(Opcode, /* Signed */ false, LHS, RHS, CtxI)) {
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
     Deduced = true;
   }
 
-  if (!OBO->hasNoSignedWrap() &&
-      willNotOverflow((Instruction::BinaryOps)OBO->getOpcode(),
-                      /* Signed */ true, LHS, RHS, CtxI)) {
+  if (CanUseNSW && !OBO->hasNoSignedWrap() &&
+      willNotOverflow(Opcode, /* Signed */ true, LHS, RHS, CtxI)) {
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
     Deduced = true;
   }
@@ -8680,6 +8691,18 @@ bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
   return getBackedgeTakenInfo(L).isConstantMaxOrZero(this);
 }
 
+/// Push PHI nodes in the header of the given loop onto the given Worklist.
+static void PushLoopPHIs(const Loop *L,
+                         SmallVectorImpl<Instruction *> &Worklist,
+                         SmallPtrSetImpl<Instruction *> &Visited) {
+  BasicBlock *Header = L->getHeader();
+
+  // Push all Loop-header PHIs onto the Worklist stack.
+  for (PHINode &PN : Header->phis())
+    if (Visited.insert(&PN).second)
+      Worklist.push_back(&PN);
+}
+
 ScalarEvolution::BackedgeTakenInfo &
 ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   auto &BTI = getBackedgeTakenInfo(L);
@@ -8789,6 +8812,8 @@ void ScalarEvolution::visitAndClearUsers(
 
 void ScalarEvolution::forgetLoop(const Loop *L) {
   SmallVector<const Loop *, 16> LoopWorklist(1, L);
+  SmallVector<Instruction *, 32> Worklist;
+  SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<SCEVUse, 16> ToForget;
 
   // Iterate over all the loops and sub-loops to drop SCEV information.
@@ -8808,12 +8833,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
       llvm::append_range(ToForget, LoopUsersItr->second);
 
     // Drop information about expressions based on loop-header PHIs.
-    for (PHINode &PN : CurrL->getHeader()->phis()) {
-      ConstantEvolutionLoopExitValue.erase(&PN);
-      auto VIt = ValueExprMap.find_as(static_cast<Value *>(&PN));
-      if (VIt != ValueExprMap.end())
-        ToForget.push_back(VIt->second);
-    }
+    PushLoopPHIs(CurrL, Worklist, Visited);
+    visitAndClearUsers(Worklist, Visited, ToForget);
 
     LoopPropertiesCache.erase(CurrL);
     // Forget all contained loops too, to avoid dangling entries in the

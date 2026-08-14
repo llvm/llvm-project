@@ -15,14 +15,16 @@ include Makefile.rules
 # we're not specifying SWIFT_SOURCES, and thus don't get the SDK.
 SWIFTFLAGS+=-sdk "$(SWIFTSDKROOT)"
 
-$(EXE): objc_main.m A.swift.o B.swift.o
+$(EXE): objc_main.m A.swift.o B.swift.o \
+        $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH)) $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) -c -I. $< -fobjc-arc -o $(BUILDDIR)/objc_main.o
 	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -o $@ $(BUILDDIR)/objc_main.o $(BUILDDIR)/A.swift.o $(BUILDDIR)/B.swift.o -L$(BUILDDIR) -Xlinker -add_ast_path -Xlinker A.swiftmodule -Xlinker -add_ast_path -Xlinker B.swiftmodule
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
 
-%.swift.o: %.swift
+%.swift.o: %.swift \
+           $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=$(patsubst %.swift.o,%,$@) \
 		SWIFT_SOURCES=$(patsubst %.swift.o,%.swift,$@) \

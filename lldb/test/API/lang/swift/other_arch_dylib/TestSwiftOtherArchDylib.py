@@ -9,7 +9,7 @@ class TestSwiftOtherArchDylib(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # the embedded test harness appends its own -target, so the other-arch dylib is never built
     @swiftTest
     @skipUnlessDarwin
     @skipIfDarwinEmbedded

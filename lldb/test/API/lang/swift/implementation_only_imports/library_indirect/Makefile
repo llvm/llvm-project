@@ -12,11 +12,13 @@ all: clean SomeLibraryCore.swiftmodule SomeLibrary.swiftmodule a.out
 
 include Makefile.rules
 
-SomeLibraryCore.swiftmodule: SomeLibraryCore.swift
+SomeLibraryCore.swiftmodule: SomeLibraryCore.swift \
+                             $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" BASENAME=$(shell basename $@ .swiftmodule) \
 		VPATH=$(SRCDIR) -f $(SRCDIR)/../dylib.mk all
 
-SomeLibrary.swiftmodule: SomeLibrary.swift SomeLibraryCore.swiftmodule
+SomeLibrary.swiftmodule: SomeLibrary.swift SomeLibraryCore.swiftmodule \
+                         $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" BASENAME=$(shell basename $@ .swiftmodule) \
 		VPATH=$(SRCDIR) LD_EXTRAS="-L$(BUILDDIR) $(SHLIB_RPATH)" -f $(SRCDIR)/../dylib.mk all
 

@@ -26,6 +26,8 @@ import os.path
 
 
 class TestSwiftInterfaceNoDebugInfo(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def get_toolchain(self):
         sdkroot = self.get_sdkroot()
         # The SDK root is expected to be wihin the Xcode.app/Contents
@@ -133,7 +135,7 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
                             "Swiftmodule file was regenerated rather than reused")
 
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_interface(self):
         """Test that we load and handle modules that only have textual .swiftinterface files"""

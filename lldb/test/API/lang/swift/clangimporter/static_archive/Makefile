@@ -22,7 +22,8 @@ ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
 
-main.o: main.m libFoo.a libBar.a
+main.o: main.m libFoo.a libBar.a \
+        $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) $(MANDATORY_MODULE_BUILD_CFLAGS) -c -o $@ $< \
 		-I$(shell pwd)
 

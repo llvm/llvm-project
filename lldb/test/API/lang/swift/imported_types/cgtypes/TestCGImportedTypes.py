@@ -20,7 +20,7 @@ import os
 
 
 class TestSwiftCGImportedTypes(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_swift_cg_imported_types(self):

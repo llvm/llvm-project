@@ -10,7 +10,8 @@ include Makefile.rules
 OVERLAY_CONTENT := { "version": 0, "roots": [] }
 OVERLAY := $(BUILDDIR)/overlay.yaml
 
-lib%.dylib: %.swift
+lib%.dylib: %.swift \
+            $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call RM_F,$(OVERLAY))
 	$(call ECHO_TO_FILE,'$(OVERLAY_CONTENT)',$(OVERLAY))
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \

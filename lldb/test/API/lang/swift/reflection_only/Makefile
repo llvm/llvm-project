@@ -9,7 +9,8 @@ all: dylib $(EXE)
 .PHONY: dylib
 
 include Makefile.rules
-dylib: lib.swift
+dylib: lib.swift \
+       $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		MAKE_DSYM=YES DYLIB_ONLY=YES DYLIB_NAME=dynamic_lib \
 		DYLIB_SWIFT_SOURCES="lib.swift" \

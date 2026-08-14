@@ -9,7 +9,7 @@ ADDR_PATTERN = "(0x[0-9a-f]{6,})"
 
 class TestCase(TestBase):
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @skipUnlessDarwin
     @swiftTest
     def test(self):

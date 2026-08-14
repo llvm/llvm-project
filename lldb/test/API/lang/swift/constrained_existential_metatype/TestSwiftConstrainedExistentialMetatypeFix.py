@@ -6,7 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftConstrainedExistentialMetatypeFix(TestBase):
     @swiftTest
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     def test(self):
         self.build()
 

@@ -25,7 +25,7 @@ class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @decorators.skipEmbeddedSwift
+    @decorators.requireNotEmbeddedSwift
     @decorators.skipIfLinux
     @decorators.expectedFailureWindows
     def test_swift_runtime_reporting(self):

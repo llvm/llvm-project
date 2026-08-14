@@ -6,14 +6,16 @@ SWIFT_OBJC_INTEROP := 1
 
 include Makefile.rules
 
-a.out: main.m libFoo.dylib libBar.dylib
+a.out: main.m libFoo.dylib libBar.dylib \
+       $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) $(MANDATORY_MODULE_BUILD_CFLAGS) -I$(shell pwd) -lFoo -lBar -L$(shell pwd) -o $@ $<
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$@"
 endif
 
 
-lib%.dylib: %.swift
+lib%.dylib: %.swift \
+            $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \

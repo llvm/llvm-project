@@ -26,6 +26,8 @@ import os.path
 
 
 class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self):
         # The custom swift module cache location
         swift_mod_cache = self.getBuildArtifact("MCP")
@@ -101,7 +103,7 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
             self.assertTrue(is_old(file), "Swiftmodule file was regenerated rather than reused")
 
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIfWindows
     def test_swift_interface_fallback(self):

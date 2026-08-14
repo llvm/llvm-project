@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     def test(self):
         self.build()

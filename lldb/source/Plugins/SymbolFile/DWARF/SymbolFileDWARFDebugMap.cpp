@@ -1734,6 +1734,32 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
   return Status();
 }
 
+bool SymbolFileDWARFDebugMap::GetCompileOption(const char *option,
+                                               std::string &value,
+                                               CompileUnit *cu) {
+  value.clear();
+
+  // The compile options are recorded in the DW_AT_APPLE_flags of the compile
+  // units in the .o files, so the query has to be forwarded to the
+  // SymbolFileDWARF of the corresponding object file.
+  if (cu) {
+    if (SymbolFileDWARF *oso_dwarf = GetSymbolFile(*cu))
+      return oso_dwarf->GetCompileOption(option, value, cu);
+    return false;
+  }
+
+  bool found = false;
+  ForEachSymbolFile("Parsing compile option",
+                    [&](SymbolFileDWARF &oso_dwarf) {
+                      if (oso_dwarf.GetCompileOption(option, value)) {
+                        found = true;
+                        return IterationAction::Stop;
+                      }
+                      return IterationAction::Continue;
+                    });
+  return found;
+}
+
 void SymbolFileDWARFDebugMap::GetCompileOptions(
     std::unordered_map<lldb::CompUnitSP, Args> &args) {
 

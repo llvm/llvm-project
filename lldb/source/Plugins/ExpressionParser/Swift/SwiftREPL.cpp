@@ -165,7 +165,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
 
   FileSpecList containingModules;
   containingModules.Append(
-      FileSpec(exe_module_sp->GetFileSpec().GetFilename().GetStringRef()));
+      FileSpec(exe_module_sp->GetFileSpec().GetFilename()));
 
   BreakpointSP main_bp_sp = target_sp->CreateBreakpoint(
       &containingModules,    // Limit to these modules
@@ -222,7 +222,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   debugger.StartEventHandlerThread();
 
   // Destroy the process and the event handler thread after a fatal error.
-  auto cleanup = llvm::make_scope_exit([&]() {
+  auto cleanup = llvm::scope_exit([&]() {
     process_sp->Destroy(/*force_kill=*/false);
     debugger.StopEventHandlerThread();
   });
@@ -451,7 +451,7 @@ bool isThrownError(ValueObjectSP valobj_sp) {
   if (length < 3)
     return false;
 
-  const char *name_cstr = name.AsCString();
+  const char *name_cstr = name.AsCString(nullptr);
   if (name_cstr[0] != '$')
     return false;
   if (name_cstr[1] != 'E')

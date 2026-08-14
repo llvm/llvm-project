@@ -11,7 +11,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 
 class TestSwiftHashedContainerEnum(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_any_object_type(self):
         """Test combinations of hashed swift containers with enums"""

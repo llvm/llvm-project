@@ -113,7 +113,7 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
     LLDB_LOGF(GetLog(LLDBLog::Types),
               "[MemberVariableOffsetResolver] type is a class - trying to "
               "get metadata for valueobject %s",
-              (instance ? instance->GetName().AsCString() : "<null>"));
+              (instance ? instance->GetName().AsCString("") : "<null>"));
     if (instance) {
       lldb::addr_t pointer = instance->GetPointerValue().address;
       if (!pointer || pointer == LLDB_INVALID_ADDRESS)
@@ -139,7 +139,7 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
           LLDB_LOGF(
               GetLog(LLDBLog::Types),
               "[MemberVariableOffsetResolver] resolved non-class type = %s",
-              bound.GetTypeName().AsCString());
+              bound.GetTypeName().AsCString(""));
 
           swift_type = scratch_ctx->GetCanonicalSwiftType(bound).getPointer();
           MemberID key{swift_type, ConstString(member_name).GetCString()};
@@ -244,7 +244,7 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialRemoteAST(
       existential_address, swift::remote::RemoteAddress::DefaultAddressSpace);
   auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
   auto swift_type =
-      llvm::expectedToStdOptional(swift_ast_ctx->GetSwiftType(existential_type))
+      llvm::expectedToOptional(swift_ast_ctx->GetSwiftType(existential_type))
           .value_or(swift::Type());
   if (!swift_type)
     return {};
@@ -297,7 +297,7 @@ SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
 
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
     swift::Type target_swift_type(
-        llvm::expectedToStdOptional(swift_ast_ctx->GetSwiftType(base_type))
+        llvm::expectedToOptional(swift_ast_ctx->GetSwiftType(base_type))
             .value_or(swift::Type()));
     if (target_swift_type->hasArchetype())
       target_swift_type = target_swift_type->mapTypeOutOfEnvironment().getPointer();
@@ -429,7 +429,7 @@ SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
 
           if (!target_concrete_type.IsValid())
             return type;
-          return llvm::expectedToStdOptional(
+          return llvm::expectedToOptional(
                      swift_ast_ctx->GetSwiftType(target_concrete_type))
               .value_or(swift::Type());
         },
@@ -487,7 +487,7 @@ CompilerType SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(
                        result.getValue().getPointer()};
     if (log)
       log->Printf("[MetadataPromise] result is type %s",
-                  m_compiler_type->GetTypeName().AsCString());
+                  m_compiler_type->GetTypeName().AsCString(""));
     return m_compiler_type.value();
   } else {
     const auto &failure = result.getFailure();
@@ -536,7 +536,7 @@ SwiftLanguageRuntime::GetPromiseForTypeNameAndFrame(const char *type_name,
 
   StreamString type_metadata_ptr_var_name;
   type_metadata_ptr_var_name.Printf("$%s", type_name);
-  VariableList *var_list = frame->GetVariableList(false, nullptr);
+  VariableList *var_list = frame->GetVariableList(false, false, nullptr);
   if (!var_list)
     return nullptr;
 

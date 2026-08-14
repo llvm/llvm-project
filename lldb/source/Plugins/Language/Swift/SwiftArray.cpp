@@ -403,8 +403,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &static_valobj) {
     if (!swift_runtime)
       return nullptr;
 
-    if (CompilerType type =
-            swift_runtime->GetTypeFromMetadata(*ts, argmetadata_ptr))
+    if (CompilerType type = swift_runtime->GetTypeFromMetadata(
+            *ts, Address(argmetadata_ptr)))
       if (auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
         argument_type = ts->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
 
@@ -636,13 +636,13 @@ llvm::Expected<size_t> lldb_private::formatters::swift::ArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_array_buffer)
     return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+                                   name.AsCString(""));
   const char *item_name = name.GetCString();
   auto optional_idx = ExtractIndexFromString(item_name);
   if (!optional_idx ||
       optional_idx.value() >= CalculateNumChildrenIgnoringErrors())
     return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+                                   name.AsCString(""));
   return optional_idx.value();
 }
 

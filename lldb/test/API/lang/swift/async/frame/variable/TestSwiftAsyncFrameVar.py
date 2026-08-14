@@ -7,7 +7,7 @@ class TestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     @skipIf(oslist=['windows'])
     def test(self):

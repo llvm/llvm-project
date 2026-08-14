@@ -6,6 +6,7 @@ import os
 
 
 class TestSwiftStaticFramework(lldbtest.TestBase):
+    SHARED_BUILD_TESTCASE = False
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True

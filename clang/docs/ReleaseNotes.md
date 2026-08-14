@@ -834,6 +834,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a crash in the constant evaluator when an ill-formed array new-expression whose bound could not be determined (e.g. `new int[]()`) was used in a constant expression. (#GH200139)
 - Fixed a case where function effect analysis (`nonblocking` etc.) did not visit a destructor invoked from a `delete` expression. (#GH184460)
 - Clang now defines the GCC-compatible predefined macros `__WCHAR_MIN__`, `__WINT_MIN__`, and `__SIG_ATOMIC_MIN__`. (#GH199678)
+- Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fix a crash in addUnsizedArray due assert not verifying we have a Base before doing checks on it. (#GH44212)
 - Fixed an assertion that could occur when rebuilding parenthesized list initialization expressions during template instantiation or AST transformation.
 
@@ -1169,6 +1170,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Add support for `#pragma export` for z/OS. This is a pragma used to export functions and variables
   with external linkage from shared libraries. It provides compatibility with the IBM XL C/C++
   compiler.
+- Add support for variable argument lists on z/OS.
+- Add compare-and-swap builtin functions, as provided by the IBM C/C++ compiler for z/OS.
+- Add new wrapper headers for z/OS to improve compatibility with the system headers.
+- Raised minimal supported target OS level to z/OS 3.1.
 
 ### DWARF Support in Clang
 

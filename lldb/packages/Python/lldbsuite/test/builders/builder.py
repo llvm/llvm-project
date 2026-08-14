@@ -219,7 +219,10 @@ class Builder:
         compiler used for the make system.
         """
         if configuration.swiftCompiler:
-            return ['SWIFTC="{}"'.format(configuration.swiftCompiler)]
+            # Pass the bare path, as for CC and CXX. make is invoked without a
+            # shell, so quotes here would end up as part of the value and stop
+            # it from naming a file.
+            return ["SWIFTC=%s" % configuration.swiftCompiler]
         return []
 
     def getPythonSpec(self):

@@ -6,7 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftExplicitModules(lldbtest.TestBase):
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test(self):
         """Test explicit Swift modules"""
@@ -21,7 +21,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Discovered main module {{.*}}a.swiftmodule
         # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Module import remark: loaded module 'a'; source: '{{.*}}a.swiftmodule', loaded: '{{.*}}a.swiftmodule'
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_disable_esml(self):
         """Test disabling the explicit Swift module loader"""

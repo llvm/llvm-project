@@ -248,9 +248,8 @@ bool ValueObjectVariable::UpdateValue() {
                     Target &target = process_sp->GetTarget();
                     size_t ptr_size = process_sp->GetAddressByteSize();
                     lldb::addr_t deref_addr;
-                    lldb::addr_t load_addr = address.GetLoadAddress(&target);
                     // FIXME: Add error handling!
-                    if (target.ReadMemory(load_addr, &deref_addr, ptr_size,
+                    if (target.ReadMemory(address, &deref_addr, ptr_size,
                                           m_error, process_is_alive))
                       m_value.GetScalar() = deref_addr;
                   }

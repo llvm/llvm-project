@@ -9,7 +9,7 @@ import os
 
 
 class TestSwiftBridgedMetatype(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipUnlessFoundation
     def test_swift_bridged_metatype(self):

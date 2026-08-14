@@ -18,7 +18,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestSwiftGenericExtension(TestBase):
-     @skipEmbeddedSwift
+     @requireNotEmbeddedSwift
      @swiftTest
      def test(self):
         self.build()

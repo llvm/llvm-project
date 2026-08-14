@@ -20,7 +20,7 @@ import os
 
 
 class TestSwiftMetatype(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift monomorphizes every generic, so T.self is already concrete and never resolves dynamically
     @swiftTest
     def test_metatype(self):
         """Test the formatting of Swift metatypes"""

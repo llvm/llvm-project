@@ -18,6 +18,21 @@
 PYTHON ?= python3
 
 SWIFTC ?= $(shell $(PYTHON) "$(VPATH)/$(LEVEL)/find-swift.py")
+
+# The bare path to the Swift compiler, for use where a filename is expected.
+# $(SWIFTC) itself is a shell word from here on and may carry quotes.
+SWIFTC_PATH := $(SWIFTC)
+
+# swiftc and swift are both symlinks to the driver, which is not rebuilt when
+# the frontend is. Track the frontend too, so that test binaries are rebuilt
+# when the compiler that actually produced them changes.
+SWIFT_FRONTEND_PATH := $(dir $(SWIFTC_PATH))swift-frontend
+
+ifeq "$(HOST_OS)" "Windows_NT"
+       # Quote the path so it survives being passed through 'sh', as for $(CXX).
+       override SWIFTC := $(QUOTE)$(SWIFTC)$(QUOTE)
+endif
+
 ifeq "$(SDKROOT)" ""
 	SWIFTSDKROOT = $(shell $(PYTHON) "$(VPATH)/$(LEVEL)/find-swift.py" -s)
 else
@@ -49,6 +64,16 @@ SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
 SWIFTFLAGS += $(FRAMEWORK_INCLUDES)
 ifeq "$(findstring -target,$(SWIFTFLAGS))" ""
   SWIFTFLAGS += $(TARGET_SWIFTFLAGS)
+endif
+
+# A test whose sources use an API that was introduced in a specific OS
+# version sets SWIFT_DEPLOYMENT_TARGET to that version. Note that this
+# only works with versions >= 26 when the versioning scheme was unified.
+ifneq "$(SWIFT_DEPLOYMENT_TARGET)" ""
+ifneq "$(findstring -apple-,$(TARGET_SWIFTFLAGS))" ""
+  SWIFT_DEPLOYMENT_TRIPLE := $(shell echo '$(TARGET_SWIFTFLAGS)' | sed -E 's/.*-target ([^ ]+).*/\1/; s/^([^-]*-[^-]*-[a-zA-Z]+)[0-9.]*/\1$(SWIFT_DEPLOYMENT_TARGET)/')
+  SWIFTFLAGS += -target $(SWIFT_DEPLOYMENT_TRIPLE)
+endif
 endif
 
 ifeq "$(OS)" "Windows_NT"
@@ -176,16 +201,30 @@ endif
 ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
 	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -enable-experimental-feature ValueGenerics -Xfrontend -disable-objc-interop -runtime-compatibility-version none
 	ifeq "$(OS)" "Darwin"
-		# If TARGET_SWIFTFLAGS already specifies a -target (e.g. for remote-ios),
-		# honour it; the embedded triple is the target triple with the version
-		# number stripped (e.g. arm64-apple-ios26.0 → arm64-apple-ios).
-		# Otherwise default to a macOS host build.
+		# If TARGET_SWIFTFLAGS already specifies a -target for a different
+		# platform (e.g. for remote-ios), honour it; the embedded triple is
+		# the target triple with the version number stripped (e.g.
+		# arm64-apple-ios26.0 → arm64-apple-ios).
+		#
+		# For a macOS build (the default, or an explicit macOS -target),
+		# always use at least macos14: the embedded macOS standard library
+		# has a minimum deployment target of macOS 14, but the API test
+		# suite's default -target (TARGET_SWIFTFLAGS, e.g.
+		# arm64-apple-macosx13.0) is derived from the toolchain's configured
+		# minimum deployment target, which can be lower. Appending another
+		# -target here overrides the earlier one, since swiftc/clang honour
+		# the last -target flag on the command line.
+		TARGET_SWIFTFLAGS_TRIPLE = $(shell echo $(TARGET_SWIFTFLAGS) | sed -E 's/.*-target ([^ ]+).*/\1/')
 		ifneq "$(findstring -target,$(TARGET_SWIFTFLAGS))" ""
-			# Extract the triple from TARGET_SWIFTFLAGS (e.g. "-target arm64-apple-ios26.0"
-			# becomes "arm64-apple-ios26.0"), then strip the version number so the result
-			# matches the directory names under lib/swift/embedded/ (e.g. "arm64-apple-ios").
-			SWIFT_EMBEDDED_TRIPLE_VERSIONED = $(shell echo $(TARGET_SWIFTFLAGS) | sed -E 's/.*-target ([^ ]+).*/\1/')
-			SWIFT_EMBEDDED_TRIPLE = $(shell echo $(SWIFT_EMBEDDED_TRIPLE_VERSIONED) | sed -E 's/([^-]+-[^-]+-[^.0-9]+).*/\1/')
+			ifeq "$(findstring apple-macos,$(TARGET_SWIFTFLAGS_TRIPLE))" ""
+				# Extract the triple from TARGET_SWIFTFLAGS (e.g. "-target arm64-apple-ios26.0"
+				# becomes "arm64-apple-ios26.0"), then strip the version number so the result
+				# matches the directory names under lib/swift/embedded/ (e.g. "arm64-apple-ios").
+				SWIFT_EMBEDDED_TRIPLE = $(shell echo $(TARGET_SWIFTFLAGS_TRIPLE) | sed -E 's/([^-]+-[^-]+-[^.0-9]+).*/\1/')
+			else
+				SWIFTFLAGS += -target $(ARCH)-apple-macos14
+				SWIFT_EMBEDDED_TRIPLE = $(ARCH)-apple-macos
+			endif
 		else
 			SWIFTFLAGS += -target $(ARCH)-apple-macos14
 			SWIFT_EMBEDDED_TRIPLE = $(ARCH)-apple-macos
@@ -201,6 +240,7 @@ ifeq "$(SWIFT_EMBEDDED_CONCURRENCY)" "1"
 	SWIFT_EMBEDDED_LIB_DIR = $(shell dirname $(SWIFTC))/../lib/swift/embedded/$(SWIFT_EMBEDDED_TRIPLE)
 	LD_EXTRAS +=  -Xlinker $(SWIFT_EMBEDDED_LIB_DIR)/libswift_Concurrency.a
 	LD_EXTRAS +=  -Xlinker $(SWIFT_EMBEDDED_LIB_DIR)/libswift_ConcurrencyDefaultExecutor.a
+	LD_EXTRAS +=  -Xlinker $(SWIFT_EMBEDDED_LIB_DIR)/libswiftEmbeddedPlatformSingleThreaded.a
 	LD_EXTRAS += -lc++
 	LD_EXTRAS += -Xlinker -dead_strip
 endif
@@ -250,20 +290,23 @@ endif
 
 # The Swift object files are named .swift.o so they don't conflict
 # with the wrapped Swift module $(MODULENAME).o
-$(SWIFT_OBJECTS): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)
+$(SWIFT_OBJECTS): $(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES) \
+                  $(call tool_prereq,$(SWIFTC_PATH)) \
+                  $(call tool_prereq,$(SWIFT)) \
+                  $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 ifneq "$(SWIFT_WMO)" "1"
 	@echo "### Generating output file map"
-	$(PYTHON) $(THIS_FILE_DIR)/gen-output-map.py $^ $(patsubst %,$(BUILDDIR)/%,$(SWIFT_OBJECTS)) >$(BUILDDIR)/$(MODULENAME)-output-file-map.json
+	$(PYTHON) $(THIS_FILE_DIR)/gen-output-map.py $(filter %.swift,$^) $(patsubst %,$(BUILDDIR)/%,$(SWIFT_OBJECTS)) >$(BUILDDIR)/$(MODULENAME)-output-file-map.json
 endif
-	@echo "### Compiling" $^
+	@echo "### Compiling" $(filter %.swift,$^)
 	@echo "### Swift driver expanded incovation will be:"
-	$(SWIFTC) -emit-object $^ $(SWIFTC_OUTPUT) \
+	$(SWIFTC) -emit-object $(filter %.swift,$^) $(SWIFTC_OUTPUT) \
 	  $(SWIFTFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
 	  -module-name $(MODULENAME) \
           -emit-module-path $(BUILDDIR)/$(MODULENAME).swiftmodule \
 	  $(SWIFT_INTERFACE_FLAGS) -###
 	@echo "### Swift driver invocation:"
-	$(SWIFTC) -emit-object $^ $(SWIFTC_OUTPUT) \
+	$(SWIFTC) -emit-object $(filter %.swift,$^) $(SWIFTC_OUTPUT) \
 	  $(SWIFTFLAGS) $(SWIFT_HFLAGS) $(PARSE_AS_LIBRARY) \
 	  -module-name $(MODULENAME) \
           -emit-module-path $(BUILDDIR)/$(MODULENAME).swiftmodule \
@@ -282,7 +325,7 @@ else
 SWIFTMODULE =
 LD_SWIFTFLAGS =
 endif
-$(EXE): $(OBJECTS)
+$(EXE): $(OBJECTS) $(call tool_prereq,$(SWIFTC_PATH))
 	@echo "### Linking" $(EXE)
 	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(OBJECTS) $(SWIFT_LINK_FLAGS) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
@@ -296,9 +339,9 @@ ifeq "$(HIDE_SWIFTMODULE)" ""
 WRAPPED_SWIFTMODULE = $(MODULENAME).o
 endif
 
-$(EXE): $(OBJECTS)
+$(EXE): $(OBJECTS) $(call tool_prereq,$(SWIFTC_PATH))
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $^ $(SWIFT_LINK_FLAGS) -o "$(EXE)"
+	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $(OBJECTS) $(SWIFT_LINK_FLAGS) -o "$(EXE)"
 ifneq "$(HIDE_SWIFTMODULE)" ""
 	rm -f $(MODULENAME).swiftmodule
 endif
@@ -322,7 +365,9 @@ DYLIB_OBJECTS += $(BUILDDIR)/$(MODULENAME).o
 endif
 endif # Darwin
 
-$(DYLIB_FILENAME) : $(DYLIB_OBJECTS) $(MODULE_INTERFACE)
+$(DYLIB_FILENAME) : $(DYLIB_OBJECTS) $(MODULE_INTERFACE) \
+                    $(call tool_prereq,$(SWIFTC_PATH)) \
+                    $(call tool_prereq,$(DS))
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
 ifneq "$(FRAMEWORK)" ""
 	$(call MKDIR_P,$(FRAMEWORK).framework/Versions/A/Headers)
@@ -360,6 +405,9 @@ ifneq "$(MAKE_DSYM)" "NO"
 ifneq "$(DS)" ""
 	"$(DS)" $(DSFLAGS) "$(DYLIB_FILENAME)"
 ifneq "$(FRAMEWORK)" ""
+	# Clear the destination first: mv refuses to replace a non-empty directory,
+	# and this rule re-runs whenever the toolchain changes.
+	$(call RM_RF,"$(DYLIB_FILENAME).framework.dSYM")
 	mv "$(DYLIB_FILENAME).dSYM"  "$(DYLIB_FILENAME).framework.dSYM"
 endif
 endif

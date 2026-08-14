@@ -151,6 +151,9 @@ public:
   // Statistics overrides.
   ModuleList GetDebugInfoModules() override;
 
+  bool GetCompileOption(const char *option, std::string &value,
+                        CompileUnit *cu = nullptr) override;
+
   void
   GetCompileOptions(std::unordered_map<lldb::CompUnitSP, Args> &args) override;
 

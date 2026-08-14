@@ -6,7 +6,8 @@ include Makefile.rules
 LD_EXTRAS = -lPublic -L$(BUILDDIR)
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 
-libPublic.dylib: Public.swift
+libPublic.dylib: Public.swift \
+                 $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=Public \

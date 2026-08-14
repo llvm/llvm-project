@@ -1,4 +1,4 @@
-//===-- SwiftLanguage.h -----------------------------------------*- C++ -*-===//
+//===-- SwiftLanguage.h ---------------------------------------------------===//
 //
 // This source file is part of the Swift.org open source project
 //
@@ -36,7 +36,7 @@ public:
   bool IsTopLevelFunction(Function &function) override;
 
   std::vector<Language::MethodNameVariant>
-  GetMethodNameVariants(ConstString method_name) const override;
+  GetMethodNameVariants(llvm::StringRef method_name) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
@@ -136,7 +136,7 @@ public:
 
   bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
-  llvm::StringRef GetInstanceVariableName() override { return "self"; }
+  llvm::StringRef GetInstanceName() override { return "self"; }
 
   bool HandleFrameFormatVariable(const SymbolContext &sc,
                                  const ExecutionContext *exe_ctx,
