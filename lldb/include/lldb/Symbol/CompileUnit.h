@@ -460,6 +460,8 @@ private:
         (1u << 6) ///< Have we parsed the debug macros already?
   };
 
+  std::recursive_mutex &GetMutex() const;
+
   CompileUnit(const CompileUnit &) = delete;
   const CompileUnit &operator=(const CompileUnit &) = delete;
   const char *GetCachedLanguage() const;
