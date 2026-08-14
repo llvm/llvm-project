@@ -182,16 +182,16 @@ namespace std {
 #    include <__iterator/reverse_access.h>
 #    include <__iterator/size.h>
 
+#    include <version>
+
+#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#      pragma GCC system_header
+#    endif
+
+#  endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+
 // [stacktrace.syn]
-#    include <compare>
-#  endif
-
-#  include <version>
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
-
-#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <compare>
+#endif
 
 #endif // _LIBCPP_STACKTRACE
