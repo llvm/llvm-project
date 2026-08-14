@@ -1237,6 +1237,43 @@ int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
   return Opcode;
 }
 
+// For a 64-bit value defined by a REG_SEQUENCE with half of the result being 0,
+// find the instruction that defines exactly the bits in the other half, and
+// return a pair containing that instruction and an unsigned indicating which 32
+// bits are zero.  The unsigned is 0 if the upper 32 bits are zero and 1 if the
+// lower 32 bits are zero.
+std::pair<MachineInstr *, unsigned>
+SIInstrInfo::analyzePartiallyZeroRegSequence(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
+  if (MI.getOpcode() != AMDGPU::REG_SEQUENCE || MI.getNumOperands() != 5)
+    return std::make_pair(nullptr, 0);
+
+  int64_t SubRegValues[2];
+  bool SubRegIsConst[2];
+  MachineInstr *RealDefs[2];
+
+  // Visit subreg-index operands of the REG_SEQUENCE instruction (MI)
+  for (unsigned I : {2, 4}) {
+    unsigned ArrayIdx = MI.getOperand(I).getImm() == AMDGPU::sub0 ? 0 : 1;
+    Register Subreg = MI.getOperand(I - 1).getReg();
+    RealDefs[ArrayIdx] = MRI.getVRegDef(Subreg);
+    SubRegIsConst[ArrayIdx] = getConstValDefinedInReg(
+        *RealDefs[ArrayIdx], Subreg, SubRegValues[ArrayIdx]);
+  }
+
+  // Visit indices of SubRegValues and SubRegIsConst arrays filled in by
+  // previous loop
+  for (unsigned I : {0, 1})
+    if (SubRegIsConst[I] && !SubRegValues[I] &&
+        MRI.getRegClass(RealDefs[(I + 1) % 2]->getOperand(0).getReg())
+                    ->getSizeInBits() *
+                2 ==
+            MRI.getRegClass(MI.getOperand(0).getReg())->getSizeInBits())
+      return std::make_pair(RealDefs[(I + 1) % 2], (I + 1) % 2);
+
+  return std::make_pair(nullptr, 0);
+}
+
 bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
                                           const Register Reg,
                                           int64_t &ImmVal) const {
@@ -11449,10 +11486,91 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (!SrcReg || SrcReg.isPhysical())
     return false;
 
-  if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
-    return false;
+  if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue)) {
+    std::pair<MachineInstr *, unsigned> RegSequence2;
+    MachineInstr *Src2Def = MRI->getVRegDef(SrcReg2);
+    if (!Src2Def)
+      return false;
 
-  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
+    Src2Def =
+        (RegSequence2 = analyzePartiallyZeroRegSequence(*Src2Def, *MRI)).first;
+    if (!Src2Def ||
+        !getFoldableImm(Src2Def->getOperand(0).getReg(), *MRI, CmpValue))
+      return false;
+    else if (RegSequence2.second)
+      CmpValue <<= 32;
+  }
+
+  const auto replaceSourceReg = [](MachineInstr &MI, Register Old,
+                                   Register New) {
+    for (unsigned I = 0; I < MI.getNumOperands(); I++)
+      if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old) {
+        MI.getOperand(I).setReg(New);
+        return true;
+      }
+    return false;
+  };
+
+  const auto replaceSourceImm = [](MachineInstr &MI, uint64_t Old,
+                                   uint64_t New) {
+    for (unsigned I = 0; I < MI.getNumOperands(); I++)
+      if (MI.getOperand(I).isImm() &&
+          (uint64_t)MI.getOperand(I).getImm() == Old) {
+        MI.getOperand(I).setImm(New);
+        return true;
+      }
+    return false;
+  };
+
+  const auto replaceSourceRegWithImm = [](MachineInstr &MI, Register Old,
+                                          uint64_t New) {
+    for (unsigned I = 0; I < MI.getNumOperands(); I++)
+      if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old) {
+        MI.getOperand(I).ChangeToImmediate(New);
+        return true;
+      }
+    return false;
+  };
+
+  const auto strengthReduceSCMP = [&CmpInstr, &SrcReg, &SrcReg2, &CmpValue, MRI,
+                                   this, &replaceSourceReg, &replaceSourceImm,
+                                   &replaceSourceRegWithImm]() -> bool {
+    MachineInstr *Def = MRI->getVRegDef(SrcReg);
+    if (!Def)
+      return false;
+
+    auto RegSequence = analyzePartiallyZeroRegSequence(*Def, *MRI);
+    if (!RegSequence.first)
+      return false;
+
+    unsigned OrigOpcode = CmpInstr.getOpcode();
+    if (OrigOpcode != AMDGPU::S_CMP_EQ_U64 &&
+        OrigOpcode != AMDGPU::S_CMP_LG_U64)
+      return false;
+
+    if (!RegSequence.second) { // Upper 32 bits zero
+        CmpInstr.setDesc(get(OrigOpcode == AMDGPU::S_CMP_EQ_U64
+                                 ? AMDGPU::S_CMP_EQ_U32
+                                 : AMDGPU::S_CMP_LG_U32));
+        replaceSourceReg(CmpInstr, SrcReg,
+                         RegSequence.first->getOperand(0).getReg());
+        SrcReg = RegSequence.first->getOperand(0).getReg();
+    }
+    else { // Lower 32 bits zero
+        CmpInstr.setDesc(get(OrigOpcode == AMDGPU::S_CMP_EQ_U64
+                                 ? AMDGPU::S_CMP_EQ_U32
+                                 : AMDGPU::S_CMP_LG_U32));
+        replaceSourceReg(CmpInstr, SrcReg,
+                         RegSequence.first->getOperand(0).getReg());
+        if (!replaceSourceImm(CmpInstr, CmpValue, (uint64_t)CmpValue >> 32))
+          replaceSourceRegWithImm(CmpInstr, SrcReg2, (uint64_t)CmpValue >> 32);
+        SrcReg = RegSequence.first->getOperand(0).getReg();
+        CmpValue = (uint64_t)CmpValue >> 32;
+    }
+    return true;
+  };
+
+  const auto optimizeCmpSelect = [&CmpInstr, &SrcReg, &CmpValue, MRI,
                                   this](bool NeedInversion) -> bool {
     if (CmpValue != 0)
       return false;
@@ -11632,7 +11750,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GE_I32:
     return optimizeCmpAnd(1, 32, false, true);
   case AMDGPU::S_CMP_EQ_U64:
-    return optimizeCmpAnd(1, 64, true, false);
+    return (int)strengthReduceSCMP() | (int)optimizeCmpAnd(1, 64, true, false);
   case AMDGPU::S_CMP_LG_U32:
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
@@ -11646,8 +11764,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GT_I32:
     return optimizeCmpAnd(0, 32, false, true);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64, true, false) ||
-           optimizeCmpSelect(/*NeedInversion=*/false);
+    return (int)optimizeCmpAnd(0, 64, true, false) | (int)strengthReduceSCMP() |
+           (int)optimizeCmpSelect(/*NeedInversion=*/false);
   }
 
   return false;

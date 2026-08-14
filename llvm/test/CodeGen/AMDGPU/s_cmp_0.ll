@@ -433,8 +433,6 @@ define amdgpu_ps i32 @bfe_i64(i64 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bfe_i64 s[2:3], s[0:1], 0x80000
 ; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[2:3]
@@ -466,7 +464,6 @@ define amdgpu_ps i32 @bfe_u64(i64 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_and_b32 s0, s0, 0xff
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -502,7 +499,6 @@ define amdgpu_ps i32 @bcnt064(i64 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bcnt0_i32_b64 s0, s[0:1]
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -537,7 +533,6 @@ define amdgpu_ps i32 @bcnt164(i64 inreg %val0) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
