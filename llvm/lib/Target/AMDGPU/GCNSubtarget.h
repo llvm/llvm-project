@@ -578,6 +578,12 @@ public:
   // if also at the end of the allocation block.
   bool hasShift64HighRegBug() const { return HasGFX90AInsts; }
 
+  // v_dot2c_f32_f16 unconditionally flushes f16 subnormal inputs to zero
+  // regardless of the MODE register, unlike v_fma_mix_f32 which respects it.
+  bool dot2UnconditionalFlush() const {
+    return HasGFX90AInsts && !HasGFX940Insts;
+  }
+
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
   bool hasTransForwardingHazard() const { return HasGFX940Insts; }
