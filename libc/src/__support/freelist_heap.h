@@ -51,7 +51,14 @@ public:
   void *realloc(void *ptr, size_t size);
   void *calloc(size_t num, size_t size);
   size_t allocation_size(const void *ptr) const;
-  LIBC_INLINE void integrity_check() const { free_store.integrity_check(); }
+  LIBC_INLINE void integrity_check() const {
+#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+    free_stores[0].integrity_check();
+    free_stores[1].integrity_check();
+#else
+    free_store.integrity_check();
+#endif
+  }
 
   cpp::span<cpp::byte> region() const { return {begin, end}; }
 
@@ -68,15 +75,68 @@ private:
 
   bool is_valid_ptr(const void *ptr) const { return ptr >= begin && ptr < end; }
 
+#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+  LIBC_INLINE int get_store_index(BlockRef block) {
+    return block.next().prev_free_store_index();
+  }
+
+  LIBC_INLINE void coalesce_and_insert(BlockRef block, int store_idx) {
+    block.mark_free(store_idx);
+    BlockRef prev = block.prev_free();
+    if (prev) {
+      if (FreeStore::too_small(prev)) {
+        block = prev;
+        block.merge_next();
+      } else {
+        int prev_store = get_store_index(prev);
+        if (prev_store == store_idx) {
+          free_stores[prev_store].remove(prev);
+          block = prev;
+          block.merge_next();
+        }
+      }
+    }
+
+    BlockRef next = block.next();
+    if (!next.used()) {
+      if (FreeStore::too_small(next)) {
+        block.merge_next();
+      } else {
+        int next_store = get_store_index(next);
+        if (next_store == store_idx) {
+          free_stores[next_store].remove(next);
+          block.merge_next();
+        }
+      }
+    }
+    block.mark_free(store_idx);
+    free_stores[store_idx].insert(block);
+  }
+
+  LIBC_INLINE void rotate() {
+    unsigned prev_active = active;
+    active = 1 - active;
+    while (BlockRef block = free_stores[prev_active].remove_any())
+      coalesce_and_insert(block, active);
+  }
+#endif
+
   cpp::byte *begin;
   cpp::byte *end;
   bool is_initialized = false;
+#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+  FreeStore free_stores[2];
+  unsigned active = 0;
+  LIBC_INLINE FreeStore &active_free_store() { return free_stores[active]; }
+#else
   FreeStore free_store;
+  LIBC_INLINE FreeStore &active_free_store() { return free_store; }
+#endif
 };
 
 template <size_t BUFF_SIZE> class FreeListHeapBuffer : public FreeListHeap {
 public:
-  constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
+  LIBC_INLINE constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
 
 private:
   cpp::byte buffer[BUFF_SIZE];
@@ -86,8 +146,14 @@ LIBC_INLINE void FreeListHeap::init() {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
   auto result = BlockRef::init(region());
   BlockRef block = *result;
+#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+  free_stores[0].set_range({0, cpp::bit_ceil(block.inner_size())});
+  free_stores[1].set_range({0, cpp::bit_ceil(block.inner_size())});
+  coalesce_and_insert(block, active);
+#else
   free_store.set_range({0, cpp::bit_ceil(block.inner_size())});
   free_store.insert(block);
+#endif
   is_initialized = true;
 }
 
@@ -102,17 +168,29 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (!request_size)
     return nullptr;
 
-  BlockRef block = free_store.remove_best_fit(request_size);
+  BlockRef block = active_free_store().remove_best_fit(request_size);
+#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+  if (!block) {
+    rotate();
+    block = active_free_store().remove_best_fit(request_size);
+  }
+#endif
   if (!block)
     return nullptr;
 
   auto block_info = BlockRef::allocate(block, alignment, size);
+  block_info.block.mark_used();
+#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+  if (block_info.next)
+    coalesce_and_insert(block_info.next, active);
+  if (block_info.prev)
+    coalesce_and_insert(block_info.prev, active);
+#else
   if (block_info.next)
     free_store.insert(block_info.next);
   if (block_info.prev)
     free_store.insert(block_info.prev);
-
-  block_info.block.mark_used();
+#endif
   return block_info.block.usable_space();
 }
 
@@ -147,6 +225,9 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
   BlockRef block = BlockRef::from_usable_space(bytes);
   LIBC_ASSERT(block.next() && "sentinel last block cannot be freed");
   LIBC_ASSERT(block.used() && "double free");
+#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+  coalesce_and_insert(block, 1 - active);
+#else
   block.mark_free();
 
   // Can we combine with the left or right blocks?
@@ -165,6 +246,7 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
   }
   // Add back to the freelist
   free_store.insert(block);
+#endif
 }
 
 LIBC_INLINE size_t FreeListHeap::allocation_size(const void *ptr) const {
@@ -186,6 +268,9 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {
     // register the new block on successful split
     if (next.has_value()) {
       BlockRef next_block = *next;
+#ifdef LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
+      coalesce_and_insert(next_block, 1 - active);
+#else
       BlockRef right = next_block.next();
       // Since the original block was not the last block (the sentinel last
       // block is never split), the split-off remainder block `next_block` is
@@ -197,6 +282,7 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(BlockRef block, size_t size) {
         next_block.merge_next();
       }
       free_store.insert(next_block);
+#endif
     }
     return true;
   }

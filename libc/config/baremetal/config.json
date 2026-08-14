@@ -75,5 +75,10 @@
     "LIBC_CONF_CTYPE_SMALLER_ASCII": {
       "value": true
     }
+  },
+  "baremetal": {
+    "LIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION": {
+      "value": true
+    }
   }
 }

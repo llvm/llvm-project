@@ -41,6 +41,8 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     freelist_heap_fuzz
     SRCS
       freelist_heap_fuzz.cpp
+    COMPILE_OPTIONS
+      -DLIBC_COPT_BAREMETAL_HEAP_ENABLE_FREESTORE_ROTATION
     DEPENDS
       libc.src.__support.freelist_heap
   )
