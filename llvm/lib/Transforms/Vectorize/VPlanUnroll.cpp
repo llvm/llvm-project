@@ -332,6 +332,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractVectorForPart>(
+                      m_VPValue(Op), m_VPValue()))) {
+      Copy->setOperand(0, Op);
+      Copy->setOperand(1, Plan.getConstantInt(64, Part));
+      continue;
+    }
     if (isa<VPVectorPointerRecipe, VPWidenCanonicalIVRecipe>(R)) {
       VPBuilder Builder(&R);
       const DataLayout &DL = Plan.getDataLayout();
@@ -468,6 +474,13 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       R.setOperand(0, getValueForPart(Op0, UF - 1));
+      continue;
+    }
+
+    if (match(&R,
+              m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()))) {
+      auto *ALM = cast<VPInstruction>(&R);
+      ALM->setOperand(2, getConstantInt(UF));
       continue;
     }
 
