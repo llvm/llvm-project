@@ -1441,26 +1441,28 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       elePat = genByteSplatInit(builder, loc, eleTy, hexByte);
       break;
     case Fortran::lower::InitLocalKind::QNaN:
-      if (fpTy)
+      if (fpTy) {
         elePat = genFPNaNInit(builder, loc, fpTy, false);
-      else if (cplxTy) {
+      } else if (cplxTy) {
         auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
         mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, false);
         elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
                                                  nanPart);
-      } else
+      } else {
         elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
+      }
       break;
     case Fortran::lower::InitLocalKind::SNaN:
-      if (fpTy)
+      if (fpTy) {
         elePat = genFPNaNInit(builder, loc, fpTy, true);
-      else if (cplxTy) {
+      } else if (cplxTy) {
         auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
         mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, true);
         elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
                                                  nanPart);
-      } else
+      } else {
         elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
+      }
       break;
     default:
       llvm_unreachable("unexpected InitLocalKind");
