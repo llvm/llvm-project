@@ -1491,18 +1491,25 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   }
 }
 
+bool tools::addLLVMOffloadingRuntime(const Compilation &C,
+                                     ArgStringList &CmdArgs,
+                                     const ToolChain &TC, const ArgList &Args) {
+
+  if (!Args.hasFlag(options::OPT_foffload_via_llvm,
+                    options::OPT_fno_offload_via_llvm, false))
+    return false;
+
+  CmdArgs.push_back("-lLLVMOffloadKernel");
+  return true;
+}
+
 bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
                              const ToolChain &TC, const ArgList &Args,
                              bool ForceStaticHostRuntime, bool IsOffloadingHost,
                              bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                    options::OPT_fno_openmp, false)) {
-    // We need libomptarget (liboffload) if it's the choosen offloading runtime.
-    if (Args.hasFlag(options::OPT_foffload_via_llvm,
-                     options::OPT_fno_offload_via_llvm, false))
-      CmdArgs.push_back("-lomptarget");
+                    options::OPT_fno_openmp, false))
     return false;
-  }
 
   Driver::OpenMPRuntimeKind RTKind = TC.getDriver().getOpenMPRuntime(Args);
 

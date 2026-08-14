@@ -2189,7 +2189,34 @@ If your usage pattern follows a strict insert-then-query approach, you can
 trivially use the same approach as {ref}`sorted vectors for set-like containers <dss_sortedvectorset>`.  The only difference is that your query function (which
 uses `std::lower_bound` to get efficient log(n) lookup) should only compare the
 key, not both the key and value.  This yields the same advantages as sorted
-vectors for sets.
+vectors for sets.  If you need a map-like container with incremental insertions
+backed by a sorted vector, see {ref}`SortedVectorMap <dss_sortedvectormap_class>`.
+
+(dss_sortedvectormap_class)=
+
+#### llvm/ADT/SortedVectorMap.h
+
+`SortedVectorMap<KeyT, ValueT, N, KeyCompare>` is a map backed by a sorted
+`SmallVector`. It provides a `std::map`-like interface with $O(\log N)$ binary
+search lookup while maintaining contiguous memory layout and cache locality.
+
+`SortedVectorMap` is intended for:
+- Small maps where memory footprint is a primary concern. In particular, it
+  avoids the initial bucket overhead of `DenseMap` (e.g. 64 buckets by default)
+  when only a few elements are stored.
+- Use cases that require iteration in sorted key order.
+
+Trade-offs:
+- Lookups take $O(\log N)$ time via binary search rather than $O(1)$ in `DenseMap`.
+- Insertions and deletions take $O(N)$ time due to shifting elements in the
+  underlying vector, making it best suited for small $N$ or mostly-read data.
+- Like other vector-based containers (and unlike `std::map`), iterators and
+  references are invalidated by insertions (due to element shifting or
+  reallocations) and erasures (due to element shifting).
+- Compared to `std::map`, elements are stored contiguously, eliminating per-node
+  heap allocations and pointer chasing.
+- Compared to `MapVector`, elements are ordered by key rather than insertion
+  order, with zero auxiliary hash table overhead.
 
 (dss_stringmap)=
 

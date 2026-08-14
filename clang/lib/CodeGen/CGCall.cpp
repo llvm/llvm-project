@@ -59,7 +59,12 @@ using namespace CodeGen;
 
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
-  default:
+  case CC_C:
+    // On SPIR/SPIR-V, CC_C is the AST-level default calling convention, but
+    // it still needs to lower to spir_func so IR consumers can rely on the
+    // calling convention to distinguish device functions.
+    if (Target.getTriple().isSPIROrSPIRV())
+      return llvm::CallingConv::SPIR_FUNC;
     return llvm::CallingConv::C;
   case CC_X86StdCall:
     return llvm::CallingConv::X86_StdCall;

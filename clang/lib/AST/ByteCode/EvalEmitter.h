@@ -57,6 +57,9 @@ public:
   /// Clean up all resources.
   void cleanup();
 
+  /// Returns the source location of the current opcode.
+  SourceInfo getSource(CodePtr PC) const override { return CurrentSource; }
+
 protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
 
@@ -98,11 +101,6 @@ protected:
 
   /// Callback for registering a local.
   Local createLocal(Descriptor *D);
-
-  /// Returns the source location of the current opcode.
-  SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    return (F && F->hasBody()) ? F->getSource(PC) : CurrentSource;
-  }
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;

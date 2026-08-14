@@ -36,4 +36,18 @@ void main() {
   // expected-note@*:* {{candidate function not viable: no known conversion from 'uint2' (aka 'vector<uint, 2>') to 'vector<unsigned int, 3>'}}
   float4 val5 = Tex[too_few];
 #endif
+
+  // A read-only texture's operator[] returns a const reference, so it cannot be
+  // assigned through. The writable counterpart is covered by
+  // RWTextures-Subscript.hlsl.
+  // expected-note@*:* 3 {{function 'operator[]' which returns const-qualified type 'vector<float, 4> const hlsl_device &' declared here}}
+
+  // expected-error@+1 {{cannot assign to return value because function 'operator[]' returns a const value}}
+  Tex[valid_index] = float4(1, 2, 3, 4);
+
+  // expected-error@+1 {{cannot assign to return value because function 'operator[]' returns a const value}}
+  Tex[valid_index].y = 5.0;
+
+  // expected-error@+1 {{cannot assign to return value because function 'operator[]' returns a const value}}
+  Tex[valid_index] += float4(1, 1, 1, 1);
 }

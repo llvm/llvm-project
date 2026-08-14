@@ -11,10 +11,8 @@ from typing import Dict, List, NamedTuple, Optional, Sequence, Set, TextIO
 import argparse
 import common
 import github
-import json
 import logging
 import os
-import pathlib
 import re
 import sys
 import tabulate
@@ -52,9 +50,11 @@ class Runs(NamedTuple):
         return sum(n for (target, n) in self.in_flight.items() if target.machine == machine)
 
 
-# The repository and the workflow this tool drives.
+# The repository and the workflow driven by this tool, and the ref to use for the
+# definition of the workflow.
 REPOSITORY = 'llvm/llvm-project'
 WORKFLOW = 'libcxx-benchmark-commit.yml'
+WORKFLOW_REF = 'main'
 
 # The name the benchmark workflow gives its runs. What a run is benchmarking can
 # only be recovered from its name (the inputs a workflow was dispatched with are
@@ -159,25 +159,29 @@ def workflow_runs(workflow: github.Workflow.Workflow) -> List[WorkflowRun]:
     except github.GithubException as error:
         raise GithubError(f'could not list the runs of {workflow.path}: {error}')
     if dry:
-        logging.info(f'ignoring {len(dry)} dry runs')
+        logging.debug(f'ignoring {len(dry)} workflow dry runs: {", ".join(str(i) for i in sorted(dry))}')
     return list(runs.values())
 
 
-def dispatch(workflow: github.Workflow.Workflow, inputs: Dict[str, str]) -> None:
+def dispatch(workflow: github.Workflow.Workflow, inputs: Dict[str, str]) -> str:
     """
-    Request one run of a workflow.
+    Request one run of a workflow and return the URL of the run that was created.
 
-    The definition on `main` is always the one that runs, whatever commit is being
+    The definition on WORKFLOW_REF is always the one that runs, whatever commit is being
     benchmarked.
     """
     logging.debug(f'dispatching {workflow.path} with {inputs}')
     try:
-        # A refused dispatch is reported by returning False rather than by raising, and
-        # the refusal reason is not surfaced. The request is all we can report.
-        if not workflow.create_dispatch(ref='main', inputs=inputs):
-            raise GithubError(f'the API refused to dispatch a run for {inputs["commit"]} on {inputs["lnt-machine"]}')
+        # Don't go through PyGithub's create_dispatch() since it doesn't support return_run_details
+        # until https://github.com/PyGithub/PyGithub/issues/3474 is fixed.
+        (_, details) = workflow.requester.requestJsonAndCheck(
+            'POST', f'{workflow.url}/dispatches',
+            input={'ref': WORKFLOW_REF, 'inputs': inputs, 'return_run_details': True})
     except github.GithubException as error:
         raise GithubError(f'could not dispatch a run for {inputs["commit"]} on {inputs["lnt-machine"]}: {error}')
+    if not isinstance(details, dict) or not details.get('html_url'):
+        raise GithubError(f'failed to dispatch a workflow run for {inputs["commit"]} on {inputs["lnt-machine"]}: {details}')
+    return details['html_url']
 
 
 def summarize(runs: Sequence[WorkflowRun]) -> Runs:
@@ -344,9 +348,6 @@ def main(argv: List[str]) -> int:
              'variable. `gh auth token` can be used to print the token registered locally.')
     parser.add_argument('--dry-run', action='store_true',
         help='Do not request anything, just report what would be requested.')
-    parser.add_argument('--output', type=pathlib.Path, default=None,
-        help='Where to write the record of what was requested, one JSON object per line. Defaults '
-             'to standard output.')
     parser.add_argument('-q', '--quiet', action='store_true',
         help='Do not print the human-readable summary to standard error.')
     parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -378,9 +379,7 @@ def main(argv: List[str]) -> int:
     if not args.quiet:
         report(args, decisions, runs)
 
-    # Requests are made one at a time and recorded as they succeed. A failure halfway through must still
-    # leave an accurate record, since the runs already requested actually exist in Github.
-    records: List[str] = []
+    # Requests are made one at a time and reported as they succeed.
     dispatched = 0
     try:
         for decision in decisions:
@@ -389,24 +388,17 @@ def main(argv: List[str]) -> int:
             inputs = workflow_inputs(args, decision.item)
             for _ in range(decision.jobs):
                 if not args.dry_run:
-                    dispatch(workflow, inputs)
+                    url = dispatch(workflow, inputs)
+                    if not args.quiet:
+                        # Print heading with the first run to avoid clutter in the "nothing dispatched" case.
+                        if dispatched == 0:
+                            print('', file=sys.stderr)
+                            print('Requested runs:', file=sys.stderr)
+                        print(f'  {decision.item.commit[:12]} on {decision.item.machine}: {url}', file=sys.stderr)
                 dispatched += 1
-                records.append(json.dumps({'commit': decision.item.commit,
-                                           'machine': decision.item.machine,
-                                           'reason': decision.item.reason,
-                                           'dry_run': args.dry_run,
-                                           'inputs': inputs}, sort_keys=True) + '\n')
     except GithubError:
         logging.error(f'requested {dispatched} runs before failing')
         raise
-    finally:
-        # Write what we managed to do even when we fail: those runs exist and will
-        # consume machine time, so we want to report them.
-        contents = ''.join(records)
-        if args.output is None:
-            sys.stdout.write(contents)
-        else:
-            args.output.write_text(contents)
 
     if not args.quiet and not args.dry_run:
         print(f'Requested {dispatched} runs.', file=sys.stderr)
