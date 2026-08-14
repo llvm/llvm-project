@@ -396,6 +396,24 @@ const MCPhysReg *X86RegisterInfo::getCalleeSavedRegsViaCopy(
   return nullptr;
 }
 
+ArrayRef<MCPhysReg>
+X86RegisterInfo::getIntraCallClobberedRegs(const MachineFunction *MF) const {
+  static const MCPhysReg X87PhysRegs[] = {
+    X86::FP0, X86::FP1, X86::FP2, X86::FP3, X86::FP4, X86::FP5,
+    X86::FP6, X86::FP7, X86::ST0, X86::ST1, X86::ST2, X86::ST3,
+    X86::ST4, X86::ST5, X86::ST6, X86::ST7
+  };
+
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  const BitVector &UsedPhysRegsMask = MRI.getUsedPhysRegsMask();
+
+  for (MCPhysReg Reg : X87PhysRegs)
+    if (!MRI.def_empty(Reg) || UsedPhysRegsMask.test(Reg))
+      return ArrayRef(X87PhysRegs);
+
+  return {};
+}
+
 const uint32_t *
 X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                       CallingConv::ID CC) const {
