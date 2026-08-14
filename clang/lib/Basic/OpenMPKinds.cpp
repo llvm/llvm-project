@@ -982,6 +982,9 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_teams:
       CaptureRegions.push_back(OMPD_teams);
       break;
+    case OMPD_taskgraph:
+      CaptureRegions.push_back(OMPD_taskgraph);
+      break;
     case OMPD_taskloop:
       CaptureRegions.push_back(OMPD_taskloop);
       break;
@@ -1005,7 +1008,6 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_simd:
     case OMPD_single:
     case OMPD_target_data:
-    case OMPD_taskgraph:
     case OMPD_taskgroup:
     case OMPD_stripe:
       // These directives (when standalone) use OMPD_unknown as the region,
