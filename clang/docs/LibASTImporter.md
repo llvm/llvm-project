@@ -8,9 +8,6 @@ to the Clang AST <IntroductionToTheClangAST>` if you want to learn more
 about how the AST is structured.
 Knowledge about {doc}`matching the Clang AST <LibASTMatchers>` and the [reference for the matchers](https://clang.llvm.org/docs/LibASTMatchersReference.html) are also useful.
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

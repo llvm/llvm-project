@@ -1,8 +1,5 @@
 # Clang Compiler User's Manual
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

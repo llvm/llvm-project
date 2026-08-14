@@ -1,9 +1,5 @@
 # Assembling a Complete Toolchain
 
-```{contents}
-:depth: 2
-:local: true
-```
 
 ## Introduction
 

@@ -1,8 +1,5 @@
 # HLSL Availability Diagnostics
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

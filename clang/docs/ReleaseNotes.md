@@ -12,10 +12,6 @@ myst:
 {#clang-release-releasenotestitle}
 # Clang {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') if env.config.project == 'Clang' else '|ReleaseNotesTitle|' }}
 
-```{contents}
-:depth: 2
-:local:
-```
 
 Written by the [LLVM Team](https://llvm.org/)
 

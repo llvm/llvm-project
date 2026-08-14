@@ -1,8 +1,5 @@
 # Source-based Code Coverage
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

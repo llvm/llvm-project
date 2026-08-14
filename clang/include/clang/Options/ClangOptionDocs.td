@@ -15,10 +15,6 @@ def GlobalDocumentation {
 
 # Clang command line argument reference
 
-```{contents}
-:local:
-```
-
 ## Introduction
 
 This page lists the command line arguments currently supported by the

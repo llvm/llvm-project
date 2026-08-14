@@ -1,8 +1,5 @@
 # Expected Differences vs DXC and FXC
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

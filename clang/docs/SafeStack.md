@@ -1,8 +1,5 @@
 # SafeStack
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
