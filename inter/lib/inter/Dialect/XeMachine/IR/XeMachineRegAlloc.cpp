@@ -97,7 +97,109 @@ static uint64_t getDestinationStorageDwords(Operation *operation,
   return storageDwords;
 }
 
+static int64_t getGRFSpan(int64_t firstElement, int64_t lastElement,
+                          uint64_t elementBytes) {
+  constexpr int64_t bytesPerGRF = 64;
+  int64_t firstByte = firstElement * elementBytes;
+  int64_t lastByte = (lastElement + 1) * elementBytes - 1;
+  return lastByte / bytesPerGRF - firstByte / bytesPerGRF + 1;
+}
+
+static FailureOr<int64_t> getMessageGRFLength(Operation *operation, Type type,
+                                               const Twine &name) {
+  int64_t width = cast<RegType>(type).getWidthDwords();
+  if (width % 16 != 0)
+    return operation->emitError() << name << " must occupy whole GRFs";
+  return width / 16;
+}
+
+static LogicalResult validateSendFootprint(SendOp send) {
+  FailureOr<int64_t> source0 =
+      getMessageGRFLength(send, send.getAddrPayload().getType(), "source 0");
+  FailureOr<int64_t> destination =
+      getMessageGRFLength(send, send.getDst().getType(), "destination");
+  if (failed(source0) || failed(destination))
+    return failure();
+
+  uint32_t descriptor = static_cast<uint32_t>(send.getDesc());
+  int64_t encodedSource0 = (descriptor >> 25) & 0xf;
+  int64_t encodedDestination = (descriptor >> 20) & 0x1f;
+  if (*source0 != encodedSource0)
+    return send.emitOpError("source 0 width does not match the descriptor");
+  bool block2DArrayResponse = (descriptor & 0x3f) == 0x3 &&
+                              encodedDestination == 31 && *destination == 32;
+  if (*destination != encodedDestination && !block2DArrayResponse)
+    return send.emitOpError("destination width does not match the descriptor");
+
+  int64_t source1 = 0;
+  if (Value data = send.getDataPayload()) {
+    FailureOr<int64_t> length =
+        getMessageGRFLength(send, data.getType(), "source 1");
+    if (failed(length))
+      return failure();
+    source1 = *length;
+  }
+  if (source1 > 31)
+    return send.emitOpError("source 1 exceeds the 31-GRF encoding limit");
+  if (*source0 + source1 >= 32)
+    return send.emitOpError("combined source payload exceeds 31 GRFs");
+  return success();
+}
+
+static LogicalResult validateMessageFootprint(Operation *operation) {
+  if (!isa<LoadA64Op, StoreA64Op, LoadSLMOp, StoreSLMOp, AtomicIAddA64Op,
+           FenceSLMOp, BarrierSignalOp, EotOp, LoadBlockA32Op>(operation))
+    return success();
+
+  FailureOr<int64_t> source0 = getMessageGRFLength(
+      operation, operation->getOperand(0).getType(), "source 0");
+  if (failed(source0))
+    return failure();
+  if (*source0 > 15)
+    return operation->emitError("source 0 exceeds the 15-GRF encoding limit");
+
+  int64_t destination = 0;
+  if (operation->getNumResults() != 0 &&
+      isa<RegType>(operation->getResult(0).getType())) {
+    FailureOr<int64_t> length = getMessageGRFLength(
+        operation, operation->getResult(0).getType(), "destination");
+    if (failed(length))
+      return failure();
+    destination = *length;
+  }
+  if (destination > 31)
+    return operation->emitError(
+        "destination exceeds the 31-GRF encoding limit");
+
+  Value data;
+  if (StoreA64Op store = dyn_cast<StoreA64Op>(operation))
+    data = store.getDataPayload();
+  else if (StoreSLMOp store = dyn_cast<StoreSLMOp>(operation))
+    data = store.getDataPayload();
+  else if (AtomicIAddA64Op atomic = dyn_cast<AtomicIAddA64Op>(operation))
+    data = atomic.getDataPayload();
+  int64_t source1 = 0;
+  if (data) {
+    FailureOr<int64_t> length =
+        getMessageGRFLength(operation, data.getType(), "source 1");
+    if (failed(length))
+      return failure();
+    source1 = *length;
+  }
+  if (source1 > 31)
+    return operation->emitError(
+        "source 1 exceeds the 31-GRF encoding limit");
+  if (*source0 + source1 >= 32)
+    return operation->emitError(
+        "combined source payload exceeds 31 GRFs");
+  return success();
+}
+
 static LogicalResult validateAluFootprint(Operation *operation) {
+  if (SendOp send = dyn_cast<SendOp>(operation))
+    return validateSendFootprint(send);
+  if (failed(validateMessageFootprint(operation)))
+    return failure();
   if (!isa<MovOp, AddOp, SubOp, ShlOp, ShrOp, AndOp, OrOp, Add3Op, MulOp,
            CmpOp>(operation))
     return success();
@@ -123,6 +225,9 @@ static LogicalResult validateAluFootprint(Operation *operation) {
               getDestinationStorageDwords(operation, destinationType) * 4)
         return operation->emitError(
             "destination region exceeds declared register storage");
+      if (getGRFSpan(sub, last, *bytes) > 2)
+        return operation->emitError(
+            "destination region spans more than two GRFs");
     }
   }
 
@@ -144,14 +249,29 @@ static LogicalResult validateAluFootprint(Operation *operation) {
     int64_t horizontal = region ? region.getHstride() : 0;
     if (sub < 0 || vertical < 0 || width <= 0 || horizontal < 0)
       return operation->emitError("invalid source register region");
+    int64_t first = sub;
     int64_t last = sub;
-    for (int64_t lane : llvm::seq<int64_t>(0, executionSize))
-      last = std::max(last, sub + lane / width * vertical +
-                                lane % width * horizontal);
+    for (int64_t lane : llvm::seq<int64_t>(0, executionSize)) {
+      int64_t element =
+          sub + lane / width * vertical + lane % width * horizontal;
+      first = std::min(first, element);
+      last = std::max(last, element);
+    }
     if (static_cast<uint64_t>(last + 1) * *bytes >
         registerType.getWidthDwords() * 4)
       return operation->emitError(
           "source region exceeds declared register storage");
+    if (getGRFSpan(first, last, *bytes) > 2)
+      return operation->emitError() << "source " << index
+                                    << " region spans more than two GRFs";
+    for (int64_t row = 0; row < executionSize; row += width) {
+      int64_t rowLanes = std::min(width, executionSize - row);
+      int64_t rowFirst = sub + row / width * vertical;
+      int64_t rowLast = rowFirst + (rowLanes - 1) * horizontal;
+      if (horizontal != 0 && getGRFSpan(rowFirst, rowLast, *bytes) > 1)
+        return operation->emitError() << "source " << index
+                                      << " row crosses a GRF boundary";
+    }
   }
   return success();
 }

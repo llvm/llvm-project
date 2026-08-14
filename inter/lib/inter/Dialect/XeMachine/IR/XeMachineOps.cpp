@@ -331,8 +331,16 @@ LogicalResult DpasOp::verify() {
     return emitOpError("requires non-empty A/B packets and matching C/D widths");
   if (!getElemType().isF32())
     return emitOpError("requires an f32 accumulator and result");
-  if (getSystolicDepth() <= 0 || getRepeatCount() <= 0)
-    return emitOpError("requires positive systolic depth and repeat count");
+  if (getSystolicDepth() != 8)
+    return emitOpError("requires systolic depth 8 on Xe2");
+  if (getRepeatCount() <= 0 || getRepeatCount() > 8)
+    return emitOpError("requires a repeat count from 1 through 8");
+  int64_t expectedA = getSystolicDepth() * getRepeatCount();
+  int64_t expectedB = getSystolicDepth() * 16;
+  int64_t expectedAccumulator = 16 * getRepeatCount();
+  if (a.getWidthDwords() != expectedA || b.getWidthDwords() != expectedB ||
+      acc.getWidthDwords() != expectedAccumulator)
+    return emitOpError("packet widths must match Xe2 depth and repeat count");
   if (acc.getBaseGRF() >= 0 && dst.getBaseGRF() >= 0 &&
       acc.getBaseGRF() != dst.getBaseGRF())
     return emitOpError("physical destination must alias the accumulator");
