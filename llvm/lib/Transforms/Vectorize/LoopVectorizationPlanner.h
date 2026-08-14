@@ -872,18 +872,8 @@ class LoopVectorizationPlanner {
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
-  /// The profitability analysis.
-  /// The CM currently in effect for the VPlan being built or costed; it always
-  /// aliases either \c DefaultCM or \c EpilogueTFCM.
-  LoopVectorizationCostModel *EnabledCM;
-  /// The CM used for the main-loop VPlan, and for the epilogue VPlan in all
-  /// cases except tail-folded epilogue vectorization.
-  LoopVectorizationCostModel *DefaultCM;
-  /// The CM used only when the epilogue loop is vectorized with tail-folding.
-  /// \c EnabledCM is switched to point here (via enableEpilogueTFCM()) while
-  /// the epilogue VPlan's costs are computed, so that they correctly account
-  /// for the tail-folded epilogue.
-  LoopVectorizationCostModel *EpilogueTFCM;
+  /// The profitability analysis. Cleared after making cost based decisions.
+  std::unique_ptr<LoopVectorizationCostModel> CM;
 
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
@@ -911,7 +901,8 @@ class LoopVectorizationPlanner {
   ///
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
+  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU,
+                       LoopVectorizationCostModel &EnabledCM) const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid
@@ -923,22 +914,20 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel *DefaultCM,
-      LoopVectorizationCostModel *EpilogueTFCM, VFSelectionContext &Config,
-      InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      OptimizationRemarkEmitter *ORE)
-      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal),
-        DefaultCM(DefaultCM), EpilogueTFCM(EpilogueTFCM), Config(Config),
-        IAI(IAI), PSE(PSE), ORE(ORE) {
-    enableDefaultCM();
+      std::unique_ptr<LoopVectorizationCostModel> CM,
+      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
+      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE);
+
+  ~LoopVectorizationPlanner();
+
+  /// Return the cost model. Must not be called after clearCostModel().
+  LoopVectorizationCostModel &getCostModel() {
+    assert(CM && "Cost model has already been cleared");
+    return *CM;
   }
 
-  void enableDefaultCM() { EnabledCM = DefaultCM; }
-
-  void enableEpilogueTFCM() {
-    assert(EpilogueTFCM && "No CM for epilogue tail-folding to enable");
-    EnabledCM = EpilogueTFCM;
-  }
+  /// Destroy the cost model.
+  void clearCostModel();
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -947,7 +936,7 @@ public:
 
   /// Build VPlan for the forced epilogue VF. If vectorization and tail-folding
   /// should be avoided up-front, no tail-folded plans are generated.
-  bool planForEpilogueTF();
+  bool planForEpilogueTF(LoopVectorizationCostModel &EpilogueCM);
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
@@ -1045,7 +1034,7 @@ private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built.
-  VPlanPtr tryToBuildVPlan1();
+  VPlanPtr tryToBuildVPlan1(LoopVectorizationCostModel &EnabledCM);
 
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
@@ -1055,12 +1044,14 @@ private:
   /// maximum VF for which no plan could be built. Each VPlan is built starting
   /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
   /// original scalar loop.
-  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
+  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range,
+                           LoopVectorizationCostModel &EnabledCM);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
   /// when it checked if it is legal to vectorize the loop.
-  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF,
+                   LoopVectorizationCostModel &EnabledCM);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
