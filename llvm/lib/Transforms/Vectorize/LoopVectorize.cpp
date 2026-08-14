@@ -6575,7 +6575,7 @@ static bool verifyBlockProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
         Tolerance)
       continue;
 
-    errs() << "Block probability mismatch for " << VPBB->getName() << ": VPlan "
+    errs() << "Block frequency mismatch for " << VPBB->getName() << ": VPlan "
            << Computed << ", BlockFrequencyInfo " << Expected << "\n";
     return false;
   }

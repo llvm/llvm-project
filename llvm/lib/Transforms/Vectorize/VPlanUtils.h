@@ -224,8 +224,9 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 
 /// Computes for each block in \p Blocks the probability that it executes,
 /// relative to the first block in \p Blocks (the header block), which always
-/// executes. The probability of a block is the accumulated probability of its
-/// incoming edges.
+/// executes. \p Blocks must be in reverse post-order. The probability of a
+/// block is the accumulated probability of its incoming edges, or unknown if
+/// any edge on a path reaching it lacks branch weights.
 DenseMap<const VPBasicBlock *, BranchProbability>
 computeBlockProbabilities(ArrayRef<VPBasicBlock *> Blocks);
 

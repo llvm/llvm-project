@@ -12,7 +12,9 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -1056,63 +1058,74 @@ SmallVector<VPUser *> vputils::collectUsersRecursively(VPValue *V) {
   return Users.takeVector();
 }
 
-/// Returns the probability of the edge from \p Src to \p Dst, taken from the
-/// branch weights recorded on Src's terminator, or unknown if not available.
-/// See llvm::getBranchProbability in llvm/Transforms/Utils/LoopUtils.h for the
-/// IR version.
-static BranchProbability getEdgeProbability(const VPBasicBlock *Src,
-                                            const VPBasicBlock *Dst) {
-  // With a single successor the edge is always taken.
-  ArrayRef<VPBlockBase *> Successors = Src->getSuccessors();
+/// Returns the probability of reaching each unique successor of \p VPBB, taken
+/// from the branch weights recorded on its terminator, or unknown if not
+/// available. See llvm::getBranchProbability in
+/// llvm/Transforms/Utils/LoopUtils.h for the IR version.
+static SmallVector<std::pair<const VPBasicBlock *, BranchProbability>, 2>
+getSuccessorProbabilities(const VPBasicBlock *VPBB) {
+  ArrayRef<VPBlockBase *> Successors = VPBB->getSuccessors();
+  // With a single successor the edge is always taken and needs no weights.
   if (Successors.size() == 1)
-    return BranchProbability::getOne();
+    return {{cast<VPBasicBlock>(Successors[0]), BranchProbability::getOne()}};
 
-  auto *Term = dyn_cast_if_present<VPInstruction>(Src->getTerminator());
   SmallVector<uint32_t> Weights;
-  if (!Term ||
-      !extractBranchWeights(Term->getMetadata(LLVMContext::MD_prof), Weights) ||
-      Weights.size() != Successors.size())
-    return BranchProbability::getUnknown();
-
-  uint64_t Total = sum_of(Weights, uint64_t(0));
+  uint64_t Total = 0;
+  auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
+  if (Term &&
+      extractBranchWeights(Term->getMetadata(LLVMContext::MD_prof), Weights) &&
+      Weights.size() == Successors.size())
+    Total = sum_of(Weights, uint64_t(0));
+  // Without usable weights all successors have unknown probability. Zero the
+  // weights, so the accumulation below still visits each of them.
   if (Total == 0)
-    return BranchProbability::getUnknown();
+    Weights.assign(Successors.size(), 0);
 
-  // Sum the weights of all edges from Src to Dst; the same block may be the
-  // destination of multiple successors, e.g. for switches.
-  uint64_t ToDst = 0;
-  for (const auto &[Succ, Weight] : zip(Successors, Weights))
-    if (Succ == Dst)
-      ToDst += Weight;
-  return BranchProbability::getBranchProbability(ToDst, Total);
+  SmallMapVector<const VPBasicBlock *, uint64_t, 2> WeightPerSuccessor;
+  for (const auto &[Succ, Weight] : zip_equal(Successors, Weights))
+    WeightPerSuccessor[cast<VPBasicBlock>(Succ)] += Weight;
+
+  return map_to_vector<2>(WeightPerSuccessor, [Total](const auto &SuccWeight) {
+    auto [Succ, Weight] = SuccWeight;
+    return std::make_pair(
+        Succ, Total == 0
+                  ? BranchProbability::getUnknown()
+                  : BranchProbability::getBranchProbability(Weight, Total));
+  });
 }
 
 DenseMap<const VPBasicBlock *, BranchProbability>
 vputils::computeBlockProbabilities(ArrayRef<VPBasicBlock *> Blocks) {
   assert(!Blocks.empty() && "expected at least the header block");
+  // Push each block's probability along its outgoing edges, accumulating it in
+  // the successors. Blocks is in reverse post-order and the blocks form a DAG
+  // (the backedge of a loop region is implicit), so all incoming edges of a
+  // block have contributed by the time it is visited and its probability is
+  // final.
   DenseMap<const VPBasicBlock *, BranchProbability> Probabilities;
-  // The header (first block) always executes. Any other block executes if any
-  // of its incoming edges is taken, so accumulate their probabilities.
+  Probabilities.reserve(Blocks.size());
+  // The header (first block) always executes.
   Probabilities[Blocks.front()] = BranchProbability::getOne();
-  for (VPBasicBlock *VPBB : Blocks.drop_front()) {
-    BranchProbability Prob = BranchProbability::getZero();
-    // A predecessor may be listed once per edge to VPBB, e.g. for a switch with
-    // multiple cases branching here.
-    SmallSetVector<VPBlockBase *, 4> Preds(from_range, VPBB->getPredecessors());
-    for (VPBasicBlock *PredVPBB : VPBlockUtils::blocksAs<VPBasicBlock>(Preds)) {
-      BranchProbability PredProb = Probabilities.lookup(PredVPBB);
-      BranchProbability EdgeProb = getEdgeProbability(PredVPBB, VPBB);
-      if (PredProb.isUnknown() || EdgeProb.isUnknown()) {
-        Prob = BranchProbability::getUnknown();
-        break;
+  for (VPBasicBlock *VPBB : Blocks.drop_front())
+    Probabilities[VPBB] = BranchProbability::getZero();
+
+  for (VPBasicBlock *VPBB : Blocks) {
+    BranchProbability SrcProb = Probabilities.at(VPBB);
+    for (auto [Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
+      BranchProbability &SuccProb = Probabilities.at(Succ);
+      // An unknown edge or predecessor poisons the successor: its probability
+      // is only known if all edges on paths reaching it carry branch weights.
+      if (SrcProb.isUnknown() || EdgeProb.isUnknown() || SuccProb.isUnknown()) {
+        SuccProb = BranchProbability::getUnknown();
+        continue;
       }
-      BranchProbability Contribution = PredProb * EdgeProb;
-      // Force to lowest possible probability if result gets rounded to zero.
-      if (Contribution.isZero() && !PredProb.isZero() && !EdgeProb.isZero())
+      BranchProbability Contribution = SrcProb * EdgeProb;
+      // Force to the lowest possible probability if the product gets rounded to
+      // zero, to keep reachable blocks distinguishable from unreachable ones.
+      if (Contribution.isZero() && !SrcProb.isZero() && !EdgeProb.isZero())
         Contribution = BranchProbability::getRaw(1);
-      Prob += Contribution;
+      SuccProb += Contribution;
     }
-    Probabilities[VPBB] = Prob;
   }
   return Probabilities;
 }
