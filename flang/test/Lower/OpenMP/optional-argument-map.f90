@@ -15,7 +15,7 @@ module foo
 end module foo
 
 ! CHECK-LABEL:   func.func @_QMfooPtest(
-! CHECK-SAME:                           %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "i"},
+! CHECK-SAME:                           %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only},
 ! CHECK-SAME:                           %[[VAL_1:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a", fir.optional}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_inout, optional>, uniq_name = "_QMfooFtestEa"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)

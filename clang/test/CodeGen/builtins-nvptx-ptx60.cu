@@ -89,16 +89,16 @@ __device__ void nvvm_sync(unsigned mask, int i, float f, int a, int b,
   //
 
   // CHECK: call i32 @llvm.nvvm.match.any.sync.i32(i32
-  // expected-error-re@+1 {{'__nvvm_match_any_sync_i32' needs target feature (sm_70{{.*}}),(ptx60{{.*}})}}
+  // expected-error-re@+1 {{'__nvvm_match_any_sync_i32' needs target feature {{.*}}sm_70{{.*}}ptx60}}
   __nvvm_match_any_sync_i32(mask, i);
   // CHECK: call i32 @llvm.nvvm.match.any.sync.i64(i32
-  // expected-error-re@+1 {{'__nvvm_match_any_sync_i64' needs target feature (sm_70{{.*}}),(ptx60{{.*}})}}
+  // expected-error-re@+1 {{'__nvvm_match_any_sync_i64' needs target feature {{.*}}sm_70{{.*}}ptx60}}
   __nvvm_match_any_sync_i64(mask, i64);
   // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i32p(i32
-  // expected-error-re@+1 {{'__nvvm_match_all_sync_i32p' needs target feature (sm_70{{.*}}),(ptx60{{.*}})}}
+  // expected-error-re@+1 {{'__nvvm_match_all_sync_i32p' needs target feature {{.*}}sm_70{{.*}}ptx60}}
   __nvvm_match_all_sync_i32p(mask, i, &i);
   // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i64p(i32
-  // expected-error-re@+1 {{'__nvvm_match_all_sync_i64p' needs target feature (sm_70{{.*}}),(ptx60{{.*}})}}
+  // expected-error-re@+1 {{'__nvvm_match_all_sync_i64p' needs target feature {{.*}}sm_70{{.*}}ptx60}}
   __nvvm_match_all_sync_i64p(mask, i64, &i);
 
   // CHECK: ret void

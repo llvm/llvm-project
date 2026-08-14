@@ -28,15 +28,15 @@ use omp_lib
   if (omp_get_thread_num() == 1) THEN
     ! Not allowed clauses.
     !$omp flush seq_cst
-    !ERROR: RELAXED clause is not allowed on the FLUSH directive
+    !ERROR: RELAXED clause is not allowed on FLUSH directive
     !$omp flush relaxed
 
     ! Not allowed more than once.
-    !ERROR: At most one ACQ_REL clause can appear on the FLUSH directive
+    !ERROR: At most one ACQ_REL clause can appear on FLUSH directive
     !$omp flush acq_rel acq_rel
-    !ERROR: At most one RELEASE clause can appear on the FLUSH directive
+    !ERROR: At most one RELEASE clause can appear on FLUSH directive
     !$omp flush release release
-    !ERROR: At most one ACQUIRE clause can appear on the FLUSH directive
+    !ERROR: At most one ACQUIRE clause can appear on FLUSH directive
     !$omp flush acquire acquire
 
     ! Mix of allowed and not allowed.

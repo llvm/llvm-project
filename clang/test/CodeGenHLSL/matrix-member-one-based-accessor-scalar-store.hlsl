@@ -7,6 +7,7 @@
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat11Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -23,6 +24,7 @@ void StoreScalarAtMat11(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat12Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -40,6 +42,7 @@ void StoreScalarAtMat12(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat13Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -57,6 +60,7 @@ void StoreScalarAtMat13(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat14Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -74,6 +78,7 @@ void StoreScalarAtMat14(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat21Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -91,6 +96,7 @@ void StoreScalarAtMat21(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat22Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -108,6 +114,7 @@ void StoreScalarAtMat22(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat23Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -125,6 +132,7 @@ void StoreScalarAtMat23(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat24Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -142,6 +150,7 @@ void StoreScalarAtMat24(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat31Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -159,6 +168,7 @@ void StoreScalarAtMat31(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat32Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -176,6 +186,7 @@ void StoreScalarAtMat32(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat33Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -193,6 +204,7 @@ void StoreScalarAtMat33(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat34Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -210,6 +222,7 @@ void StoreScalarAtMat34(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat41Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -227,6 +240,7 @@ void StoreScalarAtMat41(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat42Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -244,6 +258,7 @@ void StoreScalarAtMat42(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat43Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -261,6 +276,7 @@ void StoreScalarAtMat43(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z18StoreScalarAtMat44Ru11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
