@@ -16,8 +16,6 @@
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
-#include "llvm/ADT/BitmaskEnum.h"
-
 #include <asm/ptrace.h>
 
 namespace lldb_private {
@@ -81,9 +79,9 @@ protected:
   lldb::addr_t FixWatchpointHitAddress(lldb::addr_t hit_addr) override;
 
 private:
-  // Bit mask enum used to refer to the types of registers we support. Currently
-  // used for tracking cache validity and ReadAll/WriteAllRegister data. Will
-  // be used for much more in future.
+  // Enum used to refer to the types of registers we support.
+  // Is a bitmask for storage purposes but is deliberately not a BitmaskEnum
+  // because we do not want multiple values to be passed into functions.
   enum class RegisterSetType : uint32_t {
     // General purpose registers.
     GPR = 1 << 0,
@@ -112,11 +110,7 @@ private:
     GCS = 1 << 11,
     // Permission Overlay registers.
     POE = 1 << 12,
-    LLVM_MARK_AS_BITMASK_ENUM(POE),
   };
-
-  RegisterSetType m_validity = static_cast<RegisterSetType>(0);
-
   // Returns the ptrace register set number for the given register set.
   unsigned int GetPtraceSet(RegisterSetType set) const;
 
@@ -124,26 +118,20 @@ private:
 
   void *GetSetBuffer(RegisterSetType set);
 
-  void MakeValid(RegisterSetType set) { m_validity |= set; }
+  std::underlying_type_t<RegisterSetType> m_validity;
+
+  void MakeValid(RegisterSetType set) {
+    m_validity |= static_cast<std::underlying_type_t<RegisterSetType>>(set);
+  }
 
   [[nodiscard]] bool IsValid(RegisterSetType set) const {
-    return any(m_validity & set);
+    return m_validity &
+           static_cast<std::underlying_type_t<RegisterSetType>>(set);
   }
 
-  /// Returns the mask of sets that would be invalidated if the given set was
-  /// invalidated. That is, the set itself and any sets that depend on it.
-  ///
-  /// If you need anything more complex such as only invalidating during certain
-  /// modes, put that logic in the function that calls Invalidate().
-  RegisterSetType GetInvalidationMask(const RegisterSetType set) const;
-
-  /// Invalidate our saved copies of the given register sets and any sets that
-  /// depend on those sets.
-  template <typename... Ts> void Invalidate(RegisterSetType first, Ts... rest) {
-    static_assert((std::is_same_v<Ts, RegisterSetType> && ...));
-    m_validity &=
-        ~(GetInvalidationMask(first) | ... | GetInvalidationMask(rest));
-  }
+  /// Invalidate our saved copies of the given register set and any sets that
+  /// depend on that set.
+  void Invalidate(RegisterSetType set);
 
   Status RestoreRegisters(void *buffer, const uint8_t **src, size_t len,
                           const RegisterSetType set,

@@ -70,9 +70,10 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
-NativeRegisterContextLinux_arm64::RegisterSetType
-NativeRegisterContextLinux_arm64::GetInvalidationMask(
-    const RegisterSetType set) const {
+void NativeRegisterContextLinux_arm64::Invalidate(RegisterSetType set) {
+  using Mask_t = std::underlying_type_t<RegisterSetType>;
+  Mask_t to_invalidate = 0;
+
   switch (set) {
   case RegisterSetType::FPMR:
   case RegisterSetType::GPR:
@@ -81,21 +82,28 @@ NativeRegisterContextLinux_arm64::GetInvalidationMask(
   case RegisterSetType::PAC:
   case RegisterSetType::POE:
   case RegisterSetType::TLS:
-    return set;
+    to_invalidate = static_cast<Mask_t>(set);
+    break;
   case RegisterSetType::SVE_HEADER:
   case RegisterSetType::SVE:
   case RegisterSetType::FPR:
-    return RegisterSetType::SVE_HEADER | RegisterSetType::SVE |
-           // SVE registers overlap FP registers in hardware.
-           RegisterSetType::FPR;
+    // SVE registers overlap FP registers in hardware.
+    to_invalidate = static_cast<Mask_t>(RegisterSetType::SVE_HEADER) |
+                    static_cast<Mask_t>(RegisterSetType::SVE) |
+                    static_cast<Mask_t>(RegisterSetType::FPR);
+    break;
   case RegisterSetType::ZA_HEADER:
   case RegisterSetType::ZA:
   case RegisterSetType::ZT:
     // In the Linux ptrace ABI, writes that enable ZA or ZT result in
     // both ZA and ZT being enabled.
-    return RegisterSetType::ZA_HEADER | RegisterSetType::ZA |
-           RegisterSetType::ZT;
+    to_invalidate = static_cast<Mask_t>(RegisterSetType::ZA_HEADER) |
+                    static_cast<Mask_t>(RegisterSetType::ZA) |
+                    static_cast<Mask_t>(RegisterSetType::ZT);
+    break;
   }
+
+  m_validity &= ~to_invalidate;
 }
 
 unsigned int NativeRegisterContextLinux_arm64::GetPtraceSet(
@@ -1495,7 +1503,7 @@ Status NativeRegisterContextLinux_arm64::WriteFPR() {
 }
 
 void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
-  m_validity = static_cast<RegisterSetType>(0);
+  m_validity = 0;
 
   // Update SVE and ZA registers in case there is change in configuration.
   ConfigureRegisterContext();
