@@ -6,6 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
+@skipIf(bugnumber = "rdar://159675331")
 class TestSwiftForwardInteropExpressions(TestBase):
 
     def setup(self, bkpt_str):
