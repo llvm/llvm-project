@@ -45,20 +45,7 @@
 #define TASK_DETACHABLE 1
 #define TASK_UNDETACHABLE 0
 
-#define KMP_CANCEL_THREADS
 #define KMP_THREAD_ATTR
-
-// Android does not have pthread_cancel.  Undefine KMP_CANCEL_THREADS if being
-// built on Android
-#if defined(__ANDROID__)
-#undef KMP_CANCEL_THREADS
-#endif
-
-// Some WASI targets (e.g., wasm32-wasi-threads) do not support thread
-// cancellation.
-#if KMP_OS_WASI
-#undef KMP_CANCEL_THREADS
-#endif
 
 #if !KMP_OS_WASI
 #include <signal.h>
@@ -2690,6 +2677,17 @@ typedef struct kmp_taskgraph_region_dep {
   struct kmp_taskgraph_region_dep *next;
 } kmp_taskgraph_region_dep_t;
 
+enum kmp_taskgraph_region_type {
+  TASKGRAPH_REGION_ENTRY,
+  TASKGRAPH_REGION_EXIT,
+  TASKGRAPH_REGION_NODE,
+  TASKGRAPH_REGION_WAIT,
+  TASKGRAPH_REGION_PARALLEL,
+  TASKGRAPH_REGION_EXCLUSIVE,
+  TASKGRAPH_REGION_SEQUENTIAL,
+  TASKGRAPH_REGION_IRREDUCIBLE
+};
+
 typedef struct kmp_taskgraph_node {
   kmp_task_t *task;
   bool taskloop_task;
@@ -2705,58 +2703,56 @@ typedef struct kmp_taskgraph_node {
       kmp_int32 cfg_successor;
     } unresolved;
 
-    // Valid when KMP_TDG_READY in parent taskgraph record.
-    struct {
-      struct kmp_taskgraph_region *last_region;
-      kmp_int32 count;
-    } resolved;
   } u;
 } kmp_taskgraph_node_t;
 
-enum kmp_taskgraph_region_type {
-  TASKGRAPH_REGION_ENTRY,
-  TASKGRAPH_REGION_EXIT,
-  TASKGRAPH_REGION_NODE,
-  TASKGRAPH_REGION_WAIT,
-  TASKGRAPH_REGION_PARALLEL,
-  TASKGRAPH_REGION_EXCLUSIVE,
-  TASKGRAPH_REGION_SEQUENTIAL,
-  TASKGRAPH_REGION_IRREDUCIBLE
-};
-
 typedef struct kmp_taskgraph_region {
-  struct kmp_taskgraph_record *owner;
+  struct kmp_taskgraph_record *owner = nullptr;
   // Initially, the lexical "next" region (which doesn't have to be a
   // successor). Subsequently, a pointer to the next item in the worklist.
-  struct kmp_taskgraph_region *next;
+  struct kmp_taskgraph_region *next = nullptr;
   // The parent taskgraph for this one.  Initially nullptr.
-  struct kmp_taskgraph_region *parent;
-  kmp_taskgraph_region_dep_t *successors;
-  kmp_taskgraph_region_dep_t *predecessors;
+  struct kmp_taskgraph_region *parent = nullptr;
+  kmp_taskgraph_region_dep_t *successors = nullptr;
+  kmp_taskgraph_region_dep_t *predecessors = nullptr;
   // Only valid while building the exec descr structure.  This could probably
   // share storage with one of the other fields if we wanted to save space.
-  struct kmp_taskgraph_exec_descr *exec_descr;
+  struct kmp_taskgraph_exec_descr *exec_descr = nullptr;
   // The next allocated block.
   struct kmp_taskgraph_region *alloc_chain;
-  struct kmp_bitset *mutexset;
-  struct kmp_taskgraph_region *mutexset_parent;
+  struct kmp_bitset *mutexset = nullptr;
+  struct kmp_taskgraph_region *mutexset_parent = nullptr;
   // Pointer to reduction input data for the region.  We only expect to see
   // this on TASKGRAPH_REGION_PARALLEL regions.
-  kmp_taskgraph_reduce_input_data_t *reduce_input;
+  kmp_taskgraph_reduce_input_data_t *reduce_input = nullptr;
   enum kmp_taskgraph_region_type type;
-  enum kmp_taskgraph_mark mark;
-  kmp_int32 timestamp;
-  kmp_int32 level;
+  enum kmp_taskgraph_mark mark = TASKGRAPH_UNMARKED;
+  kmp_int32 timestamp = 0;
+  kmp_int32 level = -1;
   union {
     struct {
       kmp_taskgraph_node_t *node;
-      struct kmp_taskgraph_region *next_instance;
     } task;
     struct {
       struct kmp_taskgraph_region **children;
       kmp_int32 num_children;
     } inner;
   };
+  // NODE/WAIT region.
+  kmp_taskgraph_region(struct kmp_taskgraph_record *taskgraph,
+                       struct kmp_taskgraph_region **&alloc_chain,
+                       kmp_taskgraph_node_t *node,
+                       struct kmp_taskgraph_region *parent);
+  // PARALLEL, SEQUENTIAL, etc. with trailing children.
+  kmp_taskgraph_region(struct kmp_taskgraph_record *taskgraph,
+                       struct kmp_taskgraph_region **&alloc_chain,
+                       enum kmp_taskgraph_region_type type, kmp_int32 num_nodes,
+                       struct kmp_taskgraph_region *parent);
+  // Fixed size allocation for leaf nodes.
+  static void *operator new(size_t size, kmp_info_p *thread);
+  // Variable sized allocation for nodes with trailing children.
+  static void *operator new(size_t size, kmp_info_p *thread,
+                            kmp_int32 num_nodes);
 } kmp_taskgraph_region_t;
 
 typedef struct kmp_taskgraph_record {
@@ -2772,19 +2768,19 @@ typedef struct kmp_taskgraph_record {
   kmp_taskgraph_node_t *record_map = nullptr;
   kmp_int32 num_tasks = 0;
   kmp_int32 nodes_allocated = 0;
-  kmp_taskgraph_region_t *root;
-  kmp_taskgraph_region_t *alloc_root;
-  kmp_taskgraph_region_dep_t *recycled_deps;
-  kmp_int32 num_mutexes;
-  struct kmp_taskgraph_exec_descr *exec_descrs;
-  kmp_size_t exec_descr_size;
+  kmp_taskgraph_region_t *root = nullptr;
+  kmp_taskgraph_region_t *alloc_root = nullptr;
+  kmp_taskgraph_region_dep_t *recycled_deps = nullptr;
+  kmp_int32 num_mutexes = 0;
+  struct kmp_taskgraph_exec_descr *exec_descrs = nullptr;
+  kmp_size_t num_exec_descrs = 0;
   kmp_lock_t replay_lock;
   void *taskgraph_args = nullptr;
   // We need a taskgroup structure to keep track of recorded tasks.  This is
   // set to TRUE if the user requested "nogroup" on the taskgraph directive
   // (then we can avoid blocking at the end of the taskgraph region on replay,
   // at least).
-  bool nogroup_taskgroup;
+  bool nogroup_taskgroup = false;
   struct kmp_taskgraph_record *next = nullptr;
 } kmp_taskgraph_record_t;
 
@@ -2794,15 +2790,38 @@ typedef struct kmp_taskgraph_header {
   kmp_lock_t header_lock;
 } kmp_taskgraph_header_t;
 
+struct kmp_taskgraph_exec_descr_elem;
+
+// A node in the flattened host-replay dataflow DAG.  Each task/wait gets one
+// of these, and so does a "parallel" region.  The latter is where we locate
+// metadata for reductions.  Other region types are represented implicitly by
+// the indegree field and successor list.
 typedef struct kmp_taskgraph_exec_descr {
   std::atomic<kmp_int32> npredecessors;
-  std::atomic<kmp_int32> nblocks;
+  // Immutable in-degree; npredecessors is reset to this at the start of every
+  // replay (the descr buffer is built once and reused).
+  kmp_int32 indegree;
   kmp_taskgraph_region_t *region;
-  struct kmp_taskgraph_exec_descr *sibling;
-  struct kmp_taskgraph_exec_descr *predecessor_chain;
-  struct kmp_taskgraph_exec_descr *successor;
-  struct kmp_taskgraph_exec_descr *next_instance;
+  struct kmp_taskgraph_exec_descr_elem *successors;
 } kmp_taskgraph_exec_descr_t;
+
+// A single element in an exec descr list.  In the exec_descr structure, these
+// are maintained in a circular list: that means that lists can be spliced
+// together in O(1) time.
+
+typedef struct kmp_taskgraph_exec_descr_elem {
+  kmp_taskgraph_exec_descr_t *exec_descr;
+  struct kmp_taskgraph_exec_descr_elem *next;
+} kmp_taskgraph_exec_descr_elem_t;
+
+// This list type is refcounted so that we don't leak memory during e.g.
+// irreducible region traversal.
+
+typedef struct kmp_taskgraph_exec_descr_list {
+  kmp_taskgraph_exec_descr_elem_t *head;
+  kmp_int32 length;
+  kmp_int32 refcount;
+} kmp_taskgraph_exec_descr_list_t;
 
 #endif
 
@@ -3431,9 +3450,6 @@ extern int kmp_c_debug;
 extern int kmp_d_debug;
 extern int kmp_e_debug;
 extern int kmp_f_debug;
-#if OMP_TASKGRAPH_EXPERIMENTAL
-extern int kmp_g_debug;
-#endif
 #endif /* KMP_DEBUG */
 
 /* For debug information logging using rotating buffer */
@@ -4433,6 +4449,13 @@ extern kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
 extern kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
                                        kmp_taskdata_t *current_taskdata,
                                        kmp_taskgraph_record_t *taskgraph);
+extern void __kmp_region_deplist_free(kmp_info_t *thread,
+                                      kmp_taskgraph_region_dep_t *list);
+extern void __kmp_region_deplist_recycle(kmp_taskgraph_region_dep_t **recycled,
+                                         kmp_taskgraph_region_dep_t *list);
+// True if the user asked for tracing of taskgraph structure and replay via the
+// KMP_TASKGRAPH_TRACE environment variable.
+extern bool __kmp_taskgraph_trace();
 #endif
 
 KMP_EXPORT kmp_int32 __kmpc_cancel(ident_t *loc_ref, kmp_int32 gtid,

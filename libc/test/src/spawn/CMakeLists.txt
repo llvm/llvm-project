@@ -1,6 +1,6 @@
 add_custom_target(libc_spawn_unittests)
 
-add_libc_unittest(
+add_libc_test(
   posix_spawn_file_actions_test
   SUITE
     libc_spawn_unittests

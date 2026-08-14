@@ -1142,20 +1142,27 @@ Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
   if (opts::ICP == ICP_NONE)
     return Error::success();
 
-  if (!BC.isX86()) {
-    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+  if (!BC.isX86() && !BC.isAArch64()) {
+    BC.errs() << "BOLT-ERROR: " << getName()
+              << " is supported only on X86 and AArch64\n";
     exit(1);
   }
 
   auto &BFs = BC.getBinaryFunctions();
 
   const bool OptimizeCalls = (opts::ICP == ICP_CALLS || opts::ICP == ICP_ALL);
+  if (BC.isAArch64() && opts::ICP == ICP_JUMP_TABLES) {
+    BC.errs()
+        << "BOLT-ERROR: ICP jump table promotion is disabled on AArch64\n";
+    exit(1);
+  }
+
   const bool OptimizeJumpTables =
-      (opts::ICP == ICP_JUMP_TABLES || opts::ICP == ICP_ALL);
+      (opts::ICP == ICP_JUMP_TABLES || opts::ICP == ICP_ALL) && !BC.isAArch64();
 
   std::unique_ptr<RegAnalysis> RA;
   std::unique_ptr<BinaryFunctionCallGraph> CG;
-  if (OptimizeJumpTables) {
+  if (OptimizeJumpTables || BC.isAArch64()) {
     CG.reset(new BinaryFunctionCallGraph(buildCallGraph(BC)));
     RA.reset(new RegAnalysis(BC, &BFs, &*CG));
   }
@@ -1369,14 +1376,28 @@ Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
           MethodInfo.second.push_back(TargetFetchInst);
         }
 
+        MCPhysReg Reg = 0;
+        if (BC.isAArch64()) {
+          Reg = Info.getLivenessAnalysis().scavengeRegAfter(&Inst);
+          LLVM_DEBUG({
+            dbgs() << "BOLT-DEBUG: ICP ";
+            if (Reg)
+              dbgs() << "found the free register " << BC.MRI->getName(Reg);
+            else
+              dbgs() << "could not find a free register";
+            dbgs() << " to save function address.\n";
+          });
+        }
+
         // Generate new promoted call code for this callsite.
         MCPlusBuilder::BlocksVectorTy ICPcode =
             (IsJumpTable && !opts::ICPJumpTablesByTarget)
                 ? BC.MIB->jumpTablePromotion(Inst, SymTargets,
                                              MethodInfo.second, BC.Ctx.get())
                 : BC.MIB->indirectCallPromotion(
-                      Inst, SymTargets, MethodInfo.first, MethodInfo.second,
-                      opts::ICPOldCodeSequence, BC.Ctx.get());
+                      Inst, Reg, SymTargets, MethodInfo.first,
+                      MethodInfo.second, opts::ICPOldCodeSequence,
+                      BC.Ctx.get());
 
         if (ICPcode.empty()) {
           if (opts::Verbosity >= 1)

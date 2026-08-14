@@ -171,10 +171,12 @@
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
 ///
-/// LLVM_ABI_FOR_TEST is for annotating symbols that are only exported because
-/// they are imported from a test. These symbols are not technically part of the
-/// LLVM public interface and could be conditionally excluded when not building
-/// tests in the future.
+/// LLVM_ABI_FOR_TEST is for annotating symbols that are exported from a
+/// library-internal header solely so that unit tests can link against them.
+/// Symbols in LLVM's public headers are part of the LLVM public interface and
+/// should use LLVM_ABI. LLVM_ABI_FOR_TEST is reserved for internal headers,
+/// whose symbols could be conditionally excluded when not building tests in the
+/// future.
 ///
 #ifndef LLVM_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
@@ -234,6 +236,12 @@
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else
 #define LLVM_ATTRIBUTE_USED
+#endif
+
+#if __has_attribute(warn_unused)
+#define LLVM_ATTRIBUTE_WARN_UNUSED __attribute__((warn_unused))
+#else
+#define LLVM_ATTRIBUTE_WARN_UNUSED
 #endif
 
 // Only enabled for clang:
@@ -354,6 +362,15 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE __forceinline
 #else
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
+#endif
+
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG - Like
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE but disabled in debug builds to avoid stack
+/// overflow with deep recursion.
+#if defined(NDEBUG)
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG LLVM_ATTRIBUTE_ALWAYS_INLINE
+#else
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG inline
 #endif
 
 /// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
@@ -761,5 +778,37 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
     virtual void anchor()
 #endif
 // clang-format on
+
+/// \macro LLVM_IS_X86
+/// Whether the target architecture is x86 / x86-64.
+#if defined(__x86_64__) || defined(__i386__)
+#define LLVM_IS_X86 1
+#else
+#define LLVM_IS_X86 0
+#endif
+
+/// \macro LLVM_TARGET_SSE42
+/// Function attribute to compile a function with SSE4.2 enabled.
+#if defined(__has_attribute) && __has_attribute(target)
+#define LLVM_TARGET_SSE42 __attribute__((target("sse4.2")))
+#else
+#define LLVM_TARGET_SSE42
+#endif
+
+#if __has_builtin(__builtin_cpu_supports) &&                                   \
+    (defined(__linux__) || defined(__APPLE__))
+#define LLVM_CPU_SUPPORTS(feature) __builtin_cpu_supports(feature)
+#else
+#define LLVM_CPU_SUPPORTS(feature) 0
+#endif
+
+/// \macro LLVM_CPU_SUPPORTS_SSE42
+/// Expands to true if the runtime cpu supports SSE4.2, or if compiled with
+/// SSE4.2 enabled.
+#if defined(__SSE4_2__)
+#define LLVM_CPU_SUPPORTS_SSE42 1
+#else
+#define LLVM_CPU_SUPPORTS_SSE42 LLVM_CPU_SUPPORTS("sse4.2")
+#endif
 
 #endif

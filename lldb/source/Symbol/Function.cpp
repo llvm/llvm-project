@@ -59,10 +59,6 @@ const Declaration &FunctionInfo::GetDeclaration() const {
 
 ConstString FunctionInfo::GetName() const { return m_name; }
 
-size_t FunctionInfo::MemorySize() const {
-  return m_name.MemorySize() + m_declaration.MemorySize();
-}
-
 InlineFunctionInfo::InlineFunctionInfo(const char *name,
                                        llvm::StringRef mangled,
                                        const Declaration *decl_ptr,
@@ -115,10 +111,6 @@ const Declaration &InlineFunctionInfo::GetCallSite() const {
 Mangled &InlineFunctionInfo::GetMangled() { return m_mangled; }
 
 const Mangled &InlineFunctionInfo::GetMangled() const { return m_mangled; }
-
-size_t InlineFunctionInfo::MemorySize() const {
-  return FunctionInfo::MemorySize() + m_mangled.MemorySize();
-}
 
 /// @name Call site related structures
 /// @{
@@ -235,6 +227,13 @@ Function *IndirectCallEdge::GetCallee(ModuleList &images,
     return nullptr;
   }
 
+  if (auto *process = exe_ctx.GetProcessPtr()) {
+    raw_addr = process->FixCodeAddress(raw_addr);
+  } else {
+    LLDB_LOG(log, "IndirectCallEdge: No Process available, unable to call "
+                  "FixCodeAddress on function pointer");
+  }
+
   Address callee_addr;
   if (!exe_ctx.GetTargetPtr()->ResolveLoadAddress(raw_addr, callee_addr)) {
     LLDB_LOG(log, "IndirectCallEdge: Could not resolve callee's load address");
@@ -270,6 +269,34 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
 
 Function::~Function() = default;
 
+bool Function::GetStartLineTableEntry(LineEntry &line_entry, uint32_t *index) {
+  LineTable *line_table = m_comp_unit ? m_comp_unit->GetLineTable() : nullptr;
+  if (line_table == nullptr)
+    return false;
+
+  uint32_t line_entry_idx = UINT32_MAX;
+  if (line_table->FindLineEntryByAddress(GetAddress(), line_entry,
+                                         &line_entry_idx)) {
+    if (index)
+      *index = line_entry_idx;
+    return true;
+  }
+
+  // The entry point has no line row (e.g. a WebAssembly function's
+  // locals-declaration header), so take the first row inside the function.
+  AddressRange entry_range;
+  if (!m_block.GetRangeContainingAddress(m_address, entry_range))
+    return false;
+  auto [first, last] = line_table->GetLineEntryIndexRange(entry_range);
+  if (first == last)
+    return false;
+  if (!line_table->GetLineEntryAtIndex(first, line_entry))
+    return false;
+  if (index)
+    *index = first;
+  return true;
+}
+
 void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                                       uint32_t &line_no) {
   line_no = 0;
@@ -286,12 +313,8 @@ void Function::GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
         std::make_shared<SupportFile>(m_type->GetDeclaration().GetFile());
     line_no = m_type->GetDeclaration().GetLine();
   } else {
-    LineTable *line_table = m_comp_unit->GetLineTable();
-    if (line_table == nullptr)
-      return;
-
     LineEntry line_entry;
-    if (line_table->FindLineEntryByAddress(GetAddress(), line_entry, nullptr)) {
+    if (GetStartLineTableEntry(line_entry)) {
       line_no = line_entry.line;
       source_file_sp = line_entry.file_sp;
     }
@@ -502,11 +525,6 @@ void Function::DumpSymbolContext(Stream *s) {
   s->Printf(", Function{0x%8.8" PRIx64 "}", GetID());
 }
 
-size_t Function::MemorySize() const {
-  size_t mem_size = sizeof(Function) + m_block.MemorySize();
-  return mem_size;
-}
-
 bool Function::GetIsOptimized() {
   bool result = false;
 
@@ -583,8 +601,10 @@ uint32_t Function::GetPrologueByteSize() {
     if (line_table) {
       LineEntry first_line_entry;
       uint32_t first_line_entry_idx = UINT32_MAX;
-      if (line_table->FindLineEntryByAddress(GetAddress(), first_line_entry,
-                                             &first_line_entry_idx)) {
+      bool found_first_line_entry =
+          GetStartLineTableEntry(first_line_entry, &first_line_entry_idx);
+
+      if (found_first_line_entry) {
         // Make sure the first line entry isn't already the end of the prologue
         addr_t prologue_end_file_addr = LLDB_INVALID_ADDRESS;
         addr_t line_zero_end_file_addr = LLDB_INVALID_ADDRESS;

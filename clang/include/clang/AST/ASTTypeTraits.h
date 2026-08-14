@@ -109,12 +109,6 @@ public:
   /// Hooks for using ASTNodeKind as a key in a DenseMap.
   struct DenseMapInfo {
     // ASTNodeKind() is a good empty key because it is represented as a 0.
-    static inline ASTNodeKind getEmptyKey() { return ASTNodeKind(); }
-    // NKI_NumberOfKinds is not a valid value, so it is good for a
-    // tombstone key.
-    static inline ASTNodeKind getTombstoneKey() {
-      return ASTNodeKind(NKI_NumberOfKinds);
-    }
     static unsigned getHashValue(const ASTNodeKind &Val) { return Val.KindId; }
     static bool isEqual(const ASTNodeKind &LHS, const ASTNodeKind &RHS) {
       return LHS.KindId == RHS.KindId;
@@ -374,16 +368,6 @@ public:
 
   /// Hooks for using DynTypedNode as a key in a DenseMap.
   struct DenseMapInfo {
-    static inline DynTypedNode getEmptyKey() {
-      DynTypedNode Node;
-      Node.NodeKind = ASTNodeKind::DenseMapInfo::getEmptyKey();
-      return Node;
-    }
-    static inline DynTypedNode getTombstoneKey() {
-      DynTypedNode Node;
-      Node.NodeKind = ASTNodeKind::DenseMapInfo::getTombstoneKey();
-      return Node;
-    }
     static unsigned getHashValue(const DynTypedNode &Val) {
       // FIXME: Add hashing support for the remaining types.
       if (ASTNodeKind::getFromNodeKind<TypeLoc>().isBaseOf(Val.NodeKind)) {
@@ -404,13 +388,7 @@ public:
       return llvm::hash_value(Val.getMemoizationData());
     }
     static bool isEqual(const DynTypedNode &LHS, const DynTypedNode &RHS) {
-      auto Empty = ASTNodeKind::DenseMapInfo::getEmptyKey();
-      auto TombStone = ASTNodeKind::DenseMapInfo::getTombstoneKey();
-      return (ASTNodeKind::DenseMapInfo::isEqual(LHS.NodeKind, Empty) &&
-              ASTNodeKind::DenseMapInfo::isEqual(RHS.NodeKind, Empty)) ||
-             (ASTNodeKind::DenseMapInfo::isEqual(LHS.NodeKind, TombStone) &&
-              ASTNodeKind::DenseMapInfo::isEqual(RHS.NodeKind, TombStone)) ||
-             LHS == RHS;
+      return LHS == RHS;
     }
   };
 

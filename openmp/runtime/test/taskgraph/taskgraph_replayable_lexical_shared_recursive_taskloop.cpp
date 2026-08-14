@@ -2,7 +2,6 @@
 // RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t
 // RUN: env OMP_NUM_THREADS=4 %libomp-run 2>&1 | FileCheck %s
 // REQUIRES: omp_taskgraph_experimental
-// XFAIL: *
 // clang-format on
 
 #include <cstdio>
@@ -58,17 +57,16 @@ int main() {
 
   if (first == expected_first && second == expected_second) {
     std::fprintf(stderr,
-                 "UNEXPECTED SUCCESS lexical recursive taskloop replay "
-                 "first=%d second=%d expected=%d/%d\n",
-                 first, second, expected_first, expected_second);
+                 "PASS lexical recursive taskloop replay first=%d second=%d\n",
+                 first, second);
     return 0;
   }
 
   std::fprintf(stderr,
-               "EXPECTED FAILURE lexical recursive taskloop replay first=%d "
-               "second=%d expected=%d/%d\n",
+               "FAIL lexical recursive taskloop replay first=%d second=%d "
+               "expected=%d/%d\n",
                first, second, expected_first, expected_second);
   return 1;
 }
 
-// CHECK: EXPECTED FAILURE lexical recursive taskloop replay
+// CHECK: PASS lexical recursive taskloop replay

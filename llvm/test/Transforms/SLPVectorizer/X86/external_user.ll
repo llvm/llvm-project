@@ -39,7 +39,7 @@ define double @ext_user(ptr noalias nocapture %B, ptr noalias nocapture %A, i32 
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    ret double [[TMP7]]
 ;
 entry:
