@@ -827,10 +827,9 @@ public:
 
 #  if _LIBCPP_STD_VER >= 23
 
-  template <class _Kp>
-    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
-             !is_convertible_v<_Kp &&, const_iterator>)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(_Kp&& __kp) {
+  template <class _K2>
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_K2, iterator> && !is_convertible_v<_K2, const_iterator>)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(_K2&& __kp) {
     return __tree_.__erase_unique(__kp);
   }
 
@@ -858,10 +857,9 @@ public:
 
 #    if _LIBCPP_STD_VER >= 23
 
-  template <class _Kp>
-    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
-             !is_convertible_v<_Kp &&, const_iterator>)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_Kp&& __kp) {
+  template <class _K2>
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_K2, iterator> && !is_convertible_v<_K2, const_iterator>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_K2&& __kp) {
     return __tree_.template __node_handle_extract<node_type>(__kp);
   }
 
@@ -1406,10 +1404,9 @@ public:
 
 #  if _LIBCPP_STD_VER >= 23
 
-  template <class _Kp>
-    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
-             !is_convertible_v<_Kp &&, const_iterator>)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(_Kp&& __kp) {
+  template <class _K2>
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_K2, iterator> && !is_convertible_v<_K2, const_iterator>)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type erase(_K2&& __kp) {
     return __tree_.__erase_multi(__kp);
   }
 
@@ -1437,10 +1434,9 @@ public:
 
 #    if _LIBCPP_STD_VER >= 23
 
-  template <class _Kp>
-    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
-             !is_convertible_v<_Kp &&, const_iterator>)
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_Kp&& __kp) {
+  template <class _K2>
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_K2, iterator> && !is_convertible_v<_K2, const_iterator>)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(_K2&& __kp) {
     return __tree_.template __node_handle_extract<node_type>(__kp);
   }
 

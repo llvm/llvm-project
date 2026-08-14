@@ -11,12 +11,13 @@
 
 #include "test_macros.h"
 
+#if TEST_STD_VER < 23
+#  error "This header is supported only since C++23"
+#endif // TEST_STD_VER < 23
+
 #include <cassert>
-
-#if TEST_STD_VER >= 23
-
-#  include <concepts>
-#  include <type_traits>
+#include <concepts>
+#include <type_traits>
 
 template <typename T>
 struct StoredType;
@@ -139,7 +140,5 @@ constexpr void test_non_transparent_extract(Container c) {
   assert(c.extract(SearchedType<int>(3, &conversions)).empty());
   assert(conversions == 3);
 }
-
-#endif // TEST_STD_VER >= 23
 
 #endif // TEST_TRANSPARENT_ASSOCIATIVE_H
