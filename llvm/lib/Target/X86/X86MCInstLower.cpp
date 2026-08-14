@@ -595,6 +595,47 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
             .addReg(0));
   } else if (Is64Bits) {
     bool NeedsPadding = Specifier == X86::S_TLSGD;
+    const MCSymbol *TlsGetAddr = Ctx.getOrCreateSymbol("__tls_get_addr");
+    if (Is64BitsLP64 && getSubtarget().isTargetELF() &&
+        TM.getCodeModel() == CodeModel::Large && !TM.useTLSDESC()) {
+      MCSymbol *PICBase = Ctx.createTempSymbol();
+      OutStreamer->emitLabel(PICBase);
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::LEA64r)
+              .addReg(X86::R11)
+              .addReg(X86::RIP)
+              .addImm(1)
+              .addReg(0)
+              .addExpr(MCSymbolRefExpr::create(PICBase, Ctx))
+              .addReg(0));
+      const MCExpr *GOT = MCSymbolRefExpr::create(
+          Ctx.getOrCreateSymbol("_GLOBAL_OFFSET_TABLE_"), Ctx);
+      const MCExpr *GOTOffset = MCBinaryExpr::createSub(
+          GOT, MCSymbolRefExpr::create(PICBase, Ctx), Ctx);
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::MOV64ri).addReg(X86::RAX).addExpr(GOTOffset));
+      EmitAndCountInstruction(MCInstBuilder(X86::ADD64rr)
+                                  .addReg(X86::R11)
+                                  .addReg(X86::R11)
+                                  .addReg(X86::RAX));
+      EmitAndCountInstruction(MCInstBuilder(X86::LEA64r)
+                                  .addReg(X86::RDI)
+                                  .addReg(X86::RIP)
+                                  .addImm(1)
+                                  .addReg(0)
+                                  .addExpr(Sym)
+                                  .addReg(0));
+      const MCExpr *Callee =
+          MCSymbolRefExpr::create(TlsGetAddr, X86::S_PLTOFF, Ctx);
+      EmitAndCountInstruction(
+          MCInstBuilder(X86::MOV64ri).addReg(X86::RAX).addExpr(Callee));
+      EmitAndCountInstruction(MCInstBuilder(X86::ADD64rr)
+                                  .addReg(X86::RAX)
+                                  .addReg(X86::RAX)
+                                  .addReg(X86::R11));
+      EmitAndCountInstruction(MCInstBuilder(X86::CALL64r).addReg(X86::RAX));
+      return;
+    }
     if (NeedsPadding && Is64BitsLP64)
       EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
     EmitAndCountInstruction(MCInstBuilder(X86::LEA64r)
@@ -604,7 +645,6 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                 .addReg(0)
                                 .addExpr(Sym)
                                 .addReg(0));
-    const MCSymbol *TlsGetAddr = Ctx.getOrCreateSymbol("__tls_get_addr");
     if (NeedsPadding) {
       if (!UseGot)
         EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
