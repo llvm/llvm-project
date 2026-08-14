@@ -3455,6 +3455,33 @@ getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   return Name;
 }
 
+static void emitFeatureCheck(raw_ostream &OS,
+                             bool ReportMultipleNearMisses) {
+  OS << "    if (!HasRequiredFeatures) {\n";
+  if (!ReportMultipleNearMisses)
+    OS << "      HadMatchOtherThanFeatures = true;\n";
+
+  OS << "      FeatureBitset NewMissingFeatures = RequiredFeatures & "
+        "~AvailableFeatures;\n";
+  OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target "
+        "features:\";\n";
+  OS << "                      for (unsigned I = 0, E = "
+        "NewMissingFeatures.size(); I != E; ++I)\n";
+  OS << "                        if (NewMissingFeatures[I])\n";
+  OS << "                          dbgs() << ' ' << I;\n";
+  OS << "                      dbgs() << \"\\n\");\n";
+  if (ReportMultipleNearMisses) {
+    OS << "      FeaturesNearMiss = "
+          "NearMissInfo::getMissedFeature(NewMissingFeatures);\n";
+  } else {
+    OS << "      if (NewMissingFeatures.count() <=\n"
+          "          MissingFeatures.count())\n";
+    OS << "        MissingFeatures = NewMissingFeatures;\n";
+    OS << "      continue;\n";
+  }
+  OS << "    }\n";
+}
+
 void AsmMatcherEmitter::run(raw_ostream &OS) {
   CodeGenTarget Target(Records);
   const Record *AsmParser = Target.getAsmParser();
@@ -3524,6 +3551,14 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       AsmParser->getValueAsBit("ReportMultipleNearMisses");
   bool PrioritizeFeatureInMultipleNearMisses =
       AsmParser->getValueAsBit("PrioritizeFeatureInMultipleNearMisses");
+
+  if (PrioritizeFeatureInMultipleNearMisses &&
+      !ReportMultipleNearMisses) {
+    PrintFatalError(
+        AsmParser->getLoc(),
+        "'PrioritizeFeatureInMultipleNearMisses' requires "
+        "'ReportMultipleNearMisses' to be set");
+  }
 
   // Write the output.
 
@@ -4117,20 +4152,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (ReportMultipleNearMisses && PrioritizeFeatureInMultipleNearMisses) {
-    // Emit check that the required features are available.
-    OS << "    if (!HasRequiredFeatures) {\n";
-    OS << "      FeatureBitset NewMissingFeatures = RequiredFeatures & "
-          "~AvailableFeatures;\n";
-    OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target "
-          "features:\";\n";
-    OS << "                      for (unsigned I = 0, E = "
-          "NewMissingFeatures.size(); I != E; ++I)\n";
-    OS << "                        if (NewMissingFeatures[I])\n";
-    OS << "                          dbgs() << ' ' << I;\n";
-    OS << "                      dbgs() << \"\\n\");\n";
-    OS << "      FeaturesNearMiss = "
-          "NearMissInfo::getMissedFeature(NewMissingFeatures);\n";
-    OS << "    }\n";
+    emitFeatureCheck(OS, ReportMultipleNearMisses);
   }
 
   if (ReportMultipleNearMisses) {
@@ -4164,30 +4186,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    }\n";
 
   if (!PrioritizeFeatureInMultipleNearMisses) {
-    // Emit check that the required features are available.
-    OS << "    if (!HasRequiredFeatures) {\n";
-    if (!ReportMultipleNearMisses) {
-      OS << "      HadMatchOtherThanFeatures = true;\n";
-    }
-    OS << "      FeatureBitset NewMissingFeatures = RequiredFeatures & "
-          "~AvailableFeatures;\n";
-    OS << "      DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"Missing target "
-          "features:\";\n";
-    OS << "                      for (unsigned I = 0, E = "
-          "NewMissingFeatures.size(); I != E; ++I)\n";
-    OS << "                        if (NewMissingFeatures[I])\n";
-    OS << "                          dbgs() << ' ' << I;\n";
-    OS << "                      dbgs() << \"\\n\");\n";
-    if (ReportMultipleNearMisses) {
-      OS << "      FeaturesNearMiss = "
-            "NearMissInfo::getMissedFeature(NewMissingFeatures);\n";
-    } else {
-      OS << "      if (NewMissingFeatures.count() <=\n"
-            "          MissingFeatures.count())\n";
-      OS << "        MissingFeatures = NewMissingFeatures;\n";
-      OS << "      continue;\n";
-    }
-    OS << "    }\n";
+    emitFeatureCheck(OS, ReportMultipleNearMisses);
   }
 
   OS << "\n";
