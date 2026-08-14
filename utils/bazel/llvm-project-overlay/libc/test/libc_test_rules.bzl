@@ -61,6 +61,7 @@ def libc_test(
     else:
         deps = deps + ["//libc/test/UnitTest:LibcUnitTest"]
 
+    tags = kwargs.pop("tags", [])
     if full_build:
         copts = copts + _FULL_BUILD_COPTS
 
@@ -72,6 +73,7 @@ def libc_test(
         deps = deps,
         copts = copts + libc_common_copts(),
         linkstatic = 1,
+        tags = tags,
         **kwargs
     )
 
