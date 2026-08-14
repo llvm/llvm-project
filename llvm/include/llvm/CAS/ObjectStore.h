@@ -30,6 +30,7 @@ namespace cas {
 
 class ObjectStore;
 class ObjectProxy;
+class ActionCache;
 
 /// Content-addressable storage for objects.
 ///
@@ -87,7 +88,7 @@ class ObjectProxy;
 ///   long as \a ObjectStore.
 /// - \a readRef() and \a forEachRef() iterate through the references in an
 ///   object. There is no lifetime assumption.
-class ObjectStore {
+class LLVM_ABI ObjectStore {
   friend class ObjectProxy;
   void anchor();
 
@@ -200,8 +201,7 @@ protected:
 
 public:
   /// Helper functions to store object and returns a ObjectProxy.
-  LLVM_ABI_FOR_TEST Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs,
-                                                      StringRef Data);
+  Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs, StringRef Data);
 
   /// Store object from StringRef.
   Expected<ObjectRef> storeFromString(ArrayRef<ObjectRef> Refs,
@@ -227,10 +227,10 @@ public:
   static Error createUnknownObjectError(const CASID &ID);
 
   /// Create ObjectProxy from CASID. If the object doesn't exist, get an error.
-  LLVM_ABI Expected<ObjectProxy> getProxy(const CASID &ID);
+  Expected<ObjectProxy> getProxy(const CASID &ID);
   /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an
   /// error.
-  LLVM_ABI Expected<ObjectProxy> getProxy(ObjectRef Ref);
+  Expected<ObjectProxy> getProxy(ObjectRef Ref);
 
   /// \returns \c std::nullopt if the object is missing from the CAS.
   Expected<std::optional<ObjectProxy>> getProxyIfExists(ObjectRef Ref);
@@ -272,8 +272,7 @@ public:
 
   /// Import object from another CAS. This will import the full tree from the
   /// other CAS.
-  LLVM_ABI Expected<ObjectRef> importObject(ObjectStore &Upstream,
-                                            ObjectRef Other);
+  Expected<ObjectRef> importObject(ObjectStore &Upstream, ObjectRef Other);
 
   /// Print the ObjectStore internals for debugging purpose.
   virtual void print(raw_ostream &) const {}
@@ -315,7 +314,7 @@ public:
     return CAS->forEachRef(H, Callback);
   }
 
-  std::unique_ptr<MemoryBuffer>
+  LLVM_ABI std::unique_ptr<MemoryBuffer>
   getMemoryBuffer(StringRef Name = "",
                   bool RequiresNullTerminator = true) const;
 
@@ -360,11 +359,25 @@ private:
 LLVM_ABI std::unique_ptr<ObjectStore> createInMemoryCAS();
 
 /// \returns true if \c LLVM_ENABLE_ONDISK_CAS configuration was enabled.
-bool isOnDiskCASEnabled();
+LLVM_ABI bool isOnDiskCASEnabled();
 
 /// Create a persistent on-disk path at \p Path.
 LLVM_ABI Expected<std::unique_ptr<ObjectStore>>
 createOnDiskCAS(const Twine &Path);
+
+/// Create \c ObjectStore and \c ActionCache instances backed by a plugin that
+/// implements the C API in \c "llvm-c/CAS/PluginAPI_functions.h".
+///
+/// \param PluginPath path of the dynamic library to load.
+/// \param OnDiskPath local path that the plugin should use for any on-disk
+/// resources/caches.
+/// \param PluginArgs name/value pairs passed to the plugin as custom options;
+/// they are opaque to the client.
+LLVM_ABI Expected<
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+createPluginCASDatabases(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs);
 
 } // namespace cas
 } // namespace llvm

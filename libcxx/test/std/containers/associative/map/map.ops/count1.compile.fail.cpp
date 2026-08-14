@@ -30,4 +30,6 @@ int main(int, char**) {
 
     TEST_IGNORE_NODISCARD M().count(C2Int{5});
   }
+
+  return 0;
 }

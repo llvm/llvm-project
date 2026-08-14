@@ -132,7 +132,7 @@ define half @phi_f16(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi half [ 0xHE3CE, %a ], [ 0xH5144, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi half [ -9.990000e+02, %a ], [ 4.212500e+01, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret half %x
 ;
   br i1 %c, label %a, label %b

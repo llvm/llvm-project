@@ -12,6 +12,7 @@
 
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__format/buffer.h>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
@@ -25,8 +26,9 @@
 #include <__variant/monostate.h>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
-#  include <optional>
+#  include <__locale_dir/locale.h>
+#  include <__optional/nullopt_t.h>
+#  include <__optional/optional.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
