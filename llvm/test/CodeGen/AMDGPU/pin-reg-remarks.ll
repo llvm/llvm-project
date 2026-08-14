@@ -1,23 +1,18 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -pass-remarks-missed=si-pre-color-pins \
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -pass-remarks-missed=si-pin-regs \
 ; RUN:   < %s 2>&1 | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -amdgpu-hard-pin-regs=false \
-; RUN:   -pass-remarks-missed=si-pre-color-pins < %s 2>&1 | FileCheck %s \
-; RUN:   -check-prefix=HINTS
 
-; Nothing in the source says which values a pin can be honored for, so a pin
-; that falls back to a hint, or is dropped outright, is reported rather than
-; left for the user to spot in the disassembly. Asking for hints only is a
-; choice, not a fallback, so it is silent.
+; A pin is a hint, so a value the allocator places elsewhere is not reported --
+; there is nothing the user could do about it. A pin that cannot be turned into
+; a hint at all is reported, since nothing in the source says why it was
+; dropped.
 
 declare <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32>, i32 immarg)
 declare <4 x i32> @llvm.amdgcn.pin.vgpr.v4i32(<4 x i32>, i32 immarg)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x float>, i1, i1)
 
-; A loop-carried accumulator reaches its pin through a PHI, which pre-coloring
-; cannot rewrite -- a physreg PHI operand crashes before PHIElimination lowers
-; it -- so the pin degrades to a hint.
-; CHECK: remark: {{.*}} pin to v108 is a hint rather than a fixed assignment: PHI use
-; HINTS-NOT: remark:
+; A loop-carried accumulator reaches its pin through a PHI. A hint covers the
+; whole chain, so this is silent.
+; CHECK-NOT: remark:
 define amdgpu_kernel void @pin_through_phi(ptr addrspace(1) %o, ptr addrspace(1) %p) {
 entry:
   %z = load <8 x i32>, ptr addrspace(1) %p, align 32
@@ -36,9 +31,10 @@ exit:
   ret void
 }
 
-; An odd start for a 4-VGPR value names no aligned tuple, so there is nothing
-; to place it in and the pin is dropped.
+; An odd start for a 4-VGPR value names no aligned tuple, so there is nothing to
+; hint at and the pin is dropped.
 ; CHECK: remark: {{.*}} pin to v101 was dropped: no register tuple of this width and alignment starts there
+; CHECK-NOT: remark:
 define amdgpu_kernel void @pin_to_unaligned(ptr addrspace(1) %o, <4 x i32> %v) {
   %p = call <4 x i32> @llvm.amdgcn.pin.vgpr.v4i32(<4 x i32> %v, i32 101)
   store <4 x i32> %p, ptr addrspace(1) %o

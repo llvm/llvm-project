@@ -423,8 +423,8 @@ foreach Op = Operations in {
 }
 
 // Register-pinning hints, one pseudo per register width. Expanded by the
-// SIPreColorPins pass (pre-RA, in SSA form) into either a hard physical-register
-// assignment or a soft COPY + allocation hint for the numbered VGPR/AGPR tuple.
+// SIPinRegisters pass (pre-RA, in SSA form) into a COPY plus an allocation
+// hint naming the numbered VGPR/AGPR tuple.
 class PinPseudo<RegisterClass DstRC, RegisterClass SrcRC> :
   VPseudoInstSI <(outs DstRC:$vdst), (ins SrcRC:$src, i32imm:$regno), []> {
   let hasSideEffects = 0;

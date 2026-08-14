@@ -831,7 +831,7 @@ value may be of any type occupying a whole number of 32-bit registers.
 This is a request, not a guarantee: a value the allocator cannot place there is
 placed elsewhere and the program stays correct. Which requests were met is not
 apparent from the source, so the compiler reports the ones it could not meet
-under ``-Rpass-missed=si-pre-color-pins``.
+under ``-Rpass-missed=si-pin-regs``.
 
 Two things decide whether a request can be met. The tuple must be legal for the
 value's width and alignment, and it must be within the VGPR budget the kernel's

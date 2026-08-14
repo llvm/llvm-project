@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs -amdgpu-hard-pin-regs=0 < %s | FileCheck -check-prefixes=SOFT %s
 
 ; Tests for the llvm.amdgcn.pin.{vgpr,agpr} register-pinning intrinsics.
 
@@ -17,9 +16,6 @@ declare <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 
 ; CHECK: global_load_{{.*}} a[
 ; CHECK-NOT: v_accvgpr
 ; CHECK: v_mfma_f32_16x16x16_f16 {{[va]}}[{{[0-9:]+}}], a[{{[0-9:]+}}], a[{{[0-9:]+}}]
-; The pin is honored even with hard pinning disabled (soft allocation hint).
-; SOFT-LABEL: {{^}}pin_agpr_input:
-; SOFT: v_mfma_f32_16x16x16_f16
 define amdgpu_kernel void @pin_agpr_input(ptr addrspace(1) %pa, ptr addrspace(1) %pb, ptr addrspace(1) %pc) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %ga = getelementptr <4 x half>, ptr addrspace(1) %pa, i32 %tid
@@ -74,10 +70,9 @@ define amdgpu_kernel void @pin_shared_load(ptr addrspace(1) %p, ptr addrspace(1)
 }
 
 ; A wide (8-dword) AGPR pin whose value is a REG_SEQUENCE of subregister slices
-; of wider loads must not crash: the hard-pin load-tuple fast path bails and the
-; pass falls back to soft, still placing the inputs in AGPRs (checked here via
-; the scaled f8f6f4 MFMA, whose fp8/fp4 A/B are eight dwords). verify-machineinstrs
-; in the RUN line guards against malformed liveness.
+; of wider loads must not crash, and still places the inputs in AGPRs (checked
+; here via the scaled f8f6f4 MFMA, whose fp8/fp4 A/B are eight dwords).
+; verify-machineinstrs in the RUN line guards against malformed liveness.
 ; CHECK-LABEL: {{^}}pin_agpr_wide:
 ; CHECK: global_load_{{.*}} a[
 ; CHECK: v_mfma_f32_16x16x128_f8f6f4 v[{{[0-9:]+}}], a[{{[0-9:]+}}], a[

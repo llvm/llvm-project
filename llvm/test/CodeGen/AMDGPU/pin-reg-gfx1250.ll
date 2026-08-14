@@ -1,9 +1,14 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK %s
 
-; gfx1250 has 1024 addressable VGPRs. A pin to a VGPR index >= 256 must be
-; honored: the value is placed in the requested high tuple (reachable via the
-; S_SET_VGPR_MSB addressing mode) and the VGPR count / occupancy cap grows to
-; cover the pinned range.
+; gfx1250 has 1024 addressable VGPRs. A pin to a VGPR index >= 256 is honored --
+; the value is placed in the requested high tuple, reachable via the
+; S_SET_VGPR_MSB addressing mode -- provided the tuple is inside the kernel's
+; VGPR budget. A pin is a hint, and the allocation order stops at the budget the
+; kernel's occupancy allows, so a high pin needs the kernel to declare that
+; budget (amdgpu-num-vgpr plus a work-group size and waves-per-EU that leave
+; room for it, i.e. __launch_bounds__ + __attribute__((amdgpu_num_vgpr))).
+; Without the declaration the tuple is not in the order and the value is placed
+; normally. That is attributes #0 below, on the kernels that pin above 256.
 
 declare <4 x float> @llvm.amdgcn.pin.vgpr.v4f32(<4 x float>, i32 immarg)
 declare <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32>, i32 immarg)
@@ -14,21 +19,19 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK: s_set_vgpr_msb
 ; CHECK: v[{{[0-9:]+}}] /*v[300:303]*/
 ; CHECK: .set .Lpin_high_vgpr.num_vgpr, 304
-define amdgpu_kernel void @pin_high_vgpr(ptr addrspace(1) %p) {
+define amdgpu_kernel void @pin_high_vgpr(ptr addrspace(1) %p) #0 {
   %v = load <4 x float>, ptr addrspace(1) %p
   %pv = call <4 x float> @llvm.amdgcn.pin.vgpr.v4f32(<4 x float> %v, i32 300)
   store <4 x float> %pv, ptr addrspace(1) %p
   ret void
 }
 
-; A WMMA B operand that two loads assemble is defined by a REG_SEQUENCE, which
-; the general path rejects outright. The load-tuple path now takes VGPR pins as
-; well, so the operand lands in the requested tuple instead of wherever the
-; allocator puts it. Only the AGPR form of this path ran before, and gfx1250 has
-; no AGPR file, so such a pin was always dropped here.
+; A WMMA B operand that two loads assemble is defined by a REG_SEQUENCE.
+; Coalescing folds that into the hinted value, since the tuple is used as a
+; whole, so the operand lands in the requested tuple.
 ; CHECK-LABEL: {{^}}pin_two_load_tuple:
 ; CHECK: v_wmma_f32_16x16x32_bf16 v[{{[0-9:]+}}], v[128:135],
-define amdgpu_kernel void @pin_two_load_tuple(ptr addrspace(1) %o, ptr addrspace(1) %pa, ptr addrspace(1) %pb) {
+define amdgpu_kernel void @pin_two_load_tuple(ptr addrspace(1) %o, ptr addrspace(1) %pa, ptr addrspace(1) %pb) #0 {
   %p1 = getelementptr <8 x bfloat>, ptr addrspace(1) %pb, i64 1
   %b0 = load <8 x bfloat>, ptr addrspace(1) %pb, align 16
   %b1 = load <8 x bfloat>, ptr addrspace(1) %p1, align 16
@@ -43,19 +46,17 @@ define amdgpu_kernel void @pin_two_load_tuple(ptr addrspace(1) %o, ptr addrspace
 }
 
 ; A 32-byte load off a divergent address is selected as two dwordx4 loads whose
-; lanes reach the REG_SEQUENCE as subregister slices of the wider load. Placing
-; a lane on its own would strand the rest of its load, so each load is placed as
-; a whole onto its half of the pinned tuple. The stores read the pinned tuple
-; directly: the REG_SEQUENCEs that reassemble each half are folded away rather
-; than materialised as a copy per lane.
+; lanes reach the REG_SEQUENCE as subregister slices of the wider load. Each
+; load defines half the pinned value, and neither half is the pinned value, so
+; the hint on the whole reaches neither def and the pair is placed normally. A
+; value assembled this way has to be pinned at the width each load defines to be
+; placed. The pin costs nothing here beyond going unmet -- note the VGPR count
+; does not grow to cover the declared tuple.
 ; CHECK-LABEL: {{^}}pin_split_wide_load:
-; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[304:307]*/
-; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[300:303]*/
-; CHECK-NOT: v_mov
-; CHECK: global_store_b128 v{{[0-9]+}}, v[{{[0-9:]+}}] /*v[304:307]*/
-; CHECK: global_store_b128 v{{[0-9]+}}, v[{{[0-9:]+}}] /*v[300:303]*/
-; CHECK: .set .Lpin_split_wide_load.num_vgpr, 308
-define amdgpu_kernel void @pin_split_wide_load(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; CHECK: global_load_b128 v[0:3],
+; CHECK: global_load_b128 v[4:7],
+; CHECK: .set .Lpin_split_wide_load.num_vgpr, 9
+define amdgpu_kernel void @pin_split_wide_load(ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idx = sext i32 %tid to i64
   %a = getelementptr inbounds <8 x i32>, ptr addrspace(1) %in, i64 %idx
@@ -67,16 +68,14 @@ define amdgpu_kernel void @pin_split_wide_load(ptr addrspace(1) %in, ptr addrspa
 }
 
 ; Clang pins every store to a pinned variable, so reassigning one yields two
-; pins on the same tuple. The second takes the tuple over -- the update is
-; in-place, reading and writing the same registers -- instead of leaving the
-; variable's later value wherever the allocator puts it.
+; pins on the same tuple. Both are hints, and as in pin_split_wide_load the
+; value is loaded in two halves, so neither is met and the variable is placed
+; normally -- it does stay in place across the update, which is what the two
+; pins were asking for.
 ; CHECK-LABEL: {{^}}pin_reassigned_variable:
-; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[304:307]*/
-; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[300:303]*/
-; CHECK: v_pk_fma_f32 v[{{[0-9:]+}}] /*v[306:307]*/, {{.*}}v[{{[0-9:]+}}] /*v[306:307]*/
-; CHECK: v_pk_fma_f32 v[{{[0-9:]+}}] /*v[300:301]*/, {{.*}}v[{{[0-9:]+}}] /*v[300:301]*/
-; CHECK: .set .Lpin_reassigned_variable.num_vgpr, 308
-define amdgpu_kernel void @pin_reassigned_variable(ptr addrspace(1) %p) {
+; CHECK: v_pk_fma_f32 v[{{[0-9:]+}}], {{.*}}v[{{[0-9:]+}}], -1.0
+; CHECK: .set .Lpin_reassigned_variable.num_vgpr, 9
+define amdgpu_kernel void @pin_reassigned_variable(ptr addrspace(1) %p) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idx = sext i32 %tid to i64
   %a = getelementptr inbounds <8 x float>, ptr addrspace(1) %p, i64 %idx
@@ -92,14 +91,15 @@ define amdgpu_kernel void @pin_reassigned_variable(ptr addrspace(1) %p) {
   ret void
 }
 
-; Two distinct values whose live ranges overlap must not share the tuple, even
-; though both ask for it: the second one is still loaded when the first is read.
+; Two distinct values whose live ranges overlap both ask for one tuple: the
+; second one is still loaded when the first is read, so they cannot share it.
+; One gets the tuple and the other is placed normally.
 ; CHECK-LABEL: {{^}}pin_two_live_values:
+; CHECK: global_load_b128 v[2:5],
 ; CHECK: global_load_b128 v[{{[0-9:]+}}] /*v[300:303]*/
-; CHECK: global_load_b128 v[0:3],
+; CHECK: global_store_b128 v{{[0-9]+}}, v[2:5],
 ; CHECK: global_store_b128 v{{[0-9]+}}, v[{{[0-9:]+}}] /*v[300:303]*/
-; CHECK: global_store_b128 v{{[0-9]+}}, v[0:3],
-define amdgpu_kernel void @pin_two_live_values(ptr addrspace(1) %p, ptr addrspace(1) %q) {
+define amdgpu_kernel void @pin_two_live_values(ptr addrspace(1) %p, ptr addrspace(1) %q) #0 {
   %a = load volatile <4 x float>, ptr addrspace(1) %p
   %pa = call <4 x float> @llvm.amdgcn.pin.vgpr.v4f32(<4 x float> %a, i32 300)
   %b = load volatile <4 x float>, ptr addrspace(1) %q
@@ -110,12 +110,10 @@ define amdgpu_kernel void @pin_two_live_values(ptr addrspace(1) %p, ptr addrspac
 }
 
 ; A pinned value defined outside a loop and carried into it reaches a PHI. The
-; physical tuple must not be substituted into the PHI operand: LiveVariables
-; walks PHI sources through getVarInfo(), which asserts on a physical register,
-; so the pin falls back to the soft path instead. Two pinned accumulators keep
-; both PHIs live across the back edge. The hint survives the copies that PHI
-; elimination and coalescing introduce, so the accumulator still lands on its
-; tuple and accumulates in place -- and the VGPR count has to cover it.
+; hint survives the copies that PHI elimination and coalescing introduce, so the
+; accumulator lands on its tuple and accumulates in place -- and the VGPR count
+; has to cover it. This is the shape a pinned matrix-multiply accumulator has,
+; and the one a hint places most reliably: one live range, no split.
 ; CHECK-LABEL: {{^}}pin_into_loop_phi:
 ; CHECK: v_wmma_f32_16x16x32_bf16 v[108:115], v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[108:115]
 ; CHECK: s_endpgm
@@ -140,3 +138,5 @@ exit:
   store <8 x i32> %a1, ptr addrspace(1) %o1
   ret void
 }
+
+attributes #0 = { "amdgpu-flat-work-group-size"="128,128" "amdgpu-num-vgpr"="1024" "amdgpu-waves-per-eu"="1,1" }

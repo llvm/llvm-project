@@ -726,7 +726,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIMemoryLegalizerLegacyPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
-  initializeSIPreColorPinsPass(*PR);
+  initializeSIPinRegistersPass(*PR);
   initializeSIFormMemoryClausesLegacyPass(*PR);
   initializeSIPostRABundlerLegacyPass(*PR);
   initializeGCNCreateVOPDLegacyPass(*PR);
@@ -1807,9 +1807,9 @@ bool GCNPassConfig::addGlobalInstructionSelect() {
 }
 
 void GCNPassConfig::addFastRegAlloc() {
-  // Hard-pin llvm.amdgcn.pin.* values while still in SSA form, before
-  // PHIElimination / TwoAddressInstruction.
-  addPass(createSIPreColorPinsPass());
+  // Hint llvm.amdgcn.pin.* values at their registers while still in SSA form,
+  // before PHIElimination / TwoAddressInstruction.
+  addPass(createSIPinRegistersPass());
 
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
@@ -1830,9 +1830,9 @@ void GCNPassConfig::addPreRegAlloc() {
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
-  // Hard-pin llvm.amdgcn.pin.* values while still in SSA form, before
-  // PHIElimination / TwoAddressInstruction / LiveIntervals.
-  addPass(createSIPreColorPinsPass());
+  // Hint llvm.amdgcn.pin.* values at their registers while still in SSA form,
+  // before PHIElimination / TwoAddressInstruction / LiveIntervals.
+  addPass(createSIPinRegistersPass());
 
   if (EnableDCEInRA)
     insertPass(&DetectDeadLanesID, &DeadMachineInstructionElimID);
