@@ -43,11 +43,11 @@ define float @conv_contract(ptr addrspace(1) %input, ptr addrspace(4) %mask) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <16 x float> [[TMP18]], <16 x float> [[TMP19]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul contract <16 x float> [[TMP20]], [[TMP6]]
-; CHECK-NEXT:    [[ACC14:%.*]] = extractelement <16 x float> [[TMP21]], i64 0
-; CHECK-NEXT:    [[PROD15:%.*]] = extractelement <16 x float> [[TMP21]], i64 1
-; CHECK-NEXT:    [[ACC15:%.*]] = fadd contract float [[ACC14]], [[PROD15]]
+; CHECK-NEXT:    [[ACC25:%.*]] = extractelement <16 x float> [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <16 x float> [[TMP21]], i64 1
+; CHECK-NEXT:    [[ACC26:%.*]] = fadd contract float [[ACC25]], [[TMP37]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x float> [[TMP21]], i64 2
-; CHECK-NEXT:    [[ACC16:%.*]] = fadd contract float [[ACC15]], [[TMP9]]
+; CHECK-NEXT:    [[ACC16:%.*]] = fadd contract float [[ACC26]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x float> [[TMP21]], i64 3
 ; CHECK-NEXT:    [[ACC17:%.*]] = fadd contract float [[ACC16]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x float> [[TMP21]], i64 4
@@ -71,9 +71,9 @@ define float @conv_contract(ptr addrspace(1) %input, ptr addrspace(4) %mask) {
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <16 x float> [[TMP21]], i64 13
 ; CHECK-NEXT:    [[ACC13:%.*]] = fadd contract float [[ACC12]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <16 x float> [[TMP21]], i64 14
-; CHECK-NEXT:    [[ACC25:%.*]] = fadd contract float [[ACC13]], [[TMP36]]
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <16 x float> [[TMP21]], i64 15
-; CHECK-NEXT:    [[ACC26:%.*]] = fadd contract float [[ACC25]], [[TMP37]]
+; CHECK-NEXT:    [[ACC14:%.*]] = fadd contract float [[ACC13]], [[TMP36]]
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <16 x float> [[TMP21]], i64 15
+; CHECK-NEXT:    [[ACC15:%.*]] = fadd contract float [[ACC14]], [[TMP53]]
 ; CHECK-NEXT:    [[IP16:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[INPUT]], i64 25
 ; CHECK-NEXT:    [[MP16:%.*]] = getelementptr inbounds float, ptr addrspace(4) [[MASK]], i64 16
 ; CHECK-NEXT:    [[IP20:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[INPUT]], i64 32
@@ -85,7 +85,7 @@ define float @conv_contract(ptr addrspace(1) %input, ptr addrspace(4) %mask) {
 ; CHECK-NEXT:    [[TMP43:%.*]] = shufflevector <4 x float> [[TMP38]], <4 x float> [[TMP39]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP44:%.*]] = fmul contract <8 x float> [[TMP43]], [[TMP40]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <8 x float> [[TMP44]], i64 0
-; CHECK-NEXT:    [[ACC27:%.*]] = fadd contract float [[ACC26]], [[TMP45]]
+; CHECK-NEXT:    [[ACC27:%.*]] = fadd contract float [[ACC15]], [[TMP45]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <8 x float> [[TMP44]], i64 1
 ; CHECK-NEXT:    [[ACC28:%.*]] = fadd contract float [[ACC27]], [[TMP46]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <8 x float> [[TMP44]], i64 2
