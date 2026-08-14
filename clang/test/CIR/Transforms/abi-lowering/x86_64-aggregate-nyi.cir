@@ -4,19 +4,17 @@
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!rec_UPacked = !cir.union<"UPacked" packed {!s32i, !cir.array<!s8i x 5>}, padding = {!u8i}>
-!rec_ULongDouble = !cir.union<"ULongDouble" {!cir.long_double<!cir.f80>, !s32i}>
-!rec_UFloats = !cir.union<"UFloats" {!cir.array<!cir.float x 2>, !cir.array<!cir.float x 2>}>
-!rec_UOverAligned = !cir.union<"UOverAligned" {!s32i}, padding = {!cir.array<!u8i x 12>}>
-!rec_UShortStorage = !cir.union<"UShortStorage" {!s16i, !cir.array<!s8i x 3>}, padding = {!cir.array<!u8i x 2>}>
-!rec_UByteBlobs = !cir.union<"UByteBlobs" {!u8i, !u8i}, padding = {!cir.array<!u8i x 3>}>
-!rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {!cir.double, !rec_UOverAligned}>
+!rec_UPacked = !cir.union<"UPacked" packed {data !s32i, data !cir.array<!s8i x 5>}, padding = {!u8i}>
+!rec_UOverAligned = !cir.union<"UOverAligned" {data !s32i}, padding = {!cir.array<!u8i x 12>}>
+!rec_UShortStorage = !cir.union<"UShortStorage" {data !s16i, data !cir.array<!s8i x 3>}, padding = {!cir.array<!u8i x 2>}>
+!rec_UByteBlobs = !cir.union<"UByteBlobs" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
-!rec_P = !cir.struct<"P" packed {!s8i, !s32i}>
-!rec_Ov = !cir.struct<"Ov" padded {!s32i, !cir.array<!u8i x 12>}>
-!rec_E = !cir.struct<"E" padded {!u8i}>
-!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
-!rec_RetFF = !cir.struct<"RetFF" {!cir.float, !cir.float}>
+!rec_P = !cir.struct<"P" packed {data !s8i, data !s32i}>
+!rec_Ov = !cir.struct<"Ov" padded {data !s32i, data !cir.array<!u8i x 12>}>
+!rec_E = !cir.struct<"E" padded {data !u8i}>
+!rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
+!rec_AtomicWrapper = !cir.struct<padded {data !rec_S1, pad !cir.array<!s8i x 2>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -33,22 +31,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UPacked" packed
-
-  // A union member the bridge does not map keeps the whole union unsupported.
-  cir.func @take_union_long_double(%arg0: !rec_ULongDouble) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"ULongDouble"
-
-  // A union whose highest-aligned member is an all-float array classifies to
-  // an SSE vector coerce this bridge does not represent, so it is reported NYI
-  // rather than passed unchanged.
-  cir.func @take_union_float_arrays(%arg0: !rec_UFloats) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.union<"UFloats"
 
   // No member of this union spans its 16-byte declared size, so the bytes past
   // the int cannot be told apart from the rest of a wider storage unit, and the
@@ -121,35 +103,56 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.struct<"E" padded
 
-  // An all-float struct classifies to an SSE vector coerce this bridge does
-  // not represent, so it is reported NYI rather than passed unchanged.
-  cir.func @take_ff(%arg0: !rec_FF) {
+  // CIRGen wraps an atomic whose value is narrower than its lock-free size in
+  // an anonymous record with a trailing pad member, which the padded check
+  // rejects for the same reason.
+  cir.func @take_atomic_wrapper(%arg0: !rec_AtomicWrapper) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"FF"
+  // CHECK: not yet implemented for type '!cir.struct<padded {{.*}}pad !cir.array<!cir.int<s, 8> x 2>}>'
 
-  // The same holds for an all-float array.
-  cir.func @take_farr(%arg0: !cir.array<!cir.float x 2>) {
+  // A scalable vector has no size the eightbyte rules can read.
+  cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.array<!cir.float x 2>
+  // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
 
-  // A three-float struct coerces to a record with a vector field; the
-  // unmappable field propagates out as NYI too.
-  cir.func @take_f3(%arg0: !cir.struct<"F3" {!cir.float, !cir.float, !cir.float}>) {
+  // Clang pads a vector's type width up to a power of two and the classifier
+  // branches on the exact width, so a three-byte vector would be classified at
+  // 24 bits where clang uses 32.  The ABI library's vector type cannot carry
+  // the padded width, so this is rejected rather than misclassified.
+  cir.func @take_odd_width(%arg0: !cir.vector<3 x !s8i>) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"F3"
+  // CHECK: not yet implemented for type '!cir.vector<3 x !cir.int<s, 8>>
 
-  // The unmappable-coercion check also covers the return value.
-  cir.func @ret_ff() -> !rec_RetFF {
-    %0 = cir.alloca "r" align(4) : !cir.ptr<!rec_RetFF>
-    %1 = cir.load %0 : !cir.ptr<!rec_RetFF>, !rec_RetFF
-    cir.return %1 : !rec_RetFF
+  // A pointer element loses its pointee on the way back from the classifier,
+  // which would rewrite the signature to a vector of void pointers.  No C
+  // vector has a pointer element, so this is rejected instead.
+  cir.func @take_ptr_vector(%arg0: !cir.vector<2 x !cir.ptr<!s32i>>) {
+    cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"RetFF"
+  // CHECK: not yet implemented for type '!cir.vector<2 x !cir.ptr<!cir.int<s, 32>>>
+
+  // An element narrower than a byte is rounded up to its storage container by
+  // clang but not by the classifier, so the two would size the vector
+  // differently.  Classic passes this one in an xmm register from its 128-bit
+  // width, where the classifier would read 32 bits and coerce to an integer.
+  cir.func @take_sub_byte_element(%arg0: !cir.vector<16 x !cir.int<s, 2, bitint>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
+
+  // An x87 long double is 80 bits to the classifier and 128 to clang, so the
+  // two would size this vector differently for the same reason.
+  cir.func @take_x87_element(%arg0: !cir.vector<2 x !cir.long_double<!cir.f80>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<2 x !cir.long_double<!cir.f80>>
 }

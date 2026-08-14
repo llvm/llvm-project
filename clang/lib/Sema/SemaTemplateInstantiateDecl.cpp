@@ -578,8 +578,25 @@ static void instantiateOMPDeclareVariantAttr(
     NeedDeviceAddrExprs.push_back(ER.get());
   }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
-    // When prefer_type is implemented for append_args handle them here too.
-    AppendArgs.emplace_back(II.IsTarget, II.IsTargetSync);
+    OMPInteropInfo Info(II.IsTarget, II.IsTargetSync);
+    Info.HasPreferAttrs = II.HasPreferAttrs;
+    for (const OMPInteropPref &P : II.Prefs) {
+      Expr *SubstFr = nullptr;
+      if (P.Fr) {
+        ExprResult ER = Subst(P.Fr);
+        if (ER.isInvalid())
+          continue;
+        SubstFr = ER.get();
+      }
+      llvm::SmallVector<Expr *, 2> SubstAttrs;
+      for (Expr *A : P.Attrs) {
+        ExprResult ER = Subst(A);
+        if (!ER.isInvalid())
+          SubstAttrs.push_back(ER.get());
+      }
+      Info.Prefs.emplace_back(SubstFr, std::move(SubstAttrs));
+    }
+    AppendArgs.push_back(Info);
   }
 
   S.OpenMP().ActOnOpenMPDeclareVariantDirective(
@@ -5874,7 +5891,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // instantiated record instead.
     assert(PatternDecl->isDefaulted() &&
            "Special member needs to be defaulted");
-    auto PatternSM = getDefaultedFunctionKind(PatternDecl).asSpecialMember();
+    auto PatternSM = PatternDecl->getDefaultedFunctionKind().asSpecialMember();
     if (!(PatternSM == CXXSpecialMemberKind::CopyConstructor ||
           PatternSM == CXXSpecialMemberKind::CopyAssignment ||
           PatternSM == CXXSpecialMemberKind::MoveConstructor ||

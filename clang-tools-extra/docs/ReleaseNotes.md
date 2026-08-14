@@ -56,6 +56,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Potentially Breaking Changes
 
+- The deprecated `zircon` clang-tidy module has been removed. Users of
+  `zircon-temporary-objects` should migrate to {doc}`fuchsia-temporary-objects
+  <clang-tidy/checks/fuchsia/temporary-objects>`.
+
 - In 22nd release, The `clang-tidy/ClangTidyModuleRegistry.h` header was deprecated.
   All of the symbols it used to define were moved into `clang-tidy/ClangTidyModule.h`.
   The deprecated header has been removed in this release.
@@ -102,9 +106,19 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`readability-redundant-zero-initializer
+  <clang-tidy/checks/readability/redundant-zero-initializer>` check.
+
+  Finds explicit zero initializers of arrays that can be replaced with empty
+  braces.
+
 #### New check aliases
 
 #### Changes in existing checks
+
+- Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
+  <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
+  checking an array new expression without a size expression.
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
@@ -113,6 +127,19 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
   `std::array` the same as built-in arrays when `IgnoreArrays` option is enabled.
+  
+- Improved {doc}`cppcoreguidelines-use-enum-class
+  <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
+
+- Improved {doc}`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check:
+
+  - Fixed false positives when the pointee is written through a pointer that
+    is incremented, decremented or adjusted with `+=` or `-=`, such as
+    `*p++ = 0`.
+
+  - Fixed false positives when the pointee is written through a pointer
+    assignment, such as `*(p = q) = 0`.
 
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
@@ -124,6 +151,15 @@ infrastructure are described first, followed by tool-specific sections.
   rewrite the return value when the constructed type has a
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
+
+- Improved {doc}`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check:
+
+  - Fixed a crash when checking forward-declared classes with
+    {option}`DefaultHungarianPrefix` enabled.
+
+  - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
+    invalid option.
 
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
@@ -137,6 +173,9 @@ infrastructure are described first, followed by tool-specific sections.
   trailing semicolons and lost comments when the `if` body has no braces.
 
 #### Removed checks
+
+- Removed the deprecated `zircon-temporary-objects` check. Users should migrate to
+  {doc}`fuchsia-temporary-objects <clang-tidy/checks/fuchsia/temporary-objects>`.
 
 #### Miscellaneous
 

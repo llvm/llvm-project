@@ -23,6 +23,7 @@
 #include "Thumb1FrameLowering.h"
 #include "Thumb1InstrInfo.h"
 #include "Thumb2InstrInfo.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -569,7 +570,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
     return 2;
 
   // Allocate low registers first, so we can select more 16-bit instructions.
-  // We also (in ignoreCSRForAllocationOrder) override  the default behaviour
+  // We also (in getCSRAllocationOrderMask) override  the default behaviour
   // with regards to callee-saved registers, because pushing extra registers is
   // much cheaper (in terms of code size) than using high registers. After
   // that, we allocate r12 (doesn't need to be saved), lr (saving it means we
@@ -583,15 +584,19 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
   return 1;
 }
 
-bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               MCRegister PhysReg) const {
+void ARMSubtarget::getCSRAllocationOrderMask(const MachineFunction &MF,
+                                             BitVector &Mask) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of
   // their cost per use. When optForMinSize, we prefer the low regs even if
   // they are CSR because usually push/pop can be folded into existing ones.
-  return isThumb2() && MF.getFunction().hasMinSize() &&
-         ARM::GPRRegClass.contains(PhysReg);
+  if (!isThumb2() || !MF.getFunction().hasMinSize())
+    return;
+
+  Mask.resize(getRegisterInfo()->getNumRegs());
+  for (MCPhysReg Reg : ARM::GPRRegClass)
+    Mask.set(Reg);
 }
 
 ARMSubtarget::PushPopSplitVariation

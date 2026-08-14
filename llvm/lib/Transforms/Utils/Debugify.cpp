@@ -1133,31 +1133,32 @@ static bool isIgnoredPass(StringRef PassID) {
 
 void DebugifyEachInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager &MAM) {
-  PIC.registerBeforeNonSkippedPassCallback([this, &MAM](StringRef P, Any IR) {
+  PIC.registerBeforeNonSkippedPassCallback([this, &MAM](StringRef P,
+                                                        IRUnitRef IR) {
     if (isIgnoredPass(P))
       return;
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
-    if (const auto **CF = llvm::any_cast<const Function *>(&IR)) {
-      Function &F = *const_cast<Function *>(*CF);
+    if (const auto *CF = dyn_cast<Function>(IR)) {
+      Function &F = *const_cast<Function *>(CF);
       applyDebugify(F, Mode, DebugInfoBeforePass, P);
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
           .getManager()
           .invalidate(F, PA);
-    } else if (const auto **CM = llvm::any_cast<const Module *>(&IR)) {
-      Module &M = *const_cast<Module *>(*CM);
+    } else if (const auto *CM = dyn_cast<Module>(IR)) {
+      Module &M = *const_cast<Module *>(CM);
       applyDebugify(M, Mode, DebugInfoBeforePass, P);
       MAM.invalidate(M, PA);
     }
   });
   PIC.registerAfterPassCallback(
-      [this, &MAM](StringRef P, Any IR, const PreservedAnalyses &PassPA) {
+      [this, &MAM](StringRef P, IRUnitRef IR, const PreservedAnalyses &PassPA) {
         if (isIgnoredPass(P))
           return;
         PreservedAnalyses PA;
         PA.preserveSet<CFGAnalyses>();
-        if (const auto **CF = llvm::any_cast<const Function *>(&IR)) {
-          auto &F = *const_cast<Function *>(*CF);
+        if (const auto *CF = dyn_cast<Function>(IR)) {
+          auto &F = *const_cast<Function *>(CF);
           Module &M = *F.getParent();
           auto It = F.getIterator();
           if (Mode == DebugifyMode::SyntheticDebugInfo)
@@ -1172,8 +1173,8 @@ void DebugifyEachInstrumentation::registerCallbacks(
           MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
               .getManager()
               .invalidate(F, PA);
-        } else if (const auto **CM = llvm::any_cast<const Module *>(&IR)) {
-          Module &M = *const_cast<Module *>(*CM);
+        } else if (const auto *CM = dyn_cast<Module>(IR)) {
+          Module &M = *const_cast<Module *>(CM);
           if (Mode == DebugifyMode::SyntheticDebugInfo)
             checkDebugifyMetadata(M, M.functions(), P, "CheckModuleDebugify",
                                   /*Strip=*/true, DIStatsMap);
