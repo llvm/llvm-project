@@ -29,6 +29,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -641,12 +642,18 @@ void walkAST(llvm::ArrayRef<Decl *> Roots, DeclCallback Callback) {
   TargetedSelectorDeclCollector Collector(NeededSelectors);
   Collector.TraverseDecl(Ctx.getTranslationUnitDecl());
   auto Map = Collector.takeMap();
+  llvm::SmallVector<NamedDecl *, 4> UniqueDecls;
   for (const auto *E : RecordedSelectors) {
     auto It = Map.find(E->getSelector());
+    UniqueDecls.clear();
     if (It != Map.end()) {
-      for (NamedDecl *ND : It->second)
-        Callback(E->getSelectorNameLoc(),
-                 *cast<NamedDecl>(ND->getCanonicalDecl()), RefType::Ambiguous);
+      for (NamedDecl *ND : It->second) {
+        NamedDecl *Canonical = cast<NamedDecl>(ND->getCanonicalDecl());
+        if (!llvm::is_contained(UniqueDecls, Canonical)) {
+          UniqueDecls.push_back(Canonical);
+          Callback(E->getSelectorNameLoc(), *Canonical, RefType::Ambiguous);
+        }
+      }
     }
   }
 }

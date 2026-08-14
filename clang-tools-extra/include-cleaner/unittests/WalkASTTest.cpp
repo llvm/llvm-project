@@ -1328,5 +1328,65 @@ TEST(WalkAST, ObjCSelectorExprCustomPropertySetter) {
   EXPECT_THAT(Decls, ElementsAre(Decl::ObjCProperty));
 }
 
+TEST(WalkAST, ObjcSelectorDeclarationAndDefinition) {
+  auto Decls = testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doSomething;
+    @end
+  )objc",
+                        R"objc(
+    @implementation MyClass
+    - (void)doSomething {}
+    @end
+    void test() { SEL s = @selector(^doSomething); }
+  )objc",
+                        {"-x", "objective-c"});
+
+  // This here: v
+  EXPECT_THAT(Decls, ElementsAre(Decl::ObjCMethod));
+}
+
+TEST(WalkAST, ObjcSelectorMultipleIdenticalCalls) {
+  testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void testA() { SEL s1 = @selector(^doSomething); }
+    void testB() { SEL s2 = @selector(doSomething); }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjcSelectorInstanceAndClassMethodDisambiguation) {
+  testWalk(R"objc(
+    @interface MyClass
+    $ambiguous^- (void)doSomething;
+    $ambiguous^+ (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test() { SEL s = @selector(^doSomething); }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjcSelectorCustomGetterClashWithMethod) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    $ambiguous^- (void)isFoo;
+    @end
+
+    @interface MyClass
+    @property(getter=isFoo, nonatomic) int $ambiguous^foo;
+    @end
+  )objc",
+           R"objc(
+    void test() { SEL s = @selector(^isFoo); }
+  )objc",
+           {"-x", "objective-c"});
+}
+
 } // namespace
 } // namespace clang::include_cleaner
