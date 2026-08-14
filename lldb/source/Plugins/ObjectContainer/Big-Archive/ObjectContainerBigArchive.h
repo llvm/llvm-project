@@ -11,6 +11,7 @@
 
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 
@@ -47,7 +48,6 @@ public:
   static lldb_private::ModuleSpecList
   GetModuleSpecifications(const lldb_private::FileSpec &file,
                           lldb::DataExtractorSP &extractor_sp,
-                          lldb::offset_t data_offset,
                           lldb::offset_t file_offset, lldb::offset_t length);
 
   // Member Functions

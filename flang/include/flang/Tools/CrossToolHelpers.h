@@ -20,7 +20,6 @@
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -47,6 +46,18 @@ public:
     FIROptLastEPCallbacks.push_back(C);
   }
 
+  void registerHLFIROptEarlyEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptEarlyEPCallbacks.push_back(C);
+  }
+
+  void registerHLFIROptLastEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptLastEPCallbacks.push_back(C);
+  }
+
   void invokeFIROptEarlyEPCallbacks(
       mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
     for (auto &C : FIROptEarlyEPCallbacks)
@@ -65,6 +76,18 @@ public:
       C(pm, optLevel);
   };
 
+  void invokeHLFIROptEarlyEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptEarlyEPCallbacks)
+      C(pm, optLevel);
+  };
+
+  void invokeHLFIROptLastEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptLastEPCallbacks)
+      C(pm, optLevel);
+  };
+
 private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
@@ -77,6 +100,14 @@ private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
       FIROptLastEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptEarlyEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptLastEPCallbacks;
 };
 
 /// Configuriation for the MLIR to LLVM pass pipeline.
@@ -106,6 +137,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
         ApproxFuncFPMath && mathOpts.getFPContractEnabled();
     Reciprocals = opts.Reciprocals;
     PreferVectorWidth = opts.PreferVectorWidth;
+    UseSampleProfile = !opts.SampleProfileFile.empty();
     DebugInfoForProfiling = opts.DebugInfoForProfiling;
     if (opts.InstrumentFunctions) {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
@@ -139,8 +171,12 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   std::string PreferVectorWidth = ""; ///< Set prefer-vector-width attribute for
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenACC = false; ///< Enable OpenACC lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
-  bool DebugInfoForProfiling = false; /// Enable extra debugging info
+  bool EnableOpenMPIsTargetDevice =
+      false; ///< Compiling for an OpenMP target device.
+  bool UseSampleProfile = false; ///< Enable sample based profiling
+  bool DebugInfoForProfiling = false; ///< Enable extra debugging info
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
   std::string InstrumentFunctionEntry =
@@ -168,6 +204,12 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       Opts.OpenMPIsTargetDevice, Opts.OpenMPIsGPU, Opts.OpenMPForceUSM,
       Opts.OpenMPVersion, Opts.OMPHostIRFile, Opts.OMPTargetTriples,
       Opts.NoGPULib);
+}
+
+[[maybe_unused]] static void setOpenMPIntegerWrapAround(
+    mlir::ModuleOp module, bool value) {
+  module.getOperation()->setAttr("omp.integer_wrap_around",
+      mlir::omp::IntegerWrapAroundAttr::get(module.getContext(), value));
 }
 
 #endif // FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H

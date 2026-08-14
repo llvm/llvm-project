@@ -734,6 +734,10 @@ protected:
   /// Target-specific source line recording.
   virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
 
+  /// Target-specific compile unit attribute finalization.
+  virtual void finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                          DwarfCompileUnit &NewCU) {}
+
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return InfoHolder.getUnits();
   }
@@ -810,6 +814,9 @@ public:
     SymSize[Sym] = Size;
   }
 
+  /// Whether to emit .debug_pubnames / .debug_pubtypes. Default true;
+  virtual bool shouldEmitDwarfPubSections() const { return true; }
+
   /// Returns whether we should emit all DW_AT_[MIPS_]linkage_name.
   /// If not, we still might emit certain cases.
   bool useAllLinkageNames() const { return UseAllLinkageNames; }
@@ -864,8 +871,7 @@ public:
     return HasAppleExtensionAttributes;
   }
 
-  /// Returns whether or not to change the current debug info for the
-  /// split dwarf proposal support.
+  /// Returns whether or not to change the current debug info for split DWARF.
   bool useSplitDwarf() const { return HasSplitDwarf; }
 
   /// Returns whether to generate a string offsets table with (possibly shared)

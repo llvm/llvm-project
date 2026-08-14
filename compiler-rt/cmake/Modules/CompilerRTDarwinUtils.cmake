@@ -111,6 +111,18 @@ function(darwin_test_archs os valid_archs)
   endif()
 
   set(archs ${ARGN})
+
+  # Disable building for i386 for macOS SDK >= 10.15. The SDK doesn't support
+  # linking for i386 and the corresponding OS doesn't allow running macOS i386
+  # binaries.
+  if ("${os}" STREQUAL "osx")
+    find_darwin_sdk_version(macosx_sdk_version "macosx")
+    if ("${macosx_sdk_version}" VERSION_GREATER 10.15 OR "${macosx_sdk_version}" VERSION_EQUAL 10.15)
+      message(STATUS "Disabling i386 slice for ${valid_archs}")
+      list(REMOVE_ITEM archs "i386")
+    endif()
+  endif()
+
   if(NOT TEST_COMPILE_ONLY)
     message(STATUS "Finding valid architectures for ${os}...")
     set(SIMPLE_C ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/src.c)
@@ -120,17 +132,6 @@ function(darwin_test_archs os valid_archs)
     foreach(flag ${DARWIN_${os}_LINK_FLAGS})
       set(os_linker_flags "${os_linker_flags} ${flag}")
     endforeach()
-
-    # Disable building for i386 for macOS SDK >= 10.15. The SDK doesn't support
-    # linking for i386 and the corresponding OS doesn't allow running macOS i386
-    # binaries.
-    if ("${os}" STREQUAL "osx")
-      find_darwin_sdk_version(macosx_sdk_version "macosx")
-      if ("${macosx_sdk_version}" VERSION_GREATER 10.15 OR "${macosx_sdk_version}" VERSION_EQUAL 10.15)
-        message(STATUS "Disabling i386 slice for ${valid_archs}")
-        list(REMOVE_ITEM archs "i386")
-      endif()
-    endif()
   endif()
 
   # The simple program will build for x86_64h on the simulator because it is
@@ -182,33 +183,32 @@ endfunction()
 function(darwin_filter_host_archs input output)
   list_intersect(tmp_var DARWIN_osx_ARCHS ${input})
   execute_process(
-    COMMAND sysctl hw.cputype
-    OUTPUT_VARIABLE CPUTYPE)
-  string(REGEX MATCH "hw.cputype: ([0-9]*)"
-         CPUTYPE_MATCHED "${CPUTYPE}")
-  set(ARM_HOST Off)
-  if(CPUTYPE_MATCHED)
-    # ARM cputype is (0x01000000 | 12) and X86(_64) is always 7.
-    if(${CMAKE_MATCH_1} GREATER 11)
-      set(ARM_HOST On)
-    endif()
+    COMMAND sysctl hw.optional.arm64
+    OUTPUT_VARIABLE IS_ARM64)
+  string(REGEX MATCH "hw.optional.arm64: ([0-9]*)"
+         ARM64_MATCHED "${IS_ARM64}")
+
+  set(ARM_HOST OFF)
+  if(ARM64_MATCHED AND ("${CMAKE_MATCH_1}" STREQUAL "1"))
+    set(ARM_HOST ON)
   endif()
 
-  # arm64e isn't usually supported out of the box on darwin, because of ABI.
-  list(REMOVE_ITEM tmp_var arm64e)
+  execute_process(
+    COMMAND sysctl hw.cpusubtype
+    OUTPUT_VARIABLE SUBTYPE)
+  string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
+          SUBTYPE_MATCHED "${SUBTYPE}")
 
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
     list(REMOVE_ITEM tmp_var x86_64)
     list(REMOVE_ITEM tmp_var x86_64h)
+    if(NOT COMPILER_RT_HAS_MAC_PUBLIC_ARM64E)
+      list(REMOVE_ITEM tmp_var arm64e)
+    endif()
   else()
+    list(REMOVE_ITEM tmp_var arm64e)
     list(REMOVE_ITEM tmp_var arm64)
-    execute_process(
-      COMMAND sysctl hw.cpusubtype
-      OUTPUT_VARIABLE SUBTYPE)
-    string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
-           SUBTYPE_MATCHED "${SUBTYPE}")
-
     set(HASWELL_SUPPORTED Off)
     if(SUBTYPE_MATCHED)
       if(${CMAKE_MATCH_1} GREATER 7)
@@ -340,7 +340,7 @@ macro(darwin_add_builtin_library name suffix)
 
   list(APPEND ${LIB_OS}_${suffix}_libs ${libname})
   list(APPEND ${LIB_OS}_${suffix}_lipo_flags -arch ${arch} $<TARGET_FILE:${libname}>)
-  set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT/Libraries")
+  set_target_properties(${libname} PROPERTIES FOLDER "compiler-rt/Libraries")
 endmacro()
 
 function(darwin_lipo_libs name)
@@ -359,7 +359,7 @@ function(darwin_lipo_libs name)
       )
     add_custom_target(${name}
       DEPENDS ${LIB_OUTPUT_DIR}/lib${name}.a)
-    set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT/Misc")
+    set_target_properties(${name} PROPERTIES FOLDER "compiler-rt/Misc")
     add_dependencies(${LIB_PARENT_TARGET} ${name})
 
     if(CMAKE_CONFIGURATION_TYPES)
@@ -451,11 +451,14 @@ macro(darwin_add_builtin_libraries)
                               OS ${os}
                               ARCH ${arch}
                               MIN_VERSION ${DARWIN_${os}_BUILTIN_MIN_VER})
+      cmake_push_check_state()
+      set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -arch ${arch}")
       check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }"
                               COMPILER_RT_HAS_${arch}_FLOAT16)
       append_list_if(COMPILER_RT_HAS_${arch}_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS_${arch})
       check_c_source_compiles("__bf16 foo(__bf16 x) { return x; }"
                               COMPILER_RT_HAS_${arch}_BFLOAT16)
+      cmake_pop_check_state()
       # Build BF16 files only when "__bf16" is available.
       if(COMPILER_RT_HAS_${arch}_BFLOAT16)
         list(APPEND ${arch}_SOURCES ${BF16_SOURCES})
@@ -527,8 +530,8 @@ endmacro()
 macro(darwin_add_embedded_builtin_libraries)
   # this is a hacky opt-out. If you can't target both intel and arm
   # architectures we bail here.
-  set(DARWIN_SOFT_FLOAT_ARCHS armv6m armv7m armv7em armv7)
-  set(DARWIN_HARD_FLOAT_ARCHS armv7em armv7)
+  set(DARWIN_SOFT_FLOAT_ARCHS armv6m armv7m armv7em armv7 armv8m.main armv8.1m.main)
+  set(DARWIN_HARD_FLOAT_ARCHS armv7em armv7 armv8m.main armv8.1m.main)
   if(COMPILER_RT_SUPPORTED_ARCH MATCHES ".*armv.*")
     list(FIND COMPILER_RT_SUPPORTED_ARCH i386 i386_idx)
     if(i386_idx GREATER -1)
@@ -554,7 +557,7 @@ macro(darwin_add_embedded_builtin_libraries)
     set(PIC_FLAG -fPIC)
     set(STATIC_FLAG -static)
 
-    set(DARWIN_macho_embedded_ARCHS armv6m armv7m armv7em armv7 i386 x86_64)
+    set(DARWIN_macho_embedded_ARCHS armv6m armv7m armv7em armv7 armv8m.main armv8.1m.main i386 x86_64)
 
     set(DARWIN_macho_embedded_LIBRARY_OUTPUT_DIR
       ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/macho_embedded)
@@ -575,6 +578,8 @@ macro(darwin_add_embedded_builtin_libraries)
     set(armv7m_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS})
     set(armv7em_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS})
     set(armv7_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
+    set(armv8m.main_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
+    set(armv8.1m.main_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
     set(i386_FUNCTIONS ${common_FUNCTIONS} ${i386_FUNCTIONS})
     set(x86_64_FUNCTIONS ${common_FUNCTIONS})
 

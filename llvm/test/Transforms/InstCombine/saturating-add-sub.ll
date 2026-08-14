@@ -1367,13 +1367,63 @@ define i8 @test_scalar_uadd_sub_commuted_wrong(i8 %a, i8 %b) {
 
 define i8 @test_scalar_uadd_sub_const(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_sub_const(
-; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
-; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 -43)
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
   %res = sub i8 %sat, 42
   ret i8 %res
+}
+
+define <2 x i8> @test_vector_uadd_sub_const(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_sub_const(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> splat (i8 -43))
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> splat (i8 42))
+  %res = sub <2 x i8> %sat, splat (i8 42)
+  ret <2 x i8> %res
+}
+
+; negative test - the constants do not cancel
+
+define i8 @test_scalar_uadd_sub_const_mismatch(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const_mismatch(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -43
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 43
+  ret i8 %res
+}
+
+; negative test - extra use of the saturating add
+
+define i8 @test_scalar_uadd_sub_const_multiuse(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_sub_const_multiuse(
+; CHECK-NEXT:    [[SAT:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 42)
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[SAT]], -42
+; CHECK-NEXT:    call void @usei8(i8 [[SAT]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 42)
+  %res = sub i8 %sat, 42
+  call void @usei8(i8 %sat)
+  ret i8 %res
+}
+
+; negative test - non-splat vector
+
+define <2 x i8> @test_vector_uadd_sub_const_nonsplat(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_sub_const_nonsplat(
+; CHECK-NEXT:    [[SAT:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 42, i8 3>)
+; CHECK-NEXT:    [[RES:%.*]] = add <2 x i8> [[SAT]], <i8 -42, i8 -3>
+; CHECK-NEXT:    ret <2 x i8> [[RES]]
+;
+  %sat = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 42, i8 3>)
+  %res = sub <2 x i8> %sat, <i8 42, i8 3>
+  ret <2 x i8> %res
 }
 
 define i1 @scalar_uadd_eq_zero(i8 %a, i8 %b) {
@@ -2857,4 +2907,277 @@ entry:
   %add = add i32 %x, 1
   %res = select i1 %cmp, i32 %add, i32 2147483647
   ret i32 %res
+}
+
+; Fold zext-add-umin-trunc to uadd.sat
+define i8 @fold_umin_to_uadd_sat(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_umin_to_uadd_sat(
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B:%.*]], i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %zsum = add nuw nsw i16 %zb, %za
+  %cmp = call i16 @llvm.umin.i16(i16 %zsum, i16 255)
+  %r = trunc nuw i16 %cmp to i8
+  ret i8 %r
+}
+
+; Fold zext-add-umin-trunc to uadd.sat with illegal type
+define i3 @fold_umin_to_uadd_sat_with_illegal_type(i3 %a, i3 %b) {
+; CHECK-LABEL: @fold_umin_to_uadd_sat_with_illegal_type(
+; CHECK-NEXT:    [[R:%.*]] = call i3 @llvm.uadd.sat.i3(i3 [[B:%.*]], i3 [[A:%.*]])
+; CHECK-NEXT:    ret i3 [[R]]
+;
+  %za = zext i3 %a to i11
+  %zb = zext i3 %b to i11
+  %zsum = add nuw nsw i11 %zb, %za
+  %cmp = call i11 @llvm.umin.i11(i11 %zsum, i11 7)
+  %r = trunc nuw i11 %cmp to i3
+  ret i3 %r
+}
+
+; Fold zext-add-umin-trunc to uadd.sat with commuted operations
+define i8 @fold_umin_to_uadd_sat_with_commuted_operations(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_umin_to_uadd_sat_with_commuted_operations(
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %zsum = add nuw nsw i16 %za, %zb
+  %cmp = call i16 @llvm.umin.i16(i16 %zsum, i16 255)
+  %r = trunc nuw i16 %cmp to i8
+  ret i8 %r
+}
+
+; Multi-use test: zext-add-umin-trunc, but add has multi use
+define i8 @no_fold_umin_to_uadd_sat_if_has_multi_use_for_add(i8 %a, i8 %b) {
+; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_has_multi_use_for_add(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[ZB]], [[ZA]]
+; CHECK-NEXT:    call void @usei16(i16 [[ADD]])
+; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.umin.i16(i16 [[ADD]], i16 255)
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %add = add nuw nsw i16 %zb, %za
+  call void @usei16(i16 %add)
+  %cmp = call i16 @llvm.umin.i16(i16 %add, i16 255)
+  %r = trunc nuw i16 %cmp to i8
+  ret i8 %r
+}
+
+; Multi-use test: zext-add-umin-trunc, but umin has multi use
+define i8 @no_fold_umin_to_uadd_sat_if_has_multi_use_for_umin(i8 %a, i8 %b) {
+; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_has_multi_use_for_umin(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[ZB]], [[ZA]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.umin.i16(i16 [[ADD]], i16 255)
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    call void @usei16(i16 [[CMP]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %add = add nuw nsw i16 %zb, %za
+  %cmp = call i16 @llvm.umin.i16(i16 %add, i16 255)
+  %r = trunc nuw i16 %cmp to i8
+  call void @usei16(i16 %cmp)
+  ret i8 %r
+}
+
+; Multi-use test: zext-add-umin-trunc, and zext has multi use
+define i8 @fold_umin_to_uadd_sat_if_has_multi_use_for_zext(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_umin_to_uadd_sat_if_has_multi_use_for_zext(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    call void @usei16(i16 [[ZA]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B:%.*]], i8 [[A]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %add = add nuw nsw i16 %zb, %za
+  call void @usei16(i16 %za)
+  %cmp = call i16 @llvm.umin.i16(i16 %add, i16 255)
+  %r = trunc nuw i16 %cmp to i8
+  ret i8 %r
+}
+
+declare void @usei16(i16)
+
+; Fold zext-add-smin-trunc to uadd.sat
+define i8 @fold_smin_to_uadd_sat(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_smin_to_uadd_sat(
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B:%.*]], i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %zsum = add nuw nsw i16 %zb, %za
+  %cmp = call i16 @llvm.smin.i16(i16 %zsum, i16 255)
+  %r = trunc nuw i16 %cmp to i8
+  ret i8 %r
+}
+
+; Vector version of fold zext-add-umin-trunc to uadd.sat
+define <2 x i8> @fold_umin_to_uadd_sat_vec(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @fold_umin_to_uadd_sat_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[B:%.*]], <2 x i8> [[A:%.*]])
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %za = zext <2 x i8> %a to <2 x i16>
+  %zb = zext <2 x i8> %b to <2 x i16>
+  %zsum = add nuw nsw <2 x i16> %zb, %za
+  %cmp = call <2 x i16> @llvm.umin.v2i16(<2 x i16> %zsum, <2 x i16> splat (i16 255))
+  %r = trunc nuw <2 x i16> %cmp to <2 x i8>
+  ret <2 x i8> %r
+}
+
+; Negative test: operands type inconsistency.
+define i16 @no_fold_umin_to_uadd_sat_if_different_type(i8 %a, i16 %b) {
+; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_different_type(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZB:%.*]] = zext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[ZSUM:%.*]] = add nuw nsw i32 [[ZB]], [[ZA]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i32 @llvm.umin.i32(i32 [[ZSUM]], i32 65535)
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i32 [[CMP]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %za = zext i8 %a to i32
+  %zb = zext i16 %b to i32
+  %zsum = add nuw nsw i32 %zb, %za
+  %cmp = call i32 @llvm.umin.i32(i32 %zsum, i32 65535)
+  %r = trunc nuw i32 %cmp to i16
+  ret i16 %r
+}
+
+; Negative test: umin constant is not the maximum value of the target bitwidth.
+define i8 @no_fold_umin_to_uadd_sat_if_not_boundary(i8 %a, i8 %b) {
+; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_not_boundary(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[ZSUM:%.*]] = add nuw nsw i16 [[ZB]], [[ZA]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.umin.i16(i16 [[ZSUM]], i16 121)
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw nsw i16 [[CMP]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %zsum = add nuw nsw i16 %zb, %za
+  %cmp = call i16 @llvm.umin.i16(i16 %zsum, i16 121)
+  %r = trunc nuw nsw i16 %cmp to i8
+  ret i8 %r
+}
+
+; Fold zext-sub-smax-trunc to usub.sat
+define i8 @fold_smax_to_usub_sat(i8 %a, i8 %b) {
+; CHECK-LABEL: @fold_smax_to_usub_sat(
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %zsub = sub nsw i16 %za, %zb
+  %cmp = call i16 @llvm.smax.i16(i16 %zsub, i16 0)
+  %r = trunc nuw i16 %cmp to i8
+  ret i8 %r
+}
+
+; Vector version of fold zext-sub-smax-trunc to usub.sat
+define <2 x i8> @fold_smax_to_usub_sat_vec(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @fold_smax_to_usub_sat_vec(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]])
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %za = zext <2 x i8> %a to <2 x i16>
+  %zb = zext <2 x i8> %b to <2 x i16>
+  %zsub = sub nsw <2 x i16> %za, %zb
+  %cmp = call <2 x i16> @llvm.smax.v2i16(<2 x i16> %zsub, <2 x i16> splat (i16 0))
+  %r = trunc nuw <2 x i16> %cmp to <2 x i8>
+  ret <2 x i8> %r
+}
+
+; Negative test: operands type inconsistency.
+define i8 @no_fold_smax_to_usub_sat_if_different_type(i8 %a, i16 %b) {
+; CHECK-LABEL: @no_fold_smax_to_usub_sat_if_different_type(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZB:%.*]] = zext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[ZSUB:%.*]] = sub nsw i32 [[ZA]], [[ZB]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i32 @llvm.smax.i32(i32 [[ZSUB]], i32 0)
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[CMP]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i32
+  %zb = zext i16 %b to i32
+  %zsub = sub nsw i32 %za, %zb
+  %cmp = call i32 @llvm.smax.i32(i32 %zsub, i32 0)
+  %r = trunc i32 %cmp to i8
+  ret i8 %r
+}
+
+; Negative test: smax constant is not zero.
+define i8 @no_fold_umin_to_uadd_sat_if_not_zero(i8 %a, i8 %b) {
+; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_not_zero(
+; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
+; CHECK-NEXT:    [[ZSUB:%.*]] = sub nsw i16 [[ZA]], [[ZB]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.smax.i16(i16 [[ZSUB]], i16 2)
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %za = zext i8 %a to i16
+  %zb = zext i8 %b to i16
+  %zsub = sub nsw i16 %za, %zb
+  %cmp = call i16 @llvm.smax.i16(i16 %zsub, i16 2)
+  %r = trunc nuw i16 %cmp to i8
+  ret i8 %r
+}
+
+define i8 @fold_icmpeq_to_ssub_sat(i8 %a) {
+; CHECK-LABEL: @fold_icmpeq_to_ssub_sat(
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.ssub.sat.i8(i8 0, i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %a, -128
+  %sub = sub i8 0, %a
+  %sel = select i1 %cmp, i8 127, i8 %sub
+  ret i8 %sel
+}
+
+define i8 @fold_icmpne_to_ssub_sat(i8 %a) {
+; CHECK-LABEL: @fold_icmpne_to_ssub_sat(
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.ssub.sat.i8(i8 0, i8 [[A:%.*]])
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp ne i8 %a, -128
+  %sub = sub i8 0, %a
+  %sel = select i1 %cmp, i8 %sub, i8 127
+  ret i8 %sel
+}
+
+define <4 x i8> @fold_icmpeq_to_ssub_sat_vec(<4 x i8> %a) {
+; CHECK-LABEL: @fold_icmpeq_to_ssub_sat_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i8> @llvm.ssub.sat.v4i8(<4 x i8> zeroinitializer, <4 x i8> [[A:%.*]])
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+;
+  %cmp = icmp eq <4 x i8> %a, splat (i8 -128)
+  %sub = sub <4 x i8> zeroinitializer, %a
+  %sel = select <4 x i1> %cmp, <4 x i8> splat (i8 127), <4 x i8> %sub
+  ret <4 x i8> %sel
+}
+
+define <4 x i8> @fold_icmpne_to_ssub_sat_vec(<4 x i8> %a) {
+; CHECK-LABEL: @fold_icmpne_to_ssub_sat_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i8> @llvm.ssub.sat.v4i8(<4 x i8> zeroinitializer, <4 x i8> [[A:%.*]])
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+;
+  %cmp = icmp ne <4 x i8> %a, splat (i8 -128)
+  %sub = sub <4 x i8> zeroinitializer, %a
+  %sel = select <4 x i1> %cmp, <4 x i8> %sub, <4 x i8> splat (i8 127)
+  ret <4 x i8> %sel
 }

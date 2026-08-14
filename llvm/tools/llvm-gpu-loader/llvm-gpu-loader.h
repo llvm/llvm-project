@@ -65,6 +65,16 @@ typedef struct ol_kernel_launch_size_args_t {
   size_t DynSharedMemory;
 } ol_kernel_launch_size_args_t;
 
+typedef enum ol_kernel_launch_prop_type_t {
+  OL_KERNEL_LAUNCH_PROP_TYPE_NONE = 0,
+  OL_KERNEL_LAUNCH_PROP_TYPE_FORCE_UINT32 = 0x7fffffff
+} ol_kernel_launch_prop_type_t;
+
+typedef struct ol_kernel_launch_prop_t {
+  ol_kernel_launch_prop_type_t type;
+  void *data;
+} ol_kernel_launch_prop_t;
+
 typedef enum ol_platform_backend_t {
   OL_PLATFORM_BACKEND_UNKNOWN = 0,
   OL_PLATFORM_BACKEND_CUDA = 1,
@@ -98,6 +108,7 @@ typedef struct ol_platform_impl_t *ol_platform_handle_t;
 typedef struct ol_program_impl_t *ol_program_handle_t;
 typedef struct ol_queue_impl_t *ol_queue_handle_t;
 typedef struct ol_symbol_impl_t *ol_symbol_handle_t;
+typedef struct ol_context_impl_t *ol_context_handle_t;
 typedef const struct ol_error_struct_t *ol_result_t;
 
 typedef bool (*ol_device_iterate_cb_t)(ol_device_handle_t Device,
@@ -123,10 +134,18 @@ ol_result_t (*olGetSymbol)(ol_program_handle_t Program, const char *Name,
 
 ol_result_t (*olLaunchKernel)(
     ol_queue_handle_t Queue, ol_device_handle_t Device,
-    ol_symbol_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
-    const ol_kernel_launch_size_args_t *LaunchSizeArgs);
+    ol_symbol_handle_t Kernel,
+    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+    const ol_kernel_launch_prop_t *Properties, size_t NumArgs, void **ArgPtrs,
+    const size_t *ArgSizes);
 
-ol_result_t (*olCreateQueue)(ol_device_handle_t Device,
+ol_result_t (*olCreateContext)(size_t DevicesCount, ol_device_handle_t *Devices,
+                               ol_context_handle_t *Context);
+
+ol_result_t (*olDestroyContext)(ol_context_handle_t Context);
+
+ol_result_t (*olCreateQueue)(ol_context_handle_t Context,
+                             ol_device_handle_t Device,
                              ol_queue_handle_t *Queue);
 
 ol_result_t (*olDestroyQueue)(ol_queue_handle_t Queue);
@@ -135,6 +154,9 @@ ol_result_t (*olSyncQueue)(ol_queue_handle_t Queue);
 
 ol_result_t (*olMemAlloc)(ol_device_handle_t Device, ol_alloc_type_t Type,
                           size_t Size, void **AllocationOut);
+
+ol_result_t (*olMemAllocHost)(ol_device_handle_t Device, size_t Size,
+                              void **AllocationOut);
 
 ol_result_t (*olMemFree)(void *Address);
 
@@ -180,10 +202,13 @@ llvm::Error loadLLVMOffload() {
   DYNAMIC_INIT(olDestroyProgram);
   DYNAMIC_INIT(olGetSymbol);
   DYNAMIC_INIT(olLaunchKernel);
+  DYNAMIC_INIT(olCreateContext);
+  DYNAMIC_INIT(olDestroyContext);
   DYNAMIC_INIT(olCreateQueue);
   DYNAMIC_INIT(olDestroyQueue);
   DYNAMIC_INIT(olSyncQueue);
   DYNAMIC_INIT(olMemAlloc);
+  DYNAMIC_INIT(olMemAllocHost);
   DYNAMIC_INIT(olMemFree);
   DYNAMIC_INIT(olMemcpy);
   DYNAMIC_INIT(olGetDeviceInfo);

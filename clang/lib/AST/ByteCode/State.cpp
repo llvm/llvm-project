@@ -18,6 +18,21 @@ using namespace clang::interp;
 
 State::~State() {}
 
+bool State::shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId) {
+  if (!Ctx.getLangOpts().MSVCCompat || !EvalStatus.ExtendedDiag)
+    return false;
+  switch (DiagId) {
+  case diag::note_constexpr_invalid_cast_ptrtoint:
+    addExtendedDiag(Loc, diag::warn_relaxed_constant_fold_cast);
+    return true;
+  case diag::note_constexpr_null_subobject:
+    addExtendedDiag(Loc, diag::warn_relaxed_constant_fold_null);
+    return true;
+  default:
+    return false;
+  }
+}
+
 OptionalDiagnostic State::FFDiag(SourceLocation Loc, diag::kind DiagId,
                                  unsigned ExtraNotes) {
   return diag(Loc, DiagId, ExtraNotes, false);
@@ -25,6 +40,7 @@ OptionalDiagnostic State::FFDiag(SourceLocation Loc, diag::kind DiagId,
 
 OptionalDiagnostic State::FFDiag(const Expr *E, diag::kind DiagId,
                                  unsigned ExtraNotes) {
+  EvalStatus.DiagEmitted = true;
   if (EvalStatus.Diag)
     return diag(E->getExprLoc(), DiagId, ExtraNotes, false);
   setActiveDiagnostic(false);
@@ -33,6 +49,7 @@ OptionalDiagnostic State::FFDiag(const Expr *E, diag::kind DiagId,
 
 OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
                                  unsigned ExtraNotes) {
+  EvalStatus.DiagEmitted = true;
   if (EvalStatus.Diag)
     return diag(SI.getLoc(), DiagId, ExtraNotes, false);
   setActiveDiagnostic(false);
@@ -41,6 +58,11 @@ OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
 
 OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
+  if (shouldRelaxDiag(Loc, DiagId)) {
+    setActiveDiagnostic(false);
+    return OptionalDiagnostic();
+  }
+  EvalStatus.DiagEmitted = true;
   // Don't override a previous diagnostic. Don't bother collecting
   // diagnostics if we're evaluating for overflow.
   if (!EvalStatus.Diag || !EvalStatus.Diag->empty()) {
@@ -66,6 +88,12 @@ OptionalDiagnostic State::Note(SourceLocation Loc, diag::kind DiagId) {
   return OptionalDiagnostic(&addDiag(Loc, DiagId));
 }
 
+OptionalDiagnostic State::Note(SourceInfo SI, diag::kind DiagId) {
+  if (!hasActiveDiagnostic())
+    return OptionalDiagnostic();
+  return OptionalDiagnostic(&addDiag(SI.getLoc(), DiagId));
+}
+
 void State::addNotes(ArrayRef<PartialDiagnosticAt> Diags) {
   if (hasActiveDiagnostic())
     llvm::append_range(*EvalStatus.Diag, Diags);
@@ -80,6 +108,11 @@ PartialDiagnostic &State::addDiag(SourceLocation Loc, diag::kind DiagId) {
   PartialDiagnostic PD(DiagId, Ctx.getDiagAllocator());
   EvalStatus.Diag->push_back(std::make_pair(Loc, PD));
   return EvalStatus.Diag->back().second;
+}
+
+void State::addExtendedDiag(SourceLocation Loc, diag::kind DiagId) {
+  PartialDiagnostic PD(DiagId, Ctx.getDiagAllocator());
+  EvalStatus.ExtendedDiag->push_back(std::make_pair(Loc, PD));
 }
 
 OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
@@ -122,8 +155,8 @@ void State::addCallStack(unsigned Limit) {
   // Walk the call stack and add the diagnostics.
   unsigned CallIdx = 0;
   const Frame *Top = getCurrentFrame();
-  const Frame *Bottom = getBottomFrame();
-  for (const Frame *F = Top; F != Bottom; F = F->getCaller(), ++CallIdx) {
+  for (const Frame *F = Top; F->getCaller() != nullptr;
+       F = F->getCaller(), ++CallIdx) {
     SourceRange CallRange = F->getCallRange();
     assert(CallRange.isValid());
 

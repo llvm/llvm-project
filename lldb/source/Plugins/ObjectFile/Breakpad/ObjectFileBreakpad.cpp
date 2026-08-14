@@ -102,8 +102,8 @@ ObjectFile *ObjectFileBreakpad::CreateMemoryInstance(
 }
 
 ModuleSpecList ObjectFileBreakpad::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length) {
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t file_offset,
+    offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
     return {};
   // If this is opearting on a VirtualDataExtractor, it can have

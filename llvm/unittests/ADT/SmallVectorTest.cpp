@@ -533,6 +533,53 @@ TYPED_TEST(SmallVectorTest, AppendNonIterTest) {
   assertValuesInOrder(V, 3u, 1, 7, 7);
 }
 
+struct input_iterator {
+  using iterator_category = std::input_iterator_tag;
+  using value_type = int;
+  using difference_type = int;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+  const int **State;
+  int operator*() const { return **State; }
+  input_iterator &operator++() {
+    (*State)++;
+    return *this;
+  }
+  bool operator==(const input_iterator &Other) const {
+    return *State == *Other.State;
+  }
+  bool operator!=(const input_iterator &Other) const {
+    return !(*this == Other);
+  }
+};
+
+TYPED_TEST(SmallVectorTest, AppendInputIterator) {
+  auto &V = this->theVector;
+  V.push_back(1);
+  static constexpr int Src[] = {5, 6, 7, 8};
+  // Construct an input iterator that actually returns different results on the
+  // second iteration.
+  const int *BeginState = &Src[0];
+  const int *EndState = &Src[2];
+  V.append(input_iterator{&BeginState}, input_iterator{&EndState});
+  assertValuesInOrder(V, 3u, 1, 5, 6);
+}
+
+TYPED_TEST(SmallVectorTest, InsertInputIterator) {
+  auto &V = this->theVector;
+  V.push_back(1);
+  V.push_back(2);
+  static constexpr int Src[] = {5, 6, 7, 8};
+  // Construct an input iterator that actually returns different results on the
+  // second iteration.
+  const int *BeginState = &Src[0];
+  const int *EndState = &Src[2];
+  V.insert(V.begin() + 1, input_iterator{&BeginState},
+           input_iterator{&EndState});
+  assertValuesInOrder(V, 4u, 1, 5, 6, 2);
+}
+
 struct output_iterator {
   using iterator_category = std::output_iterator_tag;
   using value_type = int;
@@ -1016,11 +1063,6 @@ struct Emplaceable {
       : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
         State(ES_Emplaced) {}
 
-  template <class A0Ty, class A1Ty, class A2Ty>
-  Emplaceable(A0Ty &&A0, A1Ty &&A1, A2Ty &&A2)
-      : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
-        A2(std::forward<A2Ty>(A2)), State(ES_Emplaced) {}
-
   template <class A0Ty, class A1Ty, class A2Ty, class A3Ty>
   Emplaceable(A0Ty &&A0, A1Ty &&A1, A2Ty &&A2, A3Ty &&A3)
       : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
@@ -1189,6 +1231,12 @@ TEST(SmallVectorTest, ToVector) {
     EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
     IntVector = to_vector<3>(V);
     EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
+  }
+  {
+    SmallVector<bool> V = {true, false, true};
+    ArrayRef<bool> ref = V;
+    auto copy = to_vector(ref);
+    EXPECT_THAT(copy, testing::ElementsAre(true, false, true));
   }
 }
 

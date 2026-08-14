@@ -11,3 +11,30 @@ module {
   }
 }
 
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // expected-error@+1{{op cannot have both static local and tls references}}
+cir.global "private" internal tls_model = <tls_dyn> tls_refs = <"asdf", "asdf", "asdf"> static_local_guard<"asdf"> @_ZZ1fvE1y : !s32i
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // expected-error@+1{{'tls_refs' only valid for tls}}
+cir.global "private" internal tls_refs = <"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // expected-error@+2{{custom op 'cir.global' expected ::cir::TLSModel to be one of: tls_dyn, tls_local_dyn, tls_init_exec, tls_local_exec}}
+  // expected-error@+1{{custom op 'cir.global' failed to parse CIR_TLSModelAttr parameter 'value' which is to be a `::cir::TLSModel}}
+cir.global "private" internal tls_model = <invalid_tls_dyn> tls_refs = <"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
+}

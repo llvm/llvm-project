@@ -25,8 +25,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/OptimizedStructLayout.h"
@@ -42,6 +44,10 @@
 #include <optional>
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 #define DEBUG_TYPE "coro-frame"
 
@@ -743,11 +749,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // If we don't add __coro_frame to the RetainedNodes, user may get
   // `no symbol __coro_frame in context` rather than `__coro_frame`
   // is optimized out, which is more precise.
-  auto RetainedNodes = DIS->getRetainedNodes();
-  SmallVector<Metadata *, 32> RetainedNodesVec(RetainedNodes.begin(),
-                                               RetainedNodes.end());
-  RetainedNodesVec.push_back(FrameDIVar);
-  DIS->replaceOperandWith(7, (MDTuple::get(F.getContext(), RetainedNodesVec)));
+  DIS->retainNodes(&FrameDIVar, &FrameDIVar + 1);
 
   // Construct the location for the frame debug variable. The column number
   // is fake but it should be fine.
@@ -763,6 +765,36 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   It->getParent()->insertDbgRecordBefore(NewDVR, It);
 }
 
+// If there is memory accessing to promise alloca before CoroBegin
+static bool hasAccessingPromiseBeforeCB(const DominatorTree &DT,
+                                        coro::Shape &Shape) {
+  auto *PA = Shape.SwitchLowering.PromiseAlloca;
+  return llvm::any_of(PA->uses(), [&](Use &U) {
+    auto *Inst = dyn_cast<Instruction>(U.getUser());
+    if (!Inst || DT.dominates(Shape.CoroBegin, Inst))
+      return false;
+
+    if (auto *CI = dyn_cast<CallInst>(Inst)) {
+      // It is fine if the call wouldn't write to the Promise.
+      // This is possible for @llvm.coro.id intrinsics, which
+      // would take the promise as the second argument as a
+      // marker.
+      if (CI->onlyReadsMemory() || CI->onlyReadsMemory(CI->getArgOperandNo(&U)))
+        return false;
+      return true;
+    }
+
+    return isa<StoreInst>(Inst) ||
+           // It may take too much time to track the uses.
+           // Be conservative about the case the use may escape.
+           isa<GetElementPtrInst>(Inst) ||
+           // There would always be a bitcast for the promise alloca
+           // before we enabled Opaque pointers. And now given
+           // opaque pointers are enabled by default. This should be
+           // fine.
+           isa<BitCastInst>(Inst);
+  });
+}
 // Build the coroutine frame type as a byte array.
 // The frame layout includes:
 //   - Resume function pointer at offset 0 (Switch ABI only)
@@ -770,8 +802,9 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 //   - Promise alloca (Switch ABI only, only if present)
 //   - Suspend/Resume index
 //   - Spilled values and allocas
-static void buildFrameLayout(Function &F, coro::Shape &Shape,
-                             FrameDataInfo &FrameData, bool OptimizeFrame) {
+static void buildFrameLayout(Function &F, const DominatorTree &DT,
+                             coro::Shape &Shape, FrameDataInfo &FrameData,
+                             bool OptimizeFrame) {
   const DataLayout &DL = F.getDataLayout();
 
   // We will use this value to cap the alignment of spilled values.
@@ -794,7 +827,7 @@ static void buildFrameLayout(Function &F, coro::Shape &Shape,
 
     // PromiseAlloca field needs to be explicitly added here because it's
     // a header field with a fixed offset based on its alignment. Hence it
-    // needs special handling and cannot be added to FrameData.Allocas.
+    // needs special handling.
     if (PromiseAlloca)
       FrameData.setFieldIndex(
           PromiseAlloca, B.addFieldForAlloca(PromiseAlloca, /*header*/ true));
@@ -816,11 +849,12 @@ static void buildFrameLayout(Function &F, coro::Shape &Shape,
   // 1. updateLayoutIndex could update its index after
   // `performOptimizedStructLayout`
   // 2. it is processed in insertSpills.
-  if (Shape.ABI == coro::ABI::Switch && PromiseAlloca)
-    // We assume that the promise alloca won't be modified before
-    // CoroBegin and no alias will be create before CoroBegin.
+  if (Shape.ABI == coro::ABI::Switch && PromiseAlloca) {
+    // We assume that no alias will be create before CoroBegin.
     FrameData.Allocas.emplace_back(
-        PromiseAlloca, DenseMap<Instruction *, std::optional<APInt>>{}, false);
+        PromiseAlloca, DenseMap<Instruction *, std::optional<APInt>>{},
+        hasAccessingPromiseBeforeCB(DT, Shape));
+  }
   // Create an entry for every spilled value.
   for (auto &S : FrameData.Spills) {
     Type *FieldType = S.first->getType();
@@ -1212,6 +1246,9 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
     for (Instruction *I : UsersToUpdate)
       I->replaceUsesOfWith(Alloca, G);
+
+    if (Alloca->user_empty())
+      Alloca->eraseFromParent();
   }
   Builder.SetInsertPoint(&*Shape.getInsertPtAfterFramePtr());
   for (const auto &A : FrameData.Allocas) {
@@ -1232,45 +1269,6 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           Builder.CreateInBoundsPtrAdd(FramePtr, ConstantInt::get(ITy, Value));
       Alias.first->replaceUsesWithIf(
           AliasPtr, [&](Use &U) { return DT.dominates(Shape.CoroBegin, U); });
-    }
-  }
-
-  // PromiseAlloca is not collected in FrameData.Allocas. So we don't handle
-  // the case that the PromiseAlloca may have writes before CoroBegin in the
-  // above codes. And it may be problematic in edge cases. See
-  // https://github.com/llvm/llvm-project/issues/57861 for an example.
-  if (Shape.ABI == coro::ABI::Switch && Shape.SwitchLowering.PromiseAlloca) {
-    AllocaInst *PA = Shape.SwitchLowering.PromiseAlloca;
-    // If there is memory accessing to promise alloca before CoroBegin;
-    bool HasAccessingPromiseBeforeCB = llvm::any_of(PA->uses(), [&](Use &U) {
-      auto *Inst = dyn_cast<Instruction>(U.getUser());
-      if (!Inst || DT.dominates(Shape.CoroBegin, Inst))
-        return false;
-
-      if (auto *CI = dyn_cast<CallInst>(Inst)) {
-        // It is fine if the call wouldn't write to the Promise.
-        // This is possible for @llvm.coro.id intrinsics, which
-        // would take the promise as the second argument as a
-        // marker.
-        if (CI->onlyReadsMemory() ||
-            CI->onlyReadsMemory(CI->getArgOperandNo(&U)))
-          return false;
-        return true;
-      }
-
-      return isa<StoreInst>(Inst) ||
-             // It may take too much time to track the uses.
-             // Be conservative about the case the use may escape.
-             isa<GetElementPtrInst>(Inst) ||
-             // There would always be a bitcast for the promise alloca
-             // before we enabled Opaque pointers. And now given
-             // opaque pointers are enabled by default. This should be
-             // fine.
-             isa<BitCastInst>(Inst);
-    });
-    if (HasAccessingPromiseBeforeCB) {
-      Builder.SetInsertPoint(&*Shape.getInsertPtAfterFramePtr());
-      handleAccessBeforeCoroBegin(FrameData, Shape, Builder, PA);
     }
   }
 }
@@ -1367,6 +1365,20 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
     SetDispatchValuePN->addIncoming(SwitchConstant, Pred);
     SwitchOnDispatch->addCase(SwitchConstant, CaseBB);
     SwitchIndex++;
+  }
+
+  if (!ProfcheckDisableMetadataFixes) {
+    // Add branch weights to SwitchOnDispatch, where branches are unreachable by
+    // default. We mark all branches as having equal weights because they are
+    // mutually exclusive.
+    MDBuilder MDB(CleanupPadBB->getContext());
+    SmallVector<uint32_t> Weights;
+    Weights.push_back(0);
+    for (int i = 0; i < SwitchIndex; ++i) {
+      Weights.push_back(llvm::MDBuilder::kUnlikelyBranchWeight);
+    }
+    SwitchOnDispatch->setMetadata(LLVMContext::MD_prof,
+                                  MDB.createBranchWeights(Weights));
   }
 }
 
@@ -2006,7 +2018,7 @@ void coro::normalizeCoroutine(Function &F, coro::Shape &Shape,
 }
 
 void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
-  SuspendCrossingInfo Checker(F, Shape.CoroSuspends, Shape.CoroEnds);
+  SuspendCrossingInfo Checker(F, Shape);
   doRematerializations(F, Checker, IsMaterializable);
 
   const DominatorTree DT(F);
@@ -2036,7 +2048,7 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
 
   // Build frame layout
   FrameDataInfo FrameData(Spills, Allocas);
-  buildFrameLayout(F, Shape, FrameData, OptimizeFrame);
+  buildFrameLayout(F, DT, Shape, FrameData, OptimizeFrame);
   Shape.FramePtr = Shape.CoroBegin;
   // For now, this works for C++ programs only.
   buildFrameDebugInfo(F, Shape, FrameData);

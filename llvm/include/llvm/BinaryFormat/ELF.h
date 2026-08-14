@@ -648,6 +648,7 @@ enum {
   EF_HEXAGON_ISA_V87 = 0x00000087,  // Hexagon V87 ISA
   EF_HEXAGON_ISA_V89 = 0x00000089,  // Hexagon V89 ISA
   EF_HEXAGON_ISA_V91 = 0x00000091,  // Hexagon V91 ISA
+  EF_HEXAGON_ISA_V93 = 0x00000093,  // Hexagon V93 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 
   // Tiny core flag, bit[15]
@@ -682,6 +683,7 @@ enum {
   EF_HEXAGON_MACH_V87 = EF_HEXAGON_ISA_V87,      // Hexagon V87
   EF_HEXAGON_MACH_V89 = EF_HEXAGON_ISA_V89,      // Hexagon V89
   EF_HEXAGON_MACH_V91 = EF_HEXAGON_ISA_V91,      // Hexagon V91
+  EF_HEXAGON_MACH_V93 = EF_HEXAGON_ISA_V93,      // Hexagon V93
 
   EF_HEXAGON_MACH = 0x0000ffff, // Hexagon V..
 };
@@ -830,12 +832,17 @@ enum {
   X(0x53, EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic")            \
   X(0x54, EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")                \
   X(0x55, EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152")                            \
+  X(0x57, EF_AMDGPU_MACH_AMDGCN_GFX1154, "gfx1154")                            \
   X(0x58, EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153")                            \
   X(0x59, EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")                \
   X(0x5a, EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251")                            \
   X(0x5b, EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC, "gfx12-5-generic")            \
+  X(0x5c, EF_AMDGPU_MACH_AMDGCN_GFX1172, "gfx1172")                            \
   X(0x5d, EF_AMDGPU_MACH_AMDGCN_GFX1170, "gfx1170")                            \
-  X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")
+  X(0x5e, EF_AMDGPU_MACH_AMDGCN_GFX1171, "gfx1171")                            \
+  X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")              \
+  X(0x62, EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC, "gfx11-7-generic")            \
+  X(0x63, EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC, "gfx13-generic")
 
 enum : unsigned {
   // clang-format off
@@ -863,10 +870,12 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56 = 0x056,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57 = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X60 = 0x060,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X61 = 0x061,
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -964,6 +973,7 @@ enum : unsigned {
   EF_CUDA_SM100 = 0x64,
   EF_CUDA_SM101 = 0x65,
   EF_CUDA_SM103 = 0x67,
+  EF_CUDA_SM107 = 0x6b,
   EF_CUDA_SM110 = 0x6e,
   EF_CUDA_SM120 = 0x78,
   EF_CUDA_SM121 = 0x79,
@@ -1187,6 +1197,7 @@ enum : unsigned {
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
   SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
   SHT_LLVM_CALL_GRAPH = 0x6fff4c0f,         // LLVM Call Graph Section.
+  SHT_LLVM_DYNDBG_ELF = 0x6fff4c10,         // LLVM Dynamic Debugging ELF.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
@@ -1961,6 +1972,7 @@ enum {
   NT_OPENBSD_FPREGS = 21,
   NT_OPENBSD_XFPREGS = 22,
   NT_OPENBSD_WCOOKIE = 23,
+  NT_OPENBSD_PACMASK = 24,
 };
 
 // AMDGPU-specific section indices.

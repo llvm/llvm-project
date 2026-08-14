@@ -158,7 +158,7 @@ add_entrypoint_object(
   SRCS
     strcoll_l.cpp
   HDRS
-  strcoll_l.h
+    strcoll_l.h
 )
 
 add_entrypoint_object(
@@ -303,6 +303,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strnlen_s
+  SRCS
+    strnlen_s.cpp
+  HDRS
+    strnlen_s.h
+  DEPENDS
+    libc.hdr.types.size_t
+    .string_utils
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   strpbrk
   SRCS
     strpbrk.cpp
@@ -431,19 +444,19 @@ function(add_memcmp memcmp_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
-  add_memcmp(memcmp_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
-  add_memcmp(memcmp_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
-  add_memcmp(memcmp_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
+  add_memcmp(memcmp_x86_64_opt_sse2 COMPILE_OPTIONS -march=k8 REQUIRE SSE2)
+  add_memcmp(memcmp_x86_64_opt_sse4 COMPILE_OPTIONS -march=nehalem REQUIRE SSE4_2)
+  add_memcmp(memcmp_x86_64_opt_avx2 COMPILE_OPTIONS -march=haswell REQUIRE AVX2)
   add_memcmp(memcmp_x86_64_opt_avx512 COMPILE_OPTIONS -march=skylake-avx512 REQUIRE AVX512BW)
-  add_memcmp(memcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memcmp(memcmp_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcmp(memcmp)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
-  add_memcmp(memcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memcmp(memcmp_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcmp(memcmp)
 elseif(LIBC_TARGET_OS_IS_GPU)
   add_memcmp(memcmp)
 else()
-  add_memcmp(memcmp_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memcmp(memcmp_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcmp(memcmp)
 endif()
 
@@ -463,23 +476,23 @@ function(add_memcpy memcpy_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
-  add_memcpy(memcpy_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
-  add_memcpy(memcpy_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
-  add_memcpy(memcpy_x86_64_opt_avx    COMPILE_OPTIONS -march=sandybridge    REQUIRE AVX)
+  add_memcpy(memcpy_x86_64_opt_sse2 COMPILE_OPTIONS -march=k8 REQUIRE SSE2)
+  add_memcpy(memcpy_x86_64_opt_sse4 COMPILE_OPTIONS -march=nehalem REQUIRE SSE4_2)
+  add_memcpy(memcpy_x86_64_opt_avx COMPILE_OPTIONS -march=sandybridge REQUIRE AVX)
   add_memcpy(memcpy_x86_64_opt_avx512 COMPILE_OPTIONS -march=skylake-avx512 REQUIRE AVX512F)
-  add_memcpy(memcpy_x86_64_opt_sw_prefetch_sse4   COMPILE_OPTIONS -DLIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING -march=nehalem        REQUIRE SSE4_2)
-  add_memcpy(memcpy_x86_64_opt_sw_prefetch_avx    COMPILE_OPTIONS -DLIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING -march=sandybridge    REQUIRE AVX)
-  add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memcpy(memcpy_x86_64_opt_sw_prefetch_sse4 COMPILE_OPTIONS -DLIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING -march=nehalem REQUIRE SSE4_2)
+  add_memcpy(memcpy_x86_64_opt_sw_prefetch_avx COMPILE_OPTIONS -DLIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING -march=sandybridge REQUIRE AVX)
+  add_memcpy(memcpy_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcpy(memcpy)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
   # Disable tail merging as it leads to lower performance.
-  add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
-                                      MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
-  add_memcpy(memcpy                   MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
+  add_memcpy(memcpy_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
+    MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
+  add_memcpy(memcpy MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
 elseif(LIBC_TARGET_OS_IS_GPU)
   add_memcpy(memcpy)
 else()
-  add_memcpy(memcpy_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memcpy(memcpy_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memcpy(memcpy)
 endif()
 
@@ -499,21 +512,21 @@ function(add_memmove memmove_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
-  add_memmove(memmove_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
-  add_memmove(memmove_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
-  add_memmove(memmove_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
+  add_memmove(memmove_x86_64_opt_sse2 COMPILE_OPTIONS -march=k8 REQUIRE SSE2)
+  add_memmove(memmove_x86_64_opt_sse4 COMPILE_OPTIONS -march=nehalem REQUIRE SSE4_2)
+  add_memmove(memmove_x86_64_opt_avx2 COMPILE_OPTIONS -march=haswell REQUIRE AVX2)
   add_memmove(memmove_x86_64_opt_avx512 COMPILE_OPTIONS -march=skylake-avx512 REQUIRE AVX512F)
-  add_memmove(memmove_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memmove(memmove_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memmove(memmove)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
   # Disable tail merging as it leads to lower performance.
-  add_memmove(memmove_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
-                                        MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
-  add_memmove(memmove                   MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
+  add_memmove(memmove_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
+    MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
+  add_memmove(memmove MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
 elseif(LIBC_TARGET_OS_IS_GPU)
   add_memmove(memmove)
 else()
-  add_memmove(memmove_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memmove(memmove_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memmove(memmove)
 endif()
 
@@ -533,21 +546,21 @@ function(add_memset memset_name)
 endfunction()
 
 if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
-  add_memset(memset_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
-  add_memset(memset_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
-  add_memset(memset_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
+  add_memset(memset_x86_64_opt_sse2 COMPILE_OPTIONS -march=k8 REQUIRE SSE2)
+  add_memset(memset_x86_64_opt_sse4 COMPILE_OPTIONS -march=nehalem REQUIRE SSE4_2)
+  add_memset(memset_x86_64_opt_avx2 COMPILE_OPTIONS -march=haswell REQUIRE AVX2)
   add_memset(memset_x86_64_opt_avx512 COMPILE_OPTIONS -march=skylake-avx512 REQUIRE AVX512F)
   add_memset(memset_x86_64_opt_sw_prefetch COMPILE_OPTIONS -DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
-  add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memset(memset_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memset(memset)
 elseif(${LIBC_TARGET_ARCHITECTURE_IS_AARCH64})
   # Disable tail merging as it leads to lower performance.
-  add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
-                                      MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
-  add_memset(memset                   MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
+  add_memset(memset_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE}
+    MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
+  add_memset(memset MLLVM_COMPILE_OPTIONS "-tail-merge-threshold=0")
 elseif(LIBC_TARGET_OS_IS_GPU)
   add_memset(memset)
 else()
-  add_memset(memset_opt_host          COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
+  add_memset(memset_opt_host COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_NATIVE})
   add_memset(memset)
 endif()

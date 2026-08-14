@@ -29,21 +29,37 @@ enum class NodeKind {
   eIdentifierNode,
   eIntegerLiteralNode,
   eMemberOfNode,
+  eSizeOfNode,
   eUnaryOpNode,
 };
 
 /// The Unary operators recognized by DIL.
 enum class UnaryOpKind {
-  AddrOf, // "&"
-  Deref,  // "*"
-  Minus,  // "-"
-  Plus,   // "+"
+  AddrOf, ///< "&"
+  Deref,  ///< "*"
+  Minus,  ///< "-"
+  Plus,   ///< "+"
+  Not,    ///< "~"
+  LNot,   ///< "!"
 };
 
 /// The binary operators recognized by DIL.
 enum class BinaryOpKind {
-  Add, // "+"
-  Sub, // "-"
+  Add,       ///< "+"
+  AddAssign, ///< "+="
+  Assign,    ///< "="
+  Div,       ///< "/"
+  Mul,       ///< "*"
+  Rem,       ///< "%"
+  And,       ///< "&"
+  Xor,       ///< "^"
+  Or,        ///< "|"
+  Shl,       ///< "<<"
+  Shr,       ///< ">>"
+  Sub,       ///< "-"
+  SubAssign, ///< "-="
+  LAnd,      ///< "&&"
+  LOr,       ///< "||"
 };
 
 /// Translates DIL tokens to BinaryOpKind.
@@ -312,6 +328,29 @@ private:
   CastKind m_cast_kind;
 };
 
+class SizeOfNode : public ASTNode {
+public:
+  SizeOfNode(uint32_t location, ASTNodeUP node)
+      : ASTNode(location, NodeKind::eSizeOfNode), m_node_arg(std::move(node)) {}
+
+  SizeOfNode(uint32_t location, CompilerType type)
+      : ASTNode(location, NodeKind::eSizeOfNode), m_type_arg(type) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode &GetNodeArg() const { return *m_node_arg; }
+  CompilerType GetTypeArg() const { return m_type_arg; }
+
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eSizeOfNode;
+  }
+
+private:
+  std::string m_name;
+  ASTNodeUP m_node_arg;
+  CompilerType m_type_arg;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -338,6 +377,7 @@ public:
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode &node) = 0;
 };
 
 } // namespace lldb_private::dil

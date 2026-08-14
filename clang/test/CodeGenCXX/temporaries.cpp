@@ -48,8 +48,7 @@ namespace BraceInit {
   typedef const int &CIR;
   CIR x = CIR{3};
   // CHECK-CXX11: @_ZGRN9BraceInit1xE_ = internal constant i32 3
-  // FIXME: This should still be emitted as 'constant' in C++17.
-  // CHECK-CXX17: @_ZGRN9BraceInit1xE_ = internal global i32 3
+  // CHECK-CXX17: @_ZGRN9BraceInit1xE_ = internal constant i32 3
   // CHECK: @_ZN9BraceInit1xE ={{.*}} constant ptr @_ZGRN9BraceInit1xE_
 }
 
@@ -59,7 +58,7 @@ namespace RefTempSubobject {
     int ints[3] = {1, 2, 3};
   };
 
-  // CHECK: @_ZGRN16RefTempSubobject2srE_ = internal global { ptr, [3 x i32] } { {{.*}} getelementptr {{.*}} @_ZGRN16RefTempSubobject2srE_, {{.*}}, [3 x i32] [i32 1, i32 2, i32 3] }
+  // CHECK: @_ZGRN16RefTempSubobject2srE_ = internal constant { ptr, [3 x i32] } { {{.*}} getelementptr {{.*}} @_ZGRN16RefTempSubobject2srE_, {{.*}}, [3 x i32] [i32 1, i32 2, i32 3] }
   // CHECK: @_ZN16RefTempSubobject2srE = constant {{.*}} @_ZGRN16RefTempSubobject2srE_
   constexpr const SelfReferential &sr = SelfReferential();
 }
@@ -526,7 +525,7 @@ namespace Elision {
     // CHECK:      call void @_ZN7Elision1BC1Ev(ptr {{[^,]*}} [[BT0]])
     // CHECK-NEXT: [[AM:%.*]] = getelementptr inbounds nuw [[B]], ptr [[BT0]], i32 0, i32 0
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[AT0]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AM]])
-    // CHECK-NEXT: call void @_ZN7Elision5takeAENS_1AE(ptr noundef [[AT0]])
+    // CHECK-NEXT: call void @_ZN7Elision5takeAENS_1AE(ptr nofree noundef align 8 dereferenceable(8) [[AT0]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[AT0]])
     // CHECK-NEXT: call void @_ZN7Elision1BD1Ev(ptr {{[^,]*}} [[BT0]])
     takeA(B().a);

@@ -4,9 +4,10 @@
 define void @main(ptr %0) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[TMP0:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP4]], <4 x i32> <i32 0, i32 3, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> <double poison, double 0.000000e+00>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> <double -0.000000e+00, double poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp oeq <4 x double> [[TMP7]], zeroinitializer

@@ -9,21 +9,15 @@
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/allocator-registry-consts.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -48,6 +42,8 @@ static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
   return val;
 }
 
+static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
+
 struct CUFDeviceAddressOpConversion
     : public mlir::OpRewritePattern<cuf::DeviceAddressOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -59,10 +55,30 @@ struct CUFDeviceAddressOpConversion
   mlir::LogicalResult
   matchAndRewrite(cuf::DeviceAddressOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    if (auto global = symTab.lookup<fir::GlobalOp>(
-            op.getHostSymbol().getRootReference().getValue())) {
+    auto symName = op.getHostSymbol().getRootReference().getValue();
+    if (auto global = symTab.lookup<fir::GlobalOp>(symName)) {
       auto mod = op->getParentOfType<mlir::ModuleOp>();
       mlir::Location loc = op.getLoc();
+
+      // For non-allocatable managed globals, CUFAddConstructor created a
+      // companion pointer global (@sym.managed.ptr) that holds the unified
+      // memory address. Load from it instead of calling CUFGetDeviceAddress.
+      // CompilerGeneratedNamesConversion may have already renamed the companion
+      // pointer (replacing dots with 'X'), so try both the original and the
+      // renamed form using the same utility.
+      std::string ptrGlobalName = (symName + managedPtrSuffix).str();
+      if (!symTab.lookup<fir::GlobalOp>(ptrGlobalName))
+        ptrGlobalName = fir::NameUniquer::replaceSpecialSymbols(ptrGlobalName);
+      if (auto ptrGlobal = symTab.lookup<fir::GlobalOp>(ptrGlobalName)) {
+        auto ptrRef = fir::AddrOfOp::create(
+            rewriter, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());
+        auto rawPtr = fir::LoadOp::create(rewriter, loc, ptrRef);
+        auto converted =
+            fir::ConvertOp::create(rewriter, loc, op.getType(), rawPtr);
+        rewriter.replaceOp(op, converted);
+        return success();
+      }
+
       auto hostAddr = fir::AddrOfOp::create(
           rewriter, loc, fir::ReferenceType::get(global.getType()),
           op.getHostSymbol());

@@ -3,7 +3,7 @@
 ## instruction leading to invalid binaries.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld --global-base=2147483648 --experimental-pic --unresolved-symbols=import-dynamic -no-gc-sections --shared-memory --no-entry -o %t.wasm %t.o
+# RUN: wasm-ld --global-base=2147483648 --unresolved-symbols=import-dynamic -no-gc-sections --shared-memory --no-entry -o %t.wasm %t.o
 # XUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --
 
@@ -47,14 +47,14 @@ data_sym:
 
 # CHECK: <__wasm_apply_data_relocs>:
 # CHECK-EMPTY:
-# CHECK-NEXT:  i32.const -2147483636
+# CHECK-NEXT:  i32.const -2147483644
 # CHECK-NEXT:  global.get 0
 # CHECK-NEXT:  i32.store 0
 # CHECK-NEXT:  end
 
 # CHECK: <__wasm_apply_tls_relocs>:
 # CHECK-EMPTY:
-# CHECK-NEXT:  i32.const -2147483644
+# CHECK-NEXT:  i32.const -2147483636
 # CHECK-NEXT:  global.get 0
 # CHECK-NEXT:  i32.store 0
 # CHECK-NEXT:  end

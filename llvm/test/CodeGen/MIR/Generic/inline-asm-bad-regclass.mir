@@ -7,5 +7,5 @@
 name: foo
 body: |
   bb.0:
-    INLINEASM &"", 0 /* attdialect */, regdef:badreg
+    INLINEASM &"", attdialect, regdef:badreg
 ...

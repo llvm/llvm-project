@@ -12,7 +12,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; X86:       [[VECTOR_PH]]:
-; X86-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; X86-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; X86-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; X86-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
 ; X86-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -59,7 +59,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 32
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[A]], i64 0
 ; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
@@ -144,7 +144,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 24
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[A]], i64 0
 ; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
@@ -167,7 +167,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; AVX512-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <8 x ptr> [[BROADCAST_SPLAT2]], i32 0
+; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <8 x ptr> [[BROADCAST_SPLAT2]], i64 0
 ; AVX512-NEXT:    [[TMP10:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v8p0(<8 x ptr> [[TMP7]], <8 x i1> [[TMP6]], ptr [[TMP9]])
 ; AVX512-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -216,7 +216,7 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; X86:       [[VECTOR_PH]]:
-; X86-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; X86-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; X86-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; X86-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
 ; X86-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
@@ -263,7 +263,7 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 32
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x float> poison, float [[A]], i64 0
 ; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x float> [[BROADCAST_SPLATINSERT]], <16 x float> poison, <16 x i32> zeroinitializer
@@ -414,7 +414,7 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[A]], i64 0
 ; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
@@ -627,7 +627,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; X86:       [[VECTOR_PH]]:
-; X86-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; X86-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; X86-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; X86-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; X86-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -688,7 +688,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
@@ -775,7 +775,7 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; X86:       [[VECTOR_PH]]:
-; X86-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; X86-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; X86-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; X86-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
 ; X86-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
@@ -822,7 +822,7 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 128
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 64
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 63
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <64 x i8> poison, i8 [[A]], i64 0
 ; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <64 x i8> [[BROADCAST_SPLATINSERT]], <64 x i8> poison, <64 x i32> zeroinitializer
@@ -888,7 +888,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; X86:       [[VECTOR_PH]]:
-; X86-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; X86-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; X86-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; X86-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
 ; X86-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -945,7 +945,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 32
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 32
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 31
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[A]], i64 0
 ; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
@@ -1016,4 +1016,4 @@ exit:
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.interleave.count", i32 2}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}

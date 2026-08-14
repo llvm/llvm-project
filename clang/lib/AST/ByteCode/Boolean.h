@@ -12,8 +12,6 @@
 #include "Integral.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ComparisonCategories.h"
-#include "llvm/ADT/APSInt.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <cstdint>
@@ -61,11 +59,10 @@ public:
   bool isMin() const { return isZero(); }
 
   constexpr static bool isMinusOne() { return false; }
-
   constexpr static bool isSigned() { return false; }
-
   constexpr static bool isNegative() { return false; }
   constexpr static bool isPositive() { return !isNegative(); }
+  constexpr static bool isNumber() { return true; }
 
   ComparisonCategoryResult compare(const Boolean &RHS) const {
     return Compare(V, RHS.V);
@@ -81,7 +78,9 @@ public:
     return Boolean(Val);
   }
 
-  void bitcastToMemory(std::byte *Buff) { std::memcpy(Buff, &V, sizeof(V)); }
+  void bitcastToMemory(std::byte *Buff) const {
+    std::memcpy(Buff, &V, sizeof(V));
+  }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {

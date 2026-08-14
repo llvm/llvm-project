@@ -36,6 +36,16 @@ public:
         NumRegs(BF.getBinaryContext().MRI->getNumRegs()) {}
   virtual ~LivenessAnalysis();
 
+  // Return the state before the execution of an Instruction.
+  BitVector getLiveIn(const MCInst &Inst) const {
+    return *this->getStateAt(Inst);
+  }
+
+  // Return the state after the execution of an Instruction.
+  BitVector getLiveOut(const MCInst &Inst) const {
+    return *this->getStateBefore(Inst);
+  }
+
   bool isAlive(ProgramPoint PP, MCPhysReg Reg) const {
     const BitVector &BV = *this->getStateAt(PP);
     const BitVector &RegAliases = BC.MIB->getAliases(Reg);
@@ -46,18 +56,22 @@ public:
 
   // Return a usable general-purpose reg after point P. Return 0 if no reg is
   // available.
-  MCPhysReg scavengeRegAfter(ProgramPoint P) {
+  MCPhysReg scavengeRegAfter(ProgramPoint P) const {
     BitVector BV = *this->getStateAt(P);
-    BV.flip();
+    return scavengeRegFromState(BV);
+  }
+
+  // Return a usable general-purpose reg given a liveness state. Return 0 if
+  // no reg is available.
+  MCPhysReg scavengeRegFromState(BitVector &LiveRegs) const {
     BitVector GPRegs(NumRegs, false);
     this->BC.MIB->getGPRegs(GPRegs, /*IncludeAlias=*/false);
-    // Ignore the register used for frame pointer even if it is not alive (it
-    // may be used by CFI which is not represented in our dataflow).
-    BitVector FP = BC.MIB->getAliases(BC.MIB->getFramePointer());
-    FP.flip();
-    BV &= GPRegs;
-    BV &= FP;
-    int Reg = BV.find_first();
+    LiveRegs.flip();
+    LiveRegs &= GPRegs;
+    // Ignore target-specific special registers even if they are dead
+    // (they may be used by CFI which is not represented in our dataflow).
+    BC.MIB->removeNonScavengeableRegs(LiveRegs);
+    int Reg = LiveRegs.find_first();
     return Reg != -1 ? Reg : 0;
   }
 

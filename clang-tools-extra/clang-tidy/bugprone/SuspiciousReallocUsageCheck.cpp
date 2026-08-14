@@ -81,9 +81,9 @@ public:
 
   bool VisitDeclStmt(const DeclStmt *S) {
     for (const Decl *D : S->getDeclGroup())
-      if (const auto *LeftVar = dyn_cast<VarDecl>(D))
-        if (LeftVar->hasInit())
-          return isAccessForVar(LeftVar->getInit());
+      if (const auto *LeftVar = dyn_cast<VarDecl>(D);
+          LeftVar && LeftVar->hasInit())
+        return isAccessForVar(LeftVar->getInit());
     return false;
   }
   bool VisitBinaryOperator(const BinaryOperator *S) {
@@ -104,13 +104,13 @@ namespace clang::tidy::bugprone {
 
 void SuspiciousReallocUsageCheck::registerMatchers(MatchFinder *Finder) {
   // void *realloc(void *ptr, size_t size);
-  auto ReallocDecl =
+  const auto ReallocDecl =
       functionDecl(hasName("::realloc"), parameterCountIs(2),
                    hasParameter(0, hasType(pointerType(pointee(voidType())))),
                    hasParameter(1, hasType(isInteger())))
           .bind("realloc");
 
-  auto ReallocCall =
+  const auto ReallocCall =
       callExpr(callee(ReallocDecl), hasArgument(0, expr().bind("ptr_input")),
                hasAncestor(functionDecl().bind("parent_function")))
           .bind("call");
@@ -140,9 +140,10 @@ void SuspiciousReallocUsageCheck::check(
           dyn_cast<DeclRefExpr>(PtrInputExpr->IgnoreParenImpCasts()))
     if (const auto *Var = dyn_cast<VarDecl>(DeclRef->getDecl()))
       if (const auto *Func =
-              Result.Nodes.getNodeAs<FunctionDecl>("parent_function"))
-        if (FindAssignToVarBefore{Var, DeclRef, SM}.Visit(Func->getBody()))
-          return;
+              Result.Nodes.getNodeAs<FunctionDecl>("parent_function");
+          Func &&
+          FindAssignToVarBefore{Var, DeclRef, SM}.Visit(Func->getBody()))
+        return;
 
   const StringRef CodeOfAssignedExpr = Lexer::getSourceText(
       CharSourceRange::getTokenRange(PtrResultExpr->getSourceRange()), SM,

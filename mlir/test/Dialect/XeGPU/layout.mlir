@@ -8,22 +8,22 @@
 gpu.module @test {
 // CHECK: gpu.func @create_nd_tdesc_subgroup_1(%[[arg0:.*]]: memref<128x128xf32>) {
 gpu.func @create_nd_tdesc_subgroup_1(%src: memref<128x128xf32>) {
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]][0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64]>>
-  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64]>>
+  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64]>>
+  %1 = xegpu.create_nd_tdesc %src : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64]>>
   gpu.return
 }
 
 // CHECK: gpu.func @create_nd_tdesc_subgroup_2(%[[arg0:.*]]: memref<128x128xf32>) {
 gpu.func @create_nd_tdesc_subgroup_2(%src: memref<128x128xf32>) {
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]][0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [8, 16]>>
-  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [8, 16]>>
+  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [8, 16]>>
+  %1 = xegpu.create_nd_tdesc %src : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [8, 16]>>
   gpu.return
 }
 
 // CHECK: gpu.func @create_nd_tdesc_subgroup_3(%[[arg0:.*]]: memref<128x128xf32>) {
 gpu.func @create_nd_tdesc_subgroup_3(%src: memref<128x128xf32>) {
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]][0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
-  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+  %1 = xegpu.create_nd_tdesc %src : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
   gpu.return
 }
 
@@ -31,16 +31,16 @@ gpu.func @create_nd_tdesc_subgroup_3(%src: memref<128x128xf32>) {
 // -----
 // CHECK: func.func @create_nd_tdesc_wrap_around_layout(%[[arg0:.*]]: memref<24x32xf32>) {
 func.func @create_nd_tdesc_wrap_around_layout(%src: memref<24x32xf32>) {
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]][0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<4x8xf32, #xegpu.layout<lane_layout = [2, 8], lane_data = [4, 1]>>
-    %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
+  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]] : memref<24x32xf32> -> !xegpu.tensor_desc<4x8xf32, #xegpu.layout<lane_layout = [2, 8], lane_data = [4, 1]>>
+    %0 = xegpu.create_nd_tdesc %src : memref<24x32xf32> ->
       !xegpu.tensor_desc<4x8xf32,  #xegpu.layout<lane_layout = [2, 8], lane_data = [4, 1]>>
   return
 }
 
 // CHECK: gpu.func @create_nd_tdesc_wg_1(%[[arg0:.*]]: memref<24x32xf32>) {
 gpu.func @create_nd_tdesc_wg_1(%src: memref<24x32xf32>) {
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [3, 2], sg_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>>
-  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [3, 2], sg_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>>
+  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0 : memref<24x32xf32> -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [3, 2], sg_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>>
+  %1 = xegpu.create_nd_tdesc %src : memref<24x32xf32> -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [3, 2], sg_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>>
   gpu.return
 }
 
@@ -57,6 +57,13 @@ gpu.func @convert_layout_wg(%a: vector<32x64xf16>) {
   // CHECK-SAME: <{input_layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>, target_layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<32x64xf16>
   %2 = xegpu.convert_layout %a <{input_layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
                                 target_layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<32x64xf16>
+  gpu.return
+}
+
+gpu.func @convert_layout_wg_scalar(%a: f16) {
+  // CHECK: xegpu.convert_layout
+  // CHECK-SAME: <{input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>, target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}> : f16
+  %2 = xegpu.convert_layout %a <{input_layout = #xegpu.slice<#xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>, target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0, 1]>}> : f16
   gpu.return
 }
 

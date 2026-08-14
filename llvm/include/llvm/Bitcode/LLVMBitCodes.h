@@ -120,6 +120,11 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
+
+  MODULE_CODE_ASM_PROPERTY = 19, // [strchr x N]
+
+  // GUIDLIST: [n x i64]
+  MODULE_CODE_GUIDLIST = 20,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
@@ -524,6 +529,10 @@ enum RMWOperations {
   RMW_FMINIMUMNUM = 22,
 };
 
+enum RMWOperationFlags {
+  RMW_ELEMENTWISE_FLAG = 1 << 5,
+};
+
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
 /// OverflowingBinaryOperator's SubclassOptionalData contents.
 enum OverflowingBinaryOperatorOptionalFlags {
@@ -816,6 +825,7 @@ enum AttributeKindCodes {
   ATTR_KIND_DENORMAL_FPENV = 106,
   ATTR_KIND_NOOUTLINE = 107,
   ATTR_KIND_FLATTEN = 108,
+  ATTR_KIND_NOIPA = 109,
 };
 
 enum ComdatSelectionKindCodes {

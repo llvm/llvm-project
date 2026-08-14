@@ -14,10 +14,10 @@ add_llvm_library(LLVMDebuginfod
 
   LINK_LIBS
   ${imported_libs}
+  LLVMHTTP
 
   LINK_COMPONENTS
   Support
-  SupportHTTP
   Symbolize
   DebugInfoDWARF
   BinaryFormat

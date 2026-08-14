@@ -31,13 +31,16 @@ AST_MATCHER(CXXOperatorCallExpr, isPrePostOperator) {
 } // namespace
 
 void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
-  auto OperatorMatcher = expr(
+  const auto OperatorMatcher = expr(
       anyOf(binaryOperator(anyOf(isComparisonOperator(), isLogicalOperator())),
             cxxOperatorCallExpr(isComparisonOperator())));
 
   auto IsInUnevaluatedContext =
       expr(anyOf(hasAncestor(expr(matchers::hasUnevaluatedContext())),
                  hasAncestor(typeLoc())));
+
+  auto IsInLambda =
+      hasAncestor(lambdaExpr(hasAncestor(expr(equalsBoundNode("parent")))));
 
   Finder->addMatcher(
       expr(
@@ -50,7 +53,7 @@ void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
                          cxxOperatorCallExpr(
                              isPrePostOperator(),
                              hasUnaryOperand(expr().bind("operand")))),
-                   unless(IsInUnevaluatedContext),
+                   unless(IsInUnevaluatedContext), unless(IsInLambda),
                    hasAncestor(
                        expr(equalsBoundNode("parent"),
                             hasDescendant(

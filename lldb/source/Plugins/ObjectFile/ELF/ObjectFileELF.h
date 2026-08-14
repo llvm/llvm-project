@@ -81,7 +81,6 @@ public:
   static lldb_private::ModuleSpecList
   GetModuleSpecifications(const lldb_private::FileSpec &file,
                           lldb::DataExtractorSP &extractor_sp,
-                          lldb::offset_t data_offset,
                           lldb::offset_t file_offset, lldb::offset_t length);
 
   static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
@@ -274,7 +273,7 @@ private:
                                  uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);
 
-  static void ParseRISCVAttributes(lldb_private::DataExtractor &data,
+  static void ParseRISCVAttributes(const lldb_private::DataExtractor &data,
                                    uint64_t length,
                                    lldb_private::ArchSpec &arch_spec);
 

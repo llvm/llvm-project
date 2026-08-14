@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRVectorTransforms
   BufferizableOpInterfaceImpl.cpp
+  IndexedAccessOpInterfaceImpl.cpp
   LowerVectorBitCast.cpp
   LowerVectorBroadcast.cpp
   LowerVectorContract.cpp
@@ -14,6 +15,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   LowerVectorToFromElementsToShuffleTree.cpp
   LowerVectorTransfer.cpp
   LowerVectorTranspose.cpp
+  MemorySlotOpInterfaceImpl.cpp
   SubsetOpInterfaceImpl.cpp
   VectorDistribute.cpp
   VectorDropLeadUnitDim.cpp
@@ -43,6 +45,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRGPUUtils
   MLIRIR
   MLIRLinalgDialect
+  MLIRMemorySlotInterfaces
   MLIRMemRefDialect
   MLIRMemRefTransforms
   MLIRMemRefUtils

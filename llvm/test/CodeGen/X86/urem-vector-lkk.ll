@@ -6,84 +6,62 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX,AVX512
 
 define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
-; SSE-LABEL: fold_urem_vec_1:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pextrw $1, %xmm0, %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    shrl $2, %ecx
-; SSE-NEXT:    imull $16913, %ecx, %ecx # imm = 0x4211
-; SSE-NEXT:    shrl $19, %ecx
-; SSE-NEXT:    imull $124, %ecx, %ecx
-; SSE-NEXT:    subl %ecx, %eax
-; SSE-NEXT:    movd %xmm0, %ecx
-; SSE-NEXT:    movzwl %cx, %edx
-; SSE-NEXT:    imull $44151, %edx, %edx # imm = 0xAC77
-; SSE-NEXT:    shrl $22, %edx
-; SSE-NEXT:    imull $95, %edx, %edx
-; SSE-NEXT:    subl %edx, %ecx
-; SSE-NEXT:    movd %ecx, %xmm1
-; SSE-NEXT:    pinsrw $1, %eax, %xmm1
-; SSE-NEXT:    pextrw $2, %xmm0, %eax
-; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    shrl %ecx
-; SSE-NEXT:    imull $2675, %ecx, %ecx # imm = 0xA73
-; SSE-NEXT:    shrl $17, %ecx
-; SSE-NEXT:    imull $98, %ecx, %ecx
-; SSE-NEXT:    subl %ecx, %eax
-; SSE-NEXT:    pinsrw $2, %eax, %xmm1
-; SSE-NEXT:    pextrw $3, %xmm0, %eax
-; SSE-NEXT:    imull $1373, %eax, %ecx # imm = 0x55D
-; SSE-NEXT:    shrl $16, %ecx
-; SSE-NEXT:    movl %eax, %edx
-; SSE-NEXT:    subl %ecx, %edx
-; SSE-NEXT:    movzwl %dx, %edx
-; SSE-NEXT:    shrl %edx
-; SSE-NEXT:    addl %ecx, %edx
-; SSE-NEXT:    shrl $9, %edx
-; SSE-NEXT:    imull $1003, %edx, %ecx # imm = 0x3EB
-; SSE-NEXT:    subl %ecx, %eax
-; SSE-NEXT:    pinsrw $3, %eax, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: fold_urem_vec_1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    pandn %xmm0, %xmm1
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = [0,0,0,64,0,128,0,0,0,0,0,0,0,0,0,0]
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [44151,16913,2675,1373,u,u,u,u]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psubw %xmm2, %xmm1
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,0,0,32768,u,u,u,u]
+; SSE2-NEXT:    paddw %xmm2, %xmm1
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1024,8192,32768,128,u,u,u,u]
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [95,124,98,1003,u,u,u,u]
+; SSE2-NEXT:    psubw %xmm1, %xmm0
+; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: fold_urem_vec_1:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    shrl $2, %ecx
-; AVX-NEXT:    imull $16913, %ecx, %ecx # imm = 0x4211
-; AVX-NEXT:    shrl $19, %ecx
-; AVX-NEXT:    imull $124, %ecx, %ecx
-; AVX-NEXT:    subl %ecx, %eax
-; AVX-NEXT:    vmovd %xmm0, %ecx
-; AVX-NEXT:    movzwl %cx, %edx
-; AVX-NEXT:    imull $44151, %edx, %edx # imm = 0xAC77
-; AVX-NEXT:    shrl $22, %edx
-; AVX-NEXT:    imull $95, %edx, %edx
-; AVX-NEXT:    subl %edx, %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm1
-; AVX-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    shrl %ecx
-; AVX-NEXT:    imull $2675, %ecx, %ecx # imm = 0xA73
-; AVX-NEXT:    shrl $17, %ecx
-; AVX-NEXT:    imull $98, %ecx, %ecx
-; AVX-NEXT:    subl %ecx, %eax
-; AVX-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX-NEXT:    imull $1373, %eax, %ecx # imm = 0x55D
-; AVX-NEXT:    shrl $16, %ecx
-; AVX-NEXT:    movl %eax, %edx
-; AVX-NEXT:    subl %ecx, %edx
-; AVX-NEXT:    movzwl %dx, %edx
-; AVX-NEXT:    shrl %edx
-; AVX-NEXT:    addl %ecx, %edx
-; AVX-NEXT:    shrl $9, %edx
-; AVX-NEXT:    imull $1003, %edx, %ecx # imm = 0x3EB
-; AVX-NEXT:    subl %ecx, %eax
-; AVX-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm0
-; AVX-NEXT:    retq
+; SSE4-LABEL: fold_urem_vec_1:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movq {{.*#+}} xmm1 = [0,16384,32768,0,0,0,0,0]
+; SSE4-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE4-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2],xmm0[3],xmm1[4,5,6,7]
+; SSE4-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [44151,16913,2675,1373,u,u,u,u]
+; SSE4-NEXT:    movdqa %xmm0, %xmm2
+; SSE4-NEXT:    psubw %xmm1, %xmm2
+; SSE4-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [0,0,0,32768,u,u,u,u]
+; SSE4-NEXT:    paddw %xmm1, %xmm2
+; SSE4-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1024,8192,32768,128,u,u,u,u]
+; SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [95,124,98,1003,u,u,u,u]
+; SSE4-NEXT:    psubw %xmm2, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1OR2-LABEL: fold_urem_vec_1:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [u,16384,32768,u,u,u,u,u]
+; AVX1OR2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2],xmm0[3],xmm1[4,5,6,7]
+; AVX1OR2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [44151,16913,2675,1373,u,u,u,u]
+; AVX1OR2-NEXT:    vpsubw %xmm1, %xmm0, %xmm2
+; AVX1OR2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [0,0,0,32768,u,u,u,u]
+; AVX1OR2-NEXT:    vpaddw %xmm1, %xmm2, %xmm1
+; AVX1OR2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1024,8192,32768,128,u,u,u,u]
+; AVX1OR2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [95,124,98,1003,u,u,u,u]
+; AVX1OR2-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
+; AVX1OR2-NEXT:    retq
+;
+; AVX512-LABEL: fold_urem_vec_1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX512-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [44151,16913,2675,1373,u,u,u,u]
+; AVX512-NEXT:    vpsubw %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [0,0,0,32768,u,u,u,u]
+; AVX512-NEXT:    vpaddw %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vpsrlvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [95,124,98,1003,u,u,u,u]
+; AVX512-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %1 = urem <4 x i16> %x, <i16 95, i16 124, i16 98, i16 1003>
   ret <4 x i16> %1
 }
@@ -91,18 +69,18 @@ define <4 x i16> @fold_urem_vec_1(<4 x i16> %x) {
 define <4 x i16> @fold_urem_vec_2(<4 x i16> %x) {
 ; SSE-LABEL: fold_urem_vec_2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,44151,44151,44151,44151]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,u,u,u,u]
 ; SSE-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE-NEXT:    psrlw $6, %xmm1
-; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [95,95,95,95,95,95,95,95]
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [95,95,95,95,u,u,u,u]
 ; SSE-NEXT:    psubw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fold_urem_vec_2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [44151,44151,44151,44151,44151,44151,44151,44151]
+; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [44151,44151,44151,44151,u,u,u,u]
 ; AVX-NEXT:    vpsrlw $6, %xmm1, %xmm1
-; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [95,95,95,95,95,95,95,95]
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [95,95,95,95,u,u,u,u]
 ; AVX-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = urem <4 x i16> %x, <i16 95, i16 95, i16 95, i16 95>
@@ -114,10 +92,10 @@ define <4 x i16> @fold_urem_vec_2(<4 x i16> %x) {
 define <4 x i16> @combine_urem_udiv(<4 x i16> %x) {
 ; SSE2-LABEL: combine_urem_udiv:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,44151,44151,44151,44151]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,u,u,u,u]
 ; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $6, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [95,95,95,95,95,95,95,95]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [95,95,95,95,u,u,u,u]
 ; SSE2-NEXT:    pmullw %xmm1, %xmm2
 ; SSE2-NEXT:    psubw %xmm2, %xmm0
 ; SSE2-NEXT:    paddw %xmm1, %xmm0
@@ -125,7 +103,7 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) {
 ;
 ; SSE4-LABEL: combine_urem_udiv:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,44151,44151,44151,44151]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [44151,44151,44151,44151,u,u,u,u]
 ; SSE4-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE4-NEXT:    psrlw $6, %xmm1
 ; SSE4-NEXT:    pmovsxbw {{.*#+}} xmm2 = [95,95,95,95,95,95,95,95]
@@ -136,9 +114,9 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) {
 ;
 ; AVX-LABEL: combine_urem_udiv:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [44151,44151,44151,44151,44151,44151,44151,44151]
+; AVX-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [44151,44151,44151,44151,u,u,u,u]
 ; AVX-NEXT:    vpsrlw $6, %xmm1, %xmm1
-; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2 # [95,95,95,95,95,95,95,95]
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2 # [95,95,95,95,u,u,u,u]
 ; AVX-NEXT:    vpsubw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -152,92 +130,44 @@ define <4 x i16> @combine_urem_udiv(<4 x i16> %x) {
 define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) {
 ; SSE2-LABEL: dont_fold_urem_power_of_two:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [63,63,63,63]
-; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; SSE2-NEXT:    andl $31, %eax
-; SSE2-NEXT:    pinsrw $1, %eax, %xmm1
-; SSE2-NEXT:    pextrw $2, %xmm0, %eax
-; SSE2-NEXT:    andl $7, %eax
-; SSE2-NEXT:    pinsrw $2, %eax, %xmm1
-; SSE2-NEXT:    pextrw $3, %xmm0, %eax
-; SSE2-NEXT:    imull $44151, %eax, %ecx # imm = 0xAC77
-; SSE2-NEXT:    shrl $22, %ecx
-; SSE2-NEXT:    imull $95, %ecx, %ecx
-; SSE2-NEXT:    subl %ecx, %eax
-; SSE2-NEXT:    pinsrw $3, %eax, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = [1024,2048,8192,44151,0,0,0,0]
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    pand %xmm2, %xmm3
+; SSE2-NEXT:    psrlw $6, %xmm1
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [64,32,8,95,u,u,u,u]
+; SSE2-NEXT:    psubw %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: dont_fold_urem_power_of_two:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pmovsxbd {{.*#+}} xmm1 = [63,63,63,63]
-; SSE4-NEXT:    pand %xmm0, %xmm1
-; SSE4-NEXT:    pextrw $1, %xmm0, %eax
-; SSE4-NEXT:    andl $31, %eax
-; SSE4-NEXT:    pinsrw $1, %eax, %xmm1
-; SSE4-NEXT:    pextrw $2, %xmm0, %eax
-; SSE4-NEXT:    andl $7, %eax
-; SSE4-NEXT:    pinsrw $2, %eax, %xmm1
-; SSE4-NEXT:    pextrw $3, %xmm0, %eax
-; SSE4-NEXT:    imull $44151, %eax, %ecx # imm = 0xAC77
-; SSE4-NEXT:    shrl $22, %ecx
-; SSE4-NEXT:    imull $95, %ecx, %ecx
-; SSE4-NEXT:    subl %ecx, %eax
-; SSE4-NEXT:    pinsrw $3, %eax, %xmm1
-; SSE4-NEXT:    movdqa %xmm1, %xmm0
+; SSE4-NEXT:    movq {{.*#+}} xmm1 = [1024,2048,8192,44151,0,0,0,0]
+; SSE4-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE4-NEXT:    movdqa %xmm1, %xmm2
+; SSE4-NEXT:    psrlw $6, %xmm2
+; SSE4-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0,1,2],xmm2[3],xmm1[4,5,6,7]
+; SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [64,32,8,95,u,u,u,u]
+; SSE4-NEXT:    psubw %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
-; AVX1-LABEL: dont_fold_urem_power_of_two:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX1-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX1-NEXT:    andl $31, %eax
-; AVX1-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX1-NEXT:    andl $7, %eax
-; AVX1-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; AVX1-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX1-NEXT:    imull $44151, %eax, %ecx # imm = 0xAC77
-; AVX1-NEXT:    shrl $22, %ecx
-; AVX1-NEXT:    imull $95, %ecx, %ecx
-; AVX1-NEXT:    subl %ecx, %eax
-; AVX1-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: dont_fold_urem_power_of_two:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [63,63,63,63]
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX2-NEXT:    andl $31, %eax
-; AVX2-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX2-NEXT:    andl $7, %eax
-; AVX2-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX2-NEXT:    imull $44151, %eax, %ecx # imm = 0xAC77
-; AVX2-NEXT:    shrl $22, %ecx
-; AVX2-NEXT:    imull $95, %ecx, %ecx
-; AVX2-NEXT:    subl %ecx, %eax
-; AVX2-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm0
-; AVX2-NEXT:    retq
+; AVX1OR2-LABEL: dont_fold_urem_power_of_two:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [1024,2048,8192,44151,u,u,u,u]
+; AVX1OR2-NEXT:    vpsrlw $6, %xmm1, %xmm2
+; AVX1OR2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3],xmm1[4,5,6,7]
+; AVX1OR2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [64,32,8,95,u,u,u,u]
+; AVX1OR2-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
+; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: dont_fold_urem_power_of_two:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
-; AVX512-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX512-NEXT:    andl $31, %eax
-; AVX512-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX512-NEXT:    andl $7, %eax
-; AVX512-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX512-NEXT:    imull $44151, %eax, %ecx # imm = 0xAC77
-; AVX512-NEXT:    shrl $22, %ecx
-; AVX512-NEXT:    imull $95, %ecx, %ecx
-; AVX512-NEXT:    subl %ecx, %eax
-; AVX512-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm0
+; AVX512-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [1024,2048,8192,44151,u,u,u,u]
+; AVX512-NEXT:    vpsrlvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [64,32,8,95,u,u,u,u]
+; AVX512-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = urem <4 x i16> %x, <i16 64, i16 32, i16 8, i16 95>
   ret <4 x i16> %1
@@ -245,98 +175,58 @@ define <4 x i16> @dont_fold_urem_power_of_two(<4 x i16> %x) {
 
 ; Don't fold if the divisor is one.
 define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) {
-; SSE-LABEL: dont_fold_urem_one:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pextrw $2, %xmm0, %eax
-; SSE-NEXT:    imull $25645, %eax, %ecx # imm = 0x642D
-; SSE-NEXT:    shrl $16, %ecx
-; SSE-NEXT:    movl %eax, %edx
-; SSE-NEXT:    subl %ecx, %edx
-; SSE-NEXT:    movzwl %dx, %edx
-; SSE-NEXT:    shrl %edx
-; SSE-NEXT:    addl %ecx, %edx
-; SSE-NEXT:    shrl $4, %edx
-; SSE-NEXT:    leal (%rdx,%rdx,2), %ecx
-; SSE-NEXT:    shll $3, %ecx
-; SSE-NEXT:    subl %ecx, %edx
-; SSE-NEXT:    addl %eax, %edx
-; SSE-NEXT:    pextrw $1, %xmm0, %eax
-; SSE-NEXT:    imull $51307, %eax, %ecx # imm = 0xC86B
-; SSE-NEXT:    shrl $25, %ecx
-; SSE-NEXT:    imull $654, %ecx, %ecx # imm = 0x28E
-; SSE-NEXT:    subl %ecx, %eax
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pinsrw $1, %eax, %xmm1
-; SSE-NEXT:    pinsrw $2, %edx, %xmm1
-; SSE-NEXT:    pextrw $3, %xmm0, %eax
-; SSE-NEXT:    imull $12375, %eax, %ecx # imm = 0x3057
-; SSE-NEXT:    shrl $26, %ecx
-; SSE-NEXT:    imull $5423, %ecx, %ecx # imm = 0x152F
-; SSE-NEXT:    subl %ecx, %eax
-; SSE-NEXT:    pinsrw $3, %eax, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: dont_fold_urem_one:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    pandn %xmm0, %xmm1
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = [0,51307,25645,12375,0,0,0,0]
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    psubw %xmm2, %xmm3
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [u,0,32768,0,u,u,u,u]
+; SSE2-NEXT:    paddw %xmm2, %xmm3
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [0,0,128,0,0,16,64,0,u,u,u,u,u,u,u,u]
+; SSE2-NEXT:    por %xmm1, %xmm3
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [1,654,23,5423,u,u,u,u]
+; SSE2-NEXT:    psubw %xmm3, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: dont_fold_urem_one:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movq {{.*#+}} xmm1 = [0,51307,25645,12375,0,0,0,0]
+; SSE4-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE4-NEXT:    movdqa %xmm0, %xmm2
+; SSE4-NEXT:    psubw %xmm1, %xmm2
+; SSE4-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [u,0,32768,0,u,u,u,u]
+; SSE4-NEXT:    paddw %xmm1, %xmm2
+; SSE4-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [u,128,4096,64,u,u,u,u]
+; SSE4-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1,654,23,5423,u,u,u,u]
+; SSE4-NEXT:    psubw %xmm2, %xmm0
+; SSE4-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: dont_fold_urem_one:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX1OR2-NEXT:    imull $25645, %eax, %ecx # imm = 0x642D
-; AVX1OR2-NEXT:    shrl $16, %ecx
-; AVX1OR2-NEXT:    movl %eax, %edx
-; AVX1OR2-NEXT:    subl %ecx, %edx
-; AVX1OR2-NEXT:    movzwl %dx, %edx
-; AVX1OR2-NEXT:    shrl %edx
-; AVX1OR2-NEXT:    addl %ecx, %edx
-; AVX1OR2-NEXT:    shrl $4, %edx
-; AVX1OR2-NEXT:    leal (%rdx,%rdx,2), %ecx
-; AVX1OR2-NEXT:    shll $3, %ecx
-; AVX1OR2-NEXT:    subl %ecx, %edx
-; AVX1OR2-NEXT:    addl %eax, %edx
-; AVX1OR2-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX1OR2-NEXT:    imull $51307, %eax, %ecx # imm = 0xC86B
-; AVX1OR2-NEXT:    shrl $25, %ecx
-; AVX1OR2-NEXT:    imull $654, %ecx, %ecx # imm = 0x28E
-; AVX1OR2-NEXT:    subl %ecx, %eax
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpinsrw $2, %edx, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX1OR2-NEXT:    imull $12375, %eax, %ecx # imm = 0x3057
-; AVX1OR2-NEXT:    shrl $26, %ecx
-; AVX1OR2-NEXT:    imull $5423, %ecx, %ecx # imm = 0x152F
-; AVX1OR2-NEXT:    subl %ecx, %eax
-; AVX1OR2-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm0
+; AVX1OR2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [u,51307,25645,12375,u,u,u,u]
+; AVX1OR2-NEXT:    vpsubw %xmm1, %xmm0, %xmm2
+; AVX1OR2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [u,0,32768,0,u,u,u,u]
+; AVX1OR2-NEXT:    vpaddw %xmm1, %xmm2, %xmm1
+; AVX1OR2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [u,128,4096,64,u,u,u,u]
+; AVX1OR2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; AVX1OR2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1,654,23,5423,u,u,u,u]
+; AVX1OR2-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: dont_fold_urem_one:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpextrw $2, %xmm0, %eax
-; AVX512-NEXT:    imull $25645, %eax, %ecx # imm = 0x642D
-; AVX512-NEXT:    shrl $16, %ecx
-; AVX512-NEXT:    movl %eax, %edx
-; AVX512-NEXT:    subl %ecx, %edx
-; AVX512-NEXT:    movzwl %dx, %edx
-; AVX512-NEXT:    shrl %edx
-; AVX512-NEXT:    addl %ecx, %edx
-; AVX512-NEXT:    shrl $4, %edx
-; AVX512-NEXT:    leal (%rdx,%rdx,2), %ecx
-; AVX512-NEXT:    shll $3, %ecx
-; AVX512-NEXT:    subl %ecx, %edx
-; AVX512-NEXT:    vpextrw $1, %xmm0, %ecx
-; AVX512-NEXT:    addl %eax, %edx
-; AVX512-NEXT:    imull $51307, %ecx, %eax # imm = 0xC86B
-; AVX512-NEXT:    shrl $25, %eax
-; AVX512-NEXT:    imull $654, %eax, %eax # imm = 0x28E
-; AVX512-NEXT:    subl %eax, %ecx
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
-; AVX512-NEXT:    vpinsrw $2, %edx, %xmm1, %xmm1
-; AVX512-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX512-NEXT:    imull $12375, %eax, %ecx # imm = 0x3057
-; AVX512-NEXT:    shrl $26, %ecx
-; AVX512-NEXT:    imull $5423, %ecx, %ecx # imm = 0x152F
-; AVX512-NEXT:    subl %ecx, %eax
-; AVX512-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm0
+; AVX512-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [u,51307,25645,12375,u,u,u,u]
+; AVX512-NEXT:    vpsubw %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [u,0,32768,0,u,u,u,u]
+; AVX512-NEXT:    vpaddw %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vpsrlvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; AVX512-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1,654,23,5423,u,u,u,u]
+; AVX512-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = urem <4 x i16> %x, <i16 1, i16 654, i16 23, i16 5423>
   ret <4 x i16> %1
@@ -358,9 +248,9 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
   ret <4 x i16> %1
 }
 
-; Don't fold i64 urem.
-define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
-; SSE2-LABEL: dont_fold_urem_i64:
+; Fold i64 urem on AVX2+ targets.
+define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
+; SSE2-LABEL: fold_urem_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    movq %xmm1, %rcx
@@ -400,7 +290,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; SSE2-NEXT:    retq
 ;
-; SSE4-LABEL: dont_fold_urem_i64:
+; SSE4-LABEL: fold_urem_i64:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    movq %xmm1, %rcx
 ; SSE4-NEXT:    movabsq $7218291159277650633, %rdx # imm = 0x642C8590B21642C9
@@ -438,7 +328,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
 ; SSE4-NEXT:    movdqa %xmm2, %xmm1
 ; SSE4-NEXT:    retq
 ;
-; AVX1-LABEL: dont_fold_urem_i64:
+; AVX1-LABEL: fold_urem_i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vmovq %xmm1, %rcx
@@ -477,80 +367,75 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: dont_fold_urem_i64:
+; AVX2-LABEL: fold_urem_i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vmovq %xmm1, %rcx
-; AVX2-NEXT:    movabsq $7218291159277650633, %rdx # imm = 0x642C8590B21642C9
-; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    mulq %rdx
-; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    subq %rdx, %rax
-; AVX2-NEXT:    shrq %rax
-; AVX2-NEXT:    addq %rdx, %rax
-; AVX2-NEXT:    shrq $4, %rax
-; AVX2-NEXT:    leaq (%rax,%rax,2), %rdx
-; AVX2-NEXT:    shlq $3, %rdx
-; AVX2-NEXT:    subq %rdx, %rax
-; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    vmovq %rax, %xmm2
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX2-NEXT:    movabsq $-4513890722074972339, %rdx # imm = 0xC15B704DCBCA2F4D
-; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    mulq %rdx
-; AVX2-NEXT:    shrq $12, %rdx
-; AVX2-NEXT:    imulq $5423, %rdx, %rax # imm = 0x152F
-; AVX2-NEXT:    subq %rax, %rcx
-; AVX2-NEXT:    vmovq %rcx, %xmm1
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    shrq %rax
-; AVX2-NEXT:    movabsq $7220743857598845893, %rdx # imm = 0x64353C48064353C5
-; AVX2-NEXT:    mulq %rdx
-; AVX2-NEXT:    shrq $7, %rdx
-; AVX2-NEXT:    imulq $654, %rdx, %rax # imm = 0x28E
-; AVX2-NEXT:    subq %rax, %rcx
-; AVX2-NEXT:    vmovq %rcx, %xmm0
-; AVX2-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm2
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm3 = [0,105075653,2987803337,3419025229]
+; AVX2-NEXT:    vpmuludq %ymm3, %ymm2, %ymm4
+; AVX2-NEXT:    vpmuludq %ymm3, %ymm1, %ymm3
+; AVX2-NEXT:    vpsrlq $32, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddq %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpsrlq $32, %ymm3, %ymm4
+; AVX2-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0],ymm5[1],ymm3[2],ymm5[3],ymm3[4],ymm5[5],ymm3[6],ymm5[7]
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm5 = [0,1681210440,1680639376,3243995213]
+; AVX2-NEXT:    vpmuludq %ymm5, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddq %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; AVX2-NEXT:    vpmuludq %ymm5, %ymm2, %ymm2
+; AVX2-NEXT:    vpaddq %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpsrlq $32, %ymm2, %ymm3
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm4 = [0,0,2147483648,0]
+; AVX2-NEXT:    vpmuludq %ymm4, %ymm3, %ymm3
+; AVX2-NEXT:    vpmuludq %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpsrlq $32, %ymm2, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; AVX2-NEXT:    vpmovsxwq {{.*#+}} ymm2 = [1,654,23,5423]
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm1, %ymm3
+; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; AVX2-NEXT:    vpmuludq %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpsllq $32, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddq %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: dont_fold_urem_i64:
+; AVX512-LABEL: fold_urem_i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vmovq %xmm1, %rdx
-; AVX512-NEXT:    movabsq $7218291159277650633, %rax # imm = 0x642C8590B21642C9
-; AVX512-NEXT:    mulxq %rax, %rax, %rax
-; AVX512-NEXT:    movq %rdx, %rcx
-; AVX512-NEXT:    subq %rax, %rcx
-; AVX512-NEXT:    shrq %rcx
-; AVX512-NEXT:    addq %rax, %rcx
-; AVX512-NEXT:    shrq $4, %rcx
-; AVX512-NEXT:    leaq (%rcx,%rcx,2), %rax
-; AVX512-NEXT:    shlq $3, %rax
-; AVX512-NEXT:    subq %rax, %rcx
-; AVX512-NEXT:    addq %rdx, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX512-NEXT:    movabsq $-4513890722074972339, %rax # imm = 0xC15B704DCBCA2F4D
-; AVX512-NEXT:    mulxq %rax, %rax, %rax
-; AVX512-NEXT:    vmovq %rcx, %xmm1
-; AVX512-NEXT:    shrq $12, %rax
-; AVX512-NEXT:    imulq $5423, %rax, %rax # imm = 0x152F
-; AVX512-NEXT:    subq %rax, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX512-NEXT:    movq %rax, %rdx
-; AVX512-NEXT:    shrq %rdx
-; AVX512-NEXT:    movabsq $7220743857598845893, %rcx # imm = 0x64353C48064353C5
-; AVX512-NEXT:    mulxq %rcx, %rcx, %rcx
-; AVX512-NEXT:    shrq $7, %rcx
-; AVX512-NEXT:    imulq $654, %rcx, %rcx # imm = 0x28E
-; AVX512-NEXT:    subq %rcx, %rax
-; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
-; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX512-NEXT:    vpsrlq $32, %ymm1, %ymm2
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,105075653,2987803337,3419025229]
+; AVX512-NEXT:    vpmuludq %ymm3, %ymm2, %ymm4
+; AVX512-NEXT:    vpmuludq %ymm3, %ymm1, %ymm3
+; AVX512-NEXT:    vpsrlq $32, %ymm3, %ymm3
+; AVX512-NEXT:    vpaddq %ymm3, %ymm4, %ymm3
+; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm4 = ymm3[0],ymm4[1],ymm3[2],ymm4[3],ymm3[4],ymm4[5],ymm3[6],ymm4[7]
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,1681210440,1680639376,3243995213]
+; AVX512-NEXT:    vpsrlq $32, %ymm3, %ymm3
+; AVX512-NEXT:    vpmuludq %ymm5, %ymm1, %ymm1
+; AVX512-NEXT:    vpaddq %ymm4, %ymm1, %ymm1
+; AVX512-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; AVX512-NEXT:    vpmuludq %ymm5, %ymm2, %ymm2
+; AVX512-NEXT:    vpaddq %ymm3, %ymm2, %ymm2
+; AVX512-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
+; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vpsrlq $32, %ymm2, %ymm3
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,0,2147483648,0]
+; AVX512-NEXT:    vpmuludq %ymm4, %ymm3, %ymm3
+; AVX512-NEXT:    vpmuludq %ymm4, %ymm2, %ymm2
+; AVX512-NEXT:    vpsrlq $32, %ymm2, %ymm2
+; AVX512-NEXT:    vpor %ymm2, %ymm3, %ymm2
+; AVX512-NEXT:    vpaddq %ymm1, %ymm2, %ymm1
+; AVX512-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; AVX512-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [1,654,23,5423]
+; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = urem <4 x i64> %x, <i64 1, i64 654, i64 23, i64 5423>
   ret <4 x i64> %1

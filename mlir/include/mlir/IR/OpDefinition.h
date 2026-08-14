@@ -243,9 +243,10 @@ protected:
   /// so we can cast it away here.
   explicit OpState(Operation *state) : state(state) {}
 
-  /// For all op which don't have properties, we keep a single instance of
-  /// `EmptyProperties` to be used where a reference to a properties is needed:
-  /// this allow to bind a pointer to the reference without triggering UB.
+  /// For all ops which don't have properties, we keep a single instance of
+  /// `EmptyProperties` to be used where a pointer to a struct of properties
+  /// is needed: this allows binding a pointer to the reference without
+  /// triggering UB.
   static EmptyProperties &getEmptyProperties() {
     static EmptyProperties emptyProperties;
     return emptyProperties;
@@ -775,6 +776,18 @@ public:
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifyIsTerminator(op);
   }
+};
+
+/// This trait marks operations that are allowed to produce builtin token
+/// values.
+template <typename ConcreteType>
+class TokenProducerTrait : public TraitBase<ConcreteType, TokenProducerTrait> {
+};
+
+/// This trait marks operations that are allowed to consume builtin token
+/// values.
+template <typename ConcreteType>
+class TokenConsumerTrait : public TraitBase<ConcreteType, TokenConsumerTrait> {
 };
 
 /// This class provides verification for ops that are known to have zero
@@ -1323,6 +1336,32 @@ struct HasParent {
   };
 };
 
+/// This class provides a verifier for ops that are expecting an ancestor
+/// (anywhere up the parent chain) to be one of the given op types.
+template <typename... AncestorOpTypes>
+struct HasAncestor {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      if (op->getParentOfType<AncestorOpTypes...>())
+        return success();
+
+      return op->emitOpError()
+             << "expects ancestor op "
+             << (sizeof...(AncestorOpTypes) != 1 ? "to be one of '" : "'")
+             << llvm::ArrayRef({AncestorOpTypes::getOperationName()...}) << "'";
+    }
+
+    template <typename AncestorOpType =
+                  std::tuple_element_t<0, std::tuple<AncestorOpTypes...>>>
+    std::enable_if_t<sizeof...(AncestorOpTypes) == 1, AncestorOpType>
+    getAncestorOp() {
+      return this->getOperation()->template getParentOfType<AncestorOpType>();
+    }
+  };
+};
+
 /// A trait for operations that have an attribute specifying operand segments.
 ///
 /// Certain operations can have multiple variadic operands and their size
@@ -1568,8 +1607,8 @@ using detect_has_any_fold_trait =
 /// Returns the result of folding a trait that implements a `foldTrait` function
 /// that is specialized for operations that have a single result.
 template <typename Trait>
-static std::enable_if_t<detect_has_single_result_fold_trait<Trait>::value,
-                        LogicalResult>
+std::enable_if_t<detect_has_single_result_fold_trait<Trait>::value,
+                 LogicalResult>
 foldTrait(Operation *op, ArrayRef<Attribute> operands,
           SmallVectorImpl<OpFoldResult> &results) {
   assert(op->hasTrait<OpTrait::OneResult>() &&
@@ -1590,7 +1629,7 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
 /// Returns the result of folding a trait that implements a generalized
 /// `foldTrait` function that is supports any operation type.
 template <typename Trait>
-static std::enable_if_t<detect_has_fold_trait<Trait>::value, LogicalResult>
+std::enable_if_t<detect_has_fold_trait<Trait>::value, LogicalResult>
 foldTrait(Operation *op, ArrayRef<Attribute> operands,
           SmallVectorImpl<OpFoldResult> &results) {
   // If a previous trait has already been folded and replaced this operation, we
@@ -1598,8 +1637,7 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
   return results.empty() ? Trait::foldTrait(op, operands, results) : failure();
 }
 template <typename Trait>
-static inline std::enable_if_t<!detect_has_any_fold_trait<Trait>::value,
-                               LogicalResult>
+inline std::enable_if_t<!detect_has_any_fold_trait<Trait>::value, LogicalResult>
 foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
   return failure();
 }
@@ -1607,8 +1645,8 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 /// Given a tuple type containing a set of traits, return the result of folding
 /// the given operation.
 template <typename... Ts>
-static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
-                                SmallVectorImpl<OpFoldResult> &results) {
+LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
+                         SmallVectorImpl<OpFoldResult> &results) {
   return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
 }
 
@@ -1978,7 +2016,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorageUnsafe()
+                ->getPropertiesStorage()
                 .template as<InferredProperties<T> *>();
   }
 
@@ -2137,19 +2175,13 @@ template <typename T>
 struct DenseMapInfo<T,
                     std::enable_if_t<std::is_base_of<mlir::OpState, T>::value &&
                                      !mlir::detail::IsInterface<T>::value>> {
-  static inline T getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static inline T getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return T::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(T val) {
     return hash_value(val.getAsOpaquePointer());
   }
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
 } // namespace llvm
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::EmptyProperties)
 
 #endif

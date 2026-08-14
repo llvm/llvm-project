@@ -8,6 +8,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
@@ -213,6 +214,14 @@ bool StoringDiagnosticConsumer::HandleModuleRemark(
     LLDB_LOG(log, "Finished building Clang module {0}", module_name);
     return true;
   }
+  case clang::diag::remark_module_import: {
+    const auto &module_name = info.getArgStdStr(0);
+    const auto &module_path = info.getArgStdStr(1);
+    LLDB_LOG(log, "Importing Clang module {0} from {1}", module_name,
+             module_path);
+    return true;
+  }
+
   default:
     return false;
   }
@@ -338,8 +347,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
   }
 
   if (!HS.lookupModule(module.path.front().GetStringRef()))
-    return llvm::createStringError("header search couldn't locate module '%s'",
-                                   module.path.front().AsCString());
+    return llvm::createStringErrorV(
+        "header search couldn't locate module '{0}'", module.path.front());
 
   llvm::SmallVector<clang::IdentifierLoc, 4> clang_path;
 
@@ -504,22 +513,17 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
         ->ReadDefinedMacros();
   }
 
-  for (clang::Preprocessor::macro_iterator
-           mi = m_compiler_instance->getPreprocessor().macro_begin(),
-           me = m_compiler_instance->getPreprocessor().macro_end();
-       mi != me; ++mi) {
+  for (const auto &m : m_compiler_instance->getPreprocessor().macros()) {
     const clang::IdentifierInfo *ii = nullptr;
 
-    {
-      if (clang::IdentifierInfoLookup *lookup =
-              m_compiler_instance->getPreprocessor()
-                  .getIdentifierTable()
-                  .getExternalIdentifierLookup()) {
-        lookup->get(mi->first->getName());
-      }
-      if (!ii)
-        ii = mi->first;
+    if (clang::IdentifierInfoLookup *lookup =
+            m_compiler_instance->getPreprocessor()
+                .getIdentifierTable()
+                .getExternalIdentifierLookup()) {
+      lookup->get(m.first->getName());
     }
+    if (!ii)
+      ii = m.first;
 
     ssize_t found_priority = -1;
     clang::MacroInfo *macro_info = nullptr;
@@ -553,7 +557,7 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
     if (macro_info) {
       std::string macro_expansion = "#define ";
-      llvm::StringRef macro_identifier = mi->first->getName();
+      llvm::StringRef macro_identifier = m.first->getName();
       macro_expansion.append(macro_identifier.str());
 
       {
@@ -682,6 +686,7 @@ ClangModulesDeclVendor::Create(Target &target) {
       "-fmodules-validate-system-headers",
       "-Werror=non-modular-include-in-framework-module",
       "-Xclang=-fincremental-extensions",
+      "-Rmodule-import",
       "-Rmodule-build"};
 
   target.GetPlatform()->AddClangModuleCompilationOptions(

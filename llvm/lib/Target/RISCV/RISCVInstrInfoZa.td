@@ -87,7 +87,7 @@ multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
               (!cast<RVInst>(BaseInst#"_AQRL") GPR:$cmp, GPR:$new, GPR:$addr)>;
-    def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (vt GPR:$addr),
+    def : Pat<(!cast<PatFrag>(AtomicOp#"_seq_cst") (XLenVT GPR:$addr),
                                                    (vt GPR:$cmp),
                                                    (vt GPR:$new)),
               (!cast<RVInst>(BaseInst#"_AQRL") GPR:$cmp, GPR:$new, GPR:$addr)>;

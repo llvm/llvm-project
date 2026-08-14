@@ -364,13 +364,15 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
   llvm::PointerType *signatureType =
       llvm::PointerType::get(CGM.getLLVMContext(), ProgramAS);
 
+  // FIXME: Pass the enclosing FunctionDecl so Objective-C message sends use
+  // the caller's target features when arranging their ABI.
   // If there's a method, use information from that.
   if (method) {
     const CGFunctionInfo &signature =
       CGM.getTypes().arrangeObjCMessageSendSignature(method, callArgs[0].Ty);
 
     const CGFunctionInfo &signatureForCall =
-      CGM.getTypes().arrangeCall(signature, callArgs);
+        CGM.getTypes().arrangeCall(signature, callArgs, /*ABIInfoFD=*/nullptr);
 
     return MessageSendInfo(signatureForCall, signatureType);
   }
@@ -410,6 +412,13 @@ bool CGObjCRuntime::canMessageReceiverBeNull(
   }
 
   // Otherwise, assume it can be null.
+  return true;
+}
+
+bool CGObjCRuntime::canClassObjectBeUnrealized(
+    const ObjCInterfaceDecl *CalleeClassDecl, CodeGenFunction &CGF) const {
+  // TODO
+  // Otherwise, assume it can be unrealized.
   return true;
 }
 
@@ -464,10 +473,10 @@ clang::CodeGen::emitObjCProtocolObject(CodeGenModule &CGM,
 
 std::string CGObjCRuntime::getSymbolNameForMethod(const ObjCMethodDecl *OMD,
                                                   bool includeCategoryName,
-                                                  bool includePrefixByte) {
+                                                  bool useDirectABI) {
   std::string buffer;
   llvm::raw_string_ostream out(buffer);
   CGM.getCXXABI().getMangleContext().mangleObjCMethodName(
-      OMD, out, includePrefixByte, includeCategoryName);
+      OMD, out, /*includePrefixByte=*/true, includeCategoryName, useDirectABI);
   return buffer;
 }

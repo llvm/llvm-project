@@ -2,47 +2,48 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=x86_64 -mattr=+pclmul -S %s | FileCheck %s --check-prefix=WITH-PCLMUL
 ; RUN: opt -passes=loop-vectorize -mtriple=x86_64 -mattr=-pclmul -S %s | FileCheck %s --check-prefix=WITH-NO-PCLMUL
 
-declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
 
 define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n){
 ; WITH-PCLMUL-LABEL: define void @clmul_loop(
-; WITH-PCLMUL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; WITH-PCLMUL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; WITH-PCLMUL-NEXT:  [[ENTRY:.*]]:
 ; WITH-PCLMUL-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; WITH-PCLMUL-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; WITH-PCLMUL-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
-; WITH-PCLMUL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; WITH-PCLMUL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 10
 ; WITH-PCLMUL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; WITH-PCLMUL:       [[VECTOR_MEMCHECK]]:
 ; WITH-PCLMUL-NEXT:    [[TMP0:%.*]] = sub i64 [[C1]], [[A2]]
-; WITH-PCLMUL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
-; WITH-PCLMUL-NEXT:    [[TMP1:%.*]] = sub i64 [[C1]], [[B3]]
-; WITH-PCLMUL-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; WITH-PCLMUL-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
+; WITH-PCLMUL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 31
+; WITH-PCLMUL-NEXT:    [[TMP2:%.*]] = sub i64 [[C1]], [[B3]]
+; WITH-PCLMUL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
+; WITH-PCLMUL-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
 ; WITH-PCLMUL-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; WITH-PCLMUL-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; WITH-PCLMUL:       [[VECTOR_PH]]:
-; WITH-PCLMUL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; WITH-PCLMUL-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; WITH-PCLMUL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; WITH-PCLMUL-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; WITH-PCLMUL:       [[VECTOR_BODY]]:
 ; WITH-PCLMUL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; WITH-PCLMUL-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
-; WITH-PCLMUL-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
-; WITH-PCLMUL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
-; WITH-PCLMUL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP2]], i64 2
-; WITH-PCLMUL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; WITH-PCLMUL-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
-; WITH-PCLMUL-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP3]], i64 2
-; WITH-PCLMUL-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
-; WITH-PCLMUL-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x i64>, ptr [[TMP6]], align 8
-; WITH-PCLMUL-NEXT:    [[TMP7:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD]], <2 x i64> [[WIDE_LOAD6]])
-; WITH-PCLMUL-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD5]], <2 x i64> [[WIDE_LOAD7]])
-; WITH-PCLMUL-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP4]], i64 2
-; WITH-PCLMUL-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP4]], align 8
-; WITH-PCLMUL-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP9]], align 8
+; WITH-PCLMUL-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; WITH-PCLMUL-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
+; WITH-PCLMUL-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
+; WITH-PCLMUL-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP4]], i64 2
+; WITH-PCLMUL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP4]], align 8
+; WITH-PCLMUL-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x i64>, ptr [[TMP7]], align 8
+; WITH-PCLMUL-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP5]], i64 2
+; WITH-PCLMUL-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
+; WITH-PCLMUL-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x i64>, ptr [[TMP8]], align 8
+; WITH-PCLMUL-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD]], <2 x i64> [[WIDE_LOAD6]])
+; WITH-PCLMUL-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD5]], <2 x i64> [[WIDE_LOAD7]])
+; WITH-PCLMUL-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP6]], i64 2
+; WITH-PCLMUL-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP6]], align 8
+; WITH-PCLMUL-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP11]], align 8
 ; WITH-PCLMUL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; WITH-PCLMUL-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; WITH-PCLMUL-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; WITH-PCLMUL-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; WITH-PCLMUL-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; WITH-PCLMUL:       [[MIDDLE_BLOCK]]:
 ; WITH-PCLMUL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; WITH-PCLMUL-NEXT:    br i1 [[CMP_N]], label %[[FOR_EXIT:.*]], label %[[SCALAR_PH]]
@@ -65,7 +66,7 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n){
 ; WITH-PCLMUL-NEXT:    ret void
 ;
 ; WITH-NO-PCLMUL-LABEL: define void @clmul_loop(
-; WITH-NO-PCLMUL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; WITH-NO-PCLMUL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; WITH-NO-PCLMUL-NEXT:  [[ENTRY:.*]]:
 ; WITH-NO-PCLMUL-NEXT:    br label %[[FOR_BODY:.*]]
 ; WITH-NO-PCLMUL:       [[FOR_BODY]]:
