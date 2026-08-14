@@ -4483,15 +4483,22 @@ TEST_F(DIExpressionTest, SymbolicBranchRewrites) {
   EXPECT_EQ(DIExpression::get(Context, Expected), Appended);
   EXPECT_TRUE(Appended->isValid());
 
-  // Label IDs are arbitrary uint64_t values, so appendExt must not mistake one
-  // for DW_OP_stack_value.
+  // A label emits no bytes, so a label-only expression doesn't need a deref
+  // before the appended ops. The ID collides with DW_OP_stack_value on purpose:
+  // label IDs are arbitrary, so appendExt has to read it as an argument rather
+  // than as an opcode.
   uint64_t LabelID = dwarf::DW_OP_stack_value;
   Ops = {dwarf::DW_OP_LLVM_label, LabelID};
   Appended =
       DIExpression::appendExt(DIExpression::get(Context, Ops), 32, 64, true);
-  Expected = {dwarf::DW_OP_LLVM_label,   LabelID, dwarf::DW_OP_deref,
-              dwarf::DW_OP_LLVM_convert, 32,      dwarf::DW_ATE_signed,
-              dwarf::DW_OP_LLVM_convert, 64,      dwarf::DW_ATE_signed,
+  Expected = {dwarf::DW_OP_LLVM_label,
+              LabelID,
+              dwarf::DW_OP_LLVM_convert,
+              32,
+              dwarf::DW_ATE_signed,
+              dwarf::DW_OP_LLVM_convert,
+              64,
+              dwarf::DW_ATE_signed,
               dwarf::DW_OP_stack_value};
   EXPECT_EQ(DIExpression::get(Context, Expected), Appended);
   EXPECT_TRUE(Appended->isValid());

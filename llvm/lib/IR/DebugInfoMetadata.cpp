@@ -1762,7 +1762,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
 }
 
 bool DIExpression::ExprOperand::isNonEmitting() const {
-  return getOp() == dwarf::DW_OP_LLVM_tag_offset;
+  return isOneOf(dwarf::DW_OP_LLVM_tag_offset, dwarf::DW_OP_LLVM_label);
 }
 
 bool DIExpression::ArgOp::classof(const ExprOperand *Op) {
