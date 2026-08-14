@@ -229,13 +229,15 @@ private:
   void setTargetRuntimeLibcallSets(const Triple &TT,
                                    ExceptionHandling ExceptionModel,
                                    FloatABI::ABIType FloatABI, EABI ABIType,
-                                   StringRef ABIName);
+                                   StringRef ABIName,
+                                   LongDoubleFormat LongDoubleFormat);
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
   LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
                              FloatABI::ABIType FloatABI, EABI ABIType,
-                             StringRef ABIName);
+                             StringRef ABIName,
+                             LongDoubleFormat LongDoubleFormat);
 };
 
 } // namespace RTLIB

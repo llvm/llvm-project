@@ -6,14 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SPS ProxySpecs (signatures, controller-interface names, and dispatch) for the
-// GenericMemoryManagerProxies. The controller-interface names here are the
-// runtime's SimpleNativeMemoryMap defaults (the Create methods look symbols up
-// under caller-supplied names).
-//
-// The signatures below duplicate the SPSSimpleExecutorMemoryManager* signatures
-// in OrcRTBridge.h; the intent is to retire those and have callers depend on
-// this header instead.
+// SPS ProxySpecs for the GenericMemoryManagerProxies: each binds a Proxy to
+// its controller-interface descriptor in
+// Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h, which supplies the wrapper name
+// and wire signature. The names are the runtime's SimpleNativeMemoryMap
+// defaults (the Create methods look symbols up under caller-supplied names).
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,46 +19,18 @@
 
 #include "llvm/ExecutionEngine/Orc/RTBridge/GenericMemoryManagerProxies.h"
 #include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpec.h"
-
-#include <cstdint>
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 
 namespace llvm::orc::rt::sps {
 
-// Controller-interface name of the SimpleNativeMemoryMap instance: a data
-// symbol (the allocator object) passed as the first argument to each call, not
-// a wrapper to proxy.
-inline constexpr char MemMgrInstanceCIName[] =
-    "orc_rt_ci_SimpleNativeMemoryMap_Instance";
-
-using MemMgrReserveSPSSig = shared::SPSExpected<shared::SPSExecutorAddr>(
-    shared::SPSExecutorAddr, uint64_t);
-inline constexpr char MemMgrReserveCIName[] =
-    "orc_rt_ci_sps_SimpleNativeMemoryMap_reserve";
 using MemMgrReserveProxySpec =
-    ProxySpec<rt::MemMgrReserveProxy, MemMgrReserveSPSSig, MemMgrReserveCIName>;
-
-using MemMgrInitializeSPSSig = shared::SPSExpected<shared::SPSExecutorAddr>(
-    shared::SPSExecutorAddr, shared::SPSFinalizeRequest);
-inline constexpr char MemMgrInitializeCIName[] =
-    "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize";
+    ProxySpec<rt::MemMgrReserveProxy, sps_ci::MemMgrReserve>;
 using MemMgrInitializeProxySpec =
-    ProxySpec<rt::MemMgrInitializeProxy, MemMgrInitializeSPSSig,
-              MemMgrInitializeCIName>;
-
-using MemMgrDeinitializeSPSSig = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-inline constexpr char MemMgrDeinitializeCIName[] =
-    "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple";
+    ProxySpec<rt::MemMgrInitializeProxy, sps_ci::MemMgrInitialize>;
 using MemMgrDeinitializeProxySpec =
-    ProxySpec<rt::MemMgrDeinitializeProxy, MemMgrDeinitializeSPSSig,
-              MemMgrDeinitializeCIName>;
-
-using MemMgrReleaseSPSSig = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-inline constexpr char MemMgrReleaseCIName[] =
-    "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple";
+    ProxySpec<rt::MemMgrDeinitializeProxy, sps_ci::MemMgrDeinitialize>;
 using MemMgrReleaseProxySpec =
-    ProxySpec<rt::MemMgrReleaseProxy, MemMgrReleaseSPSSig, MemMgrReleaseCIName>;
+    ProxySpec<rt::MemMgrReleaseProxy, sps_ci::MemMgrRelease>;
 
 } // namespace llvm::orc::rt::sps
 
