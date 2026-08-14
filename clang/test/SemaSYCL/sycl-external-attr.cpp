@@ -113,6 +113,22 @@ class D {
 // expected-error@+1{{'clang::sycl_external' cannot be applied to an explicitly deleted function}}
 [[clang::sycl_external]] void del() = delete;
 
+// SYCL device code does not support variadic functions.
+// expected-error@+1{{'clang::sycl_external' cannot be applied to a variadic function}}
+[[clang::sycl_external]] void var(int, ...) {}
+
+// expected-error@+1{{'clang::sycl_external' cannot be applied to a variadic function}}
+[[clang::sycl_external]] void vardecl(int, ...);
+
+// expected-error@+2{{'clang::sycl_external' cannot be applied to a variadic function}}
+class E {
+  [[clang::sycl_external]] void mvar(int, ...) {}
+};
+
+template<typename... Ts>
+[[clang::sycl_external]] void pack(Ts...) {}
+template void pack(int);
+
 struct NonCopyable {
   ~NonCopyable() = delete;
   [[clang::sycl_external]] NonCopyable(const NonCopyable&) = default;

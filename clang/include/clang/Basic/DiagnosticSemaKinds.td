@@ -13545,6 +13545,8 @@ def err_sycl_external_invalid_main : Error<
   "%0 cannot be applied to the 'main' function">;
 def err_sycl_external_invalid_deleted_function : Error<
   "%0 cannot be applied to an explicitly deleted function">;
+def err_sycl_external_invalid_variadic_function : Error<
+  "%0 cannot be applied to a variadic function">;
 def warn_sycl_external_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">,
   InGroup<NonPortableSYCL>;
