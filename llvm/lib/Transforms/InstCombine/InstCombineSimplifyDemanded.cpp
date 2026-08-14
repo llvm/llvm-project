@@ -2075,6 +2075,7 @@ static Value *simplifyDemandedFPClassFabs(KnownFPClass &Known, Value *Src,
     return Src;
 
   // If the only sign bit difference is due to -0, ignore it with nsz
+  // TODO: need to think about this more
   if (NSZ &&
       KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
     return Src;
