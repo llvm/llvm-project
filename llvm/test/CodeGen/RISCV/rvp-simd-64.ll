@@ -6601,9 +6601,6 @@ define <4 x i16> @test_pnclipup_v4i16(<2 x i32> %a, <2 x i32> %b) {
   ret <4 x i16> %r
 }
 
-declare <2 x i32> @llvm.riscv.pnclipp.v2i32.i64(i64, i64)
-declare <2 x i32> @llvm.riscv.pnclipup.v2i32.i64(i64, i64)
-
 define i64 @test_pnclipp_v2i32(i64 %a, i64 %b) {
 ; RV32-LABEL: test_pnclipp_v2i32:
 ; RV32:       # %bb.0:

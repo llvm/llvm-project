@@ -2951,38 +2951,3 @@ define <2 x i16> @test_pnclipup_v2i16(i32 %a, i32 %b) {
   %r = call <2 x i16> @llvm.riscv.pnclipup.v2i16.i32(i32 %a, i32 %b)
   ret <2 x i16> %r
 }
-
-declare <2 x i32> @llvm.riscv.pnclipp.v2i32.i64(i64, i64)
-declare <2 x i32> @llvm.riscv.pnclipup.v2i32.i64(i64, i64)
-
-define i64 @test_pnclipp_v2i32_i64(i64 %a, i64 %b) {
-; RV32-LABEL: test_pnclipp_v2i32_i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    nclipi a0, a0, 0
-; RV32-NEXT:    nclipi a1, a2, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_pnclipp_v2i32_i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pnclipp.w a0, a0, a1
-; RV64-NEXT:    ret
-  %r = call <2 x i32> @llvm.riscv.pnclipp.v2i32.i64(i64 %a, i64 %b)
-  %s = bitcast <2 x i32> %r to i64
-  ret i64 %s
-}
-
-define i64 @test_pnclipup_v2i32_i64(i64 %a, i64 %b) {
-; RV32-LABEL: test_pnclipup_v2i32_i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    nclipiu a0, a0, 0
-; RV32-NEXT:    nclipiu a1, a2, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_pnclipup_v2i32_i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pnclipup.w a0, a0, a1
-; RV64-NEXT:    ret
-  %r = call <2 x i32> @llvm.riscv.pnclipup.v2i32.i64(i64 %a, i64 %b)
-  %s = bitcast <2 x i32> %r to i64
-  ret i64 %s
-}

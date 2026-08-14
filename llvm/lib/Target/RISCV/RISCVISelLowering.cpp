@@ -12308,18 +12308,16 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT VT = Op.getValueType();
     SDValue Rs1 = Op.getOperand(1);
     SDValue Rs2 = Op.getOperand(2);
-    unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
-
     if (Subtarget.is64Bit()) {
       if (VT == MVT::v2i32 && !Rs1.getValueType().isVector()) {
         unsigned WOpc = IsSigned ? RISCVISD::PNCLIPP_W : RISCVISD::PNCLIPUP_W;
         return DAG.getNode(WOpc, DL, VT, Rs1, Rs2);
       }
+      unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
       return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
     }
 
     MVT XLenVT = Subtarget.getXLenVT();
-    auto ToXLen = [&](SDValue V) { return DAG.getBitcast(XLenVT, V); };
     SDValue Shift = DAG.getTargetConstant(0, DL, XLenVT);
     if (VT == MVT::v4i8) {
       unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
@@ -12328,8 +12326,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     if (VT == MVT::v2i16) {
       unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
-      SDValue Pair = DAG.getNode(RISCVISD::BuildPairGPRVec, DL, MVT::v2i32,
-                                 ToXLen(Rs1), ToXLen(Rs2));
+      SDValue Pair = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, Rs1, Rs2);
       return DAG.getNode(ClipOpc, DL, VT, Pair, Shift);
     }
     if (VT == MVT::v2i32) {
