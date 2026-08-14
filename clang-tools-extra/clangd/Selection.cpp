@@ -733,7 +733,10 @@ public:
     return traverseNode(E, [&] { return TraverseStmt(E->getSyntacticForm()); });
   }
   bool TraverseTypeConstraint(const TypeConstraint *C) {
-    if (auto *E = C->getImmediatelyDeclaredConstraint()) {
+    // A concept named through a template template parameter is not part of the
+    // immediately-declared constraint.
+    if (auto *E = C->getImmediatelyDeclaredConstraint();
+        E && !C->getNamedConcept().getAsTemplateTemplateParmDecl()) {
       // Technically this expression is 'implicit' and not traversed by the RAV.
       // However, the range is correct, so we visit expression to avoid adding
       // an extra kind to 'DynTypeNode' that hold 'TypeConstraint'.

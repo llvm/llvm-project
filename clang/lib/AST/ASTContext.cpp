@@ -940,8 +940,8 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       AttributedTypes(this_()), DependentBitIntTypes(this_()),
       HLSLAttributedResourceTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()), DeducedTemplates(this_()),
-      ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
-      SourceMgr(SM), LangOpts(LOpts),
+      PackIndexingTemplates(this_()), ArrayParameterTypes(this_()),
+      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
@@ -7405,6 +7405,10 @@ ASTContext::getNameForTemplate(TemplateName Name,
     DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
     return getNameForTemplate(DTS->getUnderlying(), NameLoc);
   }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    return getNameForTemplate(PI->getPattern(), NameLoc);
+  }
   }
 
   llvm_unreachable("bad template name kind!");
@@ -7471,6 +7475,16 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
     return getSubstTemplateTemplateParmPack(
         canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
         subst->getIndex(), subst->getFinal());
+  }
+
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    SmallVector<TemplateName, 4> CanonExpansions;
+    for (TemplateName T : PI->getExpansions())
+      CanonExpansions.push_back(getCanonicalTemplateName(T, IgnoreDeduced));
+    return getPackIndexingTemplateName(
+        getCanonicalTemplateName(PI->getPattern(), IgnoreDeduced),
+        PI->getIndexExpr(), PI->isFullySubstituted(), CanonExpansions);
   }
   case TemplateName::DeducedTemplate: {
     assert(IgnoreDeduced == false);
@@ -10652,6 +10666,29 @@ ASTContext::getDeducedTemplateName(TemplateName Underlying,
     DeducedTemplates.InsertNode(DTS, InsertPos);
   }
   return TemplateName(DTS);
+}
+
+TemplateName ASTContext::getPackIndexingTemplateName(
+    TemplateName Pattern, Expr *IndexExpr, bool FullySubstituted,
+    ArrayRef<TemplateName> Expansions) const {
+  auto &Self = const_cast<ASTContext &>(*this);
+  llvm::FoldingSetNodeID ID;
+  PackIndexingTemplateStorage::Profile(ID, Self, Pattern, IndexExpr,
+                                       FullySubstituted, Expansions);
+
+  void *InsertPos = nullptr;
+  PackIndexingTemplateStorage *PI =
+      PackIndexingTemplates.FindNodeOrInsertPos(ID, InsertPos);
+  if (!PI) {
+    void *Mem =
+        Allocate(PackIndexingTemplateStorage::totalSizeToAlloc<TemplateName>(
+                     Expansions.size()),
+                 alignof(PackIndexingTemplateStorage));
+    PI = new (Mem) PackIndexingTemplateStorage(Pattern, IndexExpr,
+                                               FullySubstituted, Expansions);
+    PackIndexingTemplates.InsertNode(PI, InsertPos);
+  }
+  return TemplateName(PI);
 }
 
 /// getFromTargetType - Given one of the integer types provided by

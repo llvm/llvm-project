@@ -540,7 +540,10 @@ bool RecursiveASTVisitor<Derived>::TraverseTypeConstraint(
     TRY_TO(TraverseConceptReference(C->getConceptReference()));
     return true;
   }
-  if (Expr *IDC = C->getImmediatelyDeclaredConstraint()) {
+  // A concept named through a template template parameter has no
+  // ConceptSpecializationExpr to carry its ConceptReference.
+  if (Expr *IDC = C->getImmediatelyDeclaredConstraint();
+      IDC && !C->getNamedConcept().getAsTemplateTemplateParmDecl()) {
     TRY_TO(TraverseStmt(IDC));
   } else {
     // Avoid traversing the ConceptReference in the TypeConstraint
@@ -882,6 +885,10 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateName(
     if (TraverseQualifier && QTN->getQualifier()) {
       TRY_TO(TraverseNestedNameSpecifier(QTN->getQualifier()));
     }
+  } else if (PackIndexingTemplateStorage *PI =
+                 Template.getAsPackIndexingTemplate()) {
+    TRY_TO(TraverseTemplateName(PI->getPattern(), TraverseQualifier));
+    TRY_TO(TraverseStmt(PI->getIndexExpr()));
   }
 
   return true;
@@ -2635,6 +2642,7 @@ DEF_TRAVERSE_STMT(CXXDependentScopeMemberExpr, {
 
 DEF_TRAVERSE_STMT(DependentTemplateIdExpr, {
   TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
+  TRY_TO(TraverseTemplateName(S->getTemplateName()));
   TRY_TO(TraverseTemplateArgumentLocsHelper(S->template_arguments().data(),
                                             S->getNumTemplateArgs()));
 })
@@ -2733,6 +2741,8 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptReference(
     TRY_TO(VisitConceptReference(CR));
   TRY_TO(TraverseNestedNameSpecifierLoc(CR->getNestedNameSpecifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(CR->getConceptNameInfo()));
+  TRY_TO(TraverseTemplateName(CR->getNamedConcept(),
+                              /*TraverseQualifier=*/false));
   if (CR->hasExplicitTemplateArgs())
     TRY_TO(TraverseTemplateArgumentLocsHelper(
         CR->getTemplateArgsAsWritten()->getTemplateArgs(),

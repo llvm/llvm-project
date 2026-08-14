@@ -46,7 +46,7 @@
 #error "wrong value for __cpp_deleted_function"
 #endif
 
-#if check(pack_indexing, 202311, 202311, 202311, 202311, 202311, 202311, 202311)
+#if check(pack_indexing, 202606, 202606, 202606, 202606, 202606, 202606, 202606)
 #error "wrong value for __cpp_pack_indexing"
 #endif
 

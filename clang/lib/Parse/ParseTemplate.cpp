@@ -1279,6 +1279,7 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
     // We may have a (non-dependent) template name.
     TemplateTy Template;
     UnqualifiedId Name;
+    bool IsPackIndexingTemplateName = false;
     if (Tok.is(tok::annot_non_type)) {
       NamedDecl *ND = getNonTypeAnnotation(Tok);
       if (!isa<VarTemplateDecl>(ND))
@@ -1289,6 +1290,11 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
       if (TemplateId->LAngleLoc.isValid())
         return Result;
+      if (TemplateId->Template &&
+          TemplateId->Template.get().getAsPackIndexingTemplate()) {
+        Template = TemplateId->Template;
+        IsPackIndexingTemplateName = true;
+      }
       Name.setIdentifier(TemplateId->Name, Tok.getLocation());
       ConsumeAnnotationToken();
     } else {
@@ -1299,18 +1305,23 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
     TryConsumeToken(tok::ellipsis, EllipsisLoc);
 
     if (isEndOfTemplateArgument(Tok)) {
-      bool MemberOfUnknownSpecialization;
-      TemplateNameKind TNK = Actions.isTemplateName(
-          getCurScope(), SS,
-          /*hasTemplateKeyword=*/false, Name,
-          /*ObjectType=*/nullptr,
-          /*EnteringContext=*/false, Template, MemberOfUnknownSpecialization);
-      if (TNK == TNK_Dependent_template_name || TNK == TNK_Type_template ||
-          TNK == TNK_Var_template || TNK == TNK_Concept_template) {
-        // We have an id-expression that refers to a class template or
-        // (C++0x) alias template.
+      if (IsPackIndexingTemplateName) {
         Result = ParsedTemplateArgument(/*TemplateKwLoc=*/SourceLocation(), SS,
                                         Template, Name.StartLocation);
+      } else {
+        bool MemberOfUnknownSpecialization;
+        TemplateNameKind TNK = Actions.isTemplateName(
+            getCurScope(), SS,
+            /*hasTemplateKeyword=*/false, Name,
+            /*ObjectType=*/nullptr,
+            /*EnteringContext=*/false, Template, MemberOfUnknownSpecialization);
+        if (TNK == TNK_Dependent_template_name || TNK == TNK_Type_template ||
+            TNK == TNK_Var_template || TNK == TNK_Concept_template) {
+          // We have an id-expression that refers to a class template or
+          // (C++0x) alias template.
+          Result = ParsedTemplateArgument(/*TemplateKwLoc=*/SourceLocation(),
+                                          SS, Template, Name.StartLocation);
+        }
       }
     }
   }

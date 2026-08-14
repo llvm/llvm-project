@@ -1213,6 +1213,88 @@ SourceLocation Parser::ParsePackIndexingType(DeclSpec &DS) {
   return T.getCloseLocation();
 }
 
+TemplateNameKind Parser::isPackIndexingTemplateName(UnqualifiedId &Name,
+                                                    TemplateTy &Template) {
+  assert(Tok.is(tok::identifier) && NextToken().is(tok::ellipsis) &&
+         GetLookAheadToken(2).is(tok::l_square) && "expected 'identifier...['");
+
+  // C++29 [temp.names]p1:
+  //   pack-index-template-name:
+  //     simple-template-name ... [ constant-expression ]
+  Name.setIdentifier(Tok.getIdentifierInfo(), Tok.getLocation());
+  CXXScopeSpec EmptySS;
+  bool MemberOfUnknownSpecialization = false;
+  TemplateNameKind TNK = Actions.isTemplateName(
+      getCurScope(), EmptySS, /*hasTemplateKeyword=*/false, Name,
+      /*ObjectType=*/nullptr, /*EnteringContext=*/false, Template,
+      MemberOfUnknownSpecialization, /*AllowTypoCorrection=*/false);
+
+  if (TNK == TNK_Undeclared_template || !Template)
+    return TNK_Non_template;
+  return TNK;
+}
+
+bool Parser::AnnotatePackIndexingTemplateName(CXXScopeSpec &SS,
+                                              UnqualifiedId &Name,
+                                              TemplateTy Template,
+                                              TemplateNameKind TNK) {
+  assert(Tok.is(tok::identifier) && "expected a simple-template-name");
+  SourceLocation NameLoc = ConsumeToken();
+  ConsumeToken(); // the ellipsis
+
+  BalancedDelimiterTracker T(*this, tok::l_square);
+  if (T.consumeOpen())
+    return true;
+  ExprResult IndexExpr = ParseConstantExpression();
+  if (T.consumeClose() || IndexExpr.isInvalid())
+    return true;
+
+  TemplateName Indexed = Actions.ActOnPackIndexingTemplateName(
+      Template.get(), NameLoc, IndexExpr.get());
+  if (Indexed.isNull())
+    return true;
+  Template = TemplateTy::make(Indexed);
+
+  // C++29 [temp.names]p7:
+  //   A < is interpreted as the delimiter of a template-argument-list if
+  //   [...] it follows a pack-index-template-name.
+  if (Tok.is(tok::less))
+    return AnnotateTemplateIdToken(Template, TNK, SS,
+                                   /*TemplateKWLoc=*/SourceLocation(), Name,
+                                   /*AllowTypeAnnotation=*/false);
+
+  // Every token of the pack-index-template-name has been consumed,
+  // reinject the last token to produce an annotation.
+  if (PP.isBacktrackEnabled())
+    PP.RevertCachedTokens(1);
+  else
+    PP.EnterToken(Tok, /*IsReinject=*/true);
+
+  // C++29 [dcl.type.simple]p1:
+  //   A type specifier is a placeholder for a deduced class type if [...] it
+  //   is of the form typename pack-index-template-name.
+  if ((TNK == TNK_Type_template || TNK == TNK_Dependent_template_name) &&
+      getLangOpts().CPlusPlus17) {
+    TypeResult Type =
+        Actions.ActOnPackIndexingDeducedTemplateSpecializationType(Indexed,
+                                                                   NameLoc);
+    Tok.setKind(tok::annot_typename);
+    setTypeAnnotation(Tok, Type);
+  } else {
+    // A concept-name or a variable-template name.
+    Tok.setKind(tok::annot_template_id);
+    Tok.setAnnotationValue(TemplateIdAnnotation::Create(
+        /*TemplateKWLoc=*/SourceLocation(), NameLoc, Name.Identifier, OO_None,
+        Template, TNK, /*LAngleLoc=*/SourceLocation(),
+        /*RAngleLoc=*/SourceLocation(), /*TemplateArgs=*/{},
+        /*ArgsInvalid=*/false, TemplateIds));
+  }
+  Tok.setLocation(NameLoc);
+  Tok.setAnnotationEndLoc(T.getCloseLocation());
+  PP.AnnotateCachedTokens(Tok);
+  return false;
+}
+
 void Parser::AnnotateExistingIndexedTypeNamePack(ParsedType T,
                                                  SourceLocation StartLoc,
                                                  SourceLocation EndLoc) {

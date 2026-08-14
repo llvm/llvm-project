@@ -227,6 +227,29 @@ TEST(DumpASTTests, UnbalancedBraces) {
   ASSERT_EQ(Node.range, Case.range("func"));
 }
 
+bool hasDetail(const ASTNode &Node, llvm::StringRef Detail) {
+  if (Node.detail == Detail)
+    return true;
+  for (const ASTNode &Child : Node.children)
+    if (hasDetail(Child, Detail))
+      return true;
+  return false;
+}
+
+TEST(DumpASTTests, PackIndexedConcept) {
+  auto TU = TestTU::withCode(R"cpp(
+template <template <class> concept... CC, CC...[0] T>
+void func(T);
+  )cpp");
+  TU.ExtraArgs = {"-std=c++2d"};
+  ParsedAST AST = TU.build();
+  const ASTNode Node = dumpAST(
+      DynTypedNode::create(*AST.getASTContext().getTranslationUnitDecl()),
+      AST.getTokens(), AST.getASTContext());
+
+  EXPECT_TRUE(hasDetail(Node, "CC...[0]"));
+}
+
 TEST(DumpASTTests, NestedTemplates) {
   // Test that we don't crash while trying to dump AST of a template function
   // with nested template names such as Foo<V>::template Bar<W>::Value.
