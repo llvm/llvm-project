@@ -12,9 +12,12 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <optional>
@@ -27,6 +30,9 @@ AMDGPUMCExpr::AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args,
     : Kind(Kind), Ctx(Ctx) {
   assert(Args.size() >= 1 && "Needs a minimum of one expression.");
   assert(Kind != AGVK_None && "Cannot construct AMDGPUMCExpr of kind none.");
+  assert((getNumExpectedArgs(Kind) == 0 ||
+          Args.size() == getNumExpectedArgs(Kind)) &&
+         "wrong number of operands for AMDGPUMCExpr kind.");
 
   // Allocating the variadic arguments through the same allocation mechanism
   // that the object itself is allocated with so they end up in the same memory.
@@ -47,6 +53,30 @@ const AMDGPUMCExpr *AMDGPUMCExpr::create(VariantKind Kind,
   return new (Ctx) AMDGPUMCExpr(Kind, Args, Ctx);
 }
 
+unsigned AMDGPUMCExpr::getNumExpectedArgs(VariantKind Kind) {
+  switch (Kind) {
+  case AGVK_None:
+    llvm_unreachable("AGVK_None is not a valid AMDGPUMCExpr kind.");
+  case AGVK_Or:
+  case AGVK_Max:
+  case AGVK_Min:
+    // Variadic (parser requires >= 1).
+    return 0;
+  case AGVK_Lit:
+  case AGVK_Lit64:
+  case AGVK_InstPrefSize:
+    return 1;
+  case AGVK_TotalNumVGPRs:
+  case AGVK_AlignTo:
+    return 2;
+  case AGVK_ExtraSGPRs:
+    return 3;
+  case AGVK_Occupancy:
+    return 9;
+  }
+  llvm_unreachable("unknown AMDGPUMCExpr kind.");
+}
+
 const MCExpr *AMDGPUMCExpr::getSubExpr(size_t Index) const {
   assert(Index < Args.size() && "Indexing out of bounds AMDGPUMCExpr sub-expr");
   return Args[Index];
@@ -62,6 +92,9 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   case AGVK_Max:
     OS << "max(";
     break;
+  case AGVK_Min:
+    OS << "min(";
+    break;
   case AGVK_ExtraSGPRs:
     OS << "extrasgprs(";
     break;
@@ -73,6 +106,9 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     break;
   case AGVK_Occupancy:
     OS << "occupancy(";
+    break;
+  case AGVK_InstPrefSize:
+    OS << "instprefsize(";
     break;
   case AGVK_Lit:
     OS << "lit(";
@@ -97,6 +133,8 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
     return std::max(Arg1, Arg2);
   case AMDGPUMCExpr::AGVK_Or:
     return Arg1 | Arg2;
+  case AMDGPUMCExpr::AGVK_Min:
+    return std::min(Arg1, Arg2);
   }
 }
 
@@ -116,7 +154,7 @@ evaluateMCExprs(ArrayRef<const MCExpr *> Exprs, const MCAssembler *Asm,
 
 bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
                                       const MCAssembler *Asm) const {
-  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  const MCSubtargetInfo &STI = *Ctx.getSubtargetInfo();
   uint64_t VCCUsed = 0, FlatScrUsed = 0, XNACKUsed = 0;
 
   if (!evaluateMCExprs(Args, Asm, {VCCUsed, FlatScrUsed, XNACKUsed}))
@@ -130,10 +168,10 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
 
 bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
                                         const MCAssembler *Asm) const {
-  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  const MCSubtargetInfo &STI = *Ctx.getSubtargetInfo();
   uint64_t NumAGPR = 0, NumVGPR = 0;
 
-  bool Has90AInsts = AMDGPU::isGFX90A(*STI);
+  bool Has90AInsts = AMDGPU::isGFX90A(STI);
 
   if (!evaluateMCExprs(Args, Asm, {NumAGPR, NumVGPR}))
     return false;
@@ -155,30 +193,55 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
 
 bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
                                      const MCAssembler *Asm) const {
-  uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
-      NumSGPRs, NumVGPRs;
+  uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, NumSGPRs,
+      NumVGPRs, SGPRTotal, SGPRGranule, SGPRTrapReserve;
 
-  bool Success = evaluateMCExprs(
-      Args.slice(0, 5), Asm,
-      {MaxWaves, Granule, TargetTotalNumVGPRs, Generation, InitOccupancy});
+  // Leading operands are known constants (wave/VGPR caps + the SGPR budget
+  // total/granule/trap reserve baked in by createOccupancy); only NumSGPRs and
+  // NumVGPRs can still be symbolic. The SGPR budget makes the SGPR-limited
+  // occupancy match getMaxNumSGPRs().
+  bool Success =
+      evaluateMCExprs(Args.slice(0, 7), Asm,
+                      {MaxWaves, Granule, TargetTotalNumVGPRs, InitOccupancy,
+                       SGPRTotal, SGPRGranule, SGPRTrapReserve});
 
-  assert(Success && "Arguments 1 to 5 for Occupancy should be known constants");
+  assert(Success && "Arguments 1 to 7 for Occupancy should be known constants");
 
-  if (!Success || !evaluateMCExprs(Args.slice(5, 2), Asm, {NumSGPRs, NumVGPRs}))
+  if (!Success || !evaluateMCExprs(Args.slice(7, 2), Asm, {NumSGPRs, NumVGPRs}))
     return false;
 
   unsigned Occupancy = InitOccupancy;
   if (NumSGPRs)
-    Occupancy = std::min(
-        Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
-                       NumSGPRs, MaxWaves,
-                       static_cast<AMDGPUSubtarget::Generation>(Generation)));
+    Occupancy = std::min(Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
+                                        NumSGPRs, MaxWaves, SGPRTotal,
+                                        SGPRGranule, SGPRTrapReserve));
   if (NumVGPRs)
     Occupancy = std::min(Occupancy,
                          IsaInfo::getNumWavesPerEUWithNumVGPRs(
                              NumVGPRs, Granule, MaxWaves, TargetTotalNumVGPRs));
 
   Res = MCValue::get(Occupancy);
+  return true;
+}
+
+/// Get the inst_pref_size field width for the given subtarget.
+static unsigned getInstPrefSizeFieldWidth(const MCSubtargetInfo &STI) {
+  if (AMDGPU::isGFX12Plus(STI))
+    return amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+  return amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+}
+
+bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
+                                        const MCAssembler *Asm) const {
+  uint64_t CodeSizeInBytes = 0;
+  if (!evaluateMCExprs(Args, Asm, {CodeSizeInBytes}))
+    return false;
+  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  unsigned FieldWidth = getInstPrefSizeFieldWidth(*STI);
+  unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(*STI);
+  uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
+  uint64_t MaxVal = (1u << FieldWidth) - 1;
+  Res = MCValue::get(std::min(CodeSizeInLines, MaxVal));
   return true;
 }
 
@@ -227,6 +290,8 @@ bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     return evaluateTotalNumVGPR(Res, Asm);
   case AGVK_Occupancy:
     return evaluateOccupancy(Res, Asm);
+  case AGVK_InstPrefSize:
+    return evaluateInstPrefSize(Res, Asm);
   case AGVK_Lit:
   case AGVK_Lit64:
     return Args[0]->evaluateAsRelocatable(Res, Asm);
@@ -277,6 +342,11 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
                                                      const MCExpr *NumVGPR,
                                                      MCContext &Ctx) {
   return create(AGVK_TotalNumVGPRs, {NumAGPR, NumVGPR}, Ctx);
+}
+
+const AMDGPUMCExpr *
+AMDGPUMCExpr::createInstPrefSize(const MCExpr *CodeSizeBytes, MCContext &Ctx) {
+  return create(AGVK_InstPrefSize, {CodeSizeBytes}, Ctx);
 }
 
 const AMDGPUMCExpr *AMDGPUMCExpr::createLit(LitModifier Lit, int64_t Value,
@@ -460,7 +530,17 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     KnownBits KB = KBM[AGVK->getSubExpr(0)];
     for (const MCExpr *Arg : AGVK->getArgs()) {
       knownBitsMapHelper(Arg, KBM, Depth + 1);
-      KB = KnownBits::umax(KB, KBM[Arg]);
+      KB = KnownBits::smax(KB, KBM[Arg]);
+    }
+    KBM[Expr] = std::move(KB);
+    return;
+  }
+  case AMDGPUMCExpr::VariantKind::AGVK_Min: {
+    knownBitsMapHelper(AGVK->getSubExpr(0), KBM, Depth + 1);
+    KnownBits KB = KBM[AGVK->getSubExpr(0)];
+    for (const MCExpr *Arg : AGVK->getArgs()) {
+      knownBitsMapHelper(Arg, KBM, Depth + 1);
+      KB = KnownBits::smin(KB, KBM[Arg]);
     }
     KBM[Expr] = std::move(KB);
     return;
@@ -469,12 +549,23 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   case AMDGPUMCExpr::VariantKind::AGVK_TotalNumVGPRs:
   case AMDGPUMCExpr::VariantKind::AGVK_AlignTo:
   case AMDGPUMCExpr::VariantKind::AGVK_Occupancy:
+  case AMDGPUMCExpr::VariantKind::AGVK_InstPrefSize:
   case AMDGPUMCExpr::VariantKind::AGVK_Lit:
   case AMDGPUMCExpr::VariantKind::AGVK_Lit64: {
     int64_t Val;
     if (AGVK->evaluateAsAbsolute(Val)) {
       APInt APValue(BitWidth, Val);
       KBM[Expr] = KnownBits::makeConstant(APValue);
+      return;
+    }
+    if (AGVK->getKind() == AMDGPUMCExpr::VariantKind::AGVK_InstPrefSize) {
+      // The result is clamped to (1 << FieldWidth) - 1, so upper bits are
+      // known zero. FieldWidth is derived from the subtarget.
+      const MCSubtargetInfo *STI = AGVK->getCtx().getSubtargetInfo();
+      unsigned FieldWidth = getInstPrefSizeFieldWidth(*STI);
+      KnownBits KB(BitWidth);
+      KB.Zero.setBitsFrom(FieldWidth);
+      KBM[Expr] = KB;
       return;
     }
     KBM[Expr] = KnownBits(BitWidth);
@@ -677,4 +768,11 @@ int64_t AMDGPU::getLitValue(const MCExpr *Expr) {
   assert(isLitExpr(Expr));
   return cast<MCConstantExpr>(cast<AMDGPUMCExpr>(Expr)->getArgs()[0])
       ->getValue();
+}
+
+AMDGPUMCExpr::VariantKind AMDGPU::getExprKind(const MCExpr *Expr) {
+  const auto *E = dyn_cast<AMDGPUMCExpr>(Expr);
+  if (!E)
+    return AMDGPUMCExpr::AGVK_None;
+  return E->getKind();
 }

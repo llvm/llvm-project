@@ -28,9 +28,13 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -40,7 +44,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-reg-stackify"
 
 namespace {
-class WebAssemblyRegStackify final : public MachineFunctionPass {
+class WebAssemblyRegStackifyLegacy final : public MachineFunctionPass {
   bool Optimize;
 
   StringRef getPassName() const override {
@@ -53,11 +57,8 @@ class WebAssemblyRegStackify final : public MachineFunctionPass {
       AU.addRequired<LiveIntervalsWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
     }
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreservedID(LiveVariablesID);
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -65,19 +66,21 @@ class WebAssemblyRegStackify final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyRegStackify(CodeGenOptLevel OptLevel)
+  WebAssemblyRegStackifyLegacy(CodeGenOptLevel OptLevel)
       : MachineFunctionPass(ID), Optimize(OptLevel != CodeGenOptLevel::None) {}
-  WebAssemblyRegStackify() : WebAssemblyRegStackify(CodeGenOptLevel::Default) {}
+  WebAssemblyRegStackifyLegacy()
+      : WebAssemblyRegStackifyLegacy(CodeGenOptLevel::Default) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyRegStackify::ID = 0;
-INITIALIZE_PASS(WebAssemblyRegStackify, DEBUG_TYPE,
+char WebAssemblyRegStackifyLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegStackifyLegacy, DEBUG_TYPE,
                 "Reorder instructions to use the WebAssembly value stack",
                 false, false)
 
-FunctionPass *llvm::createWebAssemblyRegStackify(CodeGenOptLevel OptLevel) {
-  return new WebAssemblyRegStackify(OptLevel);
+FunctionPass *
+llvm::createWebAssemblyRegStackifyLegacyPass(CodeGenOptLevel OptLevel) {
+  return new WebAssemblyRegStackifyLegacy(OptLevel);
 }
 
 // Decorate the given instruction with implicit operands that enforce the
@@ -251,6 +254,10 @@ static void query(const MachineInstr &MI, bool &Read, bool &Write,
       !strcmp(MI.getOperand(0).getSymbolName(), "__stack_pointer"))
     StackPointer = true;
 
+  if (MI.isCall() && MI.getOperand(0).isSymbol() &&
+      !strcmp(MI.getOperand(0).getSymbolName(), "__wasm_get_stack_pointer"))
+    StackPointer = true;
+
   // Analyze calls.
   if (MI.isCall()) {
     queryCallee(MI, Read, Write, Effects, StackPointer);
@@ -287,16 +294,27 @@ static MachineInstr *getVRegDef(unsigned Reg, const MachineInstr *Insert,
 // generalization of MachineRegisterInfo::hasOneNonDBGUse that uses
 // LiveIntervals to handle complex cases in optimized code.
 static bool hasSingleUse(unsigned Reg, MachineRegisterInfo &MRI,
-                         WebAssemblyFunctionInfo &MFI, bool Optimize,
+                         const MachineFunction &MF, bool Optimize,
                          MachineInstr *Def, LiveIntervals *LIS) {
+  auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  // The frame base always has an implicit DBG use as DW_AT_frame_base.
+  if (MFI.isFrameBaseVirtual() && MFI.getFrameBaseVreg() == Reg) {
+    // When using global thread context, the frame base can be encoded
+    // as an offset from __stack_pointer, so the vreg can be stackified.
+    // However, when using libcall thread context, we need to keep the frame
+    // base vreg around if debug info is enabled, because there is no
+    // global to refer to.
+    bool NeedsRegForDebug =
+        MF.getFunction().getSubprogram() &&
+        MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext();
+    if (!Optimize || NeedsRegForDebug)
+      return false;
+  }
   if (!Optimize) {
     // Using "hasOneUse" instead of "hasOneNonDBGUse" here because we don't
     // want to stackify DBG_VALUE operands - WASM stack locations are less
     // useful and less widely supported than WASM local locations.
     if (!MRI.hasOneUse(Reg))
-      return false;
-    // The frame base always has an implicit DBG use as DW_AT_frame_base.
-    if (MFI.isFrameBaseVirtual() && MFI.getFrameBaseVreg() == Reg)
       return false;
     return true;
   }
@@ -336,41 +354,18 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
                          const WebAssemblyFunctionInfo &MFI,
                          const MachineRegisterInfo &MRI, bool Optimize) {
   const MachineInstr *DefI = Def->getParent();
-  const MachineInstr *UseI = Use->getParent();
   assert(DefI->getParent() == Insert->getParent());
-  assert(UseI->getParent() == Insert->getParent());
+  assert(Use->getParent()->getParent() == Insert->getParent());
 
-  // The first def of a multivalue instruction can be stackified by moving,
-  // since the later defs can always be placed into locals if necessary. Later
-  // defs can only be stackified if all previous defs are already stackified
-  // since ExplicitLocals will not know how to place a def in a local if a
-  // subsequent def is stackified. But only one def can be stackified by moving
-  // the instruction, so it must be the first one.
-  //
-  // TODO: This could be loosened to be the first *live* def, but care would
-  // have to be taken to ensure the drops of the initial dead defs can be
-  // placed. This would require checking that no previous defs are used in the
-  // same instruction as subsequent defs.
-  if (Def != DefI->defs().begin())
+  // For now avoid stackifying any multi-def instructions. While it's
+  // theoretically possible to do so for the first def in some cases this has
+  // historically led to bugs such as #199910 and #98323. For now this
+  // conservatively skips all multi-def instructions as a consequence. Note that
+  // multi-def instructions are expected to be not all that common so this in
+  // theory doesn't have a massive impact, but nevertheless this'd still be
+  // something to optimize better in the future.
+  if (DefI->getNumExplicitDefs() > 1)
     return false;
-
-  // If any subsequent def is used prior to the current value by the same
-  // instruction in which the current value is used, we cannot
-  // stackify. Stackifying in this case would require that def moving below the
-  // current def in the stack, which cannot be achieved, even with locals.
-  // Also ensure we don't sink the def past any other prior uses.
-  for (const auto &SubsequentDef : drop_begin(DefI->defs())) {
-    auto I = std::next(MachineBasicBlock::const_iterator(DefI));
-    auto E = std::next(MachineBasicBlock::const_iterator(UseI));
-    for (; I != E; ++I) {
-      for (const auto &PriorUse : I->uses()) {
-        if (&PriorUse == Use)
-          break;
-        if (PriorUse.isReg() && SubsequentDef.getReg() == PriorUse.getReg())
-          return false;
-      }
-    }
-  }
 
   // If moving is a semantic nop, it is always allowed
   const MachineBasicBlock *MBB = DefI->getParent();
@@ -834,7 +829,8 @@ public:
 };
 } // end anonymous namespace
 
-bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
+static bool regStackify(MachineFunction &MF, bool Optimize,
+                        MachineDominatorTree *MDT, LiveIntervals *LIS) {
   LLVM_DEBUG(dbgs() << "********** Register Stackifying **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -843,11 +839,9 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  MachineDominatorTree *MDT = nullptr;
-  LiveIntervals *LIS = nullptr;
   if (Optimize) {
-    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+    assert(MDT && "expected MDT to be available");
+    assert(LIS && "expected LIS to be available");
   }
 
   // Walk the instructions from the bottom up. Currently we don't look past
@@ -918,7 +912,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         bool CanMove = SameBlock &&
                        isSafeToMove(Def, &Use, Insert, MFI, MRI, Optimize) &&
                        !TreeWalker.isOnStack(Reg);
-        if (CanMove && hasSingleUse(Reg, MRI, MFI, Optimize, DefI, LIS)) {
+        if (CanMove && hasSingleUse(Reg, MRI, MF, Optimize, DefI, LIS)) {
           Insert = moveForSingleUse(Reg, Use, DefI, MBB, Insert, LIS, MFI, MRI);
 
           // If we are removing the frame base reg completely, remove the debug
@@ -960,7 +954,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
           Register UseReg = SubsequentUse->getReg();
           // TODO: This single-use restriction could be relaxed by using tees
           if (DefReg != UseReg ||
-              !hasSingleUse(DefReg, MRI, MFI, Optimize, nullptr, nullptr))
+              !hasSingleUse(DefReg, MRI, MF, Optimize, nullptr, nullptr))
             break;
           MFI.stackifyVReg(MRI, DefReg);
           ++SubsequentDef;
@@ -1028,4 +1022,32 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
 #endif
 
   return Changed;
+}
+
+bool WebAssemblyRegStackifyLegacy::runOnMachineFunction(MachineFunction &MF) {
+  MachineDominatorTree *MDT = nullptr;
+  LiveIntervals *LIS = nullptr;
+  if (Optimize) {
+    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  }
+  return regStackify(MF, Optimize, MDT, LIS);
+}
+
+PreservedAnalyses
+WebAssemblyRegStackifyPass::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree *MDT = nullptr;
+  LiveIntervals *LIS = nullptr;
+  if (Optimize) {
+    MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+    LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  }
+  bool Changed = regStackify(MF, Optimize, MDT, LIS);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<SlotIndexesAnalysis>();
 }

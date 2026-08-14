@@ -45,6 +45,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <utility>
 
 #define DEBUG_TYPE "regbankselect"
@@ -595,7 +596,7 @@ bool RegBankSelect::applyMapping(
     MachineInstr &MI, const RegisterBankInfo::InstructionMapping &InstrMapping,
     SmallVectorImpl<RegBankSelect::RepairingPlacement> &RepairPts) {
   // OpdMapper will hold all the information needed for the rewriting.
-  RegisterBankInfo::OperandsMapper OpdMapper(MI, InstrMapping, *MRI);
+  std::optional<RegisterBankInfo::OperandsMapper> OpdMapper;
 
   // First, place the repairing code.
   for (RepairingPlacement &RepairPt : RepairPts) {
@@ -620,8 +621,10 @@ bool RegBankSelect::applyMapping(
       // Don't insert additional instruction for debug instruction.
       if (MI.isDebugInstr())
         break;
-      OpdMapper.createVRegs(OpIdx);
-      if (!repairReg(MO, ValMapping, RepairPt, OpdMapper.getVRegs(OpIdx)))
+      if (!OpdMapper)
+        OpdMapper.emplace(MI, InstrMapping, *MRI);
+      OpdMapper->createVRegs(OpIdx);
+      if (!repairReg(MO, ValMapping, RepairPt, OpdMapper->getVRegs(OpIdx)))
         return false;
       break;
     default:
@@ -629,9 +632,16 @@ bool RegBankSelect::applyMapping(
     }
   }
 
+  // Default mappings only need rewriting when repairs create new operands.
+  if (!OpdMapper && InstrMapping.getID() == RegisterBankInfo::DefaultMappingID)
+    return true;
+
+  if (!OpdMapper)
+    OpdMapper.emplace(MI, InstrMapping, *MRI);
   // Second, rewrite the instruction.
-  LLVM_DEBUG(dbgs() << "Actual mapping of the operands: " << OpdMapper << '\n');
-  RBI->applyMapping(MIRBuilder, OpdMapper);
+  LLVM_DEBUG(dbgs() << "Actual mapping of the operands: " << *OpdMapper
+                    << '\n');
+  RBI->applyMapping(MIRBuilder, *OpdMapper);
 
   return true;
 }

@@ -56,7 +56,7 @@ namespace test2 {
 }
 
 // We don't expect to fold this in the frontend, but make sure it doesn't crash.
-// CHECK: @PR9558 = global float 0.000000e+0
+// CHECK: @PR9558 = global float 0.000000e+00
 float PR9558 = reinterpret_cast<const float&>("asd");
 
 // An initialized const automatic variable cannot be promoted to a constant

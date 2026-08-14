@@ -127,7 +127,7 @@ TEST(Host, FindProcesses) {
   ASSERT_TRUE(foundPID);
   llvm::scope_exit clean_up([&] {
     Host::Kill(info.GetProcessID(), SIGKILL);
-    exit_status.get_future().get();
+    exit_status.get_future().wait();
   });
 }
 
@@ -167,4 +167,15 @@ TEST(Host, LaunchProcessDuplicatesHandle) {
       pipe.Read(msg, sizeof(msg), std::chrono::seconds(10));
   ASSERT_THAT_EXPECTED(bytes_read, llvm::Succeeded());
   ASSERT_EQ(llvm::StringRef(msg, *bytes_read), test_msg);
+}
+
+TEST(Host, URLEncode) {
+  // Unreserved characters (RFC 3986) are kept literal.
+  EXPECT_EQ(Host::URLEncode("AZaz09-_.~"), "AZaz09-_.~");
+  // Everything else, including query-string metacharacters, is percent-encoded.
+  EXPECT_EQ(Host::URLEncode("a b&c=d"), "a%20b%26c%3Dd");
+  EXPECT_EQ(Host::URLEncode("/?#"), "%2F%3F%23");
+  // High bytes are encoded as two upper-case hex digits.
+  EXPECT_EQ(Host::URLEncode("\xC3\xA9"), "%C3%A9");
+  EXPECT_EQ(Host::URLEncode(""), "");
 }

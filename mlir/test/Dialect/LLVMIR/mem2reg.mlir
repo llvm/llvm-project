@@ -1035,6 +1035,20 @@ llvm.func @scalable_llvm_vector() -> i16 {
 
 // -----
 
+// CHECK-LABEL: @scalable_vector_matching_store_load
+// CHECK-SAME: %[[ARG:.+]]: vector<[4]xi1>
+llvm.func @scalable_vector_matching_store_load(%arg: vector<[4]xi1>) -> vector<[4]xi1> {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x vector<[4]xi1> : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 : vector<[4]xi1>, !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> vector<[4]xi1>
+  // CHECK: llvm.return %[[ARG]] : vector<[4]xi1>
+  llvm.return %2 : vector<[4]xi1>
+}
+
+// -----
+
 // CHECK-LABEL: @smaller_store_forwarding
 // CHECK-SAME: %[[ARG:.+]]: i16
 llvm.func @smaller_store_forwarding(%arg : i16) {
@@ -1177,6 +1191,20 @@ llvm.func @dead_direct_use(%arg0 : i1) {
   scf.if %arg0 {
     // CHECK-NOT: llvm.addrspacecast
     %2 = llvm.addrspacecast %1 : !llvm.ptr to !llvm.ptr<5>
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @indirect_blocking_use_in_different_region
+llvm.func @indirect_blocking_use_in_different_region(%arg0 : i1) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.addrspacecast %1 : !llvm.ptr to !llvm.ptr<5>
+  scf.if %arg0 {
+    %3 = llvm.addrspacecast %2 : !llvm.ptr<5> to !llvm.ptr
   }
   llvm.return
 }

@@ -19,6 +19,38 @@ entry:
   ret void
 }
 
+define void @shufflevector_xvpermi_v8i32_poison1(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: shufflevector_xvpermi_v8i32_poison1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvpermi.w $xr1, $xr0, 78
+; CHECK-NEXT:    xvst $xr1, $a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %va = load <8 x i32>, ptr %a
+  %vb = load <8 x i32>, ptr %b
+  %c = shufflevector <8 x i32> %va, <8 x i32> %vb, <8 x i32> <i32 poison, i32 3, i32 8, i32 9, i32 6, i32 7, i32 12, i32 13>
+  store <8 x i32> %c, ptr %res
+  ret void
+}
+
+define void @shufflevector_xvpermi_v8i32_poison2(ptr %res, ptr %a, ptr %b) nounwind {
+; CHECK-LABEL: shufflevector_xvpermi_v8i32_poison2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvpermi.w $xr1, $xr0, 78
+; CHECK-NEXT:    xvst $xr1, $a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %va = load <8 x i32>, ptr %a
+  %vb = load <8 x i32>, ptr %b
+  %c = shufflevector <8 x i32> %va, <8 x i32> %vb, <8 x i32> <i32 2, i32 3, i32 8, i32 9, i32 poison, i32 7, i32 12, i32 13>
+  store <8 x i32> %c, ptr %res
+  ret void
+}
+
 ;; xvpermi.w
 define void @shufflevector_xvpermi_v8f32(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_xvpermi_v8f32:
@@ -33,5 +65,20 @@ entry:
   %vb = load <8 x float>, ptr %b
   %c = shufflevector <8 x float> %va, <8 x float> %vb, <8 x i32> <i32 9, i32 11, i32 0, i32 2, i32 13, i32 15, i32 4, i32 6>
   store <8 x float> %c, ptr %res
+  ret void
+}
+
+define void @shufflevector_xvpermi_v8i32_poison_invalid(ptr %res, ptr %a) nounwind {
+; CHECK-LABEL: shufflevector_xvpermi_v8i32_poison_invalid:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
+; CHECK-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI4_0)
+; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %va = load <8 x i32>, ptr %a
+  %c = shufflevector <8 x i32> %va, <8 x i32> poison, <8 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 3, i32 5, i32 6, i32 7>
+  store <8 x i32> %c, ptr %res
   ret void
 }

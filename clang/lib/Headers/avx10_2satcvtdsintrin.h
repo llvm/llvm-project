@@ -44,6 +44,38 @@
   ((unsigned int)__builtin_ia32_vcvttss2usis32((__v4sf)(__m128)(__A),          \
                                                (const int)(__R)))
 
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_cvtts_sd_i32(__m128d __A) {
+  return (int)__builtin_ia32_vcvttsd2sis32((__v2df)__A,
+                                           _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_cvtts_sd_si32(__m128d __A) {
+  return (int)__builtin_ia32_vcvttsd2sis32((__v2df)__A,
+                                           _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ unsigned int __DEFAULT_FN_ATTRS128
+_mm_cvtts_sd_u32(__m128d __A) {
+  return (unsigned int)__builtin_ia32_vcvttsd2usis32((__v2df)__A,
+                                                     _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_cvtts_ss_i32(__m128 __A) {
+  return (int)__builtin_ia32_vcvttss2sis32((__v4sf)__A,
+                                           _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_cvtts_ss_si32(__m128 __A) {
+  return (int)__builtin_ia32_vcvttss2sis32((__v4sf)__A,
+                                           _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ unsigned int __DEFAULT_FN_ATTRS128
+_mm_cvtts_ss_u32(__m128 __A) {
+  return (unsigned int)__builtin_ia32_vcvttss2usis32((__v4sf)__A,
+                                                     _MM_FROUND_CUR_DIRECTION);
+}
+
 #ifdef __x86_64__
 #define _mm_cvtts_roundss_u64(__A, __R)                                        \
   ((unsigned long long)__builtin_ia32_vcvttss2usis64((__v4sf)(__m128)(__A),    \
@@ -68,6 +100,41 @@
 #define _mm_cvtts_roundsd_i64(__A, __R)                                        \
   ((long long)__builtin_ia32_vcvttsd2sis64((__v2df)(__m128d)(__A),             \
                                            (const int)(__R)))
+
+static __inline__ unsigned long long
+    __DEFAULT_FN_ATTRS128 _mm_cvtts_ss_u64(__m128 __A) {
+  return (unsigned long long)__builtin_ia32_vcvttss2usis64(
+      (__v4sf)__A, _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS128
+_mm_cvtts_sd_u64(__m128d __A) {
+  return (unsigned long long)__builtin_ia32_vcvttsd2usis64(
+      (__v2df)__A, _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS128 _mm_cvtts_ss_i64(__m128 __A) {
+  return (long long)__builtin_ia32_vcvttss2sis64((__v4sf)__A,
+                                                 _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS128
+_mm_cvtts_ss_si64(__m128 __A) {
+  return (long long)__builtin_ia32_vcvttss2sis64((__v4sf)__A,
+                                                 _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS128
+_mm_cvtts_sd_si64(__m128d __A) {
+  return (long long)__builtin_ia32_vcvttsd2sis64((__v2df)__A,
+                                                 _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ long long __DEFAULT_FN_ATTRS128
+_mm_cvtts_sd_i64(__m128d __A) {
+  return (long long)__builtin_ia32_vcvttsd2sis64((__v2df)__A,
+                                                 _MM_FROUND_CUR_DIRECTION);
+}
 #endif /* __x86_64__ */
 
 // 128 Bit : Double -> int
