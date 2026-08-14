@@ -92,7 +92,7 @@ private:
   constexpr explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
     if !consteval {
       _LIBCPP_ASSERT_INTERNAL(
-          (__data_ & __count_mask_) == 0, "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
+          (__data_ & __CountMask) == 0, "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
     }
   }
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: can-test-hardening-assertions-fast
+// REQUIRES: can-test-hardening-assertions-fast
 
 // template <class _Ptr, class _Tag, class _RangeCapacity>
 // class __static_packed_bounded_iterator;
