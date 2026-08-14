@@ -94,7 +94,8 @@ public:
     }
 
     if (!ty)
-      ty = getAnonRecordTy(members, packed, padded);
+      ty = getAnonRecordTy(members, packed, padded,
+                           cir::RecordType::getAllDataKinds(members));
 
     auto sTy = mlir::cast<cir::RecordType>(ty);
     return cir::ConstRecordAttr::get(sTy, arrayAttr);
@@ -154,16 +155,16 @@ public:
   ///
   /// If a record already exists and is complete, but the client tries to fetch
   /// it with a different set of attributes, this method will crash.
-  cir::RecordType getCompleteNamedRecordType(llvm::ArrayRef<mlir::Type> members,
-                                             bool packed, bool padded,
-                                             llvm::StringRef name) {
+  cir::RecordType getCompleteNamedRecordType(
+      llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
+      llvm::StringRef name, llvm::ArrayRef<cir::RecordMemberKind> memberKinds) {
     const auto nameAttr = getStringAttr(name);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
 
     // Create or get the struct type (named anonymous struct helper — always
     // struct, never class or union at this call site).
     auto type = cir::StructType::get(getContext(), members, nameAttr, packed,
-                                     padded, /*is_class=*/false);
+                                     padded, /*is_class=*/false, memberKinds);
 
     // If we found an existing type, verify that either it is incomplete or
     // it matches the requested attributes.
@@ -173,7 +174,7 @@ public:
 
     // Complete an incomplete record or ensure the existing complete record
     // matches the requested attributes.
-    type.complete(members, packed, padded);
+    type.complete(members, packed, padded, memberKinds);
 
     return type;
   }
@@ -403,11 +404,12 @@ public:
   cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
 
   /// Get a CIR anonymous struct type.
-  cir::StructType getAnonRecordTy(llvm::ArrayRef<mlir::Type> members,
-                                  bool packed = false, bool padded = false) {
+  cir::StructType
+  getAnonRecordTy(llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
+                  llvm::ArrayRef<cir::RecordMemberKind> memberKinds) {
     assert(!cir::MissingFeatures::astRecordDeclAttr());
     return cir::StructType::get(getContext(), members, packed, padded,
-                                /*is_class=*/false);
+                                /*is_class=*/false, memberKinds);
   }
 
   //===--------------------------------------------------------------------===//

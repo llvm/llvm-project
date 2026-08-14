@@ -25,28 +25,28 @@ void main(COORD_TYPE DTid : SV_DispatchThreadID) {
 
 // Store a whole texel.
 // CHECK: %[[DTID_VAL:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[DTID_ADDR]]
-// CHECK: %[[CALL1:.*]] = call noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} @Tex, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL]])
+// CHECK: %[[CALL1:.*]] = call {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} @Tex, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL]])
 // CHECK: store <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, ptr{{.*}} %[[CALL1]]
 
 // Store a single component: a GEP off the texel pointer, which the DXIL
 // backend later expands into a read-modify-write of the whole texel.
 // CHECK: %[[DTID_VAL2:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[DTID_ADDR]]
-// CHECK: %[[CALL2:.*]] = call noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} @Tex, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL2]])
+// CHECK: %[[CALL2:.*]] = call {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} @Tex, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL2]])
 // CHECK: %[[ELEM:.*]] = getelementptr <4 x float>, ptr{{.*}} %[[CALL2]], i32 0, i32 1
 // CHECK: store float 5.000000e+00, ptr{{.*}} %[[ELEM]]
 
 // Store to a scalar texture.
 // CHECK: %[[DTID_VAL3:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[DTID_ADDR]]
-// CHECK: %[[CALL3:.*]] = call noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} @Tex2, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL3]])
+// CHECK: %[[CALL3:.*]] = call {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} @Tex2, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL3]])
 // CHECK: store float 6.000000e+00, ptr{{.*}} %[[CALL3]]
 
 // Store to an integer texture.
 // CHECK: %[[DTID_VAL4:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[DTID_ADDR]]
-// CHECK: %[[CALL4:.*]] = call noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<int vector[3]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} @Tex3, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL4]])
+// CHECK: %[[CALL4:.*]] = call {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<int vector[3]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} @Tex3, <[[COORD_DIM]] x i32> noundef %[[DTID_VAL4]])
 // CHECK: store <3 x i32> <i32 7, i32 8, i32 9>, ptr{{.*}} %[[CALL4]]
 
 // Check the operator[] body
-// CHECK: define linkonce_odr hidden noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}noundef {{.*}}ptr{{.*}} @hlsl::[[TEXTURE]]<float vector[4]>::operator[](unsigned int vector[[[COORD_DIM]]]) const(ptr {{.*}} %[[THIS:.*]], <[[COORD_DIM]] x i32> noundef %[[INDEX:.*]])
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr
 // CHECK: %[[INDEX_ADDR:.*]] = alloca <[[COORD_DIM]] x i32>
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]]

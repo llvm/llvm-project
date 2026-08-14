@@ -476,6 +476,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed merging of lambdas across modules in the case where neither lambda is
   imported from an AST file. (#GH214560)
 
+- Fixed a crash when a non-type template parameter of reference type is bound
+  to a subobject and is used in a context that requires an implicit conversion.
+  (#GH215900)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -534,6 +538,11 @@ features cannot lower the translation-unit ABI level;
 #### LoongArch Support
 
 #### RISC-V Support
+
+- Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
+  option will be treated like `-mcpu=native` if `-mcpu` is not present. If
+  `-mcpu` is present, the ISA will be selected from the host CPU and the tune
+  CPU will be selected from `-mcpu`.
 
 #### CUDA/HIP Language Changes
 

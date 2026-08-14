@@ -413,7 +413,7 @@ void sequence_container_benchmarks(std::string container) {
           DoNotOptimizeData(c);
 
           state.PauseTiming();
-          c.clear();
+          c = Container();
           state.ResumeTiming();
         }
       });
@@ -440,7 +440,7 @@ void sequence_container_benchmarks(std::string container) {
           DoNotOptimizeData(c);
 
           state.PauseTiming();
-          c.clear();
+          c = Container();
           state.ResumeTiming();
         }
       });

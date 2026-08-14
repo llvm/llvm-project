@@ -278,9 +278,10 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
   case SecFuncMetadata:
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
     break;
-  default:
   case SecFuncOffsetTable:
     IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
+    break;
+  default:
     break;
   }
   if (!IsFlagLegal)
@@ -1534,29 +1535,6 @@ using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;
 LLVM_ABI void
 sortFuncProfiles(const SampleProfileMap &ProfileMap,
                  std::vector<NameFunctionSamples> &SortedProfiles);
-
-/// Sort a LocationT->SampleT map by LocationT.
-///
-/// It produces a sorted list of <LocationT, SampleT> records by ascending
-/// order of LocationT.
-template <class LocationT, class SampleT> class SampleSorter {
-public:
-  using SamplesWithLoc = std::pair<const LocationT, SampleT>;
-  using SamplesWithLocList = SmallVector<const SamplesWithLoc *, 20>;
-
-  SampleSorter(const std::map<LocationT, SampleT> &Samples) {
-    for (const auto &I : Samples)
-      V.push_back(&I);
-    llvm::stable_sort(V, [](const SamplesWithLoc *A, const SamplesWithLoc *B) {
-      return A->first < B->first;
-    });
-  }
-
-  const SamplesWithLocList &get() const { return V; }
-
-private:
-  SamplesWithLocList V;
-};
 
 /// SampleContextTrimmer impelements helper functions to trim, merge cold
 /// context profiles. It also supports context profile canonicalization to make

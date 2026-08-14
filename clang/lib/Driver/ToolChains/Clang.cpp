@@ -915,48 +915,71 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_MP);
   Args.AddLastArg(CmdArgs, options::OPT_MV);
 
-  // Add offload include arguments specific for CUDA/HIP/SYCL. This must happen
-  // before we -I or -include anything else, because we must pick up the
-  // CUDA/HIP/SYCL headers from the particular CUDA/ROCm/SYCL installation,
-  // rather than from e.g. /usr/local/include.
-  if (JA.isOffloading(Action::OFK_Cuda))
-    getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
-  if (JA.isOffloading(Action::OFK_HIP))
-    getToolChain().AddHIPIncludeArgs(Args, CmdArgs);
-  if (JA.isOffloading(Action::OFK_SYCL))
-    getToolChain().addSYCLIncludeArgs(Args, CmdArgs);
+  bool UsesLLVMOffloading = Args.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+  bool UsesOffloadInclude =
+      Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc, true);
+  bool NoBuiltinInc = Args.hasArg(options::OPT_nobuiltininc);
 
-  // If we are offloading to a target via OpenMP we need to include the
-  // openmp_wrappers folder which contains alternative system headers.
-  if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
-      !Args.hasArg(options::OPT_nostdinc) &&
-      Args.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
-                   true) &&
-      getToolChain().getTriple().isGPU()) {
-    if (!Args.hasArg(options::OPT_nobuiltininc)) {
-      // Add openmp_wrappers/* to our system include path.  This lets us wrap
-      // standard library headers.
-      SmallString<128> P(D.ResourceDir);
-      llvm::sys::path::append(P, "include");
-      llvm::sys::path::append(P, "openmp_wrappers");
-      CmdArgs.push_back("-internal-isystem");
-      CmdArgs.push_back(Args.MakeArgString(P));
+  // Add offload include arguments for CUDA/HIP when using LLVM offloading. We
+  // want to pull in our wrappers instead of the vendor headers.
+  if (UsesLLVMOffloading) {
+    if (UsesOffloadInclude && !NoBuiltinInc) {
+      auto AddOffloadHeadersInclude = [&](StringRef IncludeSubdir,
+                                          StringRef RuntimeHeader) {
+        SmallString<128> OffloadInclude(D.Dir);
+        llvm::sys::path::append(OffloadInclude, "..", "include", "offload");
+        if (!IncludeSubdir.empty())
+          llvm::sys::path::append(OffloadInclude, IncludeSubdir);
+        CmdArgs.append({"-internal-isystem", Args.MakeArgString(OffloadInclude),
+                        "-include", Args.MakeArgString(RuntimeHeader)});
+      };
+      auto AddForcedInclude = [&](StringRef Header) {
+        CmdArgs.push_back("-include");
+        CmdArgs.push_back(Args.MakeArgString(Header));
+      };
+      AddForcedInclude("__clang_gpu_runtime_wrapper.h");
+      AddForcedInclude("__clang_gpu_builtin_vars.h");
+      AddForcedInclude("__clang_gpu_device_functions.h");
+      AddForcedInclude("__clang_gpu_intrinsics.h");
+      if (JA.isOffloading(Action::OFK_Cuda))
+        AddOffloadHeadersInclude("cuda", "cuda_runtime.h");
+      if (JA.isOffloading(Action::OFK_HIP) &&
+          !Args.hasArg(options::OPT_nohipwrapperinc)) {
+        // HIP code commonly includes this as "hip/hip_runtime.h".
+        AddOffloadHeadersInclude("", "hip/hip_runtime.h");
+      }
     }
+  } else {
+    // Add offload include arguments specific for CUDA/HIP/SYCL. This must
+    // happen before we -I or -include anything else, because we must pick up
+    // the CUDA/HIP/SYCL headers from the particular CUDA/ROCm/SYCL
+    // installation, rather than from e.g. /usr/local/include.
+    if (JA.isOffloading(Action::OFK_Cuda))
+      getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
+    if (JA.isOffloading(Action::OFK_HIP))
+      getToolChain().AddHIPIncludeArgs(Args, CmdArgs);
+    if (JA.isOffloading(Action::OFK_SYCL))
+      getToolChain().addSYCLIncludeArgs(Args, CmdArgs);
 
-    CmdArgs.push_back("-include");
-    CmdArgs.push_back("__clang_openmp_device_functions.h");
-  }
+    // If we are offloading to a target via OpenMP we need to include the
+    // openmp_wrappers folder which contains alternative system headers.
+    if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
+        !Args.hasArg(options::OPT_nostdinc) && UsesOffloadInclude &&
+        getToolChain().getTriple().isGPU()) {
+      if (!NoBuiltinInc) {
+        // Add openmp_wrappers/* to our system include path.  This lets us
+        // wrap standard library headers.
+        SmallString<128> P(D.ResourceDir);
+        llvm::sys::path::append(P, "include");
+        llvm::sys::path::append(P, "openmp_wrappers");
+        CmdArgs.push_back("-internal-isystem");
+        CmdArgs.push_back(Args.MakeArgString(P));
+      }
 
-  if (Args.hasArg(options::OPT_foffload_via_llvm)) {
-    // Add llvm_wrappers/* to our system include path.  This lets us wrap
-    // standard library headers and other headers.
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "include", "llvm_offload_wrappers");
-    CmdArgs.append({"-internal-isystem", Args.MakeArgString(P), "-include"});
-    if (JA.isDeviceOffloading(Action::OFK_OpenMP))
-      CmdArgs.push_back("__llvm_offload_device.h");
-    else
-      CmdArgs.push_back("__llvm_offload_host.h");
+      CmdArgs.push_back("-include");
+      CmdArgs.push_back("__clang_openmp_device_functions.h");
+    }
   }
 
   // Add -i* options, and automatically translate to
@@ -5166,6 +5189,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsSYCLDevice = JA.isDeviceOffloading(Action::OFK_SYCL);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsExtractAPI = isa<ExtractAPIJobAction>(JA);
+  bool UsesLLVMOffloading = Args.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsHostOffloadingAction =
@@ -5285,7 +5310,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (IsCuda && !IsCudaDevice) {
+  if (IsCuda && !IsCudaDevice && !UsesLLVMOffloading) {
     // We need to figure out which CUDA version we're compiling for, as that
     // determines how we load and launch GPU kernels.
     auto *CTC = static_cast<const toolchains::CudaToolChain *>(
@@ -8293,12 +8318,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Host-side offloading compilation receives all device-side outputs. Include
   // them in the host compilation depending on the target. If the host inputs
   // are not empty we use the new-driver scheme, otherwise use the old scheme.
-  if ((IsCuda || IsHIP) && CudaDeviceInput) {
+  if ((IsCuda || IsHIP) && !UsesLLVMOffloading && CudaDeviceInput) {
     CmdArgs.push_back("-fcuda-include-gpubinary");
     CmdArgs.push_back(CudaDeviceInput->getFilename());
   } else if (!HostOffloadingInputs.empty()) {
     if ((IsCuda || IsHIP) &&
-        (!IsRDCMode || Args.hasArg(options::OPT_cuda_emit_nvcc_abi))) {
+        (!IsRDCMode || Args.hasArg(options::OPT_cuda_emit_nvcc_abi)) &&
+        !UsesLLVMOffloading) {
       assert(HostOffloadingInputs.size() == 1 && "Only one input expected");
       CmdArgs.push_back("-fcuda-include-gpubinary");
       CmdArgs.push_back(HostOffloadingInputs.front().getFilename());
