@@ -1,7 +1,7 @@
 // clang-format off
-// RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && env KMP_G_DEBUG=10 %libomp-run 2>&1 | FileCheck %s
+// RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && env KMP_TASKGRAPH_TRACE=1 %libomp-run 2>&1 | FileCheck %s
 
-// REQUIRES: omp_taskgraph_experimental, libomp_debug
+// REQUIRES: omp_taskgraph_experimental
 
 int main()
 {

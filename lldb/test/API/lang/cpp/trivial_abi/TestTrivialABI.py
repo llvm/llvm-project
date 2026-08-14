@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # return value is unrecoverable from the operand stack at a step-out
 class TestTrivialABI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

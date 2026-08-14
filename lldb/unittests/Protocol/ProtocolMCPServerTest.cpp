@@ -124,6 +124,33 @@ public:
   }
 };
 
+/// Test resource provider that fails with a non-UnsupportedURI error.
+class ErrorResourceProvider : public ResourceProvider {
+public:
+  using ResourceProvider::ResourceProvider;
+
+  std::vector<Resource> GetResources() const override { return {}; }
+
+  llvm::Expected<ReadResourceResult>
+  ReadResource(llvm::StringRef uri) const override {
+    return llvm::createStringError("resource boom");
+  }
+};
+
+/// Test tool that omits its input schema.
+class NoSchemaTool : public Tool {
+public:
+  using Tool::Tool;
+
+  llvm::Expected<CallToolResult> Call(const ToolArguments &args) override {
+    return CallToolResult{};
+  }
+
+  std::optional<llvm::json::Value> GetSchema() const override {
+    return std::nullopt;
+  }
+};
+
 class TestServer : public Server {
 public:
   using Server::Bind;
@@ -324,6 +351,140 @@ TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   Run();
   EXPECT_THAT(logged_messages,
               testing::Contains("MCP initialization complete"));
+}
+
+TEST_F(ProtocolServerMCPTest, ToolsCallNoName) {
+  EXPECT_THAT_EXPECTED(
+      (Call<CallToolResult, CallToolParams>(
+          "tools/call",
+          CallToolParams{/*name=*/"", /*arguments=*/std::nullopt})),
+      HasValue(make_response(
+          lldb_protocol::mcp::Error{eErrorCodeInternalError, "no tool name"})));
+}
+
+TEST_F(ProtocolServerMCPTest, ToolsCallUnknownTool) {
+  EXPECT_THAT_EXPECTED(
+      (Call<CallToolResult, CallToolParams>(
+          "tools/call",
+          CallToolParams{/*name=*/"missing", /*arguments=*/std::nullopt})),
+      HasValue(make_response(lldb_protocol::mcp::Error{
+          eErrorCodeInternalError, "no tool \"missing\""})));
+}
+
+TEST_F(ProtocolServerMCPTest, ToolsListWithoutSchema) {
+  server_up->AddTool(
+      std::make_unique<NoSchemaTool>("noschema", "no schema tool"));
+
+  ToolDefinition no_schema_tool;
+  no_schema_tool.name = "noschema";
+  no_schema_tool.description = "no schema tool";
+
+  EXPECT_THAT_EXPECTED(
+      Call<ListToolsResult>("tools/list", Void{}),
+      HasValue(make_response(ListToolsResult{{no_schema_tool}})));
+}
+
+TEST_F(ProtocolServerMCPTest, ResourcesRead) {
+  server_up->AddResourceProvider(std::make_unique<TestResourceProvider>());
+
+  EXPECT_THAT_EXPECTED(
+      (Call<ReadResourceResult, ReadResourceParams>(
+          "resources/read", ReadResourceParams{/*uri=*/"lldb://foo/bar"})),
+      HasValue(make_response(ReadResourceResult{{
+          {
+              /*uri=*/"lldb://foo/bar",
+              /*text=*/"foobar",
+              /*mimeType=*/"application/json",
+          },
+      }})));
+}
+
+TEST_F(ProtocolServerMCPTest, ResourcesReadNoURI) {
+  server_up->AddResourceProvider(std::make_unique<TestResourceProvider>());
+
+  EXPECT_THAT_EXPECTED((Call<ReadResourceResult, ReadResourceParams>(
+                           "resources/read", ReadResourceParams{/*uri=*/""})),
+                       HasValue(make_response(lldb_protocol::mcp::Error{
+                           eErrorCodeInternalError, "no resource uri"})));
+}
+
+TEST_F(ProtocolServerMCPTest, ResourcesReadNotFound) {
+  server_up->AddResourceProvider(std::make_unique<TestResourceProvider>());
+
+  EXPECT_THAT_EXPECTED(
+      (Call<ReadResourceResult, ReadResourceParams>(
+          "resources/read", ReadResourceParams{/*uri=*/"lldb://unknown"})),
+      HasValue(make_response(lldb_protocol::mcp::Error{
+          MCPError::kResourceNotFound,
+          "no resource handler for uri: lldb://unknown"})));
+}
+
+TEST(MCPToolTest, GetDefinitionWithSchema) {
+  TestTool tool("test", "test tool");
+  EXPECT_EQ(tool.GetName(), "test");
+
+  ToolDefinition definition = tool.GetDefinition();
+  EXPECT_EQ(definition.name, "test");
+  EXPECT_EQ(definition.description, "test tool");
+  ASSERT_TRUE(definition.inputSchema.has_value());
+}
+
+TEST(MCPToolTest, GetDefinitionWithoutSchema) {
+  NoSchemaTool tool("noschema", "no schema tool");
+
+  ToolDefinition definition = tool.GetDefinition();
+  EXPECT_EQ(definition.name, "noschema");
+  EXPECT_EQ(definition.description, "no schema tool");
+  EXPECT_FALSE(definition.inputSchema.has_value());
+}
+
+TEST_F(ProtocolServerMCPTest, AddNullToolAndResourceProvider) {
+  // Null tools and resource providers are silently ignored.
+  server_up->AddTool(nullptr);
+  server_up->AddResourceProvider(nullptr);
+
+  EXPECT_THAT_EXPECTED(Call<ListToolsResult>("tools/list", Void{}),
+                       HasValue(make_response(ListToolsResult{})));
+  EXPECT_THAT_EXPECTED(Call<ListResourcesResult>("resources/list", Void{}),
+                       HasValue(make_response(ListResourcesResult{})));
+}
+
+TEST_F(ProtocolServerMCPTest, ResourcesReadError) {
+  server_up->AddResourceProvider(std::make_unique<ErrorResourceProvider>());
+
+  EXPECT_THAT_EXPECTED(
+      (Call<ReadResourceResult, ReadResourceParams>(
+          "resources/read", ReadResourceParams{/*uri=*/"lldb://x"})),
+      HasValue(make_response(lldb_protocol::mcp::Error{eErrorCodeInternalError,
+                                                       "resource boom"})));
+}
+
+TEST_F(ProtocolServerMCPTest, Accept) {
+  auto transports = TestTransport<ProtocolDescriptor>::createPair(loop);
+  EXPECT_THAT_ERROR(server_up->Accept(std::move(transports.second)),
+                    Succeeded());
+}
+
+TEST_F(ProtocolServerMCPTest, AcceptErrorAndDisconnect) {
+  auto transports = TestTransport<ProtocolDescriptor>::createPair(loop);
+  TestTransport<ProtocolDescriptor> *server_transport = transports.second.get();
+  EXPECT_THAT_ERROR(server_up->Accept(std::move(transports.second)),
+                    Succeeded());
+
+  // A transport error is logged by the server.
+  server_transport->SimulateError(llvm::createStringError("boom"));
+  EXPECT_THAT(logged_messages,
+              testing::Contains(testing::HasSubstr("Transport error: boom")));
+
+  // Closing the transport removes the client from the server. This destroys
+  // the transport, so it must not be used afterwards.
+  server_transport->SimulateClosed();
+}
+
+TEST_F(ProtocolServerMCPTest, AcceptRegisterFailure) {
+  auto transport = std::make_unique<TestTransport<ProtocolDescriptor>>(loop);
+  transport->SetRegisterMessageHandlerShouldFail(true);
+  EXPECT_THAT_ERROR(server_up->Accept(std::move(transport)), Failed());
 }
 
 #endif

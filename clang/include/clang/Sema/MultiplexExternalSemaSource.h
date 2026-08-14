@@ -14,6 +14,7 @@
 
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/Weak.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <utility>
 
@@ -43,6 +44,9 @@ private:
   SmallVector<llvm::IntrusiveRefCntPtr<ExternalSemaSource>, 2> Sources;
 
 public:
+  /// Constructs an empty multiplexing external sema source.
+  MultiplexExternalSemaSource();
+
   /// Constructs a new multiplexing external sema source and appends the
   /// given element to it.
   ///
@@ -57,6 +61,15 @@ public:
   ///\param[in] Source - An ExternalSemaSource.
   ///
   void AddSource(llvm::IntrusiveRefCntPtr<ExternalSemaSource> Source);
+
+  /// Remove all sources for which the predicate returns true.
+  ///
+  /// \param P - A predicate that takes an
+  /// IntrusiveRefCntPtr<ExternalSemaSource> param and returns true if
+  /// the source should be removed, false otherwise.
+  template <typename UnaryPredicate> void EraseIf(UnaryPredicate P) {
+    llvm::erase_if(Sources, P);
+  }
 
   //===--------------------------------------------------------------------===//
   // ExternalASTSource.
@@ -288,7 +301,7 @@ public:
   /// be invoked multiple times; the external source should take care not to
   /// introduce the same declarations repeatedly.
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) override;
 
   /// Read the set of referenced selectors known to the
   /// external Sema source.

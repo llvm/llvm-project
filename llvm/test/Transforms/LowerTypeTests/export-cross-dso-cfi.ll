@@ -31,9 +31,9 @@ define internal void @regularlto_internal() !type !1 !type !2 {
 !cfi.functions = !{!0, !3, !4}
 !llvm.module.flags = !{!5}
 
-!0 = !{!"external", i8 0, !1, !2}
+!0 = !{!"external", i8 0, i64 5224464028922159466, !1, !2}
 !1 = !{i64 0, !"typeid1"}
 !2 = !{i64 0, i64 1234}
-!3 = !{!"external2", i8 1, !1, !2}
-!4 = !{!"internal", i8 0, !1, !2}
+!3 = !{!"external2", i8 1, i64 16430208882958242304, !1, !2}
+!4 = !{!"internal", i8 0, i64 15859245615183425489, !1, !2}
 !5 = !{i32 4, !"Cross-DSO CFI", i32 1}

@@ -94,6 +94,8 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic();
 
+  static llvm::StringRef GetDwoDiagnosticSuffix();
+
   static SymbolFile *CreateInstance(lldb::ObjectFileSP objfile_sp);
 
   // Constructors and Destructors
@@ -279,6 +281,8 @@ public:
 
   void DumpClangAST(Stream &s, llvm::StringRef filter,
                     bool show_colors) override;
+
+  lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() override;
 
   /// List separate dwo files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,

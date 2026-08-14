@@ -13,18 +13,18 @@ namespace {
 TEST(StringUtilTest, stoul) {
   {
     size_t pos = 0;
-    EXPECT_EQ(0ul, benchmark::stoul("0", &pos));
-    EXPECT_EQ(1ul, pos);
+    EXPECT_EQ(0UL, benchmark::stoul("0", &pos));
+    EXPECT_EQ(1UL, pos);
   }
   {
     size_t pos = 0;
-    EXPECT_EQ(7ul, benchmark::stoul("7", &pos));
-    EXPECT_EQ(1ul, pos);
+    EXPECT_EQ(7UL, benchmark::stoul("7", &pos));
+    EXPECT_EQ(1UL, pos);
   }
   {
     size_t pos = 0;
-    EXPECT_EQ(135ul, benchmark::stoul("135", &pos));
-    EXPECT_EQ(3ul, pos);
+    EXPECT_EQ(135UL, benchmark::stoul("135", &pos));
+    EXPECT_EQ(3UL, pos);
   }
 #if ULONG_MAX == 0xFFFFFFFFul
   {
@@ -35,35 +35,35 @@ TEST(StringUtilTest, stoul) {
 #elif ULONG_MAX == 0xFFFFFFFFFFFFFFFFul
   {
     size_t pos = 0;
-    EXPECT_EQ(0xFFFFFFFFFFFFFFFFul,
+    EXPECT_EQ(0xFFFFFFFFFFFFFFFFUL,
               benchmark::stoul("18446744073709551615", &pos));
-    EXPECT_EQ(20ul, pos);
+    EXPECT_EQ(20UL, pos);
   }
 #endif
   {
     size_t pos = 0;
-    EXPECT_EQ(10ul, benchmark::stoul("1010", &pos, 2));
-    EXPECT_EQ(4ul, pos);
+    EXPECT_EQ(10UL, benchmark::stoul("1010", &pos, 2));
+    EXPECT_EQ(4UL, pos);
   }
   {
     size_t pos = 0;
-    EXPECT_EQ(520ul, benchmark::stoul("1010", &pos, 8));
-    EXPECT_EQ(4ul, pos);
+    EXPECT_EQ(520UL, benchmark::stoul("1010", &pos, 8));
+    EXPECT_EQ(4UL, pos);
   }
   {
     size_t pos = 0;
-    EXPECT_EQ(1010ul, benchmark::stoul("1010", &pos, 10));
-    EXPECT_EQ(4ul, pos);
+    EXPECT_EQ(1010UL, benchmark::stoul("1010", &pos, 10));
+    EXPECT_EQ(4UL, pos);
   }
   {
     size_t pos = 0;
-    EXPECT_EQ(4112ul, benchmark::stoul("1010", &pos, 16));
-    EXPECT_EQ(4ul, pos);
+    EXPECT_EQ(4112UL, benchmark::stoul("1010", &pos, 16));
+    EXPECT_EQ(4UL, pos);
   }
   {
     size_t pos = 0;
-    EXPECT_EQ(0xBEEFul, benchmark::stoul("BEEF", &pos, 16));
-    EXPECT_EQ(4ul, pos);
+    EXPECT_EQ(0xBEEFUL, benchmark::stoul("BEEF", &pos, 16));
+    EXPECT_EQ(4UL, pos);
   }
 #ifndef BENCHMARK_HAS_NO_EXCEPTIONS
   {
@@ -73,83 +73,87 @@ TEST(StringUtilTest, stoul) {
 #endif
 }
 
-TEST(StringUtilTest, stoi){{size_t pos = 0;
-EXPECT_EQ(0, benchmark::stoi("0", &pos));
-EXPECT_EQ(1ul, pos);
-}  // namespace
-{
-  size_t pos = 0;
-  EXPECT_EQ(-17, benchmark::stoi("-17", &pos));
-  EXPECT_EQ(3ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(1357, benchmark::stoi("1357", &pos));
-  EXPECT_EQ(4ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(10, benchmark::stoi("1010", &pos, 2));
-  EXPECT_EQ(4ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(520, benchmark::stoi("1010", &pos, 8));
-  EXPECT_EQ(4ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(1010, benchmark::stoi("1010", &pos, 10));
-  EXPECT_EQ(4ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(4112, benchmark::stoi("1010", &pos, 16));
-  EXPECT_EQ(4ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(0xBEEF, benchmark::stoi("BEEF", &pos, 16));
-  EXPECT_EQ(4ul, pos);
-}
+TEST(StringUtilTest, stoi) {
+  {
+    size_t pos = 0;
+    EXPECT_EQ(0, benchmark::stoi("0", &pos));
+    EXPECT_EQ(1UL, pos);
+  }  // namespace
+  {
+    size_t pos = 0;
+    EXPECT_EQ(-17, benchmark::stoi("-17", &pos));
+    EXPECT_EQ(3UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(1357, benchmark::stoi("1357", &pos));
+    EXPECT_EQ(4UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(10, benchmark::stoi("1010", &pos, 2));
+    EXPECT_EQ(4UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(520, benchmark::stoi("1010", &pos, 8));
+    EXPECT_EQ(4UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(1010, benchmark::stoi("1010", &pos, 10));
+    EXPECT_EQ(4UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(4112, benchmark::stoi("1010", &pos, 16));
+    EXPECT_EQ(4UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(0xBEEF, benchmark::stoi("BEEF", &pos, 16));
+    EXPECT_EQ(4UL, pos);
+  }
 #ifndef BENCHMARK_HAS_NO_EXCEPTIONS
-{
-  ASSERT_THROW(std::ignore = benchmark::stoi("this is a test"),
-               std::invalid_argument);
-}
+  {
+    ASSERT_THROW(std::ignore = benchmark::stoi("this is a test"),
+                 std::invalid_argument);
+  }
 #endif
 }
 
-TEST(StringUtilTest, stod){{size_t pos = 0;
-EXPECT_EQ(0.0, benchmark::stod("0", &pos));
-EXPECT_EQ(1ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(-84.0, benchmark::stod("-84", &pos));
-  EXPECT_EQ(3ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(1234.0, benchmark::stod("1234", &pos));
-  EXPECT_EQ(4ul, pos);
-}
-{
-  size_t pos = 0;
-  EXPECT_EQ(1.5, benchmark::stod("1.5", &pos));
-  EXPECT_EQ(3ul, pos);
-}
-{
-  size_t pos = 0;
-  /* Note: exactly representable as double */
-  EXPECT_EQ(-1.25e+9, benchmark::stod("-1.25e+9", &pos));
-  EXPECT_EQ(8ul, pos);
-}
+TEST(StringUtilTest, stod) {
+  {
+    size_t pos = 0;
+    EXPECT_EQ(0.0, benchmark::stod("0", &pos));
+    EXPECT_EQ(1UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(-84.0, benchmark::stod("-84", &pos));
+    EXPECT_EQ(3UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(1234.0, benchmark::stod("1234", &pos));
+    EXPECT_EQ(4UL, pos);
+  }
+  {
+    size_t pos = 0;
+    EXPECT_EQ(1.5, benchmark::stod("1.5", &pos));
+    EXPECT_EQ(3UL, pos);
+  }
+  {
+    size_t pos = 0;
+    /* Note: exactly representable as double */
+    EXPECT_EQ(-1.25e+9, benchmark::stod("-1.25e+9", &pos));
+    EXPECT_EQ(8UL, pos);
+  }
 #ifndef BENCHMARK_HAS_NO_EXCEPTIONS
-{
-  ASSERT_THROW(std::ignore = benchmark::stod("this is a test"),
-               std::invalid_argument);
-}
+  {
+    ASSERT_THROW(std::ignore = benchmark::stod("this is a test"),
+                 std::invalid_argument);
+  }
 #endif
 }
 

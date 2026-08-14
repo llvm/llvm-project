@@ -69,18 +69,18 @@ define <4 x float> @fma_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z) #0
 define <4 x i32> @fptosi_v4i32_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fptosi_v4i32_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vcvt.s32.f32 s4, s2
-; CHECK-NEXT:    vcvt.s32.f32 s6, s0
-; CHECK-NEXT:    vcvt.s32.f32 s0, s1
+; CHECK-NEXT:    vcvt.s32.f32 s4, s0
+; CHECK-NEXT:    vcvt.s32.f32 s6, s2
+; CHECK-NEXT:    vcvt.s32.f32 s0, s3
 ; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vcvt.s32.f32 s4, s3
-; CHECK-NEXT:    vmov.32 d17[0], r0
-; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vcvt.s32.f32 s4, s1
 ; CHECK-NEXT:    vmov.32 d16[0], r0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov.32 d17[0], r0
 ; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.32 d17[1], r0
-; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vmov.32 d16[1], r0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
   %val = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
@@ -90,18 +90,18 @@ define <4 x i32> @fptosi_v4i32_v4f32(<4 x float> %x) #0 {
 define <4 x i32> @fptoui_v4i32_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fptoui_v4i32_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vcvt.u32.f32 s4, s2
-; CHECK-NEXT:    vcvt.u32.f32 s6, s0
-; CHECK-NEXT:    vcvt.u32.f32 s0, s1
+; CHECK-NEXT:    vcvt.u32.f32 s4, s0
+; CHECK-NEXT:    vcvt.u32.f32 s6, s2
+; CHECK-NEXT:    vcvt.u32.f32 s0, s3
 ; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vcvt.u32.f32 s4, s3
-; CHECK-NEXT:    vmov.32 d17[0], r0
-; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vcvt.u32.f32 s4, s1
 ; CHECK-NEXT:    vmov.32 d16[0], r0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov.32 d17[0], r0
 ; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.32 d17[1], r0
-; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vmov.32 d16[1], r0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
   %val = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
@@ -116,28 +116,28 @@ define <4 x i64> @fptosi_v4i64_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vorr q4, q0, q0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    mov r4, r1
-; CHECK-NEXT:    vmov r1, s16
-; CHECK-NEXT:    vmov r5, s17
-; CHECK-NEXT:    vmov r6, s18
-; CHECK-NEXT:    vmov.32 d9[0], r0
+; CHECK-NEXT:    vmov r1, s17
+; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r6, s19
+; CHECK-NEXT:    vmov.32 d8[0], r0
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl __aeabi_f2lz
-; CHECK-NEXT:    vmov.32 d10[0], r0
+; CHECK-NEXT:    vmov.32 d11[0], r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r7, r1
 ; CHECK-NEXT:    bl __aeabi_f2lz
-; CHECK-NEXT:    vmov.32 d11[0], r0
+; CHECK-NEXT:    vmov.32 d10[0], r0
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    bl __aeabi_f2lz
-; CHECK-NEXT:    vmov.32 d8[0], r0
-; CHECK-NEXT:    vmov.32 d11[1], r5
-; CHECK-NEXT:    vmov.32 d9[1], r4
-; CHECK-NEXT:    vmov.32 d10[1], r7
-; CHECK-NEXT:    vmov.32 d8[1], r1
+; CHECK-NEXT:    vmov.32 d9[0], r0
+; CHECK-NEXT:    vmov.32 d10[1], r5
+; CHECK-NEXT:    vmov.32 d8[1], r4
+; CHECK-NEXT:    vmov.32 d11[1], r7
+; CHECK-NEXT:    vmov.32 d9[1], r1
 ; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vorr q1, q4, q4
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
@@ -154,28 +154,28 @@ define <4 x i64> @fptoui_v4i64_v4f32(<4 x float> %x) #0 {
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vorr q4, q0, q0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    vmov r0, s18
 ; CHECK-NEXT:    bl __aeabi_f2ulz
 ; CHECK-NEXT:    mov r4, r1
-; CHECK-NEXT:    vmov r1, s16
-; CHECK-NEXT:    vmov r5, s17
-; CHECK-NEXT:    vmov r6, s18
-; CHECK-NEXT:    vmov.32 d9[0], r0
+; CHECK-NEXT:    vmov r1, s17
+; CHECK-NEXT:    vmov r5, s16
+; CHECK-NEXT:    vmov r6, s19
+; CHECK-NEXT:    vmov.32 d8[0], r0
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
-; CHECK-NEXT:    vmov.32 d10[0], r0
+; CHECK-NEXT:    vmov.32 d11[0], r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r7, r1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
-; CHECK-NEXT:    vmov.32 d11[0], r0
+; CHECK-NEXT:    vmov.32 d10[0], r0
 ; CHECK-NEXT:    mov r0, r6
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    bl __aeabi_f2ulz
-; CHECK-NEXT:    vmov.32 d8[0], r0
-; CHECK-NEXT:    vmov.32 d11[1], r5
-; CHECK-NEXT:    vmov.32 d9[1], r4
-; CHECK-NEXT:    vmov.32 d10[1], r7
-; CHECK-NEXT:    vmov.32 d8[1], r1
+; CHECK-NEXT:    vmov.32 d9[0], r0
+; CHECK-NEXT:    vmov.32 d10[1], r5
+; CHECK-NEXT:    vmov.32 d8[1], r4
+; CHECK-NEXT:    vmov.32 d11[1], r7
+; CHECK-NEXT:    vmov.32 d9[1], r1
 ; CHECK-NEXT:    vorr q0, q5, q5
 ; CHECK-NEXT:    vorr q1, q4, q4
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
@@ -187,43 +187,12 @@ define <4 x i64> @fptoui_v4i64_v4f32(<4 x float> %x) #0 {
 define <4 x float> @sitofp_v4f32_v4i32(<4 x i32> %x) #0 {
 ; CHECK-LABEL: sitofp_v4f32_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #32
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    vmov r12, r1, d0
-; CHECK-NEXT:    movw r0, #0
-; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    movt r0, #17200
-; CHECK-NEXT:    str r0, [sp, #20]
-; CHECK-NEXT:    vldr d16, .LCPI9_0
-; CHECK-NEXT:    eor r1, r1, #-2147483648
-; CHECK-NEXT:    str r1, [sp, #16]
-; CHECK-NEXT:    str r0, [sp, #12]
-; CHECK-NEXT:    eor r1, r2, #-2147483648
-; CHECK-NEXT:    vldr d17, [sp, #16]
-; CHECK-NEXT:    stmib sp, {r0, r1}
-; CHECK-NEXT:    eor r1, r3, #-2147483648
-; CHECK-NEXT:    vsub.f64 d17, d17, d16
-; CHECK-NEXT:    vldr d18, [sp, #8]
-; CHECK-NEXT:    str r1, [sp]
-; CHECK-NEXT:    str r0, [sp, #28]
-; CHECK-NEXT:    eor r0, r12, #-2147483648
-; CHECK-NEXT:    vldr d19, [sp]
-; CHECK-NEXT:    str r0, [sp, #24]
-; CHECK-NEXT:    vsub.f64 d18, d18, d16
-; CHECK-NEXT:    vsub.f64 d19, d19, d16
-; CHECK-NEXT:    vldr d20, [sp, #24]
-; CHECK-NEXT:    vcvt.f32.f64 s3, d19
-; CHECK-NEXT:    vsub.f64 d16, d20, d16
-; CHECK-NEXT:    vcvt.f32.f64 s2, d18
-; CHECK-NEXT:    vcvt.f32.f64 s1, d17
-; CHECK-NEXT:    vcvt.f32.f64 s0, d16
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    vcvt.f32.s32 s7, s3
+; CHECK-NEXT:    vcvt.f32.s32 s6, s2
+; CHECK-NEXT:    vcvt.f32.s32 s5, s1
+; CHECK-NEXT:    vcvt.f32.s32 s4, s0
+; CHECK-NEXT:    vorr q0, q1, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI9_0:
-; CHECK-NEXT:    .long 2147483648 @ double 4503601774854144
-; CHECK-NEXT:    .long 1127219200
   %val = call <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <4 x float> %val
 }
@@ -231,39 +200,12 @@ define <4 x float> @sitofp_v4f32_v4i32(<4 x i32> %x) #0 {
 define <4 x float> @uitofp_v4f32_v4i32(<4 x i32> %x) #0 {
 ; CHECK-LABEL: uitofp_v4f32_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #32
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    movw r2, #0
-; CHECK-NEXT:    vmov r12, r3, d0
-; CHECK-NEXT:    movt r2, #17200
-; CHECK-NEXT:    stm sp, {r1, r2}
-; CHECK-NEXT:    vldr d17, [sp]
-; CHECK-NEXT:    vldr d16, .LCPI10_0
-; CHECK-NEXT:    str r2, [sp, #12]
-; CHECK-NEXT:    vsub.f64 d17, d17, d16
-; CHECK-NEXT:    vcvt.f32.f64 s3, d17
-; CHECK-NEXT:    str r0, [sp, #8]
-; CHECK-NEXT:    vldr d18, [sp, #8]
-; CHECK-NEXT:    str r2, [sp, #20]
-; CHECK-NEXT:    str r3, [sp, #16]
-; CHECK-NEXT:    vsub.f64 d18, d18, d16
-; CHECK-NEXT:    vldr d19, [sp, #16]
-; CHECK-NEXT:    str r2, [sp, #28]
-; CHECK-NEXT:    vcvt.f32.f64 s2, d18
-; CHECK-NEXT:    str r12, [sp, #24]
-; CHECK-NEXT:    vldr d20, [sp, #24]
-; CHECK-NEXT:    vsub.f64 d19, d19, d16
-; CHECK-NEXT:    vsub.f64 d16, d20, d16
-; CHECK-NEXT:    vcvt.f32.f64 s1, d19
-; CHECK-NEXT:    vcvt.f32.f64 s0, d16
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    vcvt.f32.u32 s7, s3
+; CHECK-NEXT:    vcvt.f32.u32 s6, s2
+; CHECK-NEXT:    vcvt.f32.u32 s5, s1
+; CHECK-NEXT:    vcvt.f32.u32 s4, s0
+; CHECK-NEXT:    vorr q0, q1, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI10_0:
-; CHECK-NEXT:    .long 0 @ double 4503599627370496
-; CHECK-NEXT:    .long 1127219200
   %val = call <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <4 x float> %val
 }
@@ -601,10 +543,10 @@ define <4 x float> @trunc_v4f32(<4 x float> %x) #0 {
 define <4 x i1> @fcmp_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-LABEL: fcmp_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.f32 s3, s7
+; CHECK-NEXT:    vcmp.f32 s1, s5
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s2, s6
+; CHECK-NEXT:    vcmp.f32 s0, s4
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    mov r3, #0
 ; CHECK-NEXT:    mov r0, #0
@@ -612,23 +554,23 @@ define <4 x i1> @fcmp_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    mvnne r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s0, s4
+; CHECK-NEXT:    vcmp.f32 s2, s6
 ; CHECK-NEXT:    movweq r2, #1
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    mvnne r2, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmp.f32 s1, s5
-; CHECK-NEXT:    vmov.32 d17[0], r2
+; CHECK-NEXT:    vcmp.f32 s3, s7
+; CHECK-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NEXT:    movweq r3, #1
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    mvnne r3, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov.32 d16[0], r3
-; CHECK-NEXT:    vmov.32 d17[1], r1
+; CHECK-NEXT:    vmov.32 d17[0], r3
+; CHECK-NEXT:    vmov.32 d16[1], r1
 ; CHECK-NEXT:    movweq r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    vmov.32 d16[1], r0
+; CHECK-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NEXT:    vmovn.i32 d0, q8
 ; CHECK-NEXT:    bx lr
 entry:
@@ -639,10 +581,10 @@ entry:
 define <4 x i1> @fcmps_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-LABEL: fcmps_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmpe.f32 s3, s7
+; CHECK-NEXT:    vcmpe.f32 s1, s5
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmpe.f32 s2, s6
+; CHECK-NEXT:    vcmpe.f32 s0, s4
 ; CHECK-NEXT:    mov r2, #0
 ; CHECK-NEXT:    mov r3, #0
 ; CHECK-NEXT:    mov r0, #0
@@ -650,23 +592,23 @@ define <4 x i1> @fcmps_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    mvnne r1, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmpe.f32 s0, s4
+; CHECK-NEXT:    vcmpe.f32 s2, s6
 ; CHECK-NEXT:    movweq r2, #1
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    mvnne r2, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vcmpe.f32 s1, s5
-; CHECK-NEXT:    vmov.32 d17[0], r2
+; CHECK-NEXT:    vcmpe.f32 s3, s7
+; CHECK-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NEXT:    movweq r3, #1
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    mvnne r3, #0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov.32 d16[0], r3
-; CHECK-NEXT:    vmov.32 d17[1], r1
+; CHECK-NEXT:    vmov.32 d17[0], r3
+; CHECK-NEXT:    vmov.32 d16[1], r1
 ; CHECK-NEXT:    movweq r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    vmov.32 d16[1], r0
+; CHECK-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NEXT:    vmovn.i32 d0, q8
 ; CHECK-NEXT:    bx lr
 entry:
@@ -767,16 +709,16 @@ define <2 x i64> @fptosi_v2i64_v2f64(<2 x double> %x) #0 {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vorr q4, q0, q0
-; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_d2lz
 ; CHECK-NEXT:    mov r4, r1
-; CHECK-NEXT:    vmov r2, r1, d8
-; CHECK-NEXT:    vmov.32 d9[0], r0
+; CHECK-NEXT:    vmov r2, r1, d9
+; CHECK-NEXT:    vmov.32 d8[0], r0
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl __aeabi_d2lz
-; CHECK-NEXT:    vmov.32 d8[0], r0
-; CHECK-NEXT:    vmov.32 d9[1], r4
-; CHECK-NEXT:    vmov.32 d8[1], r1
+; CHECK-NEXT:    vmov.32 d9[0], r0
+; CHECK-NEXT:    vmov.32 d8[1], r4
+; CHECK-NEXT:    vmov.32 d9[1], r1
 ; CHECK-NEXT:    vorr q0, q4, q4
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r4, pc}
@@ -792,16 +734,16 @@ define <2 x i64> @fptoui_v2i64_v2f64(<2 x double> %x) #0 {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vorr q4, q0, q0
-; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    mov r4, r1
-; CHECK-NEXT:    vmov r2, r1, d8
-; CHECK-NEXT:    vmov.32 d9[0], r0
+; CHECK-NEXT:    vmov r2, r1, d9
+; CHECK-NEXT:    vmov.32 d8[0], r0
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bl __aeabi_d2ulz
-; CHECK-NEXT:    vmov.32 d8[0], r0
-; CHECK-NEXT:    vmov.32 d9[1], r4
-; CHECK-NEXT:    vmov.32 d8[1], r1
+; CHECK-NEXT:    vmov.32 d9[0], r0
+; CHECK-NEXT:    vmov.32 d8[1], r4
+; CHECK-NEXT:    vmov.32 d9[1], r1
 ; CHECK-NEXT:    vorr q0, q4, q4
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r4, pc}
@@ -812,30 +754,13 @@ define <2 x i64> @fptoui_v2i64_v2f64(<2 x double> %x) #0 {
 define <2 x double> @sitofp_v2f64_v2i32(<2 x i32> %x) #0 {
 ; CHECK-LABEL: sitofp_v2f64_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    vmov.32 r0, d0[1]
-; CHECK-NEXT:    movw r2, #0
 ; CHECK-NEXT:    vmov.32 r1, d0[0]
-; CHECK-NEXT:    movt r2, #17200
-; CHECK-NEXT:    str r2, [sp, #4]
-; CHECK-NEXT:    vldr d16, .LCPI34_0
-; CHECK-NEXT:    eor r0, r0, #-2147483648
-; CHECK-NEXT:    str r0, [sp]
-; CHECK-NEXT:    str r2, [sp, #12]
-; CHECK-NEXT:    eor r0, r1, #-2147483648
-; CHECK-NEXT:    vldr d17, [sp]
-; CHECK-NEXT:    str r0, [sp, #8]
-; CHECK-NEXT:    vldr d18, [sp, #8]
-; CHECK-NEXT:    vsub.f64 d1, d17, d16
-; CHECK-NEXT:    vsub.f64 d0, d18, d16
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov s4, r1
+; CHECK-NEXT:    vcvt.f64.s32 d1, s0
+; CHECK-NEXT:    vcvt.f64.s32 d0, s4
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI34_0:
-; CHECK-NEXT:    .long 2147483648 @ double 4503601774854144
-; CHECK-NEXT:    .long 1127219200
   %val = call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i32(<2 x i32> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <2 x double> %val
 }
@@ -843,28 +768,13 @@ define <2 x double> @sitofp_v2f64_v2i32(<2 x i32> %x) #0 {
 define <2 x double> @uitofp_v2f64_v2i32(<2 x i32> %x) #0 {
 ; CHECK-LABEL: uitofp_v2f64_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    movw r0, #0
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    movt r0, #17200
-; CHECK-NEXT:    vst1.32 {d0[1]}, [r1:32]
-; CHECK-NEXT:    add r1, sp, #8
-; CHECK-NEXT:    str r0, [sp, #4]
-; CHECK-NEXT:    vldr d17, [sp]
-; CHECK-NEXT:    vst1.32 {d0[0]}, [r1:32]
-; CHECK-NEXT:    vldr d16, .LCPI35_0
-; CHECK-NEXT:    str r0, [sp, #12]
-; CHECK-NEXT:    vldr d18, [sp, #8]
-; CHECK-NEXT:    vsub.f64 d1, d17, d16
-; CHECK-NEXT:    vsub.f64 d0, d18, d16
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    vmov.32 r0, d0[1]
+; CHECK-NEXT:    vmov.32 r1, d0[0]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov s4, r1
+; CHECK-NEXT:    vcvt.f64.u32 d1, s0
+; CHECK-NEXT:    vcvt.f64.u32 d0, s4
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI35_0:
-; CHECK-NEXT:    .long 0 @ double 4503599627370496
-; CHECK-NEXT:    .long 1127219200
   %val = call <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i32(<2 x i32> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <2 x double> %val
 }
@@ -1266,23 +1176,9 @@ define <1 x i64> @fptoui_v1i64_v1f64(<1 x double> %x) #0 {
 define <1 x double> @sitofp_v1f64_v1i32(<1 x i32> %x) #0 {
 ; CHECK-LABEL: sitofp_v1f64_v1i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, sp, #8
-; CHECK-NEXT:    movw r1, #0
-; CHECK-NEXT:    eor r0, r0, #-2147483648
-; CHECK-NEXT:    movt r1, #17200
-; CHECK-NEXT:    str r0, [sp]
-; CHECK-NEXT:    str r1, [sp, #4]
-; CHECK-NEXT:    vldr d16, .LCPI59_0
-; CHECK-NEXT:    vldr d17, [sp]
-; CHECK-NEXT:    vsub.f64 d0, d17, d16
-; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvt.f64.s32 d0, s0
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI59_0:
-; CHECK-NEXT:    .long 2147483648 @ double 4503601774854144
-; CHECK-NEXT:    .long 1127219200
   %val = call <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i32(<1 x i32> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
@@ -1290,22 +1186,9 @@ define <1 x double> @sitofp_v1f64_v1i32(<1 x i32> %x) #0 {
 define <1 x double> @uitofp_v1f64_v1i32(<1 x i32> %x) #0 {
 ; CHECK-LABEL: uitofp_v1f64_v1i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, sp, #8
-; CHECK-NEXT:    movw r1, #0
-; CHECK-NEXT:    str r0, [sp]
-; CHECK-NEXT:    movt r1, #17200
-; CHECK-NEXT:    vldr d16, .LCPI60_0
-; CHECK-NEXT:    str r1, [sp, #4]
-; CHECK-NEXT:    vldr d17, [sp]
-; CHECK-NEXT:    vsub.f64 d0, d17, d16
-; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvt.f64.u32 d0, s0
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI60_0:
-; CHECK-NEXT:    .long 0 @ double 4503599627370496
-; CHECK-NEXT:    .long 1127219200
   %val = call <1 x double> @llvm.experimental.constrained.uitofp.v1f64.v1i32(<1 x i32> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }

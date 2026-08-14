@@ -36,9 +36,7 @@ public:
 
   void Clear();
 
-  const char *GetName() const;
-
-  llvm::StringRef GetNameAsStringRef() const;
+  llvm::StringRef GetName() const;
 
   FileSpec &GetExecutableFile() { return m_executable; }
 
@@ -329,7 +327,7 @@ public:
   bool ArchitectureMatches(const ArchSpec &arch_spec) const;
 
   /// Return true iff the process name in this object matches process_name.
-  bool NameMatches(const char *process_name) const;
+  bool NameMatches(llvm::StringRef process_name) const;
 
   /// Return true iff the process ID and parent process IDs in this object match
   /// the ones in proc_info.
