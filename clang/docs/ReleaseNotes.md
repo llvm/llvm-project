@@ -54,6 +54,13 @@ in a future version of Clang.
 
 ### C++ Specific Potentially Breaking Changes
 
+### Objective-C Specific Potentially Breaking Changes
+
+- Fixed an issue where AST consumers based on `RecursiveASTVisitor` would bypass
+  the exception parameter declaration inside Objective-C `@catch` blocks. This
+  could cause tooling that previously ignored the parameter declaration to now
+  find valid issues. (#GH212564)
+
 ### ABI Changes in This Version
 
 - Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
