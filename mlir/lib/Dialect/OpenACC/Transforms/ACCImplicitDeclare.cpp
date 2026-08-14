@@ -45,10 +45,11 @@
 //
 // The pass performs two main optimizations:
 //
-// 1. Hoisting: For non-constant globals referenced in compute regions, the
-//    pass hoists the address-of operation out of the region when possible,
-//    allowing them to be implicitly mapped through normal data clause
-//    mechanisms rather than requiring declare marking.
+// 1. Hoisting: For non-constant globals and constant globals without a local
+//    initializer referenced in compute regions, the pass hoists the address-of
+//    operation out of the region when possible, allowing them to be implicitly
+//    mapped through normal data clause mechanisms rather than requiring
+//    declare marking.
 //
 // 2. Declaration: For globals that must be available on the device (constants,
 //    globals in routines, globals in recipe operations), the pass adds the
@@ -214,20 +215,27 @@ static bool isGlobalUseCandidateForHoisting(Operation *globalOp,
   if (accSupport.isValidSymbolUse(user, symbol))
     return false;
 
-  bool isConstant = false;
+  bool isInitializedConstant = false;
   bool isFunction = false;
 
   if (auto globalVarOp = dyn_cast<acc::GlobalVariableOpInterface>(globalOp))
-    isConstant = globalVarOp.isConstant();
+    isInitializedConstant =
+        globalVarOp.isConstant() && globalVarOp.hasInitializer();
 
   if (isa<FunctionOpInterface>(globalOp))
     isFunction = true;
 
-  // Constants should be kept in device code to ensure they are duplicated.
+  // Initialized constants should be kept in device code so their definitions
+  // can be duplicated in the device image. An initializer-less constant is an
+  // external declaration, so keeping its address-of in device code would
+  // create a device symbol that a separately compiled defining translation
+  // unit may not provide. Hoist it so normal implicit mapping passes its host
+  // definition to the compute region instead.
+  //
   // Function references should be kept in device code to ensure their device
   // addresses are computed. Everything else should be hoisted since we already
-  // proved they are not valid symbols in GPU region.
-  return !isConstant && !isFunction;
+  // proved it is not a valid symbol in the GPU region.
+  return !isInitializedConstant && !isFunction;
 }
 
 /// Checks whether it is valid to use acc.declare marking on the global.
@@ -259,9 +267,9 @@ static bool hasRelevantRecipeUse(RecipeOpT &recipeOp, ModuleOp &mod) {
   return use.getUser() != recipeOp.getOperation();
 }
 
-// Hoists addr_of operations for non-constant globals out of OpenACC regions.
-// This way - they are implicitly mapped instead of being considered for
-// implicit declare.
+// Hoists addr_of operations for globals that cannot be defined in this
+// translation unit out of OpenACC regions. This way they are implicitly mapped
+// instead of being considered for implicit declare.
 template <typename AccConstructT>
 static void hoistNonConstantDirectUses(AccConstructT accOp,
                                        acc::OpenACCSupport &accSupport) {

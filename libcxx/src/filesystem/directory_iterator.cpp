@@ -17,7 +17,7 @@
 #include "error.h"
 #include "file_descriptor.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
@@ -26,10 +26,11 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 using detail::ErrorHandler;
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 class __dir_stream {
 public:
   __dir_stream()                               = delete;
@@ -320,4 +321,5 @@ bool recursive_directory_iterator::__try_recursion(error_code* ec) {
   return false;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
