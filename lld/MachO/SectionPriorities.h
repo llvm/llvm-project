@@ -12,10 +12,12 @@
 #include "InputSection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace lld::macho {
 
 using SectionPair = std::pair<const InputSection *, const InputSection *>;
+class Symbol;
 
 class PriorityBuilder {
 public:
@@ -75,6 +77,11 @@ public:
   // Each section gets assigned the priority of the highest-priority symbol it
   // contains.
   llvm::DenseMap<const InputSection *, int> buildInputSectionPriorities();
+
+  /// Sections that branch to each objc stub. Objc stubs are synthetic and carry
+  /// no profile data, so they are ordered from the priority of their callers.
+  llvm::MapVector<const Symbol *, llvm::SetVector<const InputSection *>>
+      objcStubCallers;
 
 private:
   // The symbol with the smallest priority should be ordered first in the output
