@@ -2069,6 +2069,29 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
     vecOperands.push_back(read);
   }
 
+  bool hasUnsignedCast =
+      TypeSwitch<Operation *, bool>(linalgOp.getOperation())
+          .Case<MatmulOp, BatchMatmulOp, BatchReduceMatmulOp, ContractOp>(
+              [](auto op) { return op.getCast() == TypeFn::cast_unsigned; })
+          .Default(false);
+  if (hasUnsignedCast) {
+    auto accType = dyn_cast<VectorType>(vecOperands[2].getType());
+    auto accElementType =
+        accType ? dyn_cast<IntegerType>(accType.getElementType()) : nullptr;
+    if (accElementType && accElementType.isSignless()) {
+      for (Value &operand : MutableArrayRef(vecOperands).take_front(2)) {
+        auto operandType = cast<VectorType>(operand.getType());
+        auto operandElementType =
+            dyn_cast<IntegerType>(operandType.getElementType());
+        if (!operandElementType || !operandElementType.isSignless() ||
+            operandElementType.getWidth() >= accElementType.getWidth())
+          continue;
+        operand = arith::ExtUIOp::create(
+            rewriter, loc, operandType.clone(accElementType), operand);
+      }
+    }
+  }
+
   // Remap iterators from linalg to vector.
   SmallVector<Attribute> iterAttrs;
   auto iterators = linalgOp.getIteratorTypesArray();
