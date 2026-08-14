@@ -433,14 +433,14 @@ define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
 ; CHECK-SD-LABEL: shuffle_zip2:
 ; CHECK-SD:       // %bb.0: // %bb
 ; CHECK-SD-NEXT:    cmtst.4s v0, v0, v0
-; CHECK-SD-NEXT:    uzp1.8h v1, v0, v0
+; CHECK-SD-NEXT:    movi.4h v1, #1
+; CHECK-SD-NEXT:    uzp1.8h v2, v0, v0
 ; CHECK-SD-NEXT:    xtn.4h v0, v0
-; CHECK-SD-NEXT:    xtn.4h v1, v1
-; CHECK-SD-NEXT:    zip2.4h v0, v0, v1
-; CHECK-SD-NEXT:    movi.4s v1, #1
+; CHECK-SD-NEXT:    xtn.4h v2, v2
+; CHECK-SD-NEXT:    zip2.4h v0, v0, v2
 ; CHECK-SD-NEXT:    zip1.4h v0, v0, v0
+; CHECK-SD-NEXT:    and.8b v0, v0, v1
 ; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
-; CHECK-SD-NEXT:    and.16b v0, v0, v1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shuffle_zip2:
