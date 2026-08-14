@@ -270,7 +270,7 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
 
 std::error_code
 SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(bool IsNested) {
-  if (UseEytzingerTables) {
+  if (UseMD5IndexedTables) {
     // Eytzinger layout requires MD5 representation and does not support
     // multi-context Context-Sensitive profiles.
     if (!UseMD5 || FunctionSamples::ProfileIsCS)
@@ -454,7 +454,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     }
   }
 
-  if (UseMD5 && UseEytzingerTables) {
+  if (UseMD5 && UseMD5IndexedTables) {
     // Eytzinger name tables do not support CSSPGO profiles
     // (FunctionSamples::ProfileIsCS).
     if (FunctionSamples::ProfileIsCS)
@@ -642,7 +642,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
                    SecProfSummaryFlags::SecFlagHasVTableTypeProf);
   if (Type == SecProfileSymbolList && UseMD5ProfSymList)
     addSectionFlag(SecProfileSymbolList, SecProfileSymbolListFlags::SecFlagMD5);
-  if (Type == SecNameTable && UseEytzingerTables && UseMD5)
+  if (Type == SecNameTable && UseMD5IndexedTables && UseMD5)
     addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagEytzinger);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);

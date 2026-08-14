@@ -131,7 +131,7 @@ public:
   virtual void setPartialProfile() {}
   virtual void setUseCtxSplitLayout() {}
   virtual void setUseMD5ProfileSymbolList() {}
-  virtual void setWriteEytzingerTables() {}
+  virtual void setUseMD5IndexedTables() {}
 
   void setFormatVersion(uint64_t V) {
     assert(sampleprof::formatVersionIsSupported(V) &&
@@ -317,7 +317,7 @@ public:
 
   void setUseMD5ProfileSymbolList() override { UseMD5ProfSymList = true; }
 
-  void setWriteEytzingerTables() override { UseEytzingerTables = true; }
+  void setUseMD5IndexedTables() override { UseMD5IndexedTables = true; }
 
   void resetSecLayout(SectionLayout SL) {
     verifySecLayout(SL);
@@ -430,9 +430,9 @@ private:
   // Whether to write the profile symbol list as 64-bit MD5 hashes in Eytzinger
   // layout.
   bool UseMD5ProfSymList = false;
-  // Whether to write Eytzinger 3-span layout for NameTable and parallel
-  // FuncOffsetTable.
-  bool UseEytzingerTables = false;
+  // Whether to write MD5-based indexed NameTable and parallel FuncOffsetTable
+  // in Eytzinger layout.
+  bool UseMD5IndexedTables = false;
   size_t NumNested = 0;
   size_t NumFlat = 0;
 

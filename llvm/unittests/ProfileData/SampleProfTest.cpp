@@ -200,7 +200,7 @@ struct SampleProfTest : ::testing::Test {
 
   void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5,
                      bool UseMD5ProfSymList = false,
-                     bool UseEytzingerTables = false) {
+                     bool UseMD5IndexedTables = false) {
     TempFile ProfileFile("profile", "", "", /*Unique*/ true);
     createWriter(Format, ProfileFile.path());
     if (Format == SampleProfileFormat::SPF_Ext_Binary) {
@@ -208,8 +208,8 @@ struct SampleProfTest : ::testing::Test {
         Writer->setUseMD5();
       if (UseMD5ProfSymList)
         Writer->setUseMD5ProfileSymbolList();
-      if (UseEytzingerTables)
-        Writer->setWriteEytzingerTables();
+      if (UseMD5IndexedTables)
+        Writer->setUseMD5IndexedTables();
     }
 
     StringRef FooName("_Z3fooi");
@@ -501,7 +501,7 @@ TEST_F(SampleProfTest, roundtrip_eytzinger_ext_binary_profile) {
 
 TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true,
-                /*UseMD5ProfSymList=*/false, /*UseEytzingerTables=*/true);
+                /*UseMD5ProfSymList=*/false, /*UseMD5IndexedTables=*/true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {

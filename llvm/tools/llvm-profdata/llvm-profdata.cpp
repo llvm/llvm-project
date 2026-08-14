@@ -242,10 +242,11 @@ static cl::opt<bool>
                         cl::sub(MergeSubcommand),
                         cl::desc("Write ProfileSymbolList (Cold Symbols) as "
                                  "64-bit MD5 hashes in Eytzinger layout"));
-static cl::opt<bool> WriteEytzingerTables(
-    "eytzinger-tables", cl::init(false), cl::Hidden, cl::sub(MergeSubcommand),
-    cl::desc("Write Eytzinger 3-span layout for NameTable and parallel "
-             "FuncOffsetTable"));
+static cl::opt<bool> WriteMD5IndexedTables(
+    "md5-indexed-tables", cl::init(false), cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Write MD5-based indexed NameTable and parallel "
+             "FuncOffsetTable in Eytzinger layout (only meaningful for "
+             "-extbinary)"));
 static cl::opt<std::string> SupplInstrWithSample(
     "supplement-instr-with-sample", cl::init(""), cl::Hidden,
     cl::sub(MergeSubcommand),
@@ -1602,11 +1603,11 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
     else
       Writer.setUseMD5ProfileSymbolList();
   }
-  if (WriteEytzingerTables) {
+  if (WriteMD5IndexedTables) {
     if (OutputFormat != PF_Ext_Binary)
-      warn("-eytzinger-tables is ignored. Specify -extbinary to enable it");
+      warn("-md5-indexed-tables is ignored. Specify -extbinary to enable it");
     else
-      Writer.setWriteEytzingerTables();
+      Writer.setUseMD5IndexedTables();
   }
 }
 
