@@ -12,7 +12,7 @@
 #include "hdr/types/struct_tm.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/writer.h"
 #include "src/time/strftime_core/converter.h"
 #include "src/time/strftime_core/core_structs.h"
 #include "src/time/strftime_core/parser.h"

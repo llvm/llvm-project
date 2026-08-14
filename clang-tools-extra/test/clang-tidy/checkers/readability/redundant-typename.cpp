@@ -378,3 +378,22 @@ template <typename T>
 struct SubClass : BaseClass<typename T::R> {};
 
 template struct SubClass<Int>;
+
+template <typename T>
+struct Sink {};
+
+template <typename...>
+using VoidT = void;
+
+template <typename C, typename = void>
+inline constexpr bool HasValueType = false;
+
+template <typename C>
+inline constexpr bool HasValueType<C, VoidT<typename C::value_type>> =
+    sizeof(Sink<typename C::value_type>) != 0;
+
+struct IntVector {
+  using value_type = int;
+};
+
+static_assert(HasValueType<IntVector>);

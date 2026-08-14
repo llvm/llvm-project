@@ -53,7 +53,7 @@
 
 ## An invalid -z zicfilp-func-sig-report option should give an error
 # RUN: not ld.lld f2-s.o -z zicfilp-func-sig-report=x 2>&1 | FileCheck --check-prefix=INVALID %s
-# INVALID: error: unknown -z zicfilp-func-sig-report= value: x
+# INVALID: error: unknown -z zicfilp-func-sig-report= value 'x'
 
 ## ZICFILP-unlabeled and ZICFILP-func-sig should conflict with each other.
 # RUN: ld.lld f3-u.o -o out.override -z zicfilp=func-sig 2>&1 | FileCheck --check-prefix=FORCE-CONFLICT %s
