@@ -169,6 +169,12 @@ public:
   /// be represented in a line entry. In this case, set line and column as 0
   /// and use the scope of any location.
   ///
+  /// Intermediate-IR layers (`irlayers`) merge independently: the result keeps
+  /// the entries present in both, and none if either side has no layers or the
+  /// intersection is empty. Entries keep \p LocA's order and duplicate count,
+  /// so swapping the operands can yield a different list node with the same
+  /// entries -- LLVM assigns no meaning to layer order.
+  ///
   /// \p LocA \p LocB: The locations to be merged.
   LLVM_ABI static DebugLoc getMergedLocation(DebugLoc LocA, DebugLoc LocB);
 

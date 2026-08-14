@@ -7173,7 +7173,10 @@ mandatory, and points at an {ref}`DILexicalBlockFile`, an
 The optional `irlayers:` field points at a {ref}`DILayerLocList`, giving the
 instruction's position in one or more intermediate IRs it was lowered through, in
 addition to its primary source position. It is independent of `inlinedAt:`; a
-location may have either, both, or neither.
+location may have either, both, or neither. A location with no intermediate
+position omits the field entirely. The field belongs to the location that
+carries it: locations in an `inlinedAt:` chain may each have their own, and LLVM
+defines no relationship between them.
 
 ```text
 !0 = !DILocation(line: 2900, column: 42, scope: !1, irlayers: !3)
@@ -7200,8 +7203,9 @@ context: it is a bare coordinate in a file, not a location in a scope tree.
 
 ##### DILayerLocList
 
-`DILayerLocList` nodes hold a list of {ref}`DILayerLoc` operands, and are
-referenced by a {ref}`DILocation`'s `irlayers:` field.
+`DILayerLocList` nodes hold a non-empty list of {ref}`DILayerLoc` operands, and
+are referenced by a {ref}`DILocation`'s `irlayers:` field. A location with no
+intermediate position omits `irlayers:` rather than referencing an empty list.
 
 Operand order is preserved and is part of the node's identity — two lists with
 the same entries in a different order are different nodes — and a consumer sees
@@ -7210,8 +7214,9 @@ not define which level comes first and does not check any particular arrangement
 so any convention (such as listing levels in lowering order) is an agreement
 between a producer and its consumer.
 
-Both node types are uniqued, so instructions sharing a position at some level
-share the corresponding node.
+Both node types are normally uniqued, so instructions sharing a position at some
+level share the corresponding node. `distinct` forms are legal; nothing in LLVM
+requires a layer node to be shared.
 
 ```text
 !0 = !DILayerLocList(!1, !2)

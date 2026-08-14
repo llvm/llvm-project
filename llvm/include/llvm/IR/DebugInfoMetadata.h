@@ -2717,7 +2717,7 @@ public:
   }
 };
 
-/// A uniqued list of \a DILayerLoc entries.
+/// A normally uniqued list of \a DILayerLoc entries (`distinct` is legal).
 ///
 /// The container node behind \a DILocation's optional `irlayers` operand:
 /// essentially an \a MDTuple of \a DILayerLoc refs with typed accessors and its
