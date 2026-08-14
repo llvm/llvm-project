@@ -1,8 +1,5 @@
 # Lifetime Safety Analysis
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
