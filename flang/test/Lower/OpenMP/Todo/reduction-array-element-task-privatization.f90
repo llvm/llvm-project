@@ -11,10 +11,14 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-in-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-reduction-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-REDUCTION-SECTION
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-reduction-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-REDUCTION-SECTION
-! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o %t/eager-in-bbc.mlir %t/taskloop-in.f90
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o %t/eager-in-fc1.mlir %t/taskloop-in.f90
-! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o %t/eager-section-bbc.mlir %t/taskloop-reduction-section.f90
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o %t/eager-section-fc1.mlir %t/taskloop-reduction-section.f90
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/taskloop-in.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASKLOOP-IN
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-in.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASKLOOP-IN
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/taskloop-reduction.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASKLOOP-REDUCTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-reduction.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASKLOOP-REDUCTION
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o %t/eager-in-section-bbc.mlir %t/taskloop-in-section.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o %t/eager-in-section-fc1.mlir %t/taskloop-in-section.f90
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o %t/eager-reduction-section-bbc.mlir %t/taskloop-reduction-section.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o %t/eager-reduction-section-fc1.mlir %t/taskloop-reduction-section.f90
 
 ! An array element or section in a task reduction and the implicitly
 ! firstprivate base array are represented by separate block arguments. Reject
@@ -26,6 +30,8 @@
 ! TASK-SECTION: not yet implemented: TASK construct with IN_REDUCTION of an array element or section whose base array is privatized
 ! TASKLOOP-IN-SECTION: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element or section whose base array is privatized
 ! TASKLOOP-REDUCTION-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
+! EAGER-TASKLOOP-IN: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element whose base array is privatized
+! EAGER-TASKLOOP-REDUCTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element whose base array is privatized
 
 !--- task.f90
 subroutine task_reduction_element(a)
