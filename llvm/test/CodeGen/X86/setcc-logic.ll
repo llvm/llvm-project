@@ -746,11 +746,9 @@ define <16 x i8> @or_cmp_ne_v4i32(<16 x i8> %x, <16 x i8> %y) {
 define i1 @and_cmp_ne(i8 %x) {
 ; CHECK-LABEL: and_cmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andb $8, %al
-; CHECK-NEXT:    shrb $2, %dil
-; CHECK-NEXT:    shrb $3, %al
-; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    notb %dil
+; CHECK-NEXT:    testb $12, %dil
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %a1 = and i8 %x, 4
   %a2 = and i8 %x, 8
@@ -763,11 +761,9 @@ define i1 @and_cmp_ne(i8 %x) {
 define i1 @or_cmp_eq(i32 %x) {
 ; CHECK-LABEL: or_cmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb $8, %dil
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    testb $32, %dil
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    testb $40, %dil
+; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %a1 = and i32 %x, 8
   %a2 = and i32 %x, 32
