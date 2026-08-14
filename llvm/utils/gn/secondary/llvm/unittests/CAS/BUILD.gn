@@ -14,7 +14,6 @@ unittest("CASTests") {
     "NamedValuesSchemaTest.cpp",
     "ObjectStoreTest.cpp",
     "OnDiskCommonUtils.cpp",
-    "PluginCASTest.cpp",
   ]
 
   if (llvm_enable_ondisk_cas) {
@@ -25,8 +24,10 @@ unittest("CASTests") {
       "OnDiskGraphDBTest.cpp",
       "OnDiskKeyValueDBTest.cpp",
       "OnDiskTrieRawHashMapTest.cpp",
+      "PluginCASTest.cpp",
       "ProgramTest.cpp",
       "UnifiedOnDiskCacheTest.cpp",
     ]
+    data_deps = [ "//llvm/tools/libCASPluginTest:CASPluginTest" ]
   }
 }

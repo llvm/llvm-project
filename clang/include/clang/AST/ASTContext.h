@@ -696,6 +696,12 @@ private:
   using ParameterIndexTable = llvm::DenseMap<const VarDecl *, unsigned>;
   ParameterIndexTable ParamIndices;
 
+  /// Map from numbering information for lambdas to the corresponding lambdas.
+  /// This is intentionally not serialized, and is instead reconstructed as we
+  /// read each lambda.
+  llvm::DenseMap<std::pair<const Decl *, unsigned>, CXXRecordDecl *>
+      LambdaDeclarationsForMerging;
+
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
@@ -704,6 +710,15 @@ public:
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
+
+  // Returns a reference to the first lambda declaration with a given index in a
+  // given context. Used to merge lambdas in the case where the same lambda is
+  // redefined in multiple modules.
+  CXXRecordDecl *&getLambdaDeclarationSlotForMerging(const Decl *ContextDecl,
+                                                     int IndexInContext) {
+    return LambdaDeclarationsForMerging[{ContextDecl->getCanonicalDecl(),
+                                         IndexInContext}];
+  }
 
   /// Examines a given type, and returns whether the type itself
   /// is address discriminated, or any transitively embedded types
@@ -1516,9 +1531,9 @@ public:
   QualType removeAddrSpaceQualType(QualType T) const;
 
   /// Return the "other" discriminator used for the pointer auth schema used for
-  /// vtable pointers in instances of the requested type.
-  uint16_t
-  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+  /// vtable pointers using the given discriminator type.
+  uint16_t getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                    bool IsVTTEntry);
 
   /// Return the "other" type-specific discriminator for the given type.
   uint16_t getPointerAuthTypeDiscriminator(QualType T);
@@ -1881,7 +1896,22 @@ public:
 
   QualType adjustStringLiteralBaseType(QualType StrLTy) const;
 
+  // Represents an inclusive-first/exclusive last bit-offset into a type.
+  struct BitInterval {
+    // [First, Last)
+    uint64_t First;
+    uint64_t Last;
+  };
+
+  // Calculate and get the 'padding intervals' inside of a type. Note: calls to
+  // this potentially invalidate all ArrayRef objects, so effort must be made to
+  // copy the data if necessary.
+  llvm::ArrayRef<BitInterval> getPaddingIntervals(QualType Ty) const;
+
 private:
+  mutable llvm::DenseMap<QualType, llvm::SmallVector<BitInterval>>
+      PaddingIntervalCache;
+
   /// Return a normal function type with a typed argument list.
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
                                    const FunctionProtoType::ExtProtoInfo &EPI,
@@ -1997,7 +2027,7 @@ public:
                              QualType equivalentType) const;
 
   QualType getAttributedType(NullabilityKind nullability, QualType modifiedType,
-                             QualType equivalentType);
+                             QualType equivalentType) const;
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped) const;

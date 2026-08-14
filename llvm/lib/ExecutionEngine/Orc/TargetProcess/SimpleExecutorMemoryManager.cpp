@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/GenericMemoryManagerProxySpecs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -213,12 +214,13 @@ void SimpleExecutorMemoryManager::addBootstrapSymbols(
     // FIXME: We should codify a "simple" memory manager interface and make
     // SimpleExecutorMemoryManager its LLVM-based implementation, and
     // SimpleNativeMemoryMap its ORC-runtime implementation.
-    const auto &SNs = rt::orc_rt_SimpleNativeMemoryMapSPSSymbols;
-    M[SNs.AllocatorName] = ExecutorAddr::fromPtr(this);
-    M[SNs.ReserveName] = ExecutorAddr::fromPtr(reserveWrapper);
-    M[SNs.InitializeName] = ExecutorAddr::fromPtr(initializeWrapper);
-    M[SNs.DeinitializeName] = ExecutorAddr::fromPtr(deinitializeWrapper);
-    M[SNs.ReleaseName] = ExecutorAddr::fromPtr(releaseWrapper);
+    namespace sps = rt::sps;
+    M[sps::MemMgrInstanceCIName] = ExecutorAddr::fromPtr(this);
+    M[sps::MemMgrReserveCIName] = ExecutorAddr::fromPtr(reserveWrapper);
+    M[sps::MemMgrInitializeCIName] = ExecutorAddr::fromPtr(initializeWrapper);
+    M[sps::MemMgrDeinitializeCIName] =
+        ExecutorAddr::fromPtr(deinitializeWrapper);
+    M[sps::MemMgrReleaseCIName] = ExecutorAddr::fromPtr(releaseWrapper);
   }
 }
 

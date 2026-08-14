@@ -50,6 +50,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -634,10 +635,12 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       const MachineFunction &MF = *BB->getParent();
       const Constant *PersonalityFn = MF.getFunction().getPersonalityFn();
       const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-      if (MCRegister Reg = TLI.getExceptionPointerRegister(PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionPointerRegister(
+              TLI.getTargetMachine().getExceptionModel(), PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
-      if (MCRegister Reg = TLI.getExceptionSelectorRegister(PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionSelectorRegister(
+              TLI.getTargetMachine().getExceptionModel(), PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
     }
