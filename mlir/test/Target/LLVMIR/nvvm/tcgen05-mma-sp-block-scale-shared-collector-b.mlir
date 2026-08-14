@@ -1,6 +1,5 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
 
-
 // CHECK-LABEL: @nvvm_tcgen05_mma_sp_block_scale_collector_b
 llvm.func @nvvm_tcgen05_mma_sp_block_scale_collector_b(%d_tmem : !llvm.ptr<6>, %a_desc: i64, %b_desc: i64, %idesc: i32, %enable_input_d: i1, %scale_a: !llvm.ptr<6>, %scale_b : !llvm.ptr<6>, %spmetadata: !llvm.ptr<6>) {
 
