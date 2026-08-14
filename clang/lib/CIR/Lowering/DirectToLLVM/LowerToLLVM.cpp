@@ -723,6 +723,58 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrInfoAttr blockAddrInfo) {
   return blockAddressOp;
 }
 
+/// BlockAddrDiffAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
+  assert(blockInfoAddr &&
+         "block address lowering requires LLVMBlockAddressInfo");
+  // A block-address difference initializer is lowered to the difference of the
+  // two block addresses: trunc(ptrtoint(lhs) - ptrtoint(rhs)). Just like a
+  // single block address, each referenced block tag may not have been emitted
+  // yet, in which case it is recorded as unresolved and patched up later in
+  // resolveBlockAddressOp.
+  mlir::Location loc = parentOp->getLoc();
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+  mlir::MLIRContext *ctx = rewriter.getContext();
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+
+  auto emitBlockAddr = [&](mlir::StringAttr label) -> mlir::Value {
+    auto info = cir::BlockAddrInfoAttr::get(
+        ctx, blockAddrDiff.getFunc().getValue(), label.getValue());
+    mlir::LLVM::BlockTagOp matchLabel = blockInfoAddr->lookupBlockTag(info);
+    mlir::LLVM::BlockTagAttr tagAttr =
+        matchLabel ? matchLabel.getTag() : mlir::LLVM::BlockTagAttr{};
+    auto blkAddr = mlir::LLVM::BlockAddressAttr::get(
+        ctx, blockAddrDiff.getFunc(), tagAttr);
+    auto addrOp =
+        mlir::LLVM::BlockAddressOp::create(rewriter, loc, ptrTy, blkAddr);
+    if (!matchLabel)
+      blockInfoAddr->addUnresolvedBlockAddress(addrOp, info);
+    return addrOp;
+  };
+
+  mlir::Value lhsAddr = emitBlockAddr(blockAddrDiff.getLhsLabel());
+  mlir::Value rhsAddr = emitBlockAddr(blockAddrDiff.getRhsLabel());
+
+  // Compute the difference in a pointer-sized integer, then truncate to the
+  // initializer's type. LLVM is sensitive about the exact format of the
+  // address-of-label difference, so the truncation must happen after the
+  // subtraction.
+  mlir::Type intptrTy =
+      rewriter.getIntegerType(layout.getTypeSizeInBits(ptrTy));
+  mlir::Value lhsInt =
+      mlir::LLVM::PtrToIntOp::create(rewriter, loc, intptrTy, lhsAddr);
+  mlir::Value rhsInt =
+      mlir::LLVM::PtrToIntOp::create(rewriter, loc, intptrTy, rhsAddr);
+  mlir::Value diffVal =
+      mlir::LLVM::SubOp::create(rewriter, loc, lhsInt, rhsInt);
+
+  mlir::Type resultTy = converter->convertType(blockAddrDiff.getType());
+  mlir::Value result = diffVal;
+  if (resultTy != intptrTy)
+    result = mlir::LLVM::TruncOp::create(rewriter, loc, resultTy, diffVal);
+  return result;
+}
+
 // ConstArrayAttr visitor
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Type llvmTy = converter->convertType(attr.getType());
@@ -2805,10 +2857,10 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
 }
 
 static mlir::LLVM::ThreadLocalMode
-convertTlsModelAttrToLLVM(TLS_ModelAttr attr) {
+convertTlsModelAttrToLLVM(TLSModelAttr attr) {
   // assert that we can just static-cast these.
 #define CHECK_ENUM(CIR, LLVM_VAL)                                              \
-  static_assert(static_cast<unsigned>(TLS_Model::CIR) ==                       \
+  static_assert(static_cast<unsigned>(TLSModel::CIR) ==                        \
                 static_cast<unsigned>(mlir::LLVM::ThreadLocalMode::LLVM_VAL))
   CHECK_ENUM(GeneralDynamic, GeneralDynamic);
   CHECK_ENUM(LocalDynamic, LocalDynamic);
@@ -2868,10 +2920,12 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     cir::GlobalOp op, mlir::Attribute init,
     mlir::ConversionPatternRewriter &rewriter) const {
   // TODO: Generalize this handling when more types are needed here.
-  assert((isa<cir::BlockAddrInfoAttr, cir::ConstArrayAttr, cir::ConstRecordAttr,
-              cir::ConstVectorAttr, cir::ConstPtrAttr, cir::ConstComplexAttr,
-              cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
-              cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(init)));
+  assert(
+      (isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr, cir::ConstArrayAttr,
+           cir::ConstRecordAttr, cir::ConstVectorAttr, cir::ConstPtrAttr,
+           cir::ConstComplexAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
+           cir::UndefAttr, cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
+          init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
@@ -3000,11 +3054,12 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         return mlir::success();
       }
       return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
-    } else if (mlir::isa<cir::BlockAddrInfoAttr, cir::ConstVectorAttr,
-                         cir::ConstRecordAttr, cir::ConstPtrAttr,
-                         cir::ConstComplexAttr, cir::GlobalViewAttr,
-                         cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
-                         cir::VTableAttr, cir::ZeroAttr>(init.value())) {
+    } else if (mlir::isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
+                         cir::ConstVectorAttr, cir::ConstRecordAttr,
+                         cir::ConstPtrAttr, cir::ConstComplexAttr,
+                         cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
+                         cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(
+                   init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.
@@ -5579,6 +5634,121 @@ mlir::LogicalResult CIRToLLVMMemChrOpLowering::matchAndRewrite(
       mlir::ValueRange{adaptor.getSrc(), adaptor.getPattern(),
                        adaptor.getLen()});
   newCall.setArgAttrsAttr(argAttrs);
+  return mlir::success();
+}
+
+// Function to do the clear-padding operation. This is a faithful translation of
+// CGBuiltin.cpp's ClearPadding function.
+static void clearPadding(mlir::ConversionPatternRewriter &rewriter,
+                         mlir::Location loc, mlir::Value inputPtr,
+                         uint64_t baseAlignment,
+                         cir::OffsetPairAttr paddingAttr) {
+  // FIXME(cir): Classic-codegen pulls this from the data layout, but MLIR
+  // DataLayout just assumes it is 8 everywhere (as does all our lowering).
+  // Clang doesn't support any non-8-bit-CHAR_BIT architectures, but keeping
+  // this separate so we can use it next time.
+  uint64_t charWidth = 8;
+  mlir::Type i8Ty = rewriter.getI8Type();
+  mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(i8Ty.getContext());
+
+  auto startByte = paddingAttr.getStart() / charWidth;
+  auto startBit = paddingAttr.getStart() % charWidth;
+  auto endByte = paddingAttr.getEnd() / charWidth;
+  auto endBit = paddingAttr.getEnd() % charWidth;
+
+  if (startByte == endByte) {
+    // Interval is within a single byte
+    auto index = mlir::LLVM::ConstantOp::create(
+        rewriter, loc, rewriter.getI32Type(), startByte);
+    auto element = mlir::LLVM::GEPOp::create(rewriter, loc, ptrTy, i8Ty,
+                                             inputPtr, {index});
+
+    uint64_t adjustedAlignment = llvm::MinAlign(baseAlignment, startByte);
+
+    auto value = mlir::LLVM::LoadOp::create(rewriter, loc, i8Ty, element,
+                                            adjustedAlignment);
+
+    // Create mask to clear bits within the byte
+    // We want to clear bits from StartBit to EndBit-1
+    uint8_t bitsToClear = ((1 << endBit) - 1) & ~((1 << startBit) - 1);
+    uint8_t bitsToKeep = ~bitsToClear;
+    auto maskValue =
+        mlir::LLVM::ConstantOp::create(rewriter, loc, i8Ty, bitsToKeep);
+    auto newValue = mlir::LLVM::AndOp::create(rewriter, loc, value, maskValue);
+
+    mlir::LLVM::StoreOp::create(rewriter, loc, newValue, element,
+                                adjustedAlignment);
+  } else {
+    // Handle the start byte
+    if (startBit != 0) {
+      auto index = mlir::LLVM::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), startByte);
+      auto element = mlir::LLVM::GEPOp::create(rewriter, loc, ptrTy, i8Ty,
+                                               inputPtr, {index});
+      uint64_t adjustedAlignment = llvm::MinAlign(baseAlignment, startByte);
+
+      auto value = mlir::LLVM::LoadOp::create(rewriter, loc, i8Ty, element,
+                                              adjustedAlignment);
+
+      uint8_t bitsToClear = ((1 << (charWidth - startBit)) - 1) << startBit;
+      uint8_t bitsToKeep = ~bitsToClear;
+      auto maskValue =
+          mlir::LLVM::ConstantOp::create(rewriter, loc, i8Ty, bitsToKeep);
+      auto newValue =
+          mlir::LLVM::AndOp::create(rewriter, loc, value, maskValue);
+
+      mlir::LLVM::StoreOp::create(rewriter, loc, newValue, element,
+                                  adjustedAlignment);
+      ++startByte;
+    }
+
+    // Handle full bytes in the middle
+    for (auto offset = startByte; offset < endByte; ++offset) {
+      auto index = mlir::LLVM::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), offset);
+      auto element = mlir::LLVM::GEPOp::create(rewriter, loc, ptrTy, i8Ty,
+                                               inputPtr, {index});
+      uint64_t adjustedAlignment = llvm::MinAlign(baseAlignment, offset);
+
+      auto zero = mlir::LLVM::ConstantOp::create(rewriter, loc, i8Ty, 0);
+      mlir::LLVM::StoreOp::create(rewriter, loc, zero, element,
+                                  adjustedAlignment);
+    }
+
+    // Handle the end byte
+    if (endBit != 0) {
+      auto index = mlir::LLVM::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), endByte);
+      auto element = mlir::LLVM::GEPOp::create(rewriter, loc, ptrTy, i8Ty,
+                                               inputPtr, {index});
+      uint64_t adjustedAlignment = llvm::MinAlign(baseAlignment, endByte);
+
+      auto value = mlir::LLVM::LoadOp::create(rewriter, loc, i8Ty, element,
+                                              adjustedAlignment);
+
+      uint8_t bitsToClear = (1 << endBit) - 1;
+      uint8_t bitsToKeep = ~bitsToClear;
+      auto maskValue =
+          mlir::LLVM::ConstantOp::create(rewriter, loc, i8Ty, bitsToKeep);
+      auto newValue =
+          mlir::LLVM::AndOp::create(rewriter, loc, value, maskValue);
+
+      mlir::LLVM::StoreOp::create(rewriter, loc, newValue, element,
+                                  adjustedAlignment);
+    }
+  }
+}
+
+mlir::LogicalResult CIRToLLVMClearPaddingOpLowering::matchAndRewrite(
+    cir::ClearPaddingOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+
+  mlir::Value inputPtr = adaptor.getArg();
+  for (mlir::Attribute attr : op.getPadding())
+    clearPadding(rewriter, op.getLoc(), inputPtr, op.getAlignment(),
+                 cast<cir::OffsetPairAttr>(attr));
+
+  rewriter.eraseOp(op);
   return mlir::success();
 }
 

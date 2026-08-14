@@ -106,6 +106,12 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`readability-redundant-zero-initializer
+  <clang-tidy/checks/readability/redundant-zero-initializer>` check.
+
+  Finds explicit zero initializers of arrays that can be replaced with empty
+  braces.
+
 #### New check aliases
 
 #### Changes in existing checks
@@ -126,9 +132,14 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check by omitting unnamed enums from the `enum class` requirement, as previously the check suggested users an ill-formed fix.
 
 - Improved {doc}`misc-const-correctness
-  <clang-tidy/checks/misc/const-correctness>` check by fixing false positives
-  when the pointee is written through a pointer that is incremented,
-  decremented or adjusted with `+=` or `-=`, such as `*p++ = 0`.
+  <clang-tidy/checks/misc/const-correctness>` check:
+
+  - Fixed false positives when the pointee is written through a pointer that
+    is incremented, decremented or adjusted with `+=` or `-=`, such as
+    `*p++ = 0`.
+
+  - Fixed false positives when the pointee is written through a pointer
+    assignment, such as `*(p = q) = 0`.
 
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in

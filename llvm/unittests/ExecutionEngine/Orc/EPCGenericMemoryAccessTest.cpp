@@ -10,8 +10,8 @@
 
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/MemoryAccessProxySpecs.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/MemoryAccessSPSCI.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
@@ -124,42 +124,42 @@ public:
     // Register the test wrappers in the bootstrap JITDylib under the SPS
     // controller-interface names, so that EPCGenericMemoryAccess::Create
     // resolves its proxies to them.
-    namespace sps = rt::sps;
+    namespace sps_ci = rt::sps_ci;
     auto Exported = JITSymbolFlags::Exported;
     cantFail(ES->getBootstrapJITDylib().define(absoluteSymbols(
-        {{ES->intern(sps::MemWriteUInt8sCIName),
+        {{ES->intern(sps_ci::MemWriteUInt8s::Name),
           {ExecutorAddr::fromPtr(&testWriteUInts<tpctypes::UInt8Write,
                                                  SPSMemoryAccessUInt8Write>),
            Exported}},
-         {ES->intern(sps::MemWriteUInt16sCIName),
+         {ES->intern(sps_ci::MemWriteUInt16s::Name),
           {ExecutorAddr::fromPtr(&testWriteUInts<tpctypes::UInt16Write,
                                                  SPSMemoryAccessUInt16Write>),
            Exported}},
-         {ES->intern(sps::MemWriteUInt32sCIName),
+         {ES->intern(sps_ci::MemWriteUInt32s::Name),
           {ExecutorAddr::fromPtr(&testWriteUInts<tpctypes::UInt32Write,
                                                  SPSMemoryAccessUInt32Write>),
            Exported}},
-         {ES->intern(sps::MemWriteUInt64sCIName),
+         {ES->intern(sps_ci::MemWriteUInt64s::Name),
           {ExecutorAddr::fromPtr(&testWriteUInts<tpctypes::UInt64Write,
                                                  SPSMemoryAccessUInt64Write>),
            Exported}},
-         {ES->intern(sps::MemWritePointersCIName),
+         {ES->intern(sps_ci::MemWritePointers::Name),
           {ExecutorAddr::fromPtr(&testWritePointers), Exported}},
-         {ES->intern(sps::MemWriteBuffersCIName),
+         {ES->intern(sps_ci::MemWriteBuffers::Name),
           {ExecutorAddr::fromPtr(&testWriteBuffers), Exported}},
-         {ES->intern(sps::MemReadUInt8sCIName),
+         {ES->intern(sps_ci::MemReadUInt8s::Name),
           {ExecutorAddr::fromPtr(&testReadUInts<uint8_t>), Exported}},
-         {ES->intern(sps::MemReadUInt16sCIName),
+         {ES->intern(sps_ci::MemReadUInt16s::Name),
           {ExecutorAddr::fromPtr(&testReadUInts<uint16_t>), Exported}},
-         {ES->intern(sps::MemReadUInt32sCIName),
+         {ES->intern(sps_ci::MemReadUInt32s::Name),
           {ExecutorAddr::fromPtr(&testReadUInts<uint32_t>), Exported}},
-         {ES->intern(sps::MemReadUInt64sCIName),
+         {ES->intern(sps_ci::MemReadUInt64s::Name),
           {ExecutorAddr::fromPtr(&testReadUInts<uint64_t>), Exported}},
-         {ES->intern(sps::MemReadPointersCIName),
+         {ES->intern(sps_ci::MemReadPointers::Name),
           {ExecutorAddr::fromPtr(&testReadPointers), Exported}},
-         {ES->intern(sps::MemReadBuffersCIName),
+         {ES->intern(sps_ci::MemReadBuffers::Name),
           {ExecutorAddr::fromPtr(&testReadBuffers), Exported}},
-         {ES->intern(sps::MemReadStringsCIName),
+         {ES->intern(sps_ci::MemReadStrings::Name),
           {ExecutorAddr::fromPtr(&testReadStrings), Exported}}})));
 
     MemAccess = cantFail(EPCGenericMemoryAccess::Create(*ES));
