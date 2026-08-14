@@ -4315,11 +4315,16 @@ bool ScalarEvolution::canReuseInstruction(
     if (!I)
       return false;
 
-    // Disjoint or instructions are interpreted as adds by SCEV. However, we
-    // can't replace an arbitrary add with disjoint or, even if we drop the
-    // flag. We would need to convert the or into an add.
+    // Disjoint or instructions are interpreted as adds by SCEV. Reusing one is
+    // only safe if the operands are independently known not to overlap; after
+    // dropping the flag, an arbitrary or would not represent the add. Exclude
+    // instruction annotations from the proof because successful reuse may drop
+    // them below.
     if (auto *PDI = dyn_cast<PossiblyDisjointInst>(I))
-      if (PDI->isDisjoint())
+      if (PDI->isDisjoint() &&
+          !haveNoCommonBitsSet(PDI->getOperand(0), PDI->getOperand(1),
+                               SimplifyQuery(getDataLayout(), &DT, &AC, I,
+                                             /*UseInstrInfo=*/false)))
         return false;
 
     // FIXME: Ignore vscale, even though it technically could be poison. Do this

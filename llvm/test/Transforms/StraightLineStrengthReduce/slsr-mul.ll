@@ -68,6 +68,39 @@ define void @or(i32 %a, i32 %s) {
   ret void
 }
 
+define void @disjoint_or_known_disjoint(i32 %a, i32 %s) {
+; CHECK-LABEL: @disjoint_or_known_disjoint(
+  %b = shl i32 %a, 4
+  %b1 = or disjoint i32 %b, 1
+; CHECK: %b1 = or i32 %b, 1
+  %mul1 = mul i32 %b1, %s
+; CHECK: %mul1 = mul i32 %b1, %s
+  call void @foo(i32 %mul1)
+
+  %b2 = add i32 %b, 2
+  %mul2 = mul i32 %b2, %s
+; CHECK-NOT: %mul2 = mul
+; CHECK: %mul2 = add i32 %mul1, %s
+  call void @foo(i32 %mul2)
+
+  ret void
+}
+
+define void @disjoint_or_may_overlap(i32 %b, i32 %s) {
+; CHECK-LABEL: @disjoint_or_may_overlap(
+  %b1 = or disjoint i32 %b, 1
+  %mul1 = mul i32 %b1, %s
+; CHECK: %mul1 = mul i32 %b1, %s
+  call void @foo(i32 %mul1)
+
+  %b2 = add i32 %b, 2
+  %mul2 = mul i32 %b2, %s
+; CHECK: %mul2 = mul i32 %b2, %s
+  call void @foo(i32 %mul2)
+
+  ret void
+}
+
 ; foo(a * b)
 ; foo((a + 1) * b)
 ; foo(a * (b + 1))
