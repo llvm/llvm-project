@@ -2398,7 +2398,7 @@ define <4 x bfloat> @test_powi(<4 x bfloat> %a, i32 %b) #0 {
 ; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #96
 ; CHECK-BF16-GI-NEXT:    ret
-  %r = call <4 x bfloat> @llvm.powi.v4bf16.v4i32(<4 x bfloat> %a, i32 %b)
+  %r = call <4 x bfloat> @llvm.powi.v4bf16.i32(<4 x bfloat> %a, i32 %b)
   ret <4 x bfloat> %r
 }
 
