@@ -44,6 +44,8 @@ private:
   bool expandMovImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandMovAddr(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandMERGE(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandAddUpperImm(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI);
 };
 
 char RISCVPostRAExpandPseudo::ID = 0;
@@ -77,6 +79,8 @@ bool RISCVPostRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandMovImm(MBB, MBBI);
   case RISCV::PseudoMovAddr:
     return expandMovAddr(MBB, MBBI);
+  case RISCV::PseudoAddUpperImm:
+    return expandAddUpperImm(MBB, MBBI);
   case RISCV::PseudoMERGE:
     return expandMERGE(MBB, MBBI);
   default:
@@ -117,6 +121,30 @@ bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
                           getRenamableRegState(Renamable))
       .addReg(DstReg, RegState::Kill | getRenamableRegState(Renamable))
       .add(MBBI->getOperand(2));
+  MBBI->eraseFromParent();
+  return true;
+}
+
+bool RISCVPostRAExpandPseudo::expandAddUpperImm(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  DebugLoc DL = MBBI->getDebugLoc();
+
+  Register DstReg = MBBI->getOperand(0).getReg();
+  bool DstIsDead = MBBI->getOperand(0).isDead();
+  bool Renamable = MBBI->getOperand(0).isRenamable();
+  Register BaseReg = MBBI->getOperand(1).getReg();
+  int64_t Hi = MBBI->getOperand(2).getImm();
+
+  // Expand to LUI+ADD: the immediate is already the upper 20-bit value.
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::LUI))
+      .addReg(DstReg, RegState::Define | getRenamableRegState(Renamable))
+      .addImm(Hi);
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD))
+      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead) |
+                          getRenamableRegState(Renamable))
+      .addReg(BaseReg)
+      .addReg(DstReg, RegState::Kill | getRenamableRegState(Renamable));
+
   MBBI->eraseFromParent();
   return true;
 }

@@ -31,7 +31,7 @@ namespace llvm {
 /// `instcombine` pass instead.
 class InstSimplifyPass : public OptionalPassInfoMixin<InstSimplifyPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

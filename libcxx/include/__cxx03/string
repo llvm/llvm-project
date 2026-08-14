@@ -620,7 +620,8 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__cxx03/__type_traits/is_nothrow_constructible.h>
 #include <__cxx03/__type_traits/is_same.h>
 #include <__cxx03/__type_traits/is_standard_layout.h>
-#include <__cxx03/__type_traits/is_trivial.h>
+#include <__cxx03/__type_traits/is_trivially_constructible.h>
+#include <__cxx03/__type_traits/is_trivially_copyable.h>
 #include <__cxx03/__type_traits/is_trivially_relocatable.h>
 #include <__cxx03/__type_traits/noexcept_move_assign_container.h>
 #include <__cxx03/__type_traits/remove_cvref.h>
@@ -778,7 +779,9 @@ public:
 
   static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
   static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");
-  static_assert(is_trivial<value_type>::value, "Character type of basic_string must be trivial");
+  static_assert(is_trivially_default_constructible<value_type>::value,
+                "Character type of basic_string must be trivially default constructible");
+  static_assert(is_trivially_copyable<value_type>::value, "Character type of basic_string must be trivially copyable");
   static_assert(is_same<_CharT, typename traits_type::char_type>::value,
                 "traits_type::char_type must be the same type as CharT");
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
@@ -1620,7 +1623,18 @@ private:
   static _LIBCPP_HIDE_FROM_ABI size_type __align_it(size_type __s) _NOEXCEPT {
     return (__s + (__a - 1)) & ~(__a - 1);
   }
-  enum { __alignment = 8 };
+
+  // GCC currently doesn't define __STDCPP_DEFAULT_NEW_ALIGNMENT__ unconditionally
+  // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=123872
+#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+  static inline const size_t
+      __alignment = __is_default_allocator<allocator_type>::value && __STDCPP_DEFAULT_NEW_ALIGNMENT__ > sizeof(void*)
+                      ? __STDCPP_DEFAULT_NEW_ALIGNMENT__
+                      : sizeof(void*);
+#else
+  static inline const size_t __alignment = sizeof(void*);
+#endif
+
   static _LIBCPP_HIDE_FROM_ABI size_type __recommend(size_type __s) _NOEXCEPT {
     if (__s < __min_cap) {
       return static_cast<size_type>(__min_cap) - 1;

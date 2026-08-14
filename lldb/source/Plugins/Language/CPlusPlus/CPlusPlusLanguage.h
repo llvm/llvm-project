@@ -229,7 +229,7 @@ public:
   static llvm::Expected<ConstString>
   SubstituteStructorAliases_ItaniumMangle(llvm::StringRef mangled_name);
 
-  llvm::StringRef GetInstanceVariableName() override { return "this"; }
+  llvm::StringRef GetInstanceName() override { return "this"; }
 
   FormatEntity::Entry GetFunctionNameFormat() const override;
 

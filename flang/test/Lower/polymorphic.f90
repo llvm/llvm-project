@@ -66,7 +66,7 @@ module polymorphic_test
     lhs%b = rhs
   End Subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPassign_p1_int(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "lhs"}, %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "rhs"}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "lhs"}, %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "rhs", fir.read_only}
 ! CHECK-SAME:    attributes {fir.proc_attrs = #fir.proc_attrs<elemental, pure>}
 ! CHECK:         %[[LHS:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMpolymorphic_testFassign_p1_intElhs"}
 ! CHECK:         %[[RHS:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFassign_p1_intErhs"}
@@ -102,7 +102,7 @@ module polymorphic_test
     this%a = this%a * this%b + c
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPelemental_sub_pass(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "c"}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "this"})
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "c", fir.read_only}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "this"})
 ! CHECK-SAME:    attributes {fir.proc_attrs = #fir.proc_attrs<elemental, pure>}
 
   logical elemental function lt(i, poly)
@@ -111,7 +111,7 @@ module polymorphic_test
     lt = i < poly%a
   End Function
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPlt(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "poly"})
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "poly"})
 ! CHECK-SAME:    -> !fir.logical<4> attributes {fir.proc_attrs = #fir.proc_attrs<elemental, pure>}
 ! CHECK:         %[[I:.*]]:2 = hlfir.declare %[[ARG0]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFltEi"}
 ! CHECK:         %[[POLY:.*]]:2 = hlfir.declare %[[ARG1]]{{.*}}{fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMpolymorphic_testFltEpoly"}
@@ -680,7 +680,7 @@ module polymorphic_test
     call opt_up(i)
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPopt_int(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.optional}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.optional, fir.read_only}
 
   subroutine opt_up(up)
     class(*), optional, intent(in) :: up
@@ -714,7 +714,7 @@ module polymorphic_test
     class(*), pointer, intent(in) :: p
   end subroutine
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPup_pointer(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_name = "p"}
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_name = "p", fir.read_only}
 
   subroutine test_char_to_up_pointer(c)
     character(*), target :: c
@@ -884,4 +884,3 @@ program test
 
   l = i < o%inner
 end program
-

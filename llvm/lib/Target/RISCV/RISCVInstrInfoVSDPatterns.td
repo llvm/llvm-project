@@ -1118,10 +1118,12 @@ defm : VPatBinarySDNode_VV_VX<mul, "PseudoVMUL">;
 
 defm : VPatBinarySDNode_VV_VX<mulhs, "PseudoVMULH", IntegerVectorsExceptI64>;
 defm : VPatBinarySDNode_VV_VX<mulhu, "PseudoVMULHU", IntegerVectorsExceptI64>;
+defm : VPatBinarySDNode_VV_VX<riscv_mulhsu, "PseudoVMULHSU", IntegerVectorsExceptI64>;
 
 let Predicates = [HasVInstructionsFullMultiply] in {
   defm : VPatBinarySDNode_VV_VX<mulhs, "PseudoVMULH", I64IntegerVectors>;
   defm : VPatBinarySDNode_VV_VX<mulhu, "PseudoVMULHU", I64IntegerVectors>;
+  defm : VPatBinarySDNode_VV_VX<riscv_mulhsu, "PseudoVMULHSU", I64IntegerVectors>;
 }
 
 // 11.11. Vector Integer Divide Instructions
