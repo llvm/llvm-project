@@ -17,7 +17,6 @@
 #include <cstddef>
 #include <cstring>
 #include <utility>
-#include <vector>
 
 namespace Fortran::parser {
 
@@ -56,6 +55,8 @@ static inline int IsSpace(const char *p) {
     return 1;
   } else if (p[0] == '\xc2' && p[1] == '\xa0') { // UTF-8 NBSP
     return 2;
+  } else if (*p == '\r') { // bare carriage return retained in line
+    return 1;
   } else {
     return 0;
   }
@@ -342,6 +343,9 @@ void Prescanner::Statement() {
           LineClassification::Kind::CompilerDirectiveAfterMacroExpansion) {
     while (CompilerDirectiveContinuation(tokens, line.sentinel)) {
       newlineProvenance = GetCurrentProvenance();
+    }
+    if (inFixedForm_ && !preprocessingOnly_ && tokens.HasBlanks()) {
+      tokens.RemoveBlanks();
     }
     if (preprocessingOnly_ && inFixedForm_ && InConditionalLine() &&
         nextLine_ < limit_) {
@@ -825,6 +829,22 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitChar(tokens, *at_);
       ++at_, ++column_;
       hadContinuation = SkipToNextSignificantCharacter();
+      // Fixed-form !$omp: padding / trailing `!` in cols 7-72 before newline
+      // should allow continuation to splice split identifiers.
+      if (!hadContinuation && inFixedForm_ && IsOpenMPDirective() &&
+          !preprocessingOnly_ && IsSpaceOrTab(at_)) {
+        const char *probe{at_};
+        int col{column_};
+        while (col <= fixedFormColumnLimit_ && IsSpaceOrTab(probe)) {
+          probe += IsSpaceOrTab(probe);
+          ++col;
+        }
+        if (col > fixedFormColumnLimit_ || *probe == '\n' || *probe == '\r' ||
+            (*probe == '!' && col <= fixedFormColumnLimit_)) {
+          SkipSpaces();
+          hadContinuation = SkipToNextSignificantCharacter();
+        }
+      }
       if (hadContinuation && IsLegalIdentifierStart(*at_)) {
         if (brokenToken_) {
           break;
@@ -1674,11 +1694,15 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     }
     ++column;
   }
-  if (isOpenMPConditional) {
+  const bool isOpenMPSentinelScan{isOpenMPConditional ||
+      (features_.IsEnabled(LanguageFeature::OpenMP) &&
+          std::strcmp(sentinel, "$omp") == 0)};
+  if (isOpenMPSentinelScan) {
     for (; column <= fixedFormColumnLimit_; ++column, ++p) {
       if (IsSpaceOrTab(p)) {
       } else if (*p == '!') {
-        return std::nullopt; // !$    ! is a comment, not a directive
+        return std::nullopt; // sentinel + blanks + ! is a comment, not a
+                             // directive
       } else {
         break;
       }

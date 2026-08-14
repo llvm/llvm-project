@@ -814,6 +814,29 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
+
+    // Initialize `Format` and `Colors` before any call to `error()` or
+    // `warning()`, which use `ViewOpts.colored_ostream()` and would read
+    // uninitialized `Colors`.
+    ViewOpts.Format = Format;
+    switch (ViewOpts.Format) {
+    case CoverageViewOptions::OutputFormat::Text:
+      ViewOpts.Colors = UseColor == cl::boolOrDefault::BOU_UNSET
+                            ? sys::Process::StandardOutHasColors()
+                            : UseColor == cl::boolOrDefault::BOU_TRUE;
+      break;
+    case CoverageViewOptions::OutputFormat::HTML:
+      if (UseColor == cl::boolOrDefault::BOU_FALSE)
+        errs() << "Color output cannot be disabled when generating html.\n";
+      ViewOpts.Colors = true;
+      break;
+    case CoverageViewOptions::OutputFormat::Lcov:
+      if (UseColor == cl::boolOrDefault::BOU_TRUE)
+        errs() << "Color output cannot be enabled when generating lcov.\n";
+      ViewOpts.Colors = false;
+      break;
+    }
+
     if (Debuginfod) {
       HTTPClient::initialize();
       BIDFetcher = std::make_unique<DebuginfodFetcher>(DebugFileDirectory);
@@ -844,25 +867,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       for (StringRef OF : ObjectFilenames)
         outs() << OF << '\n';
       ::exit(0);
-    }
-
-    ViewOpts.Format = Format;
-    switch (ViewOpts.Format) {
-    case CoverageViewOptions::OutputFormat::Text:
-      ViewOpts.Colors = UseColor == cl::boolOrDefault::BOU_UNSET
-                            ? sys::Process::StandardOutHasColors()
-                            : UseColor == cl::boolOrDefault::BOU_TRUE;
-      break;
-    case CoverageViewOptions::OutputFormat::HTML:
-      if (UseColor == cl::boolOrDefault::BOU_FALSE)
-        errs() << "Color output cannot be disabled when generating html.\n";
-      ViewOpts.Colors = true;
-      break;
-    case CoverageViewOptions::OutputFormat::Lcov:
-      if (UseColor == cl::boolOrDefault::BOU_TRUE)
-        errs() << "Color output cannot be enabled when generating lcov.\n";
-      ViewOpts.Colors = false;
-      break;
     }
 
     if (!PathRemaps.empty()) {

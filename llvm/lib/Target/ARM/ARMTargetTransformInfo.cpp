@@ -92,73 +92,6 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
                                    Align(Alignment));
 }
 
-bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
-                                     const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // To inline a callee, all features not in the allowed list must match exactly.
-  bool MatchExact = (CallerBits & ~InlineFeaturesAllowed) ==
-                    (CalleeBits & ~InlineFeaturesAllowed);
-  // For features in the allowed list, the callee's features must be a subset of
-  // the callers'.
-  bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeaturesAllowed) ==
-                     (CalleeBits & InlineFeaturesAllowed);
-
-  LLVM_DEBUG({
-    if (!MatchExact || !MatchSubset) {
-      dbgs() << "=== Inline compatibility debug ===\n";
-      dbgs() << "Caller: " << Caller->getName() << "\n";
-      dbgs() << "Callee: " << Callee->getName() << "\n";
-
-      // Bit diffs
-      FeatureBitset MissingInCaller = CalleeBits & ~CallerBits; // callee-only
-      FeatureBitset ExtraInCaller = CallerBits & ~CalleeBits;   // caller-only
-
-      // Counts
-      dbgs() << "Only-in-caller bit count: " << ExtraInCaller.count() << "\n";
-      dbgs() << "Only-in-callee bit count: " << MissingInCaller.count() << "\n";
-
-      dbgs() << "Only-in-caller feature indices [";
-      {
-        bool First = true;
-        for (size_t I = 0, E = ExtraInCaller.size(); I < E; ++I) {
-          if (ExtraInCaller.test(I)) {
-            if (!First)
-              dbgs() << ", ";
-            dbgs() << I;
-            First = false;
-          }
-        }
-      }
-      dbgs() << "]\n";
-
-      dbgs() << "Only-in-callee feature indices [";
-      {
-        bool First = true;
-        for (size_t I = 0, E = MissingInCaller.size(); I < E; ++I) {
-          if (MissingInCaller.test(I)) {
-            if (!First)
-              dbgs() << ", ";
-            dbgs() << I;
-            First = false;
-          }
-        }
-      }
-      dbgs() << "]\n";
-
-      // Indices map to features as found in
-      // llvm-project/(your_build)/lib/Target/ARM/ARMGenSubtargetInfo.inc
-      dbgs() << "MatchExact=" << (MatchExact ? "true" : "false")
-             << " MatchSubset=" << (MatchSubset ? "true" : "false") << "\n";
-    }
-  });
-  return MatchExact && MatchSubset;
-}
-
 TTI::AddressingModeKind
 ARMTTIImpl::getPreferredAddressingMode(const Loop *L,
                                        ScalarEvolution *SE) const {
@@ -1229,7 +1162,8 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
     const Align DstAlign = MC->getDestAlign().valueOrOne();
     const Align SrcAlign = MC->getSourceAlign().valueOrOne();
 
-    MOp = MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
+    // Use the most restrictive of memset, memcpy, memmove.
+    MOp = MemOp::Move(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
                       /*IsVolatile*/ false);
     DstAddrSpace = MC->getDestAddressSpace();
     SrcAddrSpace = MC->getSourceAddressSpace();

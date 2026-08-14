@@ -171,6 +171,11 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_option_for_runtime : Warning<
   "ignoring '%0' option as it is not currently supported for runtime '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_hexagon_reserved_caller_saved_reg : Warning<
+  "reserving the caller-saved register '%0' may lead to incorrect code if it "
+  "is not also reserved in all other translation units and libraries; you are "
+  "responsible for ensuring the register is managed consistently">,
+  InGroup<DiagGroup<"hexagon-reserved-caller-saved">>;
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
@@ -597,8 +602,8 @@ def err_analyzer_checker_option_invalid_input : Error<
 def err_analyzer_checker_incompatible_analyzer_option : Error<
   "checker cannot be enabled with analyzer option '%0' == %1">;
 def err_analyzer_not_built_with_z3 : Error<
-  "analyzer constraint manager 'z3' is only available if LLVM was built with "
-  "-DLLVM_ENABLE_Z3_SOLVER=ON">;
+  "analyzer constraint manager 'unsupported-z3' is only available if LLVM was "
+  "built with -DLLVM_ENABLE_Z3_SOLVER=ON">;
 
 def warn_drv_needs_hvx : Warning<
   "%0 requires HVX, use -mhvx/-mhvx= to enable it">,
@@ -820,6 +825,9 @@ def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 
 def err_drv_invalid_object_mode : Error<
   "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
+
+def err_drv_compile_mode_unsupported_aix : Error<
+  "32-bit compile mode is not supported. Use OBJECT_MODE=64, -maix64 or -m64">;
 
 def err_roptr_requires_data_sections: Error<"-mxcoff-roptr is supported only with -fdata-sections">;
 def err_roptr_cannot_build_shared: Error<"-mxcoff-roptr is not supported with -shared">;

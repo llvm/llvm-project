@@ -44,10 +44,10 @@ T tmain(T argc) {
 #pragma omp target teams distribute num_teams(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
   for (int i=0; i<100; i++) foo();
 
-#pragma omp target teams distribute num_teams(1, 2, 3) // expected-error {{only two expressions allowed in 'num_teams' clause}}
+#pragma omp target teams distribute num_teams(1, 2, 3) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 1, have 3)}}
   for (int i=0; i<100; i++) foo();
 
-#pragma omp target teams distribute thread_limit(1, 2, 3) // expected-error {{only one expression allowed in 'thread_limit' clause}}
+#pragma omp target teams distribute thread_limit(1, 2, 3) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 1, have 3)}}
   for (int i=0; i<100; i++) foo();
 
 #pragma omp target teams ompx_bare num_teams(1, 2, 3, 4) thread_limit(1) // expected-error {{at most three expressions are allowed in 'num_teams' clause in 'target teams ompx_bare' construct}}
@@ -97,10 +97,10 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute num_teams (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   for (int i=0; i<100; i++) foo();
 
-#pragma omp target teams distribute num_teams(1, 2, 3) // expected-error {{only two expressions allowed in 'num_teams' clause}}
+#pragma omp target teams distribute num_teams(1, 2, 3) // expected-error {{unexpected number of expressions in 'num_teams' clause (expected 1, have 3)}}
   for (int i=0; i<100; i++) foo();
 
-#pragma omp target teams distribute thread_limit(1, 2, 3) // expected-error {{only one expression allowed in 'thread_limit' clause}}
+#pragma omp target teams distribute thread_limit(1, 2, 3) // expected-error {{unexpected number of expressions in 'thread_limit' clause (expected 1, have 3)}}
   for (int i=0; i<100; i++) foo();
 
 #pragma omp target teams ompx_bare num_teams(1, 2, 3, 4) thread_limit(1) // expected-error {{at most three expressions are allowed in 'num_teams' clause in 'target teams ompx_bare' construct}}

@@ -32,7 +32,7 @@ define void @main() {
   %align_load_valid = load ptr, ptr %alloc_ptr, !align !{i64 8}, !noundef !{}, !dereferenceable_or_null !{i64 8}
   %nonnull_load_invalid = load ptr, ptr %alloc_ptr, !nonnull !{}
 
-  %range_call_valid = call i32 @callee(), !noundef !{}, !range !{i32 0, i32 11}
+  %range_call_valid = call i32 @callee(), !range !{i32 0, i32 11}
   %range_call_invalid = call i32 @callee(), !range !{i32 0, i32 10}
   ret void
 }
@@ -56,7 +56,7 @@ define void @main() {
 ; CHECK-NEXT: Entering function: callee
 ; CHECK-NEXT:   ret i32 10
 ; CHECK-NEXT: Exiting function: callee
-; CHECK-NEXT:   %range_call_valid = call i32 @callee(), !range !7, !noundef !1 => i32 10
+; CHECK-NEXT:   %range_call_valid = call i32 @callee(), !range !7 => i32 10
 ; CHECK-NEXT: Entering function: callee
 ; CHECK-NEXT:   ret i32 10
 ; CHECK-NEXT: Exiting function: callee

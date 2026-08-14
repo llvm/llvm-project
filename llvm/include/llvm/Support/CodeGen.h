@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_CODEGEN_H
 #define LLVM_SUPPORT_CODEGEN_H
 
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <optional>
 
@@ -50,7 +51,7 @@ namespace llvm {
     };
   }
 
-  enum class ExceptionHandling {
+  enum class ExceptionHandling : int {
     None,     ///< No exception support
     DwarfCFI, ///< DWARF-like instruction based exceptions
     SjLj,     ///< setjmp/longjmp based exceptions
@@ -62,13 +63,79 @@ namespace llvm {
          ///< PPA1 is used instead of an .eh_frame section.
   };
 
+  /// The floating-point format used for the target's "long double" type.
+  enum class LongDoubleFormat {
+    IEEEsingle,
+    IEEEdouble,
+    X87DoubleExtended,
+    IEEEquad,
+    PPCDoubleDouble,
+  };
+
+  /// Returns the IR floating-point type name for a LongDoubleFormat.
+  inline StringRef getLongDoubleFormatName(LongDoubleFormat Format) {
+    switch (Format) {
+    case LongDoubleFormat::IEEEsingle:
+      return "float";
+    case LongDoubleFormat::IEEEdouble:
+      return "double";
+    case LongDoubleFormat::X87DoubleExtended:
+      return "x86_fp80";
+    case LongDoubleFormat::IEEEquad:
+      return "fp128";
+    case LongDoubleFormat::PPCDoubleDouble:
+      return "ppc_fp128";
+    }
+    return "";
+  }
+
+  /// Parses an IR floating-point type name into a LongDoubleFormat, returning
+  /// std::nullopt if it does not name a supported long double format.
+  inline std::optional<LongDoubleFormat> parseLongDoubleFormat(StringRef Name) {
+    if (Name == "float")
+      return LongDoubleFormat::IEEEsingle;
+    if (Name == "double")
+      return LongDoubleFormat::IEEEdouble;
+    if (Name == "x86_fp80")
+      return LongDoubleFormat::X87DoubleExtended;
+    if (Name == "fp128")
+      return LongDoubleFormat::IEEEquad;
+    if (Name == "ppc_fp128")
+      return LongDoubleFormat::PPCDoubleDouble;
+    return std::nullopt;
+  }
+
   namespace FloatABI {
   enum ABIType {
     Default, // Target-specific (either soft or hard depending on triple, etc).
     Soft,    // Soft float.
     Hard     // Hard float.
   };
+
+  /// Parse the string spelling used by the "float-abi" IR module flag into an
+  /// ABIType.
+  inline std::optional<ABIType> parseABIType(StringRef S) {
+    if (S == "soft")
+      return Soft;
+    if (S == "hard")
+      return Hard;
+    return std::nullopt;
   }
+
+  /// Returns the string spelling used by the "float-abi" IR module flag for a
+  /// Soft or Hard ABIType. Default has no spelling.
+  inline StringRef getABITypeName(ABIType ABI) {
+    switch (ABI) {
+    case Soft:
+      return "soft";
+    case Hard:
+      return "hard";
+    case Default:
+      break;
+    }
+    return "";
+  }
+  } // namespace FloatABI
 
   enum class EABI {
     Unknown,

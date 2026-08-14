@@ -1010,72 +1010,72 @@ class LinuxCoreTestCase(TestBase):
         }
 
         csr_values = {
-            "mstatus": ("0x00001800", "0x300"),
-            "mie": ("0x00000000", "0x304"),
-            "mtvec": ("0x00000004", "0x305"),
-            "mepc": ("0x00000000", "0x341"),
-            "mcause": ("0x00000000", "0x342"),
-            "mip": ("0x00000000", "0x344"),
-            "1984": ("0x00081000", "0x7c0"),
-            "mnepc": ("0x00000000", "0x741"),
-            "mncause": ("0x00000000", "0x742"),
-            "1987": ("0x00000004", "0x7c3"),
-            "2000": ("0x00000000", "0x7d0"),
-            "2004": ("0x00000000", "0x7d4"),
-            "mscratch": ("0x00000000", "0x340"),
-            "mnscratch": ("0x00000000", "0x740"),
-            "1992": ("0x00000000", "0x7c8"),
-            "mcycle": ("0x00000000", "0xb00"),
-            "mimpid": ("0x00000100", "0xf13"),
-            "mhartid": ("0x00000000", "0xf14"),
-            "2032": ("0x00000000", "0x7f0"),
-            "2033": ("0x00000000", "0x7f1"),
-            "2034": ("0x00000000", "0x7f2"),
-            "2035": ("0x00000000", "0x7f3"),
-            "2036": ("0x00000000", "0x7f4"),
-            "2037": ("0x00000000", "0x7f5"),
-            "2038": ("0x00000000", "0x7f6"),
-            "2039": ("0x00000000", "0x7f7"),
-            "2040": ("0xfffffffe", "0x7f8"),
-            "2041": ("0x00000000", "0x7f9"),
-            "2042": ("0x00000000", "0x7fa"),
-            "2043": ("0x00000000", "0x7fb"),
-            "2044": ("0x00000000", "0x7fc"),
-            "2045": ("0x00000000", "0x7fd"),
-            "2046": ("0x00000000", "0x7fe"),
-            "2047": ("0x00000000", "0x7ff"),
-            "3008": ("0x00000000", "0xbc0"),
-            "3009": ("0x00000000", "0xbc1"),
-            "3010": ("0x00000000", "0xbc2"),
-            "3011": ("0x00000000", "0xbc3"),
-            "3012": ("0x00000000", "0xbc4"),
-            "3013": ("0x00000000", "0xbc5"),
-            "3014": ("0x00000000", "0xbc6"),
-            "3015": ("0x00000000", "0xbc7"),
-            "3016": ("0x00000000", "0xbc8"),
-            "3017": ("0x00000000", "0xbc9"),
-            "3018": ("0x00000000", "0xbca"),
-            "3019": ("0x00000000", "0xbcb"),
-            "3020": ("0x00000000", "0xbcc"),
-            "3021": ("0x00000000", "0xbcd"),
-            "3022": ("0x00000000", "0xbce"),
-            "3023": ("0x00000000", "0xbcf"),
-            "3024": ("0x00000000", "0xbd0"),
-            "3025": ("0x00000000", "0xbd1"),
-            "3026": ("0x00000000", "0xbd2"),
-            "3027": ("0x00000000", "0xbd3"),
-            "3028": ("0x00000000", "0xbd4"),
-            "3029": ("0x00000000", "0xbd5"),
-            "3030": ("0x00000000", "0xbd6"),
-            "3031": ("0x00000000", "0xbd7"),
-            "3032": ("0x00000000", "0xbd8"),
-            "3033": ("0x00000000", "0xbd9"),
-            "3034": ("0x00000000", "0xbda"),
-            "3035": ("0x00000000", "0xbdb"),
-            "3036": ("0x00000000", "0xbdc"),
-            "3037": ("0x00000000", "0xbdd"),
-            "3038": ("0x00000000", "0xbde"),
-            "3039": ("0x00000000", "0xbdf"),
+            "mstatus": ("0x00001800", "csr_0x300"),
+            "mie": ("0x00000000", "csr_0x304"),
+            "mtvec": ("0x00000004", "csr_0x305"),
+            "mepc": ("0x00000000", "csr_0x341"),
+            "mcause": ("0x00000000", "csr_0x342"),
+            "mip": ("0x00000000", "csr_0x344"),
+            "csr_0x7c0": ("0x00081000", "csr_0x7c0"),
+            "mnepc": ("0x00000000", "csr_0x741"),
+            "mncause": ("0x00000000", "csr_0x742"),
+            "csr_0x7c3": ("0x00000004", "csr_0x7c3"),
+            "csr_0x7d0": ("0x00000000", "csr_0x7d0"),
+            "csr_0x7d4": ("0x00000000", "csr_0x7d4"),
+            "mscratch": ("0x00000000", "csr_0x340"),
+            "mnscratch": ("0x00000000", "csr_0x740"),
+            "csr_0x7c8": ("0x00000000", "csr_0x7c8"),
+            "mcycle": ("0x00000000", "csr_0xb00"),
+            "mimpid": ("0x00000100", "csr_0xf13"),
+            "mhartid": ("0x00000000", "csr_0xf14"),
+            "csr_0x7f0": ("0x00000000", "csr_0x7f0"),
+            "csr_0x7f1": ("0x00000000", "csr_0x7f1"),
+            "csr_0x7f2": ("0x00000000", "csr_0x7f2"),
+            "csr_0x7f3": ("0x00000000", "csr_0x7f3"),
+            "csr_0x7f4": ("0x00000000", "csr_0x7f4"),
+            "csr_0x7f5": ("0x00000000", "csr_0x7f5"),
+            "csr_0x7f6": ("0x00000000", "csr_0x7f6"),
+            "csr_0x7f7": ("0x00000000", "csr_0x7f7"),
+            "csr_0x7f8": ("0xfffffffe", "csr_0x7f8"),
+            "csr_0x7f9": ("0x00000000", "csr_0x7f9"),
+            "csr_0x7fa": ("0x00000000", "csr_0x7fa"),
+            "csr_0x7fb": ("0x00000000", "csr_0x7fb"),
+            "csr_0x7fc": ("0x00000000", "csr_0x7fc"),
+            "csr_0x7fd": ("0x00000000", "csr_0x7fd"),
+            "csr_0x7fe": ("0x00000000", "csr_0x7fe"),
+            "csr_0x7ff": ("0x00000000", "csr_0x7ff"),
+            "csr_0xbc0": ("0x00000000", "csr_0xbc0"),
+            "csr_0xbc1": ("0x00000000", "csr_0xbc1"),
+            "csr_0xbc2": ("0x00000000", "csr_0xbc2"),
+            "csr_0xbc3": ("0x00000000", "csr_0xbc3"),
+            "csr_0xbc4": ("0x00000000", "csr_0xbc4"),
+            "csr_0xbc5": ("0x00000000", "csr_0xbc5"),
+            "csr_0xbc6": ("0x00000000", "csr_0xbc6"),
+            "csr_0xbc7": ("0x00000000", "csr_0xbc7"),
+            "csr_0xbc8": ("0x00000000", "csr_0xbc8"),
+            "csr_0xbc9": ("0x00000000", "csr_0xbc9"),
+            "csr_0xbca": ("0x00000000", "csr_0xbca"),
+            "csr_0xbcb": ("0x00000000", "csr_0xbcb"),
+            "csr_0xbcc": ("0x00000000", "csr_0xbcc"),
+            "csr_0xbcd": ("0x00000000", "csr_0xbcd"),
+            "csr_0xbce": ("0x00000000", "csr_0xbce"),
+            "csr_0xbcf": ("0x00000000", "csr_0xbcf"),
+            "csr_0xbd0": ("0x00000000", "csr_0xbd0"),
+            "csr_0xbd1": ("0x00000000", "csr_0xbd1"),
+            "csr_0xbd2": ("0x00000000", "csr_0xbd2"),
+            "csr_0xbd3": ("0x00000000", "csr_0xbd3"),
+            "csr_0xbd4": ("0x00000000", "csr_0xbd4"),
+            "csr_0xbd5": ("0x00000000", "csr_0xbd5"),
+            "csr_0xbd6": ("0x00000000", "csr_0xbd6"),
+            "csr_0xbd7": ("0x00000000", "csr_0xbd7"),
+            "csr_0xbd8": ("0x00000000", "csr_0xbd8"),
+            "csr_0xbd9": ("0x00000000", "csr_0xbd9"),
+            "csr_0xbda": ("0x00000000", "csr_0xbda"),
+            "csr_0xbdb": ("0x00000000", "csr_0xbdb"),
+            "csr_0xbdc": ("0x00000000", "csr_0xbdc"),
+            "csr_0xbdd": ("0x00000000", "csr_0xbdd"),
+            "csr_0xbde": ("0x00000000", "csr_0xbde"),
+            "csr_0xbdf": ("0x00000000", "csr_0xbdf"),
         }
 
         for regname, values in {**gpr_values, **csr_values}.items():
@@ -1237,6 +1237,13 @@ class LinuxCoreTestCase(TestBase):
         # application binary.
         cstr = var.GetSummary()
         self.assertEqual(cstr, '"_start"')
+
+        # Reading through the target falls back to the application binary too,
+        # and must not report the failed process read.
+        error = lldb.SBError()
+        addr = target.ResolveLoadAddress(var.GetValueAsUnsigned())
+        self.assertEqual(target.ReadMemory(addr, 7, error), b"_start\0")
+        self.assertSuccess(error)
 
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
@@ -1439,6 +1446,75 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
+    def test_memory_region_name_from_nt_file(self):
+        yaml_path = self.getSourcePath("elf-NT_FILE-memory-region.yaml")
+        core_path = self.getBuildArtifact("elf-NT_FILE-memory-region.core")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        process = target.LoadCore(core_path)
+        self.assertTrue(process.IsValid())
+
+        region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x400000, region))
+        self.assertEqual(region.GetRegionBase(), 0x400000)
+        self.assertEqual(region.GetRegionEnd(), 0x401000)
+        self.assertTrue(region.IsMapped())
+        self.assertTrue(region.IsReadable())
+        self.assertFalse(region.IsWritable())
+        self.assertTrue(region.IsExecutable())
+        self.assertEqual(region.GetName(), "/tmp/kernel.hsaco")
+
+        interior_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x401000, interior_region))
+        self.assertEqual(interior_region.GetRegionBase(), 0x401000)
+        self.assertEqual(interior_region.GetRegionEnd(), 0x402000)
+        self.assertTrue(interior_region.IsMapped())
+        self.assertTrue(interior_region.IsReadable())
+        self.assertFalse(interior_region.IsWritable())
+        self.assertFalse(interior_region.IsExecutable())
+        self.assertIsNone(interior_region.GetName())
+
+        nt_file_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x402000, nt_file_region))
+        self.assertEqual(nt_file_region.GetRegionBase(), 0x402000)
+        self.assertEqual(nt_file_region.GetRegionEnd(), 0x403000)
+        self.assertTrue(nt_file_region.IsMapped())
+        # SB's boolean permission accessors report unknown as false.
+        self.assertFalse(nt_file_region.IsReadable())
+        self.assertFalse(nt_file_region.IsWritable())
+        self.assertFalse(nt_file_region.IsExecutable())
+        self.assertEqual(nt_file_region.GetName(), "/tmp/kernel.hsaco")
+
+        self.expect(
+            "memory region 0x402000",
+            substrs=["???", "/tmp/kernel.hsaco"],
+        )
+
+        regions = process.GetMemoryRegions()
+        self.assertEqual(regions.GetSize(), 3)
+        listed_region = lldb.SBMemoryRegionInfo()
+        self.assertTrue(
+            regions.GetMemoryRegionContainingAddress(0x400000, listed_region)
+        )
+        self.assertEqual(listed_region, region)
+        self.assertTrue(
+            regions.GetMemoryRegionContainingAddress(0x401000, listed_region)
+        )
+        self.assertEqual(listed_region, interior_region)
+        self.assertTrue(regions.GetMemoryRegionAtIndex(2, listed_region))
+        self.assertEqual(listed_region, nt_file_region)
+
+        following_region = lldb.SBMemoryRegionInfo()
+        self.assertSuccess(process.GetMemoryRegionInfo(0x403000, following_region))
+        self.assertEqual(following_region.GetRegionBase(), 0x403000)
+        self.assertEqual(following_region.GetRegionEnd(), lldb.LLDB_INVALID_ADDRESS)
+        self.assertFalse(following_region.IsMapped())
+        self.assertIsNone(following_region.GetName())
+
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
     def test_exe_name_extraction_nt_file(self):
         # This core file has:
         # - NT_FILE entry for the executable with path '/path/nt_file_foo
@@ -1453,7 +1529,17 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/nt_file_foo")
+        exe_path = "/path/nt_file_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        # Verify that the process info is correct.
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), "nt_file_foo")
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -1472,7 +1558,18 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/execfn_foo")
+        exe_path = "/path/execfn_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        # Verify that the process info is correct.
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), "execfn_foo")
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
+
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -1488,9 +1585,98 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "prpsinfo_foo")
+        exe_path = "prpsinfo_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), exe_path)
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
+
+
         self.dbg.DeleteTarget(target)
 
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_uuid_info_from_nt_file_and_gnu_build_id(self):
+        # This test loads a core file that has everything it needs in core
+        # memory to read the r_debug structure to get the shared library list
+        # and also the NT_FILE note where we are able to find the UUID for
+        # any library. Prior to this patch, the UUID for any library could
+        # be found in ProcessElfCore::FindModuleUUID(...) only for an
+        # executable if the resolved path found in NT_FILE matched the path
+        # that the dynamic loader used, which can often be different due to
+        # symlinks.
+        #
+        # This test verifies that ProcessElfCore::FindModuleUUID() is able to
+        # find the UUID for a library even if the resolved path (NT_FILE)
+        # does not match the path that the dynamic loader used.
+        #
+        # The libraries in this core file have the following paths:
+        # R_DEBUG                      NT_FILE
+        # ============================ ======================================
+        # /lib64/libstdc++.so.6        /usr/lib64/libstdc++.so.6.0.29
+        # /lib64/libm.so.6             /usr/lib64/libm.so.6
+        # /lib64/libgcc_s.so.1         /usr/lib64/libgcc_s-11-20240719.so.1
+        # /lib64/libc.so.6             /usr/lib64/libc.so.6
+        # /lib64/ld-linux-x86-64.so.2  /usr/lib64/ld-linux-x86-64.so.2
+        #
+        # The UUID map in ProcessELFCore is keyed off of the path from the
+        # NT_FILE info, so we verify that the new code that was added to
+        # ProcessELFCore::FindModuleUUID(...) can locate the module using the
+        # load address in the ModuleSpec that is now being passed to
+        # Process::FindModuleUUID(...).
+        yaml_path = self.getSourcePath("elf-dyld-nt-file-mismatch.yaml")
+        core_path = self.getBuildArtifact("elf-dyld-nt-file-mismatch.core")
+        log_path = self.getBuildArtifact("elf-dyld-nt-file-mismatch.log")
+        self.yaml2obj(yaml_path, core_path)
+        target = self.dbg.CreateTarget(None)
+        self.runCmd(f"log enable lldb process -f '{log_path}'")
+        # Disable parallel module loading as it can deadlock as there are
+        # issues with this feature that are not resolved.
+        self.runCmd(f"settings set target.parallel-module-load false")
+
+        def cleanup():
+            self.runCmd("log disable lldb process")
+            self.runCmd("settings set target.parallel-module-load true")
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup)
+
+        process = target.LoadCore(core_path)
+        prefix = "ProcessElfCore::FindModuleUUID() found UUID for "
+        with open(log_path, "r") as f:
+            log_text = f.read()
+            self.assertIn(
+                prefix
+                + "/lib64/libm.so.6: 25C2A650-E3E6-C2F3-25C8-AD803DBB58B3-13899C93",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libgcc_s.so.1: A29B0CF0-634D-ECD5-76D6-36CF5B9B6412-AFEB4FAC",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libstdc++.so.6: 0C8999CC-A62E-9B9F-0075-566ECB23D564-443ED68F",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libc.so.6: CFCCBA85-5FC7-2F10-BC9D-E0ABC5AD605E-D8B1AA72",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/ld-linux-x86-64.so.2: ECBDF3F8-784D-7A13-EFF2-FDD4352ABBEE-93CCE02C",
+                log_text,
+            )
+        self.dbg.DeleteTarget(target)
 
 
 def replace_path(binary, replace_from, replace_to):

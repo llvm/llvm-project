@@ -52,13 +52,15 @@ namespace std {
 #    pragma GCC system_header
 #  endif
 
+#  if _LIBCPP_STD_VER >= 23
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#  ifdef _LIBCPP_WIN32API
+#    ifdef _WIN32
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 
-#    if _LIBCPP_HAS_WIDE_CHARACTERS
+#      if _LIBCPP_HAS_WIDE_CHARACTERS
 // A wrapper for WriteConsoleW which is used to write to the Windows
 // console. This function is in the dylib to avoid pulling in windows.h
 // in the library headers. The function itself uses some private parts
@@ -69,11 +71,9 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 //
 // Note the function is only implemented on the Windows platform.
 _LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(FILE* __stream, wstring_view __view);
-#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#      endif // _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
-#  endif   // _LIBCPP_WIN32API
-
-#  if _LIBCPP_STD_VER >= 23
+#    endif   // _WIN32
 
 #    if _LIBCPP_HAS_UNICODE
 // This is the code to transcode UTF-8 to UTF-16. This is used on
@@ -197,7 +197,7 @@ inline constexpr bool __use_unicode_execution_charset = _MSVC_EXECUTION_CHARACTE
 inline constexpr bool __use_unicode_execution_charset = true;
 #    endif
 
-#    ifdef _LIBCPP_WIN32API
+#    ifdef _WIN32
 _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream) {
   // The macro _LIBCPP_TESTING_PRINT_IS_TERMINAL is used to change
   // the behavior in the test. This is not part of the public API.
@@ -207,7 +207,7 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream)
   return std::__is_windows_terminal(__stream);
 #      endif
 }
-#    endif // _LIBCPP_WIN32API
+#    endif // _WIN32
 
 [[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void __handle_output_error(FILE* __stream) {
   if (std::feof(__stream))
@@ -251,7 +251,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __output_unicode_windows([[maybe_unused]] FILE
   // the behavior in the test. This is not part of the public API.
 #        ifdef _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION
   _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION(__stream, __view);
-#        elif defined(_LIBCPP_WIN32API)
+#        elif defined(_WIN32)
   std::__write_to_windows_console(__stream, __view);
 #        else
   std::__throw_runtime_error("No defintion of _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION and "
@@ -282,7 +282,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __output_unicode([[maybe_unused]] FILE* __stre
   // so there the call can be forwarded to the non_unicode API. On
   // Windows there is a different API. This API requires transcoding.
 
-#      ifndef _LIBCPP_WIN32API
+#      ifndef _WIN32
   __print::__output_nonunicode(__stream, __text);
 #      elif _LIBCPP_HAS_WIDE_CHARACTERS
   if (__print::__is_terminal(__stream)) {
@@ -378,10 +378,13 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(string_view __fmt, format_ar
   std::vprint_nonunicode(stdout, __fmt, __args);
 }
 
-#  endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
 
+#  endif // _LIBCPP_STD_VER >= 23
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER >= 20 && _LIBCPP_STD_VER <= 23
+#    include <optional>
+#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_PRINT

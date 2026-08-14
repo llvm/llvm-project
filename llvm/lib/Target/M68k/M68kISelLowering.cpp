@@ -198,12 +198,14 @@ M68kTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 }
 
 Register
-M68kTargetLowering::getExceptionPointerRegister(const Constant *) const {
+M68kTargetLowering::getExceptionPointerRegister(ExceptionHandling EH,
+                                                const Constant *) const {
   return M68k::D0;
 }
 
 Register
-M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
+M68kTargetLowering::getExceptionSelectorRegister(ExceptionHandling EH,
+                                                 const Constant *) const {
   return M68k::D1;
 }
 
@@ -230,6 +232,7 @@ MVT M68kTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
   return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "M68kGenCallingConv.inc"
 
 enum StructReturnType { NotStructReturn, RegStructReturn, StackStructReturn };

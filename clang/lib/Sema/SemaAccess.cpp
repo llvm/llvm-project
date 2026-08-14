@@ -21,6 +21,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace sema;
@@ -1612,6 +1613,15 @@ bool Sema::isMemberAccessibleForDeletion(CXXRecordDecl *NamingClass,
   // Suppress diagnostics.
   Entity.setDiag(Diag);
 
+  // We don't want to delay access checking even we are inside an enclosing
+  // delayed-diagnostics scope (e.g. when parsing a later declaration whose
+  // initializer requires explaining why a defaulted comparison operator is
+  // deleted)
+  llvm::scope_exit UndelayDiags(
+      [&, CurrentState(DelayedDiagnostics.pushUndelayed())] {
+        DelayedDiagnostics.popUndelayed(CurrentState);
+      });
+
   switch (CheckAccess(*this, Loc, Entity)) {
   case AR_accessible: return true;
   case AR_inaccessible: return false;
@@ -1665,21 +1675,22 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   case InitializedEntity::EK_Base:
     PD = PDiag(diag::err_access_base_ctor);
     PD << Entity.isInheritedVirtualBase()
-       << Entity.getBaseSpecifier()->getType() << getSpecialMember(Constructor);
+       << Entity.getBaseSpecifier()->getType()
+       << Constructor->getSpecialMemberKind();
     break;
 
   case InitializedEntity::EK_Member:
   case InitializedEntity::EK_ParenAggInitMember: {
     const FieldDecl *Field = cast<FieldDecl>(Entity.getDecl());
     PD = PDiag(diag::err_access_field_ctor);
-    PD << Field->getType() << getSpecialMember(Constructor);
+    PD << Field->getType() << Constructor->getSpecialMemberKind();
     break;
   }
 
   case InitializedEntity::EK_LambdaCapture: {
     StringRef VarName = Entity.getCapturedVarName();
     PD = PDiag(diag::err_access_lambda_capture);
-    PD << VarName << Entity.getType() << getSpecialMember(Constructor);
+    PD << VarName << Entity.getType() << Constructor->getSpecialMemberKind();
     break;
   }
 

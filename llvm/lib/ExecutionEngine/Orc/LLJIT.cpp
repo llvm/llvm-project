@@ -912,7 +912,7 @@ Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err =
-          TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
+          TSM.withModuleDo([&](Module &M) { return applyTargetConfig(M); }))
     return Err;
 
   return InitHelperTransformLayer->add(std::move(RT), std::move(TSM));
@@ -1107,7 +1107,10 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
   return MangledName;
 }
 
-Error LLJIT::applyDataLayout(Module &M) {
+Error LLJIT::applyTargetConfig(Module &M) {
+  if (M.getTargetTriple().empty())
+    M.setTargetTriple(TT);
+
   if (M.getDataLayout().isDefault())
     M.setDataLayout(DL);
 
@@ -1306,10 +1309,18 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err = TSM.withModuleDo(
-          [&](Module &M) -> Error { return applyDataLayout(M); }))
+          [&](Module &M) -> Error { return applyTargetConfig(M); }))
     return Err;
 
   return CODLayer->add(JD, std::move(TSM));
+}
+
+// End the session before this class's members (CODLayer, IPLayer, LCTMgr) are
+// destroyed: endSession joins the compile threads, and those threads may still
+// be operating on the CompileOnDemandLayer's per-dylib IndirectStubsManagers.
+LLLazyJIT::~LLLazyJIT() {
+  if (auto Err = ES->endSession())
+    ES->reportError(std::move(Err));
 }
 
 LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
