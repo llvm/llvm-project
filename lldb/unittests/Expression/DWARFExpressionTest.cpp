@@ -1367,11 +1367,12 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_bregx_address_size) {
   ExecutionContext exe_ctx(ctx.process_sp);
 
   // The register backend may expose a value wider than the target address.
-  EXPECT_THAT_EXPECTED(
+  auto result =
       Evaluate({DW_OP_bregx, 0x40, 0x7f, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
                 DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
-               {}, {}, &exe_ctx, ctx.reg_ctx_sp.get()),
-      ExpectScalar(32, 0x29, false));
+               {}, {}, &exe_ctx, ctx.reg_ctx_sp.get());
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x29, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
