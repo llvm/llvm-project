@@ -121,6 +121,34 @@ static bool crossesRepetitiveRegion(UpdateTupleOp from, UpdateTupleOp to,
   return false;
 }
 
+static void collectSendDescriptors(Value value, DenseSet<Value> &visited,
+                                   DenseSet<int64_t> &descriptors) {
+  if (!visited.insert(value).second)
+    return;
+  for (Operation *user : value.getUsers()) {
+    if (SendOp send = dyn_cast<SendOp>(user)) {
+      if (send.getAddrPayload() == value)
+        descriptors.insert(send.getDesc());
+      continue;
+    }
+    if (UpdateTupleOp update = dyn_cast<UpdateTupleOp>(user))
+      collectSendDescriptors(update.getResult(), visited, descriptors);
+  }
+}
+
+static bool haveSameSendDescriptors(UpdateTupleOp lhs, UpdateTupleOp rhs) {
+  DenseSet<Value> lhsVisited;
+  DenseSet<Value> rhsVisited;
+  DenseSet<int64_t> lhsDescriptors;
+  DenseSet<int64_t> rhsDescriptors;
+  collectSendDescriptors(lhs.getResult(), lhsVisited, lhsDescriptors);
+  collectSendDescriptors(rhs.getResult(), rhsVisited, rhsDescriptors);
+  return lhsDescriptors.size() == rhsDescriptors.size() &&
+         llvm::all_of(lhsDescriptors, [&](int64_t descriptor) {
+           return rhsDescriptors.contains(descriptor);
+         });
+}
+
 static void factorBlock(Block &block, const RegionFlow &regionFlow) {
   SmallVector<UpdateTupleOp> updates;
   for (Operation &operation : block)
@@ -133,6 +161,7 @@ static void factorBlock(Block &block, const RegionFlow &regionFlow) {
       continue;
     UpdateTupleOp bestMatch;
     SmallVector<unsigned> commonIndices;
+    bool bestHasSameSendDescriptors = false;
     for (UpdateTupleOp candidate : updates) {
       if (candidate == reference || consumed.contains(candidate) ||
           !reference->isBeforeInBlock(candidate) ||
@@ -142,12 +171,22 @@ static void factorBlock(Block &block, const RegionFlow &regionFlow) {
         continue;
       SmallVector<unsigned> candidateCommon =
           getCommonUpdateIndices(reference, candidate);
-      if (candidateCommon.size() > commonIndices.size()) {
+      if (candidateCommon.size() < 2)
+        continue;
+      bool hasSameSendDescriptors =
+          haveSameSendDescriptors(reference, candidate);
+      // TODO: Represent payload ownership directly instead of using equal send
+      // descriptors as the proxy for compatible physical materialization.
+      if (!bestMatch ||
+          (hasSameSendDescriptors && !bestHasSameSendDescriptors) ||
+          (hasSameSendDescriptors == bestHasSameSendDescriptors &&
+           candidateCommon.size() > commonIndices.size())) {
         bestMatch = candidate;
         commonIndices = std::move(candidateCommon);
+        bestHasSameSendDescriptors = hasSameSendDescriptors;
       }
     }
-    if (!bestMatch || commonIndices.size() < 2)
+    if (!bestMatch)
       continue;
 
     SmallVector<UpdateTupleOp> group{reference, bestMatch};
@@ -157,6 +196,8 @@ static void factorBlock(Block &block, const RegionFlow &regionFlow) {
           reference->isBeforeInBlock(candidate) &&
           !crossesRepetitiveRegion(reference, candidate, regionFlow) &&
           candidate.getResult().getType() == reference.getResult().getType() &&
+          haveSameSendDescriptors(reference, candidate) ==
+              bestHasSameSendDescriptors &&
           areEquivalentValues(reference.getBase(), candidate.getBase()) &&
           hasCommonUpdates(reference, candidate, commonIndices))
         group.push_back(candidate);

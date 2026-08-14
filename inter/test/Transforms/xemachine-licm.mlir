@@ -31,7 +31,7 @@ module {
 // CHECK-LABEL: func.func @nested_uniform_licm
 // CHECK: [[CONSTANT:%.*]] = xemachine.imm 7
 // CHECK-NEXT: [[INVARIANT:%.*]] = xemachine.mov [[CONSTANT]] {{.*}}noMask
-// CHECK-NEXT: [[TEMPLATE:%.*]] = xemachine.update_tuple %arg1, [[INVARIANT]]
+// CHECK-NEXT: [[TEMPLATE:%.*]] = xemachine.update_tuple {{%.*}}, [[INVARIANT]]
 // CHECK-NEXT: xemachine.uniform_loop
 // CHECK: xemachine.uniform_if
 // CHECK-NOT: xemachine.imm 7

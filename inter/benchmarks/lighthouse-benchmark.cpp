@@ -233,13 +233,30 @@ int main(int argc, char **argv) {
     return zeEventHostSynchronize(event, UINT64_MAX);
   };
   auto validate = [&]() {
+    int64_t invalidCount = 0;
+    int64_t minRow = m;
+    int64_t maxRow = -1;
+    int64_t minColumn = n;
+    int64_t maxColumn = -1;
     for (int64_t index = 0; index < m * n; ++index)
       if (!std::isfinite(c[index]) || c[index] != reference[index]) {
-        fprintf(stderr, "incorrect C[%ld,%ld]: %.9g != %.9g\n", index / n,
-                index % n, c[index], reference[index]);
-        return false;
+        int64_t row = index / n;
+        int64_t column = index % n;
+        if (invalidCount == 0)
+          fprintf(stderr, "incorrect C[%ld,%ld]: %.9g != %.9g\n", row,
+                  column, c[index], reference[index]);
+        ++invalidCount;
+        minRow = std::min(minRow, row);
+        maxRow = std::max(maxRow, row);
+        minColumn = std::min(minColumn, column);
+        maxColumn = std::max(maxColumn, column);
       }
-    return true;
+    if (invalidCount == 0)
+      return true;
+    fprintf(stderr,
+            "invalid outputs: %ld, bounds rows %ld..%ld, columns %ld..%ld\n",
+            invalidCount, minRow, maxRow, minColumn, maxColumn);
+    return false;
   };
 
   for (int iteration = 0; iteration < warmups; ++iteration) {
