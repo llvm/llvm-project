@@ -1,9 +1,7 @@
 ; RUN: opt %s -S -passes=dse -o - | FileCheck %s --implicit-check-not="#dbg_"
 
-;; The IR is clang's, cleaned up but not otherwise adjusted, so the variable
-;; fills its alloca and the offsets are the ones clang emitted. That gives up
-;; the coverage shorten-offset.ll buys by adjusting them, and gets a source
-;; listing whose numbers can be checked against the test.
+;; The IR is clang's, with only the cleanup listed below. The variable fills its
+;; alloca, so the source byte offsets can be checked directly against the test.
 ;;
 ;; $ cat shorten.c
 ;; void esc(char *);
@@ -14,30 +12,27 @@
 ;;   esc(local);
 ;; }
 ;;
-;; $ clang -O2 -g -c -Xclang -fexperimental-assignment-tracking=forced \
+;; $ clang -O2 -g -gno-key-instructions -c \
+;;       -Xclang -fexperimental-assignment-tracking=forced \
 ;;       -mllvm -print-before=dse -mllvm -print-module-scope shorten.c \
 ;;       -o /dev/null
 ;;
 ;; and then, by hand: dropped the target triple and datalayout so this runs
 ;; anywhere, dropped the tbaa metadata, llvm.ident, the producer/checksum/
-;; sysroot strings, the key-instruction atoms, the lifetime intrinsics and the
-;; function attributes, converted the debug records to intrinsics, and
+;; sysroot strings, the lifetime intrinsics and the function attributes, and
 ;; renumbered the metadata. The remaining non-debug instructions keep clang's
 ;; order and operands, and the assignment offsets are unchanged.
 
 ;; 'local' is 640 bits and starts at the alloca, so variable bit N is alloca
 ;; byte N/8 throughout, which is what makes the arithmetic readable.
 ;;
-;; The first memset covers bytes [8, 80) and the second covers [4, 68), so the
-;; second kills the front of the first and DSE shortens it to [68, 80). The
-;; bytes that died are [8, 68), which is variable bits [64, 544): fragment
-;; (64, 480).
-;;
-;; The dead slice stays inside the fragment, so the record keeps its size and
-;; only the offset can be wrong, and an offset that is off by the store's
-;; distance from the alloca still describes 60 plausible bytes. shorten-offset.ll
-;; covers the two shapes where the slice moves far enough to clip the fragment
-;; or to leave the variable entirely.
+;; The first memset covers bytes [8, 80) and the second covers [4, 68), so DSE
+;; shortens the first to [68, 80). The dead slice is [8, 68), or variable bits
+;; [64, 544), which gives fragment (64, 480). Counting the same eight-byte
+;; offset again gives (128, 480). Both fit inside the record's original
+;; (64, 576) fragment, so only the offset exposes the bug. shorten-offset.ll
+;; covers the cases where the extra offset clips the fragment or moves the
+;; slice past it.
 
 ; CHECK: @shortenBeginPartial
 ; CHECK:      #dbg_assign({{.*}}, ![[VAR:[0-9]+]], !DIExpression(), {{.*}}, ptr %local, !DIExpression(),
@@ -54,19 +49,18 @@
 define void @shortenBeginPartial() !dbg !7 {
 entry:
   %local = alloca [80 x i8], align 1, !DIAssignID !13
-  call void @llvm.dbg.assign(metadata i1 poison, metadata !11, metadata !DIExpression(), metadata !13, metadata ptr %local, metadata !DIExpression()), !dbg !14
+    #dbg_assign(i1 poison, !11, !DIExpression(), !13, ptr %local, !DIExpression(), !14)
   %add.ptr = getelementptr inbounds nuw i8, ptr %local, i64 8, !dbg !15
   call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(72) %add.ptr, i8 0, i64 72, i1 false), !dbg !15, !DIAssignID !16
-  call void @llvm.dbg.assign(metadata i8 0, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 576), metadata !16, metadata ptr %add.ptr, metadata !DIExpression()), !dbg !14
+    #dbg_assign(i8 0, !11, !DIExpression(DW_OP_LLVM_fragment, 64, 576), !16, ptr %add.ptr, !DIExpression(), !14)
   %add.ptr2 = getelementptr inbounds nuw i8, ptr %local, i64 4, !dbg !17
   call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(64) %add.ptr2, i8 8, i64 64, i1 false), !dbg !17, !DIAssignID !18
-  call void @llvm.dbg.assign(metadata i1 poison, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 512), metadata !18, metadata ptr %add.ptr2, metadata !DIExpression()), !dbg !14
+    #dbg_assign(i1 poison, !11, !DIExpression(DW_OP_LLVM_fragment, 32, 512), !18, ptr %add.ptr2, !DIExpression(), !14)
   call void @esc(ptr noundef nonnull %local), !dbg !19
   ret void, !dbg !20
 }
 
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
-declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 declare void @esc(ptr noundef)
 
 !llvm.dbg.cu = !{!0}

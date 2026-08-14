@@ -4,22 +4,22 @@
 ;;
 ;; $ cat test.cpp
 ;; void esc(char*);
-;; void shortenEnd() {
+;; void shortenBeginWholeFragment() {
 ;;   char local[80];                      //        bits    frag
-;;   __builtin_memset(local + 8, 0, 72);  // local:  64-160 ( 64, 96)
+;;   __builtin_memset(local + 8, 0, 72);  // local:  64-160 (64, 96)
 ;;   __builtin_memset(local + 4, 8, 64);  // local:  32-160 killed
 ;;   esc(local);
 ;; }
 ;; void shortenStart() {
 ;;   char local2[40];                 //          bits   frag
-;;   __builtin_memset(local2, 0, 40); // local2:  0-160  (0, 160)
+;;   __builtin_memset(local2, 0, 36); // local2:  0-160  (0, 160)
 ;;   __builtin_memset(local2, 8, 16); // local2:  0-128  (0, 128)
 ;;   esc(local2);
 ;; }
 ;; void shortenEndPartial() {
 ;;   char local3[80];                      //         bits    frag
 ;;   __builtin_memset(local3 + 8,  0, 8);  // local3:  64-128 (64, 96)
-;;   __builtin_memset(local3 + 12, 8, 4);  // local3:  96-128 ( 96, 32)
+;;   __builtin_memset(local3 + 12, 8, 4);  // local3:  96-128 (96, 32)
 ;;   esc(local3);
 ;; }
 
@@ -31,19 +31,19 @@
 ;; 'local' and 'local3' have both been adjusted to be 160 bits, so the bit
 ;; ranges above are the written bytes clamped to the variable.
 
-;; In shortenEnd the killing store starts before the dead one, at local + 4
-;; against local + 8, so despite the name it takes the overwrite-begin path.
-;; shortenEndPartial is the overwrite-end one, and between them they cover
-;; both arms of the offset shortenAssignment computes.
+;; shortenBeginWholeFragment takes the overwrite-begin path because the killing
+;; store starts before the dead one, at local + 4 against local + 8.
+;; shortenEndPartial takes the overwrite-end path, so the two cases cover both
+;; offsets shortenAssignment computes.
 
-;; DSE shortens the first store in shortenEnd from bytes [8, 80) of 'local' to
-;; [56, 80), so the dead bytes are [8, 56). The dbg.assign's address is
-;; %offset_4_bytes + 4, i.e. local + 8, so its fragment (64, 96) describes
-;; local bytes [8, 20), all of which the dead slice covers. There's no live
-;; part left to describe, so instead of inserting a fragment we unlink the
-;; dbg.assign from the store and kill its address.
+;; DSE shortens the first store in shortenBeginWholeFragment from bytes [8, 80)
+;; of 'local' to [56, 80), so the dead bytes are [8, 56). The dbg.assign's
+;; address is %offset_4_bytes + 4, i.e. local + 8, so its fragment (64, 96)
+;; describes local bytes [8, 20), all of which the dead slice covers. There's
+;; no live part left to describe, so instead of inserting a fragment we unlink
+;; the dbg.assign from the store and kill its address.
 
-; CHECK: @_Z10shortenEndv
+; CHECK: @_Z25shortenBeginWholeFragmentv
 ; CHECK:      #dbg_assign({{.*}}, ![[VAR:[0-9]+]], !DIExpression(), {{.*}}, ptr %local, !DIExpression(),
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID:[0-9]+]]
 ; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 96), ![[UniqueID1:[0-9]+]], ptr poison, !DIExpression(DW_OP_plus_uconst, 4),
@@ -64,9 +64,7 @@
 ;; to [8, 12), so the dead bytes are [12, 16). The dbg.assign's address is
 ;; %offset_4_bytes + 4, i.e. local3 + 8, where its fragment (64, 96) starts, so
 ;; the dead bytes are variable bits [96, 128). Check we get an unlinked
-;; dbg.assign for (96, 32). Counting the dead store's offset from local3 twice
-;; pushes the slice past the end of the fragment instead, and nothing at all
-;; gets inserted.
+;; dbg.assign for (96, 32).
 
 ; CHECK: @_Z17shortenEndPartialv
 ; CHECK:      #dbg_assign({{.*}}, ptr %local3, !DIExpression(),
@@ -79,7 +77,7 @@
 ; CHECK-DAG: ![[UniqueID2]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[UniqueID3]] = distinct !DIAssignID()
 
-define dso_local void @_Z10shortenEndv() local_unnamed_addr #0 !dbg !7 {
+define dso_local void @_Z25shortenBeginWholeFragmentv() local_unnamed_addr #0 !dbg !7 {
 entry:
   %local = alloca [80 x i8], align 16, !DIAssignID !16
   call void @llvm.dbg.assign(metadata i1 poison, metadata !11, metadata !DIExpression(), metadata !16, metadata ptr %local, metadata !DIExpression()), !dbg !17
@@ -143,7 +141,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"uwtable", i32 1}
 !6 = !{!"clang version 14.0.0"}
-!7 = distinct !DISubprogram(name: "shortenEnd", linkageName: "_Z10shortenEndv", scope: !1, file: !1, line: 2, type: !8, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !10)
+!7 = distinct !DISubprogram(name: "shortenBeginWholeFragment", linkageName: "_Z25shortenBeginWholeFragmentv", scope: !1, file: !1, line: 2, type: !8, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !10)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null}
 !10 = !{!11}
