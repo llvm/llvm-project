@@ -51,14 +51,12 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/KnownBits.h"
 #include <optional>
 
 using namespace llvm;
@@ -2451,16 +2449,14 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // InstCombine's canEvaluateZExtd); we intentionally do NOT treat a merely
       // multiply-used operand as clean, since that is a guess rather than
       // proof.
-      bool CleanSource = isa<LoadInst>(Op);
-      if (!CleanSource)
-        if (const auto *A = dyn_cast<Argument>(Op))
-          CleanSource = A->hasAttribute(Attribute::ZExt);
-      if (!CleanSource)
-        CleanSource =
-            computeKnownBits(Op, I->getDataLayout(), /*AC=*/nullptr, I)
-                .countMinLeadingZeros() > 0;
-      if (CleanSource)
-        return 0;
+      if (isa<LoadInst>(Op))
+        return TTI::TCC_Free;
+      if (const auto *A = dyn_cast<Argument>(Op))
+        if (A->hasAttribute(Attribute::ZExt))
+          return TTI::TCC_Free;
+      if (computeKnownBits(Op, I->getDataLayout(), /*AC=*/nullptr, I)
+              .countMinLeadingZeros() > 0)
+        return TTI::TCC_Free;
     }
   }
 
