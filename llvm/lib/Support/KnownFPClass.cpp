@@ -616,6 +616,26 @@ KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+KnownFPClass KnownFPClass::cbrt(const KnownFPClass &KnownSrc,
+                                DenormalMode Mode) {
+  KnownFPClass Known;
+
+  Known.propagateNonNaN(KnownSrc);
+
+  // cbrt is never subnormal for the same reason that sqrt is never subnormal.
+  Known.knownNot(fcSubnormal);
+
+  // cbrt(x) == +0.0 iff x == +0.0
+  if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+    Known.knownNot(fcPosZero);
+
+  // cbrt(x) == -0.0 iff x == -0.0
+  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+    Known.knownNot(fcNegZero);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::sin(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
 
@@ -679,6 +699,16 @@ KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
     Known.knownNot(fcNegative);
 
   Known.propagateNonNaN(KnownSrc);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::acosh(const KnownFPClass &KnownSrc) {
+  KnownFPClass Known;
+
+  Known.knownNot(fcNegative);
+
+  Known.propagateNonSNaN(KnownSrc);
 
   return Known;
 }

@@ -5819,6 +5819,49 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcSubnormal);
       break;
     }
+    case Intrinsic::not_intrinsic: {
+      // Recognize the libcall directly for functions with no intrinsic
+      // equivalent. TLI validates the declaration's prototype and rejects calls
+      // marked 'nobuiltin'. Do not recognize locally-defined functions.
+      if (!Q.TLI)
+        break;
+      const Function *F = II->getCalledFunction();
+      if (!F || F->hasLocalLinkage())
+        break;
+      LibFunc Func = Q.TLI->getLibFunc(*II);
+      if (Func == NotLibFunc)
+        break;
+
+      switch (Func) {
+      case LibFunc_acosh:
+      case LibFunc_acoshf:
+      case LibFunc_acoshl: {
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Q, Depth + 1);
+        Known = KnownFPClass::acosh(KnownSrc);
+        break;
+      }
+      case LibFunc_cbrt:
+      case LibFunc_cbrtf:
+      case LibFunc_cbrtl: {
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Q, Depth + 1);
+        const Function *Caller = II->getFunction();
+        const fltSemantics &FltSem =
+            Op->getType()->getScalarType()->getFltSemantics();
+        DenormalMode Mode = Caller ? Caller->getDenormalMode(FltSem)
+                                   : DenormalMode::getDynamic();
+        Known = KnownFPClass::cbrt(KnownSrc, Mode);
+        break;
+      }
+      default:
+        break;
+      }
+
+      break;
+    }
     default:
       break;
     }
