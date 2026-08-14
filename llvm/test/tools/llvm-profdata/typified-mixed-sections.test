@@ -1,0 +1,29 @@
+; Verify that an empty typified section is skipped without preventing a
+; following legacy profile section from being read.
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-typified-empty-lbr.proftext -o %t.legacy
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.legacy %t.empty-mixed prepend-empty-typified
+; RUN: llvm-profdata merge --sample --text %t.empty-mixed -o - | FileCheck %s --check-prefix=PROFILE
+
+; Verify that the temporary decoding mode is also restored after reading a
+; nonempty typified section. Both sections contain the same profiles, so every
+; counter is expected to be accumulated exactly twice.
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/sample-typified-empty-lbr.proftext -o %t.typified
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.legacy %t.nonempty-mixed prepend-typified --donor %t.typified
+; RUN: llvm-profdata merge --sample --text %t.nonempty-mixed -o - | FileCheck %s --check-prefix=ACCUMULATED
+
+; Verify that the section table reports both physical profile section formats.
+; RUN: llvm-profdata show --sample --show-sec-info-only %t.empty-mixed | FileCheck %s --check-prefix=SECTIONS
+
+; Verify that an empty typified section still makes typified inspection
+; applicable, without producing the legacy-profile warning.
+; RUN: llvm-profdata show --sample --show-typified-info-only %t.empty-mixed 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-WARNING
+
+; PROFILE: top:42:7
+; PROFILE-NEXT: caller:21:3
+; PROFILE-NEXT:  1: callee:11
+; ACCUMULATED: top:84:14
+; ACCUMULATED-NEXT: caller:42:6
+; ACCUMULATED-NEXT:  1: callee:22
+; SECTIONS: TypifiedProfileSection
+; SECTIONS: LBRProfileSection
+; NO-WARNING-NOT: only supported for typified sample profiles

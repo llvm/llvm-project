@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -222,7 +223,22 @@ protected:
   std::error_code writeSummary();
   virtual std::error_code writeContextIdx(const SampleContext &Context);
   std::error_code writeNameIdx(FunctionId FName);
-  std::error_code writeBody(const FunctionSamples &S);
+  std::error_code writeBody(const FunctionSamples &S, bool IsNested);
+  std::error_code writeLBRProfile(const FunctionSamples &S, bool IsNested);
+
+  /// Interfaces for typified profile writing.
+  std::error_code writeTypifiedProfile(const FunctionSamples &S, bool IsNested);
+  /// Write one \p Type and the size-prefixed payload emitted by \p
+  /// WritePayload. The callback may be invoked twice when its payload exceeds
+  /// the dynamic buffer limit, so it must emit identical bytes without external
+  /// side effects.
+  std::error_code
+  writeProfileType(ProfTypes Type,
+                   function_ref<std::error_code()> WritePayload);
+  /// Reusable size-counting stream with bounded dynamic payload storage.
+  std::unique_ptr<raw_ostream> PayloadBufferStream;
+  /// Whether a profile payload callback is currently being executed.
+  bool WritingProfileType = false;
 
   MapVector<FunctionId, uint32_t> NameTable;
 
@@ -236,6 +252,7 @@ protected:
                           raw_ostream &OS);
 
   bool WriteVTableProf = false;
+  bool WriteTypifiedProf = false;
 
 private:
   LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
@@ -371,9 +388,10 @@ protected:
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code
   writeEytzingerNameTableSection(const SampleProfileMap &ProfileMap);
-  std::error_code writeFuncOffsetTable(bool IsNested);
-  std::error_code writeEytzingerFuncOffsetTable(bool IsNested);
-  std::error_code writeLegacyFuncOffsetTable();
+  // Type selects SecFuncOffsetTable vs SecTypifiedFuncOffsetTable for flags.
+  std::error_code writeFuncOffsetTable(SecType Type, bool IsNested);
+  std::error_code writeEytzingerFuncOffsetTable(SecType Type, bool IsNested);
+  std::error_code writeLegacyFuncOffsetTable(SecType Type);
   std::error_code writeProfileSymbolListSection();
   std::error_code writeStringBasedProfileSymbolListSection();
   std::error_code writeMD5ProfileSymbolListSection();
@@ -443,6 +461,9 @@ private:
 
   std::error_code writeSections(const SampleProfileMap &ProfileMap) override;
 
+  // Configure whether to use typified profile sections.
+  void configureTypifiedProfile(const SampleProfileMap &ProfileMap);
+
   std::error_code writeCustomSection(SecType Type) override {
     return sampleprof_error::success;
   };
@@ -451,6 +472,11 @@ private:
     assert((SL == DefaultLayout || SL == CtxSplitLayout) &&
            "Unsupported layout");
   }
+
+  /// Section types for profile storage and bookkeeping (used to switch between
+  /// typified and non-typified profiles).
+  SecType ProfSection = SecLBRProfile;
+  SecType FuncOffsetSection = SecFuncOffsetTable;
 };
 
 } // end namespace sampleprof

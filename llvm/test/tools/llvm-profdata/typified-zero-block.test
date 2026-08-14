@@ -1,0 +1,18 @@
+; Verify that a function may have no typified blocks while its nested function
+; still carries and exposes an LBR block.
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/typified-zero-block.proftext -o %t.prof
+; RUN: llvm-profdata show --sample --show-typified-info-only %t.prof | FileCheck %s
+
+; CHECK: Function: caller
+; CHECK-NEXT:   Profile blocks: 0
+; CHECK-NEXT: Nested function: callee
+; CHECK-NEXT:   Profile blocks: 1
+; CHECK-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
+
+; Verify that the zero-block parent and its nested LBR payload both survive a
+; round trip back to text.
+; RUN: llvm-profdata merge --sample --text %t.prof -o - | FileCheck %s --check-prefix=PROFILE --match-full-lines --strict-whitespace
+
+; PROFILE:caller:0:0
+; PROFILE-NEXT: 1: callee:1
+; PROFILE-NEXT:  0: 1

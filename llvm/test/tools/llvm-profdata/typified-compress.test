@@ -1,0 +1,6 @@
+REQUIRES: zlib
+
+# Round trip from text to compressed typified extbinary and back to text.
+RUN: llvm-profdata merge --sample --extbinary --extbinary-force-typified-prof --compress-all-sections --output=%t.profdata %S/Inputs/sample-profile.proftext
+RUN: llvm-profdata merge --sample --text --output=%t.proftext %t.profdata
+RUN: diff -b %t.proftext %S/Inputs/sample-profile.proftext

@@ -16,6 +16,8 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -40,6 +42,34 @@ static ::testing::AssertionResult NoError(std::error_code EC) {
 }
 
 namespace {
+
+/// Temporarily control typified ExtBinary writing and restore the command-line
+/// option when the test scope ends.
+class ScopedForceTypifiedProfile {
+public:
+  /// Select the requested option value for the lifetime of this scope.
+  explicit ScopedForceTypifiedProfile(bool Enabled) { set(Enabled); }
+
+  /// Restore the default disabled state when leaving the test scope.
+  ~ScopedForceTypifiedProfile() { set(false); }
+
+  /// Select whether ExtBinary writes use typified profile sections through the
+  /// same type-checked command-line parser used by the production tool.
+  void set(bool Enabled) {
+    constexpr StringLiteral OptionName = "extbinary-force-typified-prof";
+    auto &Options = cl::getRegisteredOptions();
+    auto OptionIt = Options.find(OptionName);
+    if (OptionIt == Options.end())
+      report_fatal_error("typified profile option is not registered");
+
+    // Reset only the option controlled by this scope, leaving unrelated test
+    // process configuration unchanged.
+    cl::Option *Option = OptionIt->second;
+    Option->reset();
+    if (Option->addOccurrence(0, OptionName, Enabled ? "true" : "false"))
+      report_fatal_error("failed to set typified profile option");
+  }
+};
 
 struct SampleProfTest : ::testing::Test {
   LLVMContext Context;
@@ -482,6 +512,54 @@ TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
 }
 
+// Verify the full ExtBinary round trip through typified profile sections.
+TEST_F(SampleProfTest, roundtrip_typified_ext_binary_profile) {
+  [[maybe_unused]] ScopedForceTypifiedProfile ForceTypified(true);
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
+}
+
+// Verify that reusing one ExtBinary writer for a typified profile and then a
+// legacy profile restores the legacy section types.
+TEST_F(SampleProfTest, ext_binary_writer_typified_to_legacy) {
+  ScopedForceTypifiedProfile ForceTypified(true);
+
+  SmallVector<char, 128> Buffer;
+  std::unique_ptr<raw_ostream> OS =
+      std::make_unique<raw_svector_ostream>(Buffer);
+  auto WriterOrErr =
+      SampleProfileWriter::create(OS, SampleProfileFormat::SPF_Ext_Binary);
+  ASSERT_TRUE(NoError(WriterOrErr.getError()));
+  auto ProfileWriter = std::move(WriterOrErr.get());
+
+  StringRef FooName("_Z3fooi");
+  FunctionSamples FooSamples;
+  FooSamples.setFunction(FunctionId(FooName));
+  FooSamples.addTotalSamples(1);
+  SampleProfileMap Profiles;
+  Profiles[FooName] = std::move(FooSamples);
+
+  auto VerifyFormat = [&](bool IsTypified) {
+    std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+        StringRef(Buffer.data(), Buffer.size()), "profile");
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+    ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+    auto ProfileReader = std::move(ReaderOrErr.get());
+    ASSERT_TRUE(NoError(ProfileReader->read()));
+    EXPECT_EQ(IsTypified, ProfileReader->hasTypifiedProfileSection());
+  };
+
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(true);
+
+  Buffer.clear();
+  ForceTypified.set(false);
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(false);
+}
+
 TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
 }
@@ -510,6 +588,12 @@ TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
       "SampleProfTest", "--sample-profile-write-eytzinger-name-tables=false"};
   cl::ResetAllOptionOccurrences();
   cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
+}
+
+// Verify typified ExtBinary round trips when the name table uses MD5 hashes.
+TEST_F(SampleProfTest, roundtrip_typified_md5_ext_binary_profile) {
+  [[maybe_unused]] ScopedForceTypifiedProfile ForceTypified(true);
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {

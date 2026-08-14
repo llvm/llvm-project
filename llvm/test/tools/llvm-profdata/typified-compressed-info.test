@@ -1,0 +1,12 @@
+REQUIRES: zlib
+
+; Verify that compressed typified blocks remain inspectable when their payloads
+; exceed the bounded buffer and that overflow does not change the output.
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary --compress-all-sections %S/Inputs/sample-profile.proftext -o %t.buffered
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary --compress-all-sections --extbinary-profile-type-buffer-limit=1 %S/Inputs/sample-profile.proftext -o %t.overflow
+; RUN: cmp %t.buffered %t.overflow
+; RUN: llvm-profdata show --sample --show-typified-info-only %t.overflow | FileCheck %s
+
+; CHECK: Function:
+; CHECK-NEXT:   Profile blocks: 1
+; CHECK-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
