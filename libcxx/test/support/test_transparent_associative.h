@@ -16,6 +16,7 @@
 #endif // TEST_STD_VER < 23
 
 #include <cassert>
+#include <compare>
 #include <concepts>
 #include <type_traits>
 
