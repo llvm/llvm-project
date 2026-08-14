@@ -17,13 +17,13 @@
 TEXTURE<float4> Tex;
 
 // CHECK: define {{.*}} void @test_uint_dims{{(\(\))?}}()
-// CHECK: call void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @Tex, ptr {{.*}}, ptr {{.*}})
+// CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @Tex, ptr {{.*}}, ptr {{.*}})
 void test_uint_dims() {
   uint w, h;
   Tex.GetDimensions(w, h);
 }
 
-// CHECK: define linkonce_odr hidden void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} %[[THIS:.*]], ptr {{.*}} %[[WIDTH:.*]], ptr {{.*}} %[[HEIGHT:.*]])
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} %[[THIS:.*]], ptr {{.*}} %[[WIDTH:.*]], ptr {{.*}} %[[HEIGHT:.*]])
 // CHECK: %[[THIS_VAL:.*]] = load ptr, ptr %[[THIS]]
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), ptr %[[HANDLE_GEP]]
@@ -38,13 +38,13 @@ void test_uint_dims() {
 // CHECK: store i32 %[[H_VAL]], ptr %[[H_PTR]]
 
 // CHECK: define {{.*}} void @test_uint_levels_dims{{.*}}(i32 noundef %{{.*}})
-// CHECK: call void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int, unsigned int&, unsigned int&, unsigned int&)(ptr {{.*}} @Tex, i32 noundef %{{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}})
+// CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int, unsigned int&, unsigned int&, unsigned int&)(ptr {{.*}} @Tex, i32 noundef %{{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}})
 void test_uint_levels_dims(uint mipLevel) {
   uint w, h, l;
   Tex.GetDimensions(mipLevel, w, h, l);
 }
 
-// CHECK: define linkonce_odr hidden void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int, unsigned int&, unsigned int&, unsigned int&)(ptr {{.*}} %[[THIS:.*]], i32 {{.*}} %[[MIP:.*]], ptr {{.*}} %[[WIDTH:.*]], ptr {{.*}} %[[HEIGHT:.*]], ptr {{.*}} %[[LEVELS:.*]])
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int, unsigned int&, unsigned int&, unsigned int&)(ptr {{.*}} %[[THIS:.*]], i32 {{.*}} %[[MIP:.*]], ptr {{.*}} %[[WIDTH:.*]], ptr {{.*}} %[[HEIGHT:.*]], ptr {{.*}} %[[LEVELS:.*]])
 // CHECK: %[[THIS_VAL:.*]] = load ptr, ptr %[[THIS]]
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), ptr %[[HANDLE_GEP]]
@@ -63,13 +63,13 @@ void test_uint_levels_dims(uint mipLevel) {
 // CHECK: store i32 %[[L_VAL]], ptr %[[L_PTR]]
 
 // CHECK: define {{.*}} void @test_float_dims{{(\(\))?}}()
-// CHECK: call void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(float&, float&)(ptr {{.*}} @Tex, ptr {{.*}}, ptr {{.*}})
+// CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(float&, float&)(ptr {{.*}} @Tex, ptr {{.*}}, ptr {{.*}})
 void test_float_dims() {
   float w, h;
   Tex.GetDimensions(w, h);
 }
 
-// CHECK: define linkonce_odr hidden void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(float&, float&)(ptr {{.*}} %[[THIS:.*]], ptr {{.*}} %[[WIDTH:.*]], ptr {{.*}} %[[HEIGHT:.*]])
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(float&, float&)(ptr {{.*}} %[[THIS:.*]], ptr {{.*}} %[[WIDTH:.*]], ptr {{.*}} %[[HEIGHT:.*]])
 // CHECK: %[[THIS_VAL:.*]] = load ptr, ptr %[[THIS]]
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), ptr %[[HANDLE_GEP]]
@@ -86,13 +86,13 @@ void test_float_dims() {
 // CHECK: store float %[[H_F]], ptr %[[H_PTR]]
 
 // CHECK: define {{.*}} void @test_float_levels_dims{{.*}}(i32 noundef %{{.*}})
-// CHECK: call void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int, float&, float&, float&)(ptr {{.*}} @Tex, i32 noundef %{{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}})
+// CHECK: call {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int, float&, float&, float&)(ptr {{.*}} @Tex, i32 noundef %{{.*}}, ptr {{.*}}, ptr {{.*}}, ptr {{.*}})
 void test_float_levels_dims(uint mipLevel) {
   float w, h, l;
   Tex.GetDimensions(mipLevel, w, h, l);
 }
 
-// CHECK: define linkonce_odr hidden void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int, float&, float&, float&)(ptr {{.*}} %[[THIS:.*]], i32 {{.*}} %[[MIP:.*]], ptr {{.*}} %[[WIDTH:.*]], ptr {{.*}} %[[HEIGHT:.*]], ptr {{.*}} %[[LEVELS:.*]])
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::[[TEXTURE]]<float vector[4]>::GetDimensions(unsigned int, float&, float&, float&)(ptr {{.*}} %[[THIS:.*]], i32 {{.*}} %[[MIP:.*]], ptr {{.*}} %[[WIDTH:.*]], ptr {{.*}} %[[HEIGHT:.*]], ptr {{.*}} %[[LEVELS:.*]])
 // CHECK: %[[THIS_VAL:.*]] = load ptr, ptr %[[THIS]]
 // CHECK: %[[HANDLE_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL]], i32 0, i32 0
 // DXIL: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), ptr %[[HANDLE_GEP]]

@@ -8,6 +8,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
+#include "hdr/limits_macros.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/time/clock_gettime.h"
@@ -90,9 +91,9 @@ TEST(LlvmLibcSemaphoreTest, TimedWaitNullTime) {
 
 TEST(LlvmLibcSemaphoreTest, PostOverflow) {
   // The value exceeds maximum, post() must fail with EOVERFLOW
-  Semaphore sem(LIBC_NAMESPACE::SEM_VALUE_MAX, /*is_shared=*/false);
+  Semaphore sem(SEM_VALUE_MAX, /*is_shared=*/false);
   ASSERT_EQ(sem.post(), EOVERFLOW);
-  ASSERT_EQ(sem.getvalue(), static_cast<int>(LIBC_NAMESPACE::SEM_VALUE_MAX));
+  ASSERT_EQ(sem.getvalue(), SEM_VALUE_MAX);
 }
 
 TEST(LlvmLibcSemaphoreTest, TimedWaitTimeout) {
@@ -153,7 +154,7 @@ TEST(LlvmLibcSemaphoreTest, ClockWaitUnsupportedClock) {
 // Named semaphore tests.
 
 TEST(LlvmLibcSemaphoreTest, NamedOpenCloseUnlink) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_test_sem");
+  const char *name = "/llvmlibc_test_sem";
 
   // clean up any leftover from previous test runs.
   Semaphore::unlink(name);
@@ -172,7 +173,7 @@ TEST(LlvmLibcSemaphoreTest, NamedOpenCloseUnlink) {
 }
 
 TEST(LlvmLibcSemaphoreTest, NamedOpenExisting) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_test_sem_exist");
+  const char *name = "/llvmlibc_test_sem_exist";
 
   Semaphore::unlink(name);
 
@@ -196,7 +197,7 @@ TEST(LlvmLibcSemaphoreTest, NamedOpenExisting) {
 }
 
 TEST(LlvmLibcSemaphoreTest, NamedOpenExclFails) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_test_sem_excl");
+  const char *name = "/llvmlibc_test_sem_excl";
 
   Semaphore::unlink(name);
 

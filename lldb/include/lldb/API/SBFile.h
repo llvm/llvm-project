@@ -43,7 +43,7 @@ public:
   bool IsValid() const;
   SBError Close();
 
-  operator bool() const;
+  explicit operator bool() const;
 #ifndef SWIG
   bool operator!() const;
 #endif

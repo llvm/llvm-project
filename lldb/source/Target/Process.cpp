@@ -1365,7 +1365,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   }
 
   ListenerSP listener_sp(
-      Listener::MakeListener(ResumeSynchronousHijackListenerName.data()));
+      Listener::MakeListener(ResumeSynchronousHijackListenerName));
   HijackProcessEvents(listener_sp);
 
   Status error = PrivateResume();
@@ -2808,8 +2808,8 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
     progress_up = std::make_unique<Progress>("Reading binary from memory",
                                              file_spec.GetFilename().str());
 
-  if (ObjectFile *_ = module_sp->GetMemoryObjectFile(
-          shared_from_this(), header_addr, error, size_to_read))
+  if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
+                                     size_to_read))
     return module_sp;
 
   return error.takeError();
