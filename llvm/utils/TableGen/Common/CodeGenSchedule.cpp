@@ -431,7 +431,7 @@ void OpcodeInfo::addPredicateForProcModel(const llvm::APInt &CpuMask,
                                           const llvm::APInt &OperandMask,
                                           const Record *Predicate) {
   auto It = llvm::find_if(
-      Predicates, [&OperandMask, &Predicate](const PredicateInfo &P) {
+      Predicates, [&OperandMask, &Predicate](const SchedulePredicateInfo &P) {
         return P.Predicate == Predicate && P.OperandMask == OperandMask;
       });
   if (It == Predicates.end()) {
