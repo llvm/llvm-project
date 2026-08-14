@@ -36,3 +36,27 @@ BASELINE-NEXT: fn1 u test.c:4 1 14 0.0714 7 0.5
 BASELINE-NEXT: fn1 v test.c:13 0 14 0 7 0.5
 BASELINE-NEXT: fn1 x test.c:3 7 14 0.5 7 0.5
 BASELINE-NEXT: fn1 y test.c:3 7 14 0.5 7 0.5
+
+RUN: llvm-dwarfdump --show-variable-coverage --variable-coverage-bitcode-file=%S/Inputs/coverage.ll %t.o | FileCheck %s --check-prefix=BITCODE
+
+BITCODE:      Variable coverage statistics:
+BITCODE-NEXT: Function InlChain Variable Decl LinesCovered
+BITCODE-NEXT: f k test.c:20 2
+BITCODE-NEXT: f l test.c:20 3
+BITCODE-NEXT: fn1 a test.c:11 6
+BITCODE-NEXT: fn1 u test.c:4 12
+BITCODE-NEXT: fn1 v test.c:13 4
+BITCODE-NEXT: fn1 x test.c:3 13
+BITCODE-NEXT: fn1 y test.c:3 13
+
+RUN: llvm-dwarfdump --show-variable-coverage --variable-coverage-bitcode-file=%S/Inputs/coverage.ll --coverage-baseline %t.o %t-opt.o | FileCheck %s --check-prefix=BASELINE-BITCODE
+
+BASELINE-BITCODE:      Variable coverage statistics:
+BASELINE-BITCODE-NEXT: Function InlChain Variable Decl LinesCovered Baseline CoveredRatio LinesPresent LinesPresentRatio
+BASELINE-BITCODE-NEXT: f k test.c:20 2 2 1 2 1
+BASELINE-BITCODE-NEXT: f l test.c:20 3 3 1 3 1
+BASELINE-BITCODE-NEXT: fn1 a test.c:11 3 6 0.5 3 0.5
+BASELINE-BITCODE-NEXT: fn1 u test.c:4 1 12 0.0833 5 0.417
+BASELINE-BITCODE-NEXT: fn1 v test.c:13 0 4 0 2 0.5
+BASELINE-BITCODE-NEXT: fn1 x test.c:3 6 13 0.462 6 0.462
+BASELINE-BITCODE-NEXT: fn1 y test.c:3 6 13 0.462 6 0.462

@@ -32,6 +32,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -77,6 +78,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -592,14 +594,6 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VABS_V:
   case RISCV::VABD_VV:
   case RISCV::VABDU_VV:
-
-  // XRivosVizip
-  case RISCV::RI_VZIPEVEN_VV:
-  case RISCV::RI_VZIPODD_VV:
-  case RISCV::RI_VZIP2A_VV:
-  case RISCV::RI_VZIP2B_VV:
-  case RISCV::RI_VUNZIP2A_VV:
-  case RISCV::RI_VUNZIP2B_VV:
     return MILog2SEW;
 
   // Vector Widening Shift Left Logical (Zvbb)

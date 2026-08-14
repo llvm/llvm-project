@@ -11,6 +11,11 @@ RUN: FileCheck %s --check-prefix CHECK-HM-64 --input-file %t
 RUN: FileCheck %s --check-prefix CHECK-HM-128 --input-file %t-128
 RUN: FileCheck %s --check-prefix CHECK-HM-1024 --input-file %t-1024
 
+RUN: split-file %s %t.inputs
+RUN: llvm-bolt-heatmap %t.exe -o %t.ext --pa \
+RUN:   -p %t.inputs/external.preagg --block-size=4096 --line-size=64
+RUN: FileCheck %s --check-prefix CHECK-HM-EXTERNAL --input-file %t.ext
+
 ## BOLTed input binary
 RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
 RUN:   --reorder-blocks=ext-tsp --split-functions --split-strategy=cdsplit \
@@ -68,6 +73,10 @@ CHECK-HM-1024-NEXT: 048c048c048c048c048c048c048c048c048c048c048c048c048c048c048c
 CHECK-HM-1024-NEXT: 0
 CHECK-HM-1024-NEXT: 0
 
+CHECK-HM-EXTERNAL: 0x00000000: o...............................................................
+CHECK-HM-EXTERNAL-NOT: 0x00000000:
+CHECK-HM-EXTERNAL: 0x00400000: .
+
 CHECK-BAT-HM-64: (349, 1126]
 CHECK-BAT-HM-4K: (605, 2182]
 
@@ -89,3 +98,7 @@ CHECK-SEC-HOT-BAT-NEXT: .text.cold, 0x800300, 0x800415, 0.0000, 0.0000, 0.0000
 CHECK-SEC-HOT-BAT-NEXT: [hot text], 0x800000, 0x8002cc, 38.7595, 91.6667, 0.3553
 CHECK-HOT-SYMS: 800000 W __hot_start
 CHECK-HOT-SYMS: 8002cc W __hot_end
+
+#--- external.preagg
+S X:0 1
+S 401000 6

@@ -894,94 +894,55 @@ static size_t __kmp_round_up_to_val(size_t size, size_t val) {
   return size;
 } // __kmp_round_up_to_val
 
-// FIXME: C++-ify this.
+void *kmp_taskgraph_region::operator new(size_t size, kmp_info_t *thread) {
+  return __kmp_fast_allocate(thread, size);
+}
+
+void *kmp_taskgraph_region::operator new(size_t size, kmp_info_t *thread,
+                                         kmp_int32 num_nodes) {
+  size += num_nodes * sizeof(kmp_taskgraph_region_t *);
+  size = __kmp_round_up_to_val(size, sizeof(kmp_taskgraph_region_t *));
+  return __kmp_fast_allocate(thread, size);
+}
+
+kmp_taskgraph_region::kmp_taskgraph_region(
+    kmp_taskgraph_record_t *taskgraph, kmp_taskgraph_region_t **&alloc_chain,
+    kmp_taskgraph_node_t *node, kmp_taskgraph_region_t *parent) {
+  owner = taskgraph;
+  type = node ? TASKGRAPH_REGION_NODE : TASKGRAPH_REGION_WAIT;
+  task.node = node;
+  this->parent = parent;
+  *alloc_chain = this;
+  alloc_chain = &this->alloc_chain;
+}
+
+kmp_taskgraph_region::kmp_taskgraph_region(
+    kmp_taskgraph_record_t *taskgraph, kmp_taskgraph_region_t **&alloc_chain,
+    enum kmp_taskgraph_region_type type, kmp_int32 num_nodes,
+    kmp_taskgraph_region_t *parent) {
+  owner = taskgraph;
+  this->type = type;
+  inner.children = (kmp_taskgraph_region **)(this + 1); // trailing storage
+  inner.num_children = num_nodes;
+  this->parent = parent;
+  *alloc_chain = this;
+  alloc_chain = &this->alloc_chain;
+}
+
 static kmp_taskgraph_region_t *__kmp_taskgraph_region_alloc(
     kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
     kmp_taskgraph_region_t **&alloc_chain, kmp_taskgraph_node_t *node,
     kmp_taskgraph_region_t *parent) {
-  kmp_taskgraph_region_t *region =
-      (kmp_taskgraph_region_t *)__kmp_fast_allocate(
-          thread, sizeof(kmp_taskgraph_region_t));
-  region->owner = taskgraph;
-  region->type = node ? TASKGRAPH_REGION_NODE : TASKGRAPH_REGION_WAIT;
-  region->task.node = node;
-  region->task.next_instance = region;
-  region->mark = TASKGRAPH_UNMARKED;
-  region->level = -1;
-  region->timestamp = 0;
-  region->next = nullptr;
-  region->parent = parent;
-  region->predecessors = nullptr;
-  region->successors = nullptr;
-  region->mutexset = nullptr;
-  region->mutexset_parent = nullptr;
-  region->reduce_input = nullptr;
-  *alloc_chain = region;
-  alloc_chain = &region->alloc_chain;
-  return region;
+  return new (thread)
+      kmp_taskgraph_region_t(taskgraph, alloc_chain, node, parent);
 }
 
-// FIXME: This too.
 static kmp_taskgraph_region_t *__kmp_taskgraph_region_alloc(
     kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
     kmp_taskgraph_region_t **&alloc_chain, enum kmp_taskgraph_region_type type,
     kmp_int32 num_nodes, kmp_taskgraph_region_t *parent) {
-  kmp_size_t size = sizeof(kmp_taskgraph_region_t) +
-                    num_nodes * sizeof(kmp_taskgraph_region_t *);
-  size = __kmp_round_up_to_val(size, sizeof(kmp_taskgraph_region_t *));
-  kmp_taskgraph_region_t *region =
-      (kmp_taskgraph_region_t *)__kmp_fast_allocate(thread, size);
-  region->owner = taskgraph;
-  region->type = type;
-  region->inner.children = (kmp_taskgraph_region **)&region[1];
-  region->inner.num_children = num_nodes;
-  region->mark = TASKGRAPH_UNMARKED;
-  region->level = -1;
-  region->timestamp = 0;
-  region->next = nullptr;
-  region->parent = parent;
-  region->predecessors = nullptr;
-  region->successors = nullptr;
-  region->mutexset = nullptr;
-  region->mutexset_parent = nullptr;
-  region->reduce_input = nullptr;
-  *alloc_chain = region;
-  alloc_chain = &region->alloc_chain;
-  return region;
-}
-
-// This makes a mostly-deep copy of a region.  The region itself and children
-// nodes are created new, but node pointers are shared.
-static kmp_taskgraph_region_t *__kmp_taskgraph_region_clone(
-    kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
-    kmp_taskgraph_region_t **&alloc_chain, kmp_taskgraph_region_t *from,
-    kmp_taskgraph_region_t *parent, kmp_int32 indent = 0) {
-  kmp_taskgraph_region_t *clone = nullptr;
-  switch (from->type) {
-  case TASKGRAPH_REGION_ENTRY:
-  case TASKGRAPH_REGION_EXIT:
-    clone = __kmp_taskgraph_region_alloc(thread, taskgraph, alloc_chain,
-                                         nullptr, parent);
-    clone->type = from->type;
-    break;
-  case TASKGRAPH_REGION_NODE:
-  case TASKGRAPH_REGION_WAIT:
-    clone = __kmp_taskgraph_region_alloc(thread, taskgraph, alloc_chain,
-                                         from->task.node, parent);
-    break;
-  default: {
-    clone =
-        __kmp_taskgraph_region_alloc(thread, taskgraph, alloc_chain, from->type,
-                                     from->inner.num_children, parent);
-    for (kmp_int32 n = 0; n < from->inner.num_children; n++) {
-      clone->inner.children[n] = __kmp_taskgraph_region_clone(
-          thread, taskgraph, alloc_chain, from->inner.children[n], clone,
-          indent + 2);
-    }
-  }
-  }
-  TGDBG("%*scloned region %p from region %p\n", indent, "", clone, from);
-  return clone;
+  return new (thread, num_nodes)
+      kmp_taskgraph_region_t(taskgraph, alloc_chain, type, num_nodes, parent);
 }
 
 static kmp_int32
@@ -1045,8 +1006,8 @@ static kmp_int32 __kmp_region_deplist_len(kmp_taskgraph_region_dep_t *list) {
   return len;
 }
 
-static void __kmp_region_deplist_free(kmp_info_t *thread,
-                                      kmp_taskgraph_region_dep_t *list) {
+void __kmp_region_deplist_free(kmp_info_t *thread,
+                               kmp_taskgraph_region_dep_t *list) {
   while (list) {
     kmp_taskgraph_region_dep_t *next = list->next;
     __kmp_fast_free(thread, list);
@@ -1060,8 +1021,8 @@ static void __kmp_region_dep_recycle(kmp_taskgraph_region_dep_t **recycled,
   *recycled = dep;
 }
 
-static void __kmp_region_deplist_recycle(kmp_taskgraph_region_dep_t **recycled,
-                                         kmp_taskgraph_region_dep_t *list) {
+void __kmp_region_deplist_recycle(kmp_taskgraph_region_dep_t **recycled,
+                                  kmp_taskgraph_region_dep_t *list) {
   while (list) {
     kmp_taskgraph_region_dep_t *next = list->next;
     __kmp_region_dep_recycle(recycled, list);
@@ -1097,7 +1058,7 @@ static bool __kmp_taskgraph_collapse_sequence(
   if (chain_len <= 1)
     return false;
 
-  kmp_taskgraph_region_t *seq_region = __kmp_taskgraph_region_alloc(
+  auto *seq_region = __kmp_taskgraph_region_alloc(
       thread, taskgraph, alloc_chain, TASKGRAPH_REGION_SEQUENTIAL, chain_len,
       parent);
   TGDBG("allocated new seq region: %p (length %d)\n", seq_region, chain_len);
@@ -1337,7 +1298,7 @@ static bool __kmp_taskgraph_region_mutex_p(kmp_taskgraph_region_t *reg) {
 // share a pp; for (2), C & D share a pp, and F & G share a pp; for (3), C & D
 // share a pp, and E has a separate pp.
 //
-// We choose the pp the the highest level ("furthest down the graph"), and
+// We choose the pp with the highest level ("furthest down the graph"), and
 // collapse the subgraph into a parallel region.
 
 static bool __kmp_taskgraph_collapse_par_exclusive(
@@ -1430,7 +1391,7 @@ static bool __kmp_taskgraph_collapse_par_exclusive(
       continue;
     kmp_taskgraph_region_type region_type =
         any_mutex_p ? TASKGRAPH_REGION_EXCLUSIVE : TASKGRAPH_REGION_PARALLEL;
-    kmp_taskgraph_region_t *par_region = __kmp_taskgraph_region_alloc(
+    auto *par_region = __kmp_taskgraph_region_alloc(
         thread, taskgraph, alloc_chain, region_type, preds_for_pp, parent);
     changed = true;
     TGDBG("allocated %s region: %p\n",
@@ -1593,130 +1554,284 @@ static void __kmp_taskgraph_region_dot(kmp_taskgraph_region_t *region,
   fprintf(stderr, "}\n");
 }
 
-static kmp_int32
-__kmp_taskgraph_count_edges_to_dominator(kmp_taskgraph_region_t *reg,
-                                         kmp_taskgraph_region_t *dom) {
-  kmp_int32 count = __kmp_region_deplist_len(reg->successors) - 1;
+/// Wrap a single-entry / single-exit (SESE) irreducible region into one
+/// TASKGRAPH_REGION_IRREDUCIBLE region.
+//
+// `entryregion` and `exitregion`  are the SESE region's boundary
+// sentinels, and `members` (length `num_children`) are its interior nodes,
+// which we know at this point to be non-series/parallel reducible.  Because
+// the region is SESE, every edge into the interior comes through the entry and
+// every edge out of it leaves through the exit, so we can collapse the
+// interior into one node without disturbing anything outside the region.
+//
+// We collect the members as the children of one IRREDUCIBLE region and
+// *retain* their child<->child (intra-kernel) predecessor/successor edges --
+// those edges are the kernel's internal DAG.  Edges to the entry/exit
+// sentinels are dropped from the children and replaced by a single
+// entry -> irreducible -> exit bracket, so the surrounding graph becomes
+// trivially series-parallel around the kernel and the build loop makes
+// progress.
 
-  for (kmp_taskgraph_region_dep_t *pred = reg->predecessors; pred;
-       pred = pred->next) {
-    if (pred->region == dom)
-      count++;
-    else
-      count += __kmp_taskgraph_count_edges_to_dominator(pred->region, dom) + 1;
-  }
-  count--;
-
-  return count;
-}
-
-/// Extract/clone a subgraph of the dependency graph, and rewrite predecessor
-/// and successor edges to point to the new cloned part.
-//
-// The function conceptually starts at the bottom (a list of predecessors
-// with some particular dominator) and works up towards the entry point,
-// stopping when it hits the aforementioned dominator.
-//
-// Say we have an irreducible graph like this (each letter represents a region,
-// which could be a single task node or an already-processed nested region):
-//
-//          <S>         (S->A, S->B)
-//        _/   \_
-//       /       \
-//      A         B     (A->C, A->D, B->F, B->G)
-//     /  \      /  \
-//    C    D    F    G
-//    |\     \/     /|
-//    | \    /\    / |  (C->H, C->I, D->I, F->H, G->H, G->J)
-//    |  \ / __|__/  |
-//     \ /\_/_ /     |
-//      H__/  I      J
-//       \__  |  ___/   (H->E, I->E, J->E)
-//          \ | /
-//           <E>
-//
-// We pick the exit node E which has more than one predecessor: H, I and J.
-// In this case, H is immediately dominated by the start node, S.
-// The 'preds_with_dom' list initially contains the node H.
-// We clone the region H then call ourselves with its cloned predecessors,
-// until we hit the dominator 'region_dom'.  After rewriting the original
-// subgraph's (entering) predecessors and (leaving) successors, we obtain a
-// graph like this:
-//
-//           __ <S>__          (S->A', S->B', S->A, S->B)
-//        _/  /   \  \___
-//       /  /      \     \
-//      A'  B'      A     B    (A'->C', B'->F', B'->G', A->C, A->D, B->F, B->G)
-//     /   / \     / \   / \
-//    C'  F'  G'  C   D  F* G  (C'->H', F'->H', G'->H', C->I, D->I, G->J)
-//     \_ | _/     \ /     /
-//        H'        I     J    (H'->E, I->E, J->E)
-//         \        |    /
-//          \___   / __/
-//               <E>
-//
-// The new cloned subgraph formed from nodes H', C', F', G', A', B' replaces
-// the original predecessor of E, H.  Some nodes are now unreachable (F, marked
-// with *), and can be deleted.  The start node S now has successors A, B, and
-// the new clones A' and B'.
-//
-// In this way, irreducible graphs are turned into reducible graphs.  A
-// critical point is what it means to clone a task node in this way: that is
-// discussed in the commentary of __kmp_taskgraph_rewrite_irreducible.
-
-static void __kmp_taskgraph_clone_subgraph(
+static kmp_taskgraph_region_t *__kmp_taskgraph_carve_irreducible(
     kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
-    kmp_taskgraph_region_t **&alloc_chain,
-    kmp_taskgraph_region_t *cloned_nodes[], kmp_taskgraph_region_t *orig_region,
-    kmp_taskgraph_region_t *doms[], kmp_taskgraph_region_dep_t *preds_with_dom,
-    kmp_taskgraph_region_t *region_dom,
-    kmp_taskgraph_region_t ***added_worklist) {
-  for (kmp_taskgraph_region_dep_t *pred = preds_with_dom; pred;
-       pred = pred->next) {
-    kmp_taskgraph_region_t *pred_region = pred->region;
-    if (pred_region == region_dom) {
-      // NOTE: Adding the new subgraph entry point as a new successor for the
-      // dominating block is done in the successor-adding post-pass.
-      pred->region = region_dom;
-    } else {
-      // If we've already processed this predecessor, move on.
-      if (cloned_nodes[pred_region->timestamp]) {
-        pred->region = cloned_nodes[pred_region->timestamp];
-        continue;
-      }
-      kmp_taskgraph_region_t *cloned_region = __kmp_taskgraph_region_clone(
-          thread, taskgraph, alloc_chain, pred_region, nullptr);
-      cloned_nodes[pred_region->timestamp] = cloned_region;
+    kmp_taskgraph_region_t **&alloc_chain, kmp_taskgraph_region_t *entryregion,
+    kmp_taskgraph_region_t *exitregion, kmp_taskgraph_region_t **members,
+    kmp_int32 num_children) {
+  auto *irr = __kmp_taskgraph_region_alloc(thread, taskgraph, alloc_chain,
+                                           TASKGRAPH_REGION_IRREDUCIBLE,
+                                           num_children, nullptr);
 
-      **added_worklist = cloned_region;
-      *added_worklist = &cloned_region->next;
+  for (kmp_int32 c = 0; c < num_children; c++) {
+    kmp_taskgraph_region_t *r = members[c];
+    irr->inner.children[c] = r;
+    r->mark = TASKGRAPH_COMBINED;
+    r->parent = irr;
+    // We've clobbered level info already: this isn't valid now, so don't
+    // pretend it is.
+    r->level = -1;
 
-      pred->region = cloned_region;
-      // Now make a copy of the predecessor list and call ourselves recursively.
-      kmp_taskgraph_region_dep_t *cloned_preds = nullptr;
-      for (kmp_taskgraph_region_dep_t *p = pred_region->predecessors; p;
-           p = p->next) {
-        cloned_preds = __kmp_region_deplist_add(
-            thread, &taskgraph->recycled_deps, p->region, cloned_preds);
+    // Drop the child's edges to the entry/exit sentinels; intra-kernel edges
+    // (to other children) are kept as the irreducible region's structure.
+    kmp_taskgraph_region_dep_t **predp = &r->predecessors;
+    while (*predp) {
+      if ((*predp)->region == entryregion) {
+        kmp_taskgraph_region_dep_t *dead = *predp;
+        *predp = dead->next;
+        __kmp_region_dep_recycle(&taskgraph->recycled_deps, dead);
+      } else {
+        predp = &(*predp)->next;
       }
-      cloned_region->predecessors = cloned_preds;
-      // Note pred_region is the original predecessor region here, not the
-      // newly-cloned one.
-      __kmp_taskgraph_clone_subgraph(thread, taskgraph, alloc_chain,
-                                     cloned_nodes, pred_region, doms,
-                                     cloned_preds, region_dom, added_worklist);
+    }
+    kmp_taskgraph_region_dep_t **succp = &r->successors;
+    while (*succp) {
+      if ((*succp)->region == exitregion) {
+        kmp_taskgraph_region_dep_t *dead = *succp;
+        *succp = dead->next;
+        __kmp_region_dep_recycle(&taskgraph->recycled_deps, dead);
+      } else {
+        succp = &(*succp)->next;
+      }
     }
   }
+  irr->level = -1;
+
+  // Bracket the kernel: entry -> irr -> exit (collapse the fan-in/out into a
+  // single edge each way).  Because the region is SESE, every successor of the
+  // entry leads into the interior and every predecessor of the exit comes from
+  // the interior, so replacing those lists wholesale is safe.
+  __kmp_region_deplist_recycle(&taskgraph->recycled_deps,
+                               entryregion->successors);
+  entryregion->successors =
+      __kmp_region_deplist_add(thread, &taskgraph->recycled_deps, irr, nullptr);
+  __kmp_region_deplist_recycle(&taskgraph->recycled_deps,
+                               exitregion->predecessors);
+  exitregion->predecessors =
+      __kmp_region_deplist_add(thread, &taskgraph->recycled_deps, irr, nullptr);
+  irr->predecessors = __kmp_region_deplist_add(
+      thread, &taskgraph->recycled_deps, entryregion, nullptr);
+  irr->successors = __kmp_region_deplist_add(thread, &taskgraph->recycled_deps,
+                                             exitregion, nullptr);
+
+  // Splice the irreducible region into the worklist right after the entry
+  // sentinel; the now-COMBINED children are pruned by the caller's next pass.
+  irr->next = entryregion->next;
+  entryregion->next = irr;
+  return irr;
+}
+
+// Decompose the irreducible residual into its nested single-entry / single-exit
+// (SESE) regions using immediate dominators and postdominators, and carve each
+// minimal (leaf) SESE region into its own IRREDUCIBLE node.  Only the genuine
+// non-series-parallel knots become IRREDUCIBLE; the surrounding reducible /
+// reduction structure is left for the series/parallel collapse to handle on a
+// subsequent pass of the build loop.  Returns true if at least one region was
+// carved.
+//
+// On a DAG with a single source (ENTRY) and single sink (EXIT), a pair
+// (entry, exit) bounds a canonical SESE region iff exit = ipdom[entry] and
+// entry = idom[exit].  Read: every path leaving the entry reconverges at the
+// (single) exit and every path reaching the exit comes through the (single)
+// entry, so everything strictly between the entry and exit is enterable
+// only via the entry and leavable only via the exit.  These pairs form a
+// laminar (properly nested) family; a leaf is one whose interior contains no
+// other pair's entry.
+//
+// After the series/parallel collapse and the transitive-drop / twin-merge
+// passes have run to fixpoint, any surviving leaf region is genuinely
+// irreducible -- a clean series/parallel interior would already have been
+// collapsed -- so carving leaves is exactly right and preserves everything
+// reducible around the knots.
+
+static bool __kmp_taskgraph_carve_sese(kmp_info_t *thread,
+                                       kmp_taskgraph_record_t *taskgraph,
+                                       kmp_taskgraph_region_t **&alloc_chain,
+                                       kmp_taskgraph_region_t **order,
+                                       kmp_taskgraph_region_t **idom,
+                                       kmp_int32 worklist_length,
+                                       kmp_taskgraph_region_t *exitregion) {
+  kmp_int32 n = worklist_length;
+
+  // At the start, we already have immediate-dominator information.  The
+  // 'order' array points to regions in reverse postorder, and each region
+  // has a timestamp field that contains its own index in that array.
+  // The 'idom' array is indexed by reverse-postorder (i.e. the region's
+  // timestamp field), which means we should copy that timestamp field before
+  // the second (post) dominator-finding calls below.  We're not otherwise
+  // using the level field at this point.
+  for (kmp_int32 i = 0; i < n; i++) {
+    order[i]->level = order[i]->timestamp;
+  }
+
+  // Compute immediate postdominators.  Mirror the dominator setup: DFS from the
+  // EXIT sentinel following predecessors so the exit lands at index n-1, then
+  // run the same dominator solver in postdom mode (which walks successors).
+  // Reset marks first: after the dominator solve every region is PERMANENT, but
+  // region_dfs only recurses into UNMARKED neighbours.
+  kmp_taskgraph_region_t **order_pd =
+      (kmp_taskgraph_region_t **)__kmp_fast_allocate(
+          thread, n * sizeof(kmp_taskgraph_region_t *));
+  kmp_taskgraph_region_t **ipdom =
+      (kmp_taskgraph_region_t **)__kmp_fast_allocate(
+          thread, n * sizeof(kmp_taskgraph_region_t *));
+  memset(ipdom, 0, n * sizeof(kmp_taskgraph_region_t *));
+  for (kmp_int32 i = 0; i < n; i++)
+    order[i]->mark = TASKGRAPH_UNMARKED;
+  kmp_int32 cursor = n;
+  __kmp_taskgraph_region_dfs(exitregion, order_pd, cursor, /*use_preds=*/true);
+  assert(cursor == 0);
+  __kmp_taskgraph_region_doms(order_pd, ipdom, n, /*postdom=*/true);
+
+#ifdef DEBUG_TASKGRAPH
+  fprintf(stderr, "digraph {\n");
+  for (kmp_int32 i = 0; i < worklist_length; i++) {
+    kmp_taskgraph_region_t *b = order[i];
+    for (kmp_taskgraph_region_dep_t *succ = b->successors; succ;
+         succ = succ->next) {
+      fprintf(stderr, "  \"%d\" -> \"%d\"\n", b->timestamp,
+              succ->region->timestamp);
+    }
+    fprintf(stderr, "  \"%d\" -> \"%d\" [color=green, constraint=false]\n",
+            b->timestamp, idom[b->timestamp]->timestamp);
+    fprintf(stderr, "  \"%d\" -> \"%d\" [color=red, constraint=false]\n",
+            b->timestamp, ipdom[b->timestamp]->timestamp);
+  }
+  fprintf(stderr, "}\n");
+#endif
+
+  auto dominates = [&](kmp_taskgraph_region_t *a,
+                       kmp_taskgraph_region_t *b) -> bool {
+    kmp_taskgraph_region_t *cur = b;
+    while (true) {
+      // A node dominates itself.
+      if (cur == a)
+        return true;
+      kmp_taskgraph_region_t *anc = idom[cur->level];
+      // We've reached the entry node without encountering 'a':
+      // 'a' does not dominate 'b'.
+      if (anc == cur)
+        return false;
+      cur = anc;
+    }
+  };
+  auto postdominates = [&](kmp_taskgraph_region_t *a,
+                           kmp_taskgraph_region_t *b) -> bool {
+    kmp_taskgraph_region_t *cur = b;
+    while (true) {
+      // A node postdominates itself.
+      if (cur == a)
+        return true;
+      kmp_taskgraph_region_t *anc = ipdom[cur->timestamp];
+      // We've reached the exit node without encountering 'a':
+      // 'a' does not postdominate 'b'.
+      if (anc == cur)
+        return false;
+      cur = anc;
+    }
+  };
+
+  // Matched SESE pairs: matched[i] is pdom(i) if matched[i] starts the SESE
+  // region and pdom(i) ends it.
+  kmp_taskgraph_region_t **matched =
+      (kmp_taskgraph_region_t **)__kmp_fast_allocate(
+          thread, n * sizeof(kmp_taskgraph_region_t *));
+  for (kmp_int32 i = 0; i < n; i++) {
+    matched[i] = nullptr;
+    kmp_taskgraph_region_t *region = order[i];
+    kmp_taskgraph_region_t *pdom = ipdom[region->timestamp];
+    // Only true for exit region.
+    if (region == pdom)
+      continue;
+    if (idom[pdom->level] == region)
+      matched[i] = pdom;
+  }
+
+  // Carve every leaf pair with a non-empty interior.  Leaves are vertex-
+  // disjoint and each carve only rewires edges incident to its own interior,
+  // so carving them all in one pass is safe.  Membership uses the pre-carve
+  // idom/ipdom relations, which the carve does not modify.
+  bool carved = false;
+  kmp_taskgraph_region_t **members =
+      (kmp_taskgraph_region_t **)__kmp_fast_allocate(
+          thread, n * sizeof(kmp_taskgraph_region_t *));
+  for (kmp_int32 i = 0; i < n; i++) {
+    if (!matched[i])
+      continue;
+    kmp_taskgraph_region_t *entry = order[i];
+    kmp_taskgraph_region_t *exit = matched[i];
+
+    // Leaf test: no other matched pair's entry lies strictly inside
+    // (entry, exit).
+    bool is_leaf = true;
+    for (kmp_int32 k = 0; k < n && is_leaf; k++) {
+      if (k == i || !matched[k])
+        continue;
+      kmp_taskgraph_region_t *region = order[k];
+      if (region == entry || region == exit)
+        continue;
+      if (dominates(entry, region) && postdominates(exit, region))
+        is_leaf = false;
+    }
+    if (!is_leaf)
+      continue;
+
+    // Gather the interior: nodes dominated by entry and postdominated by exit,
+    // other than the boundary sentinels (and skipping anything already carved).
+    kmp_int32 num_members = 0;
+    for (kmp_int32 m = 0; m < n; m++) {
+      kmp_taskgraph_region_t *region = order[m];
+      if (region == entry || region == exit ||
+          region->mark == TASKGRAPH_COMBINED)
+        continue;
+      if (dominates(entry, region) && postdominates(exit, region)) {
+        TGDBG("carving member: %d\n", region->timestamp);
+        members[num_members++] = region;
+      }
+    }
+    if (num_members == 0)
+      continue;
+
+    TGDBG("carving %d nodes from %d to %d\n", num_members, entry->timestamp,
+          exit->timestamp);
+    __kmp_taskgraph_carve_irreducible(thread, taskgraph, alloc_chain, entry,
+                                      exit, members, num_members);
+    carved = true;
+  }
+
+  __kmp_fast_free(thread, members);
+  __kmp_fast_free(thread, matched);
+  __kmp_fast_free(thread, ipdom);
+  __kmp_fast_free(thread, order_pd);
+  return carved;
 }
 
 /// This function uses several strategies to turn an irreducible taskgraph
 /// into a reducible taskgraph.
 //
 // 1. If a node C depends on node B and also node A which dominates C,
-//    and if B is also dominated by C, then the dependency of C on A can be
-//    dropped.  That is, we know B must execute after A, so we can say
-//    execution must proceed A->B->C, and we don't also need to specify the
-//    transitive A->C dependency directly.
+//    and if B also dominates C, then the dependency of C on A can be dropped.
+//    That is, we know B must execute after A, so we can say execution must
+//    proceed A->B->C, and we don't also need to specify the transitive A->C
+//    dependency directly.
 //
 //            A          A
 //           / \         |
@@ -1735,44 +1850,19 @@ static void __kmp_taskgraph_clone_subgraph(
 //       \       /                                 |
 //        '--F--'                                  F
 //
-// 3. We find a node with >1 predecessor R, and group those predecessors by
-//    their immediate dominators.  There are two subcases from here.
-//
-// 3a. If there is more than one group of predecessors (more than one
-//     dominator), we pick the dominator with the highest topological-sort
-//     level, and we clone the subgraph from that dominator to R.
-//
-// 3b. If all predecessors share a single dominator, we instead pick the
-//     predecessor with the highest incoming/outgoing edge count, and we clone
-//     the subgraph from that predecessor to the dominator.
-//
-// For details of how the subgraph cloning works, see the commentary for
-// __kmp_taskgraph_clone_subgraph.
-//
-// In this way, irreducible edges are gradually "teased apart", and the graph
-// thus becomes reducible.
-//
-// Cloning the subgraph means that task nodes can appear more than once in the
-// taskgraph (multiple "instantiations").  The way this should be handled is
-// left to later stages of execution, allowing for runtime or API-specific
-// techniques to be used.
-//
-// Say the resulting graph clones a node N into N1 and N2.  Now:
-//
-//  - All of N1's predecessors and all of N2's predecessors must execute before
-//    either N1 or N2 execute.
-//  - Only N1 or N2 should execute, not both.
-//  - All of N1's, and all of N2's, successors should execute after either N1
-//    or N2 executes.
-//
-// For host execution, this is handled by __kmp_exec_descr_link_instances, etc.
+// 3. Otherwise the residual is genuinely non-series-parallel (no series,
+//    parallel, transitive-drop or twin merge applies).  We decompose the
+//    residual into its nested single-entry / single-exit (SESE) regions via
+//    immediate dominators/postdominators (__kmp_taskgraph_carve_sese) and
+//    carve only the minimal (leaf) irreducible regions into
+//    TASKGRAPH_REGION_IRREDUCIBLE nodes.  See the commentary on
+//    __kmp_taskgraph_carve_sese and __kmp_taskgraph_carve_irreducible.
 
 static bool __kmp_taskgraph_rewrite_irreducible(
     kmp_info_t *thread, kmp_taskgraph_record_t *taskgraph,
-    kmp_taskgraph_region_t **alloc_chain, kmp_taskgraph_region_t **region_p,
+    kmp_taskgraph_region_t **&alloc_chain, kmp_taskgraph_region_t **region_p,
     kmp_taskgraph_region_t *exitregion) {
   kmp_taskgraph_region_t *entryregion = *region_p;
-  bool changed = false;
 
   kmp_int32 worklist_length = 0;
   for (kmp_taskgraph_region_t *r = entryregion; r; r = r->next) {
@@ -1802,27 +1892,6 @@ static bool __kmp_taskgraph_rewrite_irreducible(
   __kmp_taskgraph_region_dfs(entryregion, order, cursor, false);
   assert(cursor == 0);
   __kmp_taskgraph_region_doms(order, doms, worklist_length, false);
-
-#ifdef DEBUG_TASKGRAPH
-  fprintf(stderr, "digraph {\n");
-  for (kmp_int32 i = 0; i < worklist_length; i++) {
-    kmp_taskgraph_region_t *b = order[i];
-    for (kmp_taskgraph_region_dep_t *succ = b->successors; succ;
-         succ = succ->next) {
-      fprintf(stderr, "  \"%d\" -> \"%d\"\n", b->timestamp,
-              succ->region->timestamp);
-    }
-    fprintf(stderr, "  \"%d\" -> \"%d\" [color=green, constraint=false]\n",
-            b->timestamp, doms[b->timestamp]->timestamp);
-  }
-  fprintf(stderr, "}\n");
-#endif
-
-  // Irreducible regions are handled by duplicating regions, and those new
-  // regions need adding to the worklist.  The added_worklist variable stores
-  // the head of the new work to be added.
-  kmp_taskgraph_region_t *added_worklist = nullptr;
-  kmp_taskgraph_region_t **added_worklist_p = &added_worklist;
 
   bool dropped_preds_p = false;
 
@@ -1882,8 +1951,11 @@ static bool __kmp_taskgraph_rewrite_irreducible(
     }
   }
 
-  if (dropped_preds_p)
+  if (dropped_preds_p) {
+    __kmp_fast_free(thread, order);
+    __kmp_fast_free(thread, doms);
     return true;
+  }
 
   kmp_bitset_t **pred_bitsets = nullptr;
   kmp_bitset_t **succ_bitsets = nullptr;
@@ -1903,11 +1975,6 @@ static bool __kmp_taskgraph_rewrite_irreducible(
       for (pred = region->predecessors; pred; pred = pred->next) {
         kmp_taskgraph_region_t *pred_region = pred->region;
         kmp_taskgraph_region_t *this_dom = doms[pred_region->timestamp];
-#ifdef DEBUG_TASKGRAPH
-        kmp_int32 edges_to_dom =
-            __kmp_taskgraph_count_edges_to_dominator(pred_region, this_dom);
-        TGDBG("this pred: %p, edges_to_dom=%d\n", pred_region, edges_to_dom);
-#endif
         bool found = false;
         for (kmp_int32 grp = 0; grp < num_groups; grp++) {
           if (dom_groups[grp].dom == this_dom) {
@@ -1975,7 +2042,7 @@ static bool __kmp_taskgraph_rewrite_irreducible(
           kmp_taskgraph_region_type region_type =
               any_mutex_p ? TASKGRAPH_REGION_EXCLUSIVE
                           : TASKGRAPH_REGION_PARALLEL;
-          kmp_taskgraph_region_t *par_region = __kmp_taskgraph_region_alloc(
+          auto *par_region = __kmp_taskgraph_region_alloc(
               thread, taskgraph, alloc_chain, region_type, same_preds_and_succs,
               nullptr);
           par_region->inner.children[0] = region;
@@ -2058,173 +2125,8 @@ static bool __kmp_taskgraph_rewrite_irreducible(
           regions_combined_p = true;
         }
       }
-
-      if (regions_combined_p)
-        continue;
-
-      assert(num_groups >= 1);
-
-      TGDBG("should split region %p (%d)\n", region, region->timestamp);
-      TGDBG("clone graph to dominator: %p (%d, %s)\n", doms[region->timestamp],
-            doms[region->timestamp]->timestamp,
-            __kmp_taskgraph_region_type_name(doms[region->timestamp]->type));
-      kmp_taskgraph_region_t *region_dom = doms[region->timestamp];
-      kmp_int32 grp = -1;
-      kmp_int32 highest_dom = -1;
-      // Choose a dominator.  We pick one with the highest level, i.e.
-      // with the largest chain of dependents.  Anything we pick should
-      // be irreducible, because we've already tried the serial-parallel
-      // decomposition.
-      for (kmp_int32 j = 0; j < num_groups; j++) {
-        if (dom_groups[j].dom->level > highest_dom) {
-          grp = j;
-          highest_dom = dom_groups[j].dom->level;
-        }
-      }
-
-      // Separate out the predecessors with this dominator (identified by
-      // grp).
-      kmp_taskgraph_region_dep_t *preds_with_dom = nullptr;
-      kmp_taskgraph_region_dep_t **pwd_tail = &preds_with_dom;
-      kmp_taskgraph_region_dep_t **pred_cursor = &region->predecessors;
-      TGDBG("before splitting we have %d preds\n",
-            __kmp_region_deplist_len(region->predecessors));
-      while (*pred_cursor) {
-        kmp_taskgraph_region_dep_t *this_pred = *pred_cursor;
-        kmp_taskgraph_region_t *dom = doms[this_pred->region->timestamp];
-        if (dom == dom_groups[grp].dom) {
-          *pwd_tail = this_pred;
-          pwd_tail = &this_pred->next;
-          *pred_cursor = this_pred->next;
-        } else {
-          pred_cursor = &this_pred->next;
-        }
-      }
-      // Finish list.
-      *pwd_tail = nullptr;
-
-      if (!region->predecessors) {
-        kmp_int32 highest = -1;
-        kmp_taskgraph_region_dep_t **use_pred = nullptr;
-        // This can only happen if...
-        assert(num_groups == 1);
-        region->predecessors = preds_with_dom;
-        for (kmp_taskgraph_region_dep_t **rp = &region->predecessors; *rp;
-             rp = &(*rp)->next) {
-          kmp_int32 count = __kmp_taskgraph_count_edges_to_dominator(
-              (*rp)->region, dom_groups[grp].dom);
-          TGDBG("for pred %p, outgoing edges to dom = %d\n", (*rp)->region,
-                count);
-          if (count > highest) {
-            highest = count;
-            use_pred = rp;
-          }
-        }
-        TGDBG("using pred %p\n", (*use_pred)->region);
-        // Pick the single predecessor with the largest outgoing edge
-        // count (the "most complicated" predecessor).
-        preds_with_dom = *use_pred;
-        *use_pred = (*use_pred)->next;
-        preds_with_dom->next = nullptr;
-      }
-
-      kmp_taskgraph_region_dep_t *unlinked_successors = nullptr;
-
-      // Unlink successors for preds_with_dom nodes, and record where they
-      // came from.
-      for (pred = preds_with_dom; pred; pred = pred->next) {
-        kmp_taskgraph_region_dep_t **succp = &pred->region->successors;
-        while (*succp) {
-          kmp_taskgraph_region_dep_t *succ = *succp;
-          kmp_taskgraph_region_t *succ_region = succ->region;
-          if (succ_region == region) {
-            kmp_taskgraph_region_dep_t *next = succ->next;
-            __kmp_region_dep_recycle(&taskgraph->recycled_deps, succ);
-            TGDBG("unlinking successor %p -> %p\n", pred->region, region);
-            unlinked_successors =
-                __kmp_region_deplist_add(thread, &taskgraph->recycled_deps,
-                                         pred->region, unlinked_successors);
-            *succp = next;
-          } else {
-            succp = &succ->next;
-          }
-        }
-      }
-
-      TGDBG("after splitting, # preds_with_dom=%d, others %d\n",
-            __kmp_region_deplist_len(preds_with_dom),
-            __kmp_region_deplist_len(region->predecessors));
-      *pwd_tail = nullptr;
-      kmp_taskgraph_region_t *cloned_nodes[worklist_length];
-      memset(cloned_nodes, 0,
-             sizeof(kmp_taskgraph_region_t *) * worklist_length);
-      __kmp_taskgraph_clone_subgraph(thread, taskgraph, alloc_chain,
-                                     cloned_nodes, region, doms, preds_with_dom,
-                                     region_dom, &added_worklist_p);
-      // Now fill in the successors for the cloned regions.
-      for (kmp_int32 n = 0; n < worklist_length; n++) {
-        kmp_taskgraph_region_t *cloned_region = cloned_nodes[n];
-        if (!cloned_region)
-          continue;
-        for (kmp_taskgraph_region_dep_t *pred = cloned_region->predecessors;
-             pred; pred = pred->next) {
-          kmp_taskgraph_region_t *pred_region = pred->region;
-          pred_region->successors =
-              __kmp_region_deplist_add(thread, &taskgraph->recycled_deps,
-                                       cloned_region, pred_region->successors);
-        }
-      }
-
-#ifdef DEBUG_TASKGRAPH
-      TGDBG("before appending:\n");
-      for (pred = region->predecessors; pred; pred = pred->next) {
-        TGDBG("region %p, pred: %p\n", region, pred);
-      }
-#endif
-
-      // Re-attach redirected predecessor list to region's predecessors.
-      pred = region->predecessors;
-      if (pred) {
-        while (pred && pred->next)
-          pred = pred->next;
-        pred->next = preds_with_dom;
-      } else {
-        region->predecessors = preds_with_dom;
-      }
-
-#ifdef DEBUG_TASKGRAPH
-      TGDBG("after appending:\n");
-      for (pred = region->predecessors; pred; pred = pred->next) {
-        TGDBG("region %p, pred: %p\n", region, pred);
-      }
-#endif
-
-      // Redirect the unlinked successors from the region's original
-      // predecessors so that the new (cloned) predecessors still point to
-      // the region.
-      for (kmp_taskgraph_region_dep_t *succ = unlinked_successors; succ;) {
-        kmp_taskgraph_region_t *cloned_reg =
-            cloned_nodes[succ->region->timestamp];
-        kmp_taskgraph_region_dep_t *next = succ->next;
-        __kmp_region_dep_recycle(&taskgraph->recycled_deps, succ);
-        TGDBG("add successor to cloned region: %p -> %p\n", cloned_reg, region);
-        cloned_reg->successors = __kmp_region_deplist_add(
-            thread, &taskgraph->recycled_deps, region, cloned_reg->successors);
-        succ = next;
-      }
-
-      // Cloning subgraph invalidates e.g. the timestamp fields: just do
-      // one round of transformation.  We could possibly do more if we
-      // were careful.
-
-      changed = true;
     }
-    if (changed)
-      break;
   }
-
-  if (regions_combined_p)
-    changed = true;
 
   if (pred_bitsets) {
     for (kmp_int32 j = 0; j < worklist_length; j++) {
@@ -2235,94 +2137,29 @@ static bool __kmp_taskgraph_rewrite_irreducible(
     __kmp_fast_free(thread, succ_bitsets);
   }
 
-  *added_worklist_p = nullptr;
-  added_worklist = __kmp_region_worklist_reverse(added_worklist);
-
-  kmp_taskgraph_region_t *last = exitregion;
-  while (last && last->next)
-    last = last->next;
-  last->next = added_worklist;
-
-  TGDBG("starting trim dead edges...\n");
-
-  for (kmp_taskgraph_region_t *r = entryregion; r; r = r->next) {
-    r->mark = TASKGRAPH_UNMARKED;
+  // Case 2 made progress: let the build loop re-run the series/parallel
+  // collapse before we look at irreducibility again.
+  if (regions_combined_p) {
+    __kmp_fast_free(thread, order);
+    __kmp_fast_free(thread, doms);
+    return true;
   }
 
-  // Remove any regions which are now unreachable by DFS from the exit
-  // region, and any connected dependency edges.
-  int idx = 0;
-  __kmp_taskgraph_region_dfs(exitregion, nullptr, idx, true);
-  for (kmp_taskgraph_region_t *r = entryregion; r; r = r->next) {
-    if (r->mark == TASKGRAPH_UNMARKED) {
-      r->mark = TASKGRAPH_DELETED;
+  // Case 3: neither the transitive drop nor the twin merge applied, so the
+  // residual is genuinely irreducible.  Decompose it into nested SESE regions
+  // and carve only the minimal (leaf) irreducible ones, leaving any reducible
+  // structure (and its reductions) around the knots for the series/parallel
+  // collapse to pick up on the next pass.  Each carve replaces a knot with a
+  // single IRREDUCIBLE atom (fewer live regions), so the build loop makes
+  // monotone progress and terminates.
+  bool carved = __kmp_taskgraph_carve_sese(
+      thread, taskgraph, alloc_chain, order, doms, worklist_length, exitregion);
 
-      __kmp_region_deplist_recycle(&taskgraph->recycled_deps, r->successors);
-      r->successors = nullptr;
+  assert(carved);
 
-      // Delete predecessors for deleted nodes (and corresponding
-      // successors).
-      kmp_taskgraph_region_dep_t **predp = &r->predecessors;
-      while (*predp) {
-        kmp_taskgraph_region_dep_t *pred = *predp;
-        if (pred->region->mark != TASKGRAPH_UNMARKED) {
-          kmp_taskgraph_region_dep_t **succp = &pred->region->successors;
-          while (*succp) {
-            kmp_taskgraph_region_dep_t *succ = *succp;
-            if (succ->region == r) {
-              kmp_taskgraph_region_dep_t *next = succ->next;
-              __kmp_region_dep_recycle(&taskgraph->recycled_deps, succ);
-              *succp = next;
-            } else {
-              succp = &succ->next;
-            }
-          }
-        }
-        kmp_taskgraph_region_dep_t *next = pred->next;
-        __kmp_region_dep_recycle(&taskgraph->recycled_deps, pred);
-        *predp = next;
-      }
-    }
-  }
-
-  TGDBG("done trimming dead edges.\n");
-
-  __kmp_taskgraph_region_chain_prune(&entryregion);
-  __kmp_taskgraph_region_worklist_check(thread, taskgraph, entryregion,
-                                        "after irreducible handling");
-
-  worklist_length = 0;
-  for (kmp_taskgraph_region_t *r = entryregion; r; r = r->next) {
-    r->mark = TASKGRAPH_UNMARKED;
-    worklist_length++;
-  }
-
-  // Recalculate topological sort
-  kmp_int32 max_level = -1;
-  kmp_taskgraph_region_t *r = entryregion;
-  kmp_int32 outidx = 0;
-  kmp_taskgraph_region_t *order_out[worklist_length];
-  for (kmp_int32 i = 0; i < worklist_length; i++, r = r->next) {
-    if (r->mark == TASKGRAPH_UNMARKED) {
-      kmp_int32 level =
-          __kmp_taskgraph_topological_order(r, order_out, &outidx);
-      max_level = level > max_level ? level : max_level;
-    }
-  }
-
-  // Re-sort worklist wrt. topological order calculated above.
-  kmp_taskgraph_region_t **relink = &entryregion;
-  for (kmp_int32 i = 0; i < worklist_length; i++) {
-    *relink = order_out[i];
-    relink = &order_out[i]->next;
-  }
-  *relink = nullptr;
-
-#ifdef DEBUG_TASKGRAPH
-  __kmp_taskgraph_region_dot(entryregion, "PredsAndSuccsAfter");
-#endif
-
-  return changed;
+  __kmp_fast_free(thread, order);
+  __kmp_fast_free(thread, doms);
+  return true;
 }
 
 /// Build a nested region structure out of a recorded taskgraph.
@@ -2415,41 +2252,16 @@ static kmp_taskgraph_region_t *__kmp_taskgraph_build_regions(
     changed |= __kmp_taskgraph_rewrite_irreducible(
         thread, taskgraph, alloc_chain, &entryregion, exitregion);
 
-    if (!changed) {
-      fprintf(stderr, "FIXME: Failed to transform irreducible graph\n");
+    // rewrite_irreducible always makes progress now: it either applies a safe
+    // reduction (transitive drop / twin merge) or carves a subgraph of the
+    // residual into a single IRREDUCIBLE region, so the loop is guaranteed to
+    // terminate.
+    KMP_DEBUG_ASSERT(changed);
+    if (!changed)
       return entryregion;
-    }
   }
 
   return entryregion;
-}
-
-static void __kmp_taskgraph_count_nodes(kmp_taskgraph_region_t *region) {
-  switch (region->type) {
-  case TASKGRAPH_REGION_ENTRY:
-  case TASKGRAPH_REGION_EXIT:
-    return;
-  case TASKGRAPH_REGION_NODE:
-  case TASKGRAPH_REGION_WAIT: {
-    TGDBG("process region %p\n", region);
-    region->task.node->u.resolved.count++;
-    kmp_taskgraph_region_t *last_region =
-        region->task.node->u.resolved.last_region;
-    TGDBG("last region: %p\n", last_region);
-    if (last_region) {
-      kmp_taskgraph_region_t *next = last_region->task.next_instance;
-      TGDBG("next: %p\n", next);
-      last_region->task.next_instance = region;
-      region->task.next_instance = next;
-    }
-    region->task.node->u.resolved.last_region = region;
-    return;
-  }
-  default:
-    for (kmp_int32 n = 0; n < region->inner.num_children; n++) {
-      __kmp_taskgraph_count_nodes(region->inner.children[n]);
-    }
-  }
 }
 
 static void __kmp_taskgraph_gather_mutex_sets(kmp_info_t *thread,
@@ -2553,7 +2365,10 @@ static void __kmp_taskgraph_find_exclusive_regions(
   case TASKGRAPH_REGION_WAIT:
     break;
   case TASKGRAPH_REGION_SEQUENTIAL:
-  case TASKGRAPH_REGION_PARALLEL: {
+  case TASKGRAPH_REGION_PARALLEL:
+  // A carved irreducible region is a structural container: it has no mutex set
+  // of its own, but its children may, so recurse like the other containers.
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
     for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
       __kmp_taskgraph_find_exclusive_regions(thread, taskgraph, alloc_chain,
                                              &region->inner.children[c]);
@@ -2650,9 +2465,10 @@ static void __kmp_taskgraph_find_exclusive_regions(
       if (region->inner.num_children == combined_children + 1) {
         region->type = TASKGRAPH_REGION_EXCLUSIVE;
       } else {
-        kmp_taskgraph_region_t *new_par = __kmp_taskgraph_region_alloc(
+        kmp_int32 par_elems = region->inner.num_children - combined_children;
+        auto *new_par = __kmp_taskgraph_region_alloc(
             thread, taskgraph, alloc_chain, TASKGRAPH_REGION_PARALLEL,
-            region->inner.num_children - combined_children, nullptr);
+            par_elems, nullptr);
         for (kmp_int32 c = region->inner.num_children - 1; c >= 0; c--) {
           kmp_taskgraph_region_t *child = region->inner.children[c];
           // Make mutex set into a circular list.
@@ -2681,7 +2497,7 @@ static void __kmp_taskgraph_find_exclusive_regions(
               next = next->mutexset_parent;
             } while (next != child);
             TGDBG("make exclusive region with %d children\n", elems);
-            kmp_taskgraph_region_t *excl_region = __kmp_taskgraph_region_alloc(
+            auto *excl_region = __kmp_taskgraph_region_alloc(
                 thread, taskgraph, alloc_chain, TASKGRAPH_REGION_EXCLUSIVE,
                 elems, nullptr);
             kmp_int32 excl_child = 0;
@@ -2801,7 +2617,6 @@ __kmp_taskgraph_region_type_name(kmp_taskgraph_region_type type) {
   }
 }
 
-#if defined(KMP_DEBUG) || defined(DEBUG_TASKGRAPH)
 static void __kmp_dump_taskgraph_regions(FILE *f,
                                          kmp_taskgraph_region_t *region,
                                          int indent = 0) {
@@ -2819,14 +2634,9 @@ static void __kmp_dump_taskgraph_regions(FILE *f,
               (unsigned long long)region->mutexset->bits[0]);
     else
       strcpy(set_membership, "");
-    if (region->task.node->u.resolved.count > 1)
-      fprintf(f, "%*s%s: %p (* %d)%s\n", indent, "",
-              __kmp_taskgraph_region_type_name(region->type), region->task.node,
-              region->task.node->u.resolved.count, set_membership);
-    else
-      fprintf(f, "%*s%s: %p%s\n", indent, "",
-              __kmp_taskgraph_region_type_name(region->type), region->task.node,
-              set_membership);
+    fprintf(f, "%*s%s: %p%s\n", indent, "",
+            __kmp_taskgraph_region_type_name(region->type), region->task.node,
+            set_membership);
     break;
   }
   default: {
@@ -2845,7 +2655,6 @@ static void __kmp_dump_taskgraph_regions(FILE *f,
   }
   }
 }
-#endif
 
 #ifdef DEBUG_TASKGRAPH
 
@@ -2913,6 +2722,14 @@ static void __kmp_dump_raw_taskgraph_regions(FILE *f, kmp_info *thd,
   }
 }
 #endif
+
+bool __kmp_taskgraph_trace() {
+  static int trace_enabled = -1;
+  if (trace_enabled == -1) {
+    trace_enabled = getenv("KMP_TASKGRAPH_TRACE") != nullptr;
+  }
+  return trace_enabled;
+}
 
 /// Build a nested region structure from a "raw" recorded taskgraph, and mark
 /// the taskgraph ready for replay.
@@ -2994,50 +2811,73 @@ static void __kmp_dump_raw_taskgraph_regions(FILE *f, kmp_info *thd,
 //
 // The final two tasks overlap data dependencies in such a way that the
 // resulting dependency graph cannot be trivially decomposed to parallel and
-// sequential regions.  In this case, the graph is handled by duplicating task
-// nodes so they appear in more than one place in the resulting nested region
-// structure:
+// sequential regions.  In this case the whole graph is reduced to an
+// irreducible region:
 //
-// parallel {
-//   sequential {
-//     parallel {
-//       sequential {
-//         node: 0x61bfca8ecfd8 (* 2)
-//         node: 0x61bfca8ed050 (* 2)
-//       }
-//       sequential {
-//         node: 0x61bfca8ed000 (* 2)
-//         node: 0x61bfca8ed078 (* 2)
-//       }
-//     }
-//     node: 0x61bfca8ed0f0
-//   }
-//   sequential {
-//     parallel {
-//       sequential {
-//         node: 0x61bfca8ed000 (* 2)
-//         parallel {
-//           node: 0x61bfca8ed0a0
-//           node: 0x61bfca8ed078 (* 2)
-//         }
-//       }
-//       sequential {
-//         node: 0x61bfca8ecfd8 (* 2)
-//         parallel {
-//           node: 0x61bfca8ed050 (* 2)
-//           node: 0x61bfca8ed028
-//         }
-//       }
-//     }
-//     node: 0x61bfca8ed0c8
+// irreducible {
+//   node: 0x7803e00fb8d8
+//   node: 0x7803e00fb8a8
+//   node: 0x7803e00fb848
+//   node: 0x7803e00fb938
+//   node: 0x7803e00fb998
+//   node: 0x7803e00fb968
+//   node: 0x7803e00fb908
+//   node: 0x7803e00fb878
+// }
+//
+// If *part* of the graph is reducible, it should still be handled without
+// falling back to an irreducible region.  If we chnage the input as follows:
+//
+// #pragma omp taskgraph
+// {
+//   #pragma omp task depend(out: deps[0], deps[1])
+//   { }
+//   #pragma omp task depend(out: deps[2], deps[3])
+//   { }
+//   #pragma omp task depend(inout: deps[0])
+//   { }
+//   #pragma omp task depend(inout: deps[1])
+//   { }
+//   #pragma omp task depend(inout: deps[2])
+//   { }
+//   #pragma omp task depend(inout: deps[3])
+//   { }
+//   #pragma omp task depend(in: deps[0], deps[1], deps[2], deps[3])
+//   { }
+//   #pragma omp task depend(in: deps[1], deps[2])
+//   { }
+//   int res = 0;
+//   #pragma omp taskloop reduction(+: res) num_tasks(4)
+//   {
+//     for (int i = 0; i < 16; i++)
+//       res += i;
 //   }
 // }
 //
-// The "(* 2)" markers show that the task node appears "instantiated" in that
-// number of places in the graph.  Care must be taken at replay time that all
-// nodes preceding a multiply-instantiated node execute before the node, and
-// that all nodes succeeding each "instantiation point" are executed once the
-// task has executed.
+// We will now see:
+//
+// irreducible {
+//   node: 0x58de797a9328
+//   node: 0x58de797a92f8
+//   node: 0x58de797a9298
+//   node: 0x58de797a9388
+//   node: 0x58de797a93e8
+//   node: 0x58de797a93b8
+//   node: 0x58de797a9358
+//   node: 0x58de797a92c8
+//   sequential {
+//     parallel {
+//       node: 0x58de797a94a8
+//       node: 0x58de797a9478
+//       node: 0x58de797a9448
+//       node: 0x58de797a9418
+//     }
+//     wait: 0x58de797a94d8
+//   }
+// }
+//
+// This is particularly important for reductions, which won't work with the
+// "unstructured" irreducible region.
 //
 // The final region type is "exclusive", which arises for "mutexinoutset"
 // dependencies that are able to be abstracted away (we can't do this in all
@@ -3143,7 +2983,6 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   kmp_taskgraph_region_t *initial_regions =
       (kmp_taskgraph_region_t *)__kmp_fast_allocate(
           thread, sizeof(kmp_taskgraph_region_t) * numregions);
-  // FIXME: Something like 'placement new' here?
   memset(initial_regions, 0, sizeof(kmp_taskgraph_region_t) * numregions);
 
   kmp_taskgraph_region_t *cfg_barrier = nullptr;
@@ -3152,7 +2991,6 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
     initial_regions[i].type =
         nodes[i].task ? TASKGRAPH_REGION_NODE : TASKGRAPH_REGION_WAIT;
     initial_regions[i].task.node = &nodes[i];
-    initial_regions[i].task.next_instance = &initial_regions[i];
     initial_regions[i].parent = nullptr;
     if (i < numnodes - 1) {
       initial_regions[i].next = &initial_regions[i + 1];
@@ -3200,12 +3038,9 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   __kmp_dephash_free<false>(thread, hash);
   __kmp_thread_free(thread, all_depnodes_misaligned);
 
-  // We're done with the "unresolved" data now.  Initialise node count.
-  for (kmp_int32 i = 0; i < numnodes; i++) {
+  // We're done with the "unresolved" data now.
+  for (kmp_int32 i = 0; i < numnodes; i++)
     __kmp_thread_free(thread, nodes[i].u.unresolved.dep_list);
-    nodes[i].u.resolved.last_region = nullptr;
-    nodes[i].u.resolved.count = 0;
-  }
 
   // Use these indices for the virtual entry and exit regions
   kmp_int32 entryregion = numnodes, exitregion = numnodes + 1;
@@ -3270,8 +3105,6 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
       thread, taskgraph, alloc_chain, &initial_regions[entryregion],
       &initial_regions[exitregion]);
 
-  __kmp_taskgraph_count_nodes(root_region);
-
   __kmp_taskgraph_exclusive_regions(thread, taskgraph, alloc_chain,
                                     &root_region, next_mutex_set);
 
@@ -3284,10 +3117,17 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   kmp_taskgraph_region_t **regp = &taskgraph->alloc_root;
   while (*regp) {
     kmp_taskgraph_region_t *reg = *regp;
-    __kmp_region_deplist_free(thread, reg->predecessors);
-    __kmp_region_deplist_free(thread, reg->successors);
-    reg->predecessors = nullptr;
-    reg->successors = nullptr;
+    // The direct children of a carved IRREDUCIBLE region keep their
+    // predecessor / successor lists alive.  They are freed at record teardown
+    // (__kmp_free_taskgraph_record).
+    bool keep_edges =
+        reg->parent && reg->parent->type == TASKGRAPH_REGION_IRREDUCIBLE;
+    if (!keep_edges) {
+      __kmp_region_deplist_free(thread, reg->predecessors);
+      __kmp_region_deplist_free(thread, reg->successors);
+      reg->predecessors = nullptr;
+      reg->successors = nullptr;
+    }
     if (reg->mark == TASKGRAPH_DELETED) {
       kmp_taskgraph_region_t *chain_next = reg->alloc_chain;
       TGDBG("deleted region from alloc chain: %p\n", reg);
@@ -3298,8 +3138,10 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
     }
   }
   // Free recycled dep list.  We could pass this along to the next invocation
-  // of this function instead, but we don't do that yet (ownership/thread
-  // safety needs careful consideration if we do that).
+  // of this function instead, but we *mostly* don't do that yet
+  // (ownership/thread safety needs careful consideration if we do that).
+  // The "mostly" concerns irreducible-region edges: we recycle those
+  // opportunistically in __kmp_free_taskgraph.
   for (kmp_taskgraph_region_dep_t *dep = taskgraph->recycled_deps; dep;) {
     kmp_taskgraph_region_dep_t *next = dep->next;
     TGDBG("free dep from recycled list\n");
@@ -3308,9 +3150,11 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   }
   taskgraph->recycled_deps = nullptr;
 
-  KG_TRACE(10, ("Processed taskgraph %p (graph_id %" PRIx64 "):\n", taskgraph,
-                taskgraph->graph_id));
-  KG_DUMP(10, __kmp_dump_taskgraph_regions(stderr, root_region));
+  if (__kmp_taskgraph_trace()) {
+    fprintf(stderr, "Processed taskgraph %p (graph_id %" PRIx64 "):\n",
+            taskgraph, taskgraph->graph_id);
+    __kmp_dump_taskgraph_regions(stderr, root_region);
+  }
 
 #ifdef DEBUG_TASKGRAPH
 //__kmp_dump_taskgraph_regions(stderr, root_region);

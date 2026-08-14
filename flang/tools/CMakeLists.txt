@@ -7,8 +7,11 @@
 #===------------------------------------------------------------------------===#
 
 add_subdirectory(bbc)
-add_subdirectory(f18)
 add_subdirectory(flang-driver)
+if (NOT FLANG_STANDALONE_BUILD)
+  # Mock flang only needed in bootstrapping builds
+  add_subdirectory(fakeflang)
+endif ()
 add_subdirectory(tco)
 add_subdirectory(f18-parse-demo)
 add_subdirectory(fir-opt)

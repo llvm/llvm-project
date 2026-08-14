@@ -17,7 +17,7 @@ class TestKernVerStrLCNOTE(TestBase):
         bugnumber="This test is looking explicitly for a dSYM",
     )
     @skipIf(archs=no_match(["x86_64"]))
-    @skipUnlessDarwin
+    @requireDarwin
     def test_lc_note(self):
         self.build()
         self.test_exe = self.getBuildArtifact("a.out")

@@ -453,7 +453,7 @@ protected:
         }
       }
 
-      ConstString lookup_type_name(type_str.c_str());
+      ConstString lookup_type_name(type_str);
       StackFrame *frame = m_exe_ctx.GetFramePtr();
       ModuleSP search_first;
       if (frame)
@@ -769,6 +769,7 @@ protected:
             result.GetOutputStream().Printf(
                 "%zi bytes %s to '%s'\n", bytes_written,
                 append ? "appended" : "written", path.c_str());
+            result.SetStatus(eReturnStatusSuccessFinishResult);
             return;
           } else {
             result.AppendErrorWithFormat("Failed to write %" PRIu64
@@ -820,6 +821,7 @@ protected:
           return;
         }
       }
+      result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
     }
 
@@ -1510,6 +1512,7 @@ protected:
         return;
       }
     }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
   OptionGroupOptions m_option_group;
@@ -1665,7 +1668,7 @@ protected:
   void DumpRegion(CommandReturnObject &result, Target &target,
                   const MemoryRegionInfo &range_info, lldb::addr_t load_addr) {
     lldb_private::Address addr;
-    ConstString section_name;
+    llvm::StringRef section_name;
     if (target.ResolveLoadAddress(load_addr, addr)) {
       SectionSP section_sp(addr.GetSection());
       if (section_sp) {
@@ -1682,7 +1685,7 @@ protected:
         range_info.GetRange().GetRangeBase(),
         range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
         range_info.GetWritable(), range_info.GetExecutable(), name ? " " : "",
-        name, section_name ? " " : "", section_name);
+        name, !section_name.empty() ? " " : "", section_name);
     LazyBool memory_tagged = range_info.GetMemoryTagged();
     if (memory_tagged == eLazyBoolYes)
       result.AppendMessage("memory tagging: enabled");

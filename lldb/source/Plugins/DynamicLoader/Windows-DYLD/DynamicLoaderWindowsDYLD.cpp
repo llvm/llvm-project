@@ -8,6 +8,7 @@
 
 #include "DynamicLoaderWindowsDYLD.h"
 
+#include "MSVCRTCFrameRecognizer.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -137,9 +138,11 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
 
+  RegisterMSVCRTCFrameRecognizer(m_process->GetTarget());
+
   ModuleSP executable = GetTargetExecutable();
 
-  if (!executable.get())
+  if (!executable)
     return;
 
   // Try to fetch the load address of the file from the process, since there
@@ -167,8 +170,10 @@ void DynamicLoaderWindowsDYLD::DidLaunch() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
 
+  RegisterMSVCRTCFrameRecognizer(m_process->GetTarget());
+
   ModuleSP executable = GetTargetExecutable();
-  if (!executable.get())
+  if (!executable)
     return;
 
   lldb::addr_t load_addr = GetLoadAddress(executable);
@@ -194,7 +199,11 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
     return ThreadPlanSP();
   }
 
-  uint64_t pc = thread.GetRegisterContext()->GetPC();
+  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  if (!reg_ctx_sp)
+    return ThreadPlanSP();
+
+  uint64_t pc = reg_ctx_sp->GetPC();
   // Max size of an instruction in x86 is 15 bytes.
   AddressRange range(pc, 2 * 15);
 
@@ -204,10 +213,7 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
     return ThreadPlanSP();
   }
 
-  InstructionList *insn_list = &disassembler_sp->GetInstructionList();
-  if (insn_list == nullptr) {
-    return ThreadPlanSP();
-  }
+  InstructionList &insn_list = disassembler_sp->GetInstructionList();
 
   // First instruction in a x86 Windows trampoline is going to be an indirect
   // jump through the IAT and the next one will be a nop (usually there for
@@ -215,15 +221,19 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   //     0x70ff4cfc <+956>: jmpl   *0x7100c2a8
   //     0x70ff4d02 <+962>: nop
 
-  auto first_insn = insn_list->GetInstructionAtIndex(0);
-  auto second_insn = insn_list->GetInstructionAtIndex(1);
+  auto first_insn = insn_list.GetInstructionAtIndex(0);
+  auto second_insn = insn_list.GetInstructionAtIndex(1);
 
   ExecutionContext exe_ctx(m_process->GetTarget());
-  if (first_insn == nullptr || second_insn == nullptr ||
-      strcmp(first_insn->GetMnemonic(&exe_ctx), "jmpl") != 0 ||
-      strcmp(second_insn->GetMnemonic(&exe_ctx), "nop") != 0) {
+  if (first_insn == nullptr || second_insn == nullptr)
     return ThreadPlanSP();
-  }
+
+  const char *first_mnemonic = first_insn->GetMnemonic(&exe_ctx);
+  const char *second_mnemonic = second_insn->GetMnemonic(&exe_ctx);
+  if (!first_mnemonic || !second_mnemonic ||
+      strcmp(first_mnemonic, "jmpl") != 0 ||
+      strcmp(second_mnemonic, "nop") != 0)
+    return ThreadPlanSP();
 
   assert(first_insn->DoesBranch() && !second_insn->DoesBranch());
 

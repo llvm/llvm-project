@@ -1,0 +1,16 @@
+{
+  "configuration": {
+    "runtime_prefix": "__test_",
+    "runtime_prefix.description": "The runtime API prefix."
+  },
+  "instruction_post": {
+    "load": {
+      "enabled": true,
+      "filter": "atomicity_ordering >",
+      "pointer": true,
+      "value": true,
+      "atomicity_ordering": true,
+      "id": true
+    }
+  }
+}

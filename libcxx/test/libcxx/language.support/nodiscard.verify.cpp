@@ -14,6 +14,7 @@
 
 #include <compare>
 #include <coroutine>
+#include <cstddef>
 #include <exception>
 #include <initializer_list>
 #include <new>
@@ -86,6 +87,29 @@ void test() {
   }
 #endif
 
+#if TEST_STD_VER >= 17
+  { // <cstddef>
+    std::byte b{0};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b | b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b & b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b ^ b;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ~b;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b << 1;
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    b >> 1;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::to_integer<int>(b);
+  }
+#endif
+
   { // <exception>
     {
       std::bad_exception bex;
@@ -126,7 +150,9 @@ void test() {
   { // <initializer_list>
     std::initializer_list<int> il{94, 82, 49};
 
+    il.data();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.size();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    il.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }

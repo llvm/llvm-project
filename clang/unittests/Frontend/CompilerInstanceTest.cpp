@@ -82,6 +82,17 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   ASSERT_TRUE(Instance.getFileManager().getOptionalFileRef("vfs-virtual.file"));
 }
 
+TEST(CompilerInstance, CreateVFSWithoutDiagnosticConsumer) {
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  Invocation->getHeaderSearchOpts().VFSOverlayFiles.push_back("/missing.yaml");
+  auto BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  CompilerInstance Instance(std::move(Invocation));
+  // Check that omitting the DiagnosticConsumer doesn't crash (e.g. by
+  // dereferencing the null pointer).
+  ASSERT_NO_FATAL_FAILURE(
+      Instance.createVirtualFileSystem(std::move(BaseFS), /*DC=*/nullptr));
+}
+
 TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   DiagnosticOptions DiagOpts;
   // Tell the diagnostics engine to emit the diagnostic log to STDERR. This
