@@ -319,4 +319,13 @@ PreservedAnalyses UnifyLoopExitsPass::run(Function &F,
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
+
+void UnifyLoopExitsPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<UnifyLoopExitsPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (SwitchGuards)
+    OS << "<switch-guards>";
+}
+
 } // namespace llvm

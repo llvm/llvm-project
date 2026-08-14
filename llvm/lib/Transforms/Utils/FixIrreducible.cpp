@@ -466,3 +466,11 @@ PreservedAnalyses FixIrreduciblePass::run(Function &F,
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
+
+void FixIrreduciblePass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<FixIrreduciblePass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (SwitchGuards)
+    OS << "<switch-guards>";
+}
