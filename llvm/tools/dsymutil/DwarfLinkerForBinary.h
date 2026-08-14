@@ -175,9 +175,8 @@ private:
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
       }
-      // A sizeless symbol has no known extent, so it can bound neither a range
-      // of its own nor a neighbour's. The ranges stand in for the high_pc that
-      // assembly files lack.
+      // Only a sized symbol has a known extent. The ranges stand in for the
+      // high_pc that assembly files lack.
       for (const auto &Entry : DMO.symbols()) {
         const auto &Mapping = Entry.getValue();
         if (!Mapping.Size)
