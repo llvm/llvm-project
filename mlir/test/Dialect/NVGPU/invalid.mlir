@@ -339,20 +339,20 @@ func.func @tma_generate_descriptor_incorrect_last_dim(%desc: !desc,  %buffer2: m
 // -----
 
 func.func @rcp_unsupported_rounding_0(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode rn> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = rn, ftz} : vector<16xf32>
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvvm.fp_rnd_mode<rn> is not supported yet.}}
+  %out = nvgpu.rcp %in {rounding = #nvvm.fp_rnd_mode<rn>, approx = true, ftz = true} : vector<16xf32>
 }
 // -----
 
 func.func @rcp_unsupported_rounding_1(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode rz> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = rz} : vector<16xf32>
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. non-approx or non-ftz is not supported yet.}}
+  %out = nvgpu.rcp %in {ftz = true} : vector<16xf32>
 }
 // -----
 
 func.func @rcp_unsupported_ftz(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode approx> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = approx} : vector<16xf32>
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. non-approx or non-ftz is not supported yet.}}
+  %out = nvgpu.rcp %in {approx = true} : vector<16xf32>
 }
 
 // -----
@@ -422,4 +422,46 @@ func.func @mma_sparse_sync_invalid_shape_4_elements(%arg0: vector<2x2xf16>, %arg
   %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 16, 4], sparsitySelector = 0 : i32} :
        (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   return %d : vector<2x2xf16>
+}
+
+// -----
+
+func.func @warpgroup_mma_init_accumulator_invalid_m() {
+  // expected-error @+1 {{does not fit into warp-group level}}
+  %acc = nvgpu.warpgroup.mma.init.accumulator
+      -> !nvgpu.warpgroup.accumulator<fragmented = vector<65x128xf32>>
+  return
+}
+
+// -----
+
+func.func @warpgroup_mma_init_accumulator_invalid_n() {
+  // expected-error @+1 {{does not fit into warp-group level}}
+  %acc = nvgpu.warpgroup.mma.init.accumulator
+      -> !nvgpu.warpgroup.accumulator<fragmented = vector<64x121xf32>>
+  return
+}
+
+// -----
+
+func.func @warpgroup_mma_store_non_f32_result(
+    %acc: !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf16>>,
+    %dst: memref<64x128xf16, 3>) {
+  // expected-error @+1 {{only f32 results for the time being}}
+  nvgpu.warpgroup.mma.store %acc, %dst :
+      !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf16>>
+      to memref<64x128xf16, 3>
+  return
+}
+
+// -----
+
+func.func @warpgroup_mma_store_mismatched_shape(
+    %acc: !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>,
+    %dst: memref<64x64xf32, 3>) {
+  // expected-error @+1 {{does not have same size as results}}
+  nvgpu.warpgroup.mma.store %acc, %dst :
+      !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+      to memref<64x64xf32, 3>
+  return
 }

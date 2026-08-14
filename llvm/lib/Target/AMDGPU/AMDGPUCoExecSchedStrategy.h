@@ -14,110 +14,13 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECSCHEDSTRATEGY_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECSCHEDSTRATEGY_H
 
+#include "AMDGPUCoExecInfo.h"
 #include "GCNSchedStrategy.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
 
 namespace AMDGPU {
-
-//===----------------------------------------------------------------------===//
-// Instruction Flavor Classification
-//===----------------------------------------------------------------------===//
-
-enum class InstructionFlavor : uint8_t {
-  WMMA,            // WMMA/MFMA matrix operations
-  SingleCycleVALU, // Single-cycle VALU (not TRANS32, not multi-cycle CVT)
-  TRANS,           // Transcendental ops (v_exp, v_log, etc.)
-  MultiCycleVALU,  // VALU instructions with repeat rate > 1
-  VMEM,            // FLAT/GLOBAL memory operations
-  DS,              // LDS/GDS operations
-  SALU,            // Scalar ALU
-  DMA,             // Tensor DMA operations
-  Fence,           // Fences and waits
-  Other,           // Everything else
-  NUM_FLAVORS
-};
-
-inline StringRef getFlavorName(InstructionFlavor F) {
-  switch (F) {
-  case InstructionFlavor::WMMA:
-    return "WMMA";
-  case InstructionFlavor::SingleCycleVALU:
-    return "VALU(1c)";
-  case InstructionFlavor::TRANS:
-    return "TRANS";
-  case InstructionFlavor::MultiCycleVALU:
-    return "VALU(Nc)";
-  case InstructionFlavor::VMEM:
-    return "VMEM";
-  case InstructionFlavor::DS:
-    return "DS";
-  case InstructionFlavor::SALU:
-    return "SALU";
-  case InstructionFlavor::DMA:
-    return "DMA";
-  case InstructionFlavor::Fence:
-    return "Fence";
-  case InstructionFlavor::Other:
-    return "Other";
-  case InstructionFlavor::NUM_FLAVORS:
-    return "???";
-  }
-  llvm_unreachable("Unknown InstructionFlavor");
-}
-
-inline StringRef getFlavorShortName(InstructionFlavor F) {
-  switch (F) {
-  case InstructionFlavor::WMMA:
-    return "W";
-  case InstructionFlavor::SingleCycleVALU:
-    return "V";
-  case InstructionFlavor::TRANS:
-    return "T";
-  case InstructionFlavor::MultiCycleVALU:
-    return "C";
-  case InstructionFlavor::VMEM:
-    return "M";
-  case InstructionFlavor::DS:
-    return "D";
-  case InstructionFlavor::SALU:
-    return "S";
-  case InstructionFlavor::DMA:
-    return "X";
-  case InstructionFlavor::Fence:
-    return "F";
-  case InstructionFlavor::Other:
-    return "O";
-  case InstructionFlavor::NUM_FLAVORS:
-    return "?";
-  }
-  llvm_unreachable("Unknown InstructionFlavor");
-}
-
-InstructionFlavor classifyFlavor(const MachineInstr &MI,
-                                 const SIInstrInfo &SII);
-
-using FlavorGroup = SmallVector<InstructionFlavor, 4>;
-
-namespace FlavorGroups {
-inline FlavorGroup allVALU() {
-  return {InstructionFlavor::SingleCycleVALU, InstructionFlavor::TRANS,
-          InstructionFlavor::MultiCycleVALU};
-}
-inline FlavorGroup allMem() {
-  return {InstructionFlavor::VMEM, InstructionFlavor::DS,
-          InstructionFlavor::DMA};
-}
-inline FlavorGroup individual(InstructionFlavor F) { return {F}; }
-inline FlavorGroup all() {
-  FlavorGroup G;
-  for (unsigned I = 0;
-       I < static_cast<unsigned>(InstructionFlavor::NUM_FLAVORS); ++I)
-    G.push_back(static_cast<InstructionFlavor>(I));
-  return G;
-}
-} // namespace FlavorGroups
 
 /// AMDGPU-specific scheduling decision reasons. These provide more granularity
 /// than the generic CandReason enum for debugging purposes.
@@ -137,7 +40,7 @@ inline StringRef getReasonName(AMDGPUSchedReason R) {
   case AMDGPUSchedReason::CritResourceDep:
     return "CritResourceDep";
   case AMDGPUSchedReason::NUM_REASONS:
-    return "???";
+    llvm_unreachable("Unknown AMDGPUSchedReason");
   }
   llvm_unreachable("Unknown AMDGPUSchedReason");
 }
@@ -161,16 +64,16 @@ private:
   /// more regular HardwareUnit access patterns. SUs are prioritized based on
   /// depth for top-down scheduling.
   SmallSetVector<SUnit *, 16> PrioritySUs;
-  /// All the SUs in the region that consume this resource
+  /// All the SUs in the region that consume this resource.
   SmallSetVector<SUnit *, 16> AllSUs;
   /// The total number of busy cycles for this HardwareUnit for a given region.
   unsigned TotalCycles = 0;
-  // InstructionFlavor mapping
+  /// InstructionFlavor mapping.
   AMDGPU::InstructionFlavor Type;
-  // Whether or not instructions on this HardwareUnit may produce a window in
-  // which instructions in other HardwareUnits can coexecute. For example, WMMA
-  // / MFMA instructions may take multiple cycles, which may be overlapped with
-  // instructions on other HardwareUnits
+  /// Whether or not instructions on this HardwareUnit may produce a window in
+  /// which instructions in other HardwareUnits can coexecute. For example, WMMA
+  /// / MFMA instructions may take multiple cycles, which may be overlapped with
+  /// instructions on other HardwareUnits.
   bool ProducesCoexecWindow = false;
 
 public:
@@ -193,13 +96,12 @@ public:
 
   bool contains(SUnit *SU) const { return AllSUs.contains(SU); }
 
-  /// \returns true if there is a difference in priority between \p SU and \p
-  /// Other. If so, \returns the SUnit with higher priority. This
-  /// method looks through the PrioritySUs to determine if one SU is more
+  /// \returns the SUnit with higher priority or nullptr if they are the same.
+  /// This method looks through the PrioritySUs to determine if one SU is more
   /// prioritized than the other. If neither are in the PrioritySUs list, then
   /// neither have priority over each other.
   SUnit *getHigherPriority(SUnit *SU, SUnit *Other) const {
-    for (auto *SUOrder : PrioritySUs) {
+    for (SUnit *SUOrder : PrioritySUs) {
       if (SUOrder == SU)
         return SU;
 
@@ -227,12 +129,12 @@ public:
   /// long latency (e.g. memory instructions). If we have many long latency
   /// dependencies, it is beneficial to enable SUs multiple levels ahead.
   SUnit *getNextTargetSU(bool LookDeep = false) const;
-  /// Insert the \p SU into the AllSUs and account its \p BlockingCycles into
+  /// Insert the \p SU into AllSUs and account its \p BlockingCycles into
   /// the TotalCycles. This maintains the list of PrioritySUs.
   void insert(SUnit *SU, unsigned BlockingCycles);
-  /// Update the state for \p SU being scheduled by removing it from the AllSus
+  /// Update the state for \p SU being scheduled by removing it from the AllSUs
   /// and reducing its \p BlockingCycles from the TotalCycles. This maintains
-  /// the list of PrioritySUS.
+  /// the list of PrioritySUs.
   void markScheduled(SUnit *SU, unsigned BlockingCycles);
 };
 
@@ -251,11 +153,11 @@ protected:
   const TargetSchedModel *SchedModel;
   SmallVector<HardwareUnitInfo, 8> HWUInfo;
 
-  /// Walk over the region and collect total usage per HardwareUnit
+  /// Walk over the region and collect total usage per HardwareUnit.
   void collectHWUIPressure();
 
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
-  /// SU
+  /// SU.
   unsigned getHWUICyclesForInst(SUnit *SU);
 
   /// Given a \p Flavor , find the corresponding HardwareUnit. \returns the

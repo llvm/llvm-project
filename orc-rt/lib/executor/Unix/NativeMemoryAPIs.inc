@@ -100,4 +100,4 @@ orc_rt::Error hostOSMemoryProtect(void *Base, size_t Size, orc_rt::MemProt MP) {
   return orc_rt::Error::success();
 }
 
-} // anonymous namespace
+} // namespace

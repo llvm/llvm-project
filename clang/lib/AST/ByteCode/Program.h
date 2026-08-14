@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_PROGRAM_H
 #define LLVM_CLANG_AST_INTERP_PROGRAM_H
 
+#include "DeclOrExpr.h"
 #include "Function.h"
 #include "Pointer.h"
 #include "PrimType.h"
@@ -88,10 +89,11 @@ public:
                                    const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
-  unsigned getOrCreateDummy(const DeclTy &D);
+  unsigned getOrCreateDummy(DeclOrExpr D, bool IsConstexprUnknown = false);
 
   /// Creates a global and returns its index.
-  UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init);
+  UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,
+                              bool IsConstexprUnknown = false);
 
   /// Creates a global from a lifetime-extended temporary.
   UnsignedOrNone createGlobal(const Expr *E, QualType ExprType);
@@ -118,7 +120,7 @@ public:
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
-  Descriptor *createDescriptor(const DeclTy &D, PrimType T,
+  Descriptor *createDescriptor(DeclOrExpr D, PrimType T,
                                const Type *SourceTy = nullptr,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
@@ -129,7 +131,7 @@ public:
   }
 
   /// Creates a descriptor for a composite type.
-  Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
+  Descriptor *createDescriptor(DeclOrExpr D, const Type *Ty,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false, bool IsVolatile = false,
@@ -167,8 +169,9 @@ public:
 private:
   friend class DeclScope;
 
-  UnsignedOrNone createGlobal(const DeclTy &D, QualType Ty, bool IsStatic,
+  UnsignedOrNone createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
                               bool IsExtern, bool IsWeak,
+                              bool IsConstexprUnknown,
                               const Expr *Init = nullptr);
 
   /// Reference to the VM context.

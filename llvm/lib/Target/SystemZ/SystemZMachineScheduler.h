@@ -8,9 +8,12 @@
 
 // -------------------------- Pre RA scheduling ----------------------------- //
 //
-// SystemZPreRASchedStrategy performs latency scheduling in certain types of
-// regions where this is beneficial, and also helps copy coalescing and
-// comparison elimination.
+// SystemZPreRASchedStrategy reduces register pressure by scheduling a (live)
+// definition low if it does not cause another register to become live (all
+// uses live). In most regions it then reduces the scheduled latency but only
+// if the SU that is higher (by Height) than the scheduled latency is as well
+// lower (by Depth) than the remaining latency. It also helps copy coalescing
+// and comparison elimination.
 //
 // -------------------------- Post RA scheduling ---------------------------- //
 //
@@ -34,16 +37,18 @@ namespace llvm {
 
 /// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
 class SystemZPreRASchedStrategy : public GenericScheduler {
-  void initializeLatencyReduction();
-
   Register Cmp0SrcReg;
   // Return true if MI defines the Cmp0SrcReg that is used by a scheduled
   // compare with 0. If CCDef is true MI must also have an implicit def of CC.
   bool definesCmp0Src(const MachineInstr *MI, bool CCDef = true) const;
 
-  // True if the region has many instructions in def-use sequences and would
-  // likely benefit from latency reduction.
-  bool HasDataSequences;
+  // SUs that have a Height of at least this value will not be scheduled
+  // "low" to reduce liveness.
+  unsigned LivenessHeightCutOff;
+
+  // Return true if the instruction defines a register while all use operands
+  // are already live.
+  bool closesLiveRange(const SUnit *SU, ScheduleDAGMILive *DAG) const;
 
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
