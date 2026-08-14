@@ -168,9 +168,8 @@ entry:
 define double @reassociate_three_term_fadd_lhs_lhs(<2 x double> %a, double %b) nounwind {
 ; CHECK-LABEL: reassociate_three_term_fadd_lhs_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v0[1]
-; CHECK-NEXT:    fadd d0, d1, d0
-; CHECK-NEXT:    fadd d0, d2, d0
+; CHECK-NEXT:    faddp.2d d0, v0
+; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %lane0 = extractelement <2 x double> %a, i32 0
   %lane1 = extractelement <2 x double> %a, i32 1
@@ -182,9 +181,8 @@ define double @reassociate_three_term_fadd_lhs_lhs(<2 x double> %a, double %b) n
 define double @reassociate_three_term_fadd_lhs_rhs(<2 x double> %a, double %b) nounwind {
 ; CHECK-LABEL: reassociate_three_term_fadd_lhs_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v0[1]
-; CHECK-NEXT:    fadd d0, d1, d0
-; CHECK-NEXT:    fadd d0, d0, d2
+; CHECK-NEXT:    faddp.2d d0, v0
+; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %lane0 = extractelement <2 x double> %a, i32 0
   %lane1 = extractelement <2 x double> %a, i32 1
@@ -196,9 +194,8 @@ define double @reassociate_three_term_fadd_lhs_rhs(<2 x double> %a, double %b) n
 define double @reassociate_three_term_fadd_rhs_lhs(<2 x double> %a, double %b) nounwind {
 ; CHECK-LABEL: reassociate_three_term_fadd_rhs_lhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v0[1]
+; CHECK-NEXT:    faddp.2d d0, v0
 ; CHECK-NEXT:    fadd d0, d0, d1
-; CHECK-NEXT:    fadd d0, d0, d2
 ; CHECK-NEXT:    ret
   %lane0 = extractelement <2 x double> %a, i32 0
   %lane1 = extractelement <2 x double> %a, i32 1
@@ -210,9 +207,8 @@ define double @reassociate_three_term_fadd_rhs_lhs(<2 x double> %a, double %b) n
 define double @reassociate_three_term_fadd_rhs_rhs(<2 x double> %a, double %b) nounwind {
 ; CHECK-LABEL: reassociate_three_term_fadd_rhs_rhs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d2, v0[1]
+; CHECK-NEXT:    faddp.2d d0, v0
 ; CHECK-NEXT:    fadd d0, d0, d1
-; CHECK-NEXT:    fadd d0, d0, d2
 ; CHECK-NEXT:    ret
   %lane0 = extractelement <2 x double> %a, i32 0
   %lane1 = extractelement <2 x double> %a, i32 1
@@ -225,9 +221,8 @@ define float @reassociate_three_term_fadd_f32(<2 x float> %a, float %b) nounwind
 ; CHECK-LABEL: reassociate_three_term_fadd_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov s2, v0[1]
-; CHECK-NEXT:    fadd s1, s2, s1
-; CHECK-NEXT:    fadd s0, s1, s0
+; CHECK-NEXT:    faddp.2s s0, v0
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %lane0 = extractelement <2 x float> %a, i32 0
   %lane1 = extractelement <2 x float> %a, i32 1
@@ -240,9 +235,8 @@ define half @reassociate_three_term_fadd_f16(<2 x half> %a, half %b) nounwind "t
 ; CHECK-LABEL: reassociate_three_term_fadd_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h2, v0[1]
-; CHECK-NEXT:    fadd h1, h2, h1
-; CHECK-NEXT:    fadd h0, h1, h0
+; CHECK-NEXT:    faddp.2h h0, v0
+; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
   %lane0 = extractelement <2 x half> %a, i32 0
   %lane1 = extractelement <2 x half> %a, i32 1
