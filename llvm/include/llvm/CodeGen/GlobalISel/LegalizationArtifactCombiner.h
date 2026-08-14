@@ -262,7 +262,7 @@ public:
     using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_TRUNC);
 
-    Builder.setInstr(MI);
+    Builder.setInstrAndDebugLoc(MI);
     Register DstReg = MI.getOperand(0).getReg();
     const LLT DstTy = MRI.getType(DstReg);
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
@@ -384,7 +384,7 @@ public:
 
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
                                            MI.getOperand(1).getReg(), MRI)) {
-      Builder.setInstr(MI);
+      Builder.setInstrAndDebugLoc(MI);
       Register DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
 
@@ -460,7 +460,7 @@ public:
                     .Action == LegalizeActions::MoreElements)
           return false;
 
-        Builder.setInstr(MI);
+        Builder.setInstrAndDebugLoc(MI);
         auto NewUnmerge = Builder.buildUnmerge(UnmergeTy, CastSrcReg);
 
         for (unsigned I = 0; I != NumDefs; ++I) {
@@ -501,7 +501,7 @@ public:
         }
 
         // Build new unmerge
-        Builder.setInstr(MI);
+        Builder.setInstrAndDebugLoc(MI);
         Builder.buildUnmerge(DstRegs, CastSrcReg);
         UpdatedDefs.append(DstRegs.begin(), DstRegs.begin() + NewNumDefs);
         markInstAndDefDead(MI, CastMI, DeadInsts);
@@ -1165,7 +1165,7 @@ public:
       if (NumDefs % NumMergeRegs != 0)
         return false;
 
-      Builder.setInstr(MI);
+      Builder.setInstrAndDebugLoc(MI);
       // Transform to UNMERGEs, for example
       //   %1 = G_MERGE_VALUES %4, %5
       //   %9, %10, %11, %12 = G_UNMERGE_VALUES %1
@@ -1215,7 +1215,7 @@ public:
       if (ConvertOp != 0 || NumMergeRegs % NumDefs != 0)
         return false;
 
-      Builder.setInstr(MI);
+      Builder.setInstrAndDebugLoc(MI);
       // Transform to MERGEs
       //   %6 = G_MERGE_VALUES %17, %18, %19, %20
       //   %7, %8 = G_UNMERGE_VALUES %6
@@ -1248,7 +1248,7 @@ public:
       }
 
       if (ConvertOp) {
-        Builder.setInstr(MI);
+        Builder.setInstrAndDebugLoc(MI);
 
         for (unsigned Idx = 0; Idx < NumDefs; ++Idx) {
           Register DefReg = MI.getOperand(Idx).getReg();
@@ -1268,7 +1268,7 @@ public:
              "Bitcast and the other kinds of conversions should "
              "have happened earlier");
 
-      Builder.setInstr(MI);
+      Builder.setInstrAndDebugLoc(MI);
       for (unsigned Idx = 0; Idx < NumDefs; ++Idx) {
         Register DstReg = MI.getOperand(Idx).getReg();
         Register SrcReg = MergeI->getOperand(Idx + 1).getReg();
@@ -1329,7 +1329,7 @@ public:
       return false;
 
     // TODO: We could modify MI in place in most cases.
-    Builder.setInstr(MI);
+    Builder.setInstrAndDebugLoc(MI);
     Builder.buildExtract(DstReg, MergeI->getOperand(MergeSrcIdx + 1).getReg(),
                          Offset - MergeSrcIdx * MergeSrcSize);
     UpdatedDefs.push_back(DstReg);
