@@ -248,8 +248,7 @@ define i1 @uge_zero_no_function_args() {
 ; CHECK-LABEL: @uge_zero_no_function_args(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @get()
-; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[X]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %x = call i8 @get()
@@ -261,8 +260,7 @@ define i1 @ule_zero_no_function_args() {
 ; CHECK-LABEL: @ule_zero_no_function_args(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @get()
-; CHECK-NEXT:    [[C:%.*]] = icmp ule i8 0, [[X]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %x = call i8 @get()
