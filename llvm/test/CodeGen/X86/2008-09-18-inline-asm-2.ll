@@ -1,4 +1,4 @@
-; RUN: llc < %s -regalloc=fast -optimize-regalloc=0 -no-integrated-as | FileCheck %s
+; RUN: llc < %s -regalloc=fast -no-integrated-as | FileCheck %s
 ; RUN: llc < %s -regalloc=basic -no-integrated-as      | FileCheck %s
 ; RUN: llc < %s -regalloc=greedy -no-integrated-as     | FileCheck %s
 

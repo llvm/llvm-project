@@ -7,8 +7,8 @@ from typing import Sequence
 from lldbsuite.test.decorators import (
     expectedFailureAll,
     expectedFailureNetBSD,
+    requireThreadSupport,
     skipIfLinux,
-    skipIfTargetDoesNotSupportThreads,
     skipIfWindows,
 )
 from lldbsuite.test.lldbtest import line_number
@@ -18,7 +18,7 @@ from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StoppedEvent, Thread
 
 @skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
 @skipIfLinux
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class TestDAP_stopped_events(DAPTestCaseBase):
     """
     Test validates different operations that produce 'stopped' events.

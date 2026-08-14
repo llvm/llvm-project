@@ -637,7 +637,7 @@ public:
                   bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
-  cir::TLS_Model getDefaultCIRTLSModel() const;
+  cir::TLSModel getDefaultCIRTLSModel() const;
 
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
