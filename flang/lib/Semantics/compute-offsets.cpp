@@ -212,7 +212,9 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   for (auto &[symbol, dep] : dependents_) {
     symbol->set_offset(dep.symbol->offset() + dep.offset);
     if (const auto *block{FindCommonBlockContaining(*dep.symbol)}) {
-      symbol->get<ObjectEntityDetails>().set_commonBlock(*block);
+      if (auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {
+        object->set_commonBlock(*block);
+      }
     }
   }
 }

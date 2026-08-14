@@ -1688,6 +1688,12 @@ inline bool isAbsOpcode(unsigned Opcode) {
   return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
 }
 
+/// Whether this is an integer min/max opcode (ISD::(U|S)MIN or ISD::(U|S)MAX).
+inline bool isMinMaxOpcode(unsigned Opcode) {
+  return Opcode == ISD::SMIN || Opcode == ISD::SMAX || Opcode == ISD::UMIN ||
+         Opcode == ISD::UMAX;
+}
+
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);

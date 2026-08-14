@@ -1370,3 +1370,18 @@ func.func @no_crash_on_dynamic_tensor(%arg0: tensor<?xi32>, %arg1: index) -> ten
   }
   return %result : tensor<?xi32>
 }
+
+// -----
+
+// Regression test: a tensor_desc with a SliceAttr layout was not distributed.
+gpu.module @test_slice_layout {
+  // CHECK-LABEL: slice_layout
+  gpu.func @slice_layout(%arg0: memref<1024x1536xf16>) {
+    // CHECK: xegpu.create_nd_tdesc %{{.*}} : memref<1024x1536xf16> -> !xegpu.tensor_desc<8x16xf16>
+    %tdesc = xegpu.create_nd_tdesc %arg0 : memref<1024x1536xf16> -> !xegpu.tensor_desc<32x64xf16>
+    // CHECK: xegpu.load_nd %{{.*}} : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.slice<#xegpu.layout<sg_layout = [1, 4, 4], sg_data = [1, 8, 16]>, dims = [0]>}>
+        : !xegpu.tensor_desc<32x64xf16> -> vector<32x64xf16>
+    gpu.return
+  }
+}

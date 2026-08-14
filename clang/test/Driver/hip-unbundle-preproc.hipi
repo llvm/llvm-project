@@ -10,7 +10,7 @@
 // CHECK: {{".*clang.*"}} "-cc1" {{.*}}"-target-cpu" "gfx803" {{.*}}"-o" "[[DEV_O:[^"]*]]" {{.*}}"[[DEV_PP]]"
 // CHECK: {{".*lld.*"}} {{.*}}"-o" "[[DEV_ISA:.*]]" "[[DEV_O]]"
 // CHECK: {{".*clang-offload-bundler.*"}} {{.*}}"-input={{.*}}" "-input=[[DEV_ISA]]" "-output=[[FATBIN:.*]]"
-// CHECK: {{".*clang.*"}} {{.*}}"-triple" "x86_64-unknown-linux-gnu"{{.*}} "-fcuda-include-gpubinary" "[[FATBIN]]" {{.*}}"-o" "[[HOST_O:.*o]]" {{.*}}"[[HOST_PP]]"
+// CHECK: {{".*clang.*"}} {{.*}}"-triple" "x86_64-unknown-linux-gnu"{{.*}} "-foffload-include-binary" "[[FATBIN]]" {{.*}}"-o" "[[HOST_O:.*o]]" {{.*}}"[[HOST_PP]]"
 // CHECK: {{".*ld.*"}} {{.*}}"[[HOST_O]]"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu \

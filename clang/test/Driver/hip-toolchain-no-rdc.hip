@@ -116,8 +116,8 @@
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
-// OLD-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_A]]"
-// NEW-SAME: {{.*}} "-fcuda-include-gpubinary" "[[HIPFB_A]]"
+// OLD-SAME: {{.*}} "-foffload-include-binary" "[[BUNDLE_A]]"
+// NEW-SAME: {{.*}} "-foffload-include-binary" "[[HIPFB_A]]"
 // CHECK-SAME: {{.*}} "-o" [[A_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
@@ -189,8 +189,8 @@
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
-// OLD-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_B]]"
-// NEW-SAME: {{.*}} "-fcuda-include-gpubinary" "[[HIPFB_B]]"
+// OLD-SAME: {{.*}} "-foffload-include-binary" "[[BUNDLE_B]]"
+// NEW-SAME: {{.*}} "-foffload-include-binary" "[[HIPFB_B]]"
 // CHECK-SAME: {{.*}} "-o" [[B_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 

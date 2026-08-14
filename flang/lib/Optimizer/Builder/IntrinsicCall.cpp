@@ -1879,9 +1879,27 @@ mlir::Value toValue(const fir::ExtendedValue &val, fir::FirOpBuilder &builder,
 // IntrinsicLibrary
 //===----------------------------------------------------------------------===//
 
+static bool isIeeeIntrinsic(llvm::StringRef name) {
+  return name.starts_with("ieee_");
+}
+
 static bool isIntrinsicModuleProcedure(llvm::StringRef name) {
   return name.starts_with("c_") || name.starts_with("compiler_") ||
-         name.starts_with("ieee_") || name.starts_with("__ppc_");
+         isIeeeIntrinsic(name) || name.starts_with("__ppc_");
+}
+
+/// IEEE_ARITHMETIC and IEEE_EXCEPTIONS procedures are defined in terms of the
+/// IEEE 754 operations they name. Their expansions encode NaN, infinity, and
+/// signed zero behavior explicitly, so relaxed floating-point assumptions from
+/// the surrounding code must not reach the operations that implement them.
+/// Contraction is kept: none of these expansions contain contractable
+/// arithmetic.
+static mlir::arith::FastMathFlags
+fastMathFlagsForIntrinsic(llvm::StringRef name,
+                          mlir::arith::FastMathFlags flags) {
+  if (!isIeeeIntrinsic(name))
+    return flags;
+  return flags & mlir::arith::FastMathFlags::contract;
 }
 
 static bool isCoarrayIntrinsic(llvm::StringRef name) {
@@ -2095,13 +2113,16 @@ static std::pair<fir::ExtendedValue, bool> genIntrinsicCallHelper(
     llvm::ArrayRef<fir::ExtendedValue> args, IntrinsicLibrary &lib) {
   assert(handler && "must be set");
   bool outline = handler->outline || outlineAllIntrinsics;
-  return {Fortran::common::visit(
-              [&](auto &generator) -> fir::ExtendedValue {
-                return invokeHandler(generator, *handler, resultType, args,
-                                     outline, lib);
-              },
-              handler->generator),
-          lib.resultMustBeFreed};
+  fir::FirOpBuilder::FastMathFlagGuard fmfGuard(
+      lib.builder,
+      fastMathFlagsForIntrinsic(handler->name, lib.builder.getFastMathFlags()));
+  auto result = Fortran::common::visit(
+      [&](auto &generator) -> fir::ExtendedValue {
+        return invokeHandler(generator, *handler, resultType, args, outline,
+                             lib);
+      },
+      handler->generator);
+  return {result, lib.resultMustBeFreed};
 }
 
 static IntrinsicLibrary::RuntimeCallGenerator getRuntimeCallGeneratorHelper(
@@ -2117,6 +2138,8 @@ static std::pair<fir::ExtendedValue, bool> genIntrinsicCallHelper(
   fir::FirOpBuilder &builder = lib.builder;
   mlir::Location loc = lib.loc;
   llvm::StringRef name = range.first->key;
+  fir::FirOpBuilder::FastMathFlagGuard fmfGuard(
+      builder, fastMathFlagsForIntrinsic(name, builder.getFastMathFlags()));
   // FIXME: using toValue to get the type won't work with array arguments.
   llvm::SmallVector<mlir::Value> mlirArgs;
   for (const fir::ExtendedValue &extendedVal : args) {

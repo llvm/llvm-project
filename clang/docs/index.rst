@@ -126,7 +126,7 @@ Design Documents
    PCHInternals
    ItaniumMangleAbiTags
    ControlFlowIntegrityDesign
-   HardwareAssistedAddressSanitizerDesign.rst
+   HardwareAssistedAddressSanitizerDesign
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
 
@@ -135,4 +135,3 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`search`
-

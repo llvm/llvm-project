@@ -112,4 +112,47 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.struct<padded {{.*}}pad !cir.array<!cir.int<s, 8> x 2>}>'
 
+  // A scalable vector has no size the eightbyte rules can read.
+  cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
+
+  // Clang pads a vector's type width up to a power of two and the classifier
+  // branches on the exact width, so a three-byte vector would be classified at
+  // 24 bits where clang uses 32.  The ABI library's vector type cannot carry
+  // the padded width, so this is rejected rather than misclassified.
+  cir.func @take_odd_width(%arg0: !cir.vector<3 x !s8i>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<3 x !cir.int<s, 8>>
+
+  // A pointer element loses its pointee on the way back from the classifier,
+  // which would rewrite the signature to a vector of void pointers.  No C
+  // vector has a pointer element, so this is rejected instead.
+  cir.func @take_ptr_vector(%arg0: !cir.vector<2 x !cir.ptr<!s32i>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<2 x !cir.ptr<!cir.int<s, 32>>>
+
+  // An element narrower than a byte is rounded up to its storage container by
+  // clang but not by the classifier, so the two would size the vector
+  // differently.  Classic passes this one in an xmm register from its 128-bit
+  // width, where the classifier would read 32 bits and coerce to an integer.
+  cir.func @take_sub_byte_element(%arg0: !cir.vector<16 x !cir.int<s, 2, bitint>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
+
+  // An x87 long double is 80 bits to the classifier and 128 to clang, so the
+  // two would size this vector differently for the same reason.
+  cir.func @take_x87_element(%arg0: !cir.vector<2 x !cir.long_double<!cir.f80>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<2 x !cir.long_double<!cir.f80>>
 }

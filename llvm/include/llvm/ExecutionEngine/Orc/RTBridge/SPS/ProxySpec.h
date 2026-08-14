@@ -24,14 +24,14 @@
 
 namespace llvm::orc::rt::sps {
 
-template <typename ProxyT, typename SPSSigT, const char *DefaultName,
+template <typename ProxyT, typename CI,
           typename FnType = typename ProxyT::FnType>
 class ProxySpec;
 
-template <typename ProxyT, typename SPSSigT, const char *DefaultName,
-          typename RetT, typename... ArgTs>
-class ProxySpec<ProxyT, SPSSigT, DefaultName, RetT(ArgTs...)> {
+template <typename ProxyT, typename CI, typename RetT, typename... ArgTs>
+class ProxySpec<ProxyT, CI, RetT(ArgTs...)> {
 
+  using SPSSigT = typename CI::SPSSig;
   using CalleeRetT = typename ProxyT::CalleeRetT;
   using ErrorRetT = typename ProxyT::ErrorRetT;
 
@@ -44,7 +44,7 @@ class ProxySpec<ProxyT, SPSSigT, DefaultName, RetT(ArgTs...)> {
   }
 
 public:
-  static constexpr const char *Name = DefaultName;
+  static constexpr const char *Name = CI::Name;
 
   static void dispatch(unique_function<void(ErrorRetT)> OnComplete,
                        ExecutionSession &ES, ExecutorAddr CalleeAddr,

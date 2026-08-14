@@ -29,7 +29,7 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
+  if (auto Err = callSPSWrapper<rt::sps_ci::CallMain::SPSSig>(
           RunAsMainAddr, Result, MainFnAddr, Args))
     return std::move(Err);
   return Result;
@@ -298,7 +298,7 @@ Error SimpleRemoteEPC::setup() {
       BootstrapSymbols[ExecutorSessionObjectName];
 
   if (auto Err =
-          getBootstrapSymbols({{RunAsMainAddr, rt::sps::CallMainCIName}}))
+          getBootstrapSymbols({{RunAsMainAddr, rt::sps_ci::CallMain::Name}}))
     return Err;
 
   return Error::success();

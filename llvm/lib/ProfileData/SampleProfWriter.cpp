@@ -631,8 +631,20 @@ SampleProfileWriterExtBinaryBase::writeMD5ProfileSymbolListSection() {
   return sampleprof_error::success;
 }
 
+unsigned SampleProfileWriterExtBinaryBase::findUnwrittenEntry(SecType Type) {
+  auto WrittenIndices =
+      llvm::map_range(SecHdrTable, &SecHdrTableEntry::LayoutIndex);
+  for (auto [I, Entry] : llvm::enumerate(SectionHdrLayout))
+    if (Entry.Type == Type && !llvm::is_contained(WrittenIndices, I))
+      return I;
+  llvm_unreachable("Matching section not found in SectionHdrLayout");
+}
+
 std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
-    SecType Type, uint32_t LayoutIdx, const SampleProfileMap &ProfileMap) {
+    SecType Type, const SampleProfileMap &ProfileMap) {
+  unsigned LayoutIdx = findUnwrittenEntry(Type);
+  SecHdrTableEntry &Entry = SectionHdrLayout[LayoutIdx];
+
   // The setting of SecFlagCompress should happen before markSectionStart.
   if (Type == SecProfileSymbolList && ProfSymList && ProfSymList->toCompress())
     setToCompressSection(SecProfileSymbolList);
@@ -676,8 +688,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
       return EC;
     break;
   case SecFuncOffsetTable: {
-    bool IsFlat =
-        hasSecFlag(SectionHdrLayout[LayoutIdx], SecCommonFlags::SecFlagFlat);
+    bool IsFlat = hasSecFlag(Entry, SecCommonFlags::SecFlagFlat);
     // An unflagged function offset table inherently indexes the primary
     // Nested symbol span.
     bool IsNested = !IsFlat;
@@ -711,24 +722,13 @@ SampleProfileWriterExtBinary::SampleProfileWriterExtBinary(
 
 std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
     const SampleProfileMap &ProfileMap) {
-  // The const indices passed to writeOneSection below are specifying the
-  // positions of the sections in SectionHdrLayout. Look at
-  // initSectionHdrLayout to find out where each section is located in
-  // SectionHdrLayout.
-  if (auto EC = writeOneSection(SecProfSummary, 0, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecNameTable, 1, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecCSNameTable, 2, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecLBRProfile, 4, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecProfileSymbolList, 5, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 3, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecFuncMetadata, 6, ProfileMap))
-    return EC;
+  static constexpr SecType Sections[] = {
+      SecProfSummary,       SecNameTable,       SecCSNameTable,  SecLBRProfile,
+      SecProfileSymbolList, SecFuncOffsetTable, SecFuncMetadata,
+  };
+  for (SecType Type : Sections)
+    if (std::error_code EC = writeOneSection(Type, ProfileMap))
+      return EC;
   return sampleprof_error::success;
 }
 
@@ -748,28 +748,19 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
   SampleProfileMap NestedProfileMap, FlatProfileMap;
   splitProfileMapToTwo(ProfileMap, NestedProfileMap, FlatProfileMap);
 
-  if (auto EC = writeOneSection(SecProfSummary, 0, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecNameTable, 1, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecLBRProfile, 3, NestedProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 2, NestedProfileMap))
-    return EC;
-  // Mark the section as flat (without callsite samples). Note section flag
-  // needs to be set before writing the section.
-  addSectionFlag(5, SecCommonFlags::SecFlagFlat);
-  if (auto EC = writeOneSection(SecLBRProfile, 5, FlatProfileMap))
-    return EC;
-  // Mark the section as flat (without callsite samples). Note section flag
-  // needs to be set before writing the section.
-  addSectionFlag(4, SecCommonFlags::SecFlagFlat);
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 4, FlatProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecProfileSymbolList, 6, ProfileMap))
-    return EC;
-  if (auto EC = writeOneSection(SecFuncMetadata, 7, ProfileMap))
-    return EC;
+  const std::pair<SecType, const SampleProfileMap &> Sections[] = {
+      {SecProfSummary, ProfileMap},
+      {SecNameTable, ProfileMap},
+      {SecLBRProfile, NestedProfileMap},
+      {SecFuncOffsetTable, NestedProfileMap},
+      {SecLBRProfile, FlatProfileMap},
+      {SecFuncOffsetTable, FlatProfileMap},
+      {SecProfileSymbolList, ProfileMap},
+      {SecFuncMetadata, ProfileMap},
+  };
+  for (const auto &[Type, Map] : Sections)
+    if (std::error_code EC = writeOneSection(Type, Map))
+      return EC;
 
   return sampleprof_error::success;
 }
@@ -806,10 +797,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   OS << "\n";
   LineCount++;
 
-  SampleSorter<LineLocation, SampleRecord> SortedSamples(S.getBodySamples());
-  for (const auto &I : SortedSamples.get()) {
-    LineLocation Loc = I->first;
-    const SampleRecord &Sample = I->second;
+  for (const auto &[Loc, Sample] : S.getBodySamples()) {
     OS.indent(Indent + 1);
     Loc.print(OS);
     OS << ": " << Sample.getSamples();
@@ -833,12 +821,8 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     }
   }
 
-  SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
-      S.getCallsiteSamples());
   Indent += 1;
-  for (const auto *Element : SortedCallsiteSamples.get()) {
-    // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
-    const auto &[Loc, FunctionSamplesMap] = *Element;
+  for (const auto &[Loc, FunctionSamplesMap] : S.getCallsiteSamples()) {
     for (const FunctionSamples &CalleeSamples :
          make_second_range(FunctionSamplesMap)) {
       OS.indent(Indent);

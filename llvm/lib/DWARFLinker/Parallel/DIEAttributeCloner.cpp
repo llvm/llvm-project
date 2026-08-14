@@ -525,6 +525,16 @@ size_t DIEAttributeCloner::cloneScalarAttr(
       !OutUnit.isCompileUnit())
     return 0;
 
+  // A nested scope inherits the range its parent function overran, so every
+  // range is constrained, not just the subprogram's own.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc && FuncAddressAdjustment) {
+    if (std::optional<uint64_t> LowPC =
+            dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc)))
+      Value = InUnit.getContaingFile().Addresses->constrainCodeRangeHighPC(
+                  *LowPC, *LowPC + Value, *FuncAddressAdjustment) -
+              *LowPC;
+  }
+
   auto Result =
       Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value);
   // Record DW_AT_LLVM_stmt_sequence so the attribute value can be
@@ -549,12 +559,29 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   return Result.second;
 }
 
+static bool expressionDependsOnOriginUnit(const DWARFExpression &Expr) {
+  using Encoding = DWARFExpression::Operation::Encoding;
+
+  for (const DWARFExpression::Operation &Op : Expr) {
+    switch (Op.getCode()) {
+    case dwarf::DW_OP_addr:
+    case dwarf::DW_OP_addrx:
+    case dwarf::DW_OP_constx:
+      return true;
+    default:
+      break;
+    }
+
+    if (llvm::is_contained(Op.getDescription().Op, Encoding::BaseTypeRef))
+      return true;
+  }
+
+  return false;
+}
+
 size_t DIEAttributeCloner::cloneBlockAttr(
     const DWARFFormValue &Val,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
-
-  if (OutUnit.isTypeUnit())
-    return 0;
 
   size_t NumberOfPatchesAtStart = PatchesOffsets.size();
 
@@ -568,6 +595,12 @@ size_t DIEAttributeCloner::cloneBlockAttr(
     DataExtractor Data(Bytes, InUnit.getOrigUnit().isLittleEndian());
     DWARFExpression Expr(Data, InUnit.getOrigUnit().getAddressByteSize(),
                          InUnit.getFormParams().Format);
+
+    // A type unit is shared by every compile unit that references the type, so
+    // an expression resolving against one origin unit has no single correct
+    // value there.
+    if (OutUnit.isTypeUnit() && expressionDependsOnOriginUnit(Expr))
+      return 0;
 
     InUnit.cloneDieAttrExpression(Expr, Buffer, DebugInfoOutputSection,
                                   VarAddressAdjustment, PatchesOffsets);
@@ -656,6 +689,12 @@ size_t DIEAttributeCloner::cloneAddressAttr(
     else
       return 0;
   } else {
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc && FuncAddressAdjustment) {
+      if (std::optional<uint64_t> LowPC =
+              dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc)))
+        Addr = InUnit.getContaingFile().Addresses->constrainCodeRangeHighPC(
+            *LowPC, *Addr, *FuncAddressAdjustment);
+    }
     if (VarAddressAdjustment)
       *Addr += *VarAddressAdjustment;
     else if (FuncAddressAdjustment)

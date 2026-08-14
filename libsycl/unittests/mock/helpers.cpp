@@ -327,4 +327,31 @@ void mock::MockLiboffload::initDefault() {
         mock::releaseDummyHandle(Event);
         return OL_SUCCESS;
       });
+
+  ON_CALL(*this, olMemAlloc)
+      .WillByDefault([this](ol_device_handle_t Device, ol_alloc_type_t Type,
+                            size_t Size, void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Device, nullptr);
+        EXPECT_NE(Type, OL_ALLOC_TYPE_HOST);
+        EXPECT_GT(Size, 0);
+        EXPECT_NE(AllocationOut, nullptr);
+        *AllocationOut = mock::createDummyHandle<void *>(Size);
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olMemAllocHost)
+      .WillByDefault([this](ol_device_handle_t Device, size_t Size,
+                            void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Device, nullptr);
+        EXPECT_GT(Size, 0);
+        EXPECT_NE(AllocationOut, nullptr);
+        *AllocationOut = mock::createDummyHandle<void *>(Size);
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olMemFree).WillByDefault([this](void *Address) -> ol_result_t {
+    EXPECT_NE(Address, nullptr);
+    mock::releaseDummyHandle(Address);
+    return OL_SUCCESS;
+  });
 }

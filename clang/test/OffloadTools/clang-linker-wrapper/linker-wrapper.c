@@ -169,6 +169,27 @@ __attribute__((visibility("protected"), used)) int x;
 
 // COFF: "/usr/bin/lld-link" {{.*}}.o -libpath:./ -out:a.exe {{.*}}openmp.image.wrapper{{.*}}
 
+// RUN: rm -rf %t.dir && mkdir -p %t.dir
+// RUN: llvm-ar rcs %t.dir/foo.lib %t.o
+// RUN: llvm-ar rcs %t.dir/libbar.dll.a %t.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-windows-msvc --dry-run \
+// RUN:   --linker-path=/usr/bin/lld-link %t.o -libpath:%t.dir foo.lib -out:a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-LIBRARY
+// RUN: clang-linker-wrapper --host-triple=x86_64-w64-windows-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld %t.o -L%t.dir -lbar -o a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-LIBRARY
+
+// COFF-LIBRARY: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.o {{.*}}.o
+
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-windows-msvc --dry-run \
+// RUN:   --linker-path=/usr/bin/lld-link -wholearchive:%t.dir/foo.lib -out:a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-WHOLE-ARCHIVE
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-windows-msvc --dry-run \
+// RUN:   --linker-path=/usr/bin/lld-link -libpath:%t.dir -wholearchive:foo.lib -out:a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-WHOLE-ARCHIVE
+
+// COFF-WHOLE-ARCHIVE: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{[^ ]*}}.o{{$}}
+
 // RUN: llvm-offload-binary -o %t-lib.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.0a-amd-amdhsa,arch=gfx90a
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out

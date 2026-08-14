@@ -952,14 +952,15 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
 
       // For assembly-language CUs there are typically no DW_TAG_subprogram
       // DIEs, so labels are the only addresses we see. Fall back to the
-      // assembly-range lookup to recover a function range for the line-table
+      // symbol-range lookup to recover a function range for the line-table
       // filter; otherwise the output line table would be empty.
       uint16_t Language = dwarf::toUnsigned(
           Entry.CU->getOrigUnit().getUnitDIE().find(dwarf::DW_AT_language), 0);
       if (Language == dwarf::DW_LANG_Mips_Assembler ||
           Language == dwarf::DW_LANG_Assembly) {
-        if (auto Range = Entry.CU->getContaingFile()
-                             .Addresses->getAssemblyRangeForAddress(*LowPc))
+        if (auto Range =
+                Entry.CU->getContaingFile().Addresses->getSymbolRangeForAddress(
+                    *LowPc))
           Entry.CU->addFunctionRange(Range->LowPC, Range->HighPC,
                                      *RelocAdjustment);
       }
@@ -974,6 +975,10 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
   if (!Info.getTrackLiveness() || DIE.getTag() == dwarf::DW_TAG_label)
     return true;
 
-  Entry.CU->addFunctionRange(*LowPc, *HighPc, *RelocAdjustment);
+  Entry.CU->addFunctionRange(
+      *LowPc,
+      Entry.CU->getContaingFile().Addresses->constrainCodeRangeHighPC(
+          *LowPc, *HighPc, *RelocAdjustment),
+      *RelocAdjustment);
   return true;
 }

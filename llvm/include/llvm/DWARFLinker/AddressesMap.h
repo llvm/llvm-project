@@ -83,20 +83,45 @@ public:
   /// Erases all data.
   virtual void clear() = 0;
 
-  /// This is used for assembly files where labels may not have high_pc
-  /// but the debug map has range information from symbols.
-  struct AssemblyRange {
-    AssemblyRange(uint64_t LowPC, uint64_t HighPC)
+  /// The extent the linker gave a symbol, in source address space.
+  struct SymbolRange {
+    SymbolRange(uint64_t LowPC, uint64_t HighPC)
         : LowPC(LowPC), HighPC(HighPC) {}
     uint64_t LowPC;
     uint64_t HighPC;
   };
 
-  /// Returns the address range containing \p Addr if available.
-  /// \returns the range [LowPC, HighPC) containing Addr.
-  virtual std::optional<AssemblyRange>
-  getAssemblyRangeForAddress(uint64_t Addr) {
+  /// Returns the symbol range [LowPC, HighPC) containing \p Addr, if known.
+  virtual std::optional<SymbolRange> getSymbolRangeForAddress(uint64_t Addr) {
     return std::nullopt;
+  }
+
+  /// Returns the linked address of the first symbol placed at or after
+  /// \p LinkedAddr, if one is known.
+  virtual std::optional<uint64_t>
+  getNextLinkedSymbolStart(uint64_t LinkedAddr) {
+    return std::nullopt;
+  }
+
+  /// Constrains the source-space end of a code range, given its start \p LowPC,
+  /// its end \p HighPC as an address, and the \p Adjustment all of its
+  /// addresses shift by in the output.
+  ///
+  /// Neighbouring symbols shift by different amounts, so a range reaching past
+  /// the symbol holding its start can land inside the next symbol in the
+  /// output. Only that collision is repaired. Coverage that overlaps nothing is
+  /// left alone, and a symbol nested in the same extent is never a neighbour,
+  /// so it cannot shorten a range that legitimately spans it.
+  uint64_t constrainCodeRangeHighPC(uint64_t LowPC, uint64_t HighPC,
+                                    int64_t Adjustment) {
+    std::optional<SymbolRange> Symbol = getSymbolRangeForAddress(LowPC);
+    if (!Symbol)
+      return HighPC;
+    std::optional<uint64_t> NextStart =
+        getNextLinkedSymbolStart(Symbol->HighPC + Adjustment);
+    if (!NextStart)
+      return HighPC;
+    return std::min(HighPC, *NextStart - Adjustment);
   }
 
   /// This function checks whether variable has DWARF expression containing

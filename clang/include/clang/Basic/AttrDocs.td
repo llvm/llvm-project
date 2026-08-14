@@ -6490,6 +6490,14 @@ with `__has_attribute(swiftcall)`. Query if the target supports the
 calling convention with `__has_extension(swiftcc)`. This implies
 support for the `swift_context`, `swift_error_result`, and
 `swift_indirect_result` attributes.
+
+Since this attribute follows the Swift calling convention, it is
+considered ABI-unstable except on targets where the Swift project
+has declared ABI stability. Users are responsible for ensuring that
+calls and definitions of functions with this attribute are compiled
+with compatible compilers. Note that different operating systems
+on the same architecture may use different ABIs and therefore may
+have different standards for ABI stability.
   }];
 }
 
@@ -6538,6 +6546,14 @@ the following:
 Query for this attribute with `__has_attribute(swiftasynccall)`. Query if
 the target supports the calling convention with
 `__has_extension(swiftasynccc)`.
+
+Since this attribute follows the Swift async calling convention, it is
+considered ABI-unstable except on targets where the Swift project
+has declared ABI stability. Users are responsible for ensuring that
+calls and definitions of functions with this attribute are compiled
+with compatible compilers. Note that different operating systems
+on the same architecture may use different ABIs and therefore may
+have different standards for ABI stability.
   }];
 }
 

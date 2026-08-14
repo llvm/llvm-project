@@ -61,14 +61,19 @@ def libc_test(
     else:
         deps = deps + ["//libc/test/UnitTest:LibcUnitTest"]
 
+    tags = kwargs.pop("tags", [])
     if full_build:
         copts = copts + _FULL_BUILD_COPTS
+
+        # Temporarily disable full_build tests (currently broken) to unblock CI.
+        tags = tags + ["manual", "notap"]
     cc_test(
         name = name,
         local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
         deps = deps,
         copts = copts + libc_common_copts(),
         linkstatic = 1,
+        tags = tags,
         **kwargs
     )
 

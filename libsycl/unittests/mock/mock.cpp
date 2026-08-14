@@ -123,6 +123,21 @@ ol_result_t olGetMemInfo(const void *Ptr, ol_mem_info_t PropName,
                                                 PropValue);
 }
 
+ol_result_t olMemAlloc(ol_device_handle_t Device, ol_alloc_type_t Type,
+                       size_t Size, void **AllocationOut) {
+  return mock::getMockLiboffload().olMemAlloc(Device, Type, Size,
+                                              AllocationOut);
+}
+
+ol_result_t olMemAllocHost(ol_device_handle_t Device, size_t Size,
+                           void **AllocationOut) {
+  return mock::getMockLiboffload().olMemAllocHost(Device, Size, AllocationOut);
+}
+
+ol_result_t olMemFree(void *Address) {
+  return mock::getMockLiboffload().olMemFree(Address);
+}
+
 ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_flags_t Flags,
                           ol_event_handle_t *Event) {
   return mock::getMockLiboffload().olCreateEvent(Queue, Flags, Event);

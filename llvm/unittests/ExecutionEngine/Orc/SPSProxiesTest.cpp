@@ -223,10 +223,12 @@ static CWrapperFunctionBuffer errorFnWrapper(const char *ArgData,
       .release();
 }
 
-inline constexpr char ErrorFnCIName[] = "test_sps_error_fn";
+struct ErrorFnCI {
+  static constexpr char Name[] = "test_sps_error_fn";
+  using SPSSig = SPSError(bool);
+};
 using ErrorFnProxy = rt::Proxy<Error(bool)>;
-using ErrorFnProxySpec =
-    sps::ProxySpec<ErrorFnProxy, SPSError(bool), ErrorFnCIName>;
+using ErrorFnProxySpec = sps::ProxySpec<ErrorFnProxy, ErrorFnCI>;
 
 // Exercises the Error -> Error mapping across the SPS boundary, including a
 // failure reported by the executor-side function itself.
@@ -257,11 +259,12 @@ static CWrapperFunctionBuffer expectedFnWrapper(const char *ArgData,
       .release();
 }
 
-inline constexpr char ExpectedFnCIName[] = "test_sps_expected_fn";
+struct ExpectedFnCI {
+  static constexpr char Name[] = "test_sps_expected_fn";
+  using SPSSig = SPSExpected<int32_t>(int32_t);
+};
 using ExpectedFnProxy = rt::Proxy<Expected<int32_t>(int32_t)>;
-using ExpectedFnProxySpec =
-    sps::ProxySpec<ExpectedFnProxy, SPSExpected<int32_t>(int32_t),
-                   ExpectedFnCIName>;
+using ExpectedFnProxySpec = sps::ProxySpec<ExpectedFnProxy, ExpectedFnCI>;
 
 // Exercises the Expected<T> -> Expected<T> (flattening) mapping across the SPS
 // boundary, for both the value and the executor-reported-error cases.

@@ -9,15 +9,14 @@
 #ifndef LLVM_OFFLOAD_LANGUAGES_INCLUDE_KERNEL_LANGUAGE_RUNTIME_H
 #define LLVM_OFFLOAD_LANGUAGES_INCLUDE_KERNEL_LANGUAGE_RUNTIME_H
 
+#include "LanguageLaunch.h"
+#include "Types.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 
-enum Error_t : uint32_t {
-  Success = 0,
-  ErrorInvalidValue = 1,
-};
+#include "LanguageErrors.h"
 
 struct DeviceProp_t {
   char name[256];

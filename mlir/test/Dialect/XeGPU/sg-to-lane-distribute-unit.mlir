@@ -1046,6 +1046,87 @@ gpu.func @convert_layout_scalar() {
 }
 
 // -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @convert_layout_repack_innermost_lane_data
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<1x64xbf16> to vector<1x4xbf16>
+// CHECK:         %[[F:.*]] = vector.shape_cast %[[SRC]] : vector<1x4xbf16> to vector<4xbf16>
+// CHECK:         %[[S0:.*]] = xegpu.lane_shuffle %[[F]] pack : vector<4xbf16>
+// CHECK:         vector.shape_cast %[[S0]] : vector<4xbf16> to vector<1x4xbf16>
+gpu.func @convert_layout_repack_innermost_lane_data() {
+  %src = "some_op"() : () -> vector<1x64xbf16>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>
+    }> : vector<1x64xbf16>
+  "some_use"(%cvt) : (vector<1x64xbf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @convert_layout_repack_innermost_lane_data_1d
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<64xbf16> to vector<4xbf16>
+// CHECK:         xegpu.lane_shuffle %[[SRC]] pack : vector<4xbf16>
+gpu.func @convert_layout_repack_innermost_lane_data_1d() {
+  %src = "some_op"() : () -> vector<64xbf16>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+      target_layout = #xegpu.layout<lane_layout = [16], lane_data = [4]>
+    }> : vector<64xbf16>
+  "some_use"(%cvt) : (vector<64xbf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @convert_layout_repack_second_innermost_lane_data
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<64x4xbf16> to vector<4x4xbf16>
+// CHECK:         %[[SL0:.*]] = vector.extract_strided_slice %[[SRC]] {offsets = [0, 0], sizes = [4, 1], strides = [1, 1]} : vector<4x4xbf16> to vector<4x1xbf16>
+// CHECK:         %[[F0:.*]] = vector.shape_cast %[[SL0]] : vector<4x1xbf16> to vector<4xbf16>
+// CHECK:         %[[S0:.*]] = xegpu.lane_shuffle %[[F0]] unpack : vector<4xbf16>
+// CHECK:         %[[C0:.*]] = vector.shape_cast %[[S0]] : vector<4xbf16> to vector<4x1xbf16>
+// CHECK:         vector.insert_strided_slice %[[C0]], %{{.*}} {offsets = [0, 0], strides = [1, 1]} : vector<4x1xbf16> into vector<4x4xbf16>
+// CHECK-COUNT-3: xegpu.lane_shuffle %{{.*}} unpack : vector<4xbf16>
+gpu.func @convert_layout_repack_second_innermost_lane_data() {
+  %src = "some_op"() : () -> vector<64x4xbf16>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [4, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+    }> : vector<64x4xbf16>
+  "some_use"(%cvt) : (vector<64x4xbf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @convert_layout_repack_innermost_lane_data_3d
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<1x1x64xbf16> to vector<1x1x4xbf16>
+// CHECK:         %[[F:.*]] = vector.shape_cast %[[SRC]] : vector<1x1x4xbf16> to vector<4xbf16>
+// CHECK:         %[[S0:.*]] = xegpu.lane_shuffle %[[F]] pack : vector<4xbf16>
+// CHECK:         vector.shape_cast %[[S0]] : vector<4xbf16> to vector<1x1x4xbf16>
+gpu.func @convert_layout_repack_innermost_lane_data_3d() {
+  %src = "some_op"() : () -> vector<1x1x64xbf16>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 4]>
+    }> : vector<1x1x64xbf16>
+  "some_use"(%cvt) : (vector<1x1x64xbf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
 // load_matrix and store_matrix with coordinate computation (offsets [0,0])
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @load_store_matrix_1

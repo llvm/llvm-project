@@ -376,7 +376,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
         "FloatABI::ABIType FloatABI, EABI EABIVersion, "
-        "StringRef ABIName) {\n";
+        "StringRef ABIName, LongDoubleFormat LongDoubleFormat) {\n";
 
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");

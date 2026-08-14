@@ -6674,17 +6674,22 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
   MachOCorefileAllImageInfos image_infos = GetCorefileAllImageInfos();
   Log *log = GetLog(LLDBLog::Object | LLDBLog::DynamicLoader);
-  Status error;
 
   bool found_platform_binary = false;
   ModuleList added_modules;
-  for (MachOCorefileImageEntry &image : image_infos.all_image_infos) {
-    ModuleSP module_sp, local_filesystem_module_sp;
 
+  llvm::SmallVector<const MachOCorefileImageEntry *> pending_images;
+  std::vector<DynamicLoader::BinarySpec> pending_specs;
+
+  for (MachOCorefileImageEntry &image : image_infos.all_image_infos) {
     // If this is a platform binary, it has been loaded (or registered with
     // the DynamicLoader to be loaded), we don't need to do any further
     // processing.  We're not going to call ModulesDidLoad on this in this
     // method, so notify==true.
+    //
+    // Setting up a platform binary can replace the Target's platform and
+    // dynamic loader, so no image is searched for until this loop has run to
+    // the end.
     if (process.GetTarget()
             .GetDebugger()
             .GetPlatformList()
@@ -6708,74 +6713,85 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
 
     // We have either a UUID, or we have a load address which
     // and can try to read load commands and find a UUID.
-    if (image.uuid.IsValid() ||
-        (!value_is_offset && value != LLDB_INVALID_ADDRESS)) {
-      DynamicLoader::BinarySpec bin_spec;
-      bin_spec.name = image.filename;
-      bin_spec.uuid = image.uuid;
-      bin_spec.value = value;
-      bin_spec.value_is_offset = value_is_offset;
-      bin_spec.force_symbol_search = image.currently_executing;
-      bin_spec.notify = false;
-      // Userland Darwin binaries will have segment load addresses via
-      // the `all image infos` LC_NOTE.
-      bin_spec.set_address_in_target = image.segment_load_addresses.empty();
-      bin_spec.allow_memory_image_last_resort =
-          !image.segment_load_addresses.empty();
-      if (llvm::Expected<ModuleSP> located =
-              DynamicLoader::LocateAndLoadBinary(&process, bin_spec)) {
-        module_sp = *located;
-      } else if (bin_spec.force_symbol_search) {
-        *process.GetTarget().GetDebugger().GetAsyncErrorStream()
-            << llvm::toString(located.takeError()) << "\n";
-      } else {
-        // A corefile image that isn't on this machine is routine, and
-        // LocateAndLoadBinary has already logged it.
-        llvm::consumeError(located.takeError());
-      }
+    if (!image.uuid.IsValid() &&
+        (value_is_offset || value == LLDB_INVALID_ADDRESS))
+      continue;
+
+    DynamicLoader::BinarySpec bin_spec;
+    bin_spec.name = image.filename;
+    bin_spec.uuid = image.uuid;
+    bin_spec.value = value;
+    bin_spec.value_is_offset = value_is_offset;
+    bin_spec.force_symbol_search = image.currently_executing;
+    bin_spec.notify = false;
+    // Userland Darwin binaries will have segment load addresses via
+    // the `all image infos` LC_NOTE.
+    bin_spec.set_address_in_target = image.segment_load_addresses.empty();
+    bin_spec.allow_memory_image_last_resort =
+        !image.segment_load_addresses.empty();
+
+    pending_images.push_back(&image);
+    pending_specs.push_back(std::move(bin_spec));
+  }
+
+  DynamicLoader::LocateBinaries(&process, pending_specs);
+
+  for (auto [image, bin_spec] :
+       llvm::zip_equal(pending_images, pending_specs)) {
+    ModuleSP module_sp;
+    if (llvm::Expected<ModuleSP> loaded =
+            DynamicLoader::LoadBinaryInTarget(&process, bin_spec)) {
+      module_sp = *loaded;
+    } else if (bin_spec.force_symbol_search) {
+      *process.GetTarget().GetDebugger().GetAsyncErrorStream()
+          << llvm::toString(loaded.takeError()) << "\n";
+    } else {
+      // A corefile image that isn't on this machine is routine, and has
+      // already been logged.
+      llvm::consumeError(loaded.takeError());
     }
 
-    // We have a ModuleSP to load in the Target.  Load it at the
-    // correct address/slide and notify/load scripting resources.
-    if (module_sp) {
-      added_modules.Append(module_sp, false /* notify */);
+    if (!module_sp)
+      continue;
 
-      // We have a list of segment load address
-      if (image.segment_load_addresses.size() > 0) {
-        if (log) {
-          std::string uuidstr = image.uuid.GetAsString();
-          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s with section load addresses",
-                      module_sp->GetFileSpec().GetPath().c_str(),
-                      uuidstr.c_str());
-        }
-        ObjectFile *objfile = module_sp->GetObjectFile();
-        SectionList *sectlist = objfile ? objfile->GetSectionList() : nullptr;
-        for (auto name_vmaddr_tuple : image.segment_load_addresses) {
-          if (sectlist) {
-            SectionSP sect_sp =
-                sectlist->FindSectionByName(std::get<0>(name_vmaddr_tuple));
-            if (sect_sp) {
-              process.GetTarget().SetSectionLoadAddress(
-                  sect_sp, std::get<1>(name_vmaddr_tuple));
-            }
+    added_modules.Append(module_sp, false /* notify */);
+
+    // We have a list of segment load address
+    if (image->segment_load_addresses.size() > 0) {
+      if (log) {
+        std::string uuidstr = image->uuid.GetAsString();
+        log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                    "UUID %s with section load addresses",
+                    module_sp->GetFileSpec().GetPath().c_str(),
+                    uuidstr.c_str());
+      }
+      ObjectFile *objfile = module_sp->GetObjectFile();
+      SectionList *sectlist = objfile ? objfile->GetSectionList() : nullptr;
+      for (auto name_vmaddr_tuple : image->segment_load_addresses) {
+        if (sectlist) {
+          SectionSP sect_sp =
+              sectlist->FindSectionByName(std::get<0>(name_vmaddr_tuple));
+          if (sect_sp) {
+            process.GetTarget().SetSectionLoadAddress(
+                sect_sp, std::get<1>(name_vmaddr_tuple));
           }
         }
-      } else {
-        if (log) {
-          std::string uuidstr = image.uuid.GetAsString();
-          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s with %s 0x%" PRIx64,
-                      module_sp->GetFileSpec().GetPath().c_str(),
-                      uuidstr.c_str(),
-                      value_is_offset ? "slide" : "load address", value);
-        }
-        bool changed;
-        module_sp->SetLoadAddress(process.GetTarget(), value, value_is_offset,
-                                  changed);
       }
+    } else {
+      if (log) {
+        std::string uuidstr = image->uuid.GetAsString();
+        log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                    "UUID %s with %s 0x%" PRIx64,
+                    module_sp->GetFileSpec().GetPath().c_str(), uuidstr.c_str(),
+                    bin_spec.value_is_offset ? "slide" : "load address",
+                    bin_spec.value);
+      }
+      bool changed;
+      module_sp->SetLoadAddress(process.GetTarget(), bin_spec.value,
+                                bin_spec.value_is_offset, changed);
     }
   }
+
   if (added_modules.GetSize() > 0) {
     process.GetTarget().ModulesDidLoad(added_modules);
     process.Flush();
