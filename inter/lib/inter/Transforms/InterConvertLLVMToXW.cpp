@@ -208,7 +208,7 @@ replaceOperationShape(Operation *op, ValueRange operands, Type resultType) {
   for (OpOperand &use : llvm::make_early_inc_range(oldResult.getUses())) {
     Operation *owner = use.getOwner();
     bool structuredCrossing =
-        isa<scf::YieldOp>(owner) ||
+        isa<scf::YieldOp, xw::YieldOp>(owner) ||
         (isa<scf::ConditionOp>(owner) && use.getOperandNumber() != 0) ||
         (isa<scf::ForOp>(owner) && use.getOperandNumber() >= 3) ||
         isa<scf::WhileOp>(owner);
@@ -300,6 +300,53 @@ static LogicalResult reconcileIfShape(scf::IfOp op, bool &changed) {
   for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
     replacement.getResult(index).setType(joinedTypes[index]);
     for (scf::YieldOp yield : {replacementThen, replacementElse}) {
+      OpBuilder builder(yield);
+      yield->setOperand(index, adaptStructuredValue(builder, yield.getLoc(),
+                                                    yield.getOperand(index),
+                                                    joinedTypes[index]));
+    }
+  }
+  op->getBlock()->getOperations().insert(op->getIterator(), replacement);
+  op->replaceAllUsesWith(replacement->getResults());
+  op.erase();
+  changed = true;
+  return success();
+}
+
+static LogicalResult reconcileWhereShape(xw::WhereOp op, bool &changed) {
+  SmallVector<Type> resultTypes(op.getResultTypes());
+  SmallVector<Type> joinedTypes;
+  joinedTypes.reserve(op.getNumResults());
+  xw::YieldOp thenYield =
+      cast<xw::YieldOp>(op.getThenRegion().front().getTerminator());
+  xw::YieldOp elseYield =
+      cast<xw::YieldOp>(op.getElseRegion().front().getTerminator());
+  for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
+    std::array<Type, 3> types = {
+        resultTypes[index],
+        unwrapMaterializedShape(thenYield.getOperand(index)).getType(),
+        unwrapMaterializedShape(elseYield.getOperand(index)).getType()};
+    FailureOr<Type> joined = joinStructuredShape(
+        op, types, Twine("where result #") + Twine(index));
+    if (failed(joined))
+      return failure();
+    joinedTypes.push_back(*joined);
+  }
+  if (joinedTypes == resultTypes &&
+      llvm::all_of(llvm::seq<unsigned>(op.getNumResults()), [&](unsigned i) {
+        return thenYield.getOperand(i).getType() == joinedTypes[i] &&
+               elseYield.getOperand(i).getType() == joinedTypes[i];
+      }))
+    return success();
+
+  xw::WhereOp replacement = cast<xw::WhereOp>(op->clone());
+  xw::YieldOp replacementThen =
+      cast<xw::YieldOp>(replacement.getThenRegion().front().getTerminator());
+  xw::YieldOp replacementElse =
+      cast<xw::YieldOp>(replacement.getElseRegion().front().getTerminator());
+  for (unsigned index : llvm::seq<unsigned>(op.getNumResults())) {
+    replacement.getResult(index).setType(joinedTypes[index]);
+    for (xw::YieldOp yield : {replacementThen, replacementElse}) {
       OpBuilder builder(yield);
       yield->setOperand(index, adaptStructuredValue(builder, yield.getLoc(),
                                                     yield.getOperand(index),
@@ -433,12 +480,15 @@ static LogicalResult reconcileWhileShape(scf::WhileOp op, bool &changed) {
 static LogicalResult reconcileStructuredShapes(ModuleOp module, bool &changed) {
   SmallVector<Operation *> candidates;
   module.walk<WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<scf::IfOp, scf::ForOp, scf::WhileOp>(op))
+    if (isa<scf::IfOp, xw::WhereOp, scf::ForOp, scf::WhileOp>(op))
       candidates.push_back(op);
   });
   for (Operation *candidate : candidates) {
     if (auto ifOp = dyn_cast<scf::IfOp>(candidate)) {
       if (failed(reconcileIfShape(ifOp, changed)))
+        return failure();
+    } else if (auto where = dyn_cast<xw::WhereOp>(candidate)) {
+      if (failed(reconcileWhereShape(where, changed)))
         return failure();
     } else if (auto forOp = dyn_cast<scf::ForOp>(candidate)) {
       if (failed(reconcileForShape(forOp, changed)))

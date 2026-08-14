@@ -141,6 +141,23 @@ module {
     llvm.return
   }
 
+  llvm.func spir_kernelcc @mixed_divergent_if(%out: !llvm.ptr<1>,
+                                               %limit: i64) {
+    %axis = llvm.mlir.constant(0 : i32) : i32
+    %gid = llvm.call spir_funccc @_Z13get_global_idj(%axis) : (i32) -> i64
+    %gid32 = llvm.trunc %gid : i64 to i32
+    %active = llvm.icmp "ult" %gid, %limit : i64
+    llvm.cond_br %active, ^then, ^else
+  ^then:
+    llvm.br ^merge(%gid32 : i32)
+  ^else:
+    %one = llvm.mlir.constant(1 : i32) : i32
+    llvm.br ^merge(%one : i32)
+  ^merge(%value: i32):
+    llvm.store %value, %out : i32, !llvm.ptr<1>
+    llvm.return
+  }
+
   llvm.func spir_kernelcc @one_sided_divergent(%out: !llvm.ptr<1>,
                                                 %limit: i64) {
     %axis = llvm.mlir.constant(0 : i32) : i32
@@ -246,6 +263,14 @@ module {
 // CHECK: } otherwise {
 // CHECK: xw.yield
 // CHECK-NOT: scf.if
+
+// CHECK-LABEL: func.func @mixed_divergent_if
+// CHECK: xw.where
+// CHECK: xw.yield {{.*}} : !xw.simd<i32, 16>
+// CHECK: } otherwise {
+// CHECK: %[[FALLBACK:.*]] = xw.splat {{.*}} : i32 -> !xw.simd<i32, 16>
+// CHECK: xw.yield %[[FALLBACK]] : !xw.simd<i32, 16>
+// CHECK: } : !xw.mask<16> -> !xw.simd<i32, 16>
 
 // CHECK-LABEL: func.func @one_sided_divergent
 // CHECK: xw.where {{.*}} {
