@@ -10016,8 +10016,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   // the streaming mode or ZA/ZT0 to be restored after returning from the call.
   SMECallAttrs CallAttrs =
       getSMECallAttrs(CallerF, getRuntimeLibcallsInfo(), CLI);
-  if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
-      CallAttrs.requiresPreservingAllZAState() ||
+  if (CallAttrs.requiresSMChange() || CallAttrs.requiresZASave() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.caller().hasStreamingBody() || CallAttrs.caller().isNewZA() ||
       CallAttrs.caller().isNewZT0())
@@ -10445,7 +10444,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
 
   std::optional<unsigned> ZAMarkerNode;
-  if (CallAttrs.requiresLazySave() || CallAttrs.requiresPreservingAllZAState())
+  if (CallAttrs.requiresZASave())
     ZAMarkerNode = AArch64ISD::REQUIRES_ZA_SAVE;
   else if (CallAttrs.requiresPreservingZT0())
     ZAMarkerNode = AArch64ISD::REQUIRES_ZT0_SAVE;
@@ -11624,7 +11623,7 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
       Opcode, DL, NodeTys, Glue ? ArrayRef(Ops) : ArrayRef(Ops).drop_back()));
 
-  if (TLSCallAttrs.requiresLazySave())
+  if (TLSCallAttrs.requiresZASave())
     std::tie(Chain, Glue) = ChainAndGlue(DAG.getNode(
         AArch64ISD::REQUIRES_ZA_SAVE, DL, NodeTys, {Chain, Chain.getValue(1)}));
 
@@ -33483,9 +33482,8 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         Caller->hasFnAttribute("aarch64_pstate_sm_compatible") ||
         Caller->hasFnAttribute("aarch64_za_state_agnostic")) {
       auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
-      if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
-          CallAttrs.requiresPreservingZT0() ||
-          CallAttrs.requiresPreservingAllZAState())
+      if (CallAttrs.requiresSMChange() || CallAttrs.requiresPreservingZT0() ||
+          CallAttrs.requiresZASave())
         return true;
     }
   }

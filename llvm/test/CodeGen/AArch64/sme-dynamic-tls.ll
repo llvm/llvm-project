@@ -155,3 +155,32 @@ entry:
   %1 = load i32, ptr %0, align 4
   ret i32 %1
 }
+
+define i32 @load_tls_agnostic_za() nounwind "aarch64_za_state_agnostic" {
+; CHECK-LABEL: load_tls_agnostic_za:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    bl __arm_sme_state_size
+; CHECK-NEXT:    sub sp, sp, x0
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    bl __arm_sme_save
+; CHECK-NEXT:    adrp x0, :tlsdesc:x
+; CHECK-NEXT:    ldr x1, [x0, :tlsdesc_lo12:x]
+; CHECK-NEXT:    add x0, x0, :tlsdesc_lo12:x
+; CHECK-NEXT:    .tlsdesccall x
+; CHECK-NEXT:    blr x1
+; CHECK-NEXT:    mrs x9, TPIDR_EL0
+; CHECK-NEXT:    ldr w9, [x9, x0]
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    bl __arm_sme_restore
+; CHECK-NEXT:    mov w0, w9
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
+  %1 = load i32, ptr %0, align 4
+  ret i32 %1
+}
