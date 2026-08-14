@@ -1,0 +1,20 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+// #cir.static_local_info holds plain data (no AST pointer), so it parses and
+// prints without a live ASTContext. Check that each field round-trips.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global "private" internal @regular = #cir.int<0> : !s32i
+    {static_local_info = #cir.static_local_info<
+       is_local_var_decl = true, tls = 0, is_inline = false, tsk = 0>}
+  // CHECK: @regular
+  // CHECK-SAME: static_local_info = #cir.static_local_info<is_local_var_decl = true, tls = 0, is_inline = false, tsk = 0>
+
+  cir.global "private" internal @tls = #cir.int<0> : !s32i
+    {static_local_info = #cir.static_local_info<
+       is_local_var_decl = true, tls = 2, is_inline = true, tsk = 1>}
+  // CHECK: @tls
+  // CHECK-SAME: static_local_info = #cir.static_local_info<is_local_var_decl = true, tls = 2, is_inline = true, tsk = 1>
+}

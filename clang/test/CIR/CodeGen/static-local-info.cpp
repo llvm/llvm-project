@@ -3,10 +3,9 @@
 
 // CIRGen attaches the VarDecl facts LoweringPrepare needs (isLocalVarDecl,
 // TLSKind, isInline, TemplateSpecializationKind) to static-local guarded
-// globals as a materialized #cir.static_local_info attribute, so the facts
-// survive without a live ASTContext. The attribute is emitted directly at
-// CIRGen time; there is no separate materialization pass and no AST-backed
-// #cir.var.decl placeholder is left on these globals.
+// globals as a #cir.static_local_info attribute, so the facts survive without
+// a live ASTContext. This is orthogonal to the #cir.var.decl AST handle, which
+// is still attached for consumers that need arbitrary AST properties.
 
 struct HasCtor {
   HasCtor();
@@ -23,13 +22,12 @@ int tls() {
   return s.x;
 }
 
-// A static local is always a local var decl; the guarded global therefore
-// carries is_local_var_decl = true and never the AST-backed placeholder.
-// CHECK-NOT: #cir.var.decl
-
-// The thread_local static local materializes a non-default TLS kind.
+// The thread_local static local materializes a non-default TLS kind, alongside
+// the retained AST handle.
 // CHECK: @_ZZ3tlsvE1s
-// CHECK-SAME: ast = #cir.static_local_info<is_local_var_decl = true, tls = 2, is_inline = false, tsk = 0>
+// CHECK-SAME: ast = #cir.var.decl.ast
+// CHECK-SAME: static_local_info = #cir.static_local_info<is_local_var_decl = true, tls = 2, is_inline = false, tsk = 0>
 
 // CHECK: @_ZZ7regularvE1s
-// CHECK-SAME: ast = #cir.static_local_info<is_local_var_decl = true, tls = 0, is_inline = false, tsk = 0>
+// CHECK-SAME: ast = #cir.var.decl.ast
+// CHECK-SAME: static_local_info = #cir.static_local_info<is_local_var_decl = true, tls = 0, is_inline = false, tsk = 0>

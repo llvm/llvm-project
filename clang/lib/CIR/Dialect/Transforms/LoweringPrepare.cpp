@@ -425,9 +425,8 @@ struct LoweringPreparePass
   /// following OG's ItaniumCXXABI::EmitGuardedInit skeleton.
   void emitCXXGuardedInitIf(CIRBaseBuilderTy &builder, cir::GlobalOp globalOp,
                             mlir::Region &ctorRegion, mlir::Region &dtorRegion,
-                            cir::ASTVarDeclInterface varDecl,
-                            mlir::Value guardPtr, cir::PointerType guardPtrTy,
-                            bool threadsafe) {
+                            bool isLocalVarDecl, mlir::Value guardPtr,
+                            cir::PointerType guardPtrTy, bool threadsafe) {
     auto loc = globalOp->getLoc();
 
     // The semantics of dynamic initialization of variables with static or
@@ -525,7 +524,7 @@ struct LoweringPreparePass
                            mlir::ValueRange{guardPtr});
 
       builder.createYield(loc);
-    } else if (!varDecl.isLocalVarDecl()) {
+    } else if (!isLocalVarDecl) {
       // For non-local variables, store 1 into the first byte of the guard
       // variable before the object initialization begins so that references
       // to the variable during initialization don't restart initialization.
@@ -1353,9 +1352,12 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
                                             cir::LocalInitOp localInitOp) {
   CIRBaseBuilderTy builder(getContext());
 
-  std::optional<cir::ASTVarDeclInterface> astOption = globalOp.getAst();
-  assert(astOption.has_value());
-  cir::ASTVarDeclInterface varDecl = astOption.value();
+  // Static-local facts are materialized into a serializable attribute by
+  // CIRGen, so this pass does not need a live ASTContext to read them.
+  std::optional<cir::StaticLocalInfoAttr> infoOption =
+      globalOp.getStaticLocalInfo();
+  assert(infoOption.has_value());
+  cir::StaticLocalInfoAttr info = infoOption.value();
 
   builder.setInsertionPointAfter(localInitOp);
   mlir::Block *localInitBlock = builder.getInsertionBlock();
@@ -1370,8 +1372,8 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // Inline variables that weren't instantiated from variable templates have
   // partially-ordered initialization within their translation unit.
   bool nonTemplateInline =
-      varDecl.isInline() &&
-      !clang::isTemplateInstantiation(varDecl.getTemplateSpecializationKind());
+      info.getIsInline() &&
+      !clang::isTemplateInstantiation(info.getTemplateSpecializationKind());
 
   // Inline namespace-scope variables require guarded initialization in a
   // __cxx_global_var_init function. This is not yet implemented.
@@ -1385,8 +1387,8 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // inline variables; other global initialization is always single-threaded
   // or (through lazy dynamic loading in multiple threads) unsequenced.
   bool threadsafe = astCtx->getLangOpts().ThreadsafeStatics &&
-                    (varDecl.isLocalVarDecl() || nonTemplateInline) &&
-                    !varDecl.getTLSKind();
+                    (info.getIsLocalVarDecl() || nonTemplateInline) &&
+                    !info.getTLSKind();
 
   // If we have a global variable with internal linkage and thread-safe statics
   // are disabled, we can just let the guard variable be of type i8.
@@ -1395,7 +1397,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // Create the guard variable if we don't already have it.
   cir::GlobalOp guard = getOrCreateStaticLocalDeclGuardAddress(
       builder, globalOp, globalOp.getStaticLocalGuard()->getName().getValue(),
-      varDecl.isLocalVarDecl(), useInt8GuardVariable);
+      info.getIsLocalVarDecl(), useInt8GuardVariable);
   if (!guard) {
     // Error was already emitted, just restore the terminator and return.
     localInitBlock->push_back(ret);
@@ -1483,10 +1485,10 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     cir::IfOp::create(
         builder, globalOp.getLoc(), needsInit,
         /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location) {
-          emitCXXGuardedInitIf(builder, globalOp, localInitOp.getCtorRegion(),
-                               localInitOp.getDtorRegion(), varDecl, guardPtr,
-                               builder.getPointerTo(guard.getSymType()),
-                               threadsafe);
+          emitCXXGuardedInitIf(
+              builder, globalOp, localInitOp.getCtorRegion(),
+              localInitOp.getDtorRegion(), info.getIsLocalVarDecl(), guardPtr,
+              builder.getPointerTo(guard.getSymType()), threadsafe);
         });
   } else {
     // Threadsafe statics without inline atomics - call __cxa_guard_acquire

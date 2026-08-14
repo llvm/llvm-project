@@ -2016,18 +2016,29 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
 //===----------------------------------------------------------------------===//
 
 def CIR_StaticLocalInfoAttr
-    : CIR_Attr<"StaticLocalInfo", "static_local_info",
-               [ASTVarDeclInterface]> {
-  let summary = "AST-free cache of static-local VarDecl facts.";
+    : CIR_Attr<"StaticLocalInfo", "static_local_info"> {
+  let summary = "Static-local variable facts needed by later lowering";
   let description = [{
-    Materialized form of the facts `cir::ASTVarDeclInterface` exposes, so
-    that post-CIRGen passes (notably LoweringPrepare) can query them without
-    a live `clang::ASTContext`. Emitted by CIRGen for static-local guarded
-    globals in place of the AST-backed `ASTVarDeclAttr`.
+    Holds the subset of a static-local variable's declaration facts that
+    post-CIRGen lowering needs: whether it is a local variable declaration
+    (`is_local_var_decl`), its thread-local storage kind (`tls`), whether it
+    is inline (`is_inline`), and its template-specialization kind (`tsk`).
+    `tls` and `tsk` are stored as plain integers matching the
+    `clang::VarDecl::TLSKind` and `clang::TemplateSpecializationKind`
+    enumerators.
 
-    The TLS and template-specialization kinds are encoded as plain integers
-    matching the underlying `clang::VarDecl::TLSKind` and
-    `clang::TemplateSpecializationKind` enumerators.
+    Example:
+    ```
+    cir.global ... @x = ...
+      {static_local_info = #cir.static_local_info<
+         is_local_var_decl = true, tls = 0, is_inline = false, tsk = 0>}
+    ```
+
+    Because it stores plain data rather than a `clang::VarDecl` pointer, it
+    round-trips through textual CIR and stays valid once the AST is gone.
+    This is what lets LoweringPrepare consume these facts without a live
+    `clang::ASTContext`; the `$ast` `ASTVarDeclAttr` remains a separate,
+    live-AST handle for consumers that need arbitrary AST properties.
   }];
 
   let parameters = (ins
@@ -2042,13 +2053,10 @@ def CIR_StaticLocalInfoAttr
   }];
 
   let extraClassDeclaration = [{
-    // Satisfy ASTVarDeclInterface by reading cached fields instead of an
-    // AST-backed VarDecl pointer.
-    bool isLocalVarDecl() const { return getIsLocalVarDecl(); }
+    // Typed accessors over the stored integer fields.
     clang::VarDecl::TLSKind getTLSKind() const {
       return static_cast<clang::VarDecl::TLSKind>(getTls());
     }
-    bool isInline() const { return getIsInline(); }
     clang::TemplateSpecializationKind getTemplateSpecializationKind() const {
       return static_cast<clang::TemplateSpecializationKind>(getTsk());
     }
