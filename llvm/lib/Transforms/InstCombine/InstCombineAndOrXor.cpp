@@ -5053,7 +5053,7 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
 
   auto InsertPt = I.getInsertionPointAfterDef();
   assert(InsertPt && "sinkNotIntoLogicalOp requires an instruction with a "
-		     "valid insertion point");
+                     "valid insertion point");
   Builder.SetInsertPoint(*InsertPt);
   Value *NewLogicOp;
   if (IsBinaryOp) {
