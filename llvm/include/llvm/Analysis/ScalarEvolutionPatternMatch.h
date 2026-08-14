@@ -17,8 +17,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm {
 namespace PatternMatchHelpers {
 template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
@@ -34,6 +32,8 @@ template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
 } // namespace PatternMatchHelpers
 
 namespace SCEVPatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
@@ -311,6 +311,13 @@ template <typename Op0_t, typename Op1_t> struct SCEVURem_match {
     const SCEV *A;
     const SCEVMulExpr *Mul;
     if (!SCEVPatternMatch::match(Expr, m_scev_Add(m_scev_Mul(Mul), m_SCEV(A))))
+      return false;
+
+    // URem is represented as `A - ((A udiv B) * B)`. Only construct the complex
+    // SCEV expression, if the multiply of the expression to check has a UDiv
+    // operand.
+    if (none_of(Mul->operands(),
+                [](const SCEV *Op) { return isa<SCEVUDivExpr>(Op); }))
       return false;
 
     const auto MatchURemWithDivisor = [&](const SCEV *B) {

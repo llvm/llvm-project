@@ -212,7 +212,9 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   for (auto &[symbol, dep] : dependents_) {
     symbol->set_offset(dep.symbol->offset() + dep.offset);
     if (const auto *block{FindCommonBlockContaining(*dep.symbol)}) {
-      symbol->get<ObjectEntityDetails>().set_commonBlock(*block);
+      if (auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {
+        object->set_commonBlock(*block);
+      }
     }
   }
 }
@@ -397,6 +399,12 @@ std::size_t ComputeOffsetsHelper::DoSymbol(
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
   if (s.size == 0) {
+    // Zero-size symbols (e.g. CHARACTER*0) still occupy their sequential
+    // position in a COMMON block or derived-type sequence. Record the current
+    // offset so that LOC() and storage-association checks see the correct
+    // address rather than always returning the block base (offset 0).
+    symbol.set_size(0);
+    symbol.set_offset(offset_);
     return 0;
   }
   std::size_t previousOffset{offset_};

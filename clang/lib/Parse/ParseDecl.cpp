@@ -3778,9 +3778,7 @@ void Parser::ParseDeclarationSpecifiers(
       // This identifier can only be a typedef name if we haven't already seen
       // a type-specifier.  Without this check we misparse:
       //  typedef int X; struct Y { short X; };  as 'short int'.
-      // However, if 'auto' is set, we need to check if this identifier is a
-      // type name to detect conflicts (e.g., "auto MyInt").
-      if (DS.hasTypeSpecifier() && DS.getTypeSpecType() != DeclSpec::TST_auto)
+      if (DS.hasTypeSpecifier())
         goto DoneWithDeclSpec;
 
       // If the token is an identifier named "__declspec" and Microsoft
@@ -3865,27 +3863,6 @@ void Parser::ParseDeclarationSpecifiers(
                                   DS.isFriendSpecified()))
         goto DoneWithDeclSpec;
 
-      // If 'auto' is set and we're in a template parameter context, the
-      // identifier is always the parameter name, not a type specifier, so skip
-      // type name lookup to avoid false ambiguity errors.
-      if (DS.getTypeSpecType() == DeclSpec::TST_auto &&
-          DSContext == DeclSpecContext::DSC_template_param) {
-        goto DoneWithDeclSpec;
-      }
-
-      // If 'auto' is set and the next token indicates this identifier is the
-      // declarator-id, stop parsing declaration specifiers before doing type
-      // lookup. Looking up the declarator-id can produce bogus ambiguity errors
-      // when a variable name matches a type brought in by a using-directive.
-      if (DS.getTypeSpecType() == DeclSpec::TST_auto) {
-        Token Next = NextToken();
-        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::l_brace,
-                         tok::amp, tok::ampamp, tok::star, tok::coloncolon,
-                         tok::comma, tok::semi, tok::colon, tok::greater,
-                         tok::r_paren, tok::arrow))
-          goto DoneWithDeclSpec;
-      }
-
       ParsedType TypeRep = Actions.getTypeName(
           *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
           false, false, nullptr, false, false,
@@ -3893,16 +3870,11 @@ void Parser::ParseDeclarationSpecifiers(
 
       // If this is not a typedef name, don't parse it as part of the declspec,
       // it must be an implicit int or an error.
-      // However, if 'auto' is already set, we can't have an implicit int.
       if (!TypeRep) {
         if (TryAnnotateTypeConstraint())
           goto DoneWithDeclSpec;
         if (Tok.isNot(tok::identifier))
           continue;
-        // If 'auto' is set, the identifier must be a type name or it's an
-        // error. Don't try to parse it as implicit int.
-        if (DS.getTypeSpecType() == DeclSpec::TST_auto)
-          goto DoneWithDeclSpec;
         ParsedAttributes Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
           if (!Attrs.empty()) {
@@ -4168,18 +4140,15 @@ void Parser::ParseDeclarationSpecifiers(
           }
         };
 
-        if (!getLangOpts().CPlusPlus && MayBeTypeSpecifier()) {
+        if (MayBeTypeSpecifier()) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
-        } else {
-          if (getLangOpts().CPlusPlus11 &&
-              NextToken().isOneOf(tok::kw_class, tok::kw_struct,
-                                  tok::kw___interface, tok::kw_union,
-                                  tok::kw_enum))
-            Diag(Loc, diag::ext_auto_storage_class);
+          if (!isInvalid && !getLangOpts().C23)
+            Diag(Tok, diag::ext_auto_storage_class)
+              << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
+        } else
           isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
                                          DiagID, Policy);
-        }
       } else
         isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                            PrevSpec, DiagID, Policy);
@@ -4637,7 +4606,7 @@ void Parser::ParseDeclarationSpecifiers(
       continue;
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
       // HACK: libstdc++ already uses '__remove_cv' as an alias template so we
       // work around this by expecting all transform type traits to be suffixed
       // with '('. They're an identifier otherwise.
@@ -4734,8 +4703,7 @@ void Parser::ParseDeclarationSpecifiers(
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
 
     // If the specifier wasn't legal, issue a diagnostic.
-    // Skip diagnostic if 'auto' conflict will be handled in Finish()
-    if (isInvalid && !DS.hasConflictingTypeSpecifier()) {
+    if (isInvalid) {
       assert(PrevSpec && "Method did not return previous specifier!");
       assert(DiagID);
 
@@ -6496,8 +6464,12 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   // C++ member pointers start with a '::' or a nested-name.
   // Member pointers get special handling, since there's no place for the
   // scope spec in the generic path below.
+  // A 'decltype' can only begin a nested-name-specifier if it is followed by
+  // '('; otherwise it is not a decltype-specifier at all and must not be
+  // parsed as one.
   if (getLangOpts().CPlusPlus &&
-      (Tok.is(tok::coloncolon) || Tok.is(tok::kw_decltype) ||
+      (Tok.is(tok::coloncolon) ||
+       (Tok.is(tok::kw_decltype) && NextToken().is(tok::l_paren)) ||
        (Tok.is(tok::identifier) &&
         (NextToken().is(tok::coloncolon) || NextToken().is(tok::less))) ||
        Tok.is(tok::annot_cxxscope))) {

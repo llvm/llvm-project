@@ -13,6 +13,6 @@ def TestTarget : Target {
   let InstructionSet = TestInstrInfo;
 }
 
-// CHECK-DAG: 83 register-info-emitter - Number of explicit register classes
-// CHECK-DAG: 447 register-info-emitter - Number of synthesized register classes
-// CHECK-DAG: 189 register-info-emitter - Number of register pressure sets
+// CHECK-DAG: 78 register-info-emitter - Number of explicit register classes
+// CHECK-DAG: 325 register-info-emitter - Number of synthesized register classes
+// CHECK-DAG: 60 register-info-emitter - Number of register pressure sets

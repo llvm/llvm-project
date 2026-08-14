@@ -1,10 +1,12 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefix=BEFORE,BOTH
 // RUN: FileCheck %s --input-file=%t.cir --check-prefix=AFTER
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=AFTER,BOTH
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=AFTER,BOTH
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm %s -o %t.ll 2>&1
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t.ll 2>&1
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o %t-og.ll 2>&1
@@ -14,8 +16,8 @@
 
 // BEFORE: #cmpinfo_partial_ltn1eq0gt1unn127 = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
 // BEFORE: #cmpinfo_strong_ltn1eq0gt1 = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
-// BEFORE: !rec_std3A3A__13A3Apartial_ordering = !cir.struct<class "std::__1::partial_ordering" {!s8i}>
-// BEFORE: !rec_std3A3A__13A3Astrong_ordering = !cir.struct<class "std::__1::strong_ordering" {!s8i}>
+// BEFORE: !rec_std3A3A__13A3Apartial_ordering = !cir.struct<class "std::__1::partial_ordering" {data !s8i}>
+// BEFORE: !rec_std3A3A__13A3Astrong_ordering = !cir.struct<class "std::__1::strong_ordering" {data !s8i}>
 
 auto three_way_strong(int x, int y) {
   return x <=> y;
