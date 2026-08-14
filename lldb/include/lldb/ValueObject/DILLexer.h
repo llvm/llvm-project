@@ -26,11 +26,14 @@ class Token {
 public:
   enum Kind {
     amp,
+    ampamp,
     arrow,
+    caret,
     colon,
     coloncolon,
     eof,
     equal,
+    exclaim,
     float_constant,
     greatergreater,
     identifier,
@@ -44,12 +47,15 @@ public:
     minusequal,
     percent,
     period,
+    pipe,
+    pipepipe,
     plus,
     plusequal,
     r_paren,
     r_square,
     slash,
     star,
+    tilde,
   };
 
   Token(Kind kind, std::string spelling, uint32_t start)

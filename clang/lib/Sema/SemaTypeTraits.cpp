@@ -1955,7 +1955,7 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET, SourceLocation KWLoc,
 static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
   return llvm::StringSwitch<std::optional<TypeTrait>>(Name)
 #define EMIT_STD_NAME_CASES
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
       .Default(std::nullopt);
 }
 
@@ -2160,7 +2160,7 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
       continue;
     }
     auto SpecialMemberKind =
-        SemaRef.getDefaultedFunctionKind(Method).asSpecialMember();
+        Method->getDefaultedFunctionKind().asSpecialMember();
     switch (SpecialMemberKind) {
     case CXXSpecialMemberKind::CopyConstructor:
     case CXXSpecialMemberKind::MoveConstructor:

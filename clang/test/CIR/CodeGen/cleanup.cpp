@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports _Complex types.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 struct Struk {
   ~Struk();
 };
 
-// CHECK: !rec_Struk = !cir.struct<"Struk" padded {!u8i}>
+// CHECK: !rec_Struk = !cir.struct<"Struk" padded {pad !u8i}>
 
 // CHECK: cir.func{{.*}} @_ZN5StrukD1Ev(!cir.ptr<!rec_Struk> {{.*}})
 

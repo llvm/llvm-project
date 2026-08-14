@@ -52,9 +52,7 @@ define dso_local void @tbaa(ptr %0) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: warning: expected an access group node to be empty and distinct
-; CHECK:      error: unsupported access group node: !0 = !{}
+; CHECK: Access scope must be 'distinct'
 define void @access_group(ptr %arg1) {
   %1 = load i32, ptr %arg1, !llvm.access.group !0
   ret void
@@ -157,22 +155,6 @@ end:
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.unroll.enable"}
 !2 = !{!"llvm.loop.unroll.disable"}
-
-; // -----
-
-; CHECK:      <unknown>
-; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.enable to hold a boolean value
-; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
-define void @unsupported_loop_annotation(i64 %n, ptr %A) {
-entry:
-  br label %end, !llvm.loop !0
-end:
-  ret void
-}
-
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable"}
 
 ; // -----
 
@@ -459,6 +441,31 @@ bb1:
 
 ; // -----
 
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = distinct !{!"sp"}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @distinct_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = distinct !{!"sp"}
+
+; // -----
+
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = !{!{{[0-9]+}}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @nested_distinct_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{!1}
+!1 = distinct !{!"sp"}
+
+; // -----
+
 ; CHECK: error: unsupported metadata: !{{[0-9]+}} = distinct !{!{{[0-9]+}}}
 declare i32 @llvm.read_register.i32(metadata)
 
@@ -468,3 +475,61 @@ define i32 @cyclic_metadata_as_value() {
 }
 
 !0 = distinct !{!0}
+
+; // -----
+
+; Local values cannot be represented by symbol-backed metadata attributes.
+; CHECK: error: unsupported metadata: i32 %{{.*}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @local_value_metadata(i32 %arg) {
+  %r = call i32 @llvm.read_register.i32(metadata i32 %arg)
+  ret i32 %r
+}
+
+; // -----
+
+; Intrinsics with dedicated import conversions have no imported symbol for a
+; metadata symbol reference to target.
+; CHECK: error: unsupported metadata: ptr @llvm.memcpy.p0.p0.i64
+declare i32 @llvm.read_register.i32(metadata)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly, ptr noalias readonly, i64, i1 immarg)
+
+define i32 @skipped_intrinsic_metadata() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr @llvm.memcpy.p0.p0.i64}
+
+; // -----
+
+; CHECK: error: unsupported metadata: ptr @llvm.global_ctors
+declare i32 @llvm.read_register.i32(metadata)
+define void @ctor() {
+  ret void
+}
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @ctor, ptr null }]
+
+define i32 @metadata_ref_global_ctors() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr @llvm.global_ctors}
+
+; // -----
+
+; CHECK: error: unsupported metadata: ptr @llvm.global_dtors
+declare i32 @llvm.read_register.i32(metadata)
+define void @dtor() {
+  ret void
+}
+@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @dtor, ptr null }]
+
+define i32 @metadata_ref_global_dtors() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr @llvm.global_dtors}

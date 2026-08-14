@@ -637,7 +637,7 @@ public:
                   bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
-  cir::TLS_Model getDefaultCIRTLSModel() const;
+  cir::TLSModel getDefaultCIRTLSModel() const;
 
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
@@ -808,12 +808,6 @@ public:
                                     mlir::NamedAttrList extraAttrs = {},
                                     bool isLocal = false,
                                     bool assumeConvergent = false);
-
-  static constexpr const char *builtinCoroId = "__builtin_coro_id";
-  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
-  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
-  static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
-  static constexpr const char *builtinCoroFree = "__builtin_coro_free";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

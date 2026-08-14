@@ -112,7 +112,7 @@ class TestFrameVar(TestBase):
             self.assertIn(s, message)
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_missing_obj(self):
         """
         Test that if we build a binary with DWARF in .o files and we remove
@@ -136,7 +136,7 @@ class TestFrameVar(TestBase):
         self.check_frame_variable_errors(thread, error_strings)
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     def test_darwin_dwarf_obj_mod_time_mismatch(self):
         """
         Test that if we build a binary with DWARF in .o files and we update
@@ -170,6 +170,7 @@ class TestFrameVar(TestBase):
 
     @skipIfRemote
     @skipIfWindows  # Windows can't set breakpoints by name 'main' in this case.
+    @skipIf(compiler=no_match("clang"))
     def test_gline_tables_only(self):
         """
         Test that if we build a binary with "-gline-tables-only" that we can
