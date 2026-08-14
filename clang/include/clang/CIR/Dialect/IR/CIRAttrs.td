@@ -111,6 +111,48 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OffloadKindAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OffloadKind : CIR_I32EnumAttr<"OffloadKind", "offload kind", [
+  I32EnumAttrCase<"Host", 0, "host">,
+  I32EnumAttrCase<"Device", 1, "device">
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload_kind"> {
+  let summary = "Offload kind of a module in an offload container";
+  let description = [{
+    Marks a module as either the host module or one of the device modules of
+    an offload container, keeping a host CIR module and its associated device
+    CIR modules in one IR unit while offload merge/split pipeline passes need
+    visibility into both sides.
+
+    A module carrying the `cir.offload.container` unit attribute is such a
+    container. Its body holds only nested modules: the first one is the host
+    module and must carry `cir.offload.kind = #cir.offload_kind<host>`, and
+    all remaining ones are device modules and must carry
+    `cir.offload.kind = #cir.offload_kind<device>`. There must be at least one
+    device module. Keeping the host module first gives later passes a simple
+    convention for finding the host side while iterating the remaining device
+    modules.
+
+    Example:
+    ```mlir
+    module attributes {cir.offload.container} {
+      module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {}
+      module @device attributes {cir.offload.kind = #cir.offload_kind<device>} {}
+    }
+    ```
+
+    The attribute names `cir.offload.container` and `cir.offload.kind` are
+    defined by the `getOffloadContainerAttrName` and `getOffloadKindAttrName`
+    methods in the CIRDialect class.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ArgPassingKind + RecordLayoutAttr
 //===----------------------------------------------------------------------===//
 
