@@ -28236,6 +28236,13 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   if (SDValue NarrowLoad = narrowExtractedVectorLoad(NVT, V, ExtIdx, DL, DAG))
     return NarrowLoad;
 
+  // Peek through frozen loads, but ensure the load has a single use.
+  if (V.getOpcode() == ISD::FREEZE && V.hasOneUse() &&
+      V.getOperand(0).hasOneUse())
+    if (SDValue NarrowLoad =
+            narrowExtractedVectorLoad(NVT, V.getOperand(0), ExtIdx, DL, DAG))
+      return DAG.getFreeze(NarrowLoad);
+
   // Combine an extract of an extract into a single extract_subvector.
   // ext (ext X, C1), C2 --> ext X, C1 + C2
   if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
