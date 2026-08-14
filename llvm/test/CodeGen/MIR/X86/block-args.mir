@@ -1,0 +1,131 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=none -o - %s | FileCheck %s
+# Round-trip test for block arguments and their SUCC_ARGS feeders.
+
+# A single block argument fed by one predecessor.
+---
+name: single_arg
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  ; CHECK-LABEL: name: single_arg
+  bb.0:
+    successors: %bb.1
+    ; CHECK: SUCC_ARGS %bb.1, %0
+    %0:gr32 = MOV32ri 7
+    SUCC_ARGS %bb.1, %0
+    JMP_1 %bb.1
+
+  ; CHECK: bb.1:
+  ; CHECK: arguments: %1
+  bb.1:
+    arguments: %1:gr32
+    RET64 %1
+...
+
+# Multiple block arguments fed positionally from two predecessors.
+---
+name: multiple_args
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  ; CHECK-LABEL: name: multiple_args
+  bb.0:
+    successors: %bb.1, %bb.2
+    %0:gr32 = MOV32ri 1
+    %1:gr32 = MOV32ri 2
+    ; CHECK: SUCC_ARGS %bb.2, %0, %1
+    SUCC_ARGS %bb.2, %0, %1
+    JCC_1 %bb.2, 4, implicit undef $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2
+    %2:gr32 = MOV32ri 3
+    %3:gr32 = MOV32ri 4
+    ; CHECK: SUCC_ARGS %bb.2, %2, %3
+    SUCC_ARGS %bb.2, %2, %3
+    JMP_1 %bb.2
+
+  ; CHECK: bb.2:
+  ; CHECK: arguments: %4, %5
+  bb.2:
+    arguments: %4:gr32, %5:gr32
+    %6:gr32 = ADD32rr %4, %5, implicit-def dead $eflags
+    RET64 %6
+...
+
+# An empty argument list must not print an "arguments:" line.
+---
+name: empty_args
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  ; CHECK-LABEL: name: empty_args
+  ; CHECK-NOT: arguments:
+  bb.0:
+    RET64
+...
+
+# A loop header argument fed from both the entry edge and the latch back-edge.
+---
+name: loop_header_arg
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  ; CHECK-LABEL: name: loop_header_arg
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 0
+    ; CHECK: SUCC_ARGS %bb.1, %0
+    SUCC_ARGS %bb.1, %0
+    JMP_1 %bb.1
+
+  ; CHECK: bb.1:
+  ; CHECK: arguments: %1
+  bb.1:
+    successors: %bb.1, %bb.2
+    arguments: %1:gr32
+    %2:gr32 = ADD32ri %1, 1, implicit-def dead $eflags
+    ; CHECK: SUCC_ARGS %bb.1, %2
+    SUCC_ARGS %bb.1, %2
+    JCC_1 %bb.1, 4, implicit undef $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET64 %1
+...
+
+# The "successors:" and "arguments:" block header lines may appear in either
+# order. bb.1 lists arguments first, bb.2 lists successors first.
+---
+name: header_order
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  ; CHECK-LABEL: name: header_order
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 7
+    SUCC_ARGS %bb.1, %0
+    JMP_1 %bb.1
+
+  ; CHECK: bb.1:
+  ; CHECK: arguments: %1
+  bb.1:
+    arguments: %1:gr32
+    successors: %bb.2
+    SUCC_ARGS %bb.2, %1
+    JMP_1 %bb.2
+
+  ; CHECK: bb.2:
+  ; CHECK: arguments: %2
+  bb.2:
+    successors: %bb.3
+    arguments: %2:gr32
+    SUCC_ARGS %bb.3, %2
+    JMP_1 %bb.3
+
+  bb.3:
+    arguments: %3:gr32
+    RET64 %3
+...

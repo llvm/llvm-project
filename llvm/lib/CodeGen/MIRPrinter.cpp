@@ -804,6 +804,17 @@ void printMBB(raw_ostream &OS, MFPrintState &State,
     HasLineAttributes = true;
   }
 
+  // Print the block arguments.
+  if (!MBB.getBlockArgs().empty()) {
+    const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+    OS.indent(2) << "arguments: ";
+    ListSeparator LS;
+    for (Register Arg : MBB.getBlockArgs())
+      OS << LS << printReg(Arg, &TRI);
+    OS << '\n';
+    HasLineAttributes = true;
+  }
+
   if (HasLineAttributes && !MBB.empty())
     OS << "\n";
   bool IsInBundle = false;
