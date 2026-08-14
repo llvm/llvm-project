@@ -31109,12 +31109,41 @@ public:
         // Estimate cost.
         InstructionCost ReductionCost;
         if (RK == ReductionOrdering::Ordered || V.isReducedBitcastRoot() ||
-            V.isReducedCmpBitcastRoot())
+            V.isReducedCmpBitcastRoot()) {
           ReductionCost = 0;
-        else
+          // Check for potential fma fusion as vectorization would break it.
+          if (RK == ReductionOrdering::Ordered && RdxKind == RecurKind::FAdd &&
+              RdxFMF.allowContract()) {
+            constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+            Type *Ty = VL.front()->getType();
+            InstructionCost UnfusedCost =
+                TTI->getArithmeticInstrCost(Instruction::FMul, Ty, CostKind) +
+                TTI->getArithmeticInstrCost(Instruction::FAdd, Ty, CostKind);
+            for (Value *RdxVal : VL) {
+              auto *FMul = dyn_cast<Instruction>(RdxVal);
+              if (!FMul || FMul->getOpcode() != Instruction::FMul ||
+                  !FMul->hasOneUse())
+                continue;
+              auto *FAdd = dyn_cast<Instruction>(FMul->user_back());
+              if (!FAdd)
+                continue;
+              InstructionsState FAddS(FAdd, FAdd);
+              if (!FAddS.isAddSubLikeOp())
+                continue;
+              InstructionCost FMACost =
+                  canConvertToFMA(FAdd, FAddS, DT, DL, *TTI, TLI);
+              if (!FMACost.isValid())
+                continue;
+              InstructionCost FusionSaving = UnfusedCost - FMACost;
+              if (FusionSaving.isValid() && FusionSaving > 0)
+                ReductionCost += FusionSaving;
+            }
+          }
+        } else {
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
                                RdxFMF, V, DT, DL, TLI);
+        }
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
