@@ -49,7 +49,8 @@ loaded local-ID array and the inline-register global offset).
 - A64 single-dword load: desc 0x02108580 (load.ugm.d32x1t.a64).
 - SIMD32 A64 atomic iadd: desc 0x0820058C (four address GRFs, two data GRFs,
   two result GRFs).
-- Barrier signal payload: dword 2 is 0x100; bytes 10-11 copy `r0.11-r0.12`.
+- Barrier signal payload: dword 2 is 0x100; bytes 10-11 copy bytes 11-12 of
+  the inline-data register.
 - EOT: `send.gtwy (1|M0) null r127 null:0 0x0 0x02000010 {EOT}`.
 
 ## SWSB notation seen in IGA text

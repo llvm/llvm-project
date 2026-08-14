@@ -1990,6 +1990,18 @@ private:
       return failure();
     Type addressType = local ? i32() : i64();
     int64_t addressBits = local ? 32 : 64;
+    if (local) {
+      FailureOr<ValueShape> offsetShape =
+          getShape(operation.getOffset().getType(), operation);
+      if (failed(offsetShape))
+        return failure();
+      FailureOr<int64_t> offsetBits =
+          getElementBits(offsetShape->elementType, operation);
+      if (failed(offsetBits))
+        return failure();
+      if (*offsetBits != addressBits)
+        return operation.emitOpError("local pointer offset must be i32");
+    }
     int64_t footprint = (shape->cardinality * addressBits + 31) / 32;
     Value lhs = *base;
     Value rhs = *offset;
@@ -2563,9 +2575,10 @@ private:
   }
 
   void emitBarrier(Value dependency) {
-    FenceSLMOp fence = FenceSLMOp::create(*builder, *location, reg(16),
-                                          MemTokenType::get(context),
-                                          architecturalRegister(0), dependency);
+    Value inlineData = getInlineDataRegister();
+    FenceSLMOp fence =
+        FenceSLMOp::create(*builder, *location, reg(16),
+                           MemTokenType::get(context), inlineData, dependency);
     FenceAwaitOp await =
         FenceAwaitOp::create(*builder, *location, MemTokenType::get(context),
                              fence.getReadback(), fence.getToken());
@@ -2584,7 +2597,7 @@ private:
                                  canonicalDestination(), uniformRegion(),
                                  builder->getI32IntegerAttr(10),
                                  builder->getI32IntegerAttr(11), TypeAttr(),
-                                 true, 0, architecturalRegister(0))
+                                 true, 0, inlineData)
                        .getResult();
     payload = UpdateTupleOp::create(
                   *builder, *location, reg(16), payload, ValueRange{header},

@@ -298,38 +298,49 @@ private:
     uint32_t desc;
     uint32_t exdesc;
     bool writesDestination;
+    bool hasFixedLengths = false;
   };
+
+  static uint32_t getGRFLength(Value value) {
+    RegType type = cast<RegType>(value.getType());
+    assert(type.getWidthDwords() % 16 == 0 &&
+           "message payload must contain whole GRFs");
+    return type.getWidthDwords() / 16;
+  }
 
   LogicalResult lowerMessage(Operation *operation) {
     MessageForm form;
     if (isa<LoadA64Op>(operation))
-      form = {SendFn::ugm, 0x08200580, 0x0, true};
+      form = {SendFn::ugm, 0x00000580, 0x0, true};
     else if (isa<StoreA64Op>(operation))
-      form = {SendFn::ugm, 0x08000584, 0x0, false};
+      form = {SendFn::ugm, 0x00000584, 0x0, false};
     else if (isa<LoadSLMOp>(operation))
-      form = {SendFn::slm, 0x04200500, 0x0, true};
+      form = {SendFn::slm, 0x00000500, 0x0, true};
     else if (isa<StoreSLMOp>(operation))
-      form = {SendFn::slm, 0x04000504, 0x0, false};
+      form = {SendFn::slm, 0x00000504, 0x0, false};
     else if (isa<AtomicIAddA64Op>(operation))
-      form = {SendFn::ugm, 0x0820058C, 0x0, true};
+      form = {SendFn::ugm, 0x0000058C, 0x0, true};
     else if (isa<FenceSLMOp>(operation))
-      form = {SendFn::slm, 0x0210001F, 0x0, true};
+      form = {SendFn::slm, 0x0210001F, 0x0, true,
+              /*hasFixedLengths=*/true};
     else if (isa<BarrierSignalOp>(operation))
-      form = {SendFn::gtwy, 0x02000004, 0x0, false};
+      form = {SendFn::gtwy, 0x02000004, 0x0, false,
+              /*hasFixedLengths=*/true};
     else if (isa<EotOp>(operation))
-      form = {SendFn::gtwy, 0x02000010, 0x0, false};
+      form = {SendFn::gtwy, 0x02000010, 0x0, false,
+              /*hasFixedLengths=*/true};
     else if (LoadBlockA32Op block = dyn_cast<LoadBlockA32Op>(operation)) {
       uint32_t desc = block.getWords() == 32   ? 0x6229E500
                       : block.getWords() == 16 ? 0x6219D500
                                                : 0x6219C500;
-      form = {SendFn::ugm, desc, 0xFF000000, true};
+      form = {SendFn::ugm, desc, 0xFF000000, true,
+              /*hasFixedLengths=*/true};
     } else {
       return operation->emitError("unknown message operation");
     }
 
     SendInstruction instruction;
     instruction.function = form.function;
-    instruction.desc = form.desc;
     instruction.exdesc = form.exdesc;
     instruction.eot = isa<EotOp>(operation);
     instruction.execution.size = 1;
@@ -341,6 +352,12 @@ private:
 
     Type i32 = IntegerType::get(context, 32);
     Value address = operation->getOperand(0);
+    if (!form.hasFixedLengths) {
+      form.desc |= getGRFLength(address) << 25;
+      if (form.writesDestination)
+        form.desc |= getGRFLength(operation->getResult(0)) << 20;
+    }
+    instruction.desc = form.desc;
     instruction.address =
         getGrfReference(cast<RegType>(address.getType()), 0, i32);
     if (form.writesDestination)

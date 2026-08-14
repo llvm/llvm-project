@@ -1524,7 +1524,8 @@ private:
     std::optional<uint64_t> width = layout.getTypeIndexBitwidth(pointer);
     if (!width || !*width)
       return rewriter.notifyMatchFailure(gep, "pointer index width is unknown");
-    IntegerType indexType = IntegerType::get(gep.getContext(), *width);
+    uint64_t indexWidth = pointer.getAddressSpace() == 3 ? 32 : *width;
+    IntegerType indexType = IntegerType::get(gep.getContext(), indexWidth);
     Type currentType = gep.getElemType();
     Value offset = createIntegerConstant(rewriter, gep.getLoc(), indexType, 0);
     unsigned dynamicIndex = 1;

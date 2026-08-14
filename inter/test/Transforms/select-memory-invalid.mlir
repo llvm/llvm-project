@@ -47,3 +47,17 @@ module {
     return
   }
 }
+
+// -----
+
+module {
+  func.func @local_i64_offset() attributes {
+      xemachine.kernel, xemachine.kernel_args = [],
+      xw.simd_width = 8 : i32} {
+    %base = xw.local_memory_base : !xw.ptr<#xw.local>
+    %offset = xw.constant 4 : i64 -> !xw.simd<i64, 8>
+    // expected-error@+1 {{local pointer offset must be i32}}
+    %address = xw.ptradd %base, %offset : !xw.ptr<#xw.local>, !xw.simd<i64, 8> -> !xw.simd<!xw.ptr<#xw.local>, 8>
+    return
+  }
+}

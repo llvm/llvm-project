@@ -28,6 +28,11 @@ module {
         : (!llvm.ptr<1>, i32) -> !llvm.ptr<1>, i32
     llvm.return
   }
+  llvm.func spir_kernelcc @local_gep(%base: !llvm.ptr<3>, %index: i64) {
+    %pointer = llvm.getelementptr %base[%index]
+        : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i32
+    llvm.return
+  }
   llvm.func spir_funccc @_Z13get_global_idj(i32) -> i64
 
   llvm.mlir.global internal @scratch() {addr_space = 3 : i32} : i32
@@ -164,6 +169,10 @@ module {
 // CHECK-LABEL: func.func @negative_gep
 // CHECK: xw.cast intconvert {{.*}}policy {extension = #xw.cast_extension<sign>}
 // CHECK: xw.ptradd
+
+// CHECK-LABEL: func.func @local_gep
+// CHECK: xw.cast intconvert {{.*}} : i64 -> i32
+// CHECK: xw.ptradd {{.*}} : !xw.ptr<#xw.local>, i32 -> !xw.ptr<#xw.local>
 
 // CHECK-LABEL: func.func @spaces(
 // CHECK-SAME: !xw.ptr<#xw.private>
