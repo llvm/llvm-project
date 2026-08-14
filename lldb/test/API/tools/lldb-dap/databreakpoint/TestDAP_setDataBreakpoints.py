@@ -233,6 +233,112 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         session.continue_to_exit()
 
     @skipIfWindows
+    def test_hit_count_preserved(self):
+        """Test setDataBreakpoints preserves hit counts of existing watchpoints."""
+        source = "main.cpp"
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        first_loop_break_line = line_number(source, "// first loop breakpoint")
+        with session.configure(LaunchArgs(program)) as ctx:
+            session.resolve_source_breakpoints(source, [first_loop_break_line])
+        stop_event = session.verify_stopped_on_breakpoint(after=ctx.process_event)
+
+        second_loop_break_line = line_number(source, "// second loop breakpoint")
+        breakpoint_ids = session.resolve_source_breakpoints(
+            source, [second_loop_break_line]
+        )
+        stop_event = session.continue_to_any_breakpoint(breakpoint_ids)
+
+        top_frame_ctx = session.top_frame_from(stop_event)
+        frame_id = top_frame_ctx.frame.id
+        locals_ref = top_frame_ctx.locals.variablesReference
+
+        response_x = session.data_breakpoint_info("x", locals_ref, frame_id)
+        arr = top_frame_ctx.locals["arr"]
+        arr_var_ref = self.expect_not_none(arr.variablesReference)
+        response_arr_2 = session.data_breakpoint_info("[2]", arr_var_ref, frame_id)
+
+        x_data_id = self.expect_not_none(response_x.body.dataId)
+        arr_2_data_id = self.expect_not_none(response_arr_2.body.dataId)
+
+        set_response = session.set_data_breakpoints(
+            [DataBreakpoint(dataId=x_data_id, accessType="write")]
+        )
+        [bp_x] = set_response.body.breakpoints
+        self.assertTrue(bp_x.verified)
+        x_bp_id = self.expect_not_none(bp_x.id)
+
+        # Hit the watchpoint on `x` twice.
+        stop_event = session.continue_to_breakpoint(x_bp_id)
+        self.assertEqual(session.top_frame_from(stop_event).locals["x"].value, "2")
+        stop_event = session.continue_to_breakpoint(x_bp_id)
+        self.assertEqual(session.top_frame_from(stop_event).locals["x"].value, "3")
+
+        resp_body = session.evaluate("`watchpoint list -v", context="repl")
+        session.verify_evaluate(resp_body, matches=r"hit_count = 2\s")
+
+        # Set additional data breakpoint on different variable.
+        set_response = session.set_data_breakpoints(
+            [
+                DataBreakpoint(dataId=x_data_id, accessType="write"),
+                DataBreakpoint(dataId=arr_2_data_id, accessType="write"),
+            ]
+        )
+        [bp_x2, bp_arr_2] = set_response.body.breakpoints
+        self.assertTrue(bp_x2.verified)
+        self.assertTrue(bp_arr_2.verified)
+        self.assertEqual(bp_x2.id, x_bp_id)
+
+        resp_body = session.evaluate("`watchpoint list -v", context="repl")
+        session.verify_evaluate(resp_body, matches=r"hit_count = 2\s")
+
+        session.set_data_breakpoints([])
+        session.continue_to_exit()
+
+    @skipIfWindows
+    def test_type_change_recreates(self):
+        """Test setDataBreakpoints recreates watchpoint in case of changing type."""
+        source = "main.cpp"
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session()
+        first_loop_break_line = line_number(source, "// first loop breakpoint")
+        with session.configure(LaunchArgs(program)) as ctx:
+            session.resolve_source_breakpoints(source, [first_loop_break_line])
+        stop_event = session.verify_stopped_on_breakpoint(after=ctx.process_event)
+
+        top_frame_ctx = session.top_frame_from(stop_event)
+        frame_id = top_frame_ctx.frame.id
+        locals_ref = top_frame_ctx.locals.variablesReference
+        response_x = session.data_breakpoint_info("x", locals_ref, frame_id)
+        x_data_id = self.expect_not_none(response_x.body.dataId)
+
+        set_response = session.set_data_breakpoints(
+            [DataBreakpoint(dataId=x_data_id, accessType="write")]
+        )
+        [bp_write] = set_response.body.breakpoints
+        self.assertTrue(bp_write.verified)
+        write_id = self.expect_not_none(bp_write.id)
+
+        stop_event = session.continue_to_breakpoint(write_id)
+        self.assertEqual(session.top_frame_from(stop_event).locals["x"].value, "2")
+
+        resp_body = session.evaluate("`watchpoint list -v", context="repl")
+        session.verify_evaluate(resp_body, matches=r"hit_count = 1\s")
+
+        set_response = session.set_data_breakpoints(
+            [DataBreakpoint(dataId=x_data_id, accessType="readWrite")]
+        )
+        [bp_rw] = set_response.body.breakpoints
+        self.assertTrue(bp_rw.verified)
+        self.assertNotEqual(bp_rw.id, write_id)
+
+        resp_body = session.evaluate("`watchpoint list -v", context="repl")
+        session.verify_evaluate(resp_body, matches=r"hit_count = 0\s")
+
+        session.set_data_breakpoints([])
+        session.continue_to_exit()
+
+    @skipIfWindows
     def test_bytes(self):
         """Tests setting data breakpoints on memory range."""
         source = self.getSourcePath("main.cpp")

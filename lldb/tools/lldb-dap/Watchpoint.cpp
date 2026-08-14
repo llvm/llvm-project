@@ -60,4 +60,12 @@ void Watchpoint::SetWatchpoint() {
   if (!m_hit_condition.empty())
     SetHitCondition();
 }
+
+bool Watchpoint::HasSameSizeAndType(const Watchpoint &wp) const {
+  return m_size == wp.m_size &&
+         m_options.GetWatchpointTypeRead() ==
+             wp.m_options.GetWatchpointTypeRead() &&
+         m_options.GetWatchpointTypeWrite() ==
+             wp.m_options.GetWatchpointTypeWrite();
+}
 } // namespace lldb_dap
