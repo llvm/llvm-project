@@ -46,15 +46,25 @@ using namespace Fortran::semantics::omp;
 
 namespace {
 
-bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec) {
+bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec,
+    parser::OmpVariableCategory::Value &varCategory) {
   using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
+  using VariableCategory = parser::OmpVariableCategory;
   const parser::OmpClause *clause{
       parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_default)};
   if (!clause) {
     return false;
   }
   const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
-  return defaultClause.v.v == DataSharingAttribute::None;
+  auto *maybeCategory = OmpGetUniqueModifier<parser::OmpVariableCategory>(
+      std::get<1>(defaultClause.v.t));
+  if (maybeCategory) {
+    varCategory = maybeCategory->v;
+  } else {
+    varCategory = VariableCategory::Value::All;
+  }
+  return std::get<DataSharingAttribute>(defaultClause.v.t) ==
+      DataSharingAttribute::None;
 }
 
 bool HasNestedPrivateDSA(const Symbol &symbol, const Scope &scope) {
@@ -73,9 +83,10 @@ bool HasNestedPrivateDSA(const Symbol &symbol, const Scope &scope) {
 class MetadirectiveDefaultNoneChecker {
 public:
   MetadirectiveDefaultNoneChecker(SemanticsContext &context, const Scope &scope,
-      const SymbolSourceMap &explicitDSA, UnorderedSymbolSet &diagnosed)
+      const SymbolSourceMap &explicitDSA, UnorderedSymbolSet &diagnosed,
+      parser::OmpVariableCategory::Value &varcat)
       : context_{context}, scope_{scope}, explicitDSA_{explicitDSA},
-        diagnosed_{diagnosed} {}
+        diagnosed_{diagnosed}, varcat_{varcat} {}
 
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
@@ -128,6 +139,10 @@ public:
       return true;
     }
 
+    if (!DefaultMapCategoryMatchesSymbol(varcat_, ultimate)) {
+      return true;
+    }
+
     const Symbol *requiredSymbol{&ultimate};
     if (ultimate.test(Symbol::Flag::CrayPointee)) {
       requiredSymbol = &semantics::GetCrayPointer(ultimate).GetUltimate();
@@ -158,6 +173,7 @@ private:
   UnorderedSymbolSet loopIndices_;
   int declarativeNesting_{0};
   int expressionNesting_{0};
+  parser::OmpVariableCategory::Value varcat_;
 };
 
 } // namespace
@@ -165,25 +181,27 @@ private:
 void OmpStructureChecker::CheckDefaultNoneInAssociatedLoop(
     const parser::OmpDirectiveSpecification &spec,
     const parser::DoConstruct &rootLoop, UnorderedSymbolSet &diagnosed) {
-  if (!HasDefaultNone(spec)) {
-    return;
-  }
 
-  SymbolSourceMap explicitDSA;
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-  for (const parser::OmpClause &clause : spec.Clauses().v) {
-    if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
-      if (const parser::OmpObjectList *objects{
-              parser::omp::GetOmpObjectList(clause)}) {
-        GetSymbolsInObjectList(*objects, explicitDSA);
+  using VariableCategory = parser::OmpVariableCategory;
+  VariableCategory::Value varCategory{};
+  if (HasDefaultNone(spec, varCategory)) {
+    SymbolSourceMap explicitDSA;
+
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    for (const parser::OmpClause &clause : spec.Clauses().v) {
+      if (llvm::omp::isDataSharingAttributeClause(clause.Id(), version)) {
+        if (const parser::OmpObjectList *objects{
+                parser::omp::GetOmpObjectList(clause)}) {
+          GetSymbolsInObjectList(*objects, explicitDSA);
+        }
       }
     }
-  }
 
-  const Scope &scope{context_.FindScope(*parser::GetSource(rootLoop))};
-  MetadirectiveDefaultNoneChecker checker{
-      context_, scope, explicitDSA, diagnosed};
-  parser::Walk(rootLoop, checker);
+    const Scope &scope{context_.FindScope(*parser::GetSource(rootLoop))};
+    MetadirectiveDefaultNoneChecker checker{
+        context_, scope, explicitDSA, diagnosed, varCategory};
+    parser::Walk(rootLoop, checker);
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {

@@ -4606,17 +4606,20 @@ struct OmpApplyClause {
   std::tuple<MODIFIERS(), std::list<OmpDirectiveSpecification>> t;
 };
 
-// Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109]
+// Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109], [6.0:223-224]
 //
 // When used as a data-sharing clause:
 // default-clause ->
-//    DEFAULT(data-sharing-attribute)               // since 4.5
+//    DEFAULT(data-sharing-attribute                // since 4.5
+//      [: variable-category])                      // since 6.0
 // data-sharing-attribute ->
 //    SHARED | NONE |                               // since 4.5
 //    PRIVATE | FIRSTPRIVATE                        // since 5.0
 struct OmpDefaultClause {
-  ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
-  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, DataSharingAttribute);
+  ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None);
+  TUPLE_CLASS_BOILERPLATE(OmpDefaultClause);
+  MODIFIER_BOILERPLATE(OmpVariableCategory);
+  std::tuple<DataSharingAttribute, MODIFIERS()> t;
 };
 
 // Ref: [4.5:103-107], [5.0:324-325], [5.1:357-358], [5.2:161-162]

@@ -240,7 +240,8 @@ inline Clause convertClause(const clang::OMPClause &c) {
     return makeClause(
         kind,
         tc::DefaultT<TypeTy, IdTy, ExprTy>{
-            tc::DefaultT<TypeTy, IdTy, ExprTy>::DataSharingAttribute::Shared},
+            {tc::DefaultT<TypeTy, IdTy, ExprTy>::DataSharingAttribute::Shared,
+             std::nullopt}},
         c);
   case llvm::omp::OMPC_dyn_groupprivate:
     return makeClause(kind,

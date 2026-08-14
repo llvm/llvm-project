@@ -91,6 +91,70 @@ bool IsClauseAllowedOnDirective(llvm::omp::Clause clauseId,
       clauseId, dirId, version, GetSemanticOverridesOrNull(semaCtx));
 }
 
+bool IsOpenMPPointer(const Symbol &symbol) {
+  if (IsPointer(symbol) || IsBuiltinCPtr(symbol))
+    return true;
+  return false;
+}
+
+bool IsOpenMPAggregate(const Symbol &symbol) {
+  if (IsAllocatable(symbol) || IsOpenMPPointer(symbol))
+    return false;
+
+  const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
+
+  // OpenMP categorizes Fortran characters as aggregates.
+  if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
+    return true;
+
+  if (const auto *det{symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()})
+    if (det->IsArray())
+      return true;
+
+  if (type->AsDerived())
+    return true;
+
+  if (IsDeferredShape(symbol) || IsAssumedRank(symbol) ||
+      IsAssumedShape(symbol))
+    return true;
+  return false;
+}
+
+bool IsOpenMPScalar(const Symbol &symbol) {
+  if (IsOpenMPAggregate(symbol) || IsOpenMPPointer(symbol) ||
+      IsAllocatable(symbol))
+    return false;
+  const auto *type{symbol.GetType()};
+  if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
+      (type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Numeric ||
+          type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Logical))
+    return true;
+  return false;
+}
+
+bool DefaultMapCategoryMatchesSymbol(
+    parser::OmpVariableCategory::Value category, const Symbol &symbol) {
+  using VarCat = parser::OmpVariableCategory::Value;
+  switch (category) {
+  case VarCat::Scalar:
+    return IsOpenMPScalar(symbol);
+  case VarCat::Allocatable:
+    return IsAllocatable(symbol);
+  case VarCat::Aggregate:
+    return IsOpenMPAggregate(symbol);
+  case VarCat::Pointer:
+    return IsOpenMPPointer(symbol);
+  case VarCat::All:
+    return true;
+  }
+  return false;
+}
+
 const Scope &GetScopingUnit(const Scope &scope) {
   const Scope *iter{&scope};
   for (; !iter->IsTopLevel(); iter = &iter->parent()) {
