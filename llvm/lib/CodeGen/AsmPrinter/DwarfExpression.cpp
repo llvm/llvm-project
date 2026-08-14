@@ -571,7 +571,7 @@ bool DwarfExpression::addExpression(
   // Iterating over ExprCursor doesn't consume it.
   bool HasSymbolicBranches =
       llvm::any_of(ExprCursor, [](DIExpression::ExprOperand Op) {
-        return Op.isOneOf(dwarf::DW_OP_LLVM_bra, dwarf::DW_OP_LLVM_skip);
+        return Op.is(dwarf::DW_OP_LLVM_bra) || Op.is(dwarf::DW_OP_LLVM_skip);
       });
 
   SmallVector<LabelOffset, 4> Labels;
