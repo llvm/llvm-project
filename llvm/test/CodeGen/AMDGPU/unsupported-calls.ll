@@ -1,5 +1,5 @@
 ; RUN: not llc -mtriple=amdgpu6.00-mesa-mesa3d -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
-; RUN: not llc -global-isel -global-isel-abort=0 -mtriple=amdgpu6.00-mesa-mesa3d -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
+; RUN: not llc -global-isel -mtriple=amdgpu6.00-mesa-mesa3d -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
 ; RUN: not llc -mtriple=amdgpu6.00--amdpal -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
 ; RUN: not llc -mtriple=r600-- -mcpu=cypress -tailcallopt < %s 2>&1 | FileCheck -check-prefix=R600 %s
 

@@ -1614,8 +1614,14 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
 
   if (Info.IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
-    LLVM_DEBUG(dbgs() << "Required tail calls not implemented\n");
-    return false;
+    StringRef CalleeName = Info.Callee.isGlobal()
+                               ? Info.Callee.getGlobal()->getName()
+                               : "<unknown>";
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F, "unsupported required tail call to function " + CalleeName));
+    for (Register ResReg : Info.OrigRet.Regs)
+      MIRBuilder.buildUndef(ResReg);
+    return true;
   }
 
   // If we can lower as a tail call, do that instead.
