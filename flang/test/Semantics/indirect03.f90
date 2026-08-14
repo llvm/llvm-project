@@ -28,4 +28,25 @@ contains
     character(1) :: i
     i = 'c'
   end function
+
+  ! The restriction only applies when INDIRECT evaluates to true, so a
+  ! device-only procedure is allowed here.
+  function func_false() result(i)
+    !$omp declare target enter(func_false) device_type(nohost) indirect(.false.)
+    character(1) :: i
+    i = 'd'
+  end function
+
+  ! The argument may have any logical kind, not just the default one.
+  function func_false_kind1() result(i)
+    !$omp declare target enter(func_false_kind1) device_type(nohost) indirect(.false._1)
+    character(1) :: i
+    i = 'e'
+  end function
+
+  function func_false_kind8() result(i)
+    !$omp declare target enter(func_false_kind8) device_type(nohost) indirect(.false._8)
+    character(1) :: i
+    i = 'f'
+  end function
 end module

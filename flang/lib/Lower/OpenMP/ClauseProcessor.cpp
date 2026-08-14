@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Utils/OpenMP.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -489,9 +490,8 @@ bool ClauseProcessor::processIndirect(
     if (clause->v) {
       auto foldedExpr = Fortran::evaluate::Fold(
           semaCtx.foldingContext(), Fortran::common::Clone(*clause->v));
-      if (auto logicalVal = Fortran::evaluate::GetScalarConstantValue<
-              Fortran::evaluate::LogicalResult>(foldedExpr))
-        isIndirect = logicalVal->IsTrue();
+      // The argument may have any logical kind, not just logical(4).
+      isIndirect = semantics::omp::GetLogicalValue(foldedExpr).value_or(true);
     }
     result.indirect = isIndirect;
     return true;

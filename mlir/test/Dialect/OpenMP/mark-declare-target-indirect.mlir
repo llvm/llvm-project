@@ -6,16 +6,16 @@
 // be propagated to functions that are only reached through (direct) calls.
 
 // A function explicitly declared `indirect` that directly calls another
-// function: the callee is implicitly captured and must be marked declare target
-// with `indirect = false`, not inherit the parent's `indirect = true`.
+// function: the callee is implicitly captured (marked with `implicit = true`)
+// and must not inherit the parent's `indirect = true`.
 module {
-  // CHECK: func.func @indirect_parent() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>}
-  func.func @indirect_parent() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>} {
+  // CHECK: func.func @indirect_parent() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>}
+  func.func @indirect_parent() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>} {
     func.call @direct_callee() : () -> ()
     return
   }
 
-  // CHECK: func.func @direct_callee() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = false>}
+  // CHECK: func.func @direct_callee() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to), implicit = true>}
   func.func @direct_callee() {
     return
   }
@@ -26,14 +26,14 @@ module {
 // A callee that is itself explicitly declared `indirect` keeps its own value
 // (the pass must not clobber it).
 module {
-  // CHECK: func.func @indirect_parent2() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>}
-  func.func @indirect_parent2() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>} {
+  // CHECK: func.func @indirect_parent2() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>}
+  func.func @indirect_parent2() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>} {
     func.call @explicitly_indirect_callee() : () -> ()
     return
   }
 
-  // CHECK: func.func @explicitly_indirect_callee() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>}
-  func.func @explicitly_indirect_callee() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>} {
+  // CHECK: func.func @explicitly_indirect_callee() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>}
+  func.func @explicitly_indirect_callee() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>} {
     return
   }
 }

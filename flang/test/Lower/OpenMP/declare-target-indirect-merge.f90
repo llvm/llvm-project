@@ -9,7 +9,7 @@ module m1
   implicit none
 contains
   ! A later directive adds `indirect` with the same (default) device_type.
-  ! CHECK: func.func @_QMm1Pfoo1() -> i32 attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>}
+  ! CHECK: func.func @_QMm1Pfoo1() -> i32 attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>}
   function foo1() result(i)
     !$omp declare target enter(foo1)
     !$omp declare target enter(foo1) indirect(.true.)
@@ -22,7 +22,7 @@ module m2
   implicit none
 contains
   ! `indirect` first, plain second: it must stay set.
-  ! CHECK: func.func @_QMm2Pfoo2() -> i32 attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>}
+  ! CHECK: func.func @_QMm2Pfoo2() -> i32 attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>}
   function foo2() result(i)
     !$omp declare target enter(foo2) indirect(.true.)
     !$omp declare target enter(foo2)
@@ -37,7 +37,7 @@ contains
   ! `indirect` (device_type any) followed by a device_type(nohost) declaration:
   ! the device type merges to `any` and the `indirect = true` must be carried
   ! over rather than overwritten.
-  ! CHECK: func.func @_QMm3Pfoo3() -> i32 attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false, indirect = true>}
+  ! CHECK: func.func @_QMm3Pfoo3() -> i32 attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), indirect = true>}
   function foo3() result(i)
     !$omp declare target enter(foo3) indirect(.true.)
     !$omp declare target enter(foo3) device_type(nohost)

@@ -13,7 +13,7 @@ module functions
 
 contains
   function func1() result(i)
-    !CHECK: The INDIRECT clause cannot be used without the ENTER clause with the DECLARE TARGET directive.
+    !CHECK: The INDIRECT clause cannot be used without the ENTER or TO clause with the DECLARE TARGET directive.
     !$omp declare target indirect(.true.)
     character(1) :: i
     i = 'a'

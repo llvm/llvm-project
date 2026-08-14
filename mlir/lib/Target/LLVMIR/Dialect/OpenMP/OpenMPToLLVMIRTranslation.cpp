@@ -9793,9 +9793,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       // that indirect calls to it from within a target region can be resolved
       // by the runtime. This applies to both host and device compilation, but
       // not to host-only functions that are about to be deleted on the device.
-      mlir::BoolAttr indirectAttr = attribute.getIndirect();
-      if (indirectAttr && indirectAttr.getValue() &&
-          !(isTargetDevice && isHostFunc))
+      if (attribute.getIndirect() && !(isTargetDevice && isHostFunc))
         registerIndirectDeclareTargetFunction(funcOp, ompBuilder,
                                               moduleTranslation);
 
