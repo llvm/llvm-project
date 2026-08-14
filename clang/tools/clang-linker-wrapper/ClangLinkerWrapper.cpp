@@ -1253,33 +1253,31 @@ findFromSearchPaths(StringRef Name, StringRef Root,
 
 std::optional<std::string>
 searchLibraryBaseName(StringRef Name, StringRef Root,
-                      ArrayRef<StringRef> SearchPaths) {
-  for (StringRef Dir : SearchPaths) {
-    if (std::optional<std::string> File =
-            findFile(Dir, Root, "lib" + Name + ".so"))
-      return File;
-    if (std::optional<std::string> File =
-            findFile(Dir, Root, "lib" + Name + ".a"))
-      return File;
-    // Windows linkers also accept the MinGW and the MSVC spelling of a library.
-    if (std::optional<std::string> File =
-            findFile(Dir, Root, "lib" + Name + ".dll.a"))
-      return File;
-    if (std::optional<std::string> File = findFile(Dir, Root, Name + ".lib"))
-      return File;
-  }
+                      ArrayRef<StringRef> SearchPaths, bool IsWindows) {
+  SmallVector<std::string> Candidates;
+  if (IsWindows)
+    Candidates = {"lib" + Name.str() + ".dll.a", Name.str() + ".dll.a",
+                  "lib" + Name.str() + ".a", Name.str() + ".lib"};
+  else
+    Candidates = {"lib" + Name.str() + ".so", "lib" + Name.str() + ".a"};
+
+  for (StringRef Dir : SearchPaths)
+    for (StringRef Candidate : Candidates)
+      if (std::optional<std::string> File = findFile(Dir, Root, Candidate))
+        return File;
   return std::nullopt;
 }
 
 /// Search for static libraries in the linker's library path given input like
 /// `-lfoo` or `-l:libfoo.a`.
 std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
-                                         ArrayRef<StringRef> SearchPaths) {
+                                         ArrayRef<StringRef> SearchPaths,
+                                         bool IsWindows) {
   if (Input.starts_with(":"))
     return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
   if (Input.ends_with(".lib"))
     return findFromSearchPaths(Input, Root, SearchPaths);
-  return searchLibraryBaseName(Input, Root, SearchPaths);
+  return searchLibraryBaseName(Input, Root, SearchPaths, IsWindows);
 }
 
 /// Search for an input file given by name, e.g. `foo.lib`. COFF linkers use
@@ -1360,6 +1358,9 @@ getDeviceInput(const ArgList &Args) {
   if (Args.hasArg(OPT_override_image))
     return SmallVector<SmallVector<OffloadFile>>();
 
+  const llvm::Triple HostTriple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path, OPT_libpath))
@@ -1389,7 +1390,8 @@ getDeviceInput(const ArgList &Args) {
 
     std::optional<std::string> Filename =
         Arg->getOption().matches(OPT_library)
-            ? searchLibrary(Arg->getValue(), Root, LibraryPaths)
+            ? searchLibrary(Arg->getValue(), Root, LibraryPaths,
+                            HostTriple.isOSWindows())
             : searchInput(Arg->getValue(), Root, InputPaths);
 
     if (!Filename && Arg->getOption().matches(OPT_library))

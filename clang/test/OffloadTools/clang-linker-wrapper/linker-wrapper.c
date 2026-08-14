@@ -184,6 +184,9 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-windows-msvc --dry-run \
 // RUN:   --linker-path=/usr/bin/lld-link -wholearchive:%t.dir/foo.lib -out:a.exe 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=COFF-WHOLE-ARCHIVE
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-windows-msvc --dry-run \
+// RUN:   --linker-path=/usr/bin/lld-link -libpath:%t.dir -wholearchive:foo.lib -out:a.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=COFF-WHOLE-ARCHIVE
 
 // COFF-WHOLE-ARCHIVE: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{[^ ]*}}.o{{$}}
 
