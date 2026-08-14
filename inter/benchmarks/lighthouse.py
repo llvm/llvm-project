@@ -10,7 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from lighthouse_input import specialize_inter_source
+from lighthouse_input import drop_loop_prefetches, specialize_inter_source
 
 
 HERE = Path(__file__).resolve().parent
@@ -22,8 +22,17 @@ IGC_SOURCE = HERE / "lighthouse-matmul.cl"
 RESULT = re.compile(r"^(inter|igc) median_us=([0-9.]+).*$")
 
 
-def run(command: list[str], *, capture: bool = False) -> str:
-    process = subprocess.run(command, text=True, capture_output=capture)
+def run(
+    command: list[str], *, capture: bool = False, timeout: float | None = None
+) -> str:
+    try:
+        process = subprocess.run(
+            command, text=True, capture_output=capture, timeout=timeout
+        )
+    except subprocess.TimeoutExpired as error:
+        raise SystemExit(
+            f"command timed out after {timeout:g}s: {' '.join(command)}"
+        ) from error
     if process.returncode != 0:
         if capture:
             sys.stdout.write(process.stdout)
@@ -44,6 +53,7 @@ def build_binaries(
     igc_device: str,
     size: int,
     reduction_size: int,
+    drop_loop_prefetch: bool,
 ) -> tuple[Path, Path, str]:
     inter_opt = require(build_dir / "tools" / "inter-opt" / "inter-opt")
     inter_translate = require(
@@ -58,6 +68,8 @@ def build_binaries(
         source_text = specialize_inter_source(
             INTER_SOURCE.read_text(), size, reduction_size
         )
+        if drop_loop_prefetch:
+            source_text = drop_loop_prefetches(source_text)
     except ValueError as error:
         raise SystemExit(str(error)) from error
     inter_source.write_text(source_text)
@@ -66,6 +78,9 @@ def build_binaries(
         f"transform-preload-library{{transform-library-paths={pipelines}}},"
         "transform-interpreter{entry-point=inter_backend})"
     )
+    compile_options = f"-DMATRIX_SIZE={size} -DREDUCTION_SIZE={reduction_size}"
+    if drop_loop_prefetch:
+        compile_options += " -DDROP_LOOP_PREFETCH"
     run(
         [
             str(inter_opt),
@@ -102,7 +117,7 @@ def build_binaries(
             "-device",
             igc_device,
             "-options",
-            f"-DMATRIX_SIZE={size} -DREDUCTION_SIZE={reduction_size}",
+            compile_options,
             "-out_dir",
             str(igc_dir),
         ]
@@ -126,6 +141,7 @@ def measure(
     iterations: int,
     size: int,
     reduction_size: int,
+    timeout: float,
 ) -> float:
     output = run(
         [
@@ -141,6 +157,7 @@ def measure(
             "payload_kernel",
         ],
         capture=True,
+        timeout=timeout,
     )
     print(output, end="")
     match = RESULT.search(output)
@@ -163,9 +180,13 @@ def main() -> int:
     parser.add_argument("--warmups", type=int, default=200)
     parser.add_argument("--batches", type=int, default=15)
     parser.add_argument("--iterations", type=int, default=1000)
+    parser.add_argument("--timeout", type=float, default=120.0)
+    parser.add_argument("--drop-loop-prefetch", action="store_true")
     args = parser.parse_args()
     if min(args.runs, args.warmups, args.batches, args.iterations) < 1:
         parser.error("run counts must be positive")
+    if args.timeout <= 0:
+        parser.error("--timeout must be positive")
     if args.size < 64 or args.size % 64:
         parser.error("--size must be a positive multiple of 64")
     if args.reduction_size < 32 or args.reduction_size % 32:
@@ -175,13 +196,20 @@ def main() -> int:
     output_dir = (args.output_dir or build_dir / "benchmarks" / "lighthouse").resolve()
     runner = require(build_dir / "benchmarks" / "inter-lighthouse-benchmark")
     inter_binary, igc_binary, ocloc_version = build_binaries(
-        build_dir, output_dir, args.igc_device, args.size, args.reduction_size
+        build_dir,
+        output_dir,
+        args.igc_device,
+        args.size,
+        args.reduction_size,
+        args.drop_loop_prefetch,
     )
     print(
         f"configuration device={args.device} igc_device={args.igc_device} "
         f"shape={args.size}x{args.size}x{args.reduction_size} "
         f"runs={args.runs} warmups={args.warmups} batches={args.batches} "
         f"iterations={args.iterations} timestamp=level-zero-kernel "
+        f"timeout={args.timeout:g}s "
+        f"loop_prefetch={'off' if args.drop_loop_prefetch else 'on'} "
         f"ocloc={ocloc_version}"
     )
     samples: dict[str, list[float]] = {"inter": [], "igc": []}
@@ -200,6 +228,7 @@ def main() -> int:
                     args.iterations,
                     args.size,
                     args.reduction_size,
+                    args.timeout,
                 )
             )
 

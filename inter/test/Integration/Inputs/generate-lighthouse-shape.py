@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "benchmarks"))
 
-from lighthouse_input import specialize_inter_source
+from lighthouse_input import drop_loop_prefetches, specialize_inter_source
 
 
 def main() -> int:
@@ -21,22 +21,7 @@ def main() -> int:
         args.source.read_text(), args.size, args.reduction_size
     )
     if args.drop_loop_prefetch:
-        in_loop = False
-        removed = 0
-        lines = []
-        for line in source_text.splitlines():
-            in_loop |= line.startswith("  ^bb1")
-            if (
-                in_loop
-                and line.lstrip().startswith("llvm.call")
-                and "intel_sub_group_2d_block_prefetch" in line
-            ):
-                removed += 1
-                continue
-            lines.append(line)
-        if removed != 2:
-            raise ValueError(f"expected two loop prefetches, found {removed}")
-        source_text = "\n".join(lines) + "\n"
+        source_text = drop_loop_prefetches(source_text)
     args.output.write_text(source_text)
     return 0
 

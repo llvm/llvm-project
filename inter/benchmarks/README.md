@@ -19,6 +19,7 @@ python3 inter/benchmarks/lighthouse.py --build-dir inter/build
 Defaults are five alternating Inter/IGC runs. Each run performs 200 validated
 warmup launches followed by 15 batches of 1,000 timestamped launches. Use
 `--runs`, `--warmups`, `--batches`, and `--iterations` for shorter experiments.
+Each compiler run has a 120-second timeout; override it with `--timeout`.
 The default runtime device substring is `B60`, paired with IGC's `bmg-g21`
 target. Override both `--device` and `--igc-device` together when targeting a
 different GPU architecture.
@@ -33,3 +34,7 @@ The script updates A/B surfaces and the Inter/IGC loop bounds consistently.
 The OpenCL reference mirrors the Lighthouse operations and cache policy. Its
 2D prefetch builtins compile to cached `load_block2d.ugm.d16.a64.ca.ca`
 messages, matching the cached prefetch contract in the Inter input.
+
+Use `--drop-loop-prefetch` to remove the two loop-ahead prefetches from both
+compiler inputs. This is required for shapes that expose the final out-of-range
+prefetch while conditional async-token handling is unavailable.

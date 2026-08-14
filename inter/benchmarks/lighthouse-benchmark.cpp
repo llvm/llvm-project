@@ -150,11 +150,23 @@ int main(int argc, char **argv) {
   auto *b = static_cast<_Float16 *>(bStorage);
   auto *c = static_cast<float *>(cStorage);
   std::mt19937 random(0x4D41544Du);
-  std::uniform_int_distribution<int> distribution(-8, 8);
-  for (int64_t index = 0; index < m * k; ++index)
-    a[index] = static_cast<_Float16>(distribution(random) * 0.125f);
-  for (int64_t index = 0; index < k * n; ++index)
-    b[index] = static_cast<_Float16>(distribution(random) * 0.125f);
+  auto randomSign = [&]() { return (random() & 1) ? 1 : -1; };
+  std::vector<int> rowSigns(m);
+  std::vector<int> lhsSigns(k);
+  std::vector<int> rhsSigns(k);
+  std::vector<int> columnSigns(n);
+  std::generate(rowSigns.begin(), rowSigns.end(), randomSign);
+  std::generate(lhsSigns.begin(), lhsSigns.end(), randomSign);
+  std::generate(rhsSigns.begin(), rhsSigns.end(), randomSign);
+  std::generate(columnSigns.begin(), columnSigns.end(), randomSign);
+  for (int64_t row = 0; row < m; ++row)
+    for (int64_t inner = 0; inner < k; ++inner)
+      a[row * k + inner] =
+          static_cast<_Float16>(rowSigns[row] * lhsSigns[inner]);
+  for (int64_t inner = 0; inner < k; ++inner)
+    for (int64_t column = 0; column < n; ++column)
+      b[inner * n + column] =
+          static_cast<_Float16>(rhsSigns[inner] * columnSigns[column]);
   std::fill(c, c + m * n, std::numeric_limits<float>::quiet_NaN());
 
   if (inter) {
@@ -179,13 +191,14 @@ int main(int argc, char **argv) {
     ZE_CHECK(zeKernelSetArgumentValue(kernel, 2, sizeof(void *), &cStorage));
   }
 
-  std::vector<float> reference(m * n, 0.0f);
+  int64_t reduction = 0;
+  for (int64_t inner = 0; inner < k; ++inner)
+    reduction += lhsSigns[inner] * rhsSigns[inner];
+  std::vector<float> reference(m * n);
   for (int64_t row = 0; row < m; ++row)
     for (int64_t column = 0; column < n; ++column)
-      for (int64_t inner = 0; inner < k; ++inner)
-        reference[row * n + column] +=
-            static_cast<float>(a[row * k + inner]) *
-            static_cast<float>(b[inner * n + column]);
+      reference[row * n + column] =
+          static_cast<float>(rowSigns[row] * columnSigns[column] * reduction);
 
   ze_event_pool_desc_t poolDesc{ZE_STRUCTURE_TYPE_EVENT_POOL_DESC};
   poolDesc.flags =

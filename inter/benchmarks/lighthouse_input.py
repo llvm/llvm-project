@@ -63,3 +63,22 @@ def specialize_inter_source(
             raise ValueError(f"frozen Inter input no longer has one {frozen!r}")
         source_text = source_text.replace(frozen, replacement)
     return source_text
+
+
+def drop_loop_prefetches(source_text: str) -> str:
+    in_loop = False
+    removed = 0
+    lines = []
+    for line in source_text.splitlines():
+        in_loop |= line.startswith("  ^bb1")
+        if (
+            in_loop
+            and line.lstrip().startswith("llvm.call")
+            and "intel_sub_group_2d_block_prefetch" in line
+        ):
+            removed += 1
+            continue
+        lines.append(line)
+    if removed != 2:
+        raise ValueError(f"expected two loop prefetches, found {removed}")
+    return "\n".join(lines) + "\n"
