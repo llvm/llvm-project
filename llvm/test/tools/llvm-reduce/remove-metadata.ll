@@ -7,10 +7,10 @@
 ; RUN: llvm-reduce -abort-on-invalid-reduction --test %python --test-arg %p/Inputs/remove-metadata.py %s -o %t
 ; RUN: FileCheck --implicit-check-not=! %s < %t
 
-@global = global i32 0, !dbg !0
+@global = global i32 0, !foo !0
 
-define void @main() !dbg !0 {
-   ret void, !dbg !0
+define void @main() !foo !0 {
+   ret void, !foo !0
 }
 
 !uninteresting = !{!0}

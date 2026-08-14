@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-gnu -verify=expected,cxx14 -std=c++14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++26 %s
+
 template<typename T, typename U = int> struct A; // expected-note {{template is declared here}} \
                                                  // expected-note{{explicitly specialized}}
 
@@ -240,3 +243,33 @@ namespace LateDefined {
   };
   void A<B>::f() {}
 }
+
+#if __cplusplus >= 201402L
+namespace VarTemplateMismatch {
+  template<class> struct A {
+    template<bool> static const int x; // expected-note {{previous}}
+  };
+  template<> template<int> const int A<short>::x = 0;
+  // expected-error@-1 {{template non-type parameter has a different type 'int' in template redeclaration}}
+} // namespace VarTemplateMismatch
+
+namespace VarTemplateNoMember {
+  template<typename T> struct S {};
+  // expected-error@+1{{no member named 'foo' in 'VarTemplateNoMember::S<long>'}}
+  template<> template<typename U> constexpr int S<long>::foo;
+  // In C++14, these are definitions, not declarations, so they get a
+  // redefinition error.
+  // cxx14-error@+2{{redefinition of 'foo'}}
+  // cxx14-note@-4{{previous definition is here}}
+  template<> template<typename U> constexpr int S<long>::foo;
+  // cxx14-error@+2{{redefinition of 'foo'}}
+  // cxx14-note@-2{{previous definition is here}}
+  template<> template<typename U> constexpr int S<long>::foo;
+  // cxx14-error@+2{{redefinition of 'foo'}}
+  // cxx14-note@-2{{previous definition is here}}
+  template<> template<typename U> constexpr int S<long>::foo;
+  // cxx14-error@+2{{redefinition of 'foo'}}
+  // cxx14-note@-2{{previous definition is here}}
+  template<> template<typename U> constexpr int S<long>::foo;
+} // namespace VarTemplateNoMember
+#endif

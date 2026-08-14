@@ -40,8 +40,8 @@ public:
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &) override;
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &, unsigned shard) override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -218,9 +218,9 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
 
 void RISCV::writeGotHeader(uint8_t *buf) const {
   if (ctx.arg.is64)
-    write64le(buf, ctx.mainPart->dynamic->getVA());
+    write64le(buf, ctx.in.dynamic->getVA());
   else
-    write32le(buf, ctx.mainPart->dynamic->getVA());
+    write32le(buf, ctx.in.dynamic->getVA());
 }
 
 void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -240,37 +240,73 @@ void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 }
 
 void RISCV::writePltHeader(uint8_t *buf) const {
-  // 1: auipc t2, %pcrel_hi(.got.plt)
-  // sub t1, t1, t3
-  // l[wd] t3, %pcrel_lo(1b)(t2); t3 = _dl_runtime_resolve
-  // addi t1, t1, -pltHeaderSize-12; t1 = &.plt[i] - &.plt[0]
-  // addi t0, t2, %pcrel_lo(1b)
-  // srli t1, t1, (rv64?1:2); t1 = &.got.plt[i] - &.got.plt[0]
-  // l[wd] t0, Wordsize(t0); t0 = link_map
-  // jr t3
+  // If using lpad (CFI):
+  //
+  // 1:  auipc  t3, %pcrel_hi(.got.plt)
+  //     sub    t1, t1, t2
+  //     l[w|d] t2, %pcrel_lo(1b)(t3)
+  //     addi   t1, t1, -(hdr size + 16)
+  //     addi   t0, t3, %pcrel_lo(1b)
+  //     srli   t1, t1, log2(16/PTRSIZE)
+  //     l[w|d] t0, PTRSIZE(t0)
+  //     jr     t2
+  //
+  // If not using lpad:
+  //
+  // 1:  auipc  t2, %pcrel_hi(.got.plt)
+  //     sub    t1, t1, t3
+  //     l[w|d] t3, %pcrel_lo(1b)(t2)     ; t3 = _dl_runtime_resolve
+  //     addi   t1, t1, -pltHeaderSize-12 ; t1 = &.plt[i] - &.plt[0]
+  //     addi   t0, t2, %pcrel_lo(1b)
+  //     srli   t1, t1, (rv64?1:2)        ; t1 = &.got.plt[i] - &.got.plt[0]
+  //     l[w|d] t0, Wordsize(t0)          ; t0 = link_map
+  //     jr     t3
+  bool lpad =
+      ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
   uint32_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
   uint32_t load = ctx.arg.is64 ? LD : LW;
-  write32le(buf + 0, utype(AUIPC, X_T2, hi20(offset)));
-  write32le(buf + 4, rtype(SUB, X_T1, X_T1, X_T3));
-  write32le(buf + 8, itype(load, X_T3, X_T2, lo12(offset)));
-  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 12));
-  write32le(buf + 16, itype(ADDI, X_T0, X_T2, lo12(offset)));
+  uint32_t auipcReg = lpad ? X_T3 : X_T2;
+  uint32_t workReg = lpad ? X_T2 : X_T3;
+
+  write32le(buf + 0, utype(AUIPC, auipcReg, hi20(offset)));
+  write32le(buf + 4, rtype(SUB, X_T1, X_T1, workReg));
+  write32le(buf + 8, itype(load, workReg, auipcReg, lo12(offset)));
+  write32le(buf + 12, itype(ADDI, X_T1, X_T1,
+                            -ctx.target->pltHeaderSize - (lpad ? 16 : 12)));
+  write32le(buf + 16, itype(ADDI, X_T0, auipcReg, lo12(offset)));
   write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
   write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.wordsize));
-  write32le(buf + 28, itype(JALR, 0, X_T3, 0));
+  write32le(buf + 28, itype(JALR, X_X0, workReg, 0));
 }
 
 void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
                      uint64_t pltEntryAddr) const {
-  // 1: auipc t3, %pcrel_hi(f@.got.plt)
-  // l[wd] t3, %pcrel_lo(1b)(t3)
-  // jalr t1, t3
-  // nop
-  uint32_t offset = sym.getGotPltVA(ctx) - pltEntryAddr;
-  write32le(buf + 0, utype(AUIPC, X_T3, hi20(offset)));
-  write32le(buf + 4, itype(ctx.arg.is64 ? LD : LW, X_T3, X_T3, lo12(offset)));
-  write32le(buf + 8, itype(JALR, X_T1, X_T3, 0));
-  write32le(buf + 12, itype(ADDI, 0, 0, 0));
+  // If using lpad:
+  //
+  //     lpad 0
+  // 1:  auipc   t2, %pcrel_hi(function@.got.plt)
+  //     l[w|d]  t2, %pcrel_lo(1b)(t2)
+  //     jalr    t1, t2
+  //
+  // If not using lpad:
+  //
+  // 1:  auipc   t3, %pcrel_hi(f@.got.plt)
+  //     l[w|d]  t3, %pcrel_lo(1b)(t3)
+  //     jalr    t1, t3
+  //     nop
+  bool lpad =
+      ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+  uint32_t auipcOffset = lpad * 4;
+  uint32_t offset = sym.getGotPltVA(ctx) - pltEntryAddr - auipcOffset;
+  uint32_t rd = lpad ? X_T2 : X_T3;
+  if (lpad)
+    write32le(buf + 0, utype(AUIPC, X_X0, 0)); // lpad 0
+  write32le(buf + 0 + auipcOffset, utype(AUIPC, rd, hi20(offset)));
+  write32le(buf + 4 + auipcOffset,
+            itype(ctx.arg.is64 ? LD : LW, rd, rd, lo12(offset)));
+  write32le(buf + 8 + auipcOffset, itype(JALR, X_T1, rd, 0));
+  if (!lpad)
+    write32le(buf + 12, itype(ADDI, X_X0, X_X0, 0));
 }
 
 RelType RISCV::getDynRel(RelType type) const {
@@ -315,8 +351,9 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
 }
 
 template <class ELFT, class RelTy>
-void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                            unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
@@ -476,11 +513,11 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
                     });
 }
 
-void RISCV::scanSection(InputSectionBase &sec) {
+void RISCV::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.is64)
-    elf::scanSection1<RISCV, ELF64LE>(*this, sec);
+    elf::scanSection1<RISCV, ELF64LE>(*this, sec, shard);
   else
-    elf::scanSection1<RISCV, ELF32LE>(*this, sec);
+    elf::scanSection1<RISCV, ELF32LE>(*this, sec, shard);
 }
 
 void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -1133,12 +1170,19 @@ bool RISCV::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
       }
     }
   } else if (sec->addralign >= 4) {
-    // If the alignment is >= 4 and the section does not start with an ALIGN
-    // relocation, synthesize one.
-    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
-      return rel.r_offset == 0 && rel.getType(false) == R_RISCV_ALIGN;
+    // If the alignment is > 4, synthesize an ALIGN unless an ALIGN relocation
+    // at offset 0 already guarantees `addralign`. Note: A weaker ALIGN at
+    // offset 0 from older assemblers do not suppress synthesis (e.g.
+    // `.p2align 2; .option norelax; nop; .p2align 3` does not suppress
+    // synthesized `.p2align 3`).
+    bool covered = llvm::any_of(rels, [&](const RelTy &rel) {
+      if (rel.r_offset != 0 || rel.getType(false) != R_RISCV_ALIGN)
+        return false;
+      if constexpr (RelTy::HasAddend)
+        return uint64_t(rel.r_addend) >= sec->addralign - 2;
+      return false;
     });
-    if (!hasAlignRel) {
+    if (!covered) {
       synthesizedAligns.emplace_back(dot - baseSec->getVA(),
                                      sec->addralign - 2);
       dot += sec->addralign - 2;

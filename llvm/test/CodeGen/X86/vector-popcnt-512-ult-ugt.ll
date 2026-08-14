@@ -3731,8 +3731,8 @@ define <16 x i32> @ugt_2_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_2_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -3812,8 +3812,8 @@ define <16 x i32> @ult_3_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_3_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -3893,8 +3893,8 @@ define <16 x i32> @ugt_3_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_3_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -3974,8 +3974,8 @@ define <16 x i32> @ult_4_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_4_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4055,8 +4055,8 @@ define <16 x i32> @ugt_4_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_4_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4136,8 +4136,8 @@ define <16 x i32> @ult_5_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_5_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4217,8 +4217,8 @@ define <16 x i32> @ugt_5_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_5_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4298,8 +4298,8 @@ define <16 x i32> @ult_6_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_6_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4379,8 +4379,8 @@ define <16 x i32> @ugt_6_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_6_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4460,8 +4460,8 @@ define <16 x i32> @ult_7_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_7_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4541,8 +4541,8 @@ define <16 x i32> @ugt_7_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_7_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4622,8 +4622,8 @@ define <16 x i32> @ult_8_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_8_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4703,8 +4703,8 @@ define <16 x i32> @ugt_8_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_8_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4784,8 +4784,8 @@ define <16 x i32> @ult_9_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_9_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4865,8 +4865,8 @@ define <16 x i32> @ugt_9_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_9_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -4946,8 +4946,8 @@ define <16 x i32> @ult_10_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_10_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5027,8 +5027,8 @@ define <16 x i32> @ugt_10_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_10_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5108,8 +5108,8 @@ define <16 x i32> @ult_11_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_11_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5189,8 +5189,8 @@ define <16 x i32> @ugt_11_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_11_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5270,8 +5270,8 @@ define <16 x i32> @ult_12_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_12_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5351,8 +5351,8 @@ define <16 x i32> @ugt_12_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_12_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5432,8 +5432,8 @@ define <16 x i32> @ult_13_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_13_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5513,8 +5513,8 @@ define <16 x i32> @ugt_13_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_13_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5594,8 +5594,8 @@ define <16 x i32> @ult_14_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_14_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5675,8 +5675,8 @@ define <16 x i32> @ugt_14_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_14_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5756,8 +5756,8 @@ define <16 x i32> @ult_15_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_15_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5837,8 +5837,8 @@ define <16 x i32> @ugt_15_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_15_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5918,8 +5918,8 @@ define <16 x i32> @ult_16_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_16_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -5999,8 +5999,8 @@ define <16 x i32> @ugt_16_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_16_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6080,8 +6080,8 @@ define <16 x i32> @ult_17_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_17_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6161,8 +6161,8 @@ define <16 x i32> @ugt_17_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_17_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6242,8 +6242,8 @@ define <16 x i32> @ult_18_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_18_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6323,8 +6323,8 @@ define <16 x i32> @ugt_18_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_18_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6404,8 +6404,8 @@ define <16 x i32> @ult_19_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_19_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6485,8 +6485,8 @@ define <16 x i32> @ugt_19_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_19_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6566,8 +6566,8 @@ define <16 x i32> @ult_20_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_20_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6647,8 +6647,8 @@ define <16 x i32> @ugt_20_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_20_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6728,8 +6728,8 @@ define <16 x i32> @ult_21_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_21_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6809,8 +6809,8 @@ define <16 x i32> @ugt_21_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_21_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6890,8 +6890,8 @@ define <16 x i32> @ult_22_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_22_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -6971,8 +6971,8 @@ define <16 x i32> @ugt_22_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_22_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7052,8 +7052,8 @@ define <16 x i32> @ult_23_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_23_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7133,8 +7133,8 @@ define <16 x i32> @ugt_23_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_23_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7214,8 +7214,8 @@ define <16 x i32> @ult_24_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_24_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7295,8 +7295,8 @@ define <16 x i32> @ugt_24_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_24_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7376,8 +7376,8 @@ define <16 x i32> @ult_25_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_25_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7457,8 +7457,8 @@ define <16 x i32> @ugt_25_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_25_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7538,8 +7538,8 @@ define <16 x i32> @ult_26_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_26_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7619,8 +7619,8 @@ define <16 x i32> @ugt_26_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_26_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7700,8 +7700,8 @@ define <16 x i32> @ult_27_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_27_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7781,8 +7781,8 @@ define <16 x i32> @ugt_27_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_27_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7862,8 +7862,8 @@ define <16 x i32> @ult_28_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_28_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -7943,8 +7943,8 @@ define <16 x i32> @ugt_28_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_28_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -8024,8 +8024,8 @@ define <16 x i32> @ult_29_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_29_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -8105,8 +8105,8 @@ define <16 x i32> @ugt_29_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_29_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -8186,8 +8186,8 @@ define <16 x i32> @ult_30_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_30_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -8267,8 +8267,8 @@ define <16 x i32> @ugt_30_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_30_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -8348,8 +8348,8 @@ define <16 x i32> @ult_31_v16i32(<16 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_31_v16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
@@ -8491,8 +8491,8 @@ define <8 x i64> @ugt_2_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_2_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -8556,8 +8556,8 @@ define <8 x i64> @ult_3_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_3_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -8621,8 +8621,8 @@ define <8 x i64> @ugt_3_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_3_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -8686,8 +8686,8 @@ define <8 x i64> @ult_4_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_4_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -8751,8 +8751,8 @@ define <8 x i64> @ugt_4_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_4_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -8816,8 +8816,8 @@ define <8 x i64> @ult_5_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_5_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -8881,8 +8881,8 @@ define <8 x i64> @ugt_5_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_5_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -8946,8 +8946,8 @@ define <8 x i64> @ult_6_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_6_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9011,8 +9011,8 @@ define <8 x i64> @ugt_6_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_6_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9076,8 +9076,8 @@ define <8 x i64> @ult_7_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_7_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9141,8 +9141,8 @@ define <8 x i64> @ugt_7_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_7_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9206,8 +9206,8 @@ define <8 x i64> @ult_8_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_8_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9271,8 +9271,8 @@ define <8 x i64> @ugt_8_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_8_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9336,8 +9336,8 @@ define <8 x i64> @ult_9_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_9_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9401,8 +9401,8 @@ define <8 x i64> @ugt_9_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_9_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9466,8 +9466,8 @@ define <8 x i64> @ult_10_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_10_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9531,8 +9531,8 @@ define <8 x i64> @ugt_10_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_10_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9596,8 +9596,8 @@ define <8 x i64> @ult_11_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_11_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9661,8 +9661,8 @@ define <8 x i64> @ugt_11_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_11_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9726,8 +9726,8 @@ define <8 x i64> @ult_12_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_12_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9791,8 +9791,8 @@ define <8 x i64> @ugt_12_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_12_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9856,8 +9856,8 @@ define <8 x i64> @ult_13_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_13_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9921,8 +9921,8 @@ define <8 x i64> @ugt_13_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_13_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -9986,8 +9986,8 @@ define <8 x i64> @ult_14_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_14_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10051,8 +10051,8 @@ define <8 x i64> @ugt_14_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_14_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10116,8 +10116,8 @@ define <8 x i64> @ult_15_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_15_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10181,8 +10181,8 @@ define <8 x i64> @ugt_15_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_15_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10246,8 +10246,8 @@ define <8 x i64> @ult_16_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_16_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10311,8 +10311,8 @@ define <8 x i64> @ugt_16_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_16_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10376,8 +10376,8 @@ define <8 x i64> @ult_17_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_17_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10441,8 +10441,8 @@ define <8 x i64> @ugt_17_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_17_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10506,8 +10506,8 @@ define <8 x i64> @ult_18_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_18_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10571,8 +10571,8 @@ define <8 x i64> @ugt_18_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_18_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10636,8 +10636,8 @@ define <8 x i64> @ult_19_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_19_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10701,8 +10701,8 @@ define <8 x i64> @ugt_19_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_19_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10766,8 +10766,8 @@ define <8 x i64> @ult_20_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_20_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10831,8 +10831,8 @@ define <8 x i64> @ugt_20_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_20_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10896,8 +10896,8 @@ define <8 x i64> @ult_21_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_21_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -10961,8 +10961,8 @@ define <8 x i64> @ugt_21_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_21_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11026,8 +11026,8 @@ define <8 x i64> @ult_22_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_22_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11091,8 +11091,8 @@ define <8 x i64> @ugt_22_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_22_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11156,8 +11156,8 @@ define <8 x i64> @ult_23_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_23_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11221,8 +11221,8 @@ define <8 x i64> @ugt_23_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_23_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11286,8 +11286,8 @@ define <8 x i64> @ult_24_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_24_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11351,8 +11351,8 @@ define <8 x i64> @ugt_24_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_24_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11416,8 +11416,8 @@ define <8 x i64> @ult_25_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_25_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11481,8 +11481,8 @@ define <8 x i64> @ugt_25_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_25_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11546,8 +11546,8 @@ define <8 x i64> @ult_26_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_26_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11611,8 +11611,8 @@ define <8 x i64> @ugt_26_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_26_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11676,8 +11676,8 @@ define <8 x i64> @ult_27_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_27_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11741,8 +11741,8 @@ define <8 x i64> @ugt_27_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_27_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11806,8 +11806,8 @@ define <8 x i64> @ult_28_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_28_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11871,8 +11871,8 @@ define <8 x i64> @ugt_28_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_28_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -11936,8 +11936,8 @@ define <8 x i64> @ult_29_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_29_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12001,8 +12001,8 @@ define <8 x i64> @ugt_29_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_29_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12066,8 +12066,8 @@ define <8 x i64> @ult_30_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_30_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12131,8 +12131,8 @@ define <8 x i64> @ugt_30_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_30_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12196,8 +12196,8 @@ define <8 x i64> @ult_31_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_31_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12261,8 +12261,8 @@ define <8 x i64> @ugt_31_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_31_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12326,8 +12326,8 @@ define <8 x i64> @ult_32_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_32_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12391,8 +12391,8 @@ define <8 x i64> @ugt_32_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_32_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12456,8 +12456,8 @@ define <8 x i64> @ult_33_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_33_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12521,8 +12521,8 @@ define <8 x i64> @ugt_33_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_33_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12586,8 +12586,8 @@ define <8 x i64> @ult_34_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_34_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12651,8 +12651,8 @@ define <8 x i64> @ugt_34_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_34_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12716,8 +12716,8 @@ define <8 x i64> @ult_35_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_35_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12781,8 +12781,8 @@ define <8 x i64> @ugt_35_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_35_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12846,8 +12846,8 @@ define <8 x i64> @ult_36_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_36_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12911,8 +12911,8 @@ define <8 x i64> @ugt_36_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_36_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -12976,8 +12976,8 @@ define <8 x i64> @ult_37_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_37_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13041,8 +13041,8 @@ define <8 x i64> @ugt_37_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_37_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13106,8 +13106,8 @@ define <8 x i64> @ult_38_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_38_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13171,8 +13171,8 @@ define <8 x i64> @ugt_38_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_38_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13236,8 +13236,8 @@ define <8 x i64> @ult_39_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_39_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13301,8 +13301,8 @@ define <8 x i64> @ugt_39_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_39_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13366,8 +13366,8 @@ define <8 x i64> @ult_40_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_40_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13431,8 +13431,8 @@ define <8 x i64> @ugt_40_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_40_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13496,8 +13496,8 @@ define <8 x i64> @ult_41_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_41_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13561,8 +13561,8 @@ define <8 x i64> @ugt_41_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_41_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13626,8 +13626,8 @@ define <8 x i64> @ult_42_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_42_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13691,8 +13691,8 @@ define <8 x i64> @ugt_42_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_42_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13756,8 +13756,8 @@ define <8 x i64> @ult_43_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_43_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13821,8 +13821,8 @@ define <8 x i64> @ugt_43_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_43_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13886,8 +13886,8 @@ define <8 x i64> @ult_44_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_44_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -13951,8 +13951,8 @@ define <8 x i64> @ugt_44_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_44_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14016,8 +14016,8 @@ define <8 x i64> @ult_45_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_45_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14081,8 +14081,8 @@ define <8 x i64> @ugt_45_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_45_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14146,8 +14146,8 @@ define <8 x i64> @ult_46_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_46_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14211,8 +14211,8 @@ define <8 x i64> @ugt_46_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_46_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14276,8 +14276,8 @@ define <8 x i64> @ult_47_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_47_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14341,8 +14341,8 @@ define <8 x i64> @ugt_47_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_47_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14406,8 +14406,8 @@ define <8 x i64> @ult_48_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_48_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14471,8 +14471,8 @@ define <8 x i64> @ugt_48_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_48_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14536,8 +14536,8 @@ define <8 x i64> @ult_49_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_49_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14601,8 +14601,8 @@ define <8 x i64> @ugt_49_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_49_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14666,8 +14666,8 @@ define <8 x i64> @ult_50_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_50_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14731,8 +14731,8 @@ define <8 x i64> @ugt_50_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_50_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14796,8 +14796,8 @@ define <8 x i64> @ult_51_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_51_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14861,8 +14861,8 @@ define <8 x i64> @ugt_51_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_51_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14926,8 +14926,8 @@ define <8 x i64> @ult_52_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_52_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -14991,8 +14991,8 @@ define <8 x i64> @ugt_52_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_52_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15056,8 +15056,8 @@ define <8 x i64> @ult_53_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_53_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15121,8 +15121,8 @@ define <8 x i64> @ugt_53_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_53_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15186,8 +15186,8 @@ define <8 x i64> @ult_54_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_54_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15251,8 +15251,8 @@ define <8 x i64> @ugt_54_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_54_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15316,8 +15316,8 @@ define <8 x i64> @ult_55_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_55_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15381,8 +15381,8 @@ define <8 x i64> @ugt_55_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_55_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15446,8 +15446,8 @@ define <8 x i64> @ult_56_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_56_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15511,8 +15511,8 @@ define <8 x i64> @ugt_56_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_56_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15576,8 +15576,8 @@ define <8 x i64> @ult_57_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_57_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15641,8 +15641,8 @@ define <8 x i64> @ugt_57_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_57_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15706,8 +15706,8 @@ define <8 x i64> @ult_58_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_58_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15771,8 +15771,8 @@ define <8 x i64> @ugt_58_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_58_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15836,8 +15836,8 @@ define <8 x i64> @ult_59_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_59_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15901,8 +15901,8 @@ define <8 x i64> @ugt_59_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_59_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -15966,8 +15966,8 @@ define <8 x i64> @ult_60_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_60_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -16031,8 +16031,8 @@ define <8 x i64> @ugt_60_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_60_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -16096,8 +16096,8 @@ define <8 x i64> @ult_61_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_61_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -16161,8 +16161,8 @@ define <8 x i64> @ugt_61_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_61_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -16226,8 +16226,8 @@ define <8 x i64> @ult_62_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_62_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -16291,8 +16291,8 @@ define <8 x i64> @ugt_62_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_62_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
@@ -16356,8 +16356,8 @@ define <8 x i64> @ult_63_v8i64(<8 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_63_v8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    vpcmpltq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; BITALG-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1

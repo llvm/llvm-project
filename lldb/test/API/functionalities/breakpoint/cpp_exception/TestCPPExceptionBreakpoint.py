@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # wasm inferiors are built with -fno-exceptions
 class TestCPPExceptionBreakpoint(TestBase):
     my_var = 10
 
