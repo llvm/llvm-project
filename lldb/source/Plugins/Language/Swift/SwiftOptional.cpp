@@ -321,13 +321,14 @@ lldb::ValueObjectSP lldb_private::formatters::swift::
   if (ValueObjectSP transparent_sp = some->Clone(ConstString()))
     some = transparent_sp;
 
+  // Children inherit this flag, and it makes GetExpressionPath() emit a raw
+  // address instead of a path.
+  some->SetSyntheticChildrenGenerated(false);
+
   if (some->HasSyntheticValue())
     some = some->GetSyntheticValue();
 
-  auto child = some->GetChildAtIndex(idx, true);
-  if (child && some->IsSyntheticChildrenGenerated())
-    child->SetSyntheticChildrenGenerated(true);
-  return child;
+  return some->GetChildAtIndex(idx, true);
 }
 
 lldb::ChildCacheState
