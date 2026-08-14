@@ -1268,14 +1268,16 @@ public:
 
   /// Returns true for local variable declarations other than parameters.
   /// Note that this includes static variables inside of functions. It also
-  /// includes variables inside blocks.
+  /// includes variables inside blocks and expansion statements.
   ///
   ///   void foo() { int x; static int y; extern int z; }
   bool isLocalVarDecl() const {
     if (getKind() != Decl::Var && getKind() != Decl::Decomposition)
       return false;
     if (const DeclContext *DC = getLexicalDeclContext())
-      return DC->getRedeclContext()->isFunctionOrMethod();
+      return DC->getEnclosingNonExpansionStatementContext()
+          ->getRedeclContext()
+          ->isFunctionOrMethod();
     return false;
   }
 
@@ -2012,6 +2014,35 @@ enum class MultiVersionKind {
   TargetVersion
 };
 
+/// Kinds of C++ special members.
+enum class CXXSpecialMemberKind {
+  DefaultConstructor,
+  CopyConstructor,
+  MoveConstructor,
+  CopyAssignment,
+  MoveAssignment,
+  Destructor,
+  Invalid
+};
+
+/// Kinds of defaulted comparison operator functions.
+enum class DefaultedComparisonKind : unsigned char {
+  /// This is not a defaultable comparison operator.
+  None,
+  /// This is an operator== that should be implemented as a series of
+  /// subobject comparisons.
+  Equal,
+  /// This is an operator<=> that should be implemented as a series of
+  /// subobject comparisons.
+  ThreeWay,
+  /// This is an operator!= that should be implemented as a rewrite in terms
+  /// of a == comparison.
+  NotEqual,
+  /// This is an <, <=, >, or >= that should be implemented as a rewrite in
+  /// terms of a <=> comparison.
+  Relational,
+};
+
 /// Represents a function declaration or definition.
 ///
 /// Since a given function can be declared several times in a program,
@@ -2049,13 +2080,17 @@ public:
 
   };
 
-  /// Stashed information about a defaulted/deleted function body.
+  /// Stashed information about a defaulted/deleted function body, including
+  /// the active FP pragma overrides (FPOptionsOverride) from the declaration
+  /// site. These overrides are required to correctly synthesize the function
+  /// body.
   class DefaultedOrDeletedFunctionInfo final
       : llvm::TrailingObjects<DefaultedOrDeletedFunctionInfo, DeclAccessPair,
                               StringLiteral *> {
     friend TrailingObjects;
     unsigned NumLookups;
     bool HasDeletedMessage;
+    FPOptionsOverride FPFeatures;
 
     size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
       return NumLookups;
@@ -2064,7 +2099,10 @@ public:
   public:
     static DefaultedOrDeletedFunctionInfo *
     Create(ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
+           FPOptionsOverride FPFeatures,
            StringLiteral *DeletedMessage = nullptr);
+
+    FPOptionsOverride getFPFeatures() const { return FPFeatures; }
 
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
@@ -2078,6 +2116,54 @@ public:
     }
 
     void setDeletedMessage(StringLiteral *Message);
+  };
+
+  /// For a defaulted function, the kind of defaulted function that it is.
+  class DefaultedFunctionKind {
+    LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
+    unsigned SpecialMember : 8;
+    unsigned Comparison : 8;
+
+  public:
+    DefaultedFunctionKind()
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
+        : SpecialMember(llvm::to_underlying(CSM)),
+          Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
+    DefaultedFunctionKind(DefaultedComparisonKind Comp)
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(Comp)) {}
+
+    bool isSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
+             CXXSpecialMemberKind::Invalid;
+    }
+    bool isComparison() const {
+      return static_cast<DefaultedComparisonKind>(Comparison) !=
+             DefaultedComparisonKind::None;
+    }
+
+    explicit operator bool() const {
+      return isSpecialMember() || isComparison();
+    }
+
+    CXXSpecialMemberKind asSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember);
+    }
+    DefaultedComparisonKind asComparison() const {
+      return static_cast<DefaultedComparisonKind>(Comparison);
+    }
+
+    /// Get the index of this function kind for use in diagnostics.
+    unsigned getDiagnosticIndex() const {
+      static_assert(llvm::to_underlying(CXXSpecialMemberKind::Invalid) >
+                        llvm::to_underlying(CXXSpecialMemberKind::Destructor),
+                    "invalid should have highest index");
+      static_assert((unsigned)DefaultedComparisonKind::None == 0,
+                    "none should be equal to zero");
+      return SpecialMember + Comparison;
+    }
   };
 
 private:
@@ -2130,6 +2216,34 @@ private:
   /// Provides source/type location info for the declaration name embedded in
   /// the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
+
+  /// Specify that this function declaration is actually a function
+  /// template specialization.
+  ///
+  /// \param C the ASTContext.
+  ///
+  /// \param Template the function template that this function template
+  /// specialization specializes.
+  ///
+  /// \param TemplateArgs the template arguments that produced this
+  /// function template specialization from the template.
+  ///
+  /// \param InsertPos If non-NULL, the position in the function template
+  /// specialization set where the function template specialization data will
+  /// be inserted.
+  ///
+  /// \param TSK the kind of template specialization this is.
+  ///
+  /// \param TemplateArgsAsWritten location info of template arguments.
+  ///
+  /// \param PointOfInstantiation point at which the function template
+  /// specialization was first instantiated.
+  void setFunctionTemplateSpecialization(
+      ASTContext &C, FunctionTemplateDecl *Template,
+      TemplateArgumentList *TemplateArgs, void *InsertPos,
+      TemplateSpecializationKind TSK,
+      const TemplateArgumentListInfo *TemplateArgsAsWritten,
+      SourceLocation PointOfInstantiation);
 
   /// Specify that this record is an instantiation of the
   /// member function FD.
@@ -2225,8 +2339,6 @@ public:
       return FPT->getEllipsisLoc();
     return SourceLocation();
   }
-
-  SourceLocation getFunctionLocStart() const;
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -2337,6 +2449,19 @@ public:
 
   void setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo *Info);
   DefaultedOrDeletedFunctionInfo *getDefaultedOrDeletedInfo() const;
+
+  /// Determine the kind of defaulting that would be done for a given function.
+  ///
+  /// If the function is both a default constructor and a copy / move
+  /// constructor (due to having a default argument for the first parameter),
+  /// this picks CXXSpecialMemberKind::DefaultConstructor.
+  ///
+  /// FIXME: Check that case is properly handled by all callers.
+  DefaultedFunctionKind getDefaultedFunctionKind() const;
+
+  DefaultedComparisonKind getDefaultedComparisonKind() const {
+    return getDefaultedFunctionKind().asComparison();
+  }
 
   /// Whether this function is variadic.
   bool isVariadic() const;
@@ -3057,13 +3182,8 @@ public:
   const ASTTemplateArgumentListInfo*
   getTemplateSpecializationArgsAsWritten() const;
 
-  /// Returns the template parameter list for an explicit specialization.
-  const TemplateParameterList *getTemplateSpecializationParameters() const;
-
   /// Specify that this function declaration is actually a function
   /// template specialization.
-  ///
-  /// \param C the ASTContext.
   ///
   /// \param Template the function template that this function template
   /// specialization specializes.
@@ -3077,30 +3197,25 @@ public:
   ///
   /// \param TSK the kind of template specialization this is.
   ///
-  /// \param TemplateParams the template parameters if this is an explicit
-  /// specialization.
-  ///
   /// \param TemplateArgsAsWritten location info of template arguments.
   ///
   /// \param PointOfInstantiation point at which the function template
   /// specialization was first instantiated.
-  ///
-  /// \param AddSpecialization whether to add this specialization to the
-  /// template's specialization set.
-  ///
   void setFunctionTemplateSpecialization(
-      ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
-      TemplateSpecializationKind TSK,
-      const TemplateParameterList *TemplateParams,
-      const TemplateArgumentListInfo *TemplateArgsAsWritten,
-      SourceLocation PointOfInstantiation, bool AddSpecialization);
+      FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
+      void *InsertPos,
+      TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
+      TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
+      SourceLocation PointOfInstantiation = SourceLocation()) {
+    setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
+                                      InsertPos, TSK, TemplateArgsAsWritten,
+                                      PointOfInstantiation);
+  }
 
   /// Specifies that this function declaration is actually a
   /// dependent function template specialization.
   void setDependentTemplateSpecialization(
       ASTContext &Context, const UnresolvedSetImpl &Templates,
-      const TemplateParameterList *TemplateParams,
       const TemplateArgumentListInfo *TemplateArgs);
 
   DependentFunctionTemplateSpecializationInfo *

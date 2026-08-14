@@ -3669,6 +3669,12 @@ Applies to: ``pthread_mutex_lock, pthread_rwlock_rdlock, pthread_rwlock_wrlock, 
 ``lck_rw_lock_shared, pthread_mutex_trylock, pthread_rwlock_tryrdlock, pthread_rwlock_tryrwlock, lck_mtx_try_lock,
 lck_rw_try_lock_exclusive, lck_rw_try_lock_shared, pthread_mutex_unlock, pthread_rwlock_unlock, lck_mtx_unlock, lck_rw_done``.
 
+**Options**
+
+* ``WarnOnLockOrderReversal`` (boolean). If set to true, the checker will warn
+  on non-LIFO unlock order (possible lock order reversal). Defaults to false
+  because detecting real lock order violations requires cross-path analysis of
+  acquisition order, which the analyzer's single-path engine does not support.
 
 .. code-block:: c
 
@@ -3679,6 +3685,8 @@ lck_rw_try_lock_exclusive, lck_rw_try_lock_shared, pthread_mutex_unlock, pthread
    pthread_mutex_lock(&mtx);
      // warn: this lock has already been acquired
  }
+
+ // The following warnings require WarnOnLockOrderReversal=true:
 
  lck_mtx_t lck1, lck2;
 
@@ -3966,6 +3974,23 @@ alpha.webkit.UncheckedCallArgsChecker
 The goal of this rule is to make sure that lifetime of any dynamically allocated CheckedPtr capable object passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. CheckedPtr capable objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unchecked types.
 
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+alpha.webkit.UncheckedLambdaCapturesChecker
+"""""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to unchecked types can't be captured in lambdas. Only CheckedPtr or CheckedRef is allowed.
+
+.. code-block:: cpp
+
+ struct CheckedObject {
+   void incrementCheckedPtr() {}
+   void decrementCheckedPtr() {}
+ };
+
+ void foo(CheckedObject* a, CheckedObject& b) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+   };
+ };
 
 alpha.webkit.UnretainedCallArgsChecker
 """"""""""""""""""""""""""""""""""""""

@@ -55,9 +55,6 @@ void llvm::collectEphemeralRecipesForVPlan(
   }
 }
 
-template void DomTreeBuilder::Calculate<DominatorTreeBase<VPBlockBase, false>>(
-    DominatorTreeBase<VPBlockBase, false> &DT);
-
 bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
                                         const VPRecipeBase *B) const {
   if (A == B)
@@ -106,9 +103,12 @@ VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
   return Cost;
 }
 
-SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
-    VPlan &Plan, ArrayRef<ElementCount> VFs, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
+SmallVector<VPRegisterUsage, 8>
+llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
+                                    const TargetTransformInfo &TTI) {
+  DenseSet<VPRecipeBase *> EphemeralRecipes;
+  collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
+
   // Each 'key' in the map opens a new interval. The values
   // of the map are the index of the 'last seen' usage of the
   // VPValue that is the key.
@@ -220,12 +220,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         !R->mayHaveSideEffects())
       continue;
 
-    // Skip recipes for ignored values.
-    // TODO: Should mark recipes for ephemeral values that cannot be removed
-    // explictly in VPlan.
-    if (isa<VPSingleDefRecipe>(R) &&
-        ValuesToIgnore.contains(
-            cast<VPSingleDefRecipe>(R)->getUnderlyingValue()))
+    // Skip recipes for ephemeral values, i.e. those only feeding assumes. They
+    // are removed before code generation and must not contribute to the
+    // register pressure of the plan.
+    if (EphemeralRecipes.contains(R))
       continue;
 
     // For each VF find the maximum usage of registers.
@@ -248,8 +246,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
-        if (VFs[J].isScalar() ||
-            isa<VPRegionValue, VPReplicateRecipe, VPDerivedIVRecipe,
+        if (VFs[J].isScalar() || VPV == CanIV ||
+            isa<VPReplicateRecipe, VPDerivedIVRecipe,
                 VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&

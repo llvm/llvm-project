@@ -38,9 +38,6 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 template <int Bits>
 static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                const MCDisassembler *Decoder);
-template <int Bits>
-static DecodeStatus DecodeUImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
-                               const MCDisassembler *Decoder);
 
 #define Success MCDisassembler::Success
 #define Fail MCDisassembler::Fail
@@ -74,15 +71,14 @@ DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   return Success;
 }
 
-template <unsigned Min, unsigned Max>
-static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
-                                         uint64_t Address,
-                                         const MCDisassembler *Decoder) {
-  unsigned Reg = (RegNo * 2) + Min;
-  if (Reg < Min || Reg > Max || (Reg & 1))
+template <unsigned RegClassID, unsigned Multiple, unsigned Min, unsigned Max>
+static DecodeStatus
+DecodeMulMinMaxRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  unsigned Reg = (RegNo * Multiple) + Min;
+  if (Reg < Min || Reg > Max || (Reg % Multiple))
     return Fail;
-  MCRegister Register =
-      getAArch64MCRegisterClass(AArch64::ZPRRegClassID).getRegister(Reg);
+  MCRegister Register = getAArch64MCRegisterClass(RegClassID).getRegister(Reg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
@@ -1440,16 +1436,6 @@ static DecodeStatus DecodeSImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
   // Imm is a signed immediate, so sign extend it.
   if (Imm & (1 << (Bits - 1)))
     Imm |= ~((1LL << Bits) - 1);
-
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return Success;
-}
-
-template <int Bits>
-static DecodeStatus DecodeUImm(MCInst &Inst, uint64_t Imm, uint64_t Address,
-                               const MCDisassembler *Decoder) {
-  if (Imm & ~((1ULL << Bits) - 1))
-    return Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));
   return Success;

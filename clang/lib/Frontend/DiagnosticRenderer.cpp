@@ -34,6 +34,27 @@ DiagnosticRenderer::DiagnosticRenderer(const LangOptions &LangOpts,
 
 DiagnosticRenderer::~DiagnosticRenderer() = default;
 
+std::optional<CharSourceRange>
+clang::getExpansionRangeInFile(CharSourceRange Range, FileID FID,
+                               const SourceManager &SM) {
+  if (Range.isInvalid())
+    return std::nullopt;
+
+  CharSourceRange Expansion = SM.getExpansionRange(Range);
+  if (SM.getFileID(Expansion.getBegin()) != FID ||
+      SM.getFileID(Expansion.getEnd()) != FID) {
+    return std::nullopt;
+  }
+
+  // Both endpoints are in FID, so comparing their offsets is meaningful.
+  if (SM.getFileOffset(Expansion.getBegin()) >
+      SM.getFileOffset(Expansion.getEnd())) {
+    return std::nullopt;
+  }
+
+  return Expansion;
+}
+
 namespace {
 
 class FixitReceiver : public edit::EditsReceiver {

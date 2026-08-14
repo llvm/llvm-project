@@ -72,6 +72,7 @@ class CCValAssign;
 enum class ComplexDeinterleavingOperation;
 enum class ComplexDeinterleavingRotation;
 class Constant;
+enum class ExceptionHandling : int;
 class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
@@ -119,21 +120,27 @@ enum Preference : uint8_t {
 // MemOp models a memory operation, either memset or memcpy/memmove.
 struct MemOp {
 private:
+  enum class MemOpKind {
+    Memset,
+    MemsetWithZero, // memset the memory with zeros
+    Memcpy, // copy memory from source to destination, source and destination do
+            // not overlap
+    MemcpyStrSrc, // memcpy source is an in-register constant, so it does not
+                  // need to be loaded
+    Memmove, // memmove: like memcpy, but source and destination regions may
+             // overlap
+  };
+
   // Shared
   uint64_t Size;
   bool DstAlignCanChange; // true if destination alignment can satisfy any
                           // constraint.
   Align DstAlign;         // Specified alignment of the memory operation.
 
-  bool AllowOverlap;
-  // memset only
-  bool IsMemset;   // If setthis memory operation is a memset.
-  bool ZeroMemset; // If set clears out memory with zeros.
-  // memcpy only
-  bool MemcpyStrSrc; // Indicates whether the memcpy source is an in-register
-                     // constant so it does not need to be loaded.
-  Align SrcAlign;    // Inferred alignment of the source or default value if the
-                     // memory operation does not need to load the value.
+  bool IsVolatile;
+  MemOpKind Kind;
+  Align SrcAlign; // Inferred alignment of the source or default value if the
+                  // memory operation does not need to load the value.
 public:
   static MemOp Copy(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
                     Align SrcAlign, bool IsVolatile,
@@ -142,10 +149,20 @@ public:
     Op.Size = Size;
     Op.DstAlignCanChange = DstAlignCanChange;
     Op.DstAlign = DstAlign;
-    Op.AllowOverlap = !IsVolatile;
-    Op.IsMemset = false;
-    Op.ZeroMemset = false;
-    Op.MemcpyStrSrc = MemcpyStrSrc;
+    Op.IsVolatile = IsVolatile;
+    Op.Kind = MemcpyStrSrc ? MemOpKind::MemcpyStrSrc : MemOpKind::Memcpy;
+    Op.SrcAlign = SrcAlign;
+    return Op;
+  }
+
+  static MemOp Move(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
+                    Align SrcAlign, bool IsVolatile) {
+    MemOp Op;
+    Op.Size = Size;
+    Op.DstAlignCanChange = DstAlignCanChange;
+    Op.DstAlign = DstAlign;
+    Op.IsVolatile = IsVolatile;
+    Op.Kind = MemOpKind::Memmove;
     Op.SrcAlign = SrcAlign;
     return Op;
   }
@@ -156,10 +173,8 @@ public:
     Op.Size = Size;
     Op.DstAlignCanChange = DstAlignCanChange;
     Op.DstAlign = DstAlign;
-    Op.AllowOverlap = !IsVolatile;
-    Op.IsMemset = true;
-    Op.ZeroMemset = IsZeroMemset;
-    Op.MemcpyStrSrc = false;
+    Op.IsVolatile = IsVolatile;
+    Op.Kind = IsZeroMemset ? MemOpKind::MemsetWithZero : MemOpKind::Memset;
     return Op;
   }
 
@@ -169,19 +184,22 @@ public:
     return DstAlign;
   }
   bool isFixedDstAlign() const { return !DstAlignCanChange; }
-  bool allowOverlap() const { return AllowOverlap; }
-  bool isMemset() const { return IsMemset; }
-  bool isMemcpy() const { return !IsMemset; }
-  bool isMemcpyWithFixedDstAlign() const {
-    return isMemcpy() && !DstAlignCanChange;
+  bool isVolatile() const { return IsVolatile; }
+  bool isMemset() const {
+    return Kind == MemOpKind::Memset || Kind == MemOpKind::MemsetWithZero;
   }
-  bool isZeroMemset() const { return isMemset() && ZeroMemset; }
-  bool isMemcpyStrSrc() const {
-    assert(isMemcpy() && "Must be a memcpy");
-    return MemcpyStrSrc;
+  bool isMemcpy() const {
+    return Kind == MemOpKind::Memcpy || Kind == MemOpKind::MemcpyStrSrc;
   }
+  bool isMemmove() const { return Kind == MemOpKind::Memmove; }
+  bool isMemcpyOrMemmove() const { return isMemcpy() || isMemmove(); }
+  bool isMemcpyOrMemmoveWithFixedDstAlign() const {
+    return isMemcpyOrMemmove() && !DstAlignCanChange;
+  }
+  bool isZeroMemset() const { return Kind == MemOpKind::MemsetWithZero; }
+  bool isMemcpyStrSrc() const { return Kind == MemOpKind::MemcpyStrSrc; }
   Align getSrcAlign() const {
-    assert(isMemcpy() && "Must be a memcpy");
+    assert(isMemcpyOrMemmove() && "Must be a memcpy or memmove");
     return SrcAlign;
   }
   bool isSrcAligned(Align AlignCheck) const {
@@ -288,6 +306,16 @@ public:
     Cheaper = 0,    // Negated expression is cheaper.
     Neutral = 1,    // Negated expression has the same cost.
     Expensive = 2   // Negated expression is more expensive.
+  };
+
+  /// Enum that specifies how expensive lowering an EXTRACT_SUBVECTOR is.
+  enum class ExtractSubvectorCost {
+    Free = 0,  // Lowers to no instruction at all, e.g. a subregister copy.
+    Cheap = 1, // Lowers to at most one instruction, and may still be free if
+               // the target can fold the extract into the instruction
+               // consuming it (e.g. a widening op that reads the high half of
+               // a register).
+    Expensive = 2 // Needs a shuffle sequence that cannot be folded away.
   };
 
   /// Enum of different potentially desirable ways to fold (and/or (setcc ...),
@@ -503,13 +531,6 @@ public:
                                       bool ZeroIsPoison,
                                       const ConstantRange *VScaleRange) const;
 
-  /// Return true if the @llvm.experimental.vector.match intrinsic should be
-  /// expanded for vector type `VT' and search size `SearchSize' using generic
-  /// code in SelectionDAGBuilder.
-  virtual bool shouldExpandVectorMatch(EVT VT, unsigned SearchSize) const {
-    return true;
-  }
-
   // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
   // vecreduce(op(x, y)) for the reduction opcode RedOpc.
   virtual bool shouldReassociateReduction(unsigned RedOpc, EVT VT) const {
@@ -659,9 +680,10 @@ public:
   // Arg0: The binary op joining the two conditions (and/or).
   // Arg1: The first condition (cond1)
   // Arg2: The second condition (cond2)
+  // Arg3: The containing function.
   virtual CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps, const Value *,
-                                const Value *) const {
+                                const Value *, const Function *) const {
     // -1 will always result in splitting.
     return {-1, -1, -1};
   }
@@ -2128,14 +2150,16 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   virtual Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const {
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const {
     return Register();
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   virtual Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const {
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const {
     return Register();
   }
 
@@ -2489,17 +2513,21 @@ public:
   /// AtomicRMW, if at all. Default is to never expand.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
-    return RMW->isFloatingPointOperation() ?
-      AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+    if (RMW->isFloatingPointOperation())
+      return AtomicExpansionKind::CmpXChg;
+    if (RMW->getType()->isVectorTy())
+      return AtomicExpansionKind::CmpXChg;
+    return AtomicExpansionKind::None;
   }
 
   /// Returns how the given atomic atomicrmw should be cast by the IR-level
   /// AtomicExpand pass.
   virtual AtomicExpansionKind
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
+    Type *ValTy = RMWI->getValOperand()->getType();
     if (RMWI->getOperation() == AtomicRMWInst::Xchg &&
-        (RMWI->getValOperand()->getType()->isFloatingPointTy() ||
-         RMWI->getValOperand()->getType()->isPointerTy()))
+        (ValTy->isFloatingPointTy() || ValTy->isPointerTy() ||
+         ValTy->isVectorTy()))
       return AtomicExpansionKind::CastToInteger;
 
     return AtomicExpansionKind::None;
@@ -3128,6 +3156,8 @@ public:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
+    case ISD::PSEUDO_FMIN:
+    case ISD::PSEUDO_FMAX:
       return true;
     default:
       return false;
@@ -3516,13 +3546,16 @@ public:
     return false;
   }
 
-  /// Return true if EXTRACT_SUBVECTOR is cheap for extracting this result type
-  /// from this source type with this index. This is needed because
-  /// EXTRACT_SUBVECTOR usually has custom lowering that depends on the index of
-  /// the first element, and only the target knows which lowering is cheap.
-  virtual bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                       unsigned Index) const {
-    return false;
+  /// Return the cost of extracting a subvector of type \p ResVT from a vector
+  /// of type \p SrcVT, starting at element \p Index.
+  ///
+  /// Most callers only create a new EXTRACT_SUBVECTOR when the cost is at most
+  /// ExtractSubvectorCost::Cheap. This hook exists because EXTRACT_SUBVECTOR
+  /// usually has custom lowering that depends on the index of the first
+  /// element, so only the target knows which lowering is cheap.
+  virtual ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                       unsigned Index) const {
+    return ExtractSubvectorCost::Expensive;
   }
 
   /// Try to convert an extract element of a vector binary operation into an
@@ -3600,8 +3633,9 @@ public:
   /// passed to the fp16 to fp conversion library function.
   virtual bool shouldKeepZExtForFP16Conv() const { return false; }
 
-  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type VT
-  /// from min(max(fptoi)) saturation patterns.
+  /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type
+  /// VT. Used when folding idioms into a saturating fp-to-int conversion, such
+  /// as min(max(fptoi)) clamps or NaN-guarded selects.
   virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {
     return isOperationLegalOrCustom(Op, VT);
   }
@@ -3708,11 +3742,6 @@ public:
   RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
     return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
   }
-
-  /// Get the comparison predicate that's to be used to test the result of the
-  /// comparison libcall against zero. This should only be used with
-  /// floating-point compare libcalls.
-  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
@@ -4385,6 +4414,19 @@ public:
     return true;
   }
 
+  /// If only low elements of a vector are demanded, shrink the operation to the
+  /// returned size in bits by converting
+  /// (op x) to insert_subvector (op (extract_subvector x)).
+  ///
+  /// The returned size must be a multiple of the element size, greater than or
+  /// equal to the demanded part of the vector and less than the original
+  /// vector size. Return 0 to disable shrinking.
+  virtual unsigned
+  getPreferredShrunkVectorSizeInBits(SDValue Op,
+                                     const APInt &DemandedElts) const {
+    return 0;
+  }
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
@@ -4421,12 +4463,11 @@ public:
                                                 const MachineRegisterInfo &MRI,
                                                 unsigned Depth = 0) const;
 
-  /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
-  /// Default implementation computes low bits based on alignment
-  /// information. This should preserve known bits passed into it.
-  virtual void computeKnownBitsForFrameIndex(int FIOp,
-                                             KnownBits &Known,
-                                             const MachineFunction &MF) const;
+  /// Determine known bits of a pointer to a known valid stack object.
+  /// The default implementation computes low bits based on alignment.
+  virtual void computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                                     const MachineFunction &MF,
+                                                     Align Alignment) const;
 
   /// This method can be implemented by targets that want to expose additional
   /// information about sign bits to the DAG Combiner. The DemandedElts
@@ -5118,6 +5159,10 @@ public:
     return true;
   }
 
+  /// Annotate a stack object pointer with known-bits assertions.
+  SDValue annotateStackObjectPointer(SDValue Ptr, SelectionDAG &DAG,
+                                     const SDLoc &DL, Align Alignment) const;
+
   /// This hook must be implemented to lower outgoing return values, described
   /// by the Outs array, into the specified DAG. The implementation should
   /// return the resulting token chain value.
@@ -5723,6 +5768,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand VECTOR_MATCH nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVectorMatch(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand VECTOR_FIND_LAST_ACTIVE nodes
   /// \param N Node to expand

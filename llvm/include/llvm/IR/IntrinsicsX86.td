@@ -5652,16 +5652,6 @@ let TargetPrefix = "x86" in {
                         [llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty, llvm_i32_ty],
                         []>;
 
-  def int_x86_tmmultf32ps : ClangBuiltin<"__builtin_ia32_tmmultf32ps">,
-              Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
-                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
-                         ImmArg<ArgIndex<2>>]>;
-  def int_x86_tmmultf32ps_internal :
-              ClangBuiltin<"__builtin_ia32_tmmultf32ps_internal">,
-              Intrinsic<[llvm_x86amx_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_x86amx_ty,
-                         llvm_x86amx_ty, llvm_x86amx_ty], []>;
-
   def int_x86_tdpbf8ps_internal :
                 ClangBuiltin<"__builtin_ia32_tdpbf8ps_internal">,
                 Intrinsic<[llvm_x86amx_ty],

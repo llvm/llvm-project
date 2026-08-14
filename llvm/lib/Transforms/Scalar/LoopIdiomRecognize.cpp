@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -151,7 +152,7 @@ bool DisableLIRP::HashRecognize;
 static cl::opt<bool, true>
     DisableLIRPHashRecognize("disable-" DEBUG_TYPE "-hashrecognize",
                              cl::desc("Proceed with loop idiom recognize pass, "
-                                      "but do not optimize CRC loops."),
+                                      "but do not do hash-recognize analysis."),
                              cl::location(DisableLIRP::HashRecognize),
                              cl::init(false), cl::ReallyHidden);
 
@@ -165,6 +166,25 @@ static cl::opt<bool> ForceMemsetPatternIntrinsic(
     "loop-idiom-force-memset-pattern-intrinsic",
     cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
     cl::Hidden);
+
+enum class CRCStrategyKind {
+  Disable,
+  Auto,
+  Table,
+  Clmul,
+};
+static cl::opt<CRCStrategyKind> CRCStrategy(
+    DEBUG_TYPE "-crc-strategy",
+    cl::desc("Preferred strategy for optimizing CRC loops"),
+    cl::init(CRCStrategyKind::Auto), cl::Hidden,
+    cl::values(clEnumValN(CRCStrategyKind::Disable, "disable",
+                          "Do not optimize CRC loops"),
+               clEnumValN(CRCStrategyKind::Auto, "auto",
+                          "Use costing to determine strategy"),
+               clEnumValN(CRCStrategyKind::Table, "table",
+                          "Use a Sarwate table when possible"),
+               clEnumValN(CRCStrategyKind::Clmul, "clmul",
+                          "Use carry-less multiplication when possible")));
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
@@ -259,6 +279,8 @@ private:
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
   bool optimizeCRCLoop(const PolynomialInfo &Info);
+  void optimizeCRCLoopUsingClmul(const PolynomialInfo &Info);
+  void optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -397,11 +419,10 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
     MadeChange |= runOnLoopBlock(BB, BECount, ExitBlocks);
   }
 
-  // Optimize a CRC loop if HashRecognize found one, provided we're not
-  // optimizing for size.
-  if (!DisableLIRP::HashRecognize && !ApplyCodeSizeHeuristics)
+  // Attempt to optimize a CRC loop if one is detected by HashRecognize.
+  if (!DisableLIRP::HashRecognize && CRCStrategy != CRCStrategyKind::Disable)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
-      optimizeCRCLoop(*Res);
+      MadeChange |= optimizeCRCLoop(*Res);
 
   return MadeChange;
 }
@@ -1282,43 +1303,47 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 namespace {
 class MemmoveVerifier {
 public:
-  explicit MemmoveVerifier(const Value &LoadBasePtr, const Value &StoreBasePtr,
-                           const DataLayout &DL)
-      : DL(DL), BP1(llvm::GetPointerBaseWithConstantOffset(
-                    LoadBasePtr.stripPointerCasts(), LoadOff, DL)),
-        BP2(llvm::GetPointerBaseWithConstantOffset(
-            StoreBasePtr.stripPointerCasts(), StoreOff, DL)),
-        IsSameObject(BP1 == BP2) {}
+  explicit MemmoveVerifier(const SCEV &LoadStart, const SCEV &StoreStart,
+                           ScalarEvolution &SE)
+      : DL(SE.getDataLayout()),
+        Off(dyn_cast<SCEVConstant>(SE.getMinusSCEV(&StoreStart, &LoadStart))),
+        BasePtr(dyn_cast<SCEVUnknown>(SE.getPointerBase(&StoreStart))),
+        IsSameObject(Off != nullptr) {}
 
   bool loadAndStoreMayFormMemmove(unsigned StoreSize, bool IsNegStride,
                                   const Instruction &TheLoad,
                                   bool IsMemCpy) const {
+    // The store must be at a constant offset from the load, and there must be
+    // an underlying pointer.
+    if (!Off || !BasePtr)
+      return false;
+    const APInt &OffVal = Off->getAPInt();
+    // If null is defined then the base pointer can't be null
+    auto *NullBase = dyn_cast<ConstantPointerNull>(BasePtr->getValue());
+    if (NullBase && NullPointerIsDefined(
+                        TheLoad.getParent()->getParent(),
+                        NullBase->getPointerType()->getPointerAddressSpace()))
+      return false;
+    int64_t LoadSize;
     if (IsMemCpy) {
-      // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
-      // for negative stride.
-      if ((!IsNegStride && LoadOff <= StoreOff) ||
-          (IsNegStride && LoadOff >= StoreOff))
-        return false;
+      // memcpy is equivalent to a sequence of byte loads and stores
+      LoadSize = 1;
     } else {
-      // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
-      // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
-      int64_t LoadSize =
-          DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
-      if (BP1 != BP2 || LoadSize != int64_t(StoreSize))
-        return false;
-      if ((!IsNegStride && LoadOff < StoreOff + int64_t(StoreSize)) ||
-          (IsNegStride && LoadOff + LoadSize > StoreOff))
+      LoadSize = DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
+      if (LoadSize != StoreSize)
         return false;
     }
+    // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
+    // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
+    if (IsNegStride ? OffVal.slt(LoadSize) : OffVal.sgt(-LoadSize))
+      return false;
     return true;
   }
 
 private:
   const DataLayout &DL;
-  int64_t LoadOff = 0;
-  int64_t StoreOff = 0;
-  const Value *BP1;
-  const Value *BP2;
+  const SCEVConstant *Off;
+  const SCEVUnknown *BasePtr;
 
 public:
   const bool IsSameObject;
@@ -1429,7 +1454,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   // If the store is a memcpy instruction, we must check if it will write to
   // the load memory locations. So remove it from the ignored stores.
-  MemmoveVerifier Verifier(*LoadBasePtr, *StoreBasePtr, *DL);
+  MemmoveVerifier Verifier(*LdStart, *StrStart, *SE);
   if (IsMemCpy && !Verifier.IsSameObject)
     IgnoredInsts.erase(TheStore);
   if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
@@ -1582,6 +1607,255 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
+  LLVMContext &Ctx = Info.LHS->getContext();
+  Type *CRCTy = Info.LHS->getType();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+
+  // CRC computation is mostly serial, so latency works best for comparison.
+  TargetTransformInfo::TargetCostKind CostKind =
+      TargetTransformInfo::TCK_Latency;
+
+  InstructionCost XorCost =
+      TTI->getArithmeticInstrCost(Instruction::Xor, CRCTy, CostKind);
+  InstructionCost ShiftCost =
+      TTI->getArithmeticInstrCost(Instruction::LShr, CRCTy, CostKind);
+  InstructionCost AndCost =
+      TTI->getArithmeticInstrCost(Instruction::And, CRCTy, CostKind);
+  InstructionCost SelectCost =
+      TTI->getCmpSelInstrCost(Instruction::Select, CRCTy, Type::getInt1Ty(Ctx),
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  InstructionCost LoadCost =
+      TTI->getMemoryOpCost(Instruction::Load, CRCTy, DL->getABITypeAlign(CRCTy),
+                           DL->getDefaultGlobalsAddressSpace(), CostKind);
+  auto ClmulCost = [&](unsigned BW) {
+    auto *Ty = IntegerType::get(Ctx, BW);
+    IntrinsicCostAttributes Attrs(Intrinsic::clmul, Ty, {Ty, Ty});
+    return TTI->getIntrinsicInstrCost(Attrs, CostKind);
+  };
+
+  // Estimate the cost of the original, unoptimized loop.
+  InstructionCost OrigLoopCost =
+      (2 * ShiftCost + 2 * XorCost + AndCost + SelectCost) * Info.TripCount;
+
+  // Estimate the cost of the Sarwate lookup table optimization strategy.
+  // As mentioned previously, a byte-multiple trip count is required.
+  InstructionCost TableStrategyCost =
+      Info.TripCount % 8 != 0
+          ? InstructionCost::getInvalid()
+          : (LoadCost + XorCost + 2 * ShiftCost) * (Info.TripCount / 8);
+
+  // Estimate the cost of the carry-less multiplication optimization strategy.
+  InstructionCost ClmulStrategyCost = ClmulCost(2 * Info.TripCount) +
+                                      ClmulCost(CRCBW + Info.TripCount) +
+                                      2 * XorCost + 2 * ShiftCost + AndCost;
+
+  ORE.emit([&]() {
+    return OptimizationRemarkAnalysis(DEBUG_TYPE, "CRCLoopCosts",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+           << "CRC loop costs: original="
+           << ore::NV("OrigLoopCost", OrigLoopCost)
+           << ", table=" << ore::NV("TableStrategyCost", TableStrategyCost)
+           << ", clmul=" << ore::NV("ClmulStrategyCost", ClmulStrategyCost);
+  });
+
+  auto ReportMissed = [&](StringRef Reason) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "CRCLoopMissed",
+                                      CurLoop->getStartLoc(),
+                                      CurLoop->getHeader())
+             << "CRC loop not optimized: " << Reason;
+    });
+  };
+  auto ReportOptimized = [&](StringRef Strategy, StringRef Reason) {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "CRCLoopOptimized",
+                                CurLoop->getStartLoc(), CurLoop->getHeader())
+             << "CRC loop optimized using " << ore::NV("Strategy", Strategy)
+             << ": " << Reason;
+    });
+  };
+
+  switch (CRCStrategy) {
+  default:
+    ReportMissed("disabled by user");
+    return false;
+  case CRCStrategyKind::Table:
+    // The table strategy is not possible in its current form without a byte-
+    // multiple trip count.
+    if (Info.TripCount % 8 == 0) {
+      optimizeCRCLoopUsingTableLookup(Info);
+      ReportOptimized("table", "forced by user");
+      return true;
+    }
+    ReportMissed("table strategy forced, but not possible");
+    return false;
+  case CRCStrategyKind::Clmul:
+    optimizeCRCLoopUsingClmul(Info);
+    ReportOptimized("clmul", "forced by user");
+    return true;
+  case CRCStrategyKind::Auto:
+    // When using the auto strategy, bail if we are optimizing for size since
+    // there's usually not a clear size benefit.
+    // TODO: The clmul optimization is around the same size in many cases, so it
+    // could be worth it to take advantage of that fact, especially if it would
+    // be much faster than the original loop.
+    if (ApplyCodeSizeHeuristics) {
+      ReportMissed("optimizing for size");
+      return false;
+    }
+
+    // Only apply an optimization if there's a clear benefit to doing so.
+    if (std::min(TableStrategyCost, ClmulStrategyCost) >= OrigLoopCost) {
+      ReportMissed("no profitable strategy");
+      return false;
+    }
+
+    if (TableStrategyCost <= ClmulStrategyCost) {
+      optimizeCRCLoopUsingTableLookup(Info);
+      ReportOptimized("table", "most profitable strategy");
+    } else {
+      optimizeCRCLoopUsingClmul(Info);
+      ReportOptimized("clmul", "most profitable strategy");
+    }
+    return true;
+  }
+}
+
+// The algorithm used in this optimization is a Polynomial (GF(2)) Barrett
+// Reduction based on Intel's "Fast CRC Computation for Generic Polynomials
+// Using PCLMULQDQ Instruction" white paper (December 2009).
+void LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
+  // TODO: If clmul exists on the target but not for the required width, it
+  // might be possible to split into multiple iterations of reduction.
+  Type *CRCTy = Info.LHS->getType();
+  LLVMContext &Ctx = CRCTy->getContext();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+  // The loop's TripCount determines how many bits of the data are processed,
+  // regardless of whether the actual data bit width matches (if auxiliary data
+  // is even used at all).
+  unsigned TC = Info.TripCount;
+  // Based on the clmul inputs, the first clmul needs 2*TC bits, and the second
+  // needs CRCBW+TC bits. However, only the low TC bits of the first clmul are
+  // used in little-endian, so a clmul in TC bits suffices in that case.
+  IntegerType *ClmulMuTy =
+      IntegerType::get(Ctx, Info.IsBigEndian ? 2 * TC : TC);
+  IntegerType *ClmulGPTy = IntegerType::get(Ctx, CRCBW + TC);
+
+  // First, generate the constants required for GF(2) Barrett reduction.
+  auto [Mu, FullGenPoly] = HashRecognize::genBarrettConstants(Info);
+  Value *MuConst =
+      ConstantInt::get(Ctx, Mu.zextOrTrunc(ClmulMuTy->getBitWidth()));
+  Value *GenPolyConst =
+      ConstantInt::get(Ctx, FullGenPoly.zext(ClmulGPTy->getBitWidth()));
+
+  IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
+
+  // If a shift needs to occur in the setup for the first clmul with MuConst, it
+  // will be by abs(TC - CRCBW). To ensure that the shift can work without
+  // losing information or creating poison, give it CRCBW + TC bits.
+  bool SetupShiftNeeded = Info.IsBigEndian && TC != CRCBW;
+  auto *SetupTy = IntegerType::get(Ctx, SetupShiftNeeded ? CRCBW + TC : TC);
+
+  // Based on the Intel white paper, in our case, we have
+  // R(x) = (LHS*x^TC) xor (LHSAux ? getTCBits(LHSAux)*x^CRCBW : 0)
+  // since the CRC loop multiplies LHS by x each iteration, and the x^CRCBW term
+  // of getTCBits(LHSAux) is XORed in for the significant bit check.
+  // Rather than compute the full R(x), we can split it in two: a quotient for
+  // step 1 (floor(R(x)/x^CRCBW)) and a remainder for step 3 (R(x) mod x^CRCBW).
+  //
+  // ClmulMuInput is an evolving variable that will eventually become the part
+  // used in step 1, which can be simplified to
+  // (LHS*x^(TC-CRCBW)) xor (LHSAux ? getTCBits(LHSAux) : 0).
+  // Thanks to restrictions imposed by HashRecognize for big-endian CRC loops,
+  // getTCBits(LHSAux) = LHSAux*x^(TC-CRCBW), so this can be further simplified
+  // to (LHS xor (LHSAux ? LHSAux : 0))*x^(TC-CRCBW).
+  Value *ClmulMuInput =
+      Builder.CreateZExtOrTrunc(Info.LHS, SetupTy, "crc.cast");
+
+  // If auxiliary data is present, XOR it in with the CRC.
+  if (Value *Data = Info.LHSAux) {
+    // This is usually a zext, but DataBW may exceed CRCBW+TC if both CRCBW and
+    // TC are small enough.
+    Data = Builder.CreateZExtOrTrunc(Data, SetupTy, "data.cast");
+
+    ClmulMuInput = Builder.CreateXor(ClmulMuInput, Data, "xor.crc.data");
+  }
+
+  // Align the current CRC with TripCount (multiply or divide by x^(TC-CRCBW)).
+  if (SetupShiftNeeded) {
+    ClmulMuInput =
+        TC > CRCBW
+            ? Builder.CreateShl(ClmulMuInput, TC - CRCBW, "crc.align.tc")
+            : Builder.CreateLShr(ClmulMuInput, CRCBW - TC, "crc.align.tc");
+  }
+
+  // Zero out any bits above (TC-1) for calculation since the original loop
+  // doesn't use them in the significant bit checks.
+  if (SetupTy->getBitWidth() > TC) {
+    auto *Mask =
+        ConstantInt::get(Ctx, APInt::getLowBitsSet(SetupTy->getBitWidth(), TC));
+    ClmulMuInput = Builder.CreateAnd(ClmulMuInput, Mask, "crc.tcbits");
+  }
+
+  // Step 1: T1(x) = floor(R(x)/x^CRCBW) * mu
+  // Input is TC bits and mu is TC+1 bits, so result will be 2*TC bits.
+  ClmulMuInput =
+      Builder.CreateZExtOrTrunc(ClmulMuInput, ClmulMuTy, "tcbits.cast");
+  Value *ClmulMu = Builder.CreateBinaryIntrinsic(
+      Intrinsic::clmul, ClmulMuInput, MuConst, /*FMFSource=*/{}, "clmul.mu");
+
+  // Calculate floor(T1(x)/x^TC) for step 2.
+  Value *ClmulGPInput =
+      Info.IsBigEndian ? Builder.CreateLShr(ClmulMu, TC, "quot.lshr") : ClmulMu;
+
+  // Step 2: T2(x) = floor(T1(x)/x^TC) * P(x)
+  // Input is TC bits and P(x) is CRCBW+1 bits, so result will be CRCBW+TC bits.
+  ClmulGPInput =
+      Builder.CreateZExtOrTrunc(ClmulGPInput, ClmulGPTy, "quot.cast");
+  Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
+                                                 GenPolyConst,
+                                                 /*FMFSource=*/{}, "clmul.gp");
+
+  // Calculate the least significant part of R(x) for step 3 as specified above.
+  // R(x) mod x^CRCBW = LHS*x^TC mod x^CRCBW, though the (mod x^CRCBW) is
+  // handled later on when truncating back to CRCBW for ComputedValue.
+  Value *CRCNext = Builder.CreateZExt(Info.LHS, ClmulGPTy, "crc.recast");
+  if (Info.IsBigEndian)
+    CRCNext = Builder.CreateShl(CRCNext, TC, "crc.shl");
+
+  // Step 3: C(x) = (R(x) xor T2(x)) mod x^CRCBW
+  CRCNext = Builder.CreateXor(CRCNext, ClmulGP, "xor.crc.mult");
+  if (!Info.IsBigEndian)
+    CRCNext = Builder.CreateLShr(CRCNext, TC, "crc.lshr");
+
+  // Bring the result back down the the CRC bit width.
+  CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
+
+  // Replace the result of the loop with the new computed CRC value.
+  Info.ComputedValue->replaceUsesOutsideBlock(CRCNext, CurLoop->getLoopLatch());
+
+  // Finally, clean up the loop as much as possible so it can be trivially
+  // deleted.
+  {
+    for (PHINode &PN : make_early_inc_range(CurLoop->getHeader()->phis())) {
+      PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+      RecursivelyDeleteDeadPHINode(&PN);
+    }
+    // Replace the exit condition with constant true/false to always cause a
+    // branch to the exit block.
+    deleteDeadInstruction(CurLoop->getLatchCmpInst());
+    auto *BrInst = cast<CondBrInst>(CurLoop->getLoopLatch()->getTerminator());
+    BrInst->setCondition(ConstantInt::getBool(
+        Ctx, BrInst->getSuccessor(0) == CurLoop->getExitBlock()));
+    SE->forgetLoop(CurLoop);
+  }
+}
+
+void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
+    const PolynomialInfo &Info) {
+  assert(Info.TripCount % 8 == 0 && "A byte-multiple trip count is required");
+
   // First, create a new GlobalVariable corresponding to the
   // Sarwate-lookup-table.
   Type *CRCTy = Info.LHS->getType();
@@ -1592,9 +1866,9 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
             [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
   Constant *ConstArray =
       ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants);
-  GlobalVariable *GV =
-      new GlobalVariable(M, ConstArray->getType(), true,
-                         GlobalValue::PrivateLinkage, ConstArray, ".crctable");
+  GlobalVariable *GV = new GlobalVariable(
+      *CurLoop->getHeader()->getModule(), ConstArray->getType(), true,
+      GlobalValue::PrivateLinkage, ConstArray, ".crctable");
 
   PHINode *IV = CurLoop->getCanonicalInductionVariable();
   SmallVector<PHINode *, 2> Cleanup;
@@ -1640,15 +1914,13 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     };
     auto HiIdx = [LoByte, CRCBW](IRBuilderBase &Builder, Value *Op,
                                  const Twine &Name) {
-      Type *OpTy = Op->getType();
-
-      // When the bitwidth of the CRC mismatches the Op's bitwidth, we need to
-      // use the CRC's bitwidth as the reference for shifting right.
-      return LoByte(Builder,
-                    CRCBW > 8 ? Builder.CreateLShr(
-                                    Op, ConstantInt::get(OpTy, CRCBW - 8), Name)
-                              : Op,
-                    Name + ".lo.byte");
+      // Shift the top bits of Op to the bottom byte by using the CRC bitwidth
+      // as a reference.
+      if (CRCBW != 8) {
+        Op = CRCBW > 8 ? Builder.CreateLShr(Op, CRCBW - 8, Name)
+                       : Builder.CreateShl(Op, 8 - CRCBW, Name);
+      }
+      return LoByte(Builder, Op, Name + ".lo.byte");
     };
 
     IRBuilder<> Builder(CurLoop->getHeader(),
@@ -1694,7 +1966,15 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
     Value *CRCTableGEP =
         Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
-    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+    Instruction *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+
+    // Update MemorySSA since we just created a new load instruction.
+    if (MSSAU) {
+      auto *NewMemAcc = MSSAU->createMemoryAccessInBB(
+          CRCTableLd, /*Definition=*/nullptr, CRCTableLd->getParent(),
+          MemorySSA::Beginning);
+      MSSAU->insertUse(cast<MemoryUse>(NewMemAcc), /*RenameUses=*/true);
+    }
 
     // CRCNext = (CRC (<<|>>) 8) ^ CRCTableLd, or simply CRCTableLd in case of
     // CRC-8.
@@ -1717,8 +1997,9 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     for (PHINode *PN : Cleanup)
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
+    if (MSSAU && VerifyMemorySSA)
+      MSSAU->getMemorySSA()->verifyMemorySSA();
   }
-  return true;
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {

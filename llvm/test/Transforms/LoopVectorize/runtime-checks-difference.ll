@@ -465,19 +465,12 @@ define void @remove_diff_checks_via_guards(i32 %x, i32 %y, ptr %A) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[SMAX]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt i32 [[TMP11]], [[OFFSET]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i64 [[SMAX]], 4294967295
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP9]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], [[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
-; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[OFFSET]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = shl nsw i64 [[TMP16]], 2
-; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP17]], 1
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP18]], 15
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH1:label %.*]]
+; CHECK-NEXT:    br i1 [[TMP15]], [[SCALAR_PH]], [[VECTOR_MEMCHECK:label %.*]]
 ;
 entry:
   %offset = sub i32 %x, %y
@@ -516,25 +509,20 @@ define void @diff_check_via_i32_ptrarith(ptr %origin, ptr %dst, ptr %base, i32 %
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OP]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PH:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[LHS]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[RHS]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[D]], [[TMP3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[RHS]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[LHS]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[D]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP14]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP7]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[RHS]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[D]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[LHS]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[BASE1]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[BASE1]], [[IDX_EXT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[LHS]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP13]], 1
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], 3
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP13]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 3
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
 ;
 entry:

@@ -1,6 +1,5 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: zlib || zstd
-// UNSUPPORTED: target={{.*}}-macosx{{.*}}, target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // Tests that clang-offload-bundler --list correctly enumerates all bundle IDs
 // from multiple concatenated compressed (CCOB) fat binary blobs stored in the
@@ -61,7 +60,7 @@
 // Build a host object and inject the concatenated blob as its .hip_fatbin
 // section, replicating the ELF layout of a fat shared library.
 //
-// RUN: %clang -O0 -target %itanium_abi_triple %s -c -o %t.host.o
+// RUN: %clang -O0 -target x86_64-unknown-linux-gnu %s -c -o %t.host.o
 // RUN: llvm-objcopy \
 // RUN:   --add-section=.hip_fatbin=%t.multi.fatbin \
 // RUN:   --set-section-flags=.hip_fatbin=alloc \

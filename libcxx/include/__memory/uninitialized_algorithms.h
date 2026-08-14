@@ -25,6 +25,7 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
@@ -141,6 +142,14 @@ uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 
 #if _LIBCPP_STD_VER >= 17
 
+template <class _Iter>
+_LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) __deref_move(_Iter& __it) {
+  if constexpr (is_lvalue_reference_v<decltype(*__it)>)
+    return std::move(*__it);
+  else
+    return *__it;
+}
+
 // uninitialized_default_construct
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel>
@@ -253,7 +262,7 @@ template <class _InputIterator, class _ForwardIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_move(_InputIterator __ifirst, _InputIterator __ilast, _ForwardIterator __ofirst) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
-  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::move(*__iter); };
+  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::__deref_move(__iter); };
 
   auto __result = std::__uninitialized_move<_ValueType>(
       std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __always_false(), __iter_move);
@@ -284,7 +293,7 @@ template <class _InputIterator, class _Size, class _ForwardIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<_InputIterator, _ForwardIterator>
 uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
-  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::move(*__iter); };
+  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::__deref_move(__iter); };
 
   auto __result = std::__uninitialized_move_n<_ValueType>(
       std::move(__ifirst), __n, std::move(__ofirst), __always_false(), __iter_move);
@@ -388,7 +397,7 @@ inline const bool __allocator_has_trivial_destroy_v<allocator<_Tp>, _Up> = true;
 // The strong exception guarantee is provided if any of the following are true:
 // - is_nothrow_move_constructible<_ValueType>
 // - is_copy_constructible<_ValueType>
-// - __libcpp_is_trivially_relocatable<_ValueType>
+// - __is_trivially_relocatable_v<_ValueType>
 template <class _Alloc, class _ContiguousIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate(
     _Alloc& __alloc, _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
@@ -396,7 +405,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocat
   using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
   static_assert(
       __is_cpp17_move_insertable_v<_Alloc>, "The specified type does not meet the requirements of Cpp17MoveInsertable");
-  if (__libcpp_is_constant_evaluated() || !__libcpp_is_trivially_relocatable<_ValueType>::value ||
+  if (__libcpp_is_constant_evaluated() || !__is_trivially_relocatable_v<_ValueType> ||
       !__allocator_has_trivial_move_construct_v<_Alloc, _ValueType> ||
       !__allocator_has_trivial_destroy_v<_Alloc, _ValueType>) {
     auto __destruct_first = __result;

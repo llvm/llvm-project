@@ -560,8 +560,10 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
                                         DeadSliceSizeInBits, Assign,
                                         NewFragment) ||
         !NewFragment) {
-      // We couldn't calculate the intersecting fragment for some reason. Be
-      // cautious and unlink the whole assignment from the store.
+      // Either the intersection couldn't be worked out, or it covers the
+      // entire variable region described by the record. Full coverage leaves
+      // NewFragment empty rather than making calculateFragmentIntersect fail,
+      // so unlink the whole assignment from the store in both cases.
       Assign->setKillAddress();
       Assign->setAssignId(GetDeadLink());
       continue;
@@ -1620,7 +1622,7 @@ bool DSEState::isGuaranteedLoopIndependent(const Instruction *Current,
   // would also be valid but we currently disable that to limit compile time).
   if (Current->getParent() == KillingDef->getParent())
     return true;
-  const Cycle *CurrentC = CI.getCycle(Current->getParent());
+  CycleRef CurrentC = CI.getCycle(Current->getParent());
   if (CurrentC && CurrentC == CI.getCycle(KillingDef->getParent()))
     return true;
   // Otherwise check the memory location is invariant to any loops.
@@ -2358,6 +2360,9 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
   if (!Calloc)
     return false;
 
+  if (MDNode *MD = Malloc->getMetadata(LLVMContext::MD_alloc_token))
+    cast<Instruction>(Calloc)->setMetadata(LLVMContext::MD_alloc_token, MD);
+
   MemorySSAUpdater Updater(&MSSA);
   auto *NewAccess = Updater.createMemoryAccessAfter(cast<Instruction>(Calloc),
                                                     nullptr, MallocDef);
@@ -2881,13 +2886,10 @@ public:
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addRequired<MemorySSAWrapperPass>();
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
     AU.addRequired<CycleInfoWrapperPass>();
-    AU.addPreserved<CycleInfoWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
   }
 };

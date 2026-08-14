@@ -209,8 +209,8 @@ define float @maxf8(float) {
 ;
 ; THRESH-LABEL: @maxf8(
 ; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr @arr1, align 16
-; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
+; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i64 1
 ; THRESH-NEXT:    [[TMP5:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
 ; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
 ; THRESH-NEXT:    [[TMP7:%.*]] = load float, ptr getelementptr inbounds ([32 x float], ptr @arr1, i64 0, i64 2), align 8
@@ -312,8 +312,8 @@ define float @maxf16(float) {
 ;
 ; THRESH-LABEL: @maxf16(
 ; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr @arr1, align 16
-; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
+; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i64 1
 ; THRESH-NEXT:    [[TMP5:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
 ; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
 ; THRESH-NEXT:    [[TMP7:%.*]] = load float, ptr getelementptr inbounds ([32 x float], ptr @arr1, i64 0, i64 2), align 8
@@ -511,8 +511,8 @@ define float @maxf32(float) {
 ;
 ; THRESH-LABEL: @maxf32(
 ; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr @arr1, align 16
-; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
+; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i64 1
 ; THRESH-NEXT:    [[TMP5:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
 ; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float [[TMP3]], float [[TMP4]]
 ; THRESH-NEXT:    [[TMP7:%.*]] = load float, ptr getelementptr inbounds ([32 x float], ptr @arr1, i64 0, i64 2), align 8
@@ -707,8 +707,8 @@ define float @maxf32(float) {
 define i32 @maxi8_mutiple_uses(i32 %0) {
 ; CHECK-LABEL: @maxi8_mutiple_uses(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr @arr, align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], i32 3, i32 4
@@ -837,8 +837,8 @@ define ptr @maxp8(i32) {
 ;
 ; THRESH-LABEL: @maxp8(
 ; THRESH-NEXT:    [[TMP2:%.*]] = load <2 x ptr>, ptr @arrp, align 16
-; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 0
-; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 1
+; THRESH-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 0
+; THRESH-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 1
 ; THRESH-NEXT:    [[TMP5:%.*]] = icmp ugt ptr [[TMP3]], [[TMP4]]
 ; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], ptr [[TMP3]], ptr [[TMP4]]
 ; THRESH-NEXT:    [[TMP7:%.*]] = load ptr, ptr getelementptr inbounds ([32 x ptr], ptr @arrp, i64 0, i64 2), align 8

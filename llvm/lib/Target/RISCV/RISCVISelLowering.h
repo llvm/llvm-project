@@ -64,8 +64,8 @@ public:
   int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                               unsigned Index) const override;
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
@@ -99,6 +99,8 @@ public:
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
+
+  bool isVectorClearMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
   bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
     // If the pair to store is a mixture of float and int values, we will
@@ -202,6 +204,11 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
+  CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *LHS,
+                                const Value *RHS,
+                                const Function *F) const override;
+
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
     if (VT == MVT::i8 || VT == MVT::i16)
@@ -266,12 +273,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
   bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;

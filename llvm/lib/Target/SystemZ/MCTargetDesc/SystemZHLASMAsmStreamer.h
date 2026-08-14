@@ -71,8 +71,6 @@ public:
   /// and only when verbose assembly output is enabled.
   void AddComment(const Twine &T, bool EOL = true) override;
 
-  raw_ostream &getCommentOS() override;
-
   void emitBytes(StringRef Data) override;
 
   void emitAlignmentDS(uint64_t ByteAlignment, std::optional<int64_t> Value,
@@ -83,6 +81,7 @@ public:
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
 
+  void emitRawComment(const Twine &T, bool TabPrefix = false) override;
   /// Return true if this streamer supports verbose assembly at all.
   bool isVerboseAsm() const override { return IsVerboseAsm; }
 

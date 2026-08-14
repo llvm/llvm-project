@@ -219,6 +219,12 @@ static Value *peekThroughBitcasts(Value *V) {
   return V;
 }
 
+/// Helper to peek through bitcasts to the same value.
+static bool isEquivBitcast(Value *X, Value *Y) {
+  return X->getType() == Y->getType() &&
+         peekThroughBitcasts(X) == peekThroughBitcasts(Y);
+}
+
 static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
   // Do not widen load if atomic/volatile or under asan/hwasan/memtag/tsan.
   // The widened load may load data from dirty regions or create data races
@@ -295,9 +301,10 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       return false;
 
     // If we load MinVecNumElts, will our target element still be loaded?
-    OffsetEltIndex = Offset.udiv(ScalarSizeInBytes).getZExtValue();
-    if (OffsetEltIndex >= MinVecNumElts)
+    APInt OffsetEltIndexAP = Offset.udiv(ScalarSizeInBytes);
+    if (OffsetEltIndexAP.uge(MinVecNumElts))
       return false;
+    OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
     if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load,
                                      SQ.AC, SQ.DT))
@@ -1989,11 +1996,12 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
         SrcAddr != SI->getPointerOperand()->stripPointerCasts())
       return false;
 
+    if (isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
+                             MemoryLocation::get(SI), AA))
+      return false;
     auto ScalarizableIdx =
         canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(Load));
-    if (ScalarizableIdx.isUnsafe() ||
-        isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
-                             MemoryLocation::get(SI), AA))
+    if (ScalarizableIdx.isUnsafe())
       return false;
 
     // Ensure we add the load back to the worklist BEFORE its users so they can
@@ -2679,6 +2687,17 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   // SingleSrcBinOp only reduces instruction count if we also eliminate the
   // original binop(s). If binops have multiple uses, they won't be eliminated.
   ReducedInstCount |= SingleSrcBinOp && LHS->hasOneUser() && RHS->hasOneUser();
+
+  // For concat shuffles of i1 vectors where both binops are one-use, the
+  // transform keeps the same instruction count but canonicalises to a single
+  // wider binop, enabling downstream folds (e.g. NOT(XOR(concat(a,b),
+  // concat(c,d))) -> XNOR(concat(a,b),concat(c,d)) on AVX-512 mask regs).
+  // Restrict to BinaryOperator (not CmpInst) since narrow comparisons may
+  // be cheaper than wide ones on some targets (e.g. AVX-512 vpcmpeq).
+  ReducedInstCount |= cast<ShuffleVectorInst>(&I)->isConcat() &&
+                      I.getType()->getScalarType()->isIntegerTy(1) &&
+                      isa<BinaryOperator>(LHS) && LHS->hasOneUser() &&
+                      RHS->hasOneUser();
 
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
@@ -3553,18 +3572,19 @@ static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
 }
 
 static Value *
-generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
+generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
                     const DenseSet<std::pair<Value *, Use *>> &IdentityLeafs,
                     const DenseSet<std::pair<Value *, Use *>> &SplatLeafs,
                     const DenseSet<std::pair<Value *, Use *>> &ConcatLeafs,
-                    IRBuilderBase &Builder, const TargetTransformInfo *TTI) {
+                    IRBuilderBase &Builder, InstructionWorklist &WorkList,
+                    const TargetTransformInfo *TTI) {
   auto [FrontV, FrontLane] = Item.front();
 
   if (IdentityLeafs.contains(std::make_pair(FrontV, From))) {
     return FrontV;
   }
   if (SplatLeafs.contains(std::make_pair(FrontV, From))) {
-    SmallVector<int, 16> Mask(Ty->getNumElements(), FrontLane);
+    SmallVector<int, 16> Mask(Item.size(), FrontLane);
     return Builder.CreateShuffleVector(FrontV, Mask);
   }
   if (ConcatLeafs.contains(std::make_pair(FrontV, From))) {
@@ -3588,6 +3608,53 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
   }
 
   auto *I = cast<Instruction>(FrontV);
+
+  // Handle vector bitcasts that change element count. We cannot use
+  // generateInstLaneVectorFromOperand for these because the lane indices
+  // don't map 1:1 through the bitcast.
+  if (auto *BitCast = dyn_cast<BitCastInst>(I)) {
+    auto *BCDstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
+    auto *BCSrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
+    if (BCDstTy && BCSrcTy &&
+        BCDstTy->getElementCount() != BCSrcTy->getElementCount()) {
+      unsigned DstElts = BCDstTy->getNumElements();
+      unsigned SrcElts = BCSrcTy->getNumElements();
+      SmallVector<InstLane> NewItem;
+      if (DstElts > SrcElts) {
+        // Widening: compress operand Item.
+        unsigned R = DstElts / SrcElts;
+        if (Item.size() % R != 0)
+          return nullptr;
+        for (unsigned Idx = 0, E = Item.size(); Idx < E; Idx += R) {
+          auto [V, Lane] = Item[Idx];
+          if (!V) {
+            NewItem.push_back({nullptr, PoisonMaskElem});
+            continue;
+          }
+          NewItem.push_back(
+              lookThroughShuffles(cast<Operator>(V)->getOperand(0), Lane / R));
+        }
+      } else {
+        // Narrowing: expand operand Item.
+        unsigned R = SrcElts / DstElts;
+        for (auto [V, Lane] : Item) {
+          if (!V) {
+            NewItem.append(R, {nullptr, PoisonMaskElem});
+            continue;
+          }
+          Value *Op = cast<Operator>(V)->getOperand(0);
+          for (unsigned J = 0; J < R; ++J)
+            NewItem.push_back(lookThroughShuffles(Op, Lane * R + J));
+        }
+      }
+      Value *Op = generateNewInstTree(NewItem, &BitCast->getOperandUse(0),
+                                      IdentityLeafs, SplatLeafs, ConcatLeafs,
+                                      Builder, WorkList, TTI);
+      WorkList.pushValue(Op);
+      return Builder.CreateBitCast(
+          Op, FixedVectorType::get(BCDstTy->getScalarType(), Item.size()));
+    }
+  }
   auto *II = dyn_cast<IntrinsicInst>(I);
   unsigned NumOps = I->getNumOperands() - (II ? 1 : 0);
   SmallVector<Value *> Ops(NumOps);
@@ -3597,9 +3664,15 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
       Ops[Idx] = II->getOperand(Idx);
       continue;
     }
-    Ops[Idx] = generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx),
-                                   &I->getOperandUse(Idx), Ty, IdentityLeafs,
-                                   SplatLeafs, ConcatLeafs, Builder, TTI);
+    Ops[Idx] = generateNewInstTree(
+        generateInstLaneVectorFromOperand(Item, Idx), &I->getOperandUse(Idx),
+        IdentityLeafs, SplatLeafs, ConcatLeafs, Builder, WorkList, TTI);
+    // Don't re-queue the operand of a bitcast we just regenerated. Doing so
+    // lets foldBitcastShuffle sink the bitcast back into a shuffle(bitcast),
+    // which foldShuffleToIdentity then re-matches as the same superfluous
+    // identity - an infinite loop between the two folds.
+    if (!isa<BitCastInst>(I))
+      WorkList.pushValue(Ops[Idx]);
   }
 
   SmallVector<Value *, 8> ValueList;
@@ -3608,7 +3681,7 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
       ValueList.push_back(Lane.first);
 
   Type *DstTy =
-      FixedVectorType::get(I->getType()->getScalarType(), Ty->getNumElements());
+      FixedVectorType::get(I->getType()->getScalarType(), Item.size());
   if (auto *BI = dyn_cast<BinaryOperator>(I)) {
     auto *Value = Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(),
                                       Ops[0], Ops[1]);
@@ -3654,16 +3727,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   for (unsigned M = 0, E = Ty->getNumElements(); M < E; ++M)
     Start[M] = lookThroughShuffles(&I, M);
 
-  SmallVector<std::pair<SmallVector<InstLane>, Use *>> Worklist;
-  Worklist.push_back(std::make_pair(Start, &*I.use_begin()));
+  SmallVector<std::pair<SmallVector<InstLane>, Use *>> Candidates;
+  Candidates.push_back(std::make_pair(Start, &*I.use_begin()));
   DenseSet<std::pair<Value *, Use *>> IdentityLeafs, SplatLeafs, ConcatLeafs;
   unsigned NumVisited = 0;
+  bool TraversedElCountChangingBitcast = false;
 
-  while (!Worklist.empty()) {
+  while (!Candidates.empty()) {
     if (++NumVisited > MaxInstrsToScan)
       return false;
 
-    auto ItemFrom = Worklist.pop_back_val();
+    auto ItemFrom = Candidates.pop_back_val();
     auto Item = ItemFrom.first;
     auto From = ItemFrom.second;
     auto [FrontV, FrontLane] = Item.front();
@@ -3672,19 +3746,13 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if (!FrontV)
       return false;
 
-    // Helper to peek through bitcasts to the same value.
-    auto IsEquiv = [&](Value *X, Value *Y) {
-      return X->getType() == Y->getType() &&
-             peekThroughBitcasts(X) == peekThroughBitcasts(Y);
-    };
-
     // Look for an identity value.
     if (FrontLane == 0 &&
         cast<FixedVectorType>(FrontV->getType())->getNumElements() ==
-            Ty->getNumElements() &&
-        all_of(drop_begin(enumerate(Item)), [IsEquiv, Item](const auto &E) {
+            Item.size() &&
+        all_of(drop_begin(enumerate(Item)), [Item](const auto &E) {
           Value *FrontV = Item.front().first;
-          return !E.value().first || (IsEquiv(E.value().first, FrontV) &&
+          return !E.value().first || (isEquivBitcast(E.value().first, FrontV) &&
                                       E.value().second == (int)E.index());
         })) {
       IdentityLeafs.insert(std::make_pair(FrontV, From));
@@ -3751,33 +3819,96 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         if (auto *BO = dyn_cast<BinaryOperator>(FrontV);
             BO && BO->isIntDivRem())
           return false;
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &cast<Instruction>(FrontV)->getOperandUse(0));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
-                              &cast<Instruction>(FrontV)->getOperandUse(1));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &cast<Instruction>(FrontV)->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
+                                &cast<Instruction>(FrontV)->getOperandUse(1));
         continue;
       } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst, FPToSIInst,
                      FPToUIInst, SIToFPInst, UIToFPInst>(FrontV)) {
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &cast<Instruction>(FrontV)->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &cast<Instruction>(FrontV)->getOperandUse(0));
         continue;
       } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontV)) {
-        // TODO: Handle vector widening/narrowing bitcasts.
-        auto *DstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
-        auto *SrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
-        if (DstTy && SrcTy &&
-            SrcTy->getNumElements() == DstTy->getNumElements()) {
-          Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                                &BitCast->getOperandUse(0));
-          continue;
+        auto *BCDstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
+        auto *BCSrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
+        if (BCDstTy && BCSrcTy) {
+          ElementCount DstEC = BCDstTy->getElementCount();
+          ElementCount SrcEC = BCSrcTy->getElementCount();
+          if (DstEC == SrcEC) {
+            // Same element count - simple pass-through.
+            Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                    &BitCast->getOperandUse(0));
+            continue;
+          }
+          unsigned DstElts = DstEC.getFixedValue();
+          unsigned SrcElts = SrcEC.getFixedValue();
+          if (DstElts > SrcElts && DstElts % SrcElts == 0) {
+            // Widening bitcast (e.g. <2 x i32> -> <4 x i16>). Compress
+            // consecutive groups of R destination lanes into one source
+            // lane.
+            unsigned R = DstElts / SrcElts;
+            SmallVector<InstLane> NItem;
+            bool Valid = Item.size() % R == 0;
+            for (unsigned Idx = 0, E = Item.size(); Valid && Idx < E;
+                 Idx += R) {
+              auto [V0, L0] = Item[Idx];
+              if (!V0) {
+                if (any_of(ArrayRef(Item).slice(Idx + 1, R - 1),
+                           [](InstLane IL) { return IL.first != nullptr; })) {
+                  Valid = false;
+                  break;
+                }
+                NItem.push_back({nullptr, PoisonMaskElem});
+                continue;
+              }
+              if (L0 % R != 0) {
+                Valid = false;
+                break;
+              }
+              for (unsigned J = 1; J < R; ++J) {
+                auto [VJ, LJ] = Item[Idx + J];
+                if (!VJ || VJ != V0 || LJ != L0 + (int)J) {
+                  Valid = false;
+                  break;
+                }
+              }
+              if (!Valid)
+                break;
+              NItem.push_back(lookThroughShuffles(
+                  cast<Operator>(V0)->getOperand(0), L0 / R));
+            }
+            if (Valid) {
+              TraversedElCountChangingBitcast = true;
+              Candidates.emplace_back(NItem, &BitCast->getOperandUse(0));
+              continue;
+            }
+          } else if (SrcElts > DstElts && SrcElts % DstElts == 0) {
+            // Narrowing bitcast (e.g. <4 x i16> -> <2 x i32>). Expand
+            // each destination lane into R source lanes.
+            unsigned R = SrcElts / DstElts;
+            SmallVector<InstLane> NItem;
+            for (auto [V, Lane] : Item) {
+              if (!V) {
+                NItem.append(R, {nullptr, PoisonMaskElem});
+                continue;
+              }
+              Value *Op = cast<Operator>(V)->getOperand(0);
+              for (unsigned J = 0; J < R; ++J)
+                NItem.push_back(lookThroughShuffles(Op, Lane * R + J));
+            }
+            TraversedElCountChangingBitcast = true;
+            Candidates.emplace_back(NItem, &BitCast->getOperandUse(0));
+            continue;
+          }
         }
       } else if (auto *Sel = dyn_cast<SelectInst>(FrontV)) {
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
-                              &Sel->getOperandUse(0));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
-                              &Sel->getOperandUse(1));
-        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 2),
-                              &Sel->getOperandUse(2));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &Sel->getOperandUse(0));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
+                                &Sel->getOperandUse(1));
+        Candidates.emplace_back(generateInstLaneVectorFromOperand(Item, 2),
+                                &Sel->getOperandUse(2));
         continue;
       } else if (auto *II = dyn_cast<IntrinsicInst>(FrontV);
                  II && isTriviallyVectorizable(II->getIntrinsicID()) &&
@@ -3794,8 +3925,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
               return false;
             continue;
           }
-          Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, Op),
-                                &cast<Instruction>(FrontV)->getOperandUse(Op));
+          Candidates.emplace_back(
+              generateInstLaneVectorFromOperand(Item, Op),
+              &cast<Instruction>(FrontV)->getOperandUse(Op));
         }
         continue;
       }
@@ -3812,13 +3944,20 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   if (NumVisited <= 1)
     return false;
 
+  // If the only non-leaf node traversed was a single bitcast that changes
+  // element count, the fold would just commute the bitcast and shuffle.
+  // foldBitcastShuffle does the reverse transform, causing an infinite loop.
+  if (NumVisited == 2 && TraversedElCountChangingBitcast)
+    return false;
+
   LLVM_DEBUG(dbgs() << "Found a superfluous identity shuffle: " << I << "\n");
 
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
   Builder.SetInsertPoint(&I);
-  Value *V = generateNewInstTree(Start, &*I.use_begin(), Ty, IdentityLeafs,
-                                 SplatLeafs, ConcatLeafs, Builder, &TTI);
+  Value *V =
+      generateNewInstTree(Start, &*I.use_begin(), IdentityLeafs, SplatLeafs,
+                          ConcatLeafs, Builder, Worklist, &TTI);
   replaceValue(I, *V);
   return true;
 }
@@ -4128,11 +4267,23 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     auto It = Demands.find(S);
     if (It == Demands.end() || It->second.Lanes.isZero())
       continue;
-    if (Cut || (!IsIdempotent && !It->second.Duplicates.isZero())) {
+    if (!IsIdempotent && !It->second.Duplicates.isZero()) {
       Cut.reset();
       break;
     }
-    Cut = ReductionCut{S, It->second.Lanes};
+    if (!Cut) {
+      Cut = ReductionCut{S, It->second.Lanes};
+      continue;
+    }
+    if (!isEquivBitcast(Cut->Src, S)) {
+      Cut.reset();
+      break;
+    }
+    if (!IsIdempotent && !(Cut->Elts & It->second.Lanes).isZero()) {
+      Cut.reset();
+      break;
+    }
+    Cut->Elts |= It->second.Lanes;
   }
   if (!Cut) {
     for (Value *V : Nodes) {
@@ -5983,30 +6134,87 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   replaceValue(*Cast, *NewVP);
   return true;
 }
-
 /// Fold the following cases into a single byte-level bit-reverse operation
 /// and accepts bswap and bitreverse intrinsics:
-///   bswap(bitreverse(x)) --> bitcast(bitreverse(bitcast(x)))
-///   bitreverse(bswap(x)) --> bitcast(bitreverse(bitcast(x)))
+///   bswap(bitreverse(x))  --> bitcast(bitreverse(bitcast(x)))
+///   bitreverse(bswap(x)) <--> bitcast(bitreverse(bitcast(x)))
+/// The direction of the fold is cost-model driven.
+/// Also supports:
+///   bitcast(bitreverse(bitcast(x))) --> bitreverse(fshl(x))
 bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   Value *X;
+
+  if (match(&I, m_BitCast(m_BitReverse(m_BitCast(m_Value(X)))))) {
+    Type *Ty = X->getType();
+    Type *VecTy = I.getOperand(0)->getType();
+    // Detect the case when bitreversing every octet in X individually. Then we
+    // can use bswap to reorder the octets before doing a single bitreverse.
+    bool CanUseBswap =
+        Ty->isIntegerTy() && Ty == I.getType() && isa<FixedVectorType>(VecTy) &&
+        cast<FixedVectorType>(VecTy)->getElementType()->isIntegerTy(8) &&
+        Ty->getIntegerBitWidth() % 16 == 0;
+    // Detect the case when bitreversing upper and lower half of X
+    // individually. Then we can use fshl as a rotate operation, to swap the
+    // halves before doing a single bitreverse.
+    bool CanUseFshl =
+        Ty->isIntegerTy() && Ty == I.getType() && isa<FixedVectorType>(VecTy) &&
+        cast<FixedVectorType>(VecTy)->getElementType()->isIntegerTy() &&
+        cast<FixedVectorType>(VecTy)->getNumElements() == 2;
+    if (CanUseBswap || CanUseFshl) {
+      auto *InnerCall = dyn_cast<Instruction>(I.getOperand(0));
+      if (!InnerCall)
+        return false;
+      auto *InnerBitCast = dyn_cast<BitCastInst>(InnerCall->getOperand(0));
+      if (!InnerBitCast)
+        return false;
+      Constant *HalfBW = ConstantInt::get(Ty, Ty->getIntegerBitWidth() / 2);
+      InstructionCost OldCost = TTI.getInstructionCost(InnerBitCast, CostKind) +
+                                TTI.getInstructionCost(InnerCall, CostKind) +
+                                TTI.getInstructionCost(&I, CostKind);
+      IntrinsicCostAttributes ICABSwap(Intrinsic::bswap, Ty, {Ty});
+      IntrinsicCostAttributes ICABFshl(Intrinsic::fshl, Ty, {X, X, HalfBW},
+                                       {Ty, Ty, Ty});
+      IntrinsicCostAttributes ICABRev(Intrinsic::bitreverse, Ty, {Ty});
+      InstructionCost NewCost =
+          TTI.getIntrinsicInstrCost(CanUseBswap ? ICABSwap : ICABFshl,
+                                    CostKind) +
+          TTI.getIntrinsicInstrCost(ICABRev, CostKind);
+      if (!InnerCall->hasOneUse())
+        NewCost += TTI.getInstructionCost(InnerCall, CostKind) +
+                   TTI.getInstructionCost(InnerBitCast, CostKind);
+      else if (!InnerBitCast->hasOneUse())
+        NewCost += TTI.getInstructionCost(InnerBitCast, CostKind);
+      LLVM_DEBUG(dbgs() << "Found bitreverse vector roundtrip: " << I
+                        << "\n  OldCost: " << OldCost
+                        << " vs NewCost: " << NewCost << "\n");
+      if (NewCost.isValid() && NewCost < OldCost) {
+        Builder.SetInsertPoint(&I);
+        Value *Swap =
+            CanUseBswap
+                ? Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X)
+                : Builder.CreateIntrinsic(Ty, Intrinsic::fshl, {X, X, HalfBW});
+        Worklist.pushValue(Swap);
+        Value *BRev = Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, Swap);
+        replaceValue(I, *BRev);
+        return true;
+      }
+    }
+  }
+
   if (!match(&I, m_BitReverse(m_BSwap(m_Value(X)))) &&
       !match(&I, m_BSwap(m_BitReverse(m_Value(X)))))
     return false;
-
   Type *Ty = I.getType();
   Type *I8Ty = Builder.getInt8Ty();
   TypeSize ElementSize = DL->getTypeStoreSize(Ty);
   ElementCount NewVecCnt = ElementCount::get(ElementSize.getKnownMinValue(),
                                              ElementSize.isScalable());
   Type *NewVecTy = VectorType::get(I8Ty, NewVecCnt);
-
   auto *II = cast<IntrinsicInst>(&I);
   auto *InnerII = cast<IntrinsicInst>(II->getArgOperand(0));
   // OldCost = cost of bitreverse/bswap + cost of bswap/bitreverse
   InstructionCost OldCost = TTI.getInstructionCost(II, CostKind) +
                             TTI.getInstructionCost(InnerII, CostKind);
-
   // NewCost = cost of bitcast to byte vector +
   //           cost of bitreverse/bswap on byte vector +
   //           cost of bitcast back to original type
@@ -6014,21 +6222,17 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
       Instruction::BitCast, NewVecTy, Ty, TTI::CastContextHint::None, CostKind);
   InstructionCost CastToOrigCost = TTI.getCastInstrCost(
       Instruction::BitCast, Ty, NewVecTy, TTI::CastContextHint::None, CostKind);
-
   IntrinsicCostAttributes ICANew(Intrinsic::bitreverse, NewVecTy, {NewVecTy});
   InstructionCost NewIntrinsicCost =
       TTI.getIntrinsicInstrCost(ICANew, CostKind);
   InstructionCost NewCost = CastToVecCost + NewIntrinsicCost + CastToOrigCost;
-
   if (!InnerII->hasOneUse())
     NewCost += TTI.getInstructionCost(InnerII, CostKind);
-
   LLVM_DEBUG(dbgs() << "Found bitorder reverse and swap: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
   if (!NewCost.isValid() || NewCost >= OldCost)
     return false;
-
   // Perform transform: bitcast(arg, <N x i8>), bitreverse, bitcast back
   Builder.SetInsertPoint(II);
   Value *CastToVec = Builder.CreateBitCast(X, NewVecTy);
@@ -6037,6 +6241,36 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   Value *CastToOrig = Builder.CreateBitCast(NewCall, Ty);
   replaceValue(I, *CastToOrig);
   return true;
+}
+
+/// Given the maximum shuffle index and load vector type, compute the number of
+/// elements for the shrunk load, rounding up to the next full vector register
+/// boundary to avoid scalar remainders that legalize poorly.
+static unsigned getAlignedNumElements(unsigned MaxIdx, FixedVectorType *LoadTy,
+                                      const TargetTransformInfo &TTI,
+                                      const DataLayout &DL) {
+  unsigned RawNumElements = MaxIdx + 1u;
+  Type *ElemTy = LoadTy->getElementType();
+  // Skip alignment for illegal element types.
+  if (!TTI.isTypeLegal(ElemTy))
+    return RawNumElements;
+
+  TypeSize ElemSize = DL.getTypeSizeInBits(ElemTy);
+  if (ElemSize.isScalable() || ElemSize.isZero())
+    return RawNumElements;
+
+  TypeSize RegSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  if (RegSize.isScalable() || RegSize.isZero())
+    return RawNumElements;
+
+  unsigned ElemsPerReg = RegSize.getFixedValue() / ElemSize.getFixedValue();
+  // If the load already fits in a register, keep the exact size.
+  // Otherwise round up to the next full register boundary.
+  if (ElemsPerReg == 0 || RawNumElements <= ElemsPerReg)
+    return RawNumElements;
+
+  return alignTo(RawNumElements, ElemsPerReg);
 }
 
 // Attempt to shrink loads that are only used by shufflevector instructions.
@@ -6088,7 +6322,8 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = Indices->second + 1u;
+    unsigned const NewNumElements =
+        getAlignedNumElements(Indices->second, OldLoadTy, TTI, *DL);
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
@@ -6334,6 +6569,9 @@ bool VectorCombine::run() {
       return false;
 
     if (Opcode == Instruction::Call)
+      if (foldBitOrderReverseAndSwap(I))
+        return true;
+    if (Opcode == Instruction::BitCast)
       if (foldBitOrderReverseAndSwap(I))
         return true;
 

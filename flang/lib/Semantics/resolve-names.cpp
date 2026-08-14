@@ -460,19 +460,63 @@ protected:
   const ArraySpec &arraySpec();
   void set_arraySpec(const ArraySpec arraySpec) { arraySpec_ = arraySpec; }
   const ArraySpec &coarraySpec();
+  std::vector<Bound> &droppedBoundsToCheck() { return droppedBoundsToCheck_; }
+  const std::vector<Bound> &attrDroppedBoundsToCheck() const {
+    return attrDroppedBoundsToCheck_;
+  }
+  // Bounds from a DIMENSION attribute's array-spec that an entity-decl's own
+  // array-spec has overridden.  They are no longer part of the entity's shape,
+  // but they remain specification expressions that must be validated.  Copies
+  // are returned because the attribute applies to every entity-decl in the
+  // statement.
+  std::vector<Bound> overriddenAttrArraySpecBounds() const {
+    std::vector<Bound> result;
+    // An entity-decl overrides the DIMENSION attribute when it supplies its own
+    // array-spec, whether that yields an array (arraySpec_) or, for a zero-size
+    // explicit-shape bounds array (F2023), a scalar (droppedBoundsToCheck_).
+    bool entityHasOwnArraySpec{
+        !arraySpec_.empty() || !droppedBoundsToCheck_.empty()};
+    if (entityHasOwnArraySpec && !attrArraySpec_.empty()) {
+      for (const ShapeSpec &spec : attrArraySpec_) {
+        for (const Bound *bound : {&spec.lbound(), &spec.ubound()}) {
+          // A constant bound -- notably the synthesized default lower bound of
+          // 1 when only an upper bound was written -- is trivially a valid
+          // specification expression, so retain only bounds that might
+          // reference something requiring validation.
+          if (const auto &expr{bound->GetExplicit()};
+              expr && !evaluate::IsConstantExpr(*expr)) {
+            result.push_back(*bound);
+          }
+        }
+      }
+    }
+    return result;
+  }
   void BeginArraySpec();
   void EndArraySpec();
-  void ClearArraySpec() { arraySpec_.clear(); }
+  void ClearArraySpec() {
+    arraySpec_.clear();
+    droppedBoundsToCheck_.clear();
+  }
   void ClearCoarraySpec() { coarraySpec_.clear(); }
 
 private:
   // arraySpec_/coarraySpec_ are populated from any ArraySpec/CoarraySpec
   ArraySpec arraySpec_;
   ArraySpec coarraySpec_;
+  // Bounds of a zero-size explicit-shape bounds array (F2023): the entity is
+  // scalar, so these specification expressions are stashed here and validated
+  // later rather than stored in the shape.
+  std::vector<Bound> droppedBoundsToCheck_;
   // When an ArraySpec is under an AttrSpec or ComponentAttrSpec, it is moved
   // into attrArraySpec_
   ArraySpec attrArraySpec_;
   ArraySpec attrCoarraySpec_;
+  // Bounds dropped from a zero-size or overriden DIMENSION attribute (F2023).
+  // Like attrArraySpec_, this is statement-level: it survives per-entity
+  // clearing so the bounds are validated for every entity-decl the attribute
+  // applies to, even when an entity-decl's own array-spec overrides the shape.
+  std::vector<Bound> attrDroppedBoundsToCheck_;
 
   void PostAttrSpec();
 };
@@ -751,6 +795,9 @@ protected:
   bool deferImplicitTyping_{false};
   bool skipImplicitTyping_{false};
   bool inEquivalenceStmt_{false};
+  // Whether the DATA statement whose objects are being visited appeared in
+  // a specification part (as opposed to an execution part)
+  bool dataStmtObjectInSpecPart_{false};
 
   // Some information is collected from a specification part for deferred
   // processing in DeclarationPartVisitor functions (e.g., CheckSaveStmts())
@@ -764,6 +811,10 @@ protected:
     std::vector<const std::list<parser::EquivalenceObject> *> equivalenceSets;
     // Names of all common block objects in the scope
     std::set<SourceName> commonBlockObjects;
+    // data-implied-do index variables whose typing is deferred to the end
+    // of the specification part, since the declaration typing the index's
+    // name may follow the DATA statement (F'2023 19.4 p5)
+    std::vector<MutableSymbolRef> deferredDataIDoVars;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -825,12 +876,17 @@ public:
   Symbol &AddGenericUse(GenericDetails &, const SourceName &, const Symbol &);
   void AddAndCheckModuleUse(SourceName, bool isIntrinsic);
   void CollectUseRenames(const parser::UseStmt &);
+  void AddImplicitUseModules();
   void ClearUseRenames() { useRenames_.clear(); }
   void ClearUseOnly() { useOnly_.clear(); }
   void ClearModuleUses() {
     intrinsicUses_.clear();
     nonIntrinsicUses_.clear();
   }
+
+protected:
+  std::optional<std::string> implicitUseModuleBeingResolved_;
+  std::set<std::string> implicitUseModulesInCurrentProgram_;
 
 private:
   // The location of the last AccessStmt without access-ids, if any.
@@ -855,6 +911,8 @@ private:
   // Record a use from useModuleScope_ of use Name/Symbol as local Name/Symbol
   SymbolRename AddUse(const SourceName &localName, const SourceName &useName);
   SymbolRename AddUse(const SourceName &, const SourceName &, Symbol *);
+  void AddUseForPublicSymbols(SourceName, const std::set<SourceName> &);
+  void AddUseForCommonBlocks();
   void DoAddUse(
       SourceName, SourceName, Symbol &localSymbol, const Symbol &useSymbol);
   void AddUse(const GenericSpecInfo &);
@@ -2928,7 +2986,7 @@ void ArraySpecVisitor::Post(const parser::RankClause &x) {
 
 void ArraySpecVisitor::Post(const parser::ArraySpec &x) {
   CHECK(arraySpec_.empty());
-  arraySpec_ = AnalyzeArraySpec(context(), x);
+  arraySpec_ = AnalyzeArraySpec(context(), x, droppedBoundsToCheck_);
 }
 void ArraySpecVisitor::Post(const parser::ComponentArraySpec &x) {
   CHECK(arraySpec_.empty());
@@ -2940,7 +2998,18 @@ void ArraySpecVisitor::Post(const parser::CoarraySpec &x) {
 }
 
 const ArraySpec &ArraySpecVisitor::arraySpec() {
-  return !arraySpec_.empty() ? arraySpec_ : attrArraySpec_;
+  if (!arraySpec_.empty()) {
+    return arraySpec_;
+  }
+  // An entity-decl's own array-spec that is a zero-size explicit-shape bounds
+  // array (F2023) declares a scalar: arraySpec_ is empty but its dropped
+  // bounds are recorded.  This still overrides any DIMENSION attribute, so
+  // don't fall back to the attribute's array-spec -- return the empty scalar
+  // shape.
+  if (!droppedBoundsToCheck_.empty()) {
+    return arraySpec_;
+  }
+  return attrArraySpec_;
 }
 const ArraySpec &ArraySpecVisitor::coarraySpec() {
   return !coarraySpec_.empty() ? coarraySpec_ : attrCoarraySpec_;
@@ -2948,27 +3017,40 @@ const ArraySpec &ArraySpecVisitor::coarraySpec() {
 void ArraySpecVisitor::BeginArraySpec() {
   CHECK(arraySpec_.empty());
   CHECK(coarraySpec_.empty());
+  CHECK(droppedBoundsToCheck_.empty());
   CHECK(attrArraySpec_.empty());
   CHECK(attrCoarraySpec_.empty());
+  CHECK(attrDroppedBoundsToCheck_.empty());
 }
 void ArraySpecVisitor::EndArraySpec() {
   CHECK(arraySpec_.empty());
   CHECK(coarraySpec_.empty());
+  CHECK(droppedBoundsToCheck_.empty());
   attrArraySpec_.clear();
   attrCoarraySpec_.clear();
+  attrDroppedBoundsToCheck_.clear();
 }
 void ArraySpecVisitor::PostAttrSpec() {
   // Save dimension/codimension from attrs so we can process array/coarray-spec
-  // on the entity-decl
-  if (!arraySpec_.empty()) {
-    if (attrArraySpec_.empty()) {
-      attrArraySpec_ = arraySpec_;
-      arraySpec_.clear();
+  // on the entity-decl.
+  if (!arraySpec_.empty() || !droppedBoundsToCheck_.empty()) {
+    if (attrArraySpec_.empty() && attrDroppedBoundsToCheck_.empty()) {
+      if (!arraySpec_.empty()) {
+        attrArraySpec_ = arraySpec_;
+        arraySpec_.clear();
+      }
     } else {
       Say(currStmtSource().value(),
           "Attribute 'DIMENSION' cannot be used more than once"_err_en_US);
     }
   }
+  // A zero-size DIMENSION attribute leaves arraySpec_ empty but produces bounds
+  // to check; move them to the statement-level list so they apply to every
+  // entity-decl.
+  attrDroppedBoundsToCheck_.insert(attrDroppedBoundsToCheck_.end(),
+      std::make_move_iterator(droppedBoundsToCheck_.begin()),
+      std::make_move_iterator(droppedBoundsToCheck_.end()));
+  droppedBoundsToCheck_.clear();
   if (!coarraySpec_.empty()) {
     if (attrCoarraySpec_.empty()) {
       attrCoarraySpec_ = coarraySpec_;
@@ -3862,30 +3944,40 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
                     },
           rename.u);
     }
-    for (const auto &[name, symbol] : *useModuleScope_) {
-      // Default USE imports public names, excluding intrinsic-only and most
-      // miscellaneous details. Allow OpenMP mapper identifiers represented
-      // as MapperDetails, and also legacy MiscDetails::ConstructName.
-      bool isMapper{symbol->has<MapperDetails>()};
-      if (!isMapper) {
-        if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
-          isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
-        }
+    AddUseForPublicSymbols(x.moduleName.source, useNames);
+  }
+  AddUseForCommonBlocks();
+
+  useModuleScope_ = nullptr;
+}
+
+void ModuleVisitor::AddUseForPublicSymbols(
+    SourceName location, const std::set<SourceName> &useNames) {
+  for (const auto &[name, symbol] : *useModuleScope_) {
+    // Default USE imports public names, excluding intrinsic-only and most
+    // miscellaneous details. Allow OpenMP mapper identifiers represented
+    // as MapperDetails, and also legacy MiscDetails::ConstructName.
+    bool isMapper{symbol->has<MapperDetails>()};
+    if (!isMapper) {
+      if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
+        isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
       }
-      if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
-          (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
-              symbol->has<UseDetails>()) &&
-          (!symbol->has<MiscDetails>() || isMapper) &&
-          useNames.count(name) == 0) {
-        SourceName location{x.moduleName.source};
-        if (auto *localSymbol{FindInScope(name)}) {
-          DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
-        } else {
-          DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
-        }
+    }
+    if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
+        (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
+            symbol->has<UseDetails>()) &&
+        (!symbol->has<MiscDetails>() || isMapper) &&
+        useNames.count(name) == 0) {
+      if (auto *localSymbol{FindInScope(name)}) {
+        DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
+      } else {
+        DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
       }
     }
   }
+}
+
+void ModuleVisitor::AddUseForCommonBlocks() {
   // Go through the list of COMMON block symbols in the module scope and add
   // their USE association to the current scope's USE-associated COMMON blocks.
   for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
@@ -3900,8 +3992,76 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
     currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
+}
 
-  useModuleScope_ = nullptr;
+void ModuleVisitor::AddImplicitUseModules() {
+  if (InModuleFile() || currScope().kind() != Scope::Kind::Subprogram) {
+    return;
+  }
+  if (const Symbol *symbol{currScope().symbol()}) {
+    if (const auto *details{symbol->detailsIf<SubprogramDetails>()}) {
+      if (auto attrs{details->cudaSubprogramAttrs()}) {
+        if (*attrs == common::CUDASubprogramAttrs::Device ||
+            *attrs == common::CUDASubprogramAttrs::Global ||
+            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+          return;
+        }
+      }
+    }
+  }
+  for (const std::string &module : context().implicitUseModules()) {
+    if (module.empty()) {
+      continue;
+    }
+    SourceName moduleName{module};
+    if (implicitUseModulesInCurrentProgram_.count(module) != 0) {
+      continue;
+    }
+    if (implicitUseModuleBeingResolved_ &&
+        *implicitUseModuleBeingResolved_ == module) {
+      continue;
+    }
+    bool isContainedInImplicitModule{false};
+    for (const Scope *scope{&currScope()}; !scope->IsTopLevel();
+        scope = &scope->parent()) {
+      if (scope->kind() == Scope::Kind::Module) {
+        if (std::optional<SourceName> scopeName{scope->GetName()};
+            scopeName && scopeName->ToString() == module) {
+          // Do not implicitly USE a module while resolving anything contained
+          // in that module; doing so would be a self USE.
+          isContainedInImplicitModule = true;
+          break;
+        }
+      }
+    }
+    if (isContainedInImplicitModule) {
+      continue;
+    }
+    if (auto it{context().globalScope().find(moduleName)};
+        it != context().globalScope().end()) {
+      if (Scope *scope{it->second->scope()};
+          scope && DoesScopeContain(scope, currScope())) {
+        continue;
+      }
+    }
+    parser::Name name{moduleName};
+    std::optional<bool> isIntrinsic;
+    if (currScope().IsModule() && currScope().symbol() &&
+        currScope().symbol()->attrs().test(Attr::INTRINSIC)) {
+      // Intrinsic modules USE only other intrinsic modules.
+      isIntrinsic = true;
+    }
+    useModuleScope_ = FindModule(name, isIntrinsic);
+    if (!useModuleScope_) {
+      continue;
+    }
+    AddAndCheckModuleUse(moduleName,
+        useModuleScope_->parent().kind() == Scope::Kind::IntrinsicModules);
+    useModuleScope_->symbol()->ReplaceName(moduleName);
+    AddUseForPublicSymbols(moduleName, {});
+    AddUseForCommonBlocks();
+    useModuleScope_ = nullptr;
+  }
 }
 
 ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
@@ -6060,8 +6220,24 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
           enumerator.t)}) {
-    Walk(*init); // Resolve names in expression before evaluation.
-    if (auto value{EvaluateInt64(context(), *init)}) {
+    std::optional<std::int64_t> value;
+    const parser::Expr &expr{parser::UnwrapRef<parser::Expr>(*init)};
+    if (parser::IsBOZLiteral(*init)) {
+      // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
+      // has the value specified by INT(boz-literal-constant, C_INT).
+      const evaluate::DynamicType cIntType{
+          TypeCategory::Integer, evaluate::CInteger::kind};
+      if (MaybeExpr maybeExpr{EvaluateExpr(expr)}) {
+        if (auto converted{
+                evaluate::ConvertToType(cIntType, std::move(*maybeExpr))}) {
+          value = evaluate::ToInt64(FoldExpr(std::move(*converted)));
+        }
+      }
+    } else {
+      Walk(*init); // Resolve names in expression before evaluation.
+      value = EvaluateInt64(context(), *init);
+    }
+    if (value) {
       // Cast all init expressions to C_INT so that they can then be
       // safely incremented (see 7.6 Note 2).
       enumerationState_.value = static_cast<int>(*value);
@@ -6344,7 +6520,8 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
     // these can be set on a symbol that is host-assoc or use-assoc
     if (!symbol &&
         (currScope().kind() == Scope::Kind::Subprogram ||
-            currScope().kind() == Scope::Kind::BlockConstruct)) {
+            currScope().kind() == Scope::Kind::BlockConstruct ||
+            currScope().IsSubmodule())) {
       if (auto *hostSymbol{FindSymbol(name)}) {
         symbol = &MakeHostAssocSymbol(name, *hostSymbol);
       }
@@ -6391,7 +6568,11 @@ void DeclarationVisitor::Post(const parser::ObjectDecl &x) {
 // Declare an entity not yet known to be an object or proc.
 Symbol &DeclarationVisitor::DeclareUnknownEntity(
     const parser::Name &name, Attrs attrs) {
-  if (!arraySpec().empty() || !coarraySpec().empty()) {
+  if (!arraySpec().empty() || !coarraySpec().empty() ||
+      !droppedBoundsToCheck().empty() || !attrDroppedBoundsToCheck().empty()) {
+    // A zero-size explicit-shape bounds array (F2023) declares a scalar with an
+    // empty arraySpec, but still carries dropped bound checks that must be
+    // stashed on an ObjectEntityDetails, so route it to DeclareObjectEntity.
     return DeclareObjectEntity(name, attrs);
   } else {
     Symbol &symbol{DeclareEntity<EntityDetails>(name, attrs)};
@@ -6520,6 +6701,24 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
       } else {
         details->set_coshape(coarraySpec());
       }
+    }
+    // Stash bounds from a zero-size explicit-shape bounds array (F2023).  The
+    // entity is scalar, so these are not part of its shape, but they are still
+    // specification expressions to be validated during declaration checking.
+    // Bounds from the entity-decl's own array-spec are moved; those from a
+    // DIMENSION attribute are copied, since the attribute applies to every
+    // entity-decl in the statement.
+    for (Bound &bound : droppedBoundsToCheck()) {
+      details->add_droppedBoundToCheck(std::move(bound));
+    }
+    for (const Bound &bound : attrDroppedBoundsToCheck()) {
+      details->add_droppedBoundToCheck(Bound{bound});
+    }
+    // An entity-decl's own array-spec overrides the DIMENSION attribute's
+    // array-spec (a non-zero-size bounds array), but the attribute's bounds
+    // remain specification expressions that must be validated.
+    for (Bound &bound : overriddenAttrArraySpecBounds()) {
+      details->add_droppedBoundToCheck(std::move(bound));
     }
     SetBindNameOn(symbol);
   }
@@ -8111,8 +8310,14 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     // an explicit "integer(k)::" in an implied DO.
     context().NoteDefinedSymbol(*prev);
     name.symbol = nullptr; // undo the "FindSymbol()" above
-    // F'2023 19.4 p5 ambiguous rule about outer declarations
-    declTypeSpec = prev->GetType();
+    if (!dataStmtObjectInSpecPart_ || type) {
+      // F'2023 19.4 p5: the index adopts the type of a visible declaration
+      // of its name (see Extensions.md on 19.4 p5).  But for a DATA
+      // statement in a specification part, defer typing to
+      // FinishSpecificationPart(), where a local declaration following the
+      // DATA statement takes precedence over this outer one.
+      declTypeSpec = prev->GetType();
+    }
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
   if (!symbol.has<ObjectEntityDetails>()) {
@@ -8127,6 +8332,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     auto restorer{
         common::ScopedSet(charInfo_.length, std::optional<ParamValue>{})};
     SetType(name, *declTypeSpec);
+  } else if (dataStmtObjectInSpecPart_) {
+    // F'2023 19.4 p5: the index takes the type its name has in the scoping
+    // unit, and that declaration may follow the DATA statement; defer
+    // typing to FinishSpecificationPart().  (8.6.7 p3 restricts only the
+    // data-stmt-objects, not this statement entity.)
+    specPartState_.deferredDataIDoVars.emplace_back(symbol);
   } else {
     ApplyImplicitRules(symbol);
   }
@@ -8558,6 +8769,8 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   // for purposes of implicit variable declaration vs. host association.
   // When a name first appears as an object in a DATA statement, it should
   // be implicitly declared locally as if it had been assigned.
+  auto specPartRestorer{
+      common::ScopedSet(dataStmtObjectInSpecPart_, inSpecificationPart_)};
   auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
   common::visit(
       common::visitors{
@@ -10297,6 +10510,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
     CollectUseRenames(useStmt.statement.value());
   }
   Walk(useStmts);
+  AddImplicitUseModules();
   UseCUDABuiltinNames();
   ClearUseRenames();
   ClearUseOnly();
@@ -10564,6 +10778,24 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
   }
+  // Type the deferred data-implied-do index variables now that the whole
+  // specification part has been visited (F'2023 19.4 p5).  Plain
+  // Symbol::SetType suffices: the symbol is untyped, so no conflict
+  // diagnostics can arise.
+  for (MutableSymbolRef ref : specPartState_.deferredDataIDoVars) {
+    Symbol &symbol{*ref};
+    if (!symbol.GetType()) {
+      if (const Symbol *outer{currScope().FindSymbol(symbol.name())};
+          outer && outer->GetType()) {
+        symbol.SetType(*outer->GetType());
+        // Inhibit unused-variable diagnostics: the outer declaration may
+        // exist solely to give the index its type.
+        context().NoteDefinedSymbol(*outer);
+      } else {
+        ApplyImplicitRules(symbol);
+      }
+    }
+  }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
     if (const auto *statement{std::get_if<
@@ -10599,25 +10831,42 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
     return; // error recovery
   }
 
-  // F2023 19.4 p2: a statement-function dummy argument name may be the same
-  // as an accessible name only if that name is a scalar variable.  The lookup
-  // walks the host chain (but not into the global scope), so host-associated
-  // identifiers are also considered.
+  // F2023 19.4 p2: a statement function dummy argument name may be the same
+  // as an accessible name only if that name is a scalar variable.  Only
+  // names present in the current scope after specification-part resolution
+  // can conflict: per 19.5.1.4 p2 item (11), the name's appearance as a
+  // statement function dummy argument renders any host entity of that name
+  // inaccessible by host association, and a global entity to which this
+  // scoping unit makes no other reference is not accessible in it either.
+  // (A name that becomes an external procedure name only by way of a
+  // reference in the execution part is not yet visible here and is not
+  // diagnosed.)
+  const std::set<SourceName> importNames{currScope().importNames()};
+  const common::ImportKind importKind{currScope().GetImportKind()};
   for (const auto &dummyName : std::get<std::list<parser::Name>>(stmtFunc.t)) {
-    if (const Symbol *hostSymbol{currScope().FindSymbol(dummyName.source)}) {
-      const Symbol &ultimate{hostSymbol->GetUltimate()};
+    // F2023 C8106: an explicitly imported name, or any host name made
+    // accessible by IMPORT, ALL, may not appear in a context that would
+    // render the host entity inaccessible, and a statement function dummy
+    // argument name is such a context (19.5.1.4 p2 item (11)).  There is
+    // no exception for scalar variables.  A plain IMPORT statement does
+    // not protect names from being hidden (8.8 p4).
+    if (importNames.count(dummyName.source) > 0 ||
+        importKind == common::ImportKind::All) {
+      if (const Symbol *host{
+              currScope().parent().FindSymbol(dummyName.source)}) {
+        Say(dummyName.source,
+            "'%s' from host may not be hidden by a statement function dummy argument"_err_en_US,
+            dummyName.source)
+            .Attach(host->name(), "Declaration of '%s'"_en_US, host->name());
+        continue;
+      }
+    }
+    if (const Symbol *local{FindInScope(currScope(), dummyName.source)}) {
+      const Symbol &ultimate{local->GetUltimate()};
       const bool isScalarVariable{(ultimate.has<ObjectEntityDetails>() ||
                                       ultimate.has<EntityDetails>()) &&
           !IsNamedConstant(ultimate) && ultimate.Rank() == 0};
       if (!isScalarVariable) {
-        Say(dummyName.source,
-            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
-      }
-    } else {
-      // Also check the global scope, which FindSymbol skips
-      const Scope &globals{context().globalScope()};
-      if (auto it{globals.find(dummyName.source)}; it != globals.end()) {
-        // global function/subroutine — definitely not a scalar variable
         Say(dummyName.source,
             "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
       }
@@ -10653,7 +10902,7 @@ void ResolveNamesVisitor::CheckImports() {
   case common::ImportKind::None:
     break;
   case common::ImportKind::All:
-    // C8102: all entities in host must not be hidden
+    // F2023 C8106: all entities in host must not be hidden
     for (const auto &pair : scope.parent()) {
       auto &name{pair.first};
       std::optional<SourceName> scopeName{scope.GetName()};
@@ -10664,7 +10913,7 @@ void ResolveNamesVisitor::CheckImports() {
     break;
   case common::ImportKind::Default:
   case common::ImportKind::Only:
-    // C8102: entities named in IMPORT must not be hidden
+    // F2023 C8106: entities named in IMPORT must not be hidden
     for (auto &name : scope.importNames()) {
       CheckImport(name, name);
     }
@@ -10964,6 +11213,10 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     return false;
   }
   ProgramTree &root{ProgramTree::Build(x, context())};
+  auto implicitUseModuleBeingResolvedRestorer{
+      common::ScopedSet(implicitUseModuleBeingResolved_,
+          root.IsModule() ? std::optional<std::string>{root.name().ToString()}
+                          : implicitUseModuleBeingResolved_)};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
@@ -11005,6 +11258,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
     ImplicitRulesVisitor::BeginScope(*hermetic);
   }
   std::map<SourceName, const parser::ProgramUnit *> modules;
+  std::set<std::string> moduleNamesInCurrentProgram;
   std::set<SourceName> uses;
   bool disordered{false};
   for (const auto &progUnit : x.v) {
@@ -11014,6 +11268,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       const auto &moduleStmt{
           std::get<parser::Statement<parser::ModuleStmt>>(mod.t)};
       const SourceName &name{moduleStmt.statement.v.source};
+      moduleNamesInCurrentProgram.insert(name.ToString());
       if (auto iter{modules.find(name)}; iter != modules.end()) {
         Say(name,
             "Module '%s' appears multiple times in a compilation unit"_err_en_US)
@@ -11037,6 +11292,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       uses.insert(used);
     }
   }
+  implicitUseModulesInCurrentProgram_ = std::move(moduleNamesInCurrentProgram);
   if (!disordered) {
     return true;
   }
@@ -11131,6 +11387,10 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   if (node.isSpecificationPartResolved()) {
     return; // been here already
   }
+  auto implicitUseModuleBeingResolvedRestorer{
+      common::ScopedSet(implicitUseModuleBeingResolved_,
+          node.IsModule() ? std::optional<std::string>{node.name().ToString()}
+                          : implicitUseModuleBeingResolved_)};
   node.set_isSpecificationPartResolved();
   if (!BeginScopeForNode(node)) {
     return; // an error prevented scope from being created

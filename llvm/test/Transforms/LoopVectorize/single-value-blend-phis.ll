@@ -147,8 +147,8 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i16> [[TMP9]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

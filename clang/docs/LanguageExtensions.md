@@ -57,7 +57,7 @@ It can be used like this:
 ...
 ```
 
-```{note}
+:::{note}
 Prior to Clang 10, `__has_builtin` could not be used to detect most builtin
 pseudo-functions.
 
@@ -66,7 +66,7 @@ use `#ifdef` instead.
 
 When compiling with target offloading, `__has_builtin` only considers the
 currently active target.
-```
+:::
 
 ### `__has_constexpr_builtin`
 
@@ -1823,6 +1823,7 @@ More information can be found [here](https://clang.llvm.org/docs/Modules.html).
 | `_Generic` with a type operand (N3260)        |                                    | C2y           | C89, C++      |
 | `++`/`--` on `_Complex` value (N3259)         |                                    | C2y           | C89, C++      |
 | `__COUNTER__` (N3457)                         |                                    | C2y           | C89, C++      |
+| If declarations (N3356)                       |                                    | C2y           | C89           |
 
 ## Builtin type aliases
 
@@ -2563,6 +2564,8 @@ Further examples of these attributes are available in the static analyzer's
 
 Query for these features with `__has_attribute(ns_consumed)`,
 `__has_attribute(ns_returns_retained)`, etc.
+
+(langext-objective-c-available)=
 
 ### Objective-C @available
 
@@ -5015,10 +5018,10 @@ will be used.
 
 ### C++ Coroutines support builtins
 
-```{warning}
+:::{warning}
 This is a work in progress. Compatibility across Clang/LLVM releases is not
 guaranteed.
-```
+:::
 
 Clang provides experimental builtins to support C++ Coroutines as defined by
 <https://wg21.link/P0057>. The following four are intended to be used by the
@@ -5538,6 +5541,40 @@ int a = 1;
 __builtin_dcbf (&a);
 ```
 
+### z/OS Language Extensions
+
+#### z/OS builtins
+
+z/OS supports builtins for compare-and-swap operations that generate the
+corresponding z/OS assembly instructions (CS, CSG, CDSG). These builtins compare
+the value pointed to by oldptr to the value pointed to by curptr. If they are
+equal, the value pointed to by newword (or newword itself for `__cs`) is
+copied into the location pointed to by curptr. If they are unequal, the value
+pointed to by curptr is copied into the location pointed to by oldptr.
+The builtins return 0 if the values are equal, or 1 if they are unequal.
+
+- `int __cs(unsigned int *oldptr, unsigned int *curptr, unsigned int newword)`
+
+  Generates a 4-byte compare-and-swap using the CS instruction.
+  Use `__cs` instead of `__cs1` when the newword arg is an r-value instead
+  of an l-value.
+
+- `int __cs1(void *oldptr, void *curptr, void *newword)`
+
+  Generates a 4-byte compare-and-swap using the CS instruction.
+
+- `int __csg(void *oldptr, void *curptr, void *newword)`
+
+  Generates an 8-byte compare-and-swap using the CSG instruction.
+
+- `int __cds1(void *oldptr, void *curptr, void *newword)`
+
+  Generates an 8-byte compare-and-swap using the CSG instruction.
+
+- `int __cdsg(void *oldptr, void *curptr, void *newword)`
+
+  Generates a 16-byte compare-and-swap using the CDSG instruction.
+
 ## Extensions for Static Analysis
 
 Clang supports additional attributes that are useful for documenting program
@@ -5678,6 +5715,8 @@ commandline.
 * - y
   - Enable frame pointers
 ```
+
+(langext-loop-hint-optimizations)=
 
 ## Extensions for loop hint optimizations
 
@@ -6051,6 +6090,8 @@ for(...) {
   a = b[i] * c[i] + e;
 }
 ```
+
+(langext-atomic-code-generation)=
 
 ## Extensions for controlling atomic code generation
 
@@ -6474,6 +6515,8 @@ Clang treats it as being at file scope when it appears within other scopes.
 When `#pragma comment(copyright, ...)` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
+
+(langext-evaluating-object-size)=
 
 ## Evaluating Object Size
 

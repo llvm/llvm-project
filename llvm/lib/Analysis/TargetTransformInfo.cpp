@@ -106,13 +106,12 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
     ParamTys.push_back(Argument->getType());
 }
 
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                                                 ArrayRef<const Value *> Args,
-                                                 ArrayRef<Type *> Tys,
-                                                 FastMathFlags Flags,
-                                                 const IntrinsicInst *I,
-                                                 InstructionCost ScalarCost)
-    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost) {
+IntrinsicCostAttributes::IntrinsicCostAttributes(
+    Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
+    ArrayRef<Type *> Tys, FastMathFlags Flags, const IntrinsicInst *I,
+    InstructionCost ScalarCost, VectorInstrContext VIC)
+    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost),
+      VIC(VIC) {
   ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
   Arguments.insert(Arguments.begin(), Args.begin(), Args.end());
 }
@@ -741,6 +740,10 @@ TargetTransformInfo::getPopcntSupport(unsigned IntTyWidthInBit) const {
 
 bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
+}
+
+bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
+  return TTIImpl->haveFastClmul(Ty);
 }
 
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
@@ -1465,9 +1468,8 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
-bool TargetTransformInfo::preferFixedOverScalableIfEqualCost(
-    bool IsEpilogue) const {
-  return TTIImpl->preferFixedOverScalableIfEqualCost(IsEpilogue);
+bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
+  return TTIImpl->preferFixedOverScalableIfEqualCost();
 }
 
 bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,

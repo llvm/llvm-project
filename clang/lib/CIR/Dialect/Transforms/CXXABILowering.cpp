@@ -67,7 +67,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
     return true;
 
   // Data Member and method are ALWAYS illegal.
-  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attr))
+  if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
+          attr))
     return false;
 
   return llvm::TypeSwitch<mlir::Attribute, bool>(attr)
@@ -394,6 +395,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
                                          mlir::Type ty,
                                          mlir::Attribute initVal) {
   if (mlir::isa<cir::DataMemberType>(ty)) {
+    // Members without a CIR field index (e.g. no_unique_address empty fields)
+    // are represented by an explicit byte offset instead of a field path.
+    if (auto offsetVal =
+            mlir::dyn_cast_if_present<cir::DataMemberOffsetAttr>(initVal))
+      return lowerModule->getCXXABI().lowerDataMemberOffsetConstant(offsetVal,
+                                                                    layout, tc);
     auto dataMemberVal = mlir::cast_if_present<cir::DataMemberAttr>(initVal);
     return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal,
                                                             layout, tc);
@@ -846,17 +853,21 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     // just do a conversion on it.
     if (!type.getName()) {
       llvm::SmallVector<mlir::Type> converted = convertRecordMemberTypes(type);
+      assert(converted.size() == type.getNumElements() &&
+             "member conversion must be one type in, one type out for the "
+             "kinds to carry over by index");
       if (auto u = mlir::dyn_cast<cir::UnionType>(type)) {
         mlir::Type loweredPadding;
         if (mlir::Type pad = u.getPadding())
           loweredPadding = convertType(pad);
         return cir::UnionType::get(type.getContext(), converted,
-                                   type.getPacked(), loweredPadding);
+                                   type.getPacked(), loweredPadding,
+                                   u.getMemberKinds());
       }
       auto s = mlir::cast<cir::StructType>(type);
       return cir::StructType::get(type.getContext(), converted,
                                   type.getPacked(), type.getPadded(),
-                                  s.getIsClass());
+                                  s.getIsClass(), s.getMemberKinds());
     }
 
     assert(!type.isIncomplete() || type.getMembers().empty());
@@ -895,13 +906,16 @@ class CIRABITypeConverter : public mlir::TypeConverter {
         [&recursiveStack]() { recursiveStack.pop_back(); });
 
     SmallVector<mlir::Type> convertedMembers = convertRecordMemberTypes(type);
+    assert(convertedMembers.size() == type.getNumElements() &&
+           "member conversion must be one type in, one type out for the kinds "
+           "to carry over by index");
 
     mlir::Type loweredPadding;
     if (auto u = mlir::dyn_cast<cir::UnionType>(type))
       if (mlir::Type pad = u.getPadding())
         loweredPadding = convertType(pad);
     convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
-                           loweredPadding);
+                           loweredPadding, type.getMemberKinds());
     addConvertedRecordType(convertedType);
     return convertedType;
   }

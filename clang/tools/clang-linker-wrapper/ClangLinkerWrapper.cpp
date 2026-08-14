@@ -139,6 +139,13 @@ static bool CanonicalPrefixes = true;
 
 using OffloadingImage = OffloadBinary::OffloadingImage;
 
+static bool usesLLVMOffloadWrapper(ArrayRef<OffloadingImage> Images) {
+  return llvm::any_of(Images, [](const OffloadingImage &Image) {
+    return Triple(Image.StringData.lookup("triple")).getEnvironment() ==
+           Triple::LLVM;
+  });
+}
+
 namespace llvm {
 // Provide DenseMapInfo so that OffloadKind can be used in a DenseMap.
 template <> struct DenseMapInfo<OffloadKind> {
@@ -586,8 +593,13 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (SaveTemps && linkerSupportsLTO(Args))
     CmdArgs.push_back("-Wl,--save-temps");
 
-  if (Args.hasArg(OPT_embed_bitcode))
-    CmdArgs.push_back("-Wl,--lto-emit-llvm");
+  if (Args.hasArg(OPT_embed_bitcode)) {
+    // SPIR-V does not use the LTO linker path, it links bitcode via llvm-link.
+    if (Triple.isSPIRV())
+      CmdArgs.push_back("-emit-llvm");
+    else
+      CmdArgs.push_back("-Wl,--lto-emit-llvm");
+  }
 
   // For linking device code with the SYCL offload kind, special handling is
   // required. Passing --sycl-link to clang results in a call to
@@ -619,7 +631,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   switch (Triple.getArch()) {
   case Triple::nvptx:
   case Triple::nvptx64:
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::x86:
   case Triple::x86_64:
   case Triple::aarch64:
@@ -640,7 +652,8 @@ Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
                            const ArgList &Args) {
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   if (Kind == OFK_OpenMP && Triple.isSPIRV() &&
-      Triple.getVendor() == llvm::Triple::Intel)
+      Triple.getVendor() == llvm::Triple::Intel &&
+      !Args.hasArg(OPT_embed_bitcode))
     return offloading::intel::containerizeOpenMPSPIRVImage(Img, Triple);
   return Error::success();
 }
@@ -971,6 +984,9 @@ Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
                    OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Bundle linked output");
+  if (usesLLVMOffloadWrapper(Images))
+    return bundleOpenMP(Images);
+
   switch (Kind) {
   case OFK_OpenMP:
     return (Verbose && SaveTemps) ? bundleOpenMPVerbose(Images)
@@ -1214,7 +1230,8 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
       continue;
     }
 
-    auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, Kind);
+    OffloadKind WrapperKind = usesLLVMOffloadWrapper(Input) ? OFK_OpenMP : Kind;
+    auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, WrapperKind);
     if (!OutputOrErr)
       return OutputOrErr.takeError();
     WrappedOutput.push_back(*OutputOrErr);
@@ -1398,16 +1415,28 @@ getDeviceInput(const ArgList &Args) {
     }
   }
 
+  // Handle the most specific target-ids first so a generic input merges last.
+  llvm::stable_sort(ObjectFilesToExtract,
+                    [](const OffloadFile &A, const OffloadFile &B) {
+                      return A.getBinary()->getArch().count(':') >
+                             B.getBinary()->getArch().count(':');
+                    });
+
   // Link all standard input files and update the list of symbols.
   MapVector<OffloadFile::TargetID, SmallVector<OffloadFile, 0>> InputFiles;
   for (OffloadFile &Binary : ObjectFilesToExtract) {
     if (!Binary.getBinary())
       continue;
 
-    SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
+    OffloadFile::TargetID Target = Binary;
+    SmallVector<OffloadFile::TargetID> CompatibleTargets;
     for (const auto &[ID, Input] : InputFiles)
-      if (object::areTargetsCompatible(Binary, ID))
+      if (object::areTargetsEquivalent(Target, ID))
         CompatibleTargets.emplace_back(ID);
+
+    // Seed a new image when no existing target can provide for this input.
+    if (CompatibleTargets.empty())
+      CompatibleTargets.emplace_back(Target);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
       // If another target needs this binary it must be copied instead.
@@ -1431,7 +1460,8 @@ getDeviceInput(const ArgList &Args) {
 
     SmallVector<OffloadFile::TargetID> CompatibleTargets = {Binary};
     for (const auto &[ID, Input] : InputFiles)
-      if (object::areTargetsCompatible(Binary, ID))
+      if (OffloadFile::TargetID(Binary) != ID &&
+          object::areTargetsCompatible(Binary, ID))
         CompatibleTargets.emplace_back(ID);
 
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {

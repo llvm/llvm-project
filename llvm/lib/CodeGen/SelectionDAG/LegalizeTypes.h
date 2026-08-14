@@ -367,6 +367,7 @@ private:
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
   SDValue PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
   SDValue PromoteIntRes_GET_ACTIVE_LANE_MASK(SDNode *N);
+  SDValue PromoteIntRes_VECTOR_MATCH(SDNode *N);
   SDValue PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N);
   SDValue PromoteIntRes_LOOP_DEPENDENCE_MASK(SDNode *N);
 
@@ -425,6 +426,7 @@ private:
   SDValue PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_UnaryBooleanVectorOp(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N);
+  SDValue PromoteIntOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N);
   SDValue PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue PromoteIntOp_MaskedBinOp(SDNode *N, unsigned OpNo);
@@ -564,6 +566,7 @@ private:
 
   // Convert Float Results to Integer.
   void SoftenFloatResult(SDNode *N, unsigned ResNo);
+  SDValue SoftenFloatRes_NoLibcall(SDNode *N, EVT NVT);
   SDValue SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC);
   bool SoftenFloatRes_UnaryWithTwoFPResults(
       SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
@@ -738,6 +741,7 @@ private:
   SDValue ExpandFloatOp_FCOPYSIGN(SDNode *N);
   SDValue ExpandFloatOp_FP_ROUND(SDNode *N);
   SDValue ExpandFloatOp_FP_TO_XINT(SDNode *N);
+  SDValue ExpandFloatOp_XRINT_XROUND(SDNode *N, RTLIB::Libcall LC);
   SDValue ExpandFloatOp_LROUND(SDNode *N);
   SDValue ExpandFloatOp_LLROUND(SDNode *N);
   SDValue ExpandFloatOp_LRINT(SDNode *N);
@@ -859,6 +863,7 @@ private:
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
   SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);
+  SDValue ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N);
   SDValue ScalarizeVecRes_VSELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT_CC(SDNode *N);
@@ -895,6 +900,8 @@ private:
   SDValue ScalarizeVecOp_FAKE_USE(SDNode *N);
   SDValue ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
   SDValue ScalarizeVecOp_CTTZ_ELTS(SDNode *N);
+  SDValue ScalarizeVecRes_VECTOR_MATCH(SDNode *N);
+  SDValue ScalarizeVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
   SDValue ScalarizeVecOp_MaskedBinOp(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
@@ -975,10 +982,12 @@ private:
   void SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_GET_ACTIVE_LANE_MASK(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_VECTOR_MATCH(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   // Vector Operand Splitting: <128 x ty> -> 2 x <64 x ty>.
   bool SplitVectorOperand(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VSELECT(SDNode *N, unsigned OpNo);
+  SDValue SplitVecOp_MaskedBinOp(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue SplitVecOp_VP_REDUCE(SDNode *N, unsigned OpNo);
@@ -1010,6 +1019,7 @@ private:
   SDValue SplitVecOp_VECTOR_HISTOGRAM(SDNode *N);
   SDValue SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N);
   SDValue SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
+  SDValue SplitVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
   // Vector Widening Support: LegalizeVectorTypes.cpp
@@ -1078,7 +1088,9 @@ private:
   SDValue WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N);
   SDValue WidenVecRes_VECTOR_REVERSE(SDNode *N);
   SDValue WidenVecRes_GET_ACTIVE_LANE_MASK(SDNode *N);
+  SDValue WidenVecRes_VECTOR_MATCH(SDNode *N);
   void WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N);
+  void WidenVecRes_VECTOR_INTERLEAVE(SDNode *N);
 
   SDValue WidenVecRes_Ternary(SDNode *N);
   SDValue WidenVecRes_Binary(SDNode *N);
@@ -1135,6 +1147,7 @@ private:
   SDValue WidenVecOp_CttzElements(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);
   SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
+  SDValue WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.
