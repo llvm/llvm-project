@@ -1063,8 +1063,10 @@ llvm::Error DAP::Loop() {
           [](MainLoopBase &loop) { loop.RequestTermination(); })) {
     thread.join();
   } else {
-    DAP_LOG(log, "failed to terminate stop the main loop. Detaching the "
-                 "Transport Handler thread.");
+    DAP_LOG(log,
+            "failed to terminate stop the main loop in {}. Detaching the "
+            "Transport Handler thread.",
+            GetClientName());
     thread.detach();
   }
 
