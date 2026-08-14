@@ -176,9 +176,9 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
     MCRegister SrcReg;
     unsigned Line;
     unsigned Col;
+    const MachineBasicBlock *MBB;
   };
-  const MachineBasicBlock *CurLineMBB = nullptr;
-  std::optional<DebugLineState> CurLineState;
+  std::optional<DebugLineState> LastLineState;
 
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);

@@ -1125,8 +1125,7 @@ void SPIRVNonSemanticDebugHandler::resetPerFunctionDebugState() {
   CurrentMF = nullptr;
   LastFunctionOpVariable = nullptr;
   DebugFunctionDefinitionEmitted = false;
-  CurLineState.reset();
-  CurLineMBB = nullptr;
+  LastLineState.reset();
 }
 
 void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
@@ -1223,10 +1222,9 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
     return;
 
   // The range of DebugLine must be reset at each basic block boundary.
-  bool IsNewBlock = MI->getParent() != CurLineMBB;
+  bool IsNewBlock = LastLineState && MI->getParent() != LastLineState->MBB;
   if (IsNewBlock) {
-    CurLineState.reset();
-    CurLineMBB = MI->getParent();
+    LastLineState.reset();
   }
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
@@ -1235,11 +1233,11 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   const DILocation *DL = MI->getDebugLoc().get();
   if (!DL) {
     // No location for the current instruction
-    if (CurLineState) {
+    if (LastLineState) {
       // Close the current DebugLine region.
       emitExtInst(SPIRV::NonSemanticExtInst::DebugNoLine, VoidTypeReg,
                   ExtInstSetReg, {}, MAI);
-      CurLineState.reset();
+      LastLineState.reset();
     }
     // No DebugLine region to close.
     return;
@@ -1271,15 +1269,15 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
 
   // Current location matches the one of the current state, no new DebugLine
   // region is needed.
-  if (CurLineState && SrcReg == CurLineState->SrcReg &&
-      Line == CurLineState->Line && Col == CurLineState->Col)
+  if (LastLineState && SrcReg == LastLineState->SrcReg &&
+      Line == LastLineState->Line && Col == LastLineState->Col)
     return;
 
   // A new DebugLine region is needed. Emit it and update the current state.
   emitExtInst(SPIRV::NonSemanticExtInst::DebugLine, VoidTypeReg, ExtInstSetReg,
               {SrcReg, LineReg, LineReg, ColStartReg, ColEndReg}, MAI);
 
-  CurLineState = DebugLineState{SrcReg, Line, Col};
+  LastLineState = DebugLineState{SrcReg, Line, Col, MI->getParent()};
 }
 
 void SPIRVNonSemanticDebugHandler::endInstruction() {
