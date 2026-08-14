@@ -1125,11 +1125,9 @@ void SPIRVNonSemanticDebugHandler::resetPerFunctionDebugState() {
   CurrentMF = nullptr;
   LastFunctionOpVariable = nullptr;
   DebugFunctionDefinitionEmitted = false;
-  clearCurLineState();
+  CurLineState.reset();
   CurLineMBB = nullptr;
 }
-
-void SPIRVNonSemanticDebugHandler::clearCurLineState() { CurLineState.reset(); }
 
 void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
     const MachineFunction *MF) {
@@ -1227,7 +1225,7 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   // The range of DebugLine must be reset at each basic block boundary.
   bool IsNewBlock = MI->getParent() != CurLineMBB;
   if (IsNewBlock) {
-    clearCurLineState();
+    CurLineState.reset();
     CurLineMBB = MI->getParent();
   }
 
@@ -1241,7 +1239,7 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
       // Close the current DebugLine region.
       emitExtInst(SPIRV::NonSemanticExtInst::DebugNoLine, VoidTypeReg,
                   ExtInstSetReg, {}, MAI);
-      clearCurLineState();
+      CurLineState.reset();
     }
     // No DebugLine region to close.
     return;

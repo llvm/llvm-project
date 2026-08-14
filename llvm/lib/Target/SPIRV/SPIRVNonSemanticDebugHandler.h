@@ -245,8 +245,6 @@ private:
 
   void resetPerFunctionDebugState();
 
-  void clearCurLineState();
-
   void emitDebugLineForInstruction(const MachineInstr *MI);
   void preparePerFunctionDebug(const MachineFunction *MF);
   void tryEmitDebugFunctionDefinition(SPIRV::ModuleAnalysisInfo &MAI);
