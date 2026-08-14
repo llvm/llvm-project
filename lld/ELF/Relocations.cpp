@@ -757,8 +757,15 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
     return;
   }
   gotPlt.addEntry(sym);
-  rel.addReloc(
-      {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
+  uint64_t off = sym.getGotPltOffset(ctx);
+  // A non-preemptible symbol has no dynsym entry, so a symbol-indexed pltRel
+  // would name STN_UNDEF. Resolve the slot at link time instead.
+  if (!isPreemptible && type == ctx.target->pltRel) {
+    if (ctx.arg.isPic)
+      addRelativeReloc(ctx, gotPlt, off, sym, 0, expr, ctx.target->symbolicRel);
+    return;
+  }
+  rel.addReloc({type, &gotPlt, off, isPreemptible, sym, 0, expr});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
