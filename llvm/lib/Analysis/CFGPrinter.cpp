@@ -35,11 +35,11 @@ static cl::opt<std::string> CFGDotFilenamePrefix(
     "cfg-dot-filename-prefix", cl::Hidden,
     cl::desc("The prefix used for the CFG dot file names."));
 
-static cl::opt<bool> HideUnreachablePaths("cfg-hide-unreachable-paths",
-                                          cl::init(false));
+static cl::opt<cl::boolOrDefault>
+    HideUnreachablePaths("cfg-hide-unreachable-paths");
 
-static cl::opt<bool> HideDeoptimizePaths("cfg-hide-deoptimize-paths",
-                                         cl::init(false));
+static cl::opt<cl::boolOrDefault>
+    HideDeoptimizePaths("cfg-hide-deoptimize-paths");
 
 static cl::opt<double> HideColdPaths(
     "cfg-hide-cold-paths", cl::init(0.0),
@@ -93,9 +93,16 @@ static void viewCFG(Function &F, const BlockFrequencyInfo *BFI,
 
 DOTFuncInfo::DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
                          const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
-                         std::optional<NodeIdFormatterTy> NodeIdFormatter)
+                         std::optional<NodeIdFormatterTy> NodeIdFormatter,
+                         bool HideDeoptimizePaths, bool HideUnreachablePaths)
     : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq),
-      NodeIdFormatter(NodeIdFormatter) {
+      NodeIdFormatter(NodeIdFormatter),
+      HideDeoptimizePaths(::HideDeoptimizePaths == cl::BOU_UNSET
+                              ? HideDeoptimizePaths
+                              : (::HideDeoptimizePaths == cl::BOU_TRUE)),
+      HideUnreachablePaths(::HideUnreachablePaths == cl::BOU_UNSET
+                               ? HideUnreachablePaths
+                               : (::HideUnreachablePaths == cl::BOU_TRUE)) {
   ShowHeat = false;
   EdgeWeights = !!BPI; // Print EdgeWeights when BPI is available.
   RawWeights = !!BFI;  // Print RawWeights when BFI is available.
@@ -190,13 +197,14 @@ void Function::viewCFGOnly(const BlockFrequencyInfo *BFI,
 /// or unreachable). These paths are hidden if the corresponding cl::opts
 /// are enabled.
 void DOTGraphTraits<DOTFuncInfo *>::computeDeoptOrUnreachablePaths(
-    const Function *F) {
+    const Function *F, const DOTFuncInfo *CFGInfo) {
   auto evaluateBB = [&](const BasicBlock *Node) {
     if (succ_empty(Node)) {
       const Instruction *TI = Node->getTerminator();
       isOnDeoptOrUnreachablePath[Node] =
-          (HideUnreachablePaths && isa<UnreachableInst>(TI)) ||
-          (HideDeoptimizePaths && Node->getTerminatingDeoptimizeCall());
+          (CFGInfo->hideUnreachablePaths() && isa<UnreachableInst>(TI)) ||
+          (CFGInfo->hideDeoptimizePaths() &&
+           Node->getTerminatingDeoptimizeCall());
       return;
     }
     isOnDeoptOrUnreachablePath[Node] =
@@ -220,9 +228,9 @@ bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
           HideColdPaths)
         return true;
     }
-  if (HideUnreachablePaths || HideDeoptimizePaths) {
+  if (CFGInfo->hideUnreachablePaths() || CFGInfo->hideDeoptimizePaths()) {
     if (!isOnDeoptOrUnreachablePath.contains(Node))
-      computeDeoptOrUnreachablePaths(Node->getParent());
+      computeDeoptOrUnreachablePaths(Node->getParent(), CFGInfo);
     return isOnDeoptOrUnreachablePath[Node];
   }
   return false;
