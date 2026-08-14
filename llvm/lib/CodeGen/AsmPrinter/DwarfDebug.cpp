@@ -1095,23 +1095,7 @@ void DwarfDebug::addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const {
 }
 
 static bool isLangCaseSensitive(const DISourceLanguageName &Lang) {
-  if (!Lang.hasVersionedName()) {
-    switch (Lang.getName()) {
-    case dwarf::DW_LANG_Cobol74:
-    case dwarf::DW_LANG_Cobol85:
-    case dwarf::DW_LANG_Fortran77:
-    case dwarf::DW_LANG_Fortran90:
-    case dwarf::DW_LANG_Fortran95:
-    case dwarf::DW_LANG_Fortran03:
-    case dwarf::DW_LANG_Fortran08:
-    case dwarf::DW_LANG_Fortran18:
-    case dwarf::DW_LANG_Fortran23:
-    case dwarf::DW_LANG_Pascal83:
-      return false;
-    default:
-      return true;
-    }
-  } else {
+  if (Lang.hasVersionedName()) {
     switch (Lang.getName()) {
     case dwarf::DW_LNAME_Fortran:
     case dwarf::DW_LNAME_Cobol:
@@ -1120,6 +1104,21 @@ static bool isLangCaseSensitive(const DISourceLanguageName &Lang) {
     default:
       return true;
     }
+  }
+  switch (Lang.getName()) {
+  case dwarf::DW_LANG_Cobol74:
+  case dwarf::DW_LANG_Cobol85:
+  case dwarf::DW_LANG_Fortran77:
+  case dwarf::DW_LANG_Fortran90:
+  case dwarf::DW_LANG_Fortran95:
+  case dwarf::DW_LANG_Fortran03:
+  case dwarf::DW_LANG_Fortran08:
+  case dwarf::DW_LANG_Fortran18:
+  case dwarf::DW_LANG_Fortran23:
+  case dwarf::DW_LANG_Pascal83:
+  return false;
+  default:
+  return true;
   }
 }
 
