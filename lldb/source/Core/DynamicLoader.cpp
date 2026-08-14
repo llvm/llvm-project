@@ -16,6 +16,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -258,47 +259,56 @@ static void SearchForBinary(Target &target, DynamicLoader::BinarySpec &bin_spec,
   if (FileSystem::Instance().Exists(name_filespec))
     module_spec.GetFileSpec() = name_filespec;
 
-  // Has lldb already seen a module with this UUID?
-  // Or have external lookup enabled in DebugSymbols on macOS.
-  Status error = ModuleList::GetSharedModule(module_spec, bin_spec.module_sp,
-                                             nullptr, nullptr);
+  // Has lldb already seen a module with this UUID? A module whose symbols are
+  // already in hand is the answer, and searching would only find them again.
+  // Without them the search still has something to add.
+  ModuleList::GetSharedModule(module_spec, bin_spec.module_sp, nullptr, nullptr,
+                              /*invoke_locate_callback=*/true,
+                              /*invoke_symbol_locators=*/false);
+  if (bin_spec.module_sp && bin_spec.module_sp->GetSymbolFileFileSpec())
+    return;
 
-  // Can lldb's symbol/executable location schemes find an executable and
-  // symbol file.
-  if (!bin_spec.module_sp) {
-    StatisticsMap symbol_locator_map;
-    module_spec.GetSymbolFileSpec() = PluginManager::LocateExecutableSymbolFile(
-        module_spec, search_paths, symbol_locator_map);
-    ModuleSpec objfile_module_spec = PluginManager::LocateExecutableObjectFile(
-        module_spec, symbol_locator_map);
-    module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
-    if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
-        FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
-      bin_spec.module_sp = std::make_shared<Module>(module_spec);
-    }
+  // Search for the binary and its symbols.
+  SymbolLocator::Request request;
+  request.module_spec = module_spec;
+  request.platform = target.GetPlatform();
+  request.external_lookup = bin_spec.force_symbol_search;
 
-    if (bin_spec.module_sp) {
-      bin_spec.module_sp->GetSymbolLocatorStatistics().merge(
-          symbol_locator_map);
-    }
+  llvm::Expected<SymbolLocator::Result> located =
+      SymbolLocator::Locate(request, search_paths);
+  if (!located) {
+    // This function's caller names the binary it could not find, so a plain
+    // miss needs nothing added to it. An explanation from a symbol server does.
+    llvm::Error error = located.takeError();
+    if (error.isA<SymbolLocator::NotFound>())
+      llvm::consumeError(std::move(error));
+    else
+      bin_spec.error = Status::FromError(std::move(error));
+    return;
   }
 
-  // If we haven't found a binary, or we don't have a SymbolFile, see
-  // if there is an external search tool that can find it.
-  if (!bin_spec.module_sp || !bin_spec.module_sp->GetSymbolFileFileSpec()) {
-    PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
-                                               bin_spec.force_symbol_search);
-    if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-      bin_spec.module_sp = std::make_shared<Module>(module_spec);
-    } else if (bin_spec.force_symbol_search && error.Fail()) {
-      bin_spec.error = std::move(error);
-    }
-  }
+  // A binary was found. Its symbols are another matter, and the caller reports
+  // that in its own order.
+  if (located->symbol_error)
+    bin_spec.error = Status::FromError(std::move(*located->symbol_error));
 
-  // If we only found the executable, create a Module based on that.
-  if (!bin_spec.module_sp &&
-      FileSystem::Instance().Exists(module_spec.GetFileSpec()))
-    bin_spec.module_sp = std::make_shared<Module>(module_spec);
+  // Create a module for what was found, sharing it with any other Target that
+  // asks for the same binary. The module is not registered with this Target
+  // until LoadBinaryInTarget. The locators have run, so don't run them again.
+  ModuleSP located_module_sp;
+  ModuleList::GetSharedModule(located->module_spec, located_module_sp, nullptr,
+                              nullptr, /*invoke_locate_callback=*/false,
+                              /*invoke_symbol_locators=*/false);
+
+  // A located binary always yields a module, whatever ObjectFile makes of the
+  // file, because the caller has nowhere else to record what the search found.
+  if (!located_module_sp)
+    located_module_sp = std::make_shared<Module>(located->module_spec);
+
+  // Published only now, so that a search that came up empty leaves whatever the
+  // shared module list had in hand.
+  bin_spec.module_sp = std::move(located_module_sp);
+  bin_spec.module_sp->GetSymbolLocatorStatistics().merge(located->statistics);
 }
 
 static void FindBinaryUUIDInMemory(Process *process,

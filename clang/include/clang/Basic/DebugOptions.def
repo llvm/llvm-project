@@ -62,6 +62,13 @@ ENUM_DEBUGOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2,
 /// Whether or not to use Key Instructions to determine breakpoint locations.
 DEBUGOPT(DebugKeyInstructions, 1, 0, Benign)
 
+/// Whether or not to use the Dynamic Debugging feature.
+DEBUGOPT(DynamicDebugging, 1, 0, Benign)
+
+/// Flag for testing: discard the dynamic debugging debug module before codegen
+/// if true.
+DEBUGOPT(DiscardDynamicDebuggingDebugModule, 1, 0, Benign)
+
 DEBUGOPT(DebugColumnInfo, 1, 0, Compatible) ///< Whether or not to use column information
                                            ///< in debug info.
 

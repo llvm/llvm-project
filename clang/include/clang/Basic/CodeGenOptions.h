@@ -240,6 +240,12 @@ public:
     NonStrictDefault = NonZero
   };
 
+  enum class NewPMEnablementLevel {
+    Auto,         // Use the target dependent default.
+    ForceEnable,  // Always enable regardless of the target default.
+    ForceDisable, // Always disable regardless of the target default.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -390,6 +396,9 @@ public:
 
   /// Prefix to use for -save-temps output.
   std::string SaveTempsFilePrefix;
+
+  /// Prefix to use for -save-dynamic-debugging-temps output.
+  std::string SaveDynDbgTempsFilePrefix;
 
   /// Name of file passed with -fcuda-include-gpubinary option to forward to
   /// CUDA runtime back-end for incorporating them into host-side object file.

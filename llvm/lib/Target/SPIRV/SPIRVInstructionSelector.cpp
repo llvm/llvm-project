@@ -253,6 +253,7 @@ private:
                            MachineInstr &I, unsigned Opcode) const;
   bool selectDebugTrap(Register ResVReg, SPIRVTypeInst ResType,
                        MachineInstr &I) const;
+  bool selectPrefetch(MachineInstr &I) const;
 
   bool selectIntegerDot(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, bool Signed) const;
@@ -1451,6 +1452,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return true;
   case TargetOpcode::G_DEBUGTRAP:
     return selectDebugTrap(ResVReg, ResType, I);
+  case TargetOpcode::G_PREFETCH:
+    return selectPrefetch(I);
 
   default:
     return false;
@@ -1464,6 +1467,35 @@ bool SPIRVInstructionSelector::selectDebugTrap(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectPrefetch(MachineInstr &I) const {
+  // llvm.prefetch is missing info about how many bytes to prefetch that
+  // OpUntypedPrefetchKHR instruction requires, so just drop the instruction
+  // in case untyped pointers are enabled since OCL prefetch cannot take
+  // untyped pointers.
+  if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers))
+    return true;
+
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
+    MachineIRBuilder MIRBuilder(I);
+    const unsigned PointerSize = GR.getPointerSize();
+    const SPIRVTypeInst PointerSizeType =
+        GR.getOrCreateSPIRVIntegerType(PointerSize, MIRBuilder);
+    bool ZeroAsNull = !STI.isShader();
+
+    // Assume that a single element needs prefetch.
+    Register ConstIntOne =
+        GR.getOrCreateConstInt(1, I, PointerSizeType, TII, ZeroAsNull);
+
+    Register AddrVal = I.getOperand(0).getReg();
+    Register ExtReg = MRI->createVirtualRegister(
+        GR.getRegClass(GR.getOpTypeVoid(MIRBuilder)));
+    return selectExtInst(ExtReg, GR.getOpTypeVoid(MIRBuilder), I, CL::prefetch,
+                         /*setMIFlags=*/false, /*useMSSrc=*/false,
+                         {AddrVal, ConstIntOne});
+  }
   return true;
 }
 
@@ -1668,11 +1700,12 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         .add(I.getOperand(SrcIdx))
         .addUse(PointerVReg)
         .constrainAllUses(TII, TRI, RBI);
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
-        .addDef(CosResVReg)
-        .addUse(ResTypeReg)
-        .addUse(PointerVReg)
-        .constrainAllUses(TII, TRI, RBI);
+    if (!MRI->use_nodbg_empty(CosResVReg))
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+          .addDef(CosResVReg)
+          .addUse(ResTypeReg)
+          .addUse(PointerVReg)
+          .constrainAllUses(TII, TRI, RBI);
     return true;
   } else if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     // GLSL.std.450 has no combined sincos; emit separate Sin and Cos.
@@ -2141,7 +2174,9 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
-  Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
+  uint32_t Sem = getMemSemanticsWithStorageClass(STI.getTargetTriple(), MemSem,
+                                                 StorageClass);
+  Register MemSemReg = buildI32Constant(Sem, I);
 
   MachineIRBuilder MIRBuilder(I);
 
@@ -2298,7 +2333,9 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
   if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
-  Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
+  uint32_t Sem = getMemSemanticsWithStorageClass(STI.getTargetTriple(), MemSem,
+                                                 StorageClass);
+  Register MemSemReg = buildI32Constant(Sem, I);
   MachineIRBuilder MIRBuilder(I);
 
   if (PointeeType.isTypePtr()) {
@@ -2581,8 +2618,10 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr)));
   AtomicOrdering AO = MemOp->getSuccessOrdering();
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO)) | ScSem;
-  Register MemSemReg = buildI32Constant(MemSem, I);
+  uint32_t OrderSem = static_cast<uint32_t>(getMemSemantics(AO));
+  Register MemSemReg = buildI32Constant(
+      getMemSemanticsWithStorageClass(STI.getTargetTriple(), OrderSem, ScSem),
+      I);
 
   Register ValueReg = I.getOperand(2).getReg();
   if (NegateOpcode != 0) {

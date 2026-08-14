@@ -41,24 +41,10 @@ LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
 LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
+LLVM_ABI extern const char *DeregisterJITLoaderGDBAllocActionName;
 
 LLVM_ABI extern const char *const DispatchName;
 LLVM_ABI extern const char *const DispatchCtxName;
-
-/// Symbol names for memory management implementation.
-/// FIXME: We should find a better home for this struct.
-struct SimpleExecutorMemoryManagerSymbolNames {
-  StringRef AllocatorName;
-  StringRef ReserveName;
-  StringRef InitializeName;
-  StringRef DeinitializeName;
-  StringRef ReleaseName;
-};
-
-/// Default symbol names for the ORC runtime's SimpleNativeMemoryMap SPS
-/// interface.
-extern const LLVM_ABI SimpleExecutorMemoryManagerSymbolNames
-    orc_rt_SimpleNativeMemoryMapSPSSymbols;
 
 /// Symbol names for the ORC runtime's NativeDylibManager SPS interface.
 inline constexpr char NativeDylibManagerInstanceName[] =

@@ -40,8 +40,8 @@
 
 // LLVM-LABEL: define dso_local i32 @main()
 // LLVM: %[[STRUCTARG:.*]] = alloca { ptr }, align 8
-// LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[J:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[RETVAL:.*]] = alloca i32, align 4
+// LLVM: %[[J:.*]] = alloca i32, align 4
 // LLVM: br label %[[ENTRY:.*]]
 
 // LLVM: [[ENTRY]]:
@@ -66,7 +66,7 @@
 // LLVM: %[[TID_VAL:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: store i32 %[[TID_VAL]], ptr %[[TID_LOCAL]], align 4
 // LLVM: %{{.*}} = load i32, ptr %[[TID_LOCAL]], align 4
-// LLVM: %[[I:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[I:.*]] = alloca i32, align 4
 // LLVM: br label %[[AFTER_ALLOCA:.*]]
 
 // LLVM: [[AFTER_ALLOCA]]:

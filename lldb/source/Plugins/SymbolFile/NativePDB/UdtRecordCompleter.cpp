@@ -12,12 +12,12 @@
 #include "SymbolFileNativePDB.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/Type.h"
-#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -115,9 +115,13 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
   if (base_qt.isNull())
     return llvm::Error::success();
-  auto decl =
+  auto *decl =
       m_ast_builder.clang().GetAsCXXRecordDecl(base_qt.getAsOpaquePtr());
-  lldbassert(decl);
+  if (!decl) {
+    LLDB_LOG(GetLog(LLDBLog::Symbols), "base ({0}) of {1} is not a record",
+             base.Type, m_id.index);
+    return Error::success();
+  }
 
   auto offset = clang::CharUnits::fromQuantity(base.getBaseOffset());
   m_layout.base_offsets.insert(std::make_pair(decl, offset));
@@ -497,13 +501,13 @@ void UdtRecordCompleter::Record::ConstructRecord() {
   for (auto &pair : fields_map) {
     uint64_t offset = pair.first;
     auto &fields = pair.second;
-    lldbassert(offset >= start_offset);
+    assert(offset >= start_offset);
     Member *parent = &record;
     if (offset > start_offset) {
       // Find the field with largest end offset that is <= offset. If it's less
       // than offset, it indicates there are padding bytes between end offset
       // and offset.
-      lldbassert(!end_offset_map.empty());
+      assert(!end_offset_map.empty());
       auto iter = end_offset_map.lower_bound(offset);
       if (iter == end_offset_map.end())
         --iter;
@@ -543,8 +547,8 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       if (parent->kind == Member::Struct) {
         end_offset_map[end_offset].push_back(parent);
       } else {
-        lldbassert(parent == &record &&
-                   "If parent is union, it must be the top level record.");
+        assert(parent == &record &&
+               "If parent is union, it must be the top level record.");
         end_offset_map[end_offset].push_back(parent->fields.back().get());
       }
     } else {
@@ -553,8 +557,8 @@ void UdtRecordCompleter::Record::ConstructRecord() {
         parent = parent->fields.back().get();
         parent->bit_offset = offset;
       } else {
-        lldbassert(parent == &record &&
-                   "If parent is union, it must be the top level record.");
+        assert(parent == &record &&
+               "If parent is union, it must be the top level record.");
       }
       for (auto &field : fields) {
         int64_t bit_size = field->bit_size;

@@ -4791,6 +4791,14 @@ defm enable_new_pm_codegen
                           "Use the NewPM for the Codegen Pipeline">>,
       DocBrief<
           [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
+def enable_new_pm_codegen : Joined<["-"], "fenable-new-pm-codegen=">,
+    Group<f_Group>,
+    Visibility<[CC1Option]>,
+    HelpText<"When enabled, use the NewPM to drive the CodeGen pipeline.">,
+    Values<"auto,force-on,force-disable">,
+    NormalizedValuesScope<"CodeGenOptions::NewPMEnablementLevel">,
+    NormalizedValues<["Auto","ForceEnable","ForceDisable"]>,
+    MarshallingInfoEnum<CodeGenOpts<"EnableNewPMCodeGen">, "Auto">;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",
@@ -5360,6 +5368,24 @@ defm key_instructions : BoolGOption<"key-instructions",
         " in some debuggers. DWARF only.">,
     BothFlags<[], [ClangOption, CLOption, CC1Option]>>,
   Group<g_flags_Group>;
+defm dynamic_debugging : BoolOption<"f", "dynamic-debugging",
+    CodeGenOpts<"DynamicDebugging">, DefaultFalse,
+    NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
+        "Enable Dynamic Debugging, which allows runtime switching between"
+        " optimized and unoptimized code in debuggers that support it."
+        " Specified optimization level affects only the optimized code."
+        " This flag inhibits interprocedural optimizations.">,
+    BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
+def save_dynamic_debugging_temps : Flag<["--"], "save-dynamic-debugging-temps">,
+    Visibility<[ClangOption, CLOption, CC1Option]>,
+    HelpText<"Compiler-debugging/testing option to save the intermediate"
+             " states of dynamic debugging in the same directory as the final"
+             " output file">;
+def discard_dynamic_debugging_debug_module : Flag<["--"], "discard-dynamic-debugging-debug-module">,
+    MarshallingInfoFlag<CodeGenOpts<"DiscardDynamicDebuggingDebugModule">>,
+    Visibility<[CC1Option]>,
+    HelpText<"Compiler-debugging/testing option to discard the dynamic"
+             " debugging debug module before Clang codegen">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
     Visibility<[ClangOption, CC1Option, CC1AsOption,
