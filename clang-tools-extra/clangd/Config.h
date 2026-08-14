@@ -111,6 +111,7 @@ struct Config {
       std::string Checks;
       llvm::StringMap<std::string> CheckOptions;
       FastCheckPolicy FastCheckFilter = FastCheckPolicy::Strict;
+      bool ExperimentalCustomChecks = false;
     } ClangTidy;
 
     IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;
