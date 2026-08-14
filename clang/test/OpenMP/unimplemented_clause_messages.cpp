@@ -76,7 +76,6 @@ void processPointsInLine() {
 // Make sure test doesn't crash.
 void test_tasgraph()
 {
-  // omp60-error@+2{{unexpected OpenMP directive '#pragma omp taskgraph'}}
   // omp51-error@+1{{unexpected OpenMP directive '#pragma omp taskgraph'}}
 #pragma omp taskgraph
   for (int i = 0; i < 10; ++i)
