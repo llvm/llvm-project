@@ -1038,7 +1038,7 @@ def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedLoopModifiers = [
     LM_Interchanged,
   ];
-  let pureSince = 52;
+  let pureSince = 60;
 }
 def OMP_interop : Directive<[Spelling<"interop">]> {
   let allowedClauses = [
