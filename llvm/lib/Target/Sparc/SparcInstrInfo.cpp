@@ -39,6 +39,13 @@ const TargetRegisterClass *SparcInstrInfo::getInlineAsmMemoryOperandRegClass(
   return Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
 }
 
+bool SparcInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                          const MachineBasicBlock *MBB,
+                                          const MachineFunction &MF) const {
+  return MI.getOpcode() == SP::RESTORErr || MI.getOpcode() == SP::RESTOREri ||
+         TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+}
+
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
 /// the destination along with the FrameIndex of the loaded stack slot.  If
