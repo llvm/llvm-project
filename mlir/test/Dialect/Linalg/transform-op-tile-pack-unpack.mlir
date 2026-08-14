@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -transform-interpreter -canonicalize -cse -split-input-file | FileCheck %s
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 // CHECK-DAG:   #[[MAP0:.+]] = affine_map<(d0) -> (d0 * 32)>
 // CHECK:       func.func @NC_to_NCnc

@@ -1,6 +1,6 @@
 // RUN: mlir-opt --test-xegpu-array-length-optimization --split-input-file %s | FileCheck %s
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 gpu.module @test {
 // CHECK-LABEL: func.func @test_load_nd_with_extract_slice

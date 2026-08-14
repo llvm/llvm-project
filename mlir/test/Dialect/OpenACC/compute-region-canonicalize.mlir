@@ -1,6 +1,6 @@
 // RUN: mlir-opt -canonicalize -split-input-file %s | FileCheck %s
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 // -----
 

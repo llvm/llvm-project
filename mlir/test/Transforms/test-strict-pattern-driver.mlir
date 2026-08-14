@@ -1,4 +1,4 @@
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 // RUN: mlir-opt \
 // RUN:     -test-strict-pattern-driver="strictness=AnyOp" \

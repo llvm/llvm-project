@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -wrap-emitc-func-in-class=func-name=execute -split-input-file | FileCheck %s --check-prefixes=EXECUTE
 // RUN: mlir-opt %s -wrap-emitc-func-in-class=class-name-format=Custom_{} -split-input-file | FileCheck %s --check-prefixes=CLASS-NAME-FORMAT
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 emitc.func @foo(%arg0 : !emitc.array<1xf32>) {
   emitc.call_opaque "bar" (%arg0) : (!emitc.array<1xf32>) -> ()

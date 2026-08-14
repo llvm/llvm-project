@@ -1,6 +1,6 @@
 // RUN: mlir-opt --raise-scf-to-affine --split-input-file %s | FileCheck %s
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 // CHECK-LABEL: @constant_step
 // CHECK-SAME:  %[[ARR:.*]]: memref<?xi32>, %[[LB:.*]]: index, %[[UB:.*]]: index

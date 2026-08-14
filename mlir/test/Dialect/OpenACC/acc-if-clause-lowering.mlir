@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -acc-if-clause-lowering -split-input-file | FileCheck %s
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 // Test acc.parallel with if condition
 // CHECK-LABEL: func.func @test_parallel_if

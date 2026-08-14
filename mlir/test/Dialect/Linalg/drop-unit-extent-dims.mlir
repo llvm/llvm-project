@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -linalg-fold-unit-extent-dims -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -linalg-fold-unit-extent-dims="use-rank-reducing-slices" -cse -split-input-file | FileCheck %s --check-prefix=CHECK-SLICES
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,

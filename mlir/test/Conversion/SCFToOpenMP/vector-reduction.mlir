@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --convert-scf-to-openmp | FileCheck %s
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 // CHECK-LABEL: omp.declare_reduction @__scf_reduction : vector<2xi1>
 // CHECK: init {

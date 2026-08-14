@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -sparsification-and-bufferization -verify-diagnostics | FileCheck %s
 
-// REQUIRES: !mlir-expensive-checks
+// XFAIL: mlir-expensive-checks
 
 // Tests that mlir-opt does not crash when parsing sparse tensor encodings with symbols.
 
