@@ -3455,8 +3455,7 @@ getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset) {
   return Name;
 }
 
-static void emitFeatureCheck(raw_ostream &OS,
-                             bool ReportMultipleNearMisses) {
+static void emitFeatureCheck(raw_ostream &OS, bool ReportMultipleNearMisses) {
   OS << "    if (!HasRequiredFeatures) {\n";
   if (!ReportMultipleNearMisses)
     OS << "      HadMatchOtherThanFeatures = true;\n";
@@ -3552,12 +3551,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   bool PrioritizeFeatureInMultipleNearMisses =
       AsmParser->getValueAsBit("PrioritizeFeatureInMultipleNearMisses");
 
-  if (PrioritizeFeatureInMultipleNearMisses &&
-      !ReportMultipleNearMisses) {
-    PrintFatalError(
-        AsmParser->getLoc(),
-        "'PrioritizeFeatureInMultipleNearMisses' requires "
-        "'ReportMultipleNearMisses' to be set");
+  if (PrioritizeFeatureInMultipleNearMisses && !ReportMultipleNearMisses) {
+    PrintFatalError(AsmParser->getLoc(),
+                    "'PrioritizeFeatureInMultipleNearMisses' requires "
+                    "'ReportMultipleNearMisses' to be set");
   }
 
   // Write the output.
