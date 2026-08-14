@@ -13,25 +13,37 @@
 //
 // Here is an example of an MCInstPredicate definition in TableGen:
 //
-// def MCInstPredicateExample : CheckAll<[
-//    CheckOpcode<[BLR]>,
-//    CheckNot<CheckRegOperand<0, LR>>]>;
+// def BLRWithRegOpOtherThanLR : CheckAll<[
+//   CheckOpcode<[BLR]>,
+//   CheckIsRegOperand<0>,
+//   CheckNot<CheckRegOperand<0, LR>>]>;
 //
 // The syntax for MCInstPredicate is declarative, and predicate definitions can
 // be composed together in order to generate more complex constraints.
 //
-// The `CheckAll` from the example defines a composition of two different
-// predicates.  Definition `MCInstPredicateExample` identifies instructions
-// whose opcode is BLR, and whose first operand is either not a register
-// operand or does not reference register `LR`.
+// The `CheckAll` from the example defines a composition of three different
+// predicates. Definition `BLRWithRegOpOtherThanLR` identifies instructions
+// whose opcode is BLR, and whose first operand is a register different from
+// register `LR`.
 //
 // Every MCInstPredicate class has a well-known semantic in tablegen. For
 // example, `CheckOpcode` is a special type of predicate used to describe a
-// constraint on the value of an instruction opcode, while `CheckRegOperand`
-// checks whether an instruction operand is a register operand and matches a
-// specified register. Therefore, a preceding `CheckIsRegOperand` is unnecessary
-// as the `CheckRegOperand` predicate will necessarily be false if the operand
-// isn't a register.
+// constraint on the value of an instruction opcode, while `CheckIsRegOperand`
+// checks whether an instruction operand is a register operand.
+// `CheckRegOperand` performs this check implicitly before comparing the
+// register value. Therefore, a preceding `CheckIsRegOperand` is redundant
+// when `CheckRegOperand` is used directly. When `CheckRegOperand` is negated,
+// we can also omit the preceding `CheckIsRegOperand` if we don't care about
+// the type of the operand (e.g. an immediate or a register) but only care
+// about the fact that the operand is not the specified register. For example:
+//
+// def BLRWithOpAnythingButLR : CheckAll<[
+//   CheckOpcode<[BLR]>,
+//   CheckNot<CheckRegOperand<0, LR>>]>;
+//
+// This predicate ensures that the opcode is BLR and the first operand is not
+// the register `LR`. It is allowed to be anything other than `LR`, including
+// immediate, etc.
 //
 // MCInstPredicate definitions are typically used by scheduling models to
 // construct MCSchedPredicate definitions (see the definition of class
@@ -40,14 +52,19 @@
 // when defining the set of SchedReadVariant and SchedWriteVariant of a
 // processor scheduling model.
 //
-// The `MCInstPredicateExample` definition above is equivalent (and therefore
-// could replace) the following definition from a previous ExynosM3 model (see
-// AArch64SchedExynosM3.td):
+// The `BLRWithRegOpOtherThanLR` definition above is equivalent (and therefore
+// could replace) the following definition:
 //
-// def M3BranchLinkFastPred  : SchedPredicate<[{
+// def BLRWithRegOpOtherThanLRPred : SchedPredicate<[{
 //    MI->getOpcode() == AArch64::BLR &&
-//    !(MI->getOperand(0).isReg() &&
-//      MI->getOperand(0).getReg() == AArch64::LR)}]>;
+//    MI->getOperand(0).isReg() &&
+//    !(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == AArch64::LR)}]>;
+//
+// The `BLRWithOpAnythingButLR` definition is equivalent to:
+//
+// def BLRWithOpAnythingButLRPred : SchedPredicate<[{
+//    MI->getOpcode() == AArch64::BLR &&
+//    !(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == AArch64::LR)}]>;
 //
 // The main advantage of using MCInstPredicate instead of SchedPredicate is
 // portability: users don't need to specify predicates in C++. As a consequence
