@@ -178,6 +178,24 @@ func.func @isnan_vector(%arg0: vector<2xf32>) -> vector<2xi1> {
   return %0 : vector<2xi1>
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.IsNormal
+//===----------------------------------------------------------------------===//
+
+func.func @isnormal_scalar(%arg0: f32) -> i1 {
+  // CHECK: spirv.IsNormal {{.*}} : f32
+  %0 = spirv.IsNormal %arg0 : f32
+  return %0 : i1
+}
+
+func.func @isnormal_vector(%arg0: vector<2xf32>) -> vector<2xi1> {
+  // CHECK: spirv.IsNormal {{.*}} : vector<2xf32>
+  %0 = spirv.IsNormal %arg0 : vector<2xf32>
+  return %0 : vector<2xi1>
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.LogicalAnd
 //===----------------------------------------------------------------------===//

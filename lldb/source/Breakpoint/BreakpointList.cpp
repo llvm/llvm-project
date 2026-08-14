@@ -125,13 +125,13 @@ BreakpointSP BreakpointList::FindBreakpointByID(break_id_t break_id) const {
 }
 
 llvm::Expected<std::vector<lldb::BreakpointSP>>
-BreakpointList::FindBreakpointsByName(const char *name) {
-  if (!name)
+BreakpointList::FindBreakpointsByName(llvm::StringRef name) {
+  if (name.empty())
     return llvm::createStringError(llvm::errc::invalid_argument,
                                    "FindBreakpointsByName requires a name");
 
   Status error;
-  if (!BreakpointID::StringIsBreakpointName(llvm::StringRef(name), error))
+  if (!BreakpointID::StringIsBreakpointName(name, error))
     return error.ToError();
 
   std::vector<lldb::BreakpointSP> matching_bps;
