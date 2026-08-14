@@ -91,6 +91,7 @@ enum class X86AVXABILevel {
   None,
   AVX,
   AVX512,
+  NumberOfEnumEntries // must be last
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo>

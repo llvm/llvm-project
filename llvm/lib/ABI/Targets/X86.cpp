@@ -29,6 +29,8 @@ static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
     return 256;
   case X86AVXABILevel::None:
     return 128;
+  case X86AVXABILevel::NumberOfEnumEntries:
+    break;
   }
   llvm_unreachable("Unknown AVXLevel");
 }
