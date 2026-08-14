@@ -165,16 +165,10 @@
 
 ?foo_p6ahxz@@YAXP6AHXZ@Z
 ; CHECK: void __cdecl foo_p6ahxz(int (__cdecl *)(void))
-?foo_p6ahxz@@YAXP6AHXZ@Z
-; CHECK: void __cdecl foo_p6ahxz(int (__cdecl *)(void))
 
 ?foo_a6ahxz@@YAXA6AHXZ@Z
 ; CHECK: void __cdecl foo_a6ahxz(int (__cdecl &)(void))
-?foo_a6ahxz@@YAXA6AHXZ@Z
-; CHECK: void __cdecl foo_a6ahxz(int (__cdecl &)(void))
 
-?foo_q6ahxz@@YAX$$Q6AHXZ@Z
-; CHECK: void __cdecl foo_q6ahxz(int (__cdecl &&)(void))
 ?foo_q6ahxz@@YAX$$Q6AHXZ@Z
 ; CHECK: void __cdecl foo_q6ahxz(int (__cdecl &&)(void))
 
@@ -260,8 +254,6 @@
 ; CHECK: void __cdecl mangle_no_backref1(int *const, int *const)
 
 ; Pointer to function types don't backref with function types
-?mangle_no_backref2@@YAXP6AXXZP6AXXZ@Z
-; CHECK: void __cdecl mangle_no_backref2(void (__cdecl *)(void), void (__cdecl *)(void))
 ?mangle_no_backref2@@YAXP6AXXZP6AXXZ@Z
 ; CHECK: void __cdecl mangle_no_backref2(void (__cdecl *)(void), void (__cdecl *)(void))
 
