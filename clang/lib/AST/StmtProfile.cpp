@@ -620,6 +620,11 @@ void OMPClauseProfiler::VisitOMPNowaitClause(const OMPNowaitClause *C) {
     Profiler->VisitStmt(C->getCondition());
 }
 
+void OMPClauseProfiler::VisitOMPReplayableClause(const OMPReplayableClause *C) {
+  if (C->getCondition())
+    Profiler->VisitStmt(C->getCondition());
+}
+
 void OMPClauseProfiler::VisitOMPUntiedClause(const OMPUntiedClause *) {}
 
 void OMPClauseProfiler::VisitOMPMergeableClause(const OMPMergeableClause *) {}
@@ -950,6 +955,14 @@ void OMPClauseProfiler::VisitOMPGrainsizeClause(const OMPGrainsizeClause *C) {
   if (C->getGrainsize())
     Profiler->VisitStmt(C->getGrainsize());
 }
+void OMPClauseProfiler::VisitOMPGraphIdClause(const OMPGraphIdClause *C) {
+  if (C->getId())
+    Profiler->VisitStmt(C->getId());
+}
+void OMPClauseProfiler::VisitOMPGraphResetClause(const OMPGraphResetClause *C) {
+  if (C->getCondition())
+    Profiler->VisitStmt(C->getCondition());
+}
 void OMPClauseProfiler::VisitOMPNumTasksClause(const OMPNumTasksClause *C) {
   VisitOMPClauseWithPreInit(C);
   if (C->getNumTasks())
@@ -1179,6 +1192,10 @@ void StmtProfiler::VisitOMPTaskwaitDirective(const OMPTaskwaitDirective *S) {
 }
 
 void StmtProfiler::VisitOMPAssumeDirective(const OMPAssumeDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPTaskgraphDirective(const OMPTaskgraphDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
