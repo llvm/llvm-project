@@ -1510,25 +1510,14 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
-  Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(F->getName());
-  if (IID == Intrinsic::not_intrinsic)
-    return false;
-
+static bool getDefaultArgUpgradeInfo(
+    Function *F, Intrinsic::ID IID, SmallVectorImpl<Type *> &OverloadTys) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
     return false;
 
-  // Overloaded intrinsics are out of scope for the default-arg feature
-  // and will be supported in a follow-up.
-  if (Intrinsic::isOverloaded(IID))
-    return false;
-
-  // Get the canonical full declaration for this intrinsic.
-  Function *FullDecl = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
-
-  // If the existing declaration already has all args, nothing to upgrade
-  if (F->arg_size() >= FullDecl->arg_size())
+  unsigned FullArgCount = FirstDefault + Defaults.size();
+  if (F->arg_size() >= FullArgCount)
     return false;
 
   // Defaults are a contiguous trailing block, so checking the first missing
@@ -1536,7 +1525,62 @@ static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
   if (F->arg_size() < FirstDefault)
     return false;
 
-  NewFn = FullDecl;
+  unsigned NumMissingTrailingParams = FullArgCount - F->arg_size();
+  if (!Intrinsic::isSignatureValid(IID, F->getFunctionType(), OverloadTys,
+                                   NumMissingTrailingParams))
+    return false;
+
+  return true;
+}
+
+static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
+  Intrinsic::ID IID = F->getIntrinsicID();
+  SmallVector<Type *, 4> OverloadTys;
+
+  if (IID != Intrinsic::not_intrinsic) {
+    if (!getDefaultArgUpgradeInfo(F, IID, OverloadTys))
+      return false;
+  } else {
+    Function *BestMatch = nullptr;
+    SmallVector<Type *, 4> BestOverloadTys;
+    for (Function &Candidate : *F->getParent()) {
+      Intrinsic::ID CandidateIID = Candidate.getIntrinsicID();
+      if (CandidateIID == Intrinsic::not_intrinsic)
+        continue;
+
+      StringRef CandidateName = Candidate.getName();
+      StringRef Suffix = F->getName();
+      if (!Suffix.consume_front(CandidateName) ||
+          !Suffix.consume_front(".") || Suffix.empty())
+        continue;
+
+      unsigned UniqueID;
+      if (Suffix.getAsInteger(10, UniqueID))
+        continue;
+
+      SmallVector<Type *, 4> CandidateOverloadTys;
+      if (!getDefaultArgUpgradeInfo(F, CandidateIID, CandidateOverloadTys))
+        continue;
+
+      if (!BestMatch ||
+          CandidateName.size() > BestMatch->getName().size()) {
+        BestMatch = &Candidate;
+        IID = CandidateIID;
+        BestOverloadTys = std::move(CandidateOverloadTys);
+      }
+    }
+
+    if (!BestMatch)
+      return false;
+    OverloadTys = std::move(BestOverloadTys);
+  }
+
+  auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
+  unsigned FullArgCount = FirstDefault + Defaults.size();
+  NewFn =
+      Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
+  assert(NewFn->arg_size() == FullArgCount &&
+         "default argument table does not match intrinsic signature");
   return true;
 }
 
@@ -2240,7 +2284,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   //  to both detect an intrinsic which needs upgrading, and to provide the
   //  upgraded form of the intrinsic. We should perhaps have two separate
   //  functions for this.
-  if (upgradeIntrinsicDeclWithDefaultArgs(F, NewFn))
+  if (upgradeIntrinsicWithDefaultArgs(F, NewFn))
     return true;
 
   return false;
