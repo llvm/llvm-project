@@ -5846,20 +5846,85 @@ static kmp_taskgraph_record_t *__kmp_taskgraph_alloc(kmp_int32 gtid,
   kmp_taskgraph_record_t *new_rec =
       (kmp_taskgraph_record_t *)__kmp_fast_allocate(
           thread, sizeof(kmp_taskgraph_record_t));
-  new_rec->status = KMP_TDG_RECORDING;
-  new_rec->gtid = gtid;
-  new_rec->graph_id = graph_id;
   __kmp_init_lock(&new_rec->map_lock);
-  new_rec->record_map = nullptr;
-  new_rec->alloc_root = nullptr;
-  new_rec->recycled_deps = nullptr;
-  new_rec->num_tasks = 0;
-  new_rec->nodes_allocated = 0;
-  new_rec->num_mutexes = 0;
-  new_rec->exec_descrs = nullptr;
-  new_rec->exec_descr_size = 0;
-  new_rec->next = nullptr;
+  __kmp_taskgraph_reset(new_rec, gtid, graph_id);
   return new_rec;
+}
+
+static void
+__kmp_taskgraph_free_region_metadata(kmp_info_t *thread,
+                                     kmp_taskgraph_region_t *region) {
+  if (region->reduce_input) {
+    __kmp_fast_free(thread, region->reduce_input->reduce_data);
+    __kmp_fast_free(thread, region->reduce_input);
+  }
+  if (region->mutexset) {
+    __kmp_fast_free(thread, region->mutexset);
+  }
+  switch (region->type) {
+  case TASKGRAPH_REGION_ENTRY:
+  case TASKGRAPH_REGION_EXIT:
+  case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_NODE:
+    break;
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    for (int k = 0; k < region->inner.num_children; k++) {
+      __kmp_taskgraph_free_region_metadata(thread, region->inner.children[k]);
+    }
+    break;
+  }
+  default:
+    assert(false && "unreachable");
+  }
+}
+
+static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
+                                 bool keep_rec = false) {
+  kmp_info_t *thread = __kmp_threads[gtid];
+
+  __kmp_taskgraph_free_region_metadata(thread, rec->root);
+
+  for (size_t task = 0; task < rec->num_tasks; task++) {
+    kmp_taskdata *taskdata = KMP_TASK_TO_TASKDATA(rec->record_map[task].task);
+    // Setting this here keeps an assertion in __kmp_free_task happy: the
+    // clone may never have been replayed, in which case 'complete' will be
+    // zero here, as initialized.
+    taskdata->td_flags.complete = 1;
+    // We never decrement td_allocated_child_tasks for taskgraph tasks.  This
+    // keeps another assertion happy in __kmp_free_task.
+    KMP_ATOMIC_ST_RLX(&taskdata->td_allocated_child_tasks, 0);
+    __kmp_free_task(gtid, taskdata, thread);
+  }
+  __kmp_thread_free(thread, rec->record_map);
+
+  kmp_taskgraph_region_t *region = rec->alloc_root;
+  while (region) {
+    kmp_taskgraph_region_t *next_region = region->alloc_chain;
+    // Children of a carved IRREDUCIBLE region retain their intra-kernel edge
+    // lists past build (the exec-DAG builder reads them on first replay); for
+    // all other regions these lists were already freed in
+    // __kmp_build_taskgraph.
+    if (keep_rec) {
+      __kmp_region_deplist_recycle(&rec->recycled_deps, region->predecessors);
+      __kmp_region_deplist_recycle(&rec->recycled_deps, region->successors);
+    } else {
+      __kmp_region_deplist_free(thread, region->predecessors);
+      __kmp_region_deplist_free(thread, region->successors);
+    }
+    __kmp_fast_free(thread, region);
+    region = next_region;
+  }
+
+  if (rec->exec_descrs)
+    __kmp_thread_free(thread, rec->exec_descrs);
+
+  if (!keep_rec) {
+    __kmp_destroy_lock(&rec->map_lock);
+    __kmp_fast_free(thread, rec);
+  }
 }
 
 static kmp_taskgraph_header_t *__kmp_taskgraph_header_alloc(kmp_int32 gtid) {
@@ -5893,7 +5958,34 @@ static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
   KMP_MEMCPY(copy_td, taskdata, shareds_offset + sizeof_shareds);
   // Tasks cloned for a taskgraph always have this field set.
   copy_td->owning_taskgraph = taskgraph;
+  KMP_ATOMIC_ST_RLX(&copy_td->td_incomplete_child_tasks, 0);
   return KMP_TASKDATA_TO_TASK(copy_td);
+}
+
+// Go through list of taskgraph records and free any that are no longer being
+// executed.  For now, this just frees everything in the list immediately: when
+// multiple concurrent playbacks are implemented, it should only free records
+// with zero usage counts.
+// When available, a kmp_taskgraph_record_t structure is returned for reuse by
+// a subsequent taskgraph recording.
+
+static kmp_taskgraph_record_t *
+__kmp_expire_taskgraph_records(kmp_int32 gtid,
+                               kmp_taskgraph_record_t **expiring_p) {
+  kmp_taskgraph_record_t *record = nullptr;
+
+  while (*expiring_p) {
+    kmp_taskgraph_record_t *expiring = *expiring_p;
+    if (!record) {
+      record = expiring;
+      __kmp_taskgraph_free(gtid, record, /*keep_rec=*/true);
+    } else {
+      __kmp_taskgraph_free(gtid, record, /*keep_rec=*/false);
+    }
+    *expiring_p = expiring->next;
+  }
+
+  return record;
 }
 
 // __kmpc_taskgraph: record or replay taskgraph
@@ -5921,14 +6013,6 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
 
   taskgroup = thread->th.th_current_task->td_taskgroup;
 
-  // FIXME: Implement graph_id and graph_reset functionality.  For graph_id, we
-  // will form a singly-linked list of task records chained through their
-  // "next" pointers (per taskgraph construct handle).  Thread safety and
-  // locking need careful consideration.  We could use a "list header" node
-  // consisting of a lock and a pointer to
-  // the list proper, perhaps.  Ideally we'd want to avoid locking/unlocking in
-  // the common case (replay).
-
   if (!header) {
     header = __kmp_taskgraph_header_alloc(gtid);
     // Another thread may have allocated the header at the same time.  Grab
@@ -5943,9 +6027,25 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
   }
 
   __kmp_acquire_lock(&header->header_lock, gtid);
-  record = header->first;
+  for (record_p = &header->first; *record_p; record_p = &((*record_p)->next))
+    if ((*record_p)->graph_id == graph_id)
+      break;
+  record = *record_p;
+  kmp_taskgraph_record_t *reuse_record = nullptr;
+  if (record && graph_reset) {
+    // Move the existing record to the header's expiring list
+    *record_p = record->next;
+    record->next = header->expiring;
+    header->expiring = record;
+    reuse_record = __kmp_expire_taskgraph_records(gtid, &header->expiring);
+    record = nullptr;
+  }
   if (!record) {
-    record = __kmp_taskgraph_alloc(gtid, graph_id);
+    if (reuse_record) {
+      record = reuse_record;
+      __kmp_taskgraph_reset(record, gtid, graph_id);
+    } else
+      record = __kmp_taskgraph_alloc(gtid, graph_id);
     // We record 'nogroup' here.  We always create a group for recording the
     // taskgraph, but we could avoid doing so for replay.  That's not done
     // yet though.
