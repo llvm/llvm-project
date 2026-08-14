@@ -153,6 +153,15 @@ namespace cwg727 { // cwg727: partial
       // expected-error@-2 {{variable template partial specialization of 'N' not in class 'A' or an enclosing namespace}}
       //   expected-note@#cwg727-N {{explicitly specialized declaration is here}}
     };
+
+    template <class> struct E {
+      template <class> struct F {};
+    };
+    template <> template <class> struct E<void>::F {};
+    template <> template <class> struct E<char>::F {}; // #cwg727-EcharF
+    template <> template <class> struct E<char>::F {};
+    // expected-error@-1 {{redefinition of 'F'}}
+    //   expected-note@#cwg727-EcharF {{previous definition is here}}
   };
 
   template<> struct A::C<char>;
@@ -334,6 +343,29 @@ namespace cwg727 { // cwg727: partial
   };
   Collision<int, int> c; // #cwg727-Collision-int-int
 } // namespace cwg727
+
+namespace cwg730 { // cwg730: 2.7
+struct A {
+  template <typename> struct S {};
+  template <typename> void f() {}
+};
+
+template <> struct A::S<int> {};
+template <> void A::f<int>() {}
+} // namespace cwg730
+
+namespace cwg743 { // cwg743: 3.1
+#if __cplusplus >= 201103L
+struct S {
+  using T = int;
+};
+
+decltype(S())::T i;
+
+template <typename T>
+using foo = typename decltype(T())::I;
+#endif
+} // namespace cwg743
 
 namespace cwg777 { // cwg777: 3.7
 #if __cplusplus >= 201103L

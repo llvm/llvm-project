@@ -30,7 +30,8 @@ class AnalysisUsage;
 class MachineFunction;
 class Module;
 class raw_ostream;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 class LiveStacks {
@@ -58,7 +59,8 @@ public:
 
   unsigned getNumIntervals() const { return (unsigned)S2IMap.size(); }
 
-  LiveInterval &getOrCreateInterval(int Slot, const TargetRegisterClass *RC);
+  LLVM_ABI LiveInterval &getOrCreateInterval(int Slot,
+                                             const TargetRegisterClass *RC);
 
   LiveInterval &getInterval(int Slot) {
     assert(Slot >= 0 && "Spill slot indice must be >= 0");
@@ -87,13 +89,13 @@ public:
 
   VNInfo::Allocator &getVNInfoAllocator() { return VNInfoAllocator; }
 
-  void releaseMemory();
+  LLVM_ABI void releaseMemory();
   /// init - analysis entry point
-  void init(MachineFunction &MF);
-  void print(raw_ostream &O, const Module *M = nullptr) const;
+  LLVM_ABI void init(MachineFunction &MF);
+  LLVM_ABI void print(raw_ostream &O, const Module *M = nullptr) const;
 };
 
-class LiveStacksWrapperLegacy : public MachineFunctionPass {
+class LLVM_ABI LiveStacksWrapperLegacy : public MachineFunctionPass {
   LiveStacks Impl;
 
 public:
@@ -121,7 +123,8 @@ class LiveStacksAnalysis : public AnalysisInfoMixin<LiveStacksAnalysis> {
 public:
   using Result = LiveStacks;
 
-  LiveStacks run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+  LLVM_ABI LiveStacks run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &);
 };
 
 class LiveStacksPrinterPass
@@ -130,8 +133,8 @@ class LiveStacksPrinterPass
 
 public:
   LiveStacksPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &AM);
 };
 } // end namespace llvm
 

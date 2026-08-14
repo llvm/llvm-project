@@ -165,7 +165,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
     auto raw_data = coff_obj.getData();
     LLDB_SCOPED_TIMERF(
         "Calculating module crc32 %s with size %" PRIu64 " KiB",
-        FileSpec(coff_obj.getFileName()).GetFilename().AsCString(""),
+        FileSpec(coff_obj.getFileName()).GetFilename().str().c_str(),
         static_cast<lldb::offset_t>(raw_data.size()) / 1024);
     gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
   }
@@ -268,7 +268,7 @@ ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
       extractor_sp->SetData(std::move(full_sp));
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
       toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
-      file.GetFilename().GetStringRef()));
+      file.GetFilename()));
 
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
@@ -304,12 +304,12 @@ ModuleSpecList ObjectFilePECOFF::GetModuleSpecifications(
     module_env_option = map->GetValueForKey(name);
     if (!module_env_option) {
       // Step 2: Try with the file name in lowercase.
-      auto name_lower = name.GetStringRef().lower();
+      auto name_lower = name.lower();
       module_env_option = map->GetValueForKey(llvm::StringRef(name_lower));
     }
     if (!module_env_option) {
       // Step 3: Try with the file name with ".debug" suffix stripped.
-      auto name_stripped = name.GetStringRef();
+      auto name_stripped = name;
       if (name_stripped.consume_back_insensitive(".debug")) {
         module_env_option = map->GetValueForKey(name_stripped);
         if (!module_env_option) {
@@ -402,7 +402,7 @@ bool ObjectFilePECOFF::CreateBinary() {
   Log *log = GetLog(LLDBLog::Object);
 
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
-      toStringRef(m_data_nsp->GetData()), m_file.GetFilename().GetStringRef()));
+      toStringRef(m_data_nsp->GetData()), m_file.GetFilename()));
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", m_file);
@@ -995,14 +995,17 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
 
   SectionType section_type =
       llvm::StringSwitch<SectionType>(sect_name)
+          // PE/COFF image-file section names are limited to 8 characters,
+          // so the linker truncates the longer source names. Match both.
+          .Cases({".eh_frame", ".eh_fram"}, eSectionTypeEHFrame)
+          .Cases({".gosymtab", ".gosymta"}, eSectionTypeGoSymtab)
+          .Cases({".lldbsummaries", ".lldbsum"},
+                 lldb::eSectionTypeLLDBTypeSummaries)
+          .Cases({".lldbformatters", ".lldbfor"},
+                 lldb::eSectionTypeLLDBFormatters)
           .Case(".debug", eSectionTypeDebug)
           .Case(".stabstr", eSectionTypeDataCString)
           .Case(".reloc", eSectionTypeOther)
-          // .eh_frame can be truncated to 8 chars.
-          .Cases({".eh_frame", ".eh_fram"}, eSectionTypeEHFrame)
-          .Case(".gosymtab", eSectionTypeGoSymtab)
-          .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
-          .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)
           .Case("swiftast", eSectionTypeSwiftModules)
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)
@@ -1056,7 +1059,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
       ConstString const_sect_name(sect_name);
       SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
 
-      SectionSP section_sp(new Section(
+      SectionSP section_sp = std::make_shared<Section>(
           module_sp,       // Module to which this section belongs
           this,            // Object file to which this section belongs
           idx + 1,         // Section ID is the 1 based section index.
@@ -1071,7 +1074,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
           m_sect_headers[idx]
               .size, // Size in bytes of this section as found in the file
           m_coff_header_opt.sect_alignment, // Section alignment
-          m_sect_headers[idx].flags));      // Flags for this section
+          m_sect_headers[idx].flags);       // Flags for this section
 
       uint32_t permissions = 0;
       if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
@@ -1391,7 +1394,7 @@ void ObjectFilePECOFF::DumpDependentModules(lldb_private::Stream *s) {
     s->PutCString("Dependent Modules\n");
     for (unsigned i = 0; i < num_modules; ++i) {
       auto spec = m_deps_filespec->GetFileSpecAtIndex(i);
-      s->Printf("  %s\n", spec.GetFilename().GetCString());
+      s->Format("  {0}\n", spec.GetFilename());
     }
   }
 }

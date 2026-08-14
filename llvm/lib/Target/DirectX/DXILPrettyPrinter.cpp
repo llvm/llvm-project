@@ -8,16 +8,24 @@
 
 #include "DXILPrettyPrinter.h"
 #include "DirectX.h"
+#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/IR/AssemblyAnnotationWriter.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::dxil;
 
 static StringRef getRCName(dxil::ResourceClass RC) {
   switch (RC) {
@@ -145,7 +153,7 @@ struct FormatResourceDimension
 
   bool HasCounter;
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     dxil::ResourceKind RK = Item.getResourceKind();
     switch (RK) {
     default: {
@@ -185,7 +193,7 @@ struct FormatBindingID
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI),
         RC(RTI.getResourceClass()) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     OS << getRCPrefix(RC).upper() << Item.getBinding().RecordID;
   }
 };
@@ -199,7 +207,7 @@ struct FormatBindingLocation
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI),
         RC(RTI.getResourceClass()) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     const auto &Binding = Item.getBinding();
     OS << getRCPrefix(RC) << Binding.LowerBound;
     if (Binding.Space)
@@ -212,7 +220,7 @@ struct FormatBindingSize
   explicit FormatBindingSize(const dxil::ResourceInfo &RI)
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     uint32_t Size = Item.getBinding().Size;
     if (Size == 0)
       OS << "unbounded";
@@ -251,12 +259,102 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
   OS << ";\n";
 }
 
+namespace {
+class DXILAssemblyAnnotationWriter : public llvm::AssemblyAnnotationWriter {
+private:
+  ModuleSlotTracker &MST;
+  AbstractSlotTrackerStorage &STS;
+  const DXILDebugInfoMap &DI;
+
+public:
+  DXILAssemblyAnnotationWriter(ModuleSlotTracker &MST,
+                               AbstractSlotTrackerStorage &STS,
+                               const DXILDebugInfoMap &DI)
+      : MST(MST), STS(STS), DI(DI) {}
+
+  void emitInstructionAnnot(const Instruction *OrigI,
+                            formatted_raw_ostream &os) override {
+    if (const Instruction *I = &DI.getDXILInstruction(*OrigI); I != OrigI) {
+      os << "; DXIL: to be replaced with: ";
+      I->print(os, MST);
+      os << "\n";
+    }
+  }
+
+  void emitMDNodeAnnot(const MDNode *N, formatted_raw_ostream &os) override {
+    if (const Metadata *NewMD = DI.MDReplace.lookup(N)) {
+      if (const auto *NewN = dyn_cast<MDNode>(NewMD))
+        if (STS.getMetadataSlot(NewN) == -1)
+          STS.createMetadataSlot(NewN);
+
+      os << "; DXIL: ";
+      N->printAsOperand(os, MST);
+      os << ": to be replaced by: ";
+      NewMD->printAsOperand(os, MST);
+      os << "\n";
+      return;
+    }
+
+    if (const Metadata *ExtraMD = DI.MDExtra.lookup(N)) {
+      if (const auto *ExtraN = dyn_cast<MDNode>(ExtraMD))
+        if (STS.getMetadataSlot(ExtraN) == -1)
+          STS.createMetadataSlot(ExtraN);
+
+      os << "; DXIL: ";
+      N->printAsOperand(os, MST);
+      os << ": additional data: ";
+      ExtraMD->printAsOperand(os, MST);
+      os << "\n";
+      return;
+    }
+  }
+};
+} // namespace
+
+static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
+                        DXILResourceTypeMap &DRTM) {
+  formatted_raw_ostream FOS(OS);
+
+  prettyPrintResources(FOS, DRM, DRTM);
+
+  DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
+
+  ModuleSlotTracker MST(&M);
+  AbstractSlotTrackerStorage *STS = nullptr;
+  unsigned NextMetadataSlot = 0;
+  MST.setProcessHook(
+      [&](AbstractSlotTrackerStorage *STS_, const Module *, bool) {
+        STS = STS_;
+        NextMetadataSlot = STS->getNextMetadataSlot();
+      });
+  // Force initialisation. ModuleSlotTracker does not have a dedicated function
+  // for this so trigger it through a dummy print.
+  MDNode::get(M.getContext(), {})->print(llvm::nulls(), MST);
+  assert(STS && "Slot tracker storage should have been initialised");
+
+  DXILAssemblyAnnotationWriter DAAW(MST, *STS, DI);
+  M.print(FOS, &DAAW);
+
+  ModuleSlotTracker::MachineMDNodeListType MDNodes;
+  MST.collectMDNodes(MDNodes, NextMetadataSlot, ~0u);
+  std::sort(MDNodes.begin(), MDNodes.end(),
+            [](const std::pair<unsigned, const MDNode *> &A,
+               const std::pair<unsigned, const MDNode *> &B) {
+              return A.first < B.first;
+            });
+  for (auto [_, MDNode] : MDNodes) {
+    DAAW.emitMDNodeAnnot(MDNode, FOS);
+    MDNode->print(FOS, MST);
+    FOS << "\n";
+  }
+}
+
 PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
-  prettyPrintResources(OS, DRM, DRTM);
-  return PreservedAnalyses::all();
+  prettyPrint(OS, M, DRM, DRTM);
+  return PreservedAnalyses::none();
 }
 
 namespace {
@@ -268,13 +366,10 @@ public:
 
   explicit DXILPrettyPrinterLegacy(raw_ostream &O) : ModulePass(ID), OS(O) {}
 
-  StringRef getPassName() const override {
-    return "DXIL Metadata Pretty Printer";
-  }
+  StringRef getPassName() const override { return "DXIL Pretty Printer"; }
 
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
   }
@@ -283,18 +378,18 @@ public:
 
 char DXILPrettyPrinterLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
-                      "DXIL Metadata Pretty Printer", true, true)
+                      "DXIL Pretty Printer", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
-                    "DXIL Metadata Pretty Printer", true, true)
+                    "DXIL Pretty Printer", true, true)
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
   const DXILResourceMap &DRM =
       getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  prettyPrintResources(OS, DRM, DRTM);
+  prettyPrint(OS, M, DRM, DRTM);
   return false;
 }
 

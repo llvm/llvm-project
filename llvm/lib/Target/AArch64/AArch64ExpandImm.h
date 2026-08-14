@@ -25,8 +25,15 @@ struct ImmInsnModel {
   uint64_t Op2;
 };
 
+struct AddrInsnModel {
+  unsigned Opcode;
+};
+
 void expandMOVImm(uint64_t Imm, unsigned BitSize,
-		  SmallVectorImpl<ImmInsnModel> &Insn);
+                  SmallVectorImpl<ImmInsnModel> &Insn);
+
+void expandMOVAddr(unsigned Opcode, unsigned TargetFlags, bool IsTargetMachO,
+                   SmallVectorImpl<AddrInsnModel> &Insn);
 
 } // end namespace AArch64_IMM
 

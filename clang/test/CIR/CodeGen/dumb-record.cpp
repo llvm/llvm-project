@@ -5,8 +5,8 @@ struct SimpleStruct {
   float b;
 } simple;
 // CHECK: Layout: <CIRecordLayout
-// CHECK: CIR Type:!cir.record<struct "SimpleStruct" {!cir.int<s, 32>, !cir.float}>
-// CHECK: NonVirtualBaseCIRType:!cir.record<struct "SimpleStruct" {!cir.int<s, 32>, !cir.float}>
+// CHECK: CIR Type:!cir.struct<"SimpleStruct" {!cir.int<s, 32>, !cir.float}>
+// CHECK: NonVirtualBaseCIRType:!cir.struct<"SimpleStruct" {!cir.int<s, 32>, !cir.float}>
 // CHECK: IsZeroInitializable:1
 // CHECK:   BitFields:[
 // CHECK: ]>
@@ -15,8 +15,8 @@ struct Empty {
 } empty;
 
 // CHECK: Layout: <CIRecordLayout
-// CHECK:  CIR Type:!cir.record<struct "Empty" padded {!cir.int<u, 8>}>
-// CHECK:  NonVirtualBaseCIRType:!cir.record<struct "Empty" padded {!cir.int<u, 8>}>
+// CHECK:  CIR Type:!cir.struct<"Empty" padded {!cir.int<u, 8>}>
+// CHECK:  NonVirtualBaseCIRType:!cir.struct<"Empty" padded {!cir.int<u, 8>}>
 // CHECK:  IsZeroInitializable:1
 // CHECK:  BitFields:[
 // CHECK:  ]>
@@ -30,8 +30,8 @@ struct BitfieldsInOrder {
 } bitfield_order;
 
 // CHECK: Layout: <CIRecordLayout
-// CHECK:  CIR Type:!cir.record<struct "BitfieldsInOrder" {!cir.int<s, 8>, !cir.int<u, 8>, !cir.int<u, 32>}>
-// CHECK:  NonVirtualBaseCIRType:!cir.record<struct "BitfieldsInOrder" {!cir.int<s, 8>, !cir.int<u, 8>, !cir.int<u, 32>}>
+// CHECK:  CIR Type:!cir.struct<"BitfieldsInOrder" {!cir.int<s, 8>, !cir.int<u, 8>, !cir.int<u, 32>}>
+// CHECK:  NonVirtualBaseCIRType:!cir.struct<"BitfieldsInOrder" {!cir.int<s, 8>, !cir.int<u, 8>, !cir.int<u, 32>}>
 // CHECK:  IsZeroInitializable:1
 // CHECK:  BitFields:[
 // CHECK-NEXT:   <CIRBitFieldInfo name:bit offset:0 size:8 isSigned:0 storageSize:8 storageOffset:1 volatileOffset:0 volatileStorageSize:0 volatileStorageOffset:0>

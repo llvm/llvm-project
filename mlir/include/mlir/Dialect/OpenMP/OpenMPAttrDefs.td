@@ -80,6 +80,16 @@ def TaskDependArrayAttr
 }
 
 //===----------------------------------------------------------------------===//
+// InteropTypeArrayAttr
+//===----------------------------------------------------------------------===//
+
+def InteropTypeArrayAttr
+    : TypedArrayAttrBase<InteropTypeAttr,
+                         InteropTypeAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
 // VersionAttr
 //===----------------------------------------------------------------------===//
 
@@ -87,6 +97,17 @@ def VersionAttr : OpenMP_Attr<"Version", "version"> {
   let parameters = (ins
     "uint32_t":$version
   );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// IntegerWrapAroundAttr
+//===----------------------------------------------------------------------===//
+
+def IntegerWrapAroundAttr
+    : OpenMP_Attr<"IntegerWrapAround", "integer_wrap_around"> {
+  let parameters = (ins "bool":$integer_wrap_around);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }
