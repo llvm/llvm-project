@@ -7,7 +7,7 @@
 ; RUN: inter-translate %t.mlir --xemachine-to-ged -o %t.ged
 ; RUN: inter-ged-dump %t.ged | FileCheck %s --check-prefix=GED
 ; RUN: inter-translate %t.mlir --xemachine-to-zebin -o %t.bin
-; RUN: inter-runner %t.bin scratch_spill 128 inout:1 in:10 in:100 in:1000 | %python %S/../../verify.py 'i*1111'
+; RUN: inter-runner %t.bin scratch_spill 128 inout:1 in:10 in:100 in:1000 | %python %S/../../verify.py 'i*1118'
 
 ; CHECK: xemachine.scratch_size
 ; CHECK: xemachine.scratch_access
@@ -25,15 +25,18 @@ define spir_kernel void @scratch_spill(ptr addrspace(1) %out,
   %gid = call spir_func i64 @_Z13get_global_idj(i32 0)
   %out.ptr = getelementptr i32, ptr addrspace(1) %out, i64 %gid
   %out.value = load i32, ptr addrspace(1) %out.ptr
+  %biased = mul i32 %out.value, 3
+  %weighted = mul i32 %out.value, 5
   %b.ptr = getelementptr i32, ptr addrspace(1) %b, i64 %gid
   %b.value = load i32, ptr addrspace(1) %b.ptr
   %c.ptr = getelementptr i32, ptr addrspace(1) %c, i64 %gid
   %c.value = load i32, ptr addrspace(1) %c.ptr
   %d.ptr = getelementptr i32, ptr addrspace(1) %d, i64 %gid
   %d.value = load i32, ptr addrspace(1) %d.ptr
-  %ab = add i32 %out.value, %b.value
-  %cd = add i32 %c.value, %d.value
-  %sum = add i32 %ab, %cd
+  %bc = add i32 %b.value, %c.value
+  %bcd = add i32 %bc, %d.value
+  %bias = add i32 %biased, %weighted
+  %sum = add i32 %bias, %bcd
   store i32 %sum, ptr addrspace(1) %out.ptr
   ret void
 }

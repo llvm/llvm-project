@@ -11,7 +11,7 @@ module attributes {transform.with_named_sequence} {
       %root: !transform.any_op {transform.readonly}) {
     %funcs = transform.collect_matching @match_func in %root
         : (!transform.any_op) -> !transform.any_op
-    %reserved = transform.param.constant 97 : i32 -> !transform.param<i32>
+    %reserved = transform.param.constant 113 : i32 -> !transform.param<i32>
     transform.annotate %funcs "xemachine.reserved_grf_count" = %reserved
         : !transform.any_op, !transform.param<i32>
     transform.yield

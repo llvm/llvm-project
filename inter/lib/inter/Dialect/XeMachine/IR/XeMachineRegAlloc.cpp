@@ -482,6 +482,13 @@ static bool isRematerializable(Operation *operation) {
   return isa<MovOp, AddOp, SubOp, ShlOp, AndOp, OrOp, Add3Op>(operation);
 }
 
+static bool hasUseAtOrAfter(Value value, const AllocationState &state,
+                            int64_t position) {
+  return llvm::any_of(value.getUses(), [&](OpOperand &use) {
+    return state.positions.lookup(use.getOwner()) >= position;
+  });
+}
+
 static bool rematerialize(AllocationState &state,
                           const AllocationFailure &failure) {
   AllocationComponent *candidate = nullptr;
@@ -491,6 +498,8 @@ static bool rematerialize(AllocationState &state,
       continue;
     Value value = component.values.front();
     if (!isRematerializable(value.getDefiningOp()))
+      continue;
+    if (!hasUseAtOrAfter(value, state, failure.position))
       continue;
     if (!candidate || candidate->end < component.end)
       candidate = &component;
@@ -653,6 +662,8 @@ static bool spillToScratch(func::FuncOp function, AllocationState &state,
         definition->hasAttr(kScratchSetupAttr) || isa<SendOp>(definition) ||
         (type.getWidthDwords() != 16 && type.getWidthDwords() != 32))
       continue;
+    if (!hasUseAtOrAfter(value, state, failure.position))
+      continue;
     if (!candidate || candidate->end < component.end)
       candidate = &component;
   }
@@ -667,8 +678,7 @@ static bool spillToScratch(func::FuncOp function, AllocationState &state,
     if (state.positions.lookup(use.getOwner()) >= failure.position)
       uses.push_back(&use);
   }
-  if (uses.empty())
-    return false;
+  assert(!uses.empty() && "scratch candidate must have a rewritable use");
 
   int64_t slot = llvm::alignTo(nextScratchOffset, int64_t{64});
   nextScratchOffset = slot + type.getWidthDwords() * 4;

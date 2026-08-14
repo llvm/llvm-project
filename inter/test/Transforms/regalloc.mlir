@@ -29,11 +29,13 @@ module {
 // -----
 
 module {
-  func.func @scratch() attributes {xemachine.grf_count = 5 : i32, xemachine.reserved_grf_count = 0 : i32, xemachine.scratch_size = 128 : i64} {
+  func.func @scratch() attributes {xemachine.grf_count = 6 : i32, xemachine.reserved_grf_count = 0 : i32, xemachine.scratch_size = 128 : i64} {
     %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
     %root = xemachine.token
-    %wide, %loaded = xemachine.load_slm %r0 dep %root {execSize = 32 : i32} : !xemachine.reg<16, 0> -> (!xemachine.reg<32, -1>, !xemachine.mem.token)
-    %extra, %loaded2 = xemachine.load_slm %r0 dep %root {execSize = 1 : i32} : !xemachine.reg<16, 0> -> (!xemachine.reg<16, -1>, !xemachine.mem.token)
+    %zero = xemachine.imm 0 : i32
+    %address = xemachine.mov %zero {execSize = 1 : i32, noMask, xemachine.rematerialized} : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+    %wide, %loaded = xemachine.load_slm %address dep %root {execSize = 32 : i32} : !xemachine.reg<16, -1> -> (!xemachine.reg<32, -1>, !xemachine.mem.token)
+    %extra, %loaded2 = xemachine.load_slm %address dep %root {execSize = 1 : i32} : !xemachine.reg<16, -1> -> (!xemachine.reg<16, -1>, !xemachine.mem.token)
     %c1 = xemachine.imm 1 : i32
     %a = xemachine.mov %c1 {execSize = 1 : i32, noMask, xemachine.rematerialized} : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
     %c2 = xemachine.imm 2 : i32
@@ -41,6 +43,8 @@ module {
     %d = xemachine.add %a, %b {execSize = 1 : i32, noMask} : (!xemachine.reg<16, -1>, !xemachine.reg<16, -1>, i32) -> !xemachine.reg<16, -1>
     %e = xemachine.add %d, %extra {execSize = 1 : i32, noMask} : (!xemachine.reg<16, -1>, !xemachine.reg<16, -1>, i32) -> !xemachine.reg<16, -1>
     %f = xemachine.add %e, %wide {execSize = 1 : i32, noMask} : (!xemachine.reg<16, -1>, !xemachine.reg<32, -1>, i32) -> !xemachine.reg<16, -1>
+    %joined = xemachine.token_join %loaded, %loaded2 : !xemachine.mem.token, !xemachine.mem.token
+    %stored = xemachine.store_slm %r0 data %f dep %joined {execSize = 1 : i32} : (!xemachine.reg<16, 0>, !xemachine.reg<16, -1>) -> !xemachine.mem.token
     return
   }
 }
