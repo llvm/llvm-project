@@ -3,13 +3,13 @@
 // TODO: use a builtin version of printf
 UNSUPPORTED: system-zos
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\x0B\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t.profraw
 // We should fail on this because the data buffer (profraw file) is not long
 // enough to hold this binary IDs size. NOTE that this (combined with the 8-byte
 // alignment requirement for binary IDs size) will ensure we can at least read one
 // 8-byte size if the binary IDs are provided.
 // BinaryIdSize - set to 8 bytes
-RUN: printf '\x08\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
