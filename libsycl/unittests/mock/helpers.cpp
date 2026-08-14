@@ -335,7 +335,7 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(Type, OL_ALLOC_TYPE_HOST);
         EXPECT_GT(Size, 0);
         EXPECT_NE(AllocationOut, nullptr);
-        *AllocationOut = std::malloc(Size);
+        *AllocationOut = mock::createDummyHandle<void *>(Size);
         return OL_SUCCESS;
       });
 
@@ -345,13 +345,13 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(Device, nullptr);
         EXPECT_GT(Size, 0);
         EXPECT_NE(AllocationOut, nullptr);
-        *AllocationOut = std::malloc(Size);
+        *AllocationOut = mock::createDummyHandle<void *>(Size);
         return OL_SUCCESS;
       });
 
   ON_CALL(*this, olMemFree).WillByDefault([this](void *Address) -> ol_result_t {
     EXPECT_NE(Address, nullptr);
-    std::free(Address);
+    mock::releaseDummyHandle(Address);
     return OL_SUCCESS;
   });
 }
