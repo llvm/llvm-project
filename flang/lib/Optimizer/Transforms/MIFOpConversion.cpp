@@ -434,6 +434,35 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
   return fir::AddrOfOp::create(builder, loc, funcType, symbolRef);
 }
 
+mlir::Value getTeam(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Type resultType, mlir::Value level) {
+  mlir::Type refTy = builder.getRefType(builder.getNoneType());
+  mlir::Type lvlTy = builder.getRefType(builder.getI32Type());
+  mlir::FunctionType ftype = mlir::FunctionType::get(builder.getContext(),
+                                                     /*inputs*/ {lvlTy, refTy},
+                                                     /*results*/ {});
+  mlir::func::FuncOp funcOp =
+      builder.createFunction(loc, getPRIFProcName("get_team"), ftype);
+
+  if (!level)
+    level = fir::AbsentOp::create(builder, loc, lvlTy);
+  else {
+    mlir::Value cst = level;
+    mlir::Type i32Ty = builder.getI32Type();
+    level = builder.createTemporary(loc, i32Ty);
+    if (cst.getType() != i32Ty)
+      cst = builder.createConvert(loc, i32Ty, cst);
+    fir::StoreOp::create(builder, loc, cst, level);
+  }
+  mlir::Type baseTy = fir::unwrapRefType(resultType);
+  mlir::Value team = builder.createTemporary(loc, baseTy);
+
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, ftype, level, team);
+  fir::CallOp::create(builder, loc, funcOp, args);
+  return team;
+}
+
 // Generates the image index relative to the initial team, regardless of which
 // team is selected. Generates a call to the `prif_initial_team_index` function
 // (analogous to `prif_image_index`) if `cosubcripts` contains at least one
@@ -442,29 +471,36 @@ mlir::Value genTerminationOperationWrapper(fir::FirOpBuilder &builder,
 getInitialTeamIndex(fir::FirOpBuilder &builder, mlir::Location loc,
                     mlir::Value coarrayHandle,
                     llvm::SmallVector<mlir::Value> cosubscripts) {
-  mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Type refTy = builder.getRefType(builder.getNoneType());
   mlir::Type i32Ty = builder.getI32Type();
   mlir::Type i64Ty = builder.getI64Type();
   mlir::Type boxArrTy = genBoxedSequenceType(i64Ty);
-  mlir::Value index = builder.createTemporary(loc, i32Ty);
 
   // If there are no subscripts, the current image index is used.
   if (cosubscripts.size() == 0) {
-    mlir::Value res = builder.createTemporary(loc, i32Ty);
     // In iso_fortran_env.f90, INITIAL_TEAM is -2
     mlir::Value initialTeam =
         builder.createIntegerConstant(loc, builder.getI32Type(), -2);
-    mlir::Value team = mif::GetTeamOp::create(
+    mlir::Value team = getTeam(
         builder, loc, builder.getRefType(builder.getNoneType()), initialTeam);
-    mlir::Value thisImage = mif::ThisImageOp::create(builder, loc, team);
-    fir::StoreOp::create(builder, loc, thisImage, res);
-    return res;
+    mlir::Value thisImage = builder.createTemporary(loc, i32Ty);
+    mlir::FunctionType ftype = mlir::FunctionType::get(
+        builder.getContext(),
+        /*inputs*/ {refTy, builder.getRefType(i32Ty)}, /*results*/ {});
+    mlir::func::FuncOp funcOp = builder.createFunction(
+        loc, getPRIFProcName("this_image_no_coarray"), ftype);
+
+    llvm::SmallVector<mlir::Value> args =
+        fir::runtime::createArguments(builder, loc, ftype, team, thisImage);
+    fir::CallOp::create(builder, loc, funcOp, args);
+    return thisImage;
   }
 
+  mlir::Value index = builder.createTemporary(loc, i32Ty);
   mlir::FunctionType ftype = mlir::FunctionType::get(
       builder.getContext(),
       /*inputs*/
-      {boxTy, boxArrTy, builder.getRefType(i32Ty), builder.getRefType(i32Ty)},
+      {refTy, boxArrTy, builder.getRefType(i32Ty), builder.getRefType(i32Ty)},
       /*results*/ {});
   mlir::func::FuncOp funcOp =
       builder.createFunction(loc, getPRIFProcName("initial_team_index"), ftype);
@@ -1149,34 +1185,8 @@ struct MIFGetTeamOpConversion : public mlir::OpRewritePattern<mif::GetTeamOp> {
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    mlir::Type refTy = builder.getRefType(builder.getNoneType());
-    mlir::Type lvlTy = builder.getRefType(builder.getI32Type());
-    mlir::FunctionType ftype =
-        mlir::FunctionType::get(builder.getContext(),
-                                /*inputs*/ {lvlTy, refTy},
-                                /*results*/ {});
-    mlir::func::FuncOp funcOp =
-        builder.createFunction(loc, getPRIFProcName("get_team"), ftype);
-
-    mlir::Value level = op.getLevel();
-    if (!level)
-      level = fir::AbsentOp::create(builder, loc, lvlTy);
-    else {
-      mlir::Value cst = op.getLevel();
-      mlir::Type i32Ty = builder.getI32Type();
-      level = builder.createTemporary(loc, i32Ty);
-      if (cst.getType() != i32Ty)
-        cst = builder.createConvert(loc, i32Ty, cst);
-      fir::StoreOp::create(builder, loc, cst, level);
-    }
-    mlir::Type resultType = op.getResult().getType();
-    mlir::Type baseTy = fir::unwrapRefType(resultType);
-    mlir::Value team = builder.createTemporary(loc, baseTy);
-
-    llvm::SmallVector<mlir::Value> args =
-        fir::runtime::createArguments(builder, loc, ftype, level, team);
-    fir::CallOp::create(builder, loc, funcOp, args);
-
+    mlir::Value team =
+        getTeam(builder, loc, op.getResult().getType(), op.getLevel());
     rewriter.replaceOp(op, team);
     return mlir::success();
   }
