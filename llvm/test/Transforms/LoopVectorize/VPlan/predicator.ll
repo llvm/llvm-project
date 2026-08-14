@@ -950,7 +950,11 @@ exit:
   ret void
 }
 
-; @outermost_uniform_branch
+define void @outermost_uniform_branch(ptr %a, i1 %u0) {
+entry:
+  br label %bb0
+
+bb0:
 ;          bb0 (u)
 ;         /    \
 ;       bb1 (v) \
@@ -960,10 +964,41 @@ exit:
 ;      bb3 [phi] |
 ;          \    /
 ;           bb4 [phi]
-;
 ; bb0's uniform branch can be easily preserved.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb4 ]
+  %add0 = add i64 %iv, 0
+  br i1 %u0, label %bb1, label %bb4
 
-; @outermost_uniform_branch_more_blocks
+bb1:
+  %add1 = add i64 %iv, 1
+  %v1 = icmp sle i64 %iv, 1
+  br i1 %v1, label %bb2, label %bb3
+
+bb2:
+  %add2 = add i64 %iv, 2
+  br label %bb3
+
+bb3:
+  %phi3 = phi i64 [ %add1, %bb1 ], [ %add2, %bb2 ]
+  %add3 = add i64 %phi3, 3
+  br label %bb4
+
+bb4:
+  %phi4 = phi i64 [ %add3, %bb3 ], [ %add0, %bb0 ]
+  store i64 %phi4, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @outermost_uniform_branch_more_blocks(ptr %a, i1 %u0) {
+entry:
+  br label %bb0
+
+bb0:
 ;          bb0 (u)
 ;         /      \
 ;       bb2 (v)  bb1
@@ -973,11 +1008,48 @@ exit:
 ;      bb5 [phi]  |
 ;          \     /
 ;           bb6 [phi]
-;
 ; Similar to above, but with extra blocks on some edges. Probably doesn't
 ; require any extra handling but nice to test explicitly.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb6 ]
+  br i1 %u0, label %bb2, label %bb1
 
-; @uniform_branch_after_varying_branch
+bb1:
+  %add1 = add i64 %iv, 1
+  br label %bb6
+
+bb2:
+  %v2 = icmp sle i64 %iv, 2
+  br i1 %v2, label %bb4, label %bb3
+
+bb3:
+  %add3 = add i64 %iv, 3
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add3, %bb3 ], [ %add4, %bb4 ]
+  %add5 = add i64 %phi5, 5
+  br label %bb6
+
+bb6:
+  %phi6 = phi i64 [ %add1, %bb1 ], [ %add5, %bb5 ]
+  store i64 %phi6, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_after_varying_branch(ptr %a, i1 %u1) {
+entry:
+  br label %bb0
+
+bb0:
 ;          bb0 (v)
 ;          /    \
 ;        bb4   bb1 (u)
@@ -987,8 +1059,43 @@ exit:
 ;         |   bb3 [phi]
 ;          \   /
 ;          bb5 [phi]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb4, label %bb1
 
-; @uniform_branch_after_varying_branch_more_blocks
+bb1:
+  %add1 = add i64 %iv, 1
+  br i1 %u1, label %bb2, label %bb3
+
+bb2:
+  %add2 = add i64 %iv, 2
+  br label %bb3
+
+bb3:
+  %phi3 = phi i64 [ %add1, %bb1 ], [ %add2, %bb2 ]
+  %add3 = add i64 %phi3, 3
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add3, %bb3 ], [ %add4, %bb4 ]
+  store i64 %phi5, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_after_varying_branch_more_blocks(ptr %a, i1 %u1) {
+entry:
+  br label %bb0
+
+bb0:
 ;         bb0 (v)
 ;         /     \
 ;       bb5    bb1 (u)
@@ -998,11 +1105,48 @@ exit:
 ;        |    bb4 [phi]
 ;         \   /
 ;          bb6 [phi]
-;
 ; Similar to above, but with extra blocks on some edges. Probably doesn't
 ; require any extra handling but nice to test explicitly.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb6 ]
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb5, label %bb1
 
-; @uniform_branch_after_varying_branch_more_blocks_mirrored
+bb1:
+  br i1 %u1, label %bb3, label %bb2
+
+bb2:
+  %add2 = add i64 %iv, 2
+  br label %bb4
+
+bb3:
+  %add3 = add i64 %iv, 3
+  br label %bb4
+
+bb4:
+  %phi4 = phi i64 [ %add2, %bb2 ], [ %add3, %bb3 ]
+  %add4 = add i64 %phi4, 4
+  br label %bb6
+
+bb5:
+  %add5 = add i64 %iv, 5
+  br label %bb6
+
+bb6:
+  %phi6 = phi i64 [ %add4, %bb4 ], [ %add5, %bb5 ]
+  store i64 %phi6, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_after_varying_branch_more_blocks_mirrored(ptr %a, i1 %u2) {
+entry:
+  br label %bb0
+
+bb0:
 ;          bb0 (v)
 ;          /   \
 ;      bb2 (u)  bb1
@@ -1012,11 +1156,48 @@ exit:
 ;      bb5 [phi] |
 ;          \    /
 ;           bb6 [phi]
-;
 ; Mirror of the above test so that "(u)" block would be processed before/after
 ; the other "(v)" destination by the RPOT.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb6 ]
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb2, label %bb1
 
-; @uniform_branch_on_masked_def
+bb1:
+  %add1 = add i64 %iv, 1
+  br label %bb6
+
+bb2:
+  br i1 %u2, label %bb4, label %bb3
+
+bb3:
+  %add3 = add i64 %iv, 3
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add3, %bb3 ], [ %add4, %bb4 ]
+  %add5 = add i64 %phi5, 5
+  br label %bb6
+
+bb6:
+  %phi6 = phi i64 [ %add1, %bb1 ], [ %add5, %bb5 ]
+  store i64 %phi6, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
+entry:
+  br label %bb0
+
+bb0:
 ;          bb0 (v)
 ;           /   \
 ;          |    bb1 (br i1 (load i1 %uni.ptr))
@@ -1026,17 +1207,50 @@ exit:
 ;          |    bb4
 ;           \  /
 ;          bb5 [phi]
-;
 ; bb1's condition is uniform, but its value is loaded only along one path of
 ; bb0's varying branch. It cannot be preserved trivially, because some the load
 ; may never be executed.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %add0 = add i64 %iv, 0
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb5, label %bb1
 
+bb1:
+  %cu1 = load i1, ptr %uni.ptr1
+  br i1 %cu1, label %bb3, label %bb2
 
+bb2:
+  %add2 = add i64 %iv, 2
+  br label %bb4
+
+bb3:
+  %add3 = add i64 %iv, 3
+  br label %bb4
+
+bb4:
+  %phi4 = phi i64 [ %add2, %bb2 ], [ %add3, %bb3 ]
+  %add4 = add i64 %phi4, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add0, %bb0 ], [ %add4, %bb4 ]
+  store i64 %phi5, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_unstructured_merge1(ptr %a, i1 %u0) {
+entry:
+  br label %bb0
+
+bb0:
 ; All @uniform_branch_unstructured_merge[0-4] below have the same structure of uniform
 ; control flow merging into the middle of the varying diamond, but "covering"
 ; different potential RPOT traversals.
-
-; @uniform_branch_unstructured_merge1
 ;          bb0 (u)
 ;         /       \
 ;      bb2 (v)   bb1
@@ -1044,9 +1258,43 @@ exit:
 ;     bb4   bb3 [phi]
 ;       \   /
 ;      bb5 [phi]
-;
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  br i1 %u0, label %bb2, label %bb1
 
-; @uniform_branch_unstructured_merge2
+bb1:
+  %add1 = add i64 %iv, 1
+  br label %bb3
+
+bb2:
+  %add2 = add i64 %iv, 2
+  %v2 = icmp sle i64 %iv, 2
+  br i1 %v2, label %bb4, label %bb3
+
+bb3:
+  %phi3 = phi i64 [ %add1, %bb1 ], [ %add2, %bb2 ]
+  %add3 = add i64 %phi3, 3
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add3, %bb3 ], [ %add4, %bb4 ]
+  store i64 %phi5, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_unstructured_merge2(ptr %a, i1 %u0) {
+entry:
+  br label %bb0
+
+bb0:
 ;          bb0 (u)
 ;         /       \
 ;      bb2 (v)   bb1
@@ -1056,9 +1304,43 @@ exit:
 ;  bb4 [phi]  bb3
 ;       \    /
 ;      bb5 [phi]
-;
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  br i1 %u0, label %bb2, label %bb1
 
-; @uniform_branch_unstructured_merge3
+bb1:
+  %add1 = add i64 %iv, 1
+  br label %bb4
+
+bb2:
+  %add2 = add i64 %iv, 2
+  %v2 = icmp sle i64 %iv, 2
+  br i1 %v2, label %bb4, label %bb3
+
+bb3:
+  %add3 = add i64 %iv, 3
+  br label %bb5
+
+bb4:
+  %phi4 = phi i64 [ %add1, %bb1 ], [ %add2, %bb2 ]
+  %add4 = add i64 %phi4, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add3, %bb3 ], [ %add4, %bb4 ]
+  store i64 %phi5, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_unstructured_merge3(ptr %a, i1 %u0) {
+entry:
+  br label %bb0
+
+bb0:
 ;         bb0 (u)
 ;         /  \
 ;      bb3   bb1 (v)
@@ -1066,9 +1348,43 @@ exit:
 ;        bb4 [phi] bb2
 ;           \      /
 ;          bb5 [phi]
-;
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  br i1 %u0, label %bb3, label %bb1
 
-; @uniform_branch_unstructured_merge4
+bb1:
+  %add1 = add i64 %iv, 1
+  %v1 = icmp sle i64 %iv, 1
+  br i1 %v1, label %bb4, label %bb2
+
+bb2:
+  %add2 = add i64 %iv, 2
+  br label %bb5
+
+bb3:
+  %add3 = add i64 %iv, 3
+  br label %bb4
+
+bb4:
+  %phi4 = phi i64 [ %add1, %bb1 ], [ %add3, %bb3 ]
+  %add4 = add i64 %phi4, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add2, %bb2 ], [ %add4, %bb4 ]
+  store i64 %phi5, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_unstructured_merge4(ptr %a, i1 %u0) {
+entry:
+  br label %bb0
+
+bb0:
 ;         bb0 (u)
 ;         /  \
 ;      bb3   bb1 (v)
@@ -1078,10 +1394,43 @@ exit:
 ;        bb4      bb2 [phi]
 ;           \      /
 ;          bb5 [phi]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  br i1 %u0, label %bb3, label %bb1
 
+bb1:
+  %add1 = add i64 %iv, 1
+  %v1 = icmp sle i64 %iv, 1
+  br i1 %v1, label %bb4, label %bb2
 
+bb2:
+  %phi2 = phi i64 [ %add1, %bb1 ], [ %add3, %bb3 ]
+  %add2 = add i64 %phi2, 2
+  br label %bb5
 
-; @uniform_branch_shared_join_with_varying
+bb3:
+  %add3 = add i64 %iv, 3
+  br label %bb2
+
+bb4:
+  %add4 = add i64 %iv, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add2, %bb2 ], [ %add4, %bb4 ]
+  store i64 %phi5, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @uniform_branch_shared_join_with_varying(ptr %a, i1 %u0) {
+entry:
+  br label %bb0
+
+bb0:
 ;          bb0 (u)
 ;         /     \
 ;      bb2 (v)   bb1
@@ -1089,10 +1438,39 @@ exit:
 ;     bb3 |     /
 ;       \ |    /
 ;      bb4 [phi]
-;
 ; Theoretically can be done, but would require a combination of a blend and a phi.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb4 ]
+  br i1 %u0, label %bb2, label %bb1
 
-;    @unstructured_uniform_only
+bb1:
+  %add1 = add i64 %iv, 1
+  br label %bb4
+
+bb2:
+  %add2 = add i64 %iv, 2
+  %v2 = icmp sle i64 %iv, 2
+  br i1 %v2, label %bb3, label %bb4
+
+bb3:
+  %add3 = add i64 %iv, 3
+  br label %bb4
+
+bb4:
+  %phi4 = phi i64 [ %add1, %bb1 ], [ %add2, %bb2 ], [ %add3, %bb3 ]
+  store i64 %phi4, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @unstructured_uniform_only(ptr %a, i1 %u0, i1 %u2) {
+entry:
+  br label %bb0
+
+bb0:
 ;             bb0 (u)
 ;            /       \
 ;         bb2 (u)   bb1
@@ -1100,10 +1478,43 @@ exit:
 ;        bb4   bb3 [phi]
 ;          \   /
 ;         bb5 [phi]
-;
 ; Triviallly preservable, but detection might not be easy.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  br i1 %u0, label %bb2, label %bb1
 
-; @unstructured_uniform_only_sese_region
+bb1:
+  %add1 = add i64 %iv, 1
+  br label %bb3
+
+bb2:
+  %add2 = add i64 %iv, 2
+  br i1 %u2, label %bb4, label %bb3
+
+bb3:
+  %phi3 = phi i64 [ %add1, %bb1 ], [ %add2, %bb2 ]
+  %add3 = add i64 %phi3, 3
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  br label %bb5
+
+bb5:
+  %phi5 = phi i64 [ %add3, %bb3 ], [ %add4, %bb4 ]
+  store i64 %phi5, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @unstructured_uniform_only_sese_region(ptr %a, i1 %u1, i1 %u3) {
+entry:
+  br label %bb0
+
+bb0:
 ;             bb0 (v)
 ;            /       \
 ;         bb6       bb1 (u)
@@ -1116,4 +1527,46 @@ exit:
 ;           \       /
 ;            \    /
 ;             bb8 [phi]
-;
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb8 ]
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb6, label %bb1
+
+bb1:
+  br i1 %u1, label %bb3, label %bb2
+
+bb2:
+  %add2 = add i64 %iv, 2
+  br label %bb4
+
+bb3:
+  %add3 = add i64 %iv, 3
+  br i1 %u3, label %bb5, label %bb4
+
+bb4:
+  %phi4 = phi i64 [ %add2, %bb2 ], [ %add3, %bb3 ]
+  %add4 = add i64 %phi4, 4
+  br label %bb7
+
+bb5:
+  %add5 = add i64 %iv, 5
+  br label %bb7
+
+bb6:
+  %add6 = add i64 %iv, 6
+  br label %bb8
+
+bb7:
+  %phi7 = phi i64 [ %add4, %bb4 ], [ %add5, %bb5 ]
+  %add7 = add i64 %phi7, 7
+  br label %bb8
+
+bb8:
+  %phi8 = phi i64 [ %add6, %bb6 ], [ %add7, %bb7 ]
+  store i64 %phi8, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
