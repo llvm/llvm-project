@@ -33,13 +33,48 @@ static constexpr unsigned MaxSignatureCols = 4;
 static constexpr unsigned MaxClipCullRows = 2;
 static constexpr unsigned MaxGeometryStreams = 4;
 
+/// Denotes the element that could not be packed and why, so that the caller
+/// can report a diagnostic that points at the offending element.
+class SignaturePackingError : public ErrorInfo<SignaturePackingError> {
+public:
+  /// Denotes why an element could not be packed into its signature.
+  enum ErrorKind {
+    /// The element does not fit in the 32 rows of the signature.
+    SignatureOverflow,
+    /// The element does not fit in the two rows that are dedicated to clip and
+    /// cull distances.
+    ClipCullOverflow,
+  };
+
+  LLVM_ABI static char ID;
+
+  SignaturePackingError(ErrorKind Kind, unsigned ElementIndex)
+      : Kind(Kind), ElementIndex(ElementIndex) {}
+
+  ErrorKind getErrorKind() const { return Kind; }
+
+  /// Index into the Elements that were being packed.
+  unsigned getElementIndex() const { return ElementIndex; }
+
+  LLVM_ABI void log(raw_ostream &OS) const override;
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+private:
+  ErrorKind Kind;
+  unsigned ElementIndex;
+};
+
 /// Iterates through Elements that belong to the signature described by
 /// ShaderStage and SignatureKind and 'packs' each element into 32 registers
 /// with 4 components by updating their StartRow and StartCol in place. An
 /// element is left unallocated if it is not part of the signature for the
 /// signature type.
 ///
-/// Returns an error if all eligible elements cannot all be placed.
+/// Returns a SignaturePackingError that denotes the first element that cannot
+/// be placed, or success if all eligible elements were placed.
 ///
 /// With the exception of some special cases listed below, the packing
 /// algorithm can be visualised as placing rectangles onto a grid of 32 rows and

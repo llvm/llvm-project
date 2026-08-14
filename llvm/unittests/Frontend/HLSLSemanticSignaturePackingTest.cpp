@@ -21,11 +21,6 @@ namespace {
 
 class HLSLSemanticSignaturePackingTest : public testing::Test {
 protected:
-  static constexpr StringRef SignatureOverflowMessage =
-      "signature elements do not fit in 32 rows";
-  static constexpr StringRef ClipCullOverflowMessage =
-      "clip/cull elements do not fit in two rows";
-
   struct ElementConfig {
     dxbc::PSV::SemanticKind SemanticKind;
     uint32_t Rows;
@@ -114,9 +109,16 @@ protected:
     }
   }
 
-  void expectPackingError(const TestConfig &Config, StringRef Message) {
+  void expectPackingError(const TestConfig &Config,
+                          SignaturePackingError::ErrorKind ExpectedKind,
+                          unsigned ExpectedElementIndex) {
     SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
-    EXPECT_THAT_ERROR(pack(Elements, Config), FailedWithMessage(Message));
+    Error E = pack(Elements, Config);
+    ASSERT_TRUE(E.isA<SignaturePackingError>());
+    handleAllErrors(std::move(E), [&](const SignaturePackingError &PackingErr) {
+      EXPECT_EQ(PackingErr.getErrorKind(), ExpectedKind);
+      EXPECT_EQ(PackingErr.getElementIndex(), ExpectedElementIndex);
+    });
   }
 };
 
@@ -1080,7 +1082,9 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsSignatureOverflow) {
                                /*Cols=*/MaxSignatureCols,
                                dxil::ElementType::F32,
                                dxbc::PSV::InterpolationMode::Linear});
-  expectPackingError(Config, SignatureOverflowMessage);
+  // The last element is the one that no longer fits.
+  expectPackingError(Config, SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/MaxSignatureRows);
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, RejectsOverflowFromComponentOrdering) {
@@ -1110,7 +1114,9 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsOverflowFromComponentOrdering) {
     Config.Elements.push_back({dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
                                /*Cols=*/3, dxil::ElementType::I32,
                                dxbc::PSV::InterpolationMode::Constant});
-  expectPackingError(Config, SignatureOverflowMessage);
+  // The last element is the one that no longer fits.
+  expectPackingError(Config, SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/MaxSignatureRows);
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, RejectsClipCullOverflow) {
@@ -1126,7 +1132,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsClipCullOverflow) {
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
        {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
-  expectPackingError(Config, ClipCullOverflowMessage);
+  expectPackingError(Config, SignaturePackingError::ClipCullOverflow,
+                     /*ExpectedElementIndex=*/2);
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, RejectsUnpackableClipCull) {
@@ -1142,7 +1149,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsUnpackableClipCull) {
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
        {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/2,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
-  expectPackingError(Config, ClipCullOverflowMessage);
+  expectPackingError(Config, SignaturePackingError::ClipCullOverflow,
+                     /*ExpectedElementIndex=*/2);
 }
 
 } // namespace

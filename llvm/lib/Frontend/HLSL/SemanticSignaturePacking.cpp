@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/bit.h"
 #include <algorithm>
@@ -21,10 +22,19 @@
 using namespace llvm;
 using namespace llvm::hlsl;
 
-static constexpr StringLiteral SignatureOverflowMessage =
-    "signature elements do not fit in 32 rows";
-static constexpr StringLiteral ClipCullOverflowMessage =
-    "clip/cull elements do not fit in two rows";
+char SignaturePackingError::ID;
+
+void SignaturePackingError::log(raw_ostream &OS) const {
+  switch (Kind) {
+  case SignatureOverflow:
+    OS << "signature elements do not fit in 32 rows";
+    break;
+  case ClipCullOverflow:
+    OS << "clip/cull elements do not fit in two rows";
+    break;
+  }
+  OS << " (element " << ElementIndex << ")";
+}
 
 namespace {
 
@@ -332,10 +342,11 @@ static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
   }
 }
 
-// Packs Element into the first rows that it fits into.
-static Error packElement(SemanticSignatureElement &Element,
-                         MutableArrayRef<SignatureRow> Rows,
-                         const ElementPlacement &Placement) {
+// Packs Element into the first rows that it fits into. Returns whether it was
+// placed.
+static bool packElement(SemanticSignatureElement &Element,
+                        MutableArrayRef<SignatureRow> Rows,
+                        const ElementPlacement &Placement) {
   for (unsigned StartRow = 0; StartRow + Placement.Rows <= Rows.size();
        ++StartRow) {
     std::optional<uint8_t> ColumnMask = canPlaceAt(Rows, StartRow, Placement);
@@ -344,9 +355,9 @@ static Error packElement(SemanticSignatureElement &Element,
     placeAt(Rows, StartRow, Placement, *ColumnMask);
     Element.StartRow = StartRow;
     Element.StartCol = getStartColumn(*ColumnMask);
-    return Error::success();
+    return true;
   }
-  return createStringError(SignatureOverflowMessage);
+  return false;
 }
 
 // A clip/cull grid row is backed by a whole reserved signature row.
@@ -381,29 +392,31 @@ reserveNextClipCullRows(MutableArrayRef<SignatureRow> Rows,
 // Reserves the whole signature rows that back the clip/cull grid rows that the
 // element is packed into. Existing rows cannot be moved without breaking
 // prefix stability, so an indexed element requires them to be adjacent.
-static Error reserveClipCullSignatureRows(
-    MutableArrayRef<SignatureRow> SignatureRows, ClipCullState &State,
-    const ElementPlacement &Placement, unsigned NewRowsUsed) {
+static std::optional<SignaturePackingError::ErrorKind>
+reserveClipCullSignatureRows(MutableArrayRef<SignatureRow> SignatureRows,
+                             ClipCullState &State,
+                             const ElementPlacement &Placement,
+                             unsigned NewRowsUsed) {
   if (Placement.Rows == 1) {
     const ElementPlacement Reservation = getClipCullReservation(Placement, 1);
     for (unsigned Row = State.RowsUsed; Row < NewRowsUsed; ++Row) {
       std::optional<unsigned> StartRow =
           reserveNextClipCullRows(SignatureRows, Reservation);
       if (!StartRow)
-        return createStringError(SignatureOverflowMessage);
+        return SignaturePackingError::SignatureOverflow;
       State.SignatureRows[Row] = *StartRow;
     }
-    return Error::success();
+    return std::nullopt;
   }
 
   if (State.RowsUsed == 0) {
     std::optional<unsigned> StartRow = reserveNextClipCullRows(
         SignatureRows, getClipCullReservation(Placement, MaxClipCullRows));
     if (!StartRow)
-      return createStringError(SignatureOverflowMessage);
+      return SignaturePackingError::SignatureOverflow;
     State.SignatureRows[0] = *StartRow;
     State.SignatureRows[1] = *StartRow + 1;
-    return Error::success();
+    return std::nullopt;
   }
 
   if (State.RowsUsed == 1) {
@@ -411,20 +424,20 @@ static Error reserveClipCullSignatureRows(
     if (StartRow >= SignatureRows.size() ||
         !reserveClipCullRows(SignatureRows, StartRow,
                              getClipCullReservation(Placement, 1)))
-      return createStringError(SignatureOverflowMessage);
+      return SignaturePackingError::SignatureOverflow;
     State.SignatureRows[1] = StartRow;
-    return Error::success();
+    return std::nullopt;
   }
 
   if (State.SignatureRows[0] + 1 != State.SignatureRows[1])
-    return createStringError(ClipCullOverflowMessage);
-  return Error::success();
+    return SignaturePackingError::ClipCullOverflow;
+  return std::nullopt;
 }
 
-static Error packClipCullElement(SemanticSignatureElement &Element,
-                                 MutableArrayRef<SignatureRow> SignatureRows,
-                                 ClipCullState &State,
-                                 const ElementPlacement &Placement) {
+static std::optional<SignaturePackingError::ErrorKind>
+packClipCullElement(SemanticSignatureElement &Element,
+                    MutableArrayRef<SignatureRow> SignatureRows,
+                    ClipCullState &State, const ElementPlacement &Placement) {
   std::optional<uint8_t> ColumnMask;
   unsigned ClipCullStartRow = 0;
   while (ClipCullStartRow + Placement.Rows <= MaxClipCullRows) {
@@ -434,18 +447,19 @@ static Error packClipCullElement(SemanticSignatureElement &Element,
     ClipCullStartRow += 1;
   }
   if (!ColumnMask)
-    return createStringError(ClipCullOverflowMessage);
+    return SignaturePackingError::ClipCullOverflow;
 
   const unsigned NewRowsUsed = ClipCullStartRow + Placement.Rows;
-  if (Error E = reserveClipCullSignatureRows(SignatureRows, State, Placement,
-                                             NewRowsUsed))
-    return E;
+  if (std::optional<SignaturePackingError::ErrorKind> Kind =
+          reserveClipCullSignatureRows(SignatureRows, State, Placement,
+                                       NewRowsUsed))
+    return Kind;
 
   placeAt(State.Rows, ClipCullStartRow, Placement, *ColumnMask);
   State.RowsUsed = std::max(State.RowsUsed, NewRowsUsed);
   Element.StartRow = State.SignatureRows[ClipCullStartRow];
   Element.StartCol = getStartColumn(*ColumnMask);
-  return Error::success();
+  return std::nullopt;
 }
 
 Error llvm::hlsl::packSignaturePrefixStable(
@@ -462,7 +476,7 @@ Error llvm::hlsl::packSignaturePrefixStable(
   SmallVector<std::array<SignatureRow, MaxSignatureRows>, 1> Rows(StreamCount);
   SmallVector<ClipCullState, 1> ClipCullStates(StreamCount);
 
-  for (SemanticSignatureElement &Element : Elements) {
+  for (const auto &[Index, Element] : enumerate(Elements)) {
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
     assert(Element.Rows > 0 && Element.Rows <= MaxSignatureRows &&
@@ -487,16 +501,20 @@ Error llvm::hlsl::packSignaturePrefixStable(
     case SemanticCategory::NotPacked:
       continue;
     case SemanticCategory::CullClip:
-      if (Error E = packClipCullElement(Element, StreamRows,
-                                        ClipCullStates[StreamIndex], Placement))
-        return E;
+      if (std::optional<SignaturePackingError::ErrorKind> Kind =
+              packClipCullElement(Element, StreamRows,
+                                  ClipCullStates[StreamIndex], Placement))
+        return make_error<SignaturePackingError>(*Kind,
+                                                 static_cast<unsigned>(Index));
       continue;
     case SemanticCategory::TessFactor:
     case SemanticCategory::Arbitrary:
     case SemanticCategory::SystemValue:
     case SemanticCategory::SystemGeneratedValue:
-      if (Error E = packElement(Element, StreamRows, Placement))
-        return E;
+      if (!packElement(Element, StreamRows, Placement))
+        return make_error<SignaturePackingError>(
+            SignaturePackingError::SignatureOverflow,
+            static_cast<unsigned>(Index));
       continue;
     }
   }
