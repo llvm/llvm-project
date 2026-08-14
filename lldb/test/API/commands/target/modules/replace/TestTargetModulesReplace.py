@@ -51,9 +51,12 @@ class TargetModulesReplaceTestCase(TestBase):
         target, v1, v2, v1_copy = self.static_target_with_v1()
         num_modules = target.GetNumModules()
 
-        # No --old-path and no --force: the copy shares v1's UUID, so the module
-        # to replace can be worked out from the file alone.
-        self.runCmd("target modules replace '%s'" % v1_copy)
+        # No --old-path: the copy shares v1's UUID, so the module to replace is
+        # worked out from the file alone. --force because both are real modules
+        # rather than placeholders.
+        self.runCmd(
+            "target modules replace --allow-uuid-mismatch --force '%s'" % v1_copy
+        )
 
         self.assertEqual(target.GetNumModules(), num_modules)
         self.assertFalse(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
@@ -67,7 +70,7 @@ class TargetModulesReplaceTestCase(TestBase):
         self.expect(
             "target modules replace '%s'" % v2,
             error=True,
-            substrs=["does not match UUID", "--force"],
+            substrs=["does not match UUID", "--allow-uuid-mismatch"],
         )
 
         # The target must be left exactly as it was.
@@ -76,16 +79,37 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertFalse(target.FindModule(lldb.SBFileSpec(v2)).IsValid())
 
         # And --force goes through.
-        self.runCmd("target modules replace --force '%s'" % v2)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v2)).IsValid())
 
     def test_old_path_option(self):
         """--old-path names the module to replace explicitly."""
         target, v1, v2, v1_copy = self.static_target_with_v1()
 
-        self.runCmd("target modules replace --old-path '%s' --force '%s'" % (v1, v2))
+        self.runCmd(
+            "target modules replace --old-path '%s' --allow-uuid-mismatch --force '%s'"
+            % (v1, v2)
+        )
         self.assertFalse(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v2)).IsValid())
+
+    def test_real_module_needs_force(self):
+        """Only unused placeholders are replaced by default."""
+        target, v1, v2, v1_copy = self.static_target_with_v1()
+        num_modules = target.GetNumModules()
+
+        # v1_copy shares v1's UUID, so only the placeholder gate can refuse it.
+        self.expect(
+            "target modules replace '%s'" % v1_copy,
+            error=True,
+            substrs=["not an unused placeholder", "--force"],
+        )
+        self.assertEqual(target.GetNumModules(), num_modules)
+        self.assertTrue(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
+        self.assertFalse(target.FindModule(lldb.SBFileSpec(v1_copy)).IsValid())
+
+        self.runCmd("target modules replace --force '%s'" % v1_copy)
+        self.assertTrue(target.FindModule(lldb.SBFileSpec(v1_copy)).IsValid())
 
     def test_no_matching_module(self):
         """A file that matches nothing points the user at --old-path."""
@@ -106,7 +130,7 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertTrue(old_module.IsValid(), "v1 is in the target")
         old_uuid = old_module.GetUUIDString()
 
-        self.runCmd("target modules replace --force '%s'" % v2)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
 
         new_module = target.FindModule(lldb.SBFileSpec(v2))
         self.assertTrue(new_module.IsValid(), "v2 was added to the target")
@@ -134,7 +158,7 @@ class TargetModulesReplaceTestCase(TestBase):
             self.base_load_address(old_module, target), lldb.LLDB_INVALID_ADDRESS
         )
 
-        self.runCmd("target modules replace --force '%s'" % v2)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
 
         new_module = target.FindModule(lldb.SBFileSpec(v2))
         self.assertEqual(
@@ -152,7 +176,7 @@ class TargetModulesReplaceTestCase(TestBase):
         base_before = self.base_load_address(old_module, target)
         self.assertNotEqual(base_before, lldb.LLDB_INVALID_ADDRESS)
 
-        self.runCmd("target modules replace --force '%s'" % v2)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
 
         # The image base is what is preserved. Individual section addresses are
         # not comparable: the two files lay their sections out differently.
@@ -181,7 +205,8 @@ class TargetModulesReplaceTestCase(TestBase):
         num_modules = target.GetNumModules()
 
         self.runCmd(
-            "target modules replace --old-path '%s' --force '%s'" % (exe, other)
+            "target modules replace --old-path '%s' --allow-uuid-mismatch --force '%s'"
+            % (exe, other)
         )
 
         self.assertEqual(target.GetNumModules(), num_modules)
@@ -201,9 +226,9 @@ class TargetModulesReplaceTestCase(TestBase):
         target, v1, v2, v1_copy = self.static_target_with_v1()
         num_modules = target.GetNumModules()
 
-        self.runCmd("target modules replace --force '%s'" % v2)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
         self.assertEqual(target.GetNumModules(), num_modules)
-        self.runCmd("target modules replace --force '%s'" % v1)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v1)
         self.assertEqual(target.GetNumModules(), num_modules)
 
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
@@ -275,8 +300,7 @@ class TargetModulesReplaceTestCase(TestBase):
         unplaceable = self.getBuildArtifact("unplaceable.o")
         self.yaml2obj("unplaceable.yaml", unplaceable)
         self.expect(
-            "target modules replace --old-path /no/such/module.so --force '%s'"
-            % unplaceable,
+            "target modules replace --old-path /no/such/module.so '%s'" % unplaceable,
             error=True,
             substrs=["could not be loaded at"],
         )
@@ -312,7 +336,7 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertTrue(old_module.IsValid())
         base = self.base_load_address(old_module, target)
 
-        self.runCmd("target modules replace --force '%s'" % v2)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
 
         new_module = target.FindModule(lldb.SBFileSpec(v2))
         self.assertTrue(new_module.IsValid())
@@ -348,7 +372,7 @@ class TargetModulesReplaceTestCase(TestBase):
         only_v1_bp = target.BreakpointCreateByName("only_in_v1")
         self.assertEqual(only_v1_bp.GetNumLocations(), 1)
 
-        self.runCmd("target modules replace --force '%s'" % v2)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
 
         # The shared symbol re-resolves, and nothing still points into the
         # module that was removed.
@@ -394,7 +418,7 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertSuccess(before.GetError(), "TLS resolves before the replace")
         self.assertEqual(before.GetValueAsSigned(), 701)
 
-        self.runCmd("target modules replace --force '%s'" % v2)
+        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
 
         after = target.EvaluateExpression("tls_var")
         self.assertSuccess(after.GetError(), "TLS still resolves after the replace")
