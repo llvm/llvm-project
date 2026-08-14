@@ -460,10 +460,19 @@ func.func @extUIOfExtUI_outer_nneg(%arg0: i1) -> i64 {
   return %ext2 : i64
 }
 
-// CHECK-LABEL: @extUIOfExtUI_nneg
+// CHECK-LABEL: @extUIOfExtUI_inner_nneg
 //       CHECK:   %[[res:.+]] = arith.extui %arg0 nneg : i8 to i64
 //       CHECK:   return %[[res]]
-func.func @extUIOfExtUI_nneg(%arg0: i8) -> i64 {
+func.func @extUIOfExtUI_inner_nneg(%arg0: i8) -> i64 {
+  %ext1 = arith.extui %arg0 nneg : i8 to i32
+  %ext2 = arith.extui %ext1 : i32 to i64
+  return %ext2 : i64
+}
+
+// CHECK-LABEL: @extUIOfExtUI_both_nneg
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 nneg : i8 to i64
+//       CHECK:   return %[[res]]
+func.func @extUIOfExtUI_both_nneg(%arg0: i8) -> i64 {
   %ext1 = arith.extui %arg0 nneg : i8 to i32
   %ext2 = arith.extui %ext1 nneg : i32 to i64
   return %ext2 : i64
