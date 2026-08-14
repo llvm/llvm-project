@@ -16,7 +16,7 @@ target triple = "x86_64-apple-macosx11.0.0"
 
 define void @vdiv(ptr %a, float %b) {
 ; CHECK-LABEL: define void @vdiv(
-; CHECK-SAME: ptr captures(none) [[A:%.*]], float [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree captures(none) [[A:%.*]], float [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer

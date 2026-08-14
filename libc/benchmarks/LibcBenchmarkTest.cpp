@@ -30,7 +30,7 @@ namespace {
 // A simple parameter provider returning a zero initialized vector of size
 // `iterations`.
 struct DummyParameterProvider {
-  std::vector<char> generateBatch(size_t iterations) {
+  std::vector<char> generate_batch(size_t iterations) {
     return std::vector<char>(iterations);
   }
 };
@@ -50,16 +50,17 @@ public:
   }
 
 protected:
-  void SetUp() override { Options.Log = BenchmarkLog::Full; }
+  void SetUp() override { options.log = BenchmarkLog::Full; }
 
   void TearDown() override {
     // We make sure all the expected measurements were performed.
-    if (MaybeTimepoints)
+    if (MaybeTimepoints) {
       EXPECT_THAT(*MaybeTimepoints, IsEmpty());
+    }
   }
 
   BenchmarkResult run() {
-    return benchmark(Options, ParameterProvider, DummyFunction, *this);
+    return benchmark(options, ParameterProvider, DummyFunction, *this);
   }
 
   void setMeasurements(llvm::ArrayRef<Duration> Durations) {
@@ -73,7 +74,7 @@ protected:
     }
   }
 
-  BenchmarkOptions Options;
+  BenchmarkOptions options;
 
 private:
   DummyParameterProvider ParameterProvider;
@@ -82,67 +83,67 @@ private:
 };
 
 TEST_F(LibcBenchmark, MaxSamplesReached) {
-  Options.MaxSamples = 1;
-  const auto Result = run();
-  EXPECT_THAT(Result.MaybeBenchmarkLog->size(), 1);
-  EXPECT_THAT(Result.TerminationStatus, BenchmarkStatus::MaxSamplesReached);
+  options.max_samples = 1;
+  const auto result = run();
+  EXPECT_THAT(result.maybe_benchmark_log->size(), 1);
+  EXPECT_THAT(result.termination_status, BenchmarkStatus::MaxSamplesReached);
 }
 
 TEST_F(LibcBenchmark, MaxDurationReached) {
-  Options.MaxDuration = nanoseconds(10);
+  options.max_duration = nanoseconds(10);
   setMeasurements({nanoseconds(11)});
-  const auto Result = run();
-  EXPECT_THAT(Result.MaybeBenchmarkLog->size(), 1);
-  EXPECT_THAT(Result.TerminationStatus, BenchmarkStatus::MaxDurationReached);
+  const auto result = run();
+  EXPECT_THAT(result.maybe_benchmark_log->size(), 1);
+  EXPECT_THAT(result.termination_status, BenchmarkStatus::MaxDurationReached);
 }
 
 TEST_F(LibcBenchmark, MaxIterationsReached) {
-  Options.InitialIterations = 1;
-  Options.MaxIterations = 20;
-  Options.ScalingFactor = 2;
-  Options.Epsilon = 0; // unreachable.
-  const auto Result = run();
-  EXPECT_THAT(*Result.MaybeBenchmarkLog,
-              ElementsAre(Field(&BenchmarkState::LastSampleIterations, 1),
-                          Field(&BenchmarkState::LastSampleIterations, 2),
-                          Field(&BenchmarkState::LastSampleIterations, 4),
-                          Field(&BenchmarkState::LastSampleIterations, 8),
-                          Field(&BenchmarkState::LastSampleIterations, 16),
-                          Field(&BenchmarkState::LastSampleIterations, 32)));
-  EXPECT_THAT(Result.MaybeBenchmarkLog->size(), 6);
-  EXPECT_THAT(Result.TerminationStatus, BenchmarkStatus::MaxIterationsReached);
+  options.initial_iterations = 1;
+  options.max_iterations = 20;
+  options.scaling_factor = 2;
+  options.epsilon = 0; // unreachable.
+  const auto result = run();
+  EXPECT_THAT(*result.maybe_benchmark_log,
+              ElementsAre(Field(&BenchmarkState::last_sample_iterations, 1),
+                          Field(&BenchmarkState::last_sample_iterations, 2),
+                          Field(&BenchmarkState::last_sample_iterations, 4),
+                          Field(&BenchmarkState::last_sample_iterations, 8),
+                          Field(&BenchmarkState::last_sample_iterations, 16),
+                          Field(&BenchmarkState::last_sample_iterations, 32)));
+  EXPECT_THAT(result.maybe_benchmark_log->size(), 6);
+  EXPECT_THAT(result.termination_status, BenchmarkStatus::MaxIterationsReached);
 }
 
 TEST_F(LibcBenchmark, MinSamples) {
-  Options.MinSamples = 4;
-  Options.ScalingFactor = 2;
-  Options.Epsilon = std::numeric_limits<double>::max(); // always reachable.
+  options.min_samples = 4;
+  options.scaling_factor = 2;
+  options.epsilon = std::numeric_limits<double>::max(); // always reachable.
   setMeasurements(
       {nanoseconds(1), nanoseconds(2), nanoseconds(4), nanoseconds(8)});
-  const auto Result = run();
-  EXPECT_THAT(*Result.MaybeBenchmarkLog,
-              ElementsAre(Field(&BenchmarkState::LastSampleIterations, 1),
-                          Field(&BenchmarkState::LastSampleIterations, 2),
-                          Field(&BenchmarkState::LastSampleIterations, 4),
-                          Field(&BenchmarkState::LastSampleIterations, 8)));
-  EXPECT_THAT(Result.MaybeBenchmarkLog->size(), 4);
-  EXPECT_THAT(Result.TerminationStatus, BenchmarkStatus::PrecisionReached);
+  const auto result = run();
+  EXPECT_THAT(*result.maybe_benchmark_log,
+              ElementsAre(Field(&BenchmarkState::last_sample_iterations, 1),
+                          Field(&BenchmarkState::last_sample_iterations, 2),
+                          Field(&BenchmarkState::last_sample_iterations, 4),
+                          Field(&BenchmarkState::last_sample_iterations, 8)));
+  EXPECT_THAT(result.maybe_benchmark_log->size(), 4);
+  EXPECT_THAT(result.termination_status, BenchmarkStatus::PrecisionReached);
 }
 
 TEST_F(LibcBenchmark, Epsilon) {
-  Options.MinSamples = 4;
-  Options.ScalingFactor = 2;
-  Options.Epsilon = std::numeric_limits<double>::max(); // always reachable.
+  options.min_samples = 4;
+  options.scaling_factor = 2;
+  options.epsilon = std::numeric_limits<double>::max(); // always reachable.
   setMeasurements(
       {nanoseconds(1), nanoseconds(2), nanoseconds(4), nanoseconds(8)});
-  const auto Result = run();
-  EXPECT_THAT(*Result.MaybeBenchmarkLog,
-              ElementsAre(Field(&BenchmarkState::LastSampleIterations, 1),
-                          Field(&BenchmarkState::LastSampleIterations, 2),
-                          Field(&BenchmarkState::LastSampleIterations, 4),
-                          Field(&BenchmarkState::LastSampleIterations, 8)));
-  EXPECT_THAT(Result.MaybeBenchmarkLog->size(), 4);
-  EXPECT_THAT(Result.TerminationStatus, BenchmarkStatus::PrecisionReached);
+  const auto result = run();
+  EXPECT_THAT(*result.maybe_benchmark_log,
+              ElementsAre(Field(&BenchmarkState::last_sample_iterations, 1),
+                          Field(&BenchmarkState::last_sample_iterations, 2),
+                          Field(&BenchmarkState::last_sample_iterations, 4),
+                          Field(&BenchmarkState::last_sample_iterations, 8)));
+  EXPECT_THAT(result.maybe_benchmark_log->size(), 4);
+  EXPECT_THAT(result.termination_status, BenchmarkStatus::PrecisionReached);
 }
 
 TEST(ArrayRefLoop, Cycle) {

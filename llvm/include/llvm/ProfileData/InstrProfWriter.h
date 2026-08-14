@@ -186,7 +186,9 @@ public:
     if (static_cast<bool>(
             (ProfileKind & InstrProfKind::FrontendInstrumentation) ^
             (Other & InstrProfKind::FrontendInstrumentation))) {
-      return make_error<InstrProfError>(instrprof_error::unsupported_version);
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          "cannot merge IR generated profile with Clang generated profile");
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
                          InstrProfKind::FunctionEntryInstrumentation) ||
@@ -195,6 +197,11 @@ public:
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
+    }
+    if (static_cast<bool>((ProfileKind & InstrProfKind::SingleByteCoverage) ^
+                          (Other & InstrProfKind::SingleByteCoverage))) {
+      return make_error<InstrProfError>(
+          instrprof_error::coverage_count_mismatch);
     }
 
     // Now we update the profile type with the bits that are set.
@@ -215,6 +222,7 @@ public:
     MemProfVersionRequested = Version;
   }
   void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
+
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   LLVM_ABI void overlapRecord(NamedInstrProfRecord &&Other,

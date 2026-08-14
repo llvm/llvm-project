@@ -1,19 +1,19 @@
 // Build two version of the bitcode library, one with a target-cpu set and one without
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx803 -DBITCODE -emit-llvm-bc -o %t-lib.bc %s
-// RUN: %clang_cc1 -triple amdgcn-- -DBITCODE -emit-llvm-bc -o %t-lib.no-cpu.bc %s
+// RUN: %clang_cc1 -triple amdgpu8.03-- -DBITCODE -emit-llvm-bc -o %t-lib.bc %s
+// RUN: %clang_cc1 -triple amdgpu-- -DBITCODE -emit-llvm-bc -o %t-lib.no-cpu.bc %s
 
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx90a -emit-llvm-bc -o %t.bc %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx90a -emit-llvm \
+// RUN: %clang_cc1 -triple amdgpu9.0a-- -emit-llvm-bc -o %t.bc %s
+// RUN: %clang_cc1 -triple amdgpu9.0a-- -emit-llvm \
 // RUN:   -mlink-builtin-bitcode %t-lib.bc -o - %t.bc | FileCheck %s
 
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx90a -emit-llvm-bc -o %t.bc %s
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx90a -emit-llvm \
+// RUN: %clang_cc1 -triple amdgpu9.0a-- -emit-llvm-bc -o %t.bc %s
+// RUN: %clang_cc1 -triple amdgpu9.0a-- -emit-llvm \
 // RUN:   -mlink-builtin-bitcode %t-lib.no-cpu.bc -o - %t.bc | FileCheck %s
 
 #ifdef BITCODE
 int no_attr(void) { return 42; }
 int __attribute__((target("gfx8-insts"))) attr_in_target(void) { return 42; }
-int __attribute__((target("extended-image-insts"))) attr_not_in_target(void) { return 42; }
+int __attribute__((target("dot8-insts"))) attr_not_in_target(void) { return 42; }
 int __attribute__((target("no-gfx9-insts"))) attr_incompatible(void) { return 42; }
 int x = 12;
 #endif
@@ -43,7 +43,7 @@ int bar() { return no_attr() + attr_in_target() + attr_not_in_target() + attr_in
 // CHECK-LABEL: @attr_incompatible
 // CHECK-SAME: () #[[ATTR_INCOMPATIBLE:[0-9]+]] {
 
-// CHECK: attributes #[[ATTR_BAR]] = { {{.*}} "target-cpu"="gfx90a" }
-// CHECK: attributes #[[ATTR_COMPATIBLE]] = { {{.*}} "target-cpu"="gfx90a" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gws,+image-insts,+lerp-inst,+mai-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+vmem-to-lds-load-insts,+wavefrontsize64" }
-// CHECK: attributes #[[ATTR_EXTEND]] = { {{.*}} "target-cpu"="gfx90a" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+extended-image-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gws,+image-insts,+lerp-inst,+mai-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+vmem-to-lds-load-insts,+wavefrontsize64" }
-// CHECK: attributes #[[ATTR_INCOMPATIBLE]] = { {{.*}} "target-cpu"="gfx90a" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx8-insts,+gfx90a-insts,+gws,+image-insts,+lerp-inst,+mai-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+vmem-to-lds-load-insts,+wavefrontsize64,-gfx9-insts" }
+// CHECK: attributes #[[ATTR_BAR]] = { {{.*}} "no-trapping-math"="true" {{.*}} }
+// CHECK: attributes #[[ATTR_COMPATIBLE]] = { {{.*}} "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-global-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gws,+image-insts,+lerp-inst,+mai-insts,+mqsad-insts,+mqsad-pk-insts,+msad-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+vmem-to-lds-load-insts,+wavefrontsize64" }
+// CHECK: attributes #[[ATTR_EXTEND]] = { {{.*}} "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+flat-global-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gws,+image-insts,+lerp-inst,+mai-insts,+mqsad-insts,+mqsad-pk-insts,+msad-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+vmem-to-lds-load-insts,+wavefrontsize64" }
+// CHECK: attributes #[[ATTR_INCOMPATIBLE]] = { {{.*}} "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-fadd-rtn-insts,+atomic-fmin-fmax-global-f64,+ci-insts,+cube-insts,+cvt-pknorm-vop2-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+flat-global-insts,+gfx8-insts,+gfx90a-insts,+gws,+image-insts,+lerp-inst,+mai-insts,+mqsad-insts,+mqsad-pk-insts,+msad-insts,+qsad-insts,+s-memrealtime,+s-memtime-inst,+sad-insts,+vmem-to-lds-load-insts,+wavefrontsize64,-gfx9-insts" }

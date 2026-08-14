@@ -26,7 +26,7 @@ OpenMP in Flang Technical Call
 -   Join `OpenMP in Flang Technical Call <https://bit.ly/39eQW3o>`_
 -   Time: Weekly call on every Thursdays 8:00 AM Pacific time.
 -   Meeting minutes are `here <https://docs.google.com/document/d/1yA-MeJf6RYY-ZXpdol0t7YoDoqtwAyBhFLr5thu5pFI>`__.
--   Status tracking `page <https://docs.google.com/spreadsheets/d/1FvHPuSkGbl4mQZRAwCIndvQx9dQboffiD-xD0oqxgU0/edit#gid=0>`__.
+-   Status tracking `page <https://flang.llvm.org/docs/OpenMPSupport.html>`__.
 
 
 .. _faq:
