@@ -43,8 +43,6 @@ constexpr StringLiteral kBuildStage = "alias-state";
 constexpr StringLiteral kSuccessStage = "linear-scan-success";
 constexpr StringLiteral kFailureStage = "linear-scan-failure";
 constexpr unsigned kMaxSwsbDistance = 7;
-constexpr int64_t kScratchAddressBias = 0x10000;
-constexpr uint32_t kScratchExdescBias = 0x80000000u;
 
 struct AllocationComponent {
   SmallVector<Value> values;
@@ -88,11 +86,11 @@ static uint64_t getDestinationStorageDwords(Operation *operation,
     unsigned updateIndex = use.getOperandNumber() - 1;
     int64_t offset =
         cast<IntegerAttr>(update.getOffsets()[updateIndex]).getInt();
-    assert(offset >= 0 && static_cast<uint64_t>(offset) <=
-                              baseType.getWidthDwords() &&
+    assert(offset >= 0 &&
+           static_cast<uint64_t>(offset) <= baseType.getWidthDwords() &&
            "verified tuple update offset must fit its base storage");
-    storageDwords = std::max<uint64_t>(
-        storageDwords, baseType.getWidthDwords() - offset);
+    storageDwords =
+        std::max<uint64_t>(storageDwords, baseType.getWidthDwords() - offset);
   }
   return storageDwords;
 }
@@ -106,7 +104,7 @@ static int64_t getGRFSpan(int64_t firstElement, int64_t lastElement,
 }
 
 static FailureOr<int64_t> getMessageGRFLength(Operation *operation, Type type,
-                                               const Twine &name) {
+                                              const Twine &name) {
   int64_t width = cast<RegType>(type).getWidthDwords();
   if (width % 16 != 0)
     return operation->emitError() << name << " must occupy whole GRFs";
@@ -187,11 +185,9 @@ static LogicalResult validateMessageFootprint(Operation *operation) {
     source1 = *length;
   }
   if (source1 > 31)
-    return operation->emitError(
-        "source 1 exceeds the 31-GRF encoding limit");
+    return operation->emitError("source 1 exceeds the 31-GRF encoding limit");
   if (*source0 + source1 >= 32)
-    return operation->emitError(
-        "combined source payload exceeds 31 GRFs");
+    return operation->emitError("combined source payload exceeds 31 GRFs");
   return success();
 }
 
@@ -212,8 +208,7 @@ static LogicalResult validateAluFootprint(Operation *operation) {
   if (operation->getNumResults() != 0) {
     auto destinationType = dyn_cast<RegType>(operation->getResult(0).getType());
     if (destinationType && destinationType.getWidthDwords() != 0) {
-      std::optional<uint64_t> bytes =
-          getElementBytes(elementType);
+      std::optional<uint64_t> bytes = getElementBytes(elementType);
       if (!bytes)
         return operation->emitError("unsupported destination element type");
       int64_t sub = alu.getDestinationSubregister();
@@ -262,15 +257,15 @@ static LogicalResult validateAluFootprint(Operation *operation) {
       return operation->emitError(
           "source region exceeds declared register storage");
     if (getGRFSpan(first, last, *bytes) > 2)
-      return operation->emitError() << "source " << index
-                                    << " region spans more than two GRFs";
+      return operation->emitError()
+             << "source " << index << " region spans more than two GRFs";
     for (int64_t row = 0; row < executionSize; row += width) {
       int64_t rowLanes = std::min(width, executionSize - row);
       int64_t rowFirst = sub + row / width * vertical;
       int64_t rowLast = rowFirst + (rowLanes - 1) * horizontal;
       if (horizontal != 0 && getGRFSpan(rowFirst, rowLast, *bytes) > 1)
-        return operation->emitError() << "source " << index
-                                      << " row crosses a GRF boundary";
+        return operation->emitError()
+               << "source " << index << " row crosses a GRF boundary";
     }
   }
   return success();
@@ -345,10 +340,9 @@ static LogicalResult finalizeComponents(func::FuncOp function,
       std::optional<uint64_t> elementBytes =
           alu ? getElementBytes(alu.getInstructionElementType()) : std::nullopt;
       bool placedAtAliasOffset =
-          elementBytes &&
-          alu.getDestinationSubregister() *
-                  static_cast<int64_t>(*elementBytes) ==
-              (valueInfo->offsetDwords % 16) * 4;
+          elementBytes && alu.getDestinationSubregister() *
+                                  static_cast<int64_t>(*elementBytes) ==
+                              (valueInfo->offsetDwords % 16) * 4;
       if (valueInfo->offsetDwords % 16 != 0 && !placedAtAliasOffset)
         return function.emitError()
                << "register-storage alias at dword offset "
@@ -686,7 +680,7 @@ static Value getScratchSurfaceOffset(func::FuncOp function, OpBuilder &builder,
                         maskBuilder.getI32IntegerAttr(0))
           .getResult();
   Value mask = ImmOp::create(maskBuilder, location, ImmType::get(context),
-                             0xFFFFFC00, i32)
+                             KernelABI::get().getScratchSurfaceMask(), i32)
                    .getResult();
   Type maskType = canDelayAddressWrite
                       ? Type(RegType::get(context, 16, -1))
@@ -696,11 +690,14 @@ static Value getScratchSurfaceOffset(func::FuncOp function, OpBuilder &builder,
   AndOp maskSetup =
       AndOp::create(maskBuilder, location, maskType, i32, /*execSize=*/1,
                     canonical, uniform, RegionAttr(), maskDestinationSub,
-                    maskBuilder.getI32IntegerAttr(5), IntegerAttr(), TypeAttr(),
-                    TypeAttr(), /*noMask=*/true, /*maskOffset=*/0, r0, mask);
+                    maskBuilder.getI32IntegerAttr(
+                        KernelABI::get().getScratchSurfaceSourceSubregister()),
+                    IntegerAttr(), TypeAttr(), TypeAttr(), /*noMask=*/true,
+                    /*maskOffset=*/0, r0, mask);
   maskSetup->setAttr(kScratchSetupAttr, builder.getUnitAttr());
-  Value four = ImmOp::create(builder, location, ImmType::get(context), 4, i32)
-                   .getResult();
+  Value shift = ImmOp::create(builder, location, ImmType::get(context),
+                              KernelABI::get().getScratchSurfaceShift(), i32)
+                    .getResult();
   IntegerAttr maskSourceSub =
       canDelayAddressWrite ? IntegerAttr() : builder.getI32IntegerAttr(2);
   ShrOp setup = ShrOp::create(
@@ -708,7 +705,7 @@ static Value getScratchSurfaceOffset(func::FuncOp function, OpBuilder &builder,
       /*execSize=*/1, canonical, uniform, RegionAttr(),
       builder.getI32IntegerAttr(2), maskSourceSub, IntegerAttr(), TypeAttr(),
       TypeAttr(), /*noMask=*/true, /*maskOffset=*/0, maskSetup.getResult(),
-      four);
+      shift);
   setup->setAttr(kScratchSetupAttr, builder.getUnitAttr());
   return setup.getDst();
 }
@@ -717,9 +714,10 @@ static Value createScratchAddress(OpBuilder &builder, Location location,
                                   int64_t offset) {
   MLIRContext *context = builder.getContext();
   Type i32 = builder.getI32Type();
-  Value immediate = ImmOp::create(builder, location, ImmType::get(context),
-                                  offset + kScratchAddressBias, i32)
-                        .getResult();
+  Value immediate =
+      ImmOp::create(builder, location, ImmType::get(context),
+                    offset + KernelABI::get().getScratchAddressBias(), i32)
+          .getResult();
   return MovOp::create(builder, location, RegType::get(context, 16, -1), i32,
                        /*execSize=*/1, DstRegionAttr::get(context, 1),
                        RegionAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
@@ -746,9 +744,9 @@ static SendOp createScratchSend(OpBuilder &builder, Location location,
   SendOp send = SendOp::create(
       builder, location, destinationType, MemTokenType::get(context),
       SendFn::ugm, /*sfid=*/0, descriptor,
-      /*exdesc=*/static_cast<int32_t>(kScratchExdescBias), /*execSize=*/1,
-      /*noMask=*/true, /*eot=*/false, address, data, surfaceOffset,
-      dependency);
+      /*exdesc=*/static_cast<int32_t>(KernelABI::get().getScratchExdescBias()),
+      /*execSize=*/1,
+      /*noMask=*/true, /*eot=*/false, address, data, surfaceOffset, dependency);
   send->setAttr(kScratchAccessAttrName, UnitAttr::get(context));
   return send;
 }
@@ -798,7 +796,9 @@ static bool spillToScratch(func::FuncOp function, AllocationState &state,
   }
   assert(!uses.empty() && "scratch candidate must have a rewritable use");
 
-  int64_t slot = llvm::alignTo(nextScratchOffset, int64_t{64});
+  int64_t slot = llvm::alignTo(
+      nextScratchOffset,
+      static_cast<int64_t>(KernelABI::get().getScratchSlotAlignment()));
   nextScratchOffset = slot + type.getWidthDwords() * 4;
   OpBuilder storeBuilder(definition);
   storeBuilder.setInsertionPointAfter(definition);
@@ -1012,9 +1012,8 @@ static void commitArfAllocation(ArrayRef<ArfLiveRange> ranges) {
     if (range.type.getIndex() >= 0)
       continue;
     Value value = range.value;
-    value.setType(ARFType::get(
-        range.value.getContext(), range.type.getFile(),
-        range.type.getWidthDwords(), range.assignment));
+    value.setType(ARFType::get(range.value.getContext(), range.type.getFile(),
+                               range.type.getWidthDwords(), range.assignment));
   }
 }
 
@@ -1122,7 +1121,8 @@ static LogicalResult runTransformArfLinearScan(Operation *target) {
     DictionaryAttr packed = function->getAttrOfType<DictionaryAttr>(kStateAttr);
     StringAttr stage = packed ? packed.getAs<StringAttr>(kStageAttr) : nullptr;
     if (!stage || stage.getValue() != kArfBuildStage)
-      return function.emitError("ARF linear scan requires ARF live-range input"),
+      return function.emitError(
+                 "ARF linear scan requires ARF live-range input"),
              failure();
     FailureOr<SmallVector<ArfLiveRange>> ranges = buildArfState(function);
     if (failed(ranges) || failed(tryAllocateArfs(*ranges)))
@@ -1454,9 +1454,10 @@ void TransformRegAllocBuildStateOp::getEffects(
   getStageEffects(*this, effects);
 }
 
-DiagnosedSilenceableFailure TransformRegAllocArfBuildStateOp::apply(
-    transform::TransformRewriter &, transform::TransformResults &results,
-    transform::TransformState &state) {
+DiagnosedSilenceableFailure
+TransformRegAllocArfBuildStateOp::apply(transform::TransformRewriter &,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
   return applyStage(*this, results, state, buildTransformArfState);
 }
 
@@ -1465,9 +1466,10 @@ void TransformRegAllocArfBuildStateOp::getEffects(
   getStageEffects(*this, effects);
 }
 
-DiagnosedSilenceableFailure TransformRegAllocArfLinearScanOp::apply(
-    transform::TransformRewriter &, transform::TransformResults &results,
-    transform::TransformState &state) {
+DiagnosedSilenceableFailure
+TransformRegAllocArfLinearScanOp::apply(transform::TransformRewriter &,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
   return applyStage(*this, results, state, runTransformArfLinearScan);
 }
 

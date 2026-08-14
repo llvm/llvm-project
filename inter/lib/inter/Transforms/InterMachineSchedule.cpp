@@ -7,6 +7,7 @@
 #include "inter/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "llvm/Support/Error.h"
 
 namespace inter {
 #define GEN_PASS_DEF_MACHINESCHEDULE
@@ -31,19 +32,18 @@ public:
     if (!hasMachineOperation.wasInterrupted())
       return;
 
-    TargetAttr target = function->getAttrOfType<TargetAttr>(kTargetAttrName);
+    llvm::Expected<TargetConfig> target = TargetConfig::resolve(
+        function->getAttrOfType<TargetAttr>(kTargetAttrName));
     if (!target) {
-      function.emitError("machine scheduling requires a target attribute");
-      return signalPassFailure();
-    }
-    if (target.getChip().getValue() != "bmg") {
-      function.emitError("machine scheduling does not support target '")
-          << target.getChip().getValue() << "'";
+      function.emitError(llvm::toString(target.takeError()));
       return signalPassFailure();
     }
 
     FailureOr<std::unique_ptr<inter::MachineScheduleModel>> model =
-        inter::createXe2ScheduleModel(function);
+        target->getArchitecture() == TargetArchitecture::xe2
+            ? inter::createXe2ScheduleModel(function)
+            : FailureOr<std::unique_ptr<inter::MachineScheduleModel>>(
+                  failure());
     if (failed(model) ||
         failed(inter::scheduleMachineRegion(function.getBody(), **model)))
       return signalPassFailure();

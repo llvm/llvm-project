@@ -40,8 +40,7 @@ private:
 
   LogicalResult validateDataType(Operation *operation, Type type) const {
     if (type.isInteger(1) || type.isInteger(8) || type.isInteger(16) ||
-        type.isInteger(32) ||
-        type.isInteger(64) || type.isF32())
+        type.isInteger(32) || type.isInteger(64) || type.isF32())
       return success();
     return operation->emitError("unsupported machine data type ") << type;
   }
@@ -454,16 +453,17 @@ private:
 
     ALUOpInterface alu = cast<ALUOpInterface>(compare.getOperation());
     for (auto [index, operand] : llvm::enumerate(compare.getOperands())) {
-      std::optional<Type> explicitType = alu.getExplicitSourceElementType(index);
+      std::optional<Type> explicitType =
+          alu.getExplicitSourceElementType(index);
       Type sourceType = explicitType.value_or(compare.getElemType());
       if (failed(validateDataType(compare, sourceType)))
         return failure();
       if (ImmOp immediate = operand.getDefiningOp<ImmOp>())
         if (failed(validateDataType(compare, immediate.getElemType())))
           return failure();
-      SourceOperand source = getSourceOperand(
-          operand, alu.getSourceSubregister(index), sourceType,
-          getSourceRegion(alu.getSourceRegion(index)));
+      SourceOperand source =
+          getSourceOperand(operand, alu.getSourceSubregister(index), sourceType,
+                           getSourceRegion(alu.getSourceRegion(index)));
       source.isSigned = instruction.isSigned;
       instruction.sources.push_back(std::move(source));
     }
@@ -517,16 +517,17 @@ private:
         destinationStride};
 
     for (auto [index, operand] : llvm::enumerate(operation->getOperands())) {
-      std::optional<Type> explicitType = alu.getExplicitSourceElementType(index);
+      std::optional<Type> explicitType =
+          alu.getExplicitSourceElementType(index);
       Type sourceType = explicitType.value_or(elementType);
       if (failed(validateDataType(operation, sourceType)))
         return failure();
       if (ImmOp immediate = operand.getDefiningOp<ImmOp>())
         if (failed(validateDataType(operation, immediate.getElemType())))
           return failure();
-      SourceOperand source = getSourceOperand(
-          operand, alu.getSourceSubregister(index), sourceType,
-          getSourceRegion(alu.getSourceRegion(index)));
+      SourceOperand source =
+          getSourceOperand(operand, alu.getSourceSubregister(index), sourceType,
+                           getSourceRegion(alu.getSourceRegion(index)));
       if (operand.getDefiningOp<ImmOp>() && !explicitType)
         source.type = index == 1 && isa<ShlOp, ShrOp>(operation)
                           ? DataType::ud
@@ -567,17 +568,9 @@ private:
 
 } // namespace
 
-LogicalResult lowerToEmissionProgram(ModuleOp moduleOp,
+LogicalResult lowerToEmissionProgram(func::FuncOp kernel,
                                      EmissionProgram &program) {
-  func::FuncOp kernel;
-  moduleOp.walk([&](func::FuncOp function) {
-    if (!kernel)
-      kernel = function;
-  });
-  if (!kernel)
-    return moduleOp.emitError("no func.func kernel found"), failure();
-
-  ProgramLowerer lowerer(moduleOp.getContext(), program);
+  ProgramLowerer lowerer(kernel.getContext(), program);
   return lowerer.lower(kernel);
 }
 

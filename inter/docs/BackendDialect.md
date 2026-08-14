@@ -54,6 +54,12 @@ supported SIMD widths, and Zebin compatibility identity. BMG is the only
 accepted chip today; unknown chips and feature requests fail before selection
 mutates a kernel.
 
+`KernelABI` separately owns source address spaces, pointer representation,
+explicit and implicit argument layout, cross-thread and per-thread payload
+geometry, reserved payload registers, and scratch conventions. Hardware GRF
+geometry remains a target property; the five-register payload reservation is
+an ABI property.
+
 After physical lowering, resource analysis adds highest GRF use, barrier presence,
 global atomic use, stateless-write status, and DPAS use. Zebin emission
 recomputes and cross-checks these derived facts.

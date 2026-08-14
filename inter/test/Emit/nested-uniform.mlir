@@ -3,7 +3,7 @@
 // RUN: inter-ged-dump %t | FileCheck %s
 
 func.func @nested(%outer: !xemachine.arf<f, 2, 0>,
-                  %inner: !xemachine.arf<f, 2, 1>) {
+                   %inner: !xemachine.arf<f, 2, 1>) attributes {xemachine.target = #xemachine.target<chip = "bmg">} {
   xemachine.exec_if %outer : !xemachine.arf<f, 2, 0> {
     xemachine.uniform_if %inner : !xemachine.arf<f, 2, 1> {
       xemachine.yield

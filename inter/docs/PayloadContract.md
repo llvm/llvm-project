@@ -5,16 +5,18 @@
 
 - `r0.0` — indirect data blob address, low 32 bits. Mask with `~0x3F`
   (64B-aligned). Used as the a32 offset with stateless `bti[255]` loads.
-- `r0.1` — thread group ID X (ud). (Y/Z in r0.2/r0.3 area.)
+- `r0.1`, `r0.6`, and `r0.7` — thread group IDs X, Y, and Z (ud).
 - `r0.4[7:0]` — thread slot id within the dispatch.
 - The software-local-ID entry receives the first 32 cross-thread bytes in
-  `r1`, copies them to `r4`, and loads local IDs into `r1-r3`.
+  `r1`, copies them after the local-ID GRFs, and loads local IDs into `r1-r3`.
+  X-only, X/Y, and X/Y/Z layouts place the copy in `r2`, `r3`, and `r4`.
 - When NEO enables hardware local-ID generation, it starts the kernel at
-  `offset_to_skip_per_thread_data_load` (192 bytes): `r1-r3` already contain
-  local IDs and the same inline data is delivered in `r4`.
-- The common body therefore reads inline data from `r4`. Argument at zeinfo
-  payload offset N lives at byte N of `r4`; a 64-bit pointer at offset 24 is
-  `r4.3:q`.
+  `offset_to_skip_per_thread_data_load`, which is the encoded byte offset of
+  the common-body label: the local-ID GRFs already contain data and the same
+  inline payload is delivered in the following register.
+- The common body reads inline data from that following register. Argument at
+  zeinfo payload offset N lives at byte N of the register; a 64-bit pointer at
+  offset 24 is subregister 3 with a qword operand.
 - EU sub-register numbering is in units of the operand data type.
 
 ## Indirect data blob (in memory, at `r0.0 & ~0x3F`)

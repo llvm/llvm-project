@@ -15,6 +15,8 @@ namespace inter {
 mlir::LogicalResult emitGedBinary(mlir::ModuleOp moduleOp,
                                   llvm::raw_ostream &output,
                                   uint32_t *payloadEntryOffset = nullptr);
+mlir::LogicalResult emitAssembly(mlir::ModuleOp moduleOp,
+                                 llvm::raw_ostream &output);
 mlir::LogicalResult emitZebin(mlir::ModuleOp moduleOp,
                               llvm::raw_ostream &output);
 

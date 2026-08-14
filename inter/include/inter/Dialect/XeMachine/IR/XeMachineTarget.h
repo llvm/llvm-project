@@ -15,6 +15,11 @@ namespace inter::xemachine {
 
 class TargetAttr;
 
+inline constexpr llvm::StringLiteral kCompilationTargetAttrName =
+    "inter.target";
+inline constexpr llvm::StringLiteral kCompilationSimdWidthAttrName =
+    "inter.simd_width";
+
 enum class TargetChip { bmg };
 enum class TargetArchitecture { xe2 };
 
@@ -28,8 +33,10 @@ struct ZebinCompatibilityIdentity {
 
 class TargetConfig {
 public:
+  static TargetConfig get(TargetChip chip) { return TargetConfig(chip); }
   static llvm::Expected<TargetConfig>
   resolve(llvm::StringRef chip, llvm::ArrayRef<llvm::StringRef> features = {});
+  static llvm::Expected<TargetConfig> resolve(TargetAttr target);
 
   TargetChip getChip() const { return chip; }
   llvm::StringRef getChipName() const;
@@ -37,7 +44,7 @@ public:
   llvm::StringRef getArchitectureName() const;
   uint32_t getGrfByteSize() const;
   uint32_t getGrfCount() const;
-  uint32_t getReservedGrfCount() const;
+  uint32_t getSbidCount(uint32_t grfCount) const;
   llvm::ArrayRef<uint32_t> getSupportedSimdWidths() const;
   bool supportsSimdWidth(uint32_t width) const;
   ZebinCompatibilityIdentity getZebinCompatibilityIdentity() const;

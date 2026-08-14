@@ -7,7 +7,7 @@
 // CHECK-NEXT: pc=16 opcode=goto exec=32 swsb=0x0 jip=16 uip=32 mask=normal channel=0 pred=normal
 // CHECK-NEXT: pc=32 opcode=join exec=32 swsb=0x0 jip=16 mask=normal channel=0 pred=normal
 // CHECK-NEXT: pc=48 opcode=join exec=32 swsb=0x0 jip=16 mask=normal channel=0 pred=normal
-func.func @k(%f: !xemachine.arf<f, 2, 0>) {
+func.func @k(%f: !xemachine.arf<f, 2, 0>) attributes {xemachine.target = #xemachine.target<chip = "bmg">} {
   xemachine.exec_if %f : !xemachine.arf<f, 2, 0> {
     xemachine.yield
   } otherwise {

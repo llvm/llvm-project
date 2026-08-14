@@ -1,7 +1,7 @@
 // RUN: inter-opt %s --inter-insert-sync | inter-translate --xemachine-to-ged - -o %t
 // RUN: inter-ged-dump %t | FileCheck %s
 
-func.func @k() attributes {xemachine.has_dpas = true} {
+func.func @k() attributes {xemachine.has_dpas = true, xemachine.target = #xemachine.target<chip = "bmg">} {
   %a = xemachine.archreg 0 : !xemachine.reg<64, 20>
   %b = xemachine.archreg 0 : !xemachine.reg<128, 24>
   %acc = xemachine.archreg 0 : !xemachine.reg<128, 32>

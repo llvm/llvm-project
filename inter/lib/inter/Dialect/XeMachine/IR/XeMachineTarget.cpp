@@ -21,6 +21,12 @@ TargetConfig::resolve(llvm::StringRef chip,
   return TargetConfig(TargetChip::bmg);
 }
 
+llvm::Expected<TargetConfig> TargetConfig::resolve(TargetAttr target) {
+  if (!target)
+    return llvm::createStringError("missing Intel GPU target attribute");
+  return resolve(target.getChip().getValue());
+}
+
 llvm::StringRef TargetConfig::getChipName() const { return "bmg"; }
 
 TargetArchitecture TargetConfig::getArchitecture() const {
@@ -33,7 +39,9 @@ uint32_t TargetConfig::getGrfByteSize() const { return 64; }
 
 uint32_t TargetConfig::getGrfCount() const { return 128; }
 
-uint32_t TargetConfig::getReservedGrfCount() const { return 5; }
+uint32_t TargetConfig::getSbidCount(uint32_t grfCount) const {
+  return grfCount > getGrfCount() ? 32 : 16;
+}
 
 llvm::ArrayRef<uint32_t> TargetConfig::getSupportedSimdWidths() const {
   static constexpr std::array<uint32_t, 3> widths = {8, 16, 32};

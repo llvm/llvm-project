@@ -99,6 +99,8 @@ def ReuseBlock2DPayloads : Pass<"inter-reuse-block2d-payloads",
 def InsertSync : Pass<"inter-insert-sync", "::mlir::func::FuncOp"> {
   let summary = "materialize machine sync operations with dense dataflow";
   let dependentDialects = ["inter::xemachine::XeMachineDialect"];
+  let options = [Option<"chip", "chip", "std::string", "\"\"",
+                        "Intel GPU target chip for standalone machine IR">];
 }
 
 def PrepareRegAlloc : Pass<"inter-prepare-regalloc", "::mlir::func::FuncOp"> {

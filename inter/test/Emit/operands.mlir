@@ -1,7 +1,7 @@
 // RUN: inter-opt %s --inter-insert-sync | inter-translate --xemachine-to-ged - -o %t
 // RUN: inter-ged-dump %t | FileCheck %s
 
-func.func @k() {
+func.func @k() attributes {xemachine.target = #xemachine.target<chip = "bmg">} {
   %one = xemachine.imm 1065353216 : f32
   // CHECK: pc=0 opcode=mov exec=16 swsb=0x0
   %f0 = xemachine.mov %one : (!xemachine.imm, f32) -> !xemachine.reg<16, 4>

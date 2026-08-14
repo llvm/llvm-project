@@ -24,8 +24,8 @@ constexpr uint32_t nativeInstructionSize = 16;
 
 class GedEncoder {
 public:
-  GedEncoder(ModuleOp moduleOp, llvm::raw_ostream &output)
-      : moduleOp(moduleOp), output(output) {}
+  GedEncoder(ModuleOp moduleOp, llvm::raw_ostream &output, GED_MODEL model)
+      : moduleOp(moduleOp), output(output), model(model) {}
 
   LogicalResult encode(const EmissionProgram &program) {
     if (failed(layout(program)))
@@ -251,7 +251,7 @@ private:
     if (swsb.token >= 0) {
       uint32_t mode = swsb.tokenMode == TokenMode::destination ? 0x80
                       : swsb.tokenMode == TokenMode::source    ? 0xA0
-                                                              : 0xC0;
+                                                               : 0xC0;
       return mode | static_cast<uint32_t>(swsb.token);
     }
     return 0;
@@ -281,7 +281,7 @@ private:
   initialize(ged_ins_t &instruction, GED_OPCODE opcode,
              const ExecutionInfo &execution,
              const std::optional<Predicate> &predicate = std::nullopt) {
-    RETURN_IF_GED_ERROR(GED_InitEmptyIns(GED_MODEL_XE2, &instruction, opcode));
+    RETURN_IF_GED_ERROR(GED_InitEmptyIns(model, &instruction, opcode));
     if (failed(setExecution(instruction, execution)))
       return failure();
     return setPredicate(instruction, predicate);
@@ -331,9 +331,9 @@ private:
     }
 
     uint32_t encoded = 0;
-    if (failed(check(GED_SetArchReg(&encoded, GED_MODEL_XE2, archRegister),
+    if (failed(check(GED_SetArchReg(&encoded, model, archRegister),
                      "GED_SetArchReg")) ||
-        failed(check(GED_SetArchRegNum(&encoded, GED_MODEL_XE2, number),
+        failed(check(GED_SetArchRegNum(&encoded, model, number),
                      "GED_SetArchRegNum")))
       return failure();
     return encoded;
@@ -663,8 +663,8 @@ private:
     };
     auto verifyRegister = [&](GrfReference reference, StringRef name) {
       if (reference.number < 0 || reference.sub != 0) {
-        moduleOp.emitError() << "DPAS " << name
-                             << " must be a physical GRF-aligned register";
+        moduleOp.emitError()
+            << "DPAS " << name << " must be a physical GRF-aligned register";
         return failure();
       }
       return success();
@@ -676,10 +676,10 @@ private:
       return failure();
     if (failed(initialize(instruction, GED_OPCODE_dpas, value.execution)))
       return failure();
-    RETURN_IF_GED_ERROR(GED_SetExecutionDataType(
-        &instruction, GED_EXECUTION_DATA_TYPE_Float));
-    RETURN_IF_GED_ERROR(GED_SetSystolicDepth(&instruction,
-                                              value.systolicDepth));
+    RETURN_IF_GED_ERROR(
+        GED_SetExecutionDataType(&instruction, GED_EXECUTION_DATA_TYPE_Float));
+    RETURN_IF_GED_ERROR(
+        GED_SetSystolicDepth(&instruction, value.systolicDepth));
     RETURN_IF_GED_ERROR(GED_SetRepeatCount(&instruction, value.repeatCount));
     RETURN_IF_GED_ERROR(GED_SetSrc0DataType(&instruction, GED_DATA_TYPE_f));
     RETURN_IF_GED_ERROR(
@@ -910,6 +910,7 @@ private:
 
   ModuleOp moduleOp;
   llvm::raw_ostream &output;
+  GED_MODEL model;
   llvm::DenseMap<uint32_t, uint32_t> labelOffsets;
   uint32_t binarySize = 0;
   uint32_t currentPc = 0;
@@ -922,10 +923,28 @@ namespace inter {
 
 LogicalResult emitGedBinary(ModuleOp moduleOp, llvm::raw_ostream &output,
                             uint32_t *payloadEntryOffset) {
+  func::FuncOp kernel;
+  for (func::FuncOp function : moduleOp.getOps<func::FuncOp>())
+    if (function->hasAttr(kTargetAttrName)) {
+      kernel = function;
+      break;
+    }
+  TargetAttr targetAttr =
+      kernel ? kernel->getAttrOfType<TargetAttr>(kTargetAttrName)
+             : TargetAttr{};
+  llvm::Expected<TargetConfig> target = TargetConfig::resolve(targetAttr);
+  if (!target)
+    return moduleOp.emitError(llvm::toString(target.takeError())), failure();
+  GED_MODEL model;
+  switch (target->getArchitecture()) {
+  case TargetArchitecture::xe2:
+    model = GED_MODEL_XE2;
+    break;
+  }
   detail::EmissionProgram program;
-  if (failed(detail::lowerToEmissionProgram(moduleOp, program)))
+  if (failed(detail::lowerToEmissionProgram(kernel, program)))
     return failure();
-  detail::GedEncoder encoder(moduleOp, output);
+  detail::GedEncoder encoder(moduleOp, output, model);
   if (failed(encoder.encode(program)))
     return failure();
   if (payloadEntryOffset) {

@@ -12,9 +12,13 @@ module {
   }
 
   llvm.func spir_kernelcc @abi(%byte: i8, %word: i32, %wide: i64,
-                               %half: f16,
+                               %single: f32,
                                %input: !llvm.ptr<1> {llvm.readonly},
                                %output: !llvm.ptr<1> {llvm.writeonly}) {
+    llvm.return
+  }
+
+  llvm.func spir_kernelcc @payload_boundary(%word: i32, %wide: i64) {
     llvm.return
   }
 }
@@ -31,11 +35,15 @@ module {
 // CHECK-SAME: {alignment = 1 : i64, kind = "value", offset = 24 : i64, size = 1 : i64}
 // CHECK-SAME: {alignment = 4 : i64, kind = "value", offset = 28 : i64, size = 4 : i64}
 // CHECK-SAME: {alignment = 4 : i64, kind = "value", offset = 32 : i64, size = 8 : i64}
-// CHECK-SAME: {alignment = 2 : i64, kind = "value", offset = 40 : i64, size = 2 : i64}
+// CHECK-SAME: {alignment = 4 : i64, kind = "value", offset = 40 : i64, size = 4 : i64}
 // CHECK-SAME: {access = "read_only", address_space = 1 : i32, alignment = 8 : i64, kind = "pointer", offset = 48 : i64, size = 8 : i64}
 // CHECK-SAME: {access = "write_only", address_space = 1 : i32, alignment = 8 : i64, kind = "pointer", offset = 56 : i64, size = 8 : i64}
 // CHECK-SAME: xw.simd_width = 16 : i32
 // CHECK-NOT: llvm.readonly
 // CHECK-NOT: llvm.writeonly
 
-// WIDTH8-COUNT-2: xw.simd_width = 8 : i32
+// CHECK-LABEL: func.func @payload_boundary
+// CHECK-SAME: {alignment = 4 : i64, kind = "value", offset = 24 : i64, size = 4 : i64}
+// CHECK-SAME: {alignment = 4 : i64, kind = "value", offset = 32 : i64, size = 8 : i64}
+
+// WIDTH8-COUNT-3: xw.simd_width = 8 : i32

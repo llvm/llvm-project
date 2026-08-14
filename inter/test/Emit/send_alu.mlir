@@ -3,7 +3,7 @@
 // RUN: inter-ged-dump %t | FileCheck %s
 // RUN: inter-opt %s --inter-insert-sync | inter-translate --xemachine-to-asm - | FileCheck %s --check-prefix=ASM
 
-func.func @k() {
+func.func @k() attributes {xemachine.target = #xemachine.target<chip = "bmg">} {
   %root = xemachine.token
   %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
   %c = xemachine.imm 4294967232 : i32

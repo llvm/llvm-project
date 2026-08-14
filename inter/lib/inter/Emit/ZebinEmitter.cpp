@@ -25,9 +25,6 @@ constexpr uint32_t kNoteGraphicsCore = 2;
 constexpr uint32_t kNoteTargetMetadata = 3;
 constexpr uint32_t kNoteZebinVersion = 4;
 constexpr uint32_t kNoteProductConfig = 6;
-constexpr uint32_t kBmgProductFamily = 0x4FA;
-constexpr uint32_t kXe2HpgCore = 0xC09;
-constexpr uint32_t kBmgG21A0Config = 0x05004000;
 
 struct Section {
   std::string name;
@@ -73,17 +70,19 @@ void appendIntelGTNote(Bytes &notes, uint32_t type,
   align(notes, 4);
 }
 
-Bytes buildCompatibilityNotes() {
+Bytes buildCompatibilityNotes(const TargetConfig &target) {
+  ZebinCompatibilityIdentity identity = target.getZebinCompatibilityIdentity();
   Bytes notes;
-  Bytes productFamily = uint32Descriptor(kBmgProductFamily);
-  Bytes graphicsCore = uint32Descriptor(kXe2HpgCore);
-  Bytes targetMetadata = uint32Descriptor(0);
-  Bytes productConfig = uint32Descriptor(kBmgG21A0Config);
+  Bytes productFamily = uint32Descriptor(identity.productFamily);
+  Bytes graphicsCore = uint32Descriptor(identity.graphicsCore);
+  Bytes targetMetadata = uint32Descriptor(identity.targetMetadata);
+  Bytes productConfig = uint32Descriptor(identity.productConfig);
   appendIntelGTNote(notes, kNoteProductFamily, productFamily);
   appendIntelGTNote(notes, kNoteGraphicsCore, graphicsCore);
   appendIntelGTNote(notes, kNoteTargetMetadata, targetMetadata);
   appendIntelGTNote(notes, kNoteZebinVersion,
-                    llvm::ArrayRef<char>("1.64\0", 5));
+                    llvm::ArrayRef<char>(identity.version.data(),
+                                         identity.version.size() + 1));
   appendIntelGTNote(notes, kNoteProductConfig, productConfig);
   return notes;
 }
@@ -101,10 +100,11 @@ std::string quoteYaml(llvm::StringRef value) {
 
 FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
                                    uint32_t payloadEntryOffset) {
-  auto target = kernel->getAttrOfType<TargetAttr>(kTargetAttrName);
-  if (!target || target.getChip().getValue() != "bmg")
-    return kernel.emitOpError("zebin emission requires a BMG target"),
-           failure();
+  const KernelABI &abi = KernelABI::get();
+  llvm::Expected<TargetConfig> target =
+      TargetConfig::resolve(kernel->getAttrOfType<TargetAttr>(kTargetAttrName));
+  if (!target)
+    return kernel.emitOpError(llvm::toString(target.takeError())), failure();
 
   ArrayAttr kernelArgs = kernel->getAttrOfType<ArrayAttr>(kKernelArgsAttrName);
   if (failed(verifyKernelArgLayout(kernelArgs, kernel.getOperation())))
@@ -121,10 +121,26 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
   auto hasDpas = kernel->getAttrOfType<BoolAttr>(kHasDpasAttrName);
   ArrayAttr requiredWorkGroupSize =
       kernel->getAttrOfType<ArrayAttr>(kRequiredWorkGroupSizeAttrName);
+  if (requiredWorkGroupSize &&
+      (requiredWorkGroupSize.size() != 3 ||
+       llvm::any_of(requiredWorkGroupSize, [](Attribute value) {
+         IntegerAttr integer = dyn_cast<IntegerAttr>(value);
+         return !integer || integer.getInt() <= 0;
+       })))
+    return kernel.emitOpError(
+               "required work-group size must contain three positive integers"),
+           failure();
+  IntegerAttr slmSize = kernel->getAttrOfType<IntegerAttr>(kSlmSizeAttrName);
+  IntegerAttr scratchSize =
+      kernel->getAttrOfType<IntegerAttr>(kScratchSizeAttrName);
+  if ((slmSize && slmSize.getInt() < 0) ||
+      (scratchSize && scratchSize.getInt() < 0))
+    return kernel.emitOpError("SLM and scratch sizes must be nonnegative"),
+           failure();
   if (!grfCount || !grfUsed || !simdSize || !barrierCount ||
       !hasGlobalAtomics || !hasNoStatelessWrite || !hasDpas)
     return kernel.emitOpError("missing machine resource attributes"), failure();
-  if (grfCount.getInt() != 128 ||
+  if (grfCount.getInt() != target->getGrfCount() ||
       (simdSize.getInt() != 8 && simdSize.getInt() != 16 &&
        simdSize.getInt() != 32))
     return kernel.emitOpError("unsupported GRF count or SIMD size"), failure();
@@ -159,18 +175,24 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
   if (usesPayload && !inlineSize)
     return kernel.emitOpError("incomplete thread payload attributes"),
            failure();
-  if (usesPayload && inlineSize.getInt() != 32)
+  if (usesPayload &&
+      inlineSize.getInt() != static_cast<int64_t>(abi.getInlinePayloadSize()))
     return kernel.emitOpError("unsupported thread payload layout"), failure();
   if (usesThreadIds &&
-      (!perThreadSize || perThreadSize.getInt() < 64 ||
-       perThreadSize.getInt() > 192 || perThreadSize.getInt() % 64 != 0))
+      (!perThreadSize ||
+       perThreadSize.getInt() <
+           static_cast<int64_t>(abi.getLocalIdAxisStride()) ||
+       perThreadSize.getInt() >
+           static_cast<int64_t>(abi.getPerThreadPayloadSize(2)) ||
+       perThreadSize.getInt() % abi.getLocalIdAxisStride() != 0))
     return kernel.emitOpError("unsupported per-thread payload layout"),
            failure();
 
   std::string yaml;
   llvm::raw_string_ostream output(yaml);
   output << "---\n"
-         << "version: '1.64'\n"
+         << "version: '" << target->getZebinCompatibilityIdentity().version
+         << "'\n"
          << "kernels:\n"
          << "  - name: " << quoteYaml(kernel.getName()) << "\n";
   if (requiredWorkGroupSize || simdSize.getInt() == 16) {
@@ -180,8 +202,7 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
     if (requiredWorkGroupSize) {
       output << "      reqd_work_group_size: [";
       for (auto [index, value] : llvm::enumerate(requiredWorkGroupSize))
-        output << (index == 0 ? "" : ", ")
-               << cast<IntegerAttr>(value).getInt();
+        output << (index == 0 ? "" : ", ") << cast<IntegerAttr>(value).getInt();
       output << "]\n";
     }
   }
@@ -203,29 +224,26 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
   output << "      has_no_stateless_write: "
          << (hasNoStatelessWrite.getValue() ? "true" : "false") << "\n";
   if (usesPayload)
-    output << "      inline_data_payload_size: " << inlineSize.getInt()
-           << "\n";
+    output << "      inline_data_payload_size: " << inlineSize.getInt() << "\n";
   if (usesThreadIds)
     output << "      offset_to_skip_per_thread_data_load: "
            << payloadEntryOffset << "\n";
   output << "      simd_size: " << simdSize.getInt() << "\n";
   if (barrierCount.getInt() != 0)
     output << "      barrier_count: " << barrierCount.getInt() << "\n";
-  if (auto slmSize = kernel->getAttrOfType<IntegerAttr>(kSlmSizeAttrName))
+  if (slmSize)
     output << "      slm_size: " << slmSize.getInt() << "\n";
-  if (auto scratchSize =
-          kernel->getAttrOfType<IntegerAttr>(kScratchSizeAttrName))
+  if (scratchSize)
     output << "      spill_size: " << scratchSize.getInt() << "\n";
 
   if (usesThreadIds || !kernelArgs.empty()) {
     output << "    payload_arguments:\n";
     if (usesThreadIds) {
-      output << "      - arg_type: global_id_offset\n"
-             << "        offset: 0\n"
-             << "        size: 12\n"
-             << "      - arg_type: enqueued_local_size\n"
-             << "        offset: 12\n"
-             << "        size: 12\n";
+      for (const ImplicitKernelArgumentLayout &argument :
+           abi.getImplicitArguments())
+        output << "      - arg_type: " << argument.name << "\n"
+               << "        offset: " << argument.offset << "\n"
+               << "        size: " << argument.size << "\n";
     }
     for (auto [index, descriptorAttr] : llvm::enumerate(kernelArgs)) {
       auto descriptor = cast<KernelArgAttr>(descriptorAttr);
@@ -235,9 +253,9 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
                << "        size: " << descriptor.getSize() << "\n"
                << "        arg_index: " << index << "\n"
                << "        addrmode: stateless\n"
-                << "        addrspace: "
-                << descriptor.getAddressSpace().getValue() << "\n"
-                << "        access_type: ";
+               << "        addrspace: "
+               << descriptor.getAddressSpace().getValue() << "\n"
+               << "        access_type: ";
         llvm::StringRef access = descriptor.getAccess().getValue();
         if (access == "read_only")
           output << "readonly\n";
@@ -258,8 +276,7 @@ FailureOr<std::string> buildZeInfo(func::FuncOp kernel,
            << "      - arg_type: local_id\n"
            << "        offset: 0\n"
            << "        size: " << perThreadSize.getInt() << "\n";
-  if (auto scratchSize =
-          kernel->getAttrOfType<IntegerAttr>(kScratchSizeAttrName))
+  if (scratchSize)
     output << "    per_thread_memory_buffers:\n"
            << "      - type: scratch\n"
            << "        usage: single_space\n"
@@ -284,8 +301,9 @@ void appendSectionHeader(Bytes &output, uint32_t name, uint32_t type,
   appendInteger(output, entrySize);
 }
 
-LogicalResult writeElf(func::FuncOp kernel, llvm::ArrayRef<char> text,
-                       llvm::StringRef zeInfo, llvm::raw_ostream &output) {
+LogicalResult writeElf(func::FuncOp kernel, const TargetConfig &target,
+                       llvm::ArrayRef<char> text, llvm::StringRef zeInfo,
+                       llvm::raw_ostream &output) {
   Bytes strtab;
   strtab.push_back(0);
   appendBytes(strtab, kernel.getName());
@@ -312,7 +330,7 @@ LogicalResult writeElf(func::FuncOp kernel, llvm::ArrayRef<char> text,
   sections.push_back(
       {".ze_info", kSectionZeInfo, 0, 8, Bytes(zeInfo.begin(), zeInfo.end())});
   sections.push_back({".note.intelgt.compat", llvm::ELF::SHT_NOTE, 0, 4,
-                      buildCompatibilityNotes()});
+                      buildCompatibilityNotes(target)});
 
   Bytes sectionNames;
   sectionNames.push_back(0);
@@ -376,6 +394,11 @@ LogicalResult inter::emitZebin(ModuleOp moduleOp, llvm::raw_ostream &output) {
   if (kernels.size() != 1)
     return moduleOp.emitError("zebin emission requires exactly one kernel"),
            failure();
+  llvm::Expected<TargetConfig> target = TargetConfig::resolve(
+      kernels.front()->getAttrOfType<TargetAttr>(kTargetAttrName));
+  if (!target)
+    return kernels.front().emitOpError(llvm::toString(target.takeError())),
+           failure();
 
   Bytes text;
   llvm::raw_svector_ostream textOutput(text);
@@ -391,5 +414,5 @@ LogicalResult inter::emitZebin(ModuleOp moduleOp, llvm::raw_ostream &output) {
   if (text.empty())
     return kernels.front().emitOpError("encoded kernel text is empty"),
            failure();
-  return writeElf(kernels.front(), text, *zeInfo, output);
+  return writeElf(kernels.front(), *target, text, *zeInfo, output);
 }

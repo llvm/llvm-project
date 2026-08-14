@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
 
 #include <array>
 #include <limits>
@@ -845,8 +846,7 @@ static AllocationPlan buildAllocationPlan(func::FuncOp function,
   DenseMap<Operation *, unsigned> groupTokens;
   for (auto &[root, members] : groups) {
     for (Operation *member : members) {
-      FinalSWSB existing =
-          cast<SWSBInfoOpInterface>(member).getFinalSWSB();
+      FinalSWSB existing = cast<SWSBInfoOpInterface>(member).getFinalSWSB();
       if (existing.token < 0 ||
           static_cast<unsigned>(existing.token) >= sbidCount ||
           existing.tokenMode != SWSBTokenMode::set)
@@ -903,9 +903,8 @@ static AllocationPlan buildAllocationPlan(func::FuncOp function,
 
 static LogicalResult validateExistingSynchronization(func::FuncOp function,
                                                      unsigned sbidCount) {
-  uint32_t legalMask = sbidCount == 32
-                           ? std::numeric_limits<uint32_t>::max()
-                           : (uint32_t{1} << sbidCount) - 1;
+  uint32_t legalMask = sbidCount == 32 ? std::numeric_limits<uint32_t>::max()
+                                       : (uint32_t{1} << sbidCount) - 1;
   DenseMap<Operation *, unsigned> assignedDpasChains;
   WalkResult result = function.walk([&](Operation *operation) {
     if (SyncOp sync = dyn_cast<SyncOp>(operation)) {
@@ -968,7 +967,7 @@ static void appendAllocationWaits(Operation *operation, const SyncState &state,
 }
 
 static void requireTokenWait(SmallVectorImpl<TokenWait> &requirements,
-                              TokenWait wait) {
+                             TokenWait wait) {
   if (wait.mode == SWSBTokenMode::source &&
       llvm::is_contained(requirements,
                          TokenWait{wait.sbid, SWSBTokenMode::destination}))
@@ -979,9 +978,9 @@ static void requireTokenWait(SmallVectorImpl<TokenWait> &requirements,
     requirements.push_back(wait);
 }
 
-static void appendNextDestinationWaits(
-    Operation *next, const SyncState &state,
-    SmallVectorImpl<IssueWait> &requirements) {
+static void
+appendNextDestinationWaits(Operation *next, const SyncState &state,
+                           SmallVectorImpl<IssueWait> &requirements) {
   if (!next || requirements.empty())
     return;
   for (IssueWait wait : computeRequirement(next, state))
@@ -990,7 +989,7 @@ static void appendNextDestinationWaits(
 }
 
 static void rewriteWithSolver(func::FuncOp function, DataFlowSolver &solver,
-                               const AllocationPlan &plan) {
+                              const AllocationPlan &plan) {
   OpBuilder builder(function.getContext());
   SmallVector<Block *> blocks;
   collectBlocks(function.getBody(), blocks);
@@ -1433,17 +1432,30 @@ static LogicalResult assignDistanceDependencies(func::FuncOp function) {
 
 class InsertSync : public inter::impl::InsertSyncBase<InsertSync> {
 public:
+  using InsertSyncBase::InsertSyncBase;
+
   void runOnOperation() override {
     func::FuncOp function = getOperation();
     if (function.isExternal())
       return;
 
-    constexpr unsigned defaultSBIDCount = 16;
-    constexpr unsigned largeGRFSBIDCount = 32;
     IntegerAttr grfCount =
         function->getAttrOfType<IntegerAttr>(kGrfCountAttrName);
-    unsigned sbidCount = grfCount && grfCount.getInt() > 128 ? largeGRFSBIDCount
-                                                              : defaultSBIDCount;
+    TargetAttr targetAttr =
+        function->getAttrOfType<TargetAttr>(kTargetAttrName);
+    llvm::Expected<TargetConfig> target =
+        targetAttr ? TargetConfig::resolve(targetAttr)
+        : !chip.empty()
+            ? TargetConfig::resolve(chip)
+            : llvm::Expected<TargetConfig>(llvm::createStringError(
+                  "synchronization requires a target attribute or --chip "
+                  "option"));
+    if (!target) {
+      function.emitError(llvm::toString(target.takeError()));
+      return signalPassFailure();
+    }
+    unsigned sbidCount = target->getSbidCount(grfCount ? grfCount.getInt()
+                                                       : target->getGrfCount());
     if (failed(validateExistingSynchronization(function, sbidCount)))
       return signalPassFailure();
     DominanceInfo dominance(function);

@@ -1,4 +1,6 @@
 #include "inter/Dialect/Inter/IR/XW.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineABI.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineTarget.h"
 
 #include "inter/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -17,14 +19,58 @@ namespace inter {
 } // namespace inter.
 
 using namespace mlir;
+using namespace inter::xemachine;
 
 namespace {
+
+LogicalResult validateModule(ModuleOp moduleOp) {
+  const KernelABI &abi = KernelABI::get();
+  if (StringAttr triple = moduleOp->getAttrOfType<StringAttr>(
+          LLVM::LLVMDialect::getTargetTripleAttrName())) {
+    if (!triple.getValue().empty() &&
+        triple.getValue() != "spir64-unknown-unknown")
+      return moduleOp.emitError("unsupported LLVM target triple '")
+             << triple.getValue() << "'";
+  }
+
+  if (ArrayAttr assembly =
+          moduleOp->getAttrOfType<ArrayAttr>("llvm.module_asm"))
+    if (!assembly.empty())
+      return moduleOp.emitError("LLVM module assembly is unsupported");
+
+  DataLayout layout(moduleOp);
+  for (uint32_t value = 0; value <= 4; ++value) {
+    KernelAddressSpace addressSpace = *abi.decodeAddressSpace(value);
+    Type pointer = LLVM::LLVMPointerType::get(moduleOp.getContext(), value);
+    llvm::TypeSize size = layout.getTypeSize(pointer);
+    uint64_t alignment = layout.getTypeABIAlignment(pointer);
+    uint32_t expectedBits = abi.getSourcePointerBitWidth(addressSpace);
+    if (size.isScalable() || size.getFixedValue() * 8 != expectedBits ||
+        alignment != abi.getPointerArgumentAlignment())
+      return moduleOp.emitError()
+             << "LLVM pointer layout for address space " << value << " must be "
+             << expectedBits << " bits with "
+             << abi.getPointerArgumentAlignment() << "-byte ABI alignment";
+    std::optional<uint64_t> indexWidth = layout.getTypeIndexBitwidth(pointer);
+    uint32_t expectedIndex = abi.getSourcePointerIndexBitWidth(addressSpace);
+    if (!indexWidth || *indexWidth != expectedIndex)
+      return moduleOp.emitError()
+             << "LLVM pointer index width for address space " << value
+             << " must be " << expectedIndex << " bits";
+  }
+  if (auto endianness = dyn_cast_or_null<StringAttr>(layout.getEndianness()))
+    if (endianness.getValue() != "little")
+      return moduleOp.emitError("LLVM data layout must be little-endian");
+  return success();
+}
 
 struct ImportLLVM final : inter::impl::ImportLLVMBase<ImportLLVM> {
   using ImportLLVMBase::ImportLLVMBase;
 
   LogicalResult importFunction(LLVM::LLVMFuncOp llvmFunction) {
-    if (llvmFunction.getCConv() != LLVM::CConv::SPIR_KERNEL)
+    const KernelABI &abi = KernelABI::get();
+    if (static_cast<unsigned>(llvmFunction.getCConv()) !=
+        abi.getCallingConvention())
       return llvmFunction.emitOpError(
                  "defined helpers must be inlined before LLVM import"),
              failure();
@@ -39,8 +85,7 @@ struct ImportLLVM final : inter::impl::ImportLLVMBase<ImportLLVM> {
                                 llvmFunction.getResultTypes()));
     cast<FunctionOpInterface>(function.getOperation())
         .setVisibility(llvmFunction.getVisibility());
-    DataLayout layout = DataLayout::closest(llvmFunction);
-    uint64_t offset = 24;
+    uint64_t offset = abi.getFirstExplicitArgumentOffset();
     SmallVector<Attribute> descriptors;
     for (auto [index, type] :
          llvm::enumerate(llvmFunction.getArgumentTypes())) {
@@ -49,14 +94,32 @@ struct ImportLLVM final : inter::impl::ImportLLVMBase<ImportLLVM> {
                    << "kernel argument " << index
                    << " must be an integer, floating-point, or pointer type",
                failure();
-      llvm::TypeSize typeSize = layout.getTypeSize(type);
-      if (typeSize.isScalable())
-        return llvmFunction.emitOpError()
-                   << "kernel argument " << index << " has scalable size",
-               failure();
-      uint64_t alignment = layout.getTypeABIAlignment(type);
-      uint64_t size = typeSize.getFixedValue();
+      uint64_t alignment = 0;
+      uint64_t size = 0;
+      if (auto pointer = dyn_cast<LLVM::LLVMPointerType>(type)) {
+        if (!abi.decodeAddressSpace(pointer.getAddressSpace()))
+          return llvmFunction.emitOpError()
+                     << "kernel argument " << index << " has address space "
+                     << pointer.getAddressSpace() << " outside the kernel ABI",
+                 failure();
+        alignment = abi.getPointerArgumentAlignment();
+        size = abi.getPointerArgumentSize();
+      } else {
+        bool isFloat = isa<FloatType>(type);
+        uint32_t bitWidth = type.getIntOrFloatBitWidth();
+        std::optional<uint32_t> scalarAlignment =
+            abi.getScalarArgumentAlignment(bitWidth, isFloat);
+        if (!scalarAlignment)
+          return llvmFunction.emitOpError()
+                     << "kernel argument " << index
+                     << " has unsupported scalar width " << bitWidth,
+                 failure();
+        alignment = *scalarAlignment;
+        size = (bitWidth + 7) / 8;
+      }
       offset = llvm::alignTo(offset, alignment);
+      if (abi.crossesPayloadBoundary(offset, size))
+        offset = abi.getNextPayloadBoundary(offset);
       NamedAttrList descriptor;
       descriptor.set("offset", builder.getI64IntegerAttr(offset));
       descriptor.set("alignment", builder.getI64IntegerAttr(alignment));
@@ -83,7 +146,7 @@ struct ImportLLVM final : inter::impl::ImportLLVMBase<ImportLLVM> {
     }
     function->setAttr("xw.kernel", builder.getUnitAttr());
     function->setAttr(xw::XWDialect::getSimdWidthAttrName(),
-                      builder.getI32IntegerAttr(simdWidth));
+                      builder.getI32IntegerAttr(effectiveSimdWidth));
     function->setAttr("xw.kernel_args", builder.getArrayAttr(descriptors));
     for (NamedAttribute attr : llvmFunction->getDiscardableAttrs())
       if (!attr.getName().strref().starts_with("llvm."))
@@ -118,7 +181,14 @@ struct ImportLLVM final : inter::impl::ImportLLVMBase<ImportLLVM> {
   }
 
   void runOnOperation() override {
-    if (simdWidth != 8 && simdWidth != 16 && simdWidth != 32) {
+    if (failed(validateModule(getOperation())))
+      return signalPassFailure();
+    effectiveSimdWidth = simdWidth;
+    if (IntegerAttr requested = getOperation()->getAttrOfType<IntegerAttr>(
+            kCompilationSimdWidthAttrName))
+      effectiveSimdWidth = requested.getInt();
+    if (effectiveSimdWidth != 8 && effectiveSimdWidth != 16 &&
+        effectiveSimdWidth != 32) {
       getOperation().emitError("--simd-width must be 8, 16, or 32");
       return signalPassFailure();
     }
@@ -131,6 +201,9 @@ struct ImportLLVM final : inter::impl::ImportLLVMBase<ImportLLVM> {
       if (failed(importFunction(function)))
         return signalPassFailure();
   }
+
+private:
+  unsigned effectiveSimdWidth = 16;
 };
 
 struct VerifyStructured final

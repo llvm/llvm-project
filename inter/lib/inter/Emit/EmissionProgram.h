@@ -3,6 +3,7 @@
 
 #include "inter/Dialect/XeMachine/IR/XeMachine.h"
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/SmallVector.h"
@@ -161,7 +162,7 @@ struct EmissionProgram {
   std::optional<uint32_t> payloadEntryLabel;
 };
 
-mlir::LogicalResult lowerToEmissionProgram(mlir::ModuleOp moduleOp,
+mlir::LogicalResult lowerToEmissionProgram(mlir::func::FuncOp kernel,
                                            EmissionProgram &program);
 
 } // namespace inter::detail

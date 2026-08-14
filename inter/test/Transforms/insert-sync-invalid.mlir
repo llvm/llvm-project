@@ -1,4 +1,4 @@
-// RUN: inter-opt %s --split-input-file --inter-insert-sync -verify-diagnostics
+// RUN: inter-opt %s --split-input-file --inter-insert-sync="chip=bmg" -verify-diagnostics
 
 func.func @unavailable_wait() attributes {xemachine.grf_count = 128 : i32} {
   // expected-error@+1 {{wait names SBID 16 but this GRF mode exposes 16}}

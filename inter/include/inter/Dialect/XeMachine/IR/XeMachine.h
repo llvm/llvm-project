@@ -2,6 +2,7 @@
 #define INTER_DIALECT_XEMACHINE_IR_XEMACHINE_H
 
 #include "inter/Dialect/XeMachine/IR/Xe2Timing.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineABI.h"
 #include "inter/Dialect/XeMachine/IR/XeMachineTarget.h"
 #include "inter/Dialect/XeMachine/IR/XeMachineTraits.h"
 

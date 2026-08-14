@@ -1,6 +1,6 @@
-// RUN: inter-opt %s --inter-insert-sync | FileCheck %s
-// RUN: inter-opt %s --inter-insert-sync -o %t
-// RUN: inter-opt %t --inter-insert-sync | diff %t -
+// RUN: inter-opt %s --inter-insert-sync="chip=bmg" | FileCheck %s
+// RUN: inter-opt %s --inter-insert-sync="chip=bmg" -o %t
+// RUN: inter-opt %t --inter-insert-sync="chip=bmg" | diff %t -
 
 // A load destination must complete before an ALU consumer reads it.
 // CHECK-LABEL: func.func @load_consumer

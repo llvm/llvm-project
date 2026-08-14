@@ -39,6 +39,11 @@ tools = [
         "inter-alias-dump", command=config.inter_alias_dump, unresolved="fatal"
     ),
     ToolSubst(
+        "inter-compile-api-test",
+        command=config.inter_compile_api_test,
+        unresolved="fatal",
+    ),
+    ToolSubst(
         "inter-timing-dump",
         command=config.inter_timing_dump,
         unresolved="fatal",

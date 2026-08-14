@@ -53,6 +53,6 @@ module {
 // CHECK: xemachine.cmp
 // CHECK: xemachine.mov
 // CHECK: src0Sub = 3 : i32} : {{.*}}i64
-// CHECK: src0Sub = 1
+// CHECK: src0Sub = 4
 // CHECK: xemachine.token
 // CHECK: xemachine.eot

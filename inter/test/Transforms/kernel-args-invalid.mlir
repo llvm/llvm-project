@@ -14,6 +14,19 @@ module {
 // -----
 
 module {
+  // expected-error@+1 {{kernel argument crosses a payload boundary}}
+  func.func @crosses_chunk(%arg: vector<4xi32>) attributes {
+      xemachine.kernel,
+      xemachine.kernel_args = [
+        #xemachine.kernel_arg<kind = by_value, address_space = "none", access = "none", size = 16, alignment = 8, offset = 88>
+       ], xw.simd_width = 8 : i32} {
+    return
+  }
+}
+
+// -----
+
+module {
   // expected-error@+1 {{kernel argument overlaps the implicit payload}}
   func.func @reserved(%arg: !xw.ptr<#xw.global>) attributes {
       xemachine.kernel,

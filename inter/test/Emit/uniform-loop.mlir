@@ -2,7 +2,7 @@
 // RUN: inter-ged-dump %t | FileCheck %s
 // RUN: inter-translate --xemachine-to-asm %s | FileCheck %s --check-prefix=ASM
 
-func.func @loops() {
+func.func @loops() attributes {xemachine.target = #xemachine.target<chip = "bmg">} {
   %one = xemachine.imm 1 : i32
   %init = xemachine.mov %one {execSize = 1 : i32, noMask}
       : (!xemachine.imm, i32) -> !xemachine.reg<16, 4>

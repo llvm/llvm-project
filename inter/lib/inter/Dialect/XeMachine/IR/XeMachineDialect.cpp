@@ -47,8 +47,7 @@ TargetAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 mlir::LogicalResult
 inter::xemachine::verifyKernelArgLayout(mlir::ArrayAttr arguments,
                                         mlir::Operation *owner) {
-  constexpr uint64_t firstExplicitArgument = 24;
-  constexpr uint64_t loadedPayloadBytes = 192;
+  const KernelABI &abi = KernelABI::get();
   if (!arguments)
     return owner->emitOpError("missing or invalid kernel argument layout");
 
@@ -66,7 +65,7 @@ inter::xemachine::verifyKernelArgLayout(mlir::ArrayAttr arguments,
     if (size == 0 || alignment == 0 || !llvm::isPowerOf2_64(alignment))
       return owner->emitOpError("invalid kernel argument size or alignment");
     if (descriptor.getKind() == KernelArgKind::by_pointer) {
-      if (size != 8 || addressSpace == "none")
+      if (size != abi.getPointerArgumentSize() || addressSpace == "none")
         return owner->emitOpError("invalid pointer kernel argument descriptor");
       if (access != "read_only" && access != "write_only" &&
           access != "read_write")
@@ -74,14 +73,17 @@ inter::xemachine::verifyKernelArgLayout(mlir::ArrayAttr arguments,
     } else if (addressSpace != "none" || access != "none") {
       return owner->emitOpError("by-value argument has pointer ABI properties");
     }
-    if (offset < firstExplicitArgument)
+    if (offset < abi.getFirstExplicitArgumentOffset())
       return owner->emitOpError(
           "kernel argument overlaps the implicit payload");
     if (offset % alignment != 0)
       return owner->emitOpError("kernel argument payload is misaligned");
-    if (offset > loadedPayloadBytes || size > loadedPayloadBytes - offset)
+    if (offset > abi.getCrossThreadPayloadLimit() ||
+        size > abi.getCrossThreadPayloadLimit() - offset)
       return owner->emitOpError(
           "kernel argument is outside the loaded payload");
+    if (abi.crossesPayloadBoundary(offset, size))
+      return owner->emitOpError("kernel argument crosses a payload boundary");
     for (auto [begin, end] : ranges)
       if (offset < end && begin < offset + size)
         return owner->emitOpError("kernel argument payloads overlap");

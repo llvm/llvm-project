@@ -16,6 +16,11 @@ target_link_libraries(inter-timing-dump PRIVATE
 add_executable(inter-target-info target-info.cpp)
 target_link_libraries(inter-target-info PRIVATE InterXeMachine)
 
+add_executable(inter-compile-api-test compile-api.cpp)
+target_link_libraries(inter-compile-api-test PRIVATE
+  InterCompiler
+  LLVMAsmParser)
+
 set(INTER_TEST_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(INTER_TEST_EXEC_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(INTER_TEST_IS_INTEGRATION 0)
@@ -27,6 +32,7 @@ configure_lit_site_cfg(
 
 set(INTER_TEST_DEPENDS
   FileCheck
+  inter-compile-api-test
   inter-alias-dump
   inter-ged-dump
   inter-opt

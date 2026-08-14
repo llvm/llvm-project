@@ -6,4 +6,4 @@ module {
   }
 }
 
-// CHECK: pointer address space 5 has no XW mapping
+// CHECK: kernel argument 0 has address space 5 outside the kernel ABI

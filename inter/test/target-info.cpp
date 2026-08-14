@@ -1,3 +1,4 @@
+#include "inter/Dialect/XeMachine/IR/XeMachineABI.h"
 #include "inter/Dialect/XeMachine/IR/XeMachineTarget.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -24,8 +25,6 @@ int main(int argc, char **argv) {
   llvm::outs() << "architecture: " << target->getArchitectureName() << '\n';
   llvm::outs() << "grf-byte-size: " << target->getGrfByteSize() << '\n';
   llvm::outs() << "grf-count: " << target->getGrfCount() << '\n';
-  llvm::outs() << "reserved-grf-count: " << target->getReservedGrfCount()
-               << '\n';
   llvm::outs() << "simd-widths:";
   for (uint32_t width : target->getSupportedSimdWidths())
     llvm::outs() << ' ' << width;
@@ -37,5 +36,23 @@ int main(int argc, char **argv) {
   llvm::outs() << "zebin-target-metadata: " << zebin.targetMetadata << '\n';
   llvm::outs() << "zebin-product-config: " << zebin.productConfig << '\n';
   llvm::outs() << "zebin-version: " << zebin.version << '\n';
+
+  const inter::xemachine::KernelABI &abi = inter::xemachine::KernelABI::get();
+  llvm::outs() << "first-explicit-argument: "
+               << abi.getFirstExplicitArgumentOffset() << '\n';
+  llvm::outs() << "cross-thread-payload-limit: "
+               << abi.getCrossThreadPayloadLimit() << '\n';
+  llvm::outs() << "inline-payload-size: " << abi.getInlinePayloadSize() << '\n';
+  llvm::outs() << "payload-chunk-size: " << abi.getPayloadChunkSize() << '\n';
+  llvm::outs() << "reserved-payload-grfs: " << abi.getReservedPayloadGrfCount()
+               << '\n';
+  for (uint32_t value = 0; value <= 4; ++value) {
+    std::optional<inter::xemachine::KernelAddressSpace> addressSpace =
+        abi.decodeAddressSpace(value);
+    llvm::outs() << "address-space-" << value << ": "
+                 << abi.getAddressSpaceName(*addressSpace) << ' '
+                 << abi.getMachinePointerBitWidth(*addressSpace) << ' '
+                 << abi.getMachinePointerIndexBitWidth(*addressSpace) << '\n';
+  }
   return 0;
 }

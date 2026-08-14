@@ -1,7 +1,7 @@
 // RUN: inter-opt --split-input-file --inter-machine-schedule -verify-diagnostics %s
 
 module {
-  // expected-error@+1 {{machine scheduling requires a target attribute}}
+  // expected-error@+1 {{missing Intel GPU target attribute}}
   func.func @missing_target() {
     %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
     return

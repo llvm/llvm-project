@@ -25,6 +25,21 @@ The initial target is Battlemage G21, validated on Arc Pro B60. The device path
 does not use IGC, vISA, or SPIR-V. Inter links Intel GED for instruction encoding
 and emits zebin directly.
 
+## Compilation API
+
+`inter::compileLLVMModule` is the tool-independent compilation boundary. It
+owns LLVM-to-MLIR import, dialect and pass registration, execution of the
+canonical transform library, diagnostic capture, and final emission. Callers
+provide an owned LLVM module, a validated `TargetConfig`, SIMD width, transform
+library path, and an output kind: zebin, raw GED bytes, IGA assembly, or
+validation-only. A caller-owned stream receives MLIR diagnostics, and the API
+returns `llvm::Error`; it does not terminate the process or depend on global
+command-line options.
+
+`inter-opt` uses the same compiler dialect and pass registration functions, and
+`inter-translate` uses the same GED, assembly, and zebin emitters. The transform
+library remains the sole declaration of backend pass order.
+
 ## Design principles
 
 - Every IR boundary is printable and verifier-backed.

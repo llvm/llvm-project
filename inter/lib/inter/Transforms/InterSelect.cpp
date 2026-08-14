@@ -27,9 +27,6 @@ using namespace inter::xemachine;
 
 namespace {
 
-constexpr int kInlineMirrorSize = 32;
-constexpr int kLocalIdLoadOffset = 0x20;
-
 struct ValueShape {
   Type elementType;
   int64_t cardinality;
@@ -50,8 +47,11 @@ public:
     SmallVector<StringRef> featureNames;
     for (const std::string &feature : targetFeatures)
       featureNames.push_back(feature);
+    TargetAttr requestedTarget =
+        getOperation()->getAttrOfType<TargetAttr>(kCompilationTargetAttrName);
     llvm::Expected<TargetConfig> resolvedTarget =
-        TargetConfig::resolve(chip, featureNames);
+        requestedTarget ? TargetConfig::resolve(requestedTarget)
+                        : TargetConfig::resolve(chip, featureNames);
     if (!resolvedTarget) {
       getOperation().emitError(llvm::toString(resolvedTarget.takeError()));
       return signalPassFailure();
@@ -71,6 +71,8 @@ public:
     for (func::FuncOp kernel : kernels)
       if (failed(lowerKernel(kernel)))
         return signalPassFailure();
+    getOperation()->removeAttr(kCompilationTargetAttrName);
+    getOperation()->removeAttr(kCompilationSimdWidthAttrName);
   }
 
 private:
@@ -139,9 +141,14 @@ private:
       return floating.getWidth();
     if (isa<IndexType>(type))
       return 64;
-    if (xw::PtrType pointer = dyn_cast<xw::PtrType>(type))
-      return isa<xw::LocalAddressSpaceAttr>(pointer.getAddressSpace()) ? 32
-                                                                       : 64;
+    if (xw::PtrType pointer = dyn_cast<xw::PtrType>(type)) {
+      std::optional<KernelAddressSpace> addressSpace =
+          getAddressSpace(pointer.getAddressSpace());
+      if (!addressSpace)
+        return owner->emitOpError("unsupported pointer address space"),
+               failure();
+      return KernelABI::get().getMachinePointerBitWidth(*addressSpace);
+    }
     if (VectorType vector = dyn_cast<VectorType>(type)) {
       FailureOr<int64_t> elementBits =
           getElementBits(vector.getElementType(), owner);
@@ -268,12 +275,10 @@ private:
       bool pointer = kind.getValue() == "pointer";
       StringRef addressSpace = "none";
       if (IntegerAttr space = descriptor.getAs<IntegerAttr>("address_space")) {
-        static constexpr std::array<StringLiteral, 5> names = {
-            "private", "global", "constant", "local", "generic"};
-        int64_t value = space.getInt();
-        addressSpace = value >= 0 && value < static_cast<int64_t>(names.size())
-                           ? names[value]
-                           : "unknown";
+        std::optional<KernelAddressSpace> decoded =
+            KernelABI::get().decodeAddressSpace(space.getInt());
+        addressSpace = decoded ? KernelABI::get().getAddressSpaceName(*decoded)
+                               : "unknown";
       }
       StringAttr access = descriptor.getAs<StringAttr>("access");
       if (pointer && !access)
@@ -296,18 +301,24 @@ private:
     if (failed(descriptor))
       return failure();
     uint64_t offset = descriptor->getOffset();
-    uint64_t size = descriptor->getSize();
-    if (offset < kInlineMirrorSize)
-      return std::pair<Value, int64_t>{getInlineDataRegister(), offset / size};
-    uint64_t tailOffset = offset - kInlineMirrorSize;
-    uint64_t chunk = tailOffset / 64;
-    if (chunk >= payloadTail.size() || tailOffset % 64 + size > 64)
+    FailureOr<int64_t> bits = getElementBits(argument.getType(), owner);
+    if (failed(bits))
+      return failure();
+    uint64_t storageBytes = (*bits + 7) / 8;
+    const KernelABI &abi = KernelABI::get();
+    if (offset < abi.getInlinePayloadSize())
+      return std::pair<Value, int64_t>{getInlineDataRegister(),
+                                       offset / storageBytes};
+    uint64_t tailOffset = offset - abi.getInlinePayloadSize();
+    uint64_t chunk = tailOffset / abi.getPayloadChunkSize();
+    if (chunk >= payloadTail.size())
       return owner->emitOpError("kernel argument at offset ")
                  << offset << " is outside loaded payload with "
                  << payloadTail.size() << " chunks",
              failure();
     return std::pair<Value, int64_t>{payloadTail[chunk],
-                                     tailOffset % 64 / size};
+                                     tailOffset % abi.getPayloadChunkSize() /
+                                         storageBytes};
   }
 
   LogicalResult validateKernelArguments(func::FuncOp kernel) {
@@ -325,7 +336,7 @@ private:
         return kernel.emitOpError("kernel ABI arguments must be bare values");
       if (xw::PtrType pointer = dyn_cast<xw::PtrType>(type)) {
         if (descriptor->getKind() != KernelArgKind::by_pointer ||
-            descriptor->getSize() != 8)
+            descriptor->getSize() != KernelABI::get().getPointerArgumentSize())
           return kernel.emitOpError("pointer argument descriptor mismatch");
         StringRef expectedSpace =
             getAddressSpaceName(pointer.getAddressSpace());
@@ -345,18 +356,24 @@ private:
     return success();
   }
 
-  StringRef getAddressSpaceName(Attribute addressSpace) const {
+  std::optional<KernelAddressSpace>
+  getAddressSpace(Attribute addressSpace) const {
     if (isa<xw::PrivateAddressSpaceAttr>(addressSpace))
-      return "private";
+      return KernelAddressSpace::privateSpace;
     if (isa<xw::GlobalAddressSpaceAttr>(addressSpace))
-      return "global";
+      return KernelAddressSpace::global;
     if (isa<xw::ConstantAddressSpaceAttr>(addressSpace))
-      return "constant";
+      return KernelAddressSpace::constant;
     if (isa<xw::LocalAddressSpaceAttr>(addressSpace))
-      return "local";
+      return KernelAddressSpace::local;
     if (isa<xw::GenericAddressSpaceAttr>(addressSpace))
-      return "generic";
-    return "";
+      return KernelAddressSpace::generic;
+    return std::nullopt;
+  }
+
+  StringRef getAddressSpaceName(Attribute addressSpace) const {
+    std::optional<KernelAddressSpace> decoded = getAddressSpace(addressSpace);
+    return decoded ? KernelABI::get().getAddressSpaceName(*decoded) : "";
   }
 
   FailureOr<uint64_t> getSlmSize(func::FuncOp kernel) const {
@@ -426,12 +443,20 @@ private:
         !target->supportsSimdWidth(static_cast<uint32_t>(simdWidth)))
       return kernel.emitOpError("SIMD width is unsupported by target '")
              << target->getChipName() << "'";
+    ArrayAttr workGroupSize =
+        kernel->getAttrOfType<ArrayAttr>("xw.required_work_group_size");
+    if (workGroupSize && (workGroupSize.size() != 3 ||
+                          llvm::any_of(workGroupSize, [](Attribute value) {
+                            IntegerAttr integer = dyn_cast<IntegerAttr>(value);
+                            return !integer || integer.getInt() <= 0;
+                          })))
+      return kernel.emitOpError(
+          "xw.required_work_group_size must contain three positive integers");
 
     WalkResult idWalk = kernel.walk([&](Operation *operation) {
       if (isa<xw::SubgroupIdOp>(operation)) {
         subgroupIdAxes.fill(true);
-        if (ArrayAttr workGroupSize = kernel->getAttrOfType<ArrayAttr>(
-                "xw.required_work_group_size")) {
+        if (workGroupSize) {
           subgroupIdAxes[1] = cast<IntegerAttr>(workGroupSize[1]).getInt() != 1;
           subgroupIdAxes[2] = cast<IntegerAttr>(workGroupSize[2]).getInt() != 1;
         }
@@ -466,20 +491,12 @@ private:
                                                     target->getGrfCount()));
     machineFunction->setAttr(
         kReservedGrfCountAttrName,
-        moduleBuilder.getI32IntegerAttr(target->getReservedGrfCount()));
+        moduleBuilder.getI32IntegerAttr(
+            KernelABI::get().getReservedPayloadGrfCount()));
     machineFunction->setAttr(kSimdSizeAttrName,
                              moduleBuilder.getI32IntegerAttr(simdWidth));
-    if (ArrayAttr workGroupSize =
-            kernel->getAttrOfType<ArrayAttr>("xw.required_work_group_size")) {
-      if (workGroupSize.size() != 3 ||
-          llvm::any_of(workGroupSize, [](Attribute value) {
-            IntegerAttr integer = dyn_cast<IntegerAttr>(value);
-            return !integer || integer.getInt() <= 0;
-          }))
-        return kernel.emitOpError(
-            "xw.required_work_group_size must contain three positive integers");
+    if (workGroupSize)
       machineFunction->setAttr(kRequiredWorkGroupSizeAttrName, workGroupSize);
-    }
     if (*slmSize != 0)
       machineFunction->setAttr(kSlmSizeAttrName,
                                moduleBuilder.getI64IntegerAttr(*slmSize));
@@ -491,7 +508,8 @@ private:
                                moduleBuilder.getUnitAttr());
     if (needsPayload) {
       machineFunction->setAttr(kInlineDataPayloadSizeAttrName,
-                               moduleBuilder.getI32IntegerAttr(32));
+                               moduleBuilder.getI32IntegerAttr(
+                                   KernelABI::get().getInlinePayloadSize()));
     }
     if (usesThreadIds)
       machineFunction->setAttr(
@@ -512,9 +530,11 @@ private:
   }
 
   void emitLocalIdEntry() {
+    const KernelABI &abi = KernelABI::get();
     Value r0 = architecturalRegister(0);
     Value r1 = architecturalRegister(1);
-    int64_t inlineDataRegister = 1 + getPerThreadPayloadSize() / 64;
+    int64_t inlineDataRegister =
+        abi.getInlineDataRegister(getPerThreadPayloadSize());
     MovOp::create(*builder, *location,
                   RegType::get(context, 16, inlineDataRegister), i32(), 8,
                   canonicalDestination(), canonicalRegion(), IntegerAttr(),
@@ -530,7 +550,7 @@ private:
                       1, canonicalDestination(), uniformRegion(), RegionAttr(),
                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
                       TypeAttr(), true, 0, base,
-                      immediate(kLocalIdLoadOffset, i32()))
+                      immediate(abi.getLocalIdBlobOffset(), i32()))
             .getResult();
     Value threadSlot =
         AndOp::create(*builder, *location, RegType::get(context, 16, 7), i16(),
@@ -567,7 +587,8 @@ private:
           AddOp::create(*builder, *location, reg(16), i32(), 1,
                         canonicalDestination(), uniformRegion(), RegionAttr(),
                         IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
-                        TypeAttr(), true, 0, address, immediate(128, i32()))
+                        TypeAttr(), true, 0, address,
+                        immediate(2 * abi.getLocalIdAxisStride(), i32()))
               .getResult();
       LoadBlockA32Op z = LoadBlockA32Op::create(
           *builder, *location, RegType::get(context, 16, 3),
@@ -580,14 +601,14 @@ private:
   int64_t getPerThreadPayloadSize() const {
     for (int64_t axis = 2; axis >= 0; --axis)
       if (usedIdAxes[axis])
-        return (axis + 1) * 64;
+        return KernelABI::get().getPerThreadPayloadSize(axis);
     llvm_unreachable("thread payload size requires a used ID axis");
   }
 
   Value getInlineDataRegister() {
     int64_t index = 1;
     if (usedIdAxes[0] || usedIdAxes[1] || usedIdAxes[2])
-      index += getPerThreadPayloadSize() / 64;
+      index = KernelABI::get().getInlineDataRegister(getPerThreadPayloadSize());
     return architecturalRegister(index);
   }
 
@@ -617,22 +638,23 @@ private:
                       IntegerAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(),
                       TypeAttr(), true, 0, r0, immediate(0xFFFFFFC0, i32()))
             .getResult();
-    uint64_t payloadEnd = kInlineMirrorSize;
+    const KernelABI &abi = KernelABI::get();
+    uint64_t payloadEnd = abi.getInlinePayloadSize();
     for (Attribute attribute : kernelArguments) {
       KernelArgAttr descriptor = cast<KernelArgAttr>(attribute);
       payloadEnd =
           std::max(payloadEnd, descriptor.getOffset() + descriptor.getSize());
     }
-    for (uint64_t offset = kInlineMirrorSize; offset < payloadEnd;
-         offset += 64) {
+    for (uint64_t offset = abi.getInlinePayloadSize(); offset < payloadEnd;
+         offset += abi.getPayloadChunkSize()) {
       Value address = base;
-      if (offset != kInlineMirrorSize)
+      if (offset != abi.getInlinePayloadSize())
         address =
             AddOp::create(*builder, *location, reg(16), i32(), 1,
                           canonicalDestination(), uniformRegion(), RegionAttr(),
                           IntegerAttr(), IntegerAttr(), IntegerAttr(),
                           TypeAttr(), TypeAttr(), true, 0, base,
-                          immediate(offset - kInlineMirrorSize, i32()))
+                          immediate(offset - abi.getInlinePayloadSize(), i32()))
                 .getResult();
       LoadBlockA32Op tail = LoadBlockA32Op::create(*builder, *location, reg(16),
                                                    MemTokenType::get(context),
@@ -2653,13 +2675,16 @@ private:
       Value r0 = architecturalRegister(0);
       Value inlineData = getInlineDataRegister();
       Value accumulator =
-          MulOp::create(*builder, *location,
-                        ARFType::get(context, ARFFile::acc, 16, 0), i32(), 1,
-                        canonicalDestination(), uniformRegion(),
-                        uniformRegion(), IntegerAttr(),
-                        builder->getI32IntegerAttr(1 + dim),
-                        builder->getI32IntegerAttr(3 + dim), TypeAttr(),
-                        TypeAttr(), true, 0, r0, inlineData)
+          MulOp::create(
+              *builder, *location, ARFType::get(context, ARFFile::acc, 16, 0),
+              i32(), 1, canonicalDestination(), uniformRegion(),
+              uniformRegion(), IntegerAttr(),
+              builder->getI32IntegerAttr(
+                  KernelABI::get().getGroupIdSubregister(dim)),
+              builder->getI32IntegerAttr(
+                  KernelABI::get().getImplicitArgumentDword(
+                      ImplicitKernelArgument::enqueuedLocalSize, dim)),
+              TypeAttr(), TypeAttr(), true, 0, r0, inlineData)
               .getResult();
       Value base =
           emitMove(reg(16), i32(), 1, accumulator, uniformRegion(), true);
@@ -2678,12 +2703,15 @@ private:
                             IntegerAttr(), IntegerAttr(), typeAttr(i32()),
                             typeAttr(i16()), false, offset, base, spacedLocal)
                   .getResult();
-          return AddOp::create(*builder, *location, reg(32), i64(), 16,
-                               canonicalDestination(), canonicalRegion(),
-                               uniformRegion(), IntegerAttr(), IntegerAttr(),
-                               builder->getI32IntegerAttr(dim), TypeAttr(),
-                               typeAttr(i32()), false, offset, groupLocal,
-                               inlineData)
+          return AddOp::create(
+                     *builder, *location, reg(32), i64(), 16,
+                     canonicalDestination(), canonicalRegion(), uniformRegion(),
+                     IntegerAttr(), IntegerAttr(),
+                     builder->getI32IntegerAttr(
+                         KernelABI::get().getImplicitArgumentDword(
+                             ImplicitKernelArgument::globalIdOffset, dim)),
+                     TypeAttr(), typeAttr(i32()), false, offset, groupLocal,
+                     inlineData)
               .getResult();
         }
         Value groupLocal =
@@ -2693,11 +2721,15 @@ private:
                           IntegerAttr(), IntegerAttr(), TypeAttr(),
                           typeAttr(i16()), false, offset, base, spacedLocal)
                 .getResult();
-        return AddOp::create(*builder, *location, reg(16), i32(), 16,
-                             canonicalDestination(), canonicalRegion(),
-                             uniformRegion(), IntegerAttr(), IntegerAttr(),
-                             builder->getI32IntegerAttr(dim), TypeAttr(),
-                             TypeAttr(), false, offset, groupLocal, inlineData)
+        return AddOp::create(
+                   *builder, *location, reg(16), i32(), 16,
+                   canonicalDestination(), canonicalRegion(), uniformRegion(),
+                   IntegerAttr(), IntegerAttr(),
+                   builder->getI32IntegerAttr(
+                       KernelABI::get().getImplicitArgumentDword(
+                           ImplicitKernelArgument::globalIdOffset, dim)),
+                   TypeAttr(), TypeAttr(), false, offset, groupLocal,
+                   inlineData)
             .getResult();
       };
       result = lowerHalf(0);
@@ -3140,16 +3172,24 @@ private:
         if (failed(lowerId(id, id.getDim(), false)))
           return failure();
       } else if (xw::GroupIdOp id = dyn_cast<xw::GroupIdOp>(operation)) {
-        constexpr std::array<int, 3> groupIdSubregisters = {1, 6, 7};
-        if (failed(lowerUniformQuery(id, id.getDim(),
-                                     groupIdSubregisters[id.getDim()], false)))
+        if (failed(lowerUniformQuery(
+                id, id.getDim(),
+                KernelABI::get().getGroupIdSubregister(id.getDim()), false)))
           return failure();
       } else if (xw::LocalSizeOp size = dyn_cast<xw::LocalSizeOp>(operation)) {
-        if (failed(lowerUniformQuery(size, size.getDim(), size.getDim(), true)))
+        if (failed(lowerUniformQuery(
+                size, size.getDim(),
+                KernelABI::get().getImplicitArgumentDword(
+                    ImplicitKernelArgument::enqueuedLocalSize, size.getDim()),
+                true)))
           return failure();
       } else if (xw::LaunchBlockSizeOp size =
                      dyn_cast<xw::LaunchBlockSizeOp>(operation)) {
-        if (failed(lowerUniformQuery(size, size.getDim(), size.getDim(), true)))
+        if (failed(lowerUniformQuery(
+                size, size.getDim(),
+                KernelABI::get().getImplicitArgumentDword(
+                    ImplicitKernelArgument::enqueuedLocalSize, size.getDim()),
+                true)))
           return failure();
       } else if (isa<xw::GlobalSizeOp, xw::NumGroupsOp, xw::LaunchGridSizeOp>(
                      operation)) {

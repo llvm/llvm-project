@@ -1,5 +1,6 @@
 add_mlir_dialect_library(InterXeMachine
   Xe2Timing.cpp
+  XeMachineABI.cpp
   XeMachineAliasAnalysis.cpp
   XeMachineDialect.cpp
   XeMachineOps.cpp

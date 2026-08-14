@@ -1,4 +1,5 @@
 #include "inter/Dialect/Inter/IR/XW.h"
+#include "inter/Dialect/XeMachine/IR/XeMachineABI.h"
 
 #include "inter/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -328,8 +329,8 @@ static LogicalResult reconcileWhereShape(xw::WhereOp op, bool &changed) {
         resultTypes[index],
         unwrapMaterializedShape(thenYield.getOperand(index)).getType(),
         unwrapMaterializedShape(elseYield.getOperand(index)).getType()};
-    FailureOr<Type> joined = joinStructuredShape(
-        op, types, Twine("where result #") + Twine(index));
+    FailureOr<Type> joined =
+        joinStructuredShape(op, types, Twine("where result #") + Twine(index));
     if (failed(joined))
       return failure();
     joinedTypes.push_back(*joined);
@@ -595,10 +596,10 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
     changed = false;
     SmallVector<Operation *> candidates;
     module.walk<WalkOrder::PostOrder>([&](Operation *op) {
-      if (op->getNumResults() != 0 && (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp,
-                                           xw::PtrAddOp, xw::FreezeOp,
-                                           xw::BitcastOp>(op) ||
-                                        op->hasTrait<OpTrait::Elementwise>()))
+      if (op->getNumResults() != 0 &&
+          (isa<xw::CmpIOp, xw::CmpFOp, xw::PtrCmpOp, xw::PtrAddOp, xw::FreezeOp,
+               xw::BitcastOp>(op) ||
+           op->hasTrait<OpTrait::Elementwise>()))
         candidates.push_back(op);
     });
     for (Operation *op : candidates) {
@@ -619,7 +620,7 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
         replacement =
             xw::SimdType::get(op->getContext(), pointer, **cardinality);
       } else if (isa<xw::FreezeOp, xw::BitcastOp>(op) ||
-                  op->hasTrait<OpTrait::Elementwise>()) {
+                 op->hasTrait<OpTrait::Elementwise>()) {
         replacement = xw::SimdType::get(
             op->getContext(), getPayloadType(resultType), **cardinality);
       }
@@ -661,14 +662,9 @@ static LogicalResult reconcileMaterializedShapes(ModuleOp module) {
     splat.erase();
   }
 
-  SmallVector<StringAttr> consumedModuleAttrs;
-  for (NamedAttribute attr : module->getAttrs()) {
-    StringRef name = attr.getName().strref();
-    if (name.starts_with("llvm.") || name == "dlti.dl_spec")
-      consumedModuleAttrs.push_back(attr.getName());
-  }
-  for (StringAttr name : consumedModuleAttrs)
-    module->removeAttr(name);
+  module->removeAttr(LLVM::LLVMDialect::getTargetTripleAttrName());
+  module->removeAttr("llvm.module_asm");
+  module->removeAttr("dlti.dl_spec");
 
   Operation *illegal = nullptr;
   module.walk([&](Operation *op) {
@@ -698,25 +694,28 @@ public:
   explicit LLVMToXWTypeConverter(MLIRContext *context) {
     addConversion([](Type type) { return type; });
     addConversion([context](LLVM::LLVMPointerType pointer) -> Type {
+      std::optional<inter::xemachine::KernelAddressSpace> decoded =
+          inter::xemachine::KernelABI::get().decodeAddressSpace(
+              pointer.getAddressSpace());
+      if (!decoded)
+        return {};
       Attribute addressSpace;
-      switch (pointer.getAddressSpace()) {
-      case 0:
+      switch (*decoded) {
+      case inter::xemachine::KernelAddressSpace::privateSpace:
         addressSpace = xw::PrivateAddressSpaceAttr::get(context);
         break;
-      case 1:
+      case inter::xemachine::KernelAddressSpace::global:
         addressSpace = xw::GlobalAddressSpaceAttr::get(context);
         break;
-      case 2:
+      case inter::xemachine::KernelAddressSpace::constant:
         addressSpace = xw::ConstantAddressSpaceAttr::get(context);
         break;
-      case 3:
+      case inter::xemachine::KernelAddressSpace::local:
         addressSpace = xw::LocalAddressSpaceAttr::get(context);
         break;
-      case 4:
+      case inter::xemachine::KernelAddressSpace::generic:
         addressSpace = xw::GenericAddressSpaceAttr::get(context);
         break;
-      default:
-        return {};
       }
       return xw::PtrType::get(context, addressSpace);
     });
@@ -790,11 +789,11 @@ enum class BuiltinKind {
 static std::optional<BuiltinKind> classifyBuiltin(StringRef symbol) {
   return StringSwitch<std::optional<BuiltinKind>>(symbol)
       .Cases({"_Z22get_sub_group_local_idv", "_Z22get_sub_group_local_id",
-               "get_sub_group_local_id"},
-              BuiltinKind::LaneId)
-      .Cases({"_Z16get_sub_group_idv", "_Z16get_sub_group_id",
-              "get_sub_group_id"},
-             BuiltinKind::SubgroupId)
+              "get_sub_group_local_id"},
+             BuiltinKind::LaneId)
+      .Cases(
+          {"_Z16get_sub_group_idv", "_Z16get_sub_group_id", "get_sub_group_id"},
+          BuiltinKind::SubgroupId)
       .Cases({"_Z13get_global_idj", "_Z13get_global_idm", "get_global_id"},
              BuiltinKind::GlobalId)
       .Cases({"_Z12get_local_idj", "_Z12get_local_idm", "get_local_id"},
@@ -997,7 +996,8 @@ public:
   LogicalResult
   matchAndRewrite(LLVM::GlobalOp op, OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (op.getAddrSpace() != 3)
+    if (op.getAddrSpace() !=
+        static_cast<unsigned>(inter::xemachine::KernelAddressSpace::local))
       return op.emitOpError(
           "only local-address-space LLVM globals are semantic allocations");
     rewriter.eraseOp(op);
@@ -1014,7 +1014,9 @@ public:
   matchAndRewrite(LLVM::AddressOfOp op, OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto pointer = dyn_cast<LLVM::LLVMPointerType>(op.getType());
-    if (!pointer || pointer.getAddressSpace() != 3)
+    if (!pointer ||
+        pointer.getAddressSpace() !=
+            static_cast<unsigned>(inter::xemachine::KernelAddressSpace::local))
       return rewriter.notifyMatchFailure(
           op, "only addresses of local LLVM globals are supported");
     Type resultType = getTypeConverter()->convertType(op.getType());
@@ -1286,10 +1288,18 @@ public:
     LLVM::LLVMPointerType source =
         cast<LLVM::LLVMPointerType>(op.getArg().getType());
     LLVM::LLVMPointerType result = cast<LLVM::LLVMPointerType>(op.getType());
-    bool sourceLocal = source.getAddressSpace() == 3;
-    bool resultLocal = result.getAddressSpace() == 3;
-    bool sourceGeneric = source.getAddressSpace() == 4;
-    bool resultGeneric = result.getAddressSpace() == 4;
+    bool sourceLocal =
+        source.getAddressSpace() ==
+        static_cast<unsigned>(inter::xemachine::KernelAddressSpace::local);
+    bool resultLocal =
+        result.getAddressSpace() ==
+        static_cast<unsigned>(inter::xemachine::KernelAddressSpace::local);
+    bool sourceGeneric =
+        source.getAddressSpace() ==
+        static_cast<unsigned>(inter::xemachine::KernelAddressSpace::generic);
+    bool resultGeneric =
+        result.getAddressSpace() ==
+        static_cast<unsigned>(inter::xemachine::KernelAddressSpace::generic);
     if ((sourceLocal && resultGeneric) || (sourceGeneric && resultLocal))
       return op.emitOpError("local and generic address-space casts require "
                             "provenance-preserving selection");
@@ -1472,7 +1482,8 @@ public:
     std::optional<int64_t> dimension;
     if (*builtin != BuiltinKind::LaneId &&
         *builtin != BuiltinKind::SubgroupId &&
-        *builtin != BuiltinKind::Barrier && *builtin != BuiltinKind::AtomicAdd) {
+        *builtin != BuiltinKind::Barrier &&
+        *builtin != BuiltinKind::AtomicAdd) {
       if (adaptor.getOperands().size() != 1)
         return rewriter.notifyMatchFailure(op,
                                            "dimension query requires one axis");
@@ -1592,7 +1603,15 @@ private:
     std::optional<uint64_t> width = layout.getTypeIndexBitwidth(pointer);
     if (!width || !*width)
       return rewriter.notifyMatchFailure(gep, "pointer index width is unknown");
-    uint64_t indexWidth = pointer.getAddressSpace() == 3 ? 32 : *width;
+    std::optional<inter::xemachine::KernelAddressSpace> addressSpace =
+        inter::xemachine::KernelABI::get().decodeAddressSpace(
+            pointer.getAddressSpace());
+    if (!addressSpace)
+      return rewriter.notifyMatchFailure(
+          gep, "pointer address space is unsupported");
+    uint64_t indexWidth =
+        inter::xemachine::KernelABI::get().getMachinePointerIndexBitWidth(
+            *addressSpace);
     IntegerType indexType = IntegerType::get(gep.getContext(), indexWidth);
     Type currentType = gep.getElemType();
     Value offset = createIntegerConstant(rewriter, gep.getLoc(), indexType, 0);
@@ -1849,9 +1868,9 @@ public:
       return rewriter.notifyMatchFailure(op,
                                          "result type has no XW conversion");
     resultType = distributeType(resultType, operands);
-    xw::BinaryOp converted = xw::BinaryOp::create(
-        rewriter, op.getLoc(), resultType, xw::BinaryKind::XOrI, operands[0],
-        operands[1]);
+    xw::BinaryOp converted =
+        xw::BinaryOp::create(rewriter, op.getLoc(), resultType,
+                             xw::BinaryKind::XOrI, operands[0], operands[1]);
     rewriter.replaceOp(op, converted.getResult());
     return success();
   }
@@ -1865,7 +1884,8 @@ struct ConvertLLVMToXW final
     for (func::FuncOp function : getOperation().getOps<func::FuncOp>()) {
       for (Type type : function.getArgumentTypes()) {
         auto pointer = dyn_cast<LLVM::LLVMPointerType>(type);
-        if (pointer && pointer.getAddressSpace() > 4) {
+        if (pointer && !inter::xemachine::KernelABI::get().decodeAddressSpace(
+                           pointer.getAddressSpace())) {
           function.emitOpError()
               << "pointer address space " << pointer.getAddressSpace()
               << " has no XW mapping";
@@ -1879,7 +1899,8 @@ struct ConvertLLVMToXW final
     });
     uint64_t slmOffset = 0;
     for (LLVM::GlobalOp global : getOperation().getOps<LLVM::GlobalOp>()) {
-      if (global.getAddrSpace() != 3)
+      if (global.getAddrSpace() !=
+          static_cast<unsigned>(inter::xemachine::KernelAddressSpace::local))
         continue;
       FlatSymbolRefAttr symbol =
           FlatSymbolRefAttr::get(context, global.getSymName());
@@ -1912,46 +1933,46 @@ struct ConvertLLVMToXW final
     }
     LLVMToXWTypeConverter converter(context);
     RewritePatternSet patterns(context);
-    patterns.add<
-        RejectLLVMUndef, ConvertLLVMPoison, ConvertLLVMFreeze, RejectLLVMFence,
-        ConvertLLVMGlobal, ConvertLLVMAddressOf, ConvertLLVMFunc,
-        ConvertLLVMCall,
-        ConvertLLVMIntegerBinary<LLVM::AddOp, xw::BinaryKind::AddI>,
-        ConvertLLVMIntegerBinary<LLVM::SubOp, xw::BinaryKind::SubI>,
-        ConvertLLVMIntegerBinary<LLVM::MulOp, xw::BinaryKind::MulI>,
-        ConvertLLVMIntegerBinary<LLVM::UDivOp, xw::BinaryKind::DivUI>,
-        ConvertLLVMIntegerBinary<LLVM::SDivOp, xw::BinaryKind::DivSI>,
-        ConvertLLVMIntegerBinary<LLVM::URemOp, xw::BinaryKind::RemUI>,
-        ConvertLLVMIntegerBinary<LLVM::SRemOp, xw::BinaryKind::RemSI>,
-        ConvertLLVMIntegerBinary<LLVM::ShlOp, xw::BinaryKind::ShLI>,
-        ConvertLLVMIntegerBinary<LLVM::LShrOp, xw::BinaryKind::ShRUI>,
-        ConvertLLVMIntegerBinary<LLVM::AShrOp, xw::BinaryKind::ShRSI>,
-        ConvertLLVMIntegerBinary<LLVM::AndOp, xw::BinaryKind::AndI>,
-        ConvertLLVMIntegerBinary<LLVM::OrOp, xw::BinaryKind::OrI>,
-        ConvertLLVMIntegerBinary<LLVM::XOrOp, xw::BinaryKind::XOrI>,
-        ConvertLLVMFloatBinary<LLVM::FAddOp, xw::FAddOp>,
-        ConvertLLVMFloatBinary<LLVM::FSubOp, xw::FSubOp>,
-        ConvertLLVMFloatBinary<LLVM::FMulOp, xw::FMulOp>,
-        RejectLLVMFloatBinary<LLVM::FDivOp>,
-        RejectLLVMFloatBinary<LLVM::FRemOp>,
-        ConvertLLVMCast<LLVM::SExtOp, xw::CastKind::IntConvert>,
-        ConvertLLVMCast<LLVM::ZExtOp, xw::CastKind::IntConvert>,
-        ConvertLLVMCast<LLVM::TruncOp, xw::CastKind::IntConvert>,
-        ConvertLLVMCast<LLVM::FPExtOp, xw::CastKind::FpConvert>,
-        ConvertLLVMCast<LLVM::FPTruncOp, xw::CastKind::FpConvert>,
-        ConvertLLVMCast<LLVM::SIToFPOp, xw::CastKind::IntToFp>,
-        ConvertLLVMCast<LLVM::UIToFPOp, xw::CastKind::IntToFp>,
-        ConvertLLVMCast<LLVM::FPToSIOp, xw::CastKind::FpToInt>,
-        ConvertLLVMCast<LLVM::FPToUIOp, xw::CastKind::FpToInt>,
-        ConvertLLVMBitcast,
-        ConvertLLVMICmp, ConvertLLVMFCmp, ConvertLLVMSelect,
-        ConvertLLVMAddrspaceCast,
-        ConvertLLVMOneSourcePointerCast<LLVM::PtrToIntOp, xw::PtrToIntOp>,
-        ConvertLLVMOneSourcePointerCast<LLVM::IntToPtrOp, xw::IntToPtrOp>,
-        ConvertLLVMConstant, ConvertLLVMZero, ConvertLLVMLoad, ConvertLLVMStore,
-        ConvertLLVMAtomicRMW, ConvertLLVMGEP, ConvertPoison, ConvertSCFIf,
-        ConvertFuncReturn, ConvertArithConstant, ConvertArithTruncI,
-        ConvertArithXOrI>(converter, context);
+    patterns
+        .add<RejectLLVMUndef, ConvertLLVMPoison, ConvertLLVMFreeze,
+             RejectLLVMFence, ConvertLLVMGlobal, ConvertLLVMAddressOf,
+             ConvertLLVMFunc, ConvertLLVMCall,
+             ConvertLLVMIntegerBinary<LLVM::AddOp, xw::BinaryKind::AddI>,
+             ConvertLLVMIntegerBinary<LLVM::SubOp, xw::BinaryKind::SubI>,
+             ConvertLLVMIntegerBinary<LLVM::MulOp, xw::BinaryKind::MulI>,
+             ConvertLLVMIntegerBinary<LLVM::UDivOp, xw::BinaryKind::DivUI>,
+             ConvertLLVMIntegerBinary<LLVM::SDivOp, xw::BinaryKind::DivSI>,
+             ConvertLLVMIntegerBinary<LLVM::URemOp, xw::BinaryKind::RemUI>,
+             ConvertLLVMIntegerBinary<LLVM::SRemOp, xw::BinaryKind::RemSI>,
+             ConvertLLVMIntegerBinary<LLVM::ShlOp, xw::BinaryKind::ShLI>,
+             ConvertLLVMIntegerBinary<LLVM::LShrOp, xw::BinaryKind::ShRUI>,
+             ConvertLLVMIntegerBinary<LLVM::AShrOp, xw::BinaryKind::ShRSI>,
+             ConvertLLVMIntegerBinary<LLVM::AndOp, xw::BinaryKind::AndI>,
+             ConvertLLVMIntegerBinary<LLVM::OrOp, xw::BinaryKind::OrI>,
+             ConvertLLVMIntegerBinary<LLVM::XOrOp, xw::BinaryKind::XOrI>,
+             ConvertLLVMFloatBinary<LLVM::FAddOp, xw::FAddOp>,
+             ConvertLLVMFloatBinary<LLVM::FSubOp, xw::FSubOp>,
+             ConvertLLVMFloatBinary<LLVM::FMulOp, xw::FMulOp>,
+             RejectLLVMFloatBinary<LLVM::FDivOp>,
+             RejectLLVMFloatBinary<LLVM::FRemOp>,
+             ConvertLLVMCast<LLVM::SExtOp, xw::CastKind::IntConvert>,
+             ConvertLLVMCast<LLVM::ZExtOp, xw::CastKind::IntConvert>,
+             ConvertLLVMCast<LLVM::TruncOp, xw::CastKind::IntConvert>,
+             ConvertLLVMCast<LLVM::FPExtOp, xw::CastKind::FpConvert>,
+             ConvertLLVMCast<LLVM::FPTruncOp, xw::CastKind::FpConvert>,
+             ConvertLLVMCast<LLVM::SIToFPOp, xw::CastKind::IntToFp>,
+             ConvertLLVMCast<LLVM::UIToFPOp, xw::CastKind::IntToFp>,
+             ConvertLLVMCast<LLVM::FPToSIOp, xw::CastKind::FpToInt>,
+             ConvertLLVMCast<LLVM::FPToUIOp, xw::CastKind::FpToInt>,
+             ConvertLLVMBitcast, ConvertLLVMICmp, ConvertLLVMFCmp,
+             ConvertLLVMSelect, ConvertLLVMAddrspaceCast,
+             ConvertLLVMOneSourcePointerCast<LLVM::PtrToIntOp, xw::PtrToIntOp>,
+             ConvertLLVMOneSourcePointerCast<LLVM::IntToPtrOp, xw::IntToPtrOp>,
+             ConvertLLVMConstant, ConvertLLVMZero, ConvertLLVMLoad,
+             ConvertLLVMStore, ConvertLLVMAtomicRMW, ConvertLLVMGEP,
+             ConvertPoison, ConvertSCFIf, ConvertFuncReturn,
+             ConvertArithConstant, ConvertArithTruncI, ConvertArithXOrI>(
+            converter, context);
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
     scf::populateSCFStructuralTypeConversions(converter, patterns);
@@ -1971,9 +1992,8 @@ struct ConvertLLVMToXW final
           if (cast->getNumOperands() != 1 || cast->getNumResults() != 1)
             return false;
           Type converted = converter.convertType(cast.getOperand(0).getType());
-          return converted &&
-                 getPayloadType(converted) ==
-                     getPayloadType(cast.getResult(0).getType());
+          return converted && getPayloadType(converted) ==
+                                  getPayloadType(cast.getResult(0).getType());
         });
     target.markUnknownOpDynamicallyLegal([](Operation *op) {
       auto legalType = [](Type type) { return !containsLLVMType(type); };
