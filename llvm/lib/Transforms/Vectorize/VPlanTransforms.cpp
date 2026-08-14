@@ -2041,7 +2041,8 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
 // Replaces ExtractVectorForPart instructions with ICMP when the VF is scalar
 // and the source is a WideActiveLaneMask. The unused mask is removed later
 // when removing dead recipes.
-static bool replaceMaskWithCompare(VPlan &Plan, ElementCount BestVF) {
+static bool replaceMaskWithCompareForScalarPlan(VPlan &Plan,
+                                                ElementCount BestVF) {
   if (!BestVF.isScalar())
     return false;
 
@@ -2145,7 +2146,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
   bool MadeChange =
       simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
-  MadeChange |= replaceMaskWithCompare(Plan, BestVF);
+  MadeChange |= replaceMaskWithCompareForScalarPlan(Plan, BestVF);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
 
   if (MadeChange) {
