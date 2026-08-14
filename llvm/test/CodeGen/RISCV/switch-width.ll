@@ -41,8 +41,8 @@ return:
 define i32 @native_i32(i32 %a)  {
 ; CHECK-LABEL: native_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    beq a0, a1, .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1
@@ -79,8 +79,8 @@ return:
 define i32 @trunc_i32(i64 %a)  {
 ; CHECK-LABEL: trunc_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    sext.w a0, a0
 ; CHECK-NEXT:    beq a0, a1, .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1
@@ -239,8 +239,8 @@ return:
 define i32 @trunc_i11(i64 %a)  {
 ; CHECK-LABEL: trunc_i11:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 2047
 ; CHECK-NEXT:    li a1, 2047
+; CHECK-NEXT:    andi a0, a0, 2047
 ; CHECK-NEXT:    beq a0, a1, .LBB6_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1
@@ -279,8 +279,8 @@ return:
 define i32 @trunc_i10(i64 %a)  {
 ; CHECK-LABEL: trunc_i10:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1023
 ; CHECK-NEXT:    li a1, 1023
+; CHECK-NEXT:    andi a0, a0, 1023
 ; CHECK-NEXT:    beq a0, a1, .LBB7_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1

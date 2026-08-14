@@ -107,8 +107,9 @@ double MakeTime(struct timespec const& ts) {
 }
 #endif
 
-BENCHMARK_NORETURN static void DiagnoseAndExit(const char* msg) {
-  std::cerr << "ERROR: " << msg << std::endl;
+BENCHMARK_NORETURN void DiagnoseAndExit(const char* msg) {
+  std::cerr << "ERROR: " << msg << '\n';
+  std::flush(std::cerr);
   std::exit(EXIT_FAILURE);
 }
 
@@ -126,8 +127,12 @@ double ProcessCPUUsage() {
     return MakeTime(kernel_time, user_time);
   DiagnoseAndExit("GetProccessTimes() failed");
 #elif defined(BENCHMARK_OS_QURT)
+  // Note that qurt_timer_get_ticks() is no longer documented as of SDK 5.3.0,
+  // and doesn't appear to work on at least some devices (eg Samsung S22),
+  // so let's use the actually-documented and apparently-equivalent
+  // qurt_sysclock_get_hw_ticks() call instead.
   return static_cast<double>(
-             qurt_timer_timetick_to_us(qurt_timer_get_ticks())) *
+             qurt_timer_timetick_to_us(qurt_sysclock_get_hw_ticks())) *
          1.0e-6;
 #elif defined(BENCHMARK_OS_EMSCRIPTEN)
   // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ...) returns 0 on Emscripten.
@@ -138,9 +143,10 @@ double ProcessCPUUsage() {
 #elif defined(CLOCK_PROCESS_CPUTIME_ID) && !defined(BENCHMARK_OS_MACOSX)
   // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
   // See https://github.com/google/benchmark/pull/292
-  struct timespec spec;
-  if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &spec) == 0)
+  struct timespec spec {};
+  if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &spec) == 0) {
     return MakeTime(spec);
+  }
   DiagnoseAndExit("clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ...) failed");
 #else
   struct rusage ru;
@@ -160,8 +166,12 @@ double ThreadCPUUsage() {
                  &user_time);
   return MakeTime(kernel_time, user_time);
 #elif defined(BENCHMARK_OS_QURT)
+  // Note that qurt_timer_get_ticks() is no longer documented as of SDK 5.3.0,
+  // and doesn't appear to work on at least some devices (eg Samsung S22),
+  // so let's use the actually-documented and apparently-equivalent
+  // qurt_sysclock_get_hw_ticks() call instead.
   return static_cast<double>(
-             qurt_timer_timetick_to_us(qurt_timer_get_ticks())) *
+             qurt_timer_timetick_to_us(qurt_sysclock_get_hw_ticks())) *
          1.0e-6;
 #elif defined(BENCHMARK_OS_MACOSX)
   // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
@@ -190,8 +200,10 @@ double ThreadCPUUsage() {
   if (getrusage(RUSAGE_LWP, &ru) == 0) return MakeTime(ru);
   DiagnoseAndExit("getrusage(RUSAGE_LWP, ...) failed");
 #elif defined(CLOCK_THREAD_CPUTIME_ID)
-  struct timespec ts;
-  if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) return MakeTime(ts);
+  struct timespec ts {};
+  if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) == 0) {
+    return MakeTime(ts);
+  }
   DiagnoseAndExit("clock_gettime(CLOCK_THREAD_CPUTIME_ID, ...) failed");
 #else
 #error Per-thread timing is not available on your system.
@@ -205,9 +217,9 @@ std::string LocalDateTimeString() {
   const std::size_t kTzOffsetLen = 6;
   const std::size_t kTimestampLen = 19;
 
-  std::size_t tz_len;
-  std::size_t timestamp_len;
-  long int offset_minutes;
+  std::size_t tz_len = 0;
+  std::size_t timestamp_len = 0;
+  long int offset_minutes = 0;
   char tz_offset_sign = '+';
   // tz_offset is set in one of three ways:
   // * strftime with %z - This either returns empty or the ISO 8601 time.  The
@@ -227,7 +239,7 @@ std::string LocalDateTimeString() {
 #if defined(BENCHMARK_OS_WINDOWS)
   std::tm* timeinfo_p = ::localtime(&now);
 #else
-  std::tm timeinfo;
+  std::tm timeinfo{};
   std::tm* timeinfo_p = &timeinfo;
   ::localtime_r(&now, &timeinfo);
 #endif
@@ -245,9 +257,9 @@ std::string LocalDateTimeString() {
       tz_offset_sign = '-';
     }
 
-    tz_len =
+    tz_len = static_cast<size_t>(
         ::snprintf(tz_offset, sizeof(tz_offset), "%c%02li:%02li",
-                   tz_offset_sign, offset_minutes / 100, offset_minutes % 100);
+                   tz_offset_sign, offset_minutes / 100, offset_minutes % 100));
     BM_CHECK(tz_len == kTzOffsetLen);
     ((void)tz_len);  // Prevent unused variable warning in optimized build.
   } else {

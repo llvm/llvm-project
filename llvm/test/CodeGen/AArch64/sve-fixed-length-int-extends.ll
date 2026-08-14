@@ -157,7 +157,7 @@ define void @sext_v16i8_v16i32(<16 x i8> %a, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: sext_v16i8_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 def $z0
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
@@ -245,7 +245,7 @@ define void @sext_v8i8_v8i64(<8 x i8> %a, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    sshll v0.8h, v0.8b, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
@@ -407,7 +407,7 @@ define void @sext_v8i16_v8i64(<8 x i16> %a, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: sext_v8i16_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 def $z0
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
@@ -656,7 +656,7 @@ define void @zext_v16i8_v16i32(<16 x i8> %a, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: zext_v16i8_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 def $z0
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
@@ -744,7 +744,7 @@ define void @zext_v8i8_v8i64(<8 x i8> %a, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ushll v0.8h, v0.8b, #0
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
@@ -906,7 +906,7 @@ define void @zext_v8i16_v8i64(<8 x i16> %a, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: zext_v8i16_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 def $z0
-; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d1, v0.d[1]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h

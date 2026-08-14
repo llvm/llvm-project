@@ -127,12 +127,36 @@ module @TestFloatAttr attributes {
   // CHECK-DAG: bytecode.f64 = 1.000000e+01 : f64
   // CHECK-DAG: bytecode.f80 = 0.1{{.*}} : f80
   // CHECK-DAG: bytecode.f128 = 0.1{{.*}} : f128
+  // CHECK-DAG: bytecode.tf32 = 1.000000e+00 : tf32
+  // CHECK-DAG: bytecode.f8E5M2 = 1.000000e+00 : f8E5M2
+  // CHECK-DAG: bytecode.f8E4M3 = 1.000000e+00 : f8E4M3
+  // CHECK-DAG: bytecode.f8E4M3FN = 1.000000e+00 : f8E4M3FN
+  // CHECK-DAG: bytecode.f8E5M2FNUZ = 1.000000e+00 : f8E5M2FNUZ
+  // CHECK-DAG: bytecode.f8E4M3FNUZ = 1.000000e+00 : f8E4M3FNUZ
+  // CHECK-DAG: bytecode.f8E4M3B11FNUZ = 1.000000e+00 : f8E4M3B11FNUZ
+  // CHECK-DAG: bytecode.f8E3M4 = 1.000000e+00 : f8E3M4
+  // CHECK-DAG: bytecode.f4E2M1FN = 1.000000e+00 : f4E2M1FN
+  // CHECK-DAG: bytecode.f6E2M3FN = 1.000000e+00 : f6E2M3FN
+  // CHECK-DAG: bytecode.f6E3M2FN = 1.000000e+00 : f6E3M2FN
+  // CHECK-DAG: bytecode.f8E8M0FNU = 1.000000e+00 : f8E8M0FNU
   bytecode.bf16 = -0.5 : bf16,
   bytecode.f16 = 1.5 : f16,
   bytecode.f32 = 3.14 : f32,
   bytecode.f64 = 10.0 : f64,
   bytecode.f80 = 0.1 : f80,
-  bytecode.f128 = 0.1 : f128
+  bytecode.f128 = 0.1 : f128,
+  bytecode.tf32 = 1.0 : tf32,
+  bytecode.f8E5M2 = 1.0 : f8E5M2,
+  bytecode.f8E4M3 = 1.0 : f8E4M3,
+  bytecode.f8E4M3FN = 1.0 : f8E4M3FN,
+  bytecode.f8E5M2FNUZ = 1.0 : f8E5M2FNUZ,
+  bytecode.f8E4M3FNUZ = 1.0 : f8E4M3FNUZ,
+  bytecode.f8E4M3B11FNUZ = 1.0 : f8E4M3B11FNUZ,
+  bytecode.f8E3M4 = 1.0 : f8E3M4,
+  bytecode.f4E2M1FN = 1.0 : f4E2M1FN,
+  bytecode.f6E2M3FN = 1.0 : f6E2M3FN,
+  bytecode.f6E3M2FN = 1.0 : f6E3M2FN,
+  bytecode.f8E8M0FNU = 1.0 : f8E8M0FNU
 } {} loc(unknown)
 
 //===----------------------------------------------------------------------===//
@@ -260,12 +284,36 @@ module @TestAllFloatTypes attributes {
   // CHECK-DAG: bytecode.f64 = f64
   // CHECK-DAG: bytecode.f80 = f80
   // CHECK-DAG: bytecode.f128 = f128
+  // CHECK-DAG: bytecode.tf32 = tf32
+  // CHECK-DAG: bytecode.f8E5M2 = f8E5M2
+  // CHECK-DAG: bytecode.f8E4M3 = f8E4M3
+  // CHECK-DAG: bytecode.f8E4M3FN = f8E4M3FN
+  // CHECK-DAG: bytecode.f8E5M2FNUZ = f8E5M2FNUZ
+  // CHECK-DAG: bytecode.f8E4M3FNUZ = f8E4M3FNUZ
+  // CHECK-DAG: bytecode.f8E4M3B11FNUZ = f8E4M3B11FNUZ
+  // CHECK-DAG: bytecode.f8E3M4 = f8E3M4
+  // CHECK-DAG: bytecode.f4E2M1FN = f4E2M1FN
+  // CHECK-DAG: bytecode.f6E2M3FN = f6E2M3FN
+  // CHECK-DAG: bytecode.f6E3M2FN = f6E3M2FN
+  // CHECK-DAG: bytecode.f8E8M0FNU = f8E8M0FNU
   bytecode.bf16 = bf16,
   bytecode.f16 = f16,
   bytecode.f32 = f32,
   bytecode.f64 = f64,
   bytecode.f80 = f80,
-  bytecode.f128 = f128
+  bytecode.f128 = f128,
+  bytecode.tf32 = tf32,
+  bytecode.f8E5M2 = f8E5M2,
+  bytecode.f8E4M3 = f8E4M3,
+  bytecode.f8E4M3FN = f8E4M3FN,
+  bytecode.f8E5M2FNUZ = f8E5M2FNUZ,
+  bytecode.f8E4M3FNUZ = f8E4M3FNUZ,
+  bytecode.f8E4M3B11FNUZ = f8E4M3B11FNUZ,
+  bytecode.f8E3M4 = f8E3M4,
+  bytecode.f4E2M1FN = f4E2M1FN,
+  bytecode.f6E2M3FN = f6E2M3FN,
+  bytecode.f6E3M2FN = f6E3M2FN,
+  bytecode.f8E8M0FNU = f8E8M0FNU
 } {} loc(unknown)
 
 //===----------------------------------------------------------------------===//
@@ -282,6 +330,7 @@ module @TestBasicTypes attributes {
   // CHECK-DAG: bytecode.ui64 = ui64
   // CHECK-DAG: bytecode.index = index
   // CHECK-DAG: bytecode.none = none
+  // CHECK-DAG: bytecode.token = token
   bytecode.i1 = i1,
   bytecode.i8 = i8,
   bytecode.i32 = i32,
@@ -289,7 +338,8 @@ module @TestBasicTypes attributes {
   bytecode.si32 = si32,
   bytecode.ui64 = ui64,
   bytecode.index = index,
-  bytecode.none = none
+  bytecode.none = none,
+  bytecode.token = token
 } {} loc(unknown)
 
 //===----------------------------------------------------------------------===//
@@ -395,6 +445,42 @@ module @TestTupleType attributes {
 } {} loc(unknown)
 
 //===----------------------------------------------------------------------===//
+// AffineMapAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestAffineMapAttr
+module @TestAffineMapAttr attributes {
+  // CHECK-DAG: bytecode.identity = affine_map<(d0) -> (d0)>
+  // CHECK-DAG: bytecode.multi_dim = affine_map<(d0, d1) -> (d0 + d1)>
+  // CHECK-DAG: bytecode.with_symbol = affine_map<(d0)[s0] -> (d0 + s0)>
+  // CHECK-DAG: bytecode.complex = affine_map<(d0, d1) -> (d0 floordiv 4, d1 mod 8)>
+  // CHECK-DAG: bytecode.empty = affine_map<() -> ()>
+  // CHECK-DAG: bytecode.constant = affine_map<() -> (42)>
+  bytecode.identity = affine_map<(d0) -> (d0)>,
+  bytecode.multi_dim = affine_map<(d0, d1) -> (d0 + d1)>,
+  bytecode.with_symbol = affine_map<(d0)[s0] -> (d0 + s0)>,
+  bytecode.complex = affine_map<(d0, d1) -> (d0 floordiv 4, d1 mod 8)>,
+  bytecode.empty = affine_map<() -> ()>,
+  bytecode.constant = affine_map<() -> (42)>
+} {} loc(unknown)
+
+//===----------------------------------------------------------------------===//
+// IntegerSetAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestIntegerSetAttr
+module @TestIntegerSetAttr attributes {
+  // CHECK-DAG: bytecode.eq = affine_set<(d0) : (d0 == 0)>
+  // CHECK-DAG: bytecode.ineq = affine_set<(d0) : (d0 >= 0)>
+  // CHECK-DAG: bytecode.multi = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + s0 >= 0, d1 >= 0)>
+  // CHECK-DAG: bytecode.eq_ineq = affine_set<(d0, d1) : (d0 == 0, d1 >= 0)>
+  bytecode.eq = affine_set<(d0) : (d0 == 0)>,
+  bytecode.ineq = affine_set<(d0) : (d0 >= 0)>,
+  bytecode.multi = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + s0 >= 0, d1 >= 0)>,
+  bytecode.eq_ineq = affine_set<(d0, d1) : (d0 == 0, d1 >= 0)>
+} {} loc(unknown)
+
+//===----------------------------------------------------------------------===//
 // DenseResourceElementsAttr
 //===----------------------------------------------------------------------===//
 
@@ -412,6 +498,20 @@ module @TestDenseResourceElementsAttr attributes {
 module @TestDenseStringElementsAttr attributes {
   bytecode.splat_str = dense<"splat"> : tensor<4x!bytecode.string>,
   bytecode.dense_str = dense<["foo", "bar", "baz"]> : tensor<3x!bytecode.string>
+} {} loc(unknown)
+
+//===----------------------------------------------------------------------===//
+// StridedLayoutAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestStridedLayoutAttr
+module @TestStridedLayoutAttr attributes {
+  // CHECK-DAG: bytecode.static_strides = strided<[3, 1]>
+  // CHECK-DAG: bytecode.with_offset = strided<[3, 1], offset: 5>
+  // CHECK-DAG: bytecode.dynamic = strided<[?, 1], offset: ?>
+  bytecode.static_strides = strided<[3, 1]>,
+  bytecode.with_offset = strided<[3, 1], offset: 5>,
+  bytecode.dynamic = strided<[?, 1], offset: ?>
 } {} loc(unknown)
 
 } loc(unknown)

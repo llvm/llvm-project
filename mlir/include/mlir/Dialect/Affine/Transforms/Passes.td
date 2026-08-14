@@ -385,6 +385,8 @@ def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
   let options = [
     Option<"promoteSingleIter", "promote-single-iter", "bool",
            /*default=*/"true", "Promote single iteration loops">,
+    Option<"useExpensiveMath", "use-expensive-math", "bool", /*default=*/"false",
+           "Use Presburger arithmetic to constantize loop upper bounds (higher analysis cost)">
   ];
 }
 
@@ -434,8 +436,8 @@ def SimplifyAffineWithBounds : Pass<"affine-simplify-with-bounds"> {
   let summary = "Simplify affine index operations using value bounds analysis";
   let description = [{
     This pass simplifies `affine.delinearize_index` / `affine.linearize_index`
-    pairs by using value bounds analysis to match basis products. Unlike the
-    built-in canonicalization patterns which only use exact `OpFoldResult`
+    pairs and `affine.for` by using value bounds analysis to match basis products.
+    Unlike the built-in canonicalization patterns which only use exact `OpFoldResult`
     comparisons, this pass can prove equality of dynamic basis products through
     `ValueBoundsConstraintSet`.
   }];

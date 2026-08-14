@@ -40,8 +40,8 @@ public:
   checkRegionChanges(ProgramStateRef State,
                      const InvalidatedSymbols *Invalidated,
                      ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
-                     const LocationContext *LCtx, const CallEvent *Call) const;
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+                     const CallEvent *Call) const;
 
   /// Indicates if a read (load) of \c errno is allowed in a non-condition part
   /// of \c if, \c switch, loop and conditional statements when the errno
@@ -217,7 +217,7 @@ void ErrnoChecker::checkPreCall(const CallEvent &Call,
 ProgramStateRef ErrnoChecker::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
     ArrayRef<const MemRegion *> ExplicitRegions,
-    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
+    ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
     const CallEvent *Call) const {
   std::optional<ento::Loc> ErrnoLoc = getErrnoLoc(State);
   if (!ErrnoLoc)

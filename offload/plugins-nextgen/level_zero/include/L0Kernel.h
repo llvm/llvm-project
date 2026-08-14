@@ -13,43 +13,16 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0KERNEL_H
 
-#include "AsyncQueue.h"
 #include "L0Defs.h"
 #include "L0Trace.h"
 #include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
+// Forward declarations.
 class L0DeviceTy;
 class L0ProgramTy;
-
-/// Loop descriptor.
-struct TgtLoopDescTy {
-  int64_t Lb = 0;     // The lower bound of the i-th loop.
-  int64_t Ub = 0;     // The upper bound of the i-th loop.
-  int64_t Stride = 0; // The stride of the i-th loop.
-
-  bool operator==(const TgtLoopDescTy &other) const {
-    return Lb == other.Lb && Ub == other.Ub && Stride == other.Stride;
-  }
-};
-
-struct TgtNDRangeDescTy {
-  int32_t NumLoops = 0;      // Number of loops/dimensions.
-  int32_t DistributeDim = 0; // Dimensions lower than this one
-                             // must end up in one WG.
-  TgtLoopDescTy Levels[3];   // Up to 3 loops.
-
-  bool operator==(const TgtNDRangeDescTy &other) const {
-    return NumLoops == other.NumLoops && DistributeDim == other.DistributeDim &&
-           std::equal(Levels, Levels + 3, other.Levels);
-  }
-  bool operator!=(const TgtNDRangeDescTy &other) const {
-    return !(*this == other);
-  }
-};
-
-/// Forward declaration.
+class L0QueueTy;
 struct L0LaunchEnvTy;
 
 /// Kernel properties.
@@ -59,41 +32,23 @@ struct KernelPropertiesTy {
   uint32_t MaxThreadGroupSize = 0;
   uint32_t NumKernelArgs = 0;
   std::unique_ptr<uint32_t[]> ArgSizes;
-
-  /// Cached input parameters used in the previous launch.
-  int32_t NumTeams = -1;
-  int32_t ThreadLimit = -1;
-
-  /// Cached parameters used in the previous launch.
   ze_kernel_indirect_access_flags_t IndirectAccessFlags =
       std::numeric_limits<decltype(IndirectAccessFlags)>::max();
-  uint32_t GroupSizes[3] = {0, 0, 0};
-  ze_group_count_t GroupCounts{0, 0, 0};
-
   std::mutex Mtx;
-
-  /// Check if we can reuse group parameters.
-  bool reuseGroupParams(const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
-                        uint32_t *GroupSizesOut, L0LaunchEnvTy &KEnv) const;
-
-  /// Update cached group parameters.
-  void cacheGroupParams(const int32_t NumTeamsIn, const int32_t ThreadLimitIn,
-                        const uint32_t *GroupSizesIn, L0LaunchEnvTy &KEnv);
 };
 
 struct L0LaunchEnvTy {
-  bool IsAsync;
-  AsyncQueueTy *AsyncQueue;
   ze_group_count_t GroupCounts = {0, 0, 0};
+  ze_group_size_t GroupSizes = {0, 0, 0};
   KernelPropertiesTy &KernelPR;
-  bool HalfNumThreads = false;
-  bool IsTeamsNDRange = false;
+  bool IsCooperative = false;
+  void **ArgPtrs = nullptr;
   std::unique_lock<std::mutex> Lock;
 
-  L0LaunchEnvTy(bool IsAsync, AsyncQueueTy *AsyncQueue,
-                KernelPropertiesTy &KernelPR)
-      : IsAsync(IsAsync), AsyncQueue(AsyncQueue), KernelPR(KernelPR),
-        Lock(KernelPR.Mtx, std::defer_lock) {}
+  L0LaunchEnvTy(KernelPropertiesTy &KernelPR,
+                const KernelLaunchArgsTy &LaunchArgs)
+      : KernelPR(KernelPR), IsCooperative(LaunchArgs.Flags.Cooperative),
+        ArgPtrs(LaunchArgs.Args), Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
 class L0KernelTy : public GenericKernelTy {
@@ -102,20 +57,17 @@ class L0KernelTy : public GenericKernelTy {
   // Kernel Properties.
   mutable KernelPropertiesTy Properties;
 
-  void decideKernelGroupArguments(L0DeviceTy &Device, uint32_t NumTeams,
-                                  uint32_t ThreadLimit, uint32_t *GroupSizes,
-                                  L0LaunchEnvTy &KEnv) const;
-
   Error buildKernel(L0ProgramTy &Program);
   Error readKernelProperties(L0ProgramTy &Program);
 
-  Error setKernelGroups(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv,
-                        uint32_t NumThreads[3], uint32_t NumBlocks[3]) const;
-  Error setIndirectFlags(L0DeviceTy &l0Device, L0LaunchEnvTy &KEnv) const;
+  ze_group_size_t createKernelGroups(L0DeviceTy &L0Device, L0LaunchEnvTy &KEnv,
+                                     uint32_t NumThreads[3],
+                                     uint32_t NumBlocks[3]) const;
+  Error setIndirectFlags(L0DeviceTy &L0Device, L0LaunchEnvTy &KEnv) const;
 
 public:
   /// Create a L0 kernel with a name and an execution mode.
-  L0KernelTy(const char *Name) : GenericKernelTy(Name), zeKernel(nullptr) {}
+  L0KernelTy(StringRef Name) : GenericKernelTy(Name), zeKernel(nullptr) {}
   ~L0KernelTy() = default;
   L0KernelTy(const L0KernelTy &) = delete;
   L0KernelTy(L0KernelTy &&) = delete;
@@ -129,7 +81,7 @@ public:
   /// Launch the L0 kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
-                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
+                   KernelLaunchArgsTy &LaunchArgs,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
   Error deinit() {
     CALL_ZE_RET_ERROR(zeKernelDestroy, zeKernel);
@@ -142,11 +94,12 @@ public:
                          "maxGroupSize not implemented yet");
   }
 
-  ze_kernel_handle_t getZeKernel() const { return zeKernel; }
+  Expected<uint32_t>
+  getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
+                              const uint32_t NumThreads[3],
+                              uint32_t DynBlockMemSize) const override;
 
-  Error getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
-                       int32_t ThreadLimit, uint32_t *GroupSizes,
-                       L0LaunchEnvTy &KEnv) const;
+  ze_kernel_handle_t getZeKernel() const { return zeKernel; }
 };
 
 } // namespace llvm::omp::target::plugin

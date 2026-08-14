@@ -19,6 +19,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
@@ -34,6 +35,7 @@ class CallBase;
 class CanonicalLoopInfo;
 class Function;
 class IRBuilderBase;
+class Metadata;
 class OpenMPIRBuilder;
 class Value;
 namespace vfs {
@@ -262,6 +264,11 @@ public:
     return globalsMapping.lookup(op);
   }
 
+  /// Finds an LLVM IR global value by the mlir.global symbol name.
+  llvm::GlobalValue *lookupGlobal(StringRef name) const {
+    return globalsByNameMapping.lookup(name);
+  }
+
   /// Finds an LLVM IR global value that corresponds to the given MLIR operation
   /// defining a global alias value.
   llvm::GlobalValue *lookupAlias(Operation *op) {
@@ -339,6 +346,13 @@ public:
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
+
+  /// Converts an LLVM dialect metadata attribute to LLVM IR metadata.
+  /// Returns failure and emits a diagnostic using `emitError` if the attribute
+  /// cannot be converted.
+  FailureOr<llvm::Metadata *>
+  convertMetadataAttr(Attribute attr,
+                      function_ref<InFlightDiagnostic()> emitError);
 
   /// Creates a stack frame of type `T` on ModuleTranslation stack. `T` must
   /// be derived from `StackFrameBase<T>` and constructible from the provided
@@ -469,6 +483,12 @@ private:
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
+
+  /// Name-keyed mirror of `globalsMapping`, populated alongside it during
+  /// `convertGlobalsAndAliases`.  Lets `getLLVMConstant` resolve
+  /// `FlatSymbolRefAttr` leaves of aggregate constants that name a global
+  /// (mirroring how `functionMapping` resolves function names).
+  llvm::StringMap<llvm::GlobalValue *> globalsByNameMapping;
 
   /// Mappings between llvm.mlir.alias definitions and corresponding global
   /// aliases.
