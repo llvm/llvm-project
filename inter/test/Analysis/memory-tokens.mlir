@@ -45,6 +45,39 @@ func.func @if_one_branch(%condition: i1, %ptr: !xw.ptr<#xw.global>,
 
 // -----
 
+func.func @conditional_prefetch(%condition: i1,
+                                %ptr: !xw.ptr<#xw.global>) attributes {
+    xw.simd_width = 16 : i32} {
+  %surface = xw.constant 128 : i32
+  %coordinate = xw.constant 0 : i32
+  scf.if %condition {
+    %prefetched = xw.block2d_prefetch %ptr[%coordinate, %coordinate]
+        surface(%surface, %surface, %surface)
+        {block_height = 8 : i64, block_width = 16 : i64,
+         blocks = 1 : i64, element_bits = 16 : i64}
+        : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+        -> !xw.mem.token
+  }
+  %value, %loaded = xw.block2d_read %ptr[%coordinate, %coordinate]
+      surface(%surface, %surface, %surface)
+      {block_height = 8 : i64, block_width = 16 : i64,
+       blocks = 1 : i64, element_bits = 16 : i64}
+      : (!xw.ptr<#xw.global>, i32, i32, i32, i32, i32)
+      -> (!xw.simd<vector<8xi16>, 16>, !xw.mem.token)
+  return
+}
+
+// CHECK-LABEL: func.func @conditional_prefetch
+// CHECK: %[[ROOT:.*]] = xw.token
+// CHECK: %[[IF:.*]] = scf.if {{.*}} -> (!xw.mem.token)
+// CHECK: %[[PREFETCH:.*]] = xw.block2d_prefetch {{.*}} after %[[ROOT]]
+// CHECK: scf.yield %[[PREFETCH]] : !xw.mem.token
+// CHECK: } else {
+// CHECK: scf.yield %[[ROOT]] : !xw.mem.token
+// CHECK: xw.block2d_read {{.*}} after %[[IF]]
+
+// -----
+
 func.func @if_both_branches(%condition: i1, %ptr: !xw.ptr<#xw.global>,
                             %value: !xw.simd<i32, 16>) attributes {
     xw.simd_width = 16 : i32} {

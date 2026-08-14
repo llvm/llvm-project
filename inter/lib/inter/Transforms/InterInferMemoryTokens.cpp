@@ -180,6 +180,7 @@ private:
 
   SmallVector<Value> rewriteBlock(Block &block, SmallVector<Value> frontier) {
     Value regionIncoming;
+    SmallVector<Value> deferredPrefetches;
     if (!isa<func::FuncOp>(block.getParentOp()) && frontier.size() == 1) {
       regionIncoming = frontier.front();
       frontier.clear();
@@ -198,7 +199,9 @@ private:
         Value token = rewriteMemory(operation, incoming);
         if (barrier)
           frontier.clear();
-        if (!isa<xw::Block2DPrefetchOp>(operation))
+        if (isa<xw::Block2DPrefetchOp>(operation))
+          appendUnique(deferredPrefetches, token);
+        else
           frontier.push_back(token);
         continue;
       }
@@ -225,6 +228,8 @@ private:
       frontier.clear();
       frontier.push_back(outgoing);
     }
+    for (Value prefetch : deferredPrefetches)
+      appendUnique(frontier, prefetch);
     return frontier;
   }
 
