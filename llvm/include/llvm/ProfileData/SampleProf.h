@@ -372,7 +372,7 @@ namespace sampleprof {
 /// represents its counter.
 /// TODO: The class name FunctionId should be renamed to SymbolId in a refactor
 /// change.
-using TypeCountMap = std::map<FunctionId, uint64_t>;
+using TypeCountMap = SortedVectorMap<FunctionId, uint64_t, 0>;
 
 /// Write \p Map to the output stream. Keys are linearized using \p NameTable
 /// and written as ULEB128. Values are written as ULEB128 as well.
@@ -805,12 +805,12 @@ inline raw_ostream &operator<<(raw_ostream &OS, const SampleContext &Context) {
 class FunctionSamples;
 class SampleProfileReaderItaniumRemapper;
 
-using BodySampleMap = std::map<LineLocation, SampleRecord>;
+using BodySampleMap = SortedVectorMap<LineLocation, SampleRecord, 0>;
 // NOTE: Using a StringMap here makes parsed profiles consume around 17% more
 // memory, which is *very* significant for large profiles.
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
-using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
+using CallsiteTypeMap = SortedVectorMap<LineLocation, TypeCountMap, 0>;
 using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
 /// Representation of the samples collected for a function.
@@ -870,6 +870,14 @@ public:
                                    const SampleRecord &SampleRecord,
                                    uint64_t Weight = 1) {
     return BodySamples[Location].merge(SampleRecord, Weight);
+  }
+
+  void reserveBodySamples(size_t NumEntries) {
+    BodySamples.reserve(NumEntries);
+  }
+
+  void reserveCallsiteTypeCounts(size_t NumEntries) {
+    VirtualCallsiteTypeCounts.reserve(NumEntries);
   }
 
   // Remove a call target and decrease the body sample correspondingly. Return
@@ -1114,6 +1122,7 @@ public:
                   "T must be a map with StringRef or FunctionId as key and "
                   "uint64_t as value");
     TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
+    TypeCounts.reserve(Other.size());
     bool Overflowed = false;
 
     for (const auto &[Type, Count] : Other) {
@@ -1169,6 +1178,7 @@ public:
                           addTotalSamples(Other.getTotalSamples(), Weight));
     mergeSampleProfErrors(Result,
                           addHeadSamples(Other.getHeadSamples(), Weight));
+    BodySamples.reserve(Other.getBodySamples().size());
     for (const auto &I : Other.getBodySamples()) {
       const LineLocation &Loc = I.first;
       const SampleRecord &Rec = I.second;
@@ -1181,6 +1191,7 @@ public:
         mergeSampleProfErrors(Result,
                               FSMap[Rec.first].merge(Rec.second, Weight));
     }
+    VirtualCallsiteTypeCounts.reserve(Other.getCallsiteTypeCounts().size());
     for (const auto &[Loc, OtherTypeMap] : Other.getCallsiteTypeCounts())
       mergeSampleProfErrors(
           Result, addCallsiteVTableTypeProfAt(Loc, OtherTypeMap, Weight));
@@ -1626,6 +1637,7 @@ private:
       // We recompute TotalSamples later, so here set to zero.
       Profile.setTotalSamples(0);
     } else {
+      Profile.reserveBodySamples(FS.getBodySamples().size());
       for (const auto &[LineLocation, SampleRecord] : FS.getBodySamples()) {
         Profile.addSampleRecord(LineLocation, SampleRecord);
       }
