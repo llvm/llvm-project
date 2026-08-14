@@ -177,6 +177,11 @@ features cannot lower the translation-unit ABI level;
 
 ### Objective-C Language Changes
 
+- Fixed an issue where AST consumers based on `RecursiveASTVisitor`
+  (such as `clangd`, `include-cleaner`, and static analyzers) would bypass the
+  exception parameter declaration (and its type) inside Objective-C `@catch`
+  blocks.
+
 ### Non-comprehensive list of changes in this release
 
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
