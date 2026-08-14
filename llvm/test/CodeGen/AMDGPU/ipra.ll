@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -enable-ipra < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -enable-ipra < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 ; Kernels are not called, so there is no call preserved mask.
 ; GCN-LABEL: {{^}}kernel:
@@ -40,13 +40,13 @@ define amdgpu_kernel void @kernel_call() #0 {
 }
 
 ; GCN-LABEL: {{^}}func_regular_call:
-; GCN-NOT: buffer_load
-; GCN-NOT: readlane
+; GCN: v_writelane_b32 v9, s30, 0
+; GCN: v_writelane_b32 v9, s31, 1
 ; GCN: flat_load_dword v8
 ; GCN: s_swappc_b64
-; GCN-NOT: buffer_load
-; GCN-NOT: readlane
+; GCN: v_readlane_b32 s30, v9, 0
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v8
+; GCN: v_readlane_b32 s31, v9, 1
 
 ; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10

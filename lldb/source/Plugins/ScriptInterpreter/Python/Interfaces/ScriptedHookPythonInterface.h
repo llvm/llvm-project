@@ -21,15 +21,16 @@ public:
   ScriptedHookPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, lldb::TargetSP target_sp,
-                     const StructuredDataImpl &args_sp) override;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::TargetSP target_sp) override;
 
-  /// A hook class must implement at least one callback. All three are
-  /// individually optional; hooks that implement none will be rejected
-  /// at creation time.
+  /// `handle_stop` is required so a hook can always be attached via
+  /// `target stop-hook add -P`. `handle_module_loaded` and
+  /// `handle_module_unloaded` are optional; if a hook doesn't implement
+  /// them, the corresponding events are simply not delivered.
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {
-    return {};
+    return llvm::SmallVector<AbstractMethodRequirement>({{"handle_stop", 2}});
   }
 
   /// Check which of the three hook methods the Python class implements.

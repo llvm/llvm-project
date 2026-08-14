@@ -828,6 +828,16 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       not_stepping_but_got_singlestep_exception);
 }
 
+void StopInfoMachException::PerformAction([[maybe_unused]] Event *event_ptr) {
+  // This action currently only fires if the exception is an ARM breakpoint
+  // and if the PC is still at the instruction that caused the exception.
+  if (!(m_value == 6 /*EXC_BREAKPOINT*/ &&
+        m_exc_code == 1 /*EXC_ARM_BREAKPOINT*/) ||
+      m_exc_subcode != m_thread_wp.lock()->GetRegisterContext()->GetPC())
+    return;
+  SkipOverTrapInstruction();
+}
+
 // Detect an unusual situation on Darwin where:
 //
 //   0. We did an instruction-step before this.

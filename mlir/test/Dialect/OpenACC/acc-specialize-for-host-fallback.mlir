@@ -155,3 +155,73 @@ func.func @declare_enter_exit(%arg0 : memref<i32>) attributes {acc.routine_info 
   acc.declare_exit token(%token) dataOperands(%0 : memref<i32>)
   return
 }
+
+//===----------------------------------------------------------------------===//
+// Atomic operations (host fallback)
+//===----------------------------------------------------------------------===//
+
+acc.routine @acc_routine_atomic_read func(@atomic_read) seq
+// CHECK-LABEL: func.func @atomic_read
+// CHECK-NOT:   acc.atomic
+func.func @atomic_read(%src : memref<f64>, %dst : memref<f64>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_atomic_read]>} {
+  acc.atomic.read %dst = %src : memref<f64>, memref<f64>, f64
+  return
+}
+
+acc.routine @acc_routine_atomic_write func(@atomic_write) seq
+// CHECK-LABEL: func.func @atomic_write
+// CHECK-NOT:   acc.atomic
+func.func @atomic_write(%addr : memref<f64>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_atomic_write]>} {
+  %val = arith.constant 5.0e-01 : f64
+  acc.atomic.write %addr = %val : memref<f64>, f64
+  return
+}
+
+acc.routine @acc_routine_atomic_update func(@atomic_update) seq
+// CHECK-LABEL: func.func @atomic_update
+// CHECK-SAME: (%[[X:.*]]: memref<f64>)
+// CHECK-NOT:   acc.atomic
+// CHECK: %[[VAL:.*]] = memref.load %[[X]][] : memref<f64>
+// CHECK: %[[CMP:.*]] = arith.cmpf ogt, %{{.*}}, %[[VAL]] fastmath<contract> : f64
+// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %{{.*}}, %[[VAL]] : f64
+// CHECK: memref.store %[[RES]], %[[X]][] : memref<f64>
+func.func @atomic_update(%x : memref<f64>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_atomic_update]>} {
+  %a = arith.constant 5.0e-01 : f64
+  acc.parallel {
+    acc.atomic.update %x : memref<f64> {
+    ^bb0(%arg0: f64):
+      %c = arith.cmpf ogt, %a, %arg0 fastmath<contract> : f64
+      %r = arith.select %c, %a, %arg0 : f64
+      acc.yield %r : f64
+    }
+    acc.terminator
+  }
+  return
+}
+
+acc.routine @acc_routine_atomic_capture func(@atomic_capture) seq
+// CHECK-LABEL: func.func @atomic_capture
+// CHECK-SAME: (%[[X:.*]]: memref<f64>, %[[DST:.*]]: memref<f64>)
+// CHECK-NOT:   acc.atomic
+// CHECK: %[[VAL:.*]] = memref.load %[[X]][] : memref<f64>
+// CHECK: %[[CMP:.*]] = arith.cmpf ogt, %{{.*}}, %[[VAL]] fastmath<contract> : f64
+// CHECK: %[[RES:.*]] = arith.select %[[CMP]], %{{.*}}, %[[VAL]] : f64
+// CHECK: memref.store %[[RES]], %[[X]][] : memref<f64>
+// CHECK: memref.copy %[[X]], %[[DST]] : memref<f64> to memref<f64>
+func.func @atomic_capture(%x : memref<f64>, %dst : memref<f64>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_atomic_capture]>} {
+  %a = arith.constant 5.0e-01 : f64
+  acc.parallel {
+    acc.atomic.capture {
+      acc.atomic.update %x : memref<f64> {
+      ^bb0(%arg0: f64):
+        %c = arith.cmpf ogt, %a, %arg0 fastmath<contract> : f64
+        %r = arith.select %c, %a, %arg0 : f64
+        acc.yield %r : f64
+      }
+      acc.atomic.read %dst = %x : memref<f64>, memref<f64>, f64
+      acc.terminator
+    }
+    acc.terminator
+  }
+  return
+}

@@ -32,16 +32,16 @@
 // CHECK: @_unnamed_nsconstantintegernumber_.7 = private constant %struct.__builtin_NSConstantIntegerNumber { ptr @"OBJC_CLASS_$_NSConstantIntegerNumber", ptr @.str.6, i64 42 }, section "__DATA,__objc_intobj,regular,no_dead_strip", align 8 #[[ATTR0]]
 // CHECK: @_unnamed_nsconstantintegernumber_.8 = private constant %struct.__builtin_NSConstantIntegerNumber { ptr @"OBJC_CLASS_$_NSConstantIntegerNumber", ptr @.str.6, i64 42 }, section "__DATA,__objc_intobj,regular,no_dead_strip", align 8 #[[ATTR0]]
 // CHECK: @"OBJC_CLASS_$_NSConstantFloatNumber" = external global %struct._class_t
-// CHECK: @_unnamed_nsconstantfloatnumber_ = private constant %struct.__builtin_NSConstantFloatNumber { ptr @"OBJC_CLASS_$_NSConstantFloatNumber", float 0x400921FB60000000 }, section "__DATA,__objc_floatobj,regular,no_dead_strip", align 8 #[[ATTR0]]
+// CHECK: @_unnamed_nsconstantfloatnumber_ = private constant %struct.__builtin_NSConstantFloatNumber { ptr @"OBJC_CLASS_$_NSConstantFloatNumber", float f0x40490FDB }, section "__DATA,__objc_floatobj,regular,no_dead_strip", align 8 #[[ATTR0]]
 // CHECK: @"OBJC_CLASS_$_NSConstantDoubleNumber" = external global %struct._class_t
-// CHECK: @_unnamed_nsconstantdoublenumber_ = private constant %struct.__builtin_NSConstantDoubleNumber { ptr @"OBJC_CLASS_$_NSConstantDoubleNumber", double 0x400921FB54411744 }, section "__DATA,__objc_doubleobj,regular,no_dead_strip", align 8 #[[ATTR0]]
+// CHECK: @_unnamed_nsconstantdoublenumber_ = private constant %struct.__builtin_NSConstantDoubleNumber { ptr @"OBJC_CLASS_$_NSConstantDoubleNumber", double f0x400921FB54411744 }, section "__DATA,__objc_doubleobj,regular,no_dead_strip", align 8 #[[ATTR0]]
 // CHECK: @__kCFBooleanTrue = external global ptr #0
 // CHECK: @__kCFBooleanFalse = external global ptr #0
 // CHECK: @_unnamed_nsconstantintegernumber_.9 = private constant %struct.__builtin_NSConstantIntegerNumber { ptr @"OBJC_CLASS_$_NSConstantIntegerNumber", ptr @.str.1, i64 1 }, section "__DATA,__objc_intobj,regular,no_dead_strip", align 8 #0
 // CHECK: @_unnamed_nsconstantintegernumber_.10 = private constant %struct.__builtin_NSConstantIntegerNumber { ptr @"OBJC_CLASS_$_NSConstantIntegerNumber", ptr @.str.1, i64 0 }, section "__DATA,__objc_intobj,regular,no_dead_strip", align 8 #0
-// CHECK: @_unnamed_nsconstantfloatnumber_.11 = private constant %struct.__builtin_NSConstantFloatNumber { ptr @"OBJC_CLASS_$_NSConstantFloatNumber", float 0x7FF8000000000000 }, section "__DATA,__objc_floatobj,regular,no_dead_strip", align 8 #0
-// CHECK: @_unnamed_nsconstantfloatnumber_.12 = private constant %struct.__builtin_NSConstantFloatNumber { ptr @"OBJC_CLASS_$_NSConstantFloatNumber", float 0x7FF0000000000000 }, section "__DATA,__objc_floatobj,regular,no_dead_strip", align 8 #0
-// CHECK: @_unnamed_nsconstantfloatnumber_.13 = private constant %struct.__builtin_NSConstantFloatNumber { ptr @"OBJC_CLASS_$_NSConstantFloatNumber", float 0xFFF0000000000000 }, section "__DATA,__objc_floatobj,regular,no_dead_strip", align 8 #0
+// CHECK: @_unnamed_nsconstantfloatnumber_.11 = private constant %struct.__builtin_NSConstantFloatNumber { ptr @"OBJC_CLASS_$_NSConstantFloatNumber", float +qnan }, section "__DATA,__objc_floatobj,regular,no_dead_strip", align 8 #0
+// CHECK: @_unnamed_nsconstantfloatnumber_.12 = private constant %struct.__builtin_NSConstantFloatNumber { ptr @"OBJC_CLASS_$_NSConstantFloatNumber", float +inf }, section "__DATA,__objc_floatobj,regular,no_dead_strip", align 8 #0
+// CHECK: @_unnamed_nsconstantfloatnumber_.13 = private constant %struct.__builtin_NSConstantFloatNumber { ptr @"OBJC_CLASS_$_NSConstantFloatNumber", float -inf }, section "__DATA,__objc_floatobj,regular,no_dead_strip", align 8 #0
 // NOTE: We expect `@((NSUInteger)2046)` to have an encoding of "Q" or `kCFNumberSInt128Type` on 64bit platforms. Since that isn't a public type `CFNumberType` will detect that and return
 // CHECK: @.str.14 = private unnamed_addr constant [2 x i8] c"Q\00", align 1
 // CHECK: @_unnamed_nsconstantintegernumber_.15 = private constant %struct.__builtin_NSConstantIntegerNumber { ptr @"OBJC_CLASS_$_NSConstantIntegerNumber", ptr @.str.14, i64 2049 }, section "__DATA,__objc_intobj,regular,no_dead_strip", align 8 #0

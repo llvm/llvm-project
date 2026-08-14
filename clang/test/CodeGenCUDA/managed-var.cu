@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=COMMON,DEV,NORDC-D %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -fgpu-rdc -cuid=abc -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefixes=COMMON,DEV,RDC-D %s
 
@@ -143,7 +143,7 @@ float load3() {
 // HOST:  %3 = ptrtoint ptr %2 to i64
 // HOST:  %4 = sub i64 %3, %1
 // HOST:  %sub.ptr.div = sdiv exact i64 %4, 4
-// HOST:  %conv = sitofp i64 %sub.ptr.div to float
+// HOST:  %conv = sitofp contract i64 %sub.ptr.div to float
 // HOST:  ret float %conv
 float addr_taken2() {
   return (float)reinterpret_cast<long>(&(v2[1].y)-&(v[1].x));

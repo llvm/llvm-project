@@ -44,6 +44,12 @@ void foo() { A *ptr1 = 0; }
 // CHECK-NEXT: AT_name{{.*}}"bPtr"
 // CHECK-NEXT: DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[PTR_B]]} "A::B *")
 
+// CHECK: 0x[[STRUCT_B]]: DW_TAG_structure_type
+// CHECK: AT_name{{.*}}"B"
+
+// CHECK: DW_TAG_member
+// CHECK: AT_name{{.*}}"x"
+
 // CHECK: DW_TAG_member
 // CHECK-NEXT: AT_name{{.*}}"bRef"
 // CHECK-NEXT: DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[REF_B]]} "A::B &"
@@ -51,12 +57,6 @@ void foo() { A *ptr1 = 0; }
 // CHECK: DW_TAG_member
 // CHECK-NEXT: AT_name{{.*}}"bPtrToField"
 // CHECK-NEXT: DW_AT_type [DW_FORM_ref4] {{.*}}{0x[[PTR_TO_FIELD:[a-f0-9]*]]} "int A::B::*"
-
-// CHECK: 0x[[STRUCT_B]]: DW_TAG_structure_type
-// CHECK: AT_name{{.*}}"B"
-
-// CHECK: DW_TAG_member
-// CHECK: AT_name{{.*}}"x"
 
 // CHECK: 0x[[PTR_TO_FIELD]]: DW_TAG_ptr_to_member_type
 // CHECK-NEXT: DW_AT_type [DW_FORM_ref4]   {{.*}}{0x[[INT_BASE]]} "int"

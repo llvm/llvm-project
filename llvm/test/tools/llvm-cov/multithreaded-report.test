@@ -82,7 +82,7 @@ Instructions for regenerating the test:
 
 # cd %S/Inputs/multithreaded_report
 
-cp -r . /tmp/multithreaded_report
+cp -R . /tmp/multithreaded_report
 
 clang++ -std=c++11 -mllvm -enable-name-compression=false \
     -fprofile-instr-generate -fcoverage-mapping \

@@ -315,7 +315,7 @@ lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::GetChildAtIndex(
   // all items named _Myval
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return val_sp->Clone(ConstString(name.GetString()));
+  return val_sp->Clone(name.GetString());
 }
 
 lldb::ChildCacheState

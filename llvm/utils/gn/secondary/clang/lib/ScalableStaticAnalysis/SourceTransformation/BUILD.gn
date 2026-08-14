@@ -1,0 +1,16 @@
+static_library("SourceTransformation") {
+  output_name = "clangScalableStaticAnalysisSourceTransformation"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/ScalableStaticAnalysis/Core",
+    "//clang/lib/Tooling/Core",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "SARIFTransformationReportFormat.cpp",
+    "TransformationRegistry.cpp",
+    "YAMLSourceEditFormat.cpp",
+  ]
+}
