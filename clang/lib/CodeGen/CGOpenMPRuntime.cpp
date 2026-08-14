@@ -3355,10 +3355,10 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const Decl *D = cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl();
+    const Decl *D = cast<DeclRefExpr>(E)->getDecl();
     const VarDecl *VD;
     if (const auto *BD = dyn_cast<BindingDecl>(D))
-      VD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
+      VD = cast<VarDecl>(BD->getDecomposedDecl());
     else
       VD = cast<VarDecl>(D);
     PrivateVarsPos[VD] = Counter;
@@ -3371,10 +3371,10 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const Decl *D = cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl();
+    const Decl *D = cast<DeclRefExpr>(E)->getDecl();
     const VarDecl *VD;
     if (const auto *BD = dyn_cast<BindingDecl>(D))
-      VD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
+      VD = cast<VarDecl>(BD->getDecomposedDecl());
     else
       VD = cast<VarDecl>(D);
     PrivateVarsPos[VD] = Counter;
@@ -3387,10 +3387,10 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const Decl *D = cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl();
+    const Decl *D = cast<DeclRefExpr>(E)->getDecl();
     const VarDecl *VD;
     if (const auto *BD = dyn_cast<BindingDecl>(D))
-      VD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
+      VD = cast<VarDecl>(BD->getDecomposedDecl());
     else
       VD = cast<VarDecl>(D);
     PrivateVarsPos[VD] = Counter;
@@ -3445,11 +3445,9 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     const VarDecl *LookupVD;
     if (Privates[Counter].second.OriginalRef) {
       const Decl *OrigDecl =
-          cast<DeclRefExpr>(Privates[Counter].second.OriginalRef)
-              ->getDecl()
-              ->getCanonicalDecl();
+          cast<DeclRefExpr>(Privates[Counter].second.OriginalRef)->getDecl();
       if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
-        LookupVD = cast<VarDecl>(BD->getDecomposedDecl()->getCanonicalDecl());
+        LookupVD = cast<VarDecl>(BD->getDecomposedDecl());
       } else {
         LookupVD = Privates[Counter].second.Original;
       }
