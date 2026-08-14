@@ -25,7 +25,9 @@ llcas_digest_print
 llcas_get_plugin_version
 llcas_loaded_object_get_data
 llcas_loaded_object_get_refs
+llcas_loaded_object_get_standalone_data
 llcas_object_refs_get_count
 llcas_object_refs_get_id
 llcas_objectid_get_digest
+llcas_standalone_data_dispose
 llcas_string_dispose

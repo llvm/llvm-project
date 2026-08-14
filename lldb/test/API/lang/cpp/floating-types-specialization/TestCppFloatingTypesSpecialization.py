@@ -5,7 +5,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireNotWasm  # _Float16/__bf16 are unsupported on the wasm target
+@requireNotWasm("_Float16/__bf16 are unsupported on the wasm target")
 class TestCase(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test(self):
