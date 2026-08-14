@@ -1,4 +1,4 @@
-// RUN: inter-opt %s --split-input-file --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_regalloc})' | FileCheck %s --check-prefixes=REMAT,SCRATCH,LOOP
+// RUN: inter-opt %s --split-input-file --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_regalloc})' | FileCheck %s --check-prefixes=REMAT,SCRATCH,LOOP,WIDE
 
 module {
   func.func @rematerialize() attributes {xemachine.grf_count = 5 : i32, xemachine.reserved_grf_count = 0 : i32} {
@@ -134,6 +134,29 @@ module {
 // LOOP: xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 0>
 // LOOP: xemachine.cmp {{.*}} -> !xemachine.arf<f, 2, 1>
 // LOOP-NOT: !xemachine.arf<f, 2, -1>
+
+// -----
+
+module {
+  func.func @wide_subregister_alias() attributes {
+      xemachine.grf_count = 4 : i32,
+      xemachine.reserved_grf_count = 0 : i32} {
+    %zero32 = xemachine.imm 0 : i32
+    %base = xemachine.mov %zero32 {execSize = 16 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+    %zero64 = xemachine.imm 0 : i64
+    %replacement = xemachine.mov %zero64 {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i64) -> !xemachine.reg<2, -1>
+    %updated = xemachine.update_tuple %base, %replacement {offsets = [2]}
+        : (!xemachine.reg<16, -1>, !xemachine.reg<2, -1>)
+        -> !xemachine.reg<16, -1>
+    return
+  }
+}
+
+// WIDE-LABEL: func.func @wide_subregister_alias
+// WIDE: xemachine.mov {{.*}}dstSub = 1
+// WIDE-NOT: !xemachine.reg<{{.*}}, -1>
 
 // -----
 

@@ -593,8 +593,11 @@ static LogicalResult repairUpdateTuples(func::FuncOp function) {
       }
       if (uniqueStorage && unconstrainedStorage &&
           representableOffset && (offset % 16 == 0 || alu) &&
+          definition &&
           !storageIsDefinedAfter(summary, update.getBase(), replacement,
                                  dominance) &&
+          !storageIsLiveAfter(summary, update.getBase(), definition, dominance,
+                              update) &&
           !storageIsLiveAfter(summary, replacement, update, dominance)) {
         if (offset % 16 == 0 || succeeded(alu.setDestinationSubregister(
                                     destinationSub)))

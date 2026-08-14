@@ -757,7 +757,8 @@ module {
 // PREP: [[READ_PARTS:%.*]]:2 = xemachine.tuple_to_elements [[READ_BASE]]
 // PREP: [[READ_REPLACEMENT:%.*]] = xemachine.mov
 // PREP-NEXT: xemachine.add [[READ_PARTS]]#1,
-// PREP-NEXT: xemachine.update_tuple [[READ_BASE]], [[READ_REPLACEMENT]]
+// PREP-NEXT: [[READ_COPY:%.*]] = xemachine.mov [[READ_REPLACEMENT]] {{.*}}xemachine.regalloc_copy = "update-value"
+// PREP-NEXT: xemachine.update_tuple [[READ_BASE]], [[READ_COPY]]
 
 // PREP-LABEL: func.func @fixed_shifted_tuple_view
 // PREP: [[SHIFT_PARTS:%.*]]:2 = xemachine.tuple_to_elements

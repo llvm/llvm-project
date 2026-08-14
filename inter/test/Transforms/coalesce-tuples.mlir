@@ -79,6 +79,63 @@ module {
         -> !xemachine.reg<32, -1>
     return
   }
+
+  func.func @prefer_destinationless_send_descriptor(
+      %base: !xemachine.reg<16, -1>,
+      %first_dynamic: !xemachine.reg<1, -1>,
+      %second_dynamic: !xemachine.reg<1, -1>,
+      %third_dynamic: !xemachine.reg<1, -1>) {
+    %zero = xemachine.imm 0 : i32
+    %first_common0 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %first_common1 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %first_common2 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %first = xemachine.update_tuple
+        %base, %first_common0, %first_common1, %first_common2, %first_dynamic
+        {offsets = [2, 3, 4, 5]}
+        : (!xemachine.reg<16, -1>, !xemachine.reg<1, -1>,
+           !xemachine.reg<1, -1>, !xemachine.reg<1, -1>,
+           !xemachine.reg<1, -1>)
+        -> !xemachine.reg<16, -1>
+    %first_dst, %first_token = xemachine.send ugm %first
+        {desc = 1 : i32, exdesc = 0 : i32, noMask, sfid = 0 : i32}
+        : (!xemachine.reg<16, -1>)
+        -> (!xemachine.reg<0, -1>, !xemachine.mem.token)
+    %second_common0 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %second_common1 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %second_common2 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %second = xemachine.update_tuple
+        %base, %second_common0, %second_common1, %second_common2, %second_dynamic
+        {offsets = [2, 3, 4, 6]}
+        : (!xemachine.reg<16, -1>, !xemachine.reg<1, -1>,
+           !xemachine.reg<1, -1>, !xemachine.reg<1, -1>,
+           !xemachine.reg<1, -1>)
+        -> !xemachine.reg<16, -1>
+    %second_dst, %second_token = xemachine.send ugm %second
+        {desc = 2 : i32, exdesc = 0 : i32, noMask, sfid = 0 : i32}
+        : (!xemachine.reg<16, -1>)
+        -> (!xemachine.reg<16, -1>, !xemachine.mem.token)
+    %third_common0 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %third_common1 = xemachine.mov %zero {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %third = xemachine.update_tuple
+        %base, %third_common0, %third_common1, %third_dynamic
+        {offsets = [2, 3, 7]}
+        : (!xemachine.reg<16, -1>, !xemachine.reg<1, -1>,
+           !xemachine.reg<1, -1>, !xemachine.reg<1, -1>)
+        -> !xemachine.reg<16, -1>
+    %third_dst, %third_token = xemachine.send ugm %third
+        {desc = 1 : i32, exdesc = 0 : i32, noMask, sfid = 0 : i32}
+        : (!xemachine.reg<16, -1>)
+        -> (!xemachine.reg<0, -1>, !xemachine.mem.token)
+    return
+  }
 }
 
 // CHECK-LABEL: func.func @factor_common_fields
@@ -100,3 +157,12 @@ module {
 // CHECK: xemachine.uniform_loop
 // CHECK: [[AFTER:%.*]] = xemachine.update_tuple
 // CHECK: xemachine.tuple_from_elements [[BEFORE]], [[AFTER]]
+
+// CHECK-LABEL: func.func @prefer_destinationless_send_descriptor
+// CHECK: [[TEMPLATE:%.*]] = xemachine.update_tuple %arg0, {{.*}} {offsets = [2, 3]}
+// CHECK: [[FIRST:%.*]] = xemachine.update_tuple [[TEMPLATE]]
+// CHECK: xemachine.send ugm [[FIRST]] {{.*}}desc = 1
+// CHECK: [[SECOND:%.*]] = xemachine.update_tuple %arg0
+// CHECK: xemachine.send ugm [[SECOND]] {{.*}}desc = 2
+// CHECK: [[THIRD:%.*]] = xemachine.update_tuple [[TEMPLATE]]
+// CHECK: xemachine.send ugm [[THIRD]] {{.*}}desc = 1

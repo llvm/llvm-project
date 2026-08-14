@@ -77,13 +77,6 @@ static std::optional<uint64_t> getElementBytes(Type type) {
   return std::nullopt;
 }
 
-static int64_t getIntegerAttr(Operation *operation, StringRef name,
-                              int64_t fallback) {
-  if (IntegerAttr attr = operation->getAttrOfType<IntegerAttr>(name))
-    return attr.getInt();
-  return fallback;
-}
-
 static uint64_t getDestinationStorageDwords(Operation *operation,
                                             RegType destinationType) {
   uint64_t storageDwords = destinationType.getWidthDwords();
@@ -228,9 +221,14 @@ static LogicalResult finalizeComponents(func::FuncOp function,
           state.aliases.lookup(value);
       assert(valueInfo && "register value is missing alias information");
       Operation *definition = value.getDefiningOp();
+      ALUOpInterface alu = dyn_cast_or_null<ALUOpInterface>(definition);
+      std::optional<uint64_t> elementBytes =
+          alu ? getElementBytes(alu.getInstructionElementType()) : std::nullopt;
       bool placedAtAliasOffset =
-          definition && getIntegerAttr(definition, "dstSub", 0) ==
-                            valueInfo->offsetDwords % 16;
+          elementBytes &&
+          alu.getDestinationSubregister() *
+                  static_cast<int64_t>(*elementBytes) ==
+              (valueInfo->offsetDwords % 16) * 4;
       if (valueInfo->offsetDwords % 16 != 0 && !placedAtAliasOffset)
         return function.emitError()
                << "register-storage alias at dword offset "

@@ -149,6 +149,33 @@ static bool haveSameSendDescriptors(UpdateTupleOp lhs, UpdateTupleOp rhs) {
          });
 }
 
+static bool reachesDestinationlessRead(Value value, DenseSet<Value> &visited) {
+  if (!visited.insert(value).second)
+    return false;
+  for (Operation *user : value.getUsers()) {
+    if (SendOp send = dyn_cast<SendOp>(user)) {
+      if (send.getAddrPayload() == value && !send.getDataPayload() &&
+          cast<RegType>(send.getDst().getType()).getWidthDwords() == 0)
+        return true;
+      continue;
+    }
+    if (UpdateTupleOp update = dyn_cast<UpdateTupleOp>(user))
+      if (reachesDestinationlessRead(update.getResult(), visited))
+        return true;
+  }
+  return false;
+}
+
+static bool shouldPreferSameSendDescriptors(UpdateTupleOp lhs,
+                                            UpdateTupleOp rhs) {
+  DenseSet<Value> lhsVisited;
+  DenseSet<Value> rhsVisited;
+  bool hasDestinationlessRead =
+      reachesDestinationlessRead(lhs.getResult(), lhsVisited) ||
+      reachesDestinationlessRead(rhs.getResult(), rhsVisited);
+  return hasDestinationlessRead && haveSameSendDescriptors(lhs, rhs);
+}
+
 static void factorBlock(Block &block, const RegionFlow &regionFlow) {
   SmallVector<UpdateTupleOp> updates;
   for (Operation &operation : block)
@@ -161,7 +188,7 @@ static void factorBlock(Block &block, const RegionFlow &regionFlow) {
       continue;
     UpdateTupleOp bestMatch;
     SmallVector<unsigned> commonIndices;
-    bool bestHasSameSendDescriptors = false;
+    bool bestHasPreferredDescriptors = false;
     for (UpdateTupleOp candidate : updates) {
       if (candidate == reference || consumed.contains(candidate) ||
           !reference->isBeforeInBlock(candidate) ||
@@ -173,17 +200,17 @@ static void factorBlock(Block &block, const RegionFlow &regionFlow) {
           getCommonUpdateIndices(reference, candidate);
       if (candidateCommon.size() < 2)
         continue;
-      bool hasSameSendDescriptors =
-          haveSameSendDescriptors(reference, candidate);
+      bool hasPreferredDescriptors =
+          shouldPreferSameSendDescriptors(reference, candidate);
       // TODO: Represent payload ownership directly instead of using equal send
       // descriptors as the proxy for compatible physical materialization.
       if (!bestMatch ||
-          (hasSameSendDescriptors && !bestHasSameSendDescriptors) ||
-          (hasSameSendDescriptors == bestHasSameSendDescriptors &&
+          (hasPreferredDescriptors && !bestHasPreferredDescriptors) ||
+          (hasPreferredDescriptors == bestHasPreferredDescriptors &&
            candidateCommon.size() > commonIndices.size())) {
         bestMatch = candidate;
         commonIndices = std::move(candidateCommon);
-        bestHasSameSendDescriptors = hasSameSendDescriptors;
+        bestHasPreferredDescriptors = hasPreferredDescriptors;
       }
     }
     if (!bestMatch)
@@ -196,8 +223,8 @@ static void factorBlock(Block &block, const RegionFlow &regionFlow) {
           reference->isBeforeInBlock(candidate) &&
           !crossesRepetitiveRegion(reference, candidate, regionFlow) &&
           candidate.getResult().getType() == reference.getResult().getType() &&
-          haveSameSendDescriptors(reference, candidate) ==
-              bestHasSameSendDescriptors &&
+          shouldPreferSameSendDescriptors(reference, candidate) ==
+              bestHasPreferredDescriptors &&
           areEquivalentValues(reference.getBase(), candidate.getBase()) &&
           hasCommonUpdates(reference, candidate, commonIndices))
         group.push_back(candidate);
