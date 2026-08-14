@@ -1301,6 +1301,10 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
       return false;
   if (Fortran::semantics::FindEquivalenceSet(sym))
     return false;
+  // CUDA device/managed/unified/shared/pinned variables must not be
+  // initialized with a plain host store; their storage lives in device memory.
+  if (Fortran::semantics::GetCUDADataAttr(&sym))
+    return false;
   return true;
 }
 
@@ -1336,6 +1340,11 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
     mlir::Value partVal = genByteSplatInit(builder, loc, partTy, bytePat);
     return mlir::complex::CreateOp::create(builder, loc, cplxTy, partVal,
                                            partVal);
+  }
+  // LOGICAL(k) has a fixed size of k bytes; treat it like an integer splat.
+  if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
+    mlir::Value intCst = makeIntCst(logTy.getFKind() * 8);
+    return builder.createConvert(loc, logTy, intCst);
   }
   // TODO: CHARACTER falls back to zero; a future improvement should fill each
   // storage unit with the byte pattern.
@@ -1427,84 +1436,97 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
   mlir::Value base = fir::getBase(exv);
   mlir::Type storeTy = fir::unwrapRefType(base.getType());
 
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(storeTy)) {
-    // Array: build element constant and use insert_on_range.
-    mlir::Type eleTy = seqTy.getEleTy();
-    auto fpTy = mlir::dyn_cast<mlir::FloatType>(eleTy);
-    auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(eleTy);
-    mlir::Value elePat;
-    switch (mode) {
-    case Fortran::lower::InitLocalKind::Zero:
-      elePat = fir::ZeroOp::create(builder, loc, eleTy);
-      break;
-    case Fortran::lower::InitLocalKind::Hex:
-      elePat = genByteSplatInit(builder, loc, eleTy, hexByte);
-      break;
-    case Fortran::lower::InitLocalKind::QNaN:
-      if (fpTy) {
-        elePat = genFPNaNInit(builder, loc, fpTy, false);
-      } else if (cplxTy) {
-        auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-        mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, false);
-        elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
-                                                 nanPart);
-      } else {
-        elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
-      }
-      break;
-    case Fortran::lower::InitLocalKind::SNaN:
-      if (fpTy) {
-        elePat = genFPNaNInit(builder, loc, fpTy, true);
-      } else if (cplxTy) {
-        auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-        mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, true);
-        elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
-                                                 nanPart);
-      } else {
-        elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
-      }
-      break;
-    default:
-      llvm_unreachable("unexpected InitLocalKind");
-    }
-    // Build flat [lb0,ub0, lb1,ub1, ...] bounds vector.
-    llvm::SmallVector<int64_t> rangeBounds;
-    bool hasUnknown = false;
-    for (auto dim : seqTy.getShape()) {
-      if (dim == fir::SequenceType::getUnknownExtent()) {
-        hasUnknown = true;
-        break;
-      }
-      rangeBounds.push_back(0);
-      rangeBounds.push_back(dim - 1);
-    }
-    if (!hasUnknown) {
-      mlir::Value arrVal = fir::UndefOp::create(builder, loc, seqTy);
-      arrVal =
-          fir::InsertOnRangeOp::create(builder, loc, seqTy, arrVal, elePat,
-                                       builder.getIndexVectorAttr(rangeBounds));
-      fir::StoreOp::create(builder, loc, arrVal, base);
-    }
-  } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(storeTy)) {
-    // Derived type: zero the whole struct, or walk fields for nan/snan/hex.
-    if (mode == Fortran::lower::InitLocalKind::Zero) {
-      fir::StoreOp::create(builder, loc,
-                           fir::ZeroOp::create(builder, loc, recTy), base);
-    } else {
-      for (auto [fieldName, fieldTy] : recTy.getTypeList()) {
-        auto fieldIdx = fir::FieldIndexOp::create(
-            builder, loc, fir::FieldType::get(recTy.getContext()), fieldName,
-            recTy, mlir::ValueRange{});
-        mlir::Value fieldAddr =
-            fir::CoordinateOp::create(builder, loc, builder.getRefType(fieldTy),
-                                      base, mlir::ValueRange{fieldIdx});
-        genInitLocalStore(builder, loc, fieldTy, fieldAddr, mode, hexByte);
-      }
-    }
-  } else {
-    // Scalar (integer, real, complex, logical, character): store directly.
-    genInitLocalStore(builder, loc, storeTy, base, mode, hexByte);
-  }
+  // Recursive helper: dispatch on type to initialize the storage at \p addr
+  // of type \p ty. Handles arrays, derived types, and scalars.
+  std::function<void(mlir::Type, mlir::Value)> initAddr =
+      [&](mlir::Type ty, mlir::Value addr) {
+        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+          // Array: build element constant and use insert_on_range.
+          mlir::Type eleTy = seqTy.getEleTy();
+          auto fpTy = mlir::dyn_cast<mlir::FloatType>(eleTy);
+          auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(eleTy);
+          mlir::Value elePat;
+          switch (mode) {
+          case Fortran::lower::InitLocalKind::Zero:
+            elePat = fir::ZeroOp::create(builder, loc, eleTy);
+            break;
+          case Fortran::lower::InitLocalKind::Hex:
+            elePat = genByteSplatInit(builder, loc, eleTy, hexByte);
+            break;
+          case Fortran::lower::InitLocalKind::QNaN:
+            if (fpTy) {
+              elePat = genFPNaNInit(builder, loc, fpTy, false);
+            } else if (cplxTy) {
+              auto partFpTy =
+                  mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+              mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, false);
+              elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy,
+                                                       nanPart, nanPart);
+            } else {
+              elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
+            }
+            break;
+          case Fortran::lower::InitLocalKind::SNaN:
+            if (fpTy) {
+              elePat = genFPNaNInit(builder, loc, fpTy, true);
+            } else if (cplxTy) {
+              auto partFpTy =
+                  mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+              mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, true);
+              elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy,
+                                                       nanPart, nanPart);
+            } else {
+              elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
+            }
+            break;
+          default:
+            llvm_unreachable("unexpected InitLocalKind");
+          }
+          // Build flat [lb0,ub0, lb1,ub1, ...] bounds vector.
+          llvm::SmallVector<int64_t> rangeBounds;
+          // Skip CHARACTER arrays: fir.zero_bits is not a valid insert_on_range
+          // element for character types (runtime-length or fixed). CHARACTER
+          // initialization is a known TODO.
+          bool hasUnknown = mlir::isa<fir::CharacterType>(eleTy);
+          for (auto dim : seqTy.getShape()) {
+            if (dim == fir::SequenceType::getUnknownExtent() || dim == 0) {
+              hasUnknown = true;
+              break;
+            }
+            rangeBounds.push_back(0);
+            rangeBounds.push_back(dim - 1);
+          }
+          if (!hasUnknown) {
+            mlir::Value arrVal = fir::UndefOp::create(builder, loc, seqTy);
+            arrVal = fir::InsertOnRangeOp::create(
+                builder, loc, seqTy, arrVal, elePat,
+                builder.getIndexVectorAttr(rangeBounds));
+            fir::StoreOp::create(builder, loc, arrVal, addr);
+          }
+        } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
+          // Derived type: zero the whole struct, or walk fields for
+          // nan/snan/hex.
+          if (mode == Fortran::lower::InitLocalKind::Zero) {
+            fir::StoreOp::create(
+                builder, loc, fir::ZeroOp::create(builder, loc, recTy), addr);
+          } else {
+            for (auto [fieldName, fieldTy] : recTy.getTypeList()) {
+              auto fieldIdx = fir::FieldIndexOp::create(
+                  builder, loc, fir::FieldType::get(recTy.getContext()),
+                  fieldName, recTy, mlir::ValueRange{});
+              mlir::Value fieldAddr = fir::CoordinateOp::create(
+                  builder, loc, builder.getRefType(fieldTy), addr,
+                  mlir::ValueRange{fieldIdx});
+              initAddr(fieldTy, fieldAddr);
+            }
+          }
+        } else {
+          // Scalar (integer, real, complex, logical, character): store
+          // directly.
+          genInitLocalStore(builder, loc, ty, addr, mode, hexByte);
+        }
+      };
+  initAddr(storeTy, base);
 }
 
 /// Instantiate a local variable. Precondition: Each variable will be visited
