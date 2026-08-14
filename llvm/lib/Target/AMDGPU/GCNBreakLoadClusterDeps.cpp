@@ -239,7 +239,7 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
         // If it's used by a load that could be in our cluster, it's _NOT_ free.
         bitset<AMDGPU::NUM_TARGET_REGS> BannedRegs =
             UsedLoadDestPhysregs | InsDefs;
-        for (auto VecIt = AllVectorLoads.rbegin();
+        for (auto VecIt = std::next(AllVectorLoads.rbegin());
              VecIt != AllVectorLoads.rend(); VecIt++) {
           bitset<AMDGPU::NUM_TARGET_REGS> FutureInsDefs =
               getUsesAndDefsFor(**VecIt).first;
