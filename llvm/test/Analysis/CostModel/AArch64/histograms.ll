@@ -84,10 +84,10 @@ define void @histograms() {
 ;
 ; CHECK-SVE2-LABEL: 'histograms'
 ; CHECK-SVE2-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.experimental.vector.histogram.add.nxv1p0.i64(<vscale x 1 x ptr> poison, i64 1, <vscale x 1 x i1> poison)
-; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
-; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
-; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
-; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> poison, i8 1, <vscale x 16 x i1> poison)
+; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> poison, i64 1, <vscale x 2 x i1> poison)
+; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> poison, i32 1, <vscale x 4 x i1> poison)
+; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 162 for instruction: call void @llvm.experimental.vector.histogram.add.nxv8p0.i16(<vscale x 8 x ptr> poison, i16 1, <vscale x 8 x i1> poison)
+; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 324 for instruction: call void @llvm.experimental.vector.histogram.add.nxv16p0.i8(<vscale x 16 x ptr> poison, i8 1, <vscale x 16 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> poison, i64 1, <2 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.experimental.vector.histogram.add.v4p0.i32(<4 x ptr> poison, i32 1, <4 x i1> poison)
 ; CHECK-SVE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.experimental.vector.histogram.add.v8p0.i16(<8 x ptr> poison, i16 1, <8 x i1> poison)
