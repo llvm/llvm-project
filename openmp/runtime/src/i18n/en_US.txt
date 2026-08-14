@@ -484,6 +484,7 @@ AffIgnoringNonHybrid         "%1$s ignored: This machine is not a hybrid archite
 AffIgnoringNotAvailable      "%1$s ignored: %2$s is not available. Using \"%3$s\" instead."
 SetNumTeamsInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
 SetTeamsThreadLimitInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
+OmpTaskgraphConcurrentRecord "%1$s: multiple threads attempting to re-record taskgraph concurrently for graph_id %2$d"
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-

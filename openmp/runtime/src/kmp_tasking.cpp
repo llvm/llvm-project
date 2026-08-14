@@ -6033,6 +6033,23 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
   record = *record_p;
   kmp_taskgraph_record_t *reuse_record = nullptr;
   if (record && graph_reset) {
+    kmp_taskgraph_status_t old_status = KMP_ATOMIC_LD_ACQ(&record->status);
+    // Sanity check: if the graph is not ready, it means another thread is
+    // already performing a record operation for this taskgraph/graph_id.
+    // That's likely a bug, so fail with an error.
+    if (old_status != KMP_TDG_READY) {
+      char *src_loc;
+      if (loc_ref && loc_ref->psource) {
+        kmp_str_loc_t str_loc = __kmp_str_loc_init(loc_ref->psource, false);
+        src_loc = __kmp_str_format("%s:%d:%d", str_loc.file, str_loc.line,
+                                   str_loc.col);
+        __kmp_str_loc_free(&str_loc);
+      } else {
+        src_loc = __kmp_str_format("unknown");
+      }
+      KMP_FATAL(OmpTaskgraphConcurrentRecord, src_loc, graph_id);
+      __kmp_str_free(&src_loc);
+    }
     // Move the existing record to the header's expiring list
     *record_p = record->next;
     record->next = header->expiring;
