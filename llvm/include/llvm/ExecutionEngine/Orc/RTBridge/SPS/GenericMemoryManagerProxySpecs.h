@@ -27,6 +27,12 @@
 
 namespace llvm::orc::rt::sps {
 
+// Controller-interface name of the SimpleNativeMemoryMap instance: a data
+// symbol (the allocator object) passed as the first argument to each call, not
+// a wrapper to proxy.
+inline constexpr char MemMgrInstanceCIName[] =
+    "orc_rt_ci_SimpleNativeMemoryMap_Instance";
+
 using MemMgrReserveSPSSig = shared::SPSExpected<shared::SPSExecutorAddr>(
     shared::SPSExecutorAddr, uint64_t);
 inline constexpr char MemMgrReserveCIName[] =
