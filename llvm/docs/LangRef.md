@@ -2378,9 +2378,9 @@ define void @f() "no-sse" { ... }
     on a function means that a call to it is not a source of divergence.
 
 `alwaysuniform`
-:   A call to this function is always uniform. In uniformity analysis, a *uniform*
-    value is a value that is the same across all threads in a subgroup. Setting this
-    attribute on a function means that a call to it always returns a uniform result.
+:   Setting this attribute on a function means that a call to it always returns
+    a uniform result regardless of the uniformity of the inputs. Even when given
+    inputs that are divergent, the call is guaranteed to return a uniform result.
 
 `noduplicate`
 :   This attribute indicates that calls to the function cannot be
