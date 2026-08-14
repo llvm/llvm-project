@@ -151,7 +151,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   }
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
-  SrcRC = TRI->getMinimalPhysRegClass(SrcReg, VT);
+  SrcRC = TRI->getMinimalPhysRegClass(SrcReg);
 
   // Figure out the register class to create for the destreg.
   if (VRBase) {
@@ -706,12 +706,10 @@ void InstrEmitter::EmitRegSequence(SDNode *Node, VRBaseMapType &VRBaseMap,
 
 /// EmitDbgValue - Generate machine instruction for a dbg_value node.
 ///
-MachineInstr *
-InstrEmitter::EmitDbgValue(SDDbgValue *SD,
-                           VRBaseMapType &VRBaseMap) {
-  DebugLoc DL = SD->getDebugLoc();
+MachineInstr *InstrEmitter::EmitDbgValue(SDDbgValue *SD,
+                                         VRBaseMapType &VRBaseMap) {
   assert(cast<DILocalVariable>(SD->getVariable())
-             ->isValidLocationForIntrinsic(DL) &&
+             ->isValidLocationForIntrinsic(SD->getDebugLoc()) &&
          "Expected inlined-at fields to agree");
 
   SD->setIsEmitted();

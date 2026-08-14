@@ -8,8 +8,10 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
@@ -22,6 +24,56 @@ namespace llvm {
 
 typedef DWARFExpression::Operation Op;
 typedef Op::Description Desc;
+
+/// Some backends (e.g. NVPTX) encode virtual register names as the DWARF
+/// register number: the ASCII bytes of the name are concatenated into a
+/// uint64_t (see NVPTXRegisterInfo::encodeRegisterForDwarf). When the object
+/// file is not the target backend, MCRegisterInfo cannot map these numbers, so
+/// recover the string for dumping.
+/// Returns true if the register name was decoded successfully, false otherwise.
+static bool decodeVirtualRegisterName(uint64_t DwarfRegNum,
+                                      SmallString<8> &Out) {
+  if (DwarfRegNum == 0)
+    return false;
+
+  uint64_t DwarfRegNumBE =
+      support::endian::byte_swap<uint64_t>(DwarfRegNum, endianness::big);
+  const char *Data = reinterpret_cast<const char *>(&DwarfRegNumBE);
+  const char *Begin = std::find_if(Data, Data + sizeof(DwarfRegNumBE),
+                                   [](char c) { return c != '\0'; });
+  SmallString<8> Tmp(Begin, Data + sizeof(DwarfRegNumBE));
+
+  if (Tmp.size() < 2)
+    return false;
+
+  if (!llvm::isAlnum(Tmp[0]) && Tmp[0] != '%')
+    return false;
+
+  for (size_t I = 1; I < Tmp.size(); ++I)
+    if (!llvm::isAlnum(Tmp[I]))
+      return false;
+
+  Out = Tmp;
+  return true;
+}
+
+/// Resolves a DWARF register number to a display name: first via \p
+/// GetNameForDWARFReg (MC register names), otherwise try decoding
+/// ASCII-encoded virtual register names (NVPTX-specific).
+/// Returns empty if neither applies.
+static std::string resolveRegName(
+    uint64_t DwarfRegNum, bool IsEH,
+    const std::function<StringRef(uint64_t, bool)> &GetNameForDWARFReg) {
+  if (GetNameForDWARFReg) {
+    StringRef R = GetNameForDWARFReg(DwarfRegNum, IsEH);
+    if (!R.empty())
+      return R.str();
+  }
+  SmallString<8> Decoded;
+  if (decodeVirtualRegisterName(DwarfRegNum, Decoded))
+    return Decoded.str().str();
+  return "";
+}
 
 static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
                                    DIDumpOptions DumpOpts,
@@ -235,6 +287,14 @@ static bool printCompactDWARFExpr(
     return false;
   };
 
+  // Keep the diagnostic in the compact printer so every register form reports
+  // failure only after resolveRegName has tried to get a target name and decode
+  // an ASCII-packed name.
+  auto UnknownRegister = [](raw_ostream &OS, uint64_t DwarfRegNum) -> bool {
+    OS << "<unknown register " << DwarfRegNum << ">";
+    return false;
+  };
+
   while (I != E) {
     const DWARFExpression::Operation &Op = *I;
     uint8_t Opcode = Op.getCode();
@@ -242,20 +302,22 @@ static bool printCompactDWARFExpr(
     case dwarf::DW_OP_regx: {
       // DW_OP_regx: A register, with the register num given as an operand.
       // Printed as the plain register name.
-      uint64_t DwarfRegNum = Op.getRawOperand(0);
-      auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
+      const uint64_t DwarfRegNum = Op.getRawOperand(0);
+      std::string RegName =
+          resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
       if (RegName.empty())
-        return false;
+        return UnknownRegister(OS, DwarfRegNum);
       raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
       S << RegName;
       break;
     }
     case dwarf::DW_OP_bregx: {
-      int DwarfRegNum = Op.getRawOperand(0);
-      int64_t Offset = Op.getRawOperand(1);
-      auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
+      const uint64_t DwarfRegNum = Op.getRawOperand(0);
+      const uint64_t Offset = Op.getRawOperand(1);
+      std::string RegName =
+          resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
       if (RegName.empty())
-        return false;
+        return UnknownRegister(OS, DwarfRegNum);
       raw_svector_ostream S(Stack.emplace_back().String);
       S << RegName;
       if (Offset)
@@ -269,10 +331,19 @@ static bool printCompactDWARFExpr(
       uint64_t SubExprLength = Op.getRawOperand(0);
       DWARFExpression::iterator SubExprEnd = I.skipBytes(SubExprLength);
       ++I;
+
+      SmallString<16> SubExpr;
+      raw_svector_ostream SubExprOS(SubExpr);
+      // Keep the subexpression separate so we can copy its diagnostic on
+      // failure without leaving a partial entry(...) in the output.
+      if (!printCompactDWARFExpr(SubExprOS, I, SubExprEnd,
+                                 GetNameForDWARFReg)) {
+        OS << SubExprOS.str();
+        return false;
+      }
+
       raw_svector_ostream S(Stack.emplace_back().String);
-      S << "entry(";
-      printCompactDWARFExpr(S, I, SubExprEnd, GetNameForDWARFReg);
-      S << ")";
+      S << "entry(" << SubExprOS.str() << ")";
       I = SubExprEnd;
       continue;
     }
@@ -297,18 +368,20 @@ static bool printCompactDWARFExpr(
         // DW_OP_reg<N>: A register, with the register num implied by the
         // opcode. Printed as the plain register name.
         uint64_t DwarfRegNum = Opcode - dwarf::DW_OP_reg0;
-        auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
+        std::string RegName =
+            resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
         if (RegName.empty())
-          return false;
+          return UnknownRegister(OS, DwarfRegNum);
         raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
         S << RegName;
       } else if (Opcode >= dwarf::DW_OP_breg0 &&
                  Opcode <= dwarf::DW_OP_breg31) {
         int DwarfRegNum = Opcode - dwarf::DW_OP_breg0;
         int64_t Offset = Op.getRawOperand(0);
-        auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
+        std::string RegName =
+            resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
         if (RegName.empty())
-          return false;
+          return UnknownRegister(OS, DwarfRegNum);
         raw_svector_ostream S(Stack.emplace_back().String);
         S << RegName;
         if (Offset)
@@ -343,9 +416,6 @@ bool printDwarfExpressionCompact(
 bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
                            DIDumpOptions DumpOpts, uint8_t Opcode,
                            ArrayRef<uint64_t> Operands) {
-  if (!DumpOpts.GetNameForDWARFReg)
-    return false;
-
   uint64_t DwarfRegNum;
   unsigned OpNum = 0;
 
@@ -353,22 +423,27 @@ bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   if (Opcode == DW_OP_LLVM_user)
     SubOpcode = Operands[OpNum++];
 
-  if (Opcode == DW_OP_bregx || Opcode == DW_OP_regx ||
+  const bool RegNumFromOperand =
+      Opcode == DW_OP_bregx || Opcode == DW_OP_regx ||
       Opcode == DW_OP_regval_type || SubOpcode == DW_OP_LLVM_aspace_bregx ||
-      SubOpcode == DW_OP_LLVM_call_frame_entry_reg)
+      SubOpcode == DW_OP_LLVM_call_frame_entry_reg;
+
+  if (RegNumFromOperand)
     DwarfRegNum = Operands[OpNum++];
   else if (Opcode >= DW_OP_breg0 && Opcode < DW_OP_bregx)
     DwarfRegNum = Opcode - DW_OP_breg0;
   else
     DwarfRegNum = Opcode - DW_OP_reg0;
 
-  auto RegName = DumpOpts.GetNameForDWARFReg(DwarfRegNum, DumpOpts.IsEH);
+  std::string RegName =
+      resolveRegName(DwarfRegNum, DumpOpts.IsEH, DumpOpts.GetNameForDWARFReg);
+
   if (!RegName.empty()) {
     if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
         Opcode == DW_OP_bregx || SubOpcode == DW_OP_LLVM_aspace_bregx)
       OS << ' ' << RegName << formatv("{0:+d}", int64_t(Operands[OpNum]));
     else
-      OS << ' ' << RegName.data();
+      OS << ' ' << RegName;
 
     if (Opcode == DW_OP_regval_type)
       prettyPrintBaseTypeRef(U, OS, DumpOpts, Operands, 1);

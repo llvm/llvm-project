@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/fcntl/open.h"
 #include "src/sys/sendfile/sendfile.h"
@@ -17,9 +19,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "hdr/fcntl_macros.h"
-#include <sys/stat.h>
-
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcSendfileTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 namespace cpp = LIBC_NAMESPACE::cpp;
@@ -30,8 +29,9 @@ TEST_F(LlvmLibcSendfileTest, CreateAndTransfer) {
   //   2. Use sendfile to copy it to another file.
   //   3. Make sure that the data was actually copied.
   //   4. Clean up the temporary files.
-  constexpr const char *IN_FILE = "testdata/sendfile_in.test";
-  constexpr const char *OUT_FILE = "testdata/sendfile_out.test";
+  constexpr const char *IN_FILE = APPEND_LIBC_TEST("testdata/sendfile_in.test");
+  constexpr const char *OUT_FILE =
+      APPEND_LIBC_TEST("testdata/sendfile_out.test");
   const char IN_DATA[] = "sendfile test";
   constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
 
