@@ -1371,7 +1371,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     if (DebuggerSupport) {
       Error TargetSymErr = Error::success();
       auto Plugin =
-          std::make_unique<ELFDebugObjectPlugin>(ES, true, true, TargetSymErr);
+          std::make_unique<ELFDebugObjectPlugin>(ES, true, TargetSymErr);
       if (!TargetSymErr)
         ObjLayer->addPlugin(std::move(Plugin));
       else

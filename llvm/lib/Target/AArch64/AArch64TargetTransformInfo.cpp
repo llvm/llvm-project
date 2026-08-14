@@ -588,7 +588,7 @@ static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
   //        using ptrue with a specific VL.
   if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy)) {
     unsigned EC = VTy->getElementCount().getKnownMinValue();
-    if (!isPowerOf2_64(EC) || !VTy->isScalableTy())
+    if (!isPowerOf2_64(EC) || !VTy->isScalableTy() || EC == 1)
       return InstructionCost::getInvalid();
 
     // HistCnt only supports 32b and 64b element types
@@ -1149,26 +1149,57 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
     EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
     unsigned SearchSize = NeedleTy->getNumElements();
-    if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize)) {
-      // Base cost for MATCH instructions. At least on the Neoverse V2 and
-      // Neoverse V3, these are cheap operations with the same latency as a
-      // vector ADD. In most cases, however, we also need to do an extra DUP.
-      // For fixed-length vectors we currently need an extra five--six
-      // instructions besides the MATCH.
-      InstructionCost Cost = 4;
-      if (isa<FixedVectorType>(RetTy))
-        Cost += 10;
-      return Cost;
-    }
-    break;
+    auto IsSupportedTypeAndSearchSize = [&]() {
+      if (SearchVT == MVT::nxv8i16 || SearchVT == MVT::v8i16)
+        return SearchSize == 8;
+
+      if (SearchVT == MVT::nxv16i8 || SearchVT == MVT::v16i8 ||
+          SearchVT == MVT::v8i8)
+        return SearchSize == 8 || SearchSize == 16;
+
+      return false;
+    };
+
+    if (!ST->hasSVE2() || !ST->isSVEAvailable() ||
+        !IsSupportedTypeAndSearchSize())
+      break;
+
+    // Base cost for MATCH instructions. At least on the Neoverse V2 and
+    // Neoverse V3, these are cheap operations with the same latency as a
+    // vector ADD. In most cases, however, we also need to do an extra DUP.
+    // For fixed-length vectors we currently need an extra five--six
+    // instructions besides the MATCH.
+    InstructionCost Cost = 4;
+    if (isa<FixedVectorType>(RetTy))
+      Cost += 10;
+    return Cost;
   }
   case Intrinsic::cttz: {
-    auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
-    if (LT.second == MVT::v8i8 || LT.second == MVT::v16i8)
-      return LT.first * 2;
-    if (LT.second == MVT::v4i16 || LT.second == MVT::v8i16 ||
-        LT.second == MVT::v2i32 || LT.second == MVT::v4i32)
-      return LT.first * 3;
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (LT.second == MVT::i32 || LT.second == MVT::i64) {
+      // Extra cost for and mask of smaller types
+      InstructionCost ExtraCost =
+          LT.second.getSizeInBits() > RetTy->getScalarSizeInBits() ? 1 : 0;
+      // And combine larger sizes to i64 with cmp+add+csel
+      if (LT.second.getSizeInBits() < RetTy->getScalarSizeInBits())
+        ExtraCost += (LT.first - 1) * 3;
+      // Basic cost is rbit+clz or ctz.
+      return LT.first * (ST->hasCSSC() ? 1 : 2) + ExtraCost;
+    }
+
+    static const CostTblEntry BaseCostTbl[] = {
+        {Intrinsic::cttz, MVT::v8i8, 2}, // rbit+clz
+        {Intrinsic::cttz, MVT::v16i8, 2},
+        {Intrinsic::cttz, MVT::v4i16, 3}, // rev16+rbit+clz
+        {Intrinsic::cttz, MVT::v8i16, 3},
+        {Intrinsic::cttz, MVT::v2i32, 3},
+        {Intrinsic::cttz, MVT::v4i32, 3},
+        {Intrinsic::cttz, MVT::v1i64, 6}, // add+bic+cnt+reduce
+        {Intrinsic::cttz, MVT::v2i64, 6}};
+    const auto *Entry =
+        CostTableLookup(BaseCostTbl, Intrinsic::cttz, LT.second);
+    if (Entry)
+      return LT.first * Entry->Cost;
     break;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -3392,6 +3423,66 @@ static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineSVEOrr(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // orr(umin(A, 1), umin(B, 1)) -> umin(orr(A, B), 1)
+  constexpr Intrinsic::ID UMinID = Intrinsic::aarch64_sve_umin_u;
+  Value *Pg = II.getOperand(0);
+
+  Value *A, *B;
+  if (!match(II.getOperand(1), m_OneUse(m_Intrinsic<UMinID>(
+                                   m_Specific(Pg), m_Value(A), m_One()))) ||
+      !match(II.getOperand(2), m_OneUse(m_Intrinsic<UMinID>(
+                                   m_Specific(Pg), m_Value(B), m_One()))))
+    return std::nullopt;
+
+  Value *NewOrr = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_orr_u,
+                                             II.getType(), {Pg, A, B});
+  Value *NewUMin = IC.Builder.CreateIntrinsic(
+      UMinID, II.getType(), {Pg, NewOrr, ConstantInt::get(II.getType(), 1)});
+  return IC.replaceInstUsesWith(II, NewUMin);
+}
+
+static std::optional<Instruction *> instCombineSVEAnd(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  // and(cmphs(pg, ConstA, A), cmphs(pg, A, ConstB))
+  // ->
+  // cmphs(pg, ConstA - ConstB, sub(pg, A, ConstB))
+  constexpr Intrinsic::ID CmphsID = Intrinsic::aarch64_sve_cmphs;
+  Value *Pg = II.getOperand(0);
+  Value *LHS = II.getOperand(1);
+  Value *RHS = II.getOperand(2);
+
+  Value *A, *PgLHS, *PgRHS;
+  uint64_t ConstA, ConstB;
+  if (!match(LHS, m_Intrinsic<CmphsID>(m_Value(PgLHS), m_ConstantInt(ConstA),
+                                       m_Value(A))) ||
+      !match(RHS, m_Intrinsic<CmphsID>(m_Value(PgRHS), m_Specific(A),
+                                       m_ConstantInt(ConstB))) ||
+      !LHS->hasOneUser() || !RHS->hasOneUser())
+    return std::nullopt;
+
+  // Always false regardless of predication
+  if (ConstB > ConstA)
+    return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+
+  // The predicate for both CMPHSs must match.
+  // The predicate for the AND can either be equal to the CMPHS predicates, or
+  // either of the CMPHS values.
+  if (PgLHS != PgRHS || (Pg != LHS && Pg != RHS && Pg != PgLHS))
+    return std::nullopt;
+
+  Type *VecTy = A->getType();
+  Constant *Base = ConstantInt::get(VecTy, ConstB);
+  Value *Sub = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_sub_u, VecTy,
+                                          {PgLHS, A, Base});
+  Constant *Limit = ConstantInt::get(VecTy, ConstA - ConstB);
+  Value *NewCmphs =
+      IC.Builder.CreateIntrinsic(CmphsID, VecTy, {PgLHS, Limit, Sub});
+
+  return IC.replaceInstUsesWith(II, NewCmphs);
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3513,6 +3604,10 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineInStreamingMode(IC, II);
   case Intrinsic::aarch64_sve_umin_u:
     return instCombineSVEUMin(IC, II);
+  case Intrinsic::aarch64_sve_orr_u:
+    return instCombineSVEOrr(IC, II);
+  case Intrinsic::aarch64_sve_and_z:
+    return instCombineSVEAnd(IC, II);
   }
 
   return std::nullopt;
@@ -5081,12 +5176,26 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
+    // TODO: revisit these costs as it's not accurate enough for non-uniform
+    // constant.
+    return LT.first;
   case ISD::SRL:
   case ISD::SRA:
-  case ISD::SHL:
-    // These nodes are marked as 'custom' for combining purposes only.
-    // We know that they are legal. See LowerAdd in ISelLowering.
+  case ISD::SHL: {
+    // Immediate vector shifts require uniform shift amounts. Non-uniform
+    // constants therefore use variable shifts and require materializing the
+    // shift vector. Account for a shift and materialization per legalized
+    // vector, together with shared setup.
+    // This cost is for (ldr, shl) + adrp
+    // TODO: These costs are based on CodeSize only, consider other CostKinds.
+    if (Op2Info.isConstant() && !Op2Info.isUniform() &&
+        LT.second.isFixedLengthVector())
+      return 2 * LT.first + 1;
+
+    // Marked 'custom' for combining purposes; a uniform shift amount still
+    // lowers to a single legal instruction.
     return LT.first;
+  }
 
   case ISD::FNEG:
     // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
@@ -5334,8 +5443,9 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
   case Intrinsic::masked_load:
-  case Intrinsic::masked_expandload:
   case Intrinsic::masked_store:
+  case Intrinsic::masked_expandload:
+  case Intrinsic::masked_compressstore:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
   return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
@@ -5370,6 +5480,19 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       return InstructionCost::getInvalid();
 
     // Operation will be split into expand of masked.load
+    MemOpCost *= 2;
+  }
+
+  if (MICA.getID() == Intrinsic::masked_compressstore) {
+    if (!isLegalMaskedCompressStore(Src, MICA.getAlignment()))
+      return InstructionCost::getInvalid();
+
+    // A compress store lowers to something like:
+    //  ptrue    p1.s
+    //  compact  z0.s, p0, z0.s
+    //  cntp     x8, p1, p0.s
+    //  whilelo  p0.s, xzr, x8
+    //  st1w     { z0.s }, p0, [x0]
     MemOpCost *= 2;
   }
 
@@ -5904,7 +6027,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
     UP.AddAdditionalAccumulators = true;
   }
 
-  // Try to unroll small loops, of few-blocks with low budget, if they have
+  // Try to unroll small, single-block loops with low budget, if they have
   // load/store dependencies, to expose more parallel memory access streams,
   // or if they do little work inside a block (i.e. load -> X -> store pattern).
   BasicBlock *Header = L->getHeader();
@@ -6005,6 +6128,22 @@ void AArch64TTIImpl::getUnrollingPreferences(
   BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
   UP.UpperBound = true;
+
+  // A loop can have a small maximum trip count while SCEV still cannot
+  // form an exact backedge count - typically a data-dependent exit, e.g.
+  // shifting a value until it reaches zero. Unlike for counted loops, the
+  // unrolled body keeps an exit test per iteration, and whether that pays
+  // off depends on how many iterations the loop usually runs, which is
+  // unknown at compile time; the code growth and extra branches are certain.
+  // Be conservative and hold such loops to a lower upper bound; 5 still lets
+  // smaller early-exit loops unroll. Also disable runtime unrolling, which
+  // would clamp the unroll count to the known maximum trip count and produce
+  // the same complete unroll.
+  if (L->getExitingBlock() && !SE.isBackedgeTakenCountMaxOrZero(L) &&
+      isa<SCEVCouldNotCompute>(SE.getBackedgeTakenCount(L))) {
+    UP.MaxUpperBound = 5;
+    UP.Runtime = false;
+  }
 
   // For inner loop, it is more likely to be a hot one, and the runtime check
   // can be promoted out from LICM pass, so the overhead is less, let's try
@@ -7107,15 +7246,9 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
   if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
     return SVEPreferFixedOverScalableIfEqualCost;
-  // For cases like post-LTO vectorization, when we eventually know the trip
-  // count, epilogue with fixed-width vectorization can be deleted if the trip
-  // count is less than the epilogue iterations. That's why we prefer
-  // fixed-width vectorization in epilogue in case of equal costs.
-  if (IsEpilogue)
-    return true;
   return ST->useFixedOverScalableIfEqualCost();
 }
 

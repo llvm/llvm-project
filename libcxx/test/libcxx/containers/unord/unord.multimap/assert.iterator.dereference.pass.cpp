@@ -10,9 +10,7 @@
 
 // Dereference non-dereferenceable iterator.
 
-// REQUIRES: has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
-// UNSUPPORTED: c++03
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
 
 #include <string>
 #include <unordered_map>

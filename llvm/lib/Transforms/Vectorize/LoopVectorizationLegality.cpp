@@ -90,10 +90,7 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
     return isPowerOf2_32(Val) && Val <= VectorizerParams::MaxVectorWidth;
   case HK_INTERLEAVE:
     return isPowerOf2_32(Val) && Val <= MaxInterleaveFactor;
-  case HK_FORCE:
-    return (Val <= 1);
   case HK_ISVECTORIZED:
-  case HK_PREDICATE:
   case HK_SCALABLE:
     return (Val == 0 || Val == 1);
   }
@@ -107,9 +104,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
     : Width("vectorize.width",
             VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
-      Force("vectorize.enable", FK_Undefined, HK_FORCE),
-      IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
+      Force(FK_Undefined), IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
+      Predicate(FK_Undefined),
       Scalable("vectorize.scalable.enable", SK_Unspecified, HK_SCALABLE),
       TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
@@ -182,7 +178,7 @@ void LoopVectorizeHints::reportDisallowedVectorization(
 bool LoopVectorizeHints::allowVectorization(
     Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
-    if (Force.Value == LoopVectorizeHints::FK_Disabled) {
+    if (Force == LoopVectorizeHints::FK_Disabled) {
       reportDisallowedVectorization("#pragma vectorize disable",
                                     "MissedExplicitlyDisabled",
                                     "vectorization is explicitly disabled", L);
@@ -226,7 +222,7 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
   using namespace ore;
 
   ORE.emit([&]() {
-    if (Force.Value == LoopVectorizeHints::FK_Disabled)
+    if (Force == LoopVectorizeHints::FK_Disabled)
       return OptimizationRemarkMissed(LV_NAME, "MissedExplicitlyDisabled",
                                       TheLoop->getStartLoc(),
                                       TheLoop->getHeader())
@@ -235,7 +231,7 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
     OptimizationRemarkMissed R(LV_NAME, "MissedDetails", TheLoop->getStartLoc(),
                                TheLoop->getHeader());
     R << "loop not vectorized";
-    if (Force.Value == LoopVectorizeHints::FK_Enabled) {
+    if (Force == LoopVectorizeHints::FK_Enabled) {
       R << " (Force=" << NV("Force", true);
       if (Width.Value != 0)
         R << ", Vector Width=" << NV("VectorWidth", getWidth());
@@ -290,9 +286,13 @@ void LoopVectorizeHints::getHintsFromMetadata() {
     // The single-operand enable/disable pair carries no argument.
     if (Args.empty()) {
       if (Name == "llvm.loop.vectorize.enable")
-        Force.Value = FK_Enabled;
+        Force = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.disable")
-        Force.Value = FK_Disabled;
+        Force = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.predicate.enable")
+        Predicate = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.predicate.disable")
+        Predicate = FK_Disabled;
       continue;
     }
     if (Args.size() == 1)
@@ -309,8 +309,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  Hint *Hints[] = {&Width,        &Interleave, &Force,
-                   &IsVectorized, &Predicate,  &Scalable};
+  // Force and Predicate are omitted: they are only spelled as single-operand
+  // enable/disable nodes, which never reach setHint().
+  Hint *Hints[] = {&Width, &Interleave, &IsVectorized, &Scalable};
   for (auto *H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
@@ -461,12 +462,14 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides = LAI && AllowRuntimeSCEVChecks
                             ? LAI->getSymbolicStrides()
                             : DenseMap<Value *, const SCEV *>();
-  int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
-                            AllowRuntimeSCEVChecks, false)
+  SmallVector<const SCEVPredicate *> Predicates;
+  int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
+                            AllowRuntimeSCEVChecks ? &Predicates : nullptr)
                    .value_or(0);
-  if (Stride == 1 || Stride == -1)
-    return Stride;
-  return 0;
+  if (Stride != 1 && Stride != -1)
+    return 0;
+  PSE.addPredicates(Predicates);
+  return Stride;
 }
 
 bool LoopVectorizationLegality::isInvariant(Value *V) const {
@@ -645,6 +648,24 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
         !LI->isLoopHeader(Br->getSuccessor(1))) {
       reportVectorizationFailure(
           "Unsupported conditional branch",
+          "loop control flow is not understood by vectorizer",
+          "CFGNotUnderstood", ORE, TheLoop);
+      if (DoExtraAnalysis)
+        Result = false;
+      else
+        return false;
+    }
+  }
+
+  // Each nested loop must exit via its latch only, as a region with the latch
+  // as its only exiting block is created for it. Note that the branch check
+  // above rejects divergent exits, but exits with an outer-loop invariant
+  // condition are allowed through.
+  SmallVector<Loop *, 4> LoopNest = TheLoop->getLoopsInPreorder();
+  for (Loop *Lp : drop_begin(LoopNest)) {
+    if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
+      reportVectorizationFailure(
+          "Nested loop does not exit via its latch",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)

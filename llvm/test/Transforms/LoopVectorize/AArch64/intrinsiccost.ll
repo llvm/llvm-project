@@ -25,7 +25,7 @@ define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END8:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST1]]
@@ -59,7 +59,7 @@ define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC6:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF4]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC6]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
@@ -133,7 +133,6 @@ while.end:
 ; CHECK-COST: Cost of 1 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 ; CHECK-COST: Cost of 1 for VF 16: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 
-
 define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @umin(
 ; CHECK-NEXT:  entry:
@@ -147,7 +146,7 @@ define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 32
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST6:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END7:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST6]]
@@ -179,7 +178,7 @@ define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF4]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC5]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]

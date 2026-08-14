@@ -5,6 +5,7 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/pointer.f90 2>&1 | FileCheck %s --check-prefix=POINTER
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/allocatable.f90 2>&1 | FileCheck %s --check-prefix=ALLOCATABLE
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/assumed-length.f90 2>&1 | FileCheck %s --check-prefix=ASSUMED-LENGTH
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/non-parallel.f90 2>&1 | FileCheck %s --check-prefix=NON-PARALLEL
 
 ! DUPLICATE: not yet implemented: ALLOCATE clause item appears more than once
 ! ARRAY: not yet implemented: ALLOCATE clause currently supports only fixed-size intrinsic scalar PRIVATE or FIRSTPRIVATE items
@@ -12,6 +13,7 @@
 ! POINTER: not yet implemented: ALLOCATE clause currently supports only fixed-size intrinsic scalar PRIVATE or FIRSTPRIVATE items
 ! ALLOCATABLE: not yet implemented: ALLOCATE clause currently supports only fixed-size intrinsic scalar PRIVATE or FIRSTPRIVATE items
 ! ASSUMED-LENGTH: not yet implemented: ALLOCATE clause currently supports only fixed-size intrinsic scalar PRIVATE or FIRSTPRIVATE items
+! NON-PARALLEL: not yet implemented: OmpAllocateClause ALIGN modifier
 
 !--- duplicate.f90
 subroutine duplicate(x)
@@ -27,6 +29,14 @@ subroutine pointer(x)
   !$omp parallel private(x) allocate(x)
     x = 1
   !$omp end parallel
+end subroutine
+
+!--- non-parallel.f90
+subroutine non_parallel(x)
+  integer :: x
+  !$omp task private(x) allocate(align(64): x)
+    x = 1
+  !$omp end task
 end subroutine
 
 !--- allocatable.f90
@@ -48,7 +58,7 @@ end subroutine
 !--- array.f90
 subroutine array(x)
   integer :: x(4)
-  !$omp parallel private(x) allocate(x)
+  !$omp parallel private(x) allocate(align(64): x)
     x = 1
   !$omp end parallel
 end subroutine

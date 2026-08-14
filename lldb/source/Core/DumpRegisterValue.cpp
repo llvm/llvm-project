@@ -11,7 +11,7 @@
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/RegisterFlags.h"
+#include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -22,7 +22,7 @@
 using namespace lldb;
 
 template <typename T>
-static void dump_type_value(const lldb_private::RegisterFlags &flags_type,
+static void dump_type_value(const lldb_private::RegisterTypeFlags &flags_type,
                             lldb_private::CompilerType &fields_compiler_type,
                             T value,
                             lldb_private::ExecutionContextScope *exe_scope,
@@ -123,24 +123,25 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                     0,                    // item_bit_offset
                     exe_scope);
 
-  const RegisterFlags *flags_type =
-      llvm::dyn_cast_if_present<RegisterFlags>(reg_info.register_type);
+  const RegisterTypeFlags *flags_type =
+      llvm::dyn_cast_if_present<RegisterTypeFlags>(reg_info.register_type);
   if (!print_flags || !flags_type || !exe_scope || !target_sp ||
       (reg_info.byte_size != 4 && reg_info.byte_size != 8))
     return;
 
-  CompilerType fields_compiler_type = target_sp->GetRegisterType(
-      reg_info.name, *flags_type, reg_info.byte_size);
+  CompilerType register_compiler_type = target_sp->GetRegisterType(reg_info);
+  if (!register_compiler_type.IsValid())
+    return;
 
   // Use a new stream so we can remove a trailing newline later.
-  StreamString fields_stream;
+  StreamString register_type_stream;
 
   if (reg_info.byte_size == 4) {
-    dump_type_value(*flags_type, fields_compiler_type, reg_val.GetAsUInt32(),
-                    exe_scope, fields_stream);
+    dump_type_value(*flags_type, register_compiler_type, reg_val.GetAsUInt32(),
+                    exe_scope, register_type_stream);
   } else {
-    dump_type_value(*flags_type, fields_compiler_type, reg_val.GetAsUInt64(),
-                    exe_scope, fields_stream);
+    dump_type_value(*flags_type, register_compiler_type, reg_val.GetAsUInt64(),
+                    exe_scope, register_type_stream);
   }
 
   // Registers are indented like:
@@ -150,16 +151,18 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
 
   // First drop the extra newline that the value printer added. The register
   // command will add one itself.
-  llvm::StringRef fields_str = fields_stream.GetString().drop_back();
+  llvm::StringRef register_type_str =
+      register_type_stream.GetString().drop_back();
 
   // End the line that contains "    foo = 0x12345678".
   s.EOL();
 
   // Then split the value lines and indent each one.
   bool first = true;
-  while (fields_str.size()) {
-    std::pair<llvm::StringRef, llvm::StringRef> split = fields_str.split('\n');
-    fields_str = split.second;
+  while (register_type_str.size()) {
+    std::pair<llvm::StringRef, llvm::StringRef> split =
+        register_type_str.split('\n');
+    register_type_str = split.second;
     // Indent as much as the stream does.
     s.Indent();
     // Indent further to match where the register name finishes.
@@ -174,7 +177,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
 
     // On the last line we don't want a newline because the command will add
     // one too.
-    if (fields_str.size())
+    if (register_type_str.size())
       s.EOL();
   }
 }
