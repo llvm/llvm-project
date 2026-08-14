@@ -705,7 +705,7 @@ void CallConvLoweringPass::runOnOperation() {
   // A per-function target attribute can raise the AVX level, so one classifier
   // per module would misclassify a wide vector in such a function.
   static constexpr unsigned numAvxLevels =
-      static_cast<unsigned>(llvm::abi::X86AVXABILevel::NumberOfEnumEntries);
+      static_cast<unsigned>(llvm::abi::X86AVXABILevel::Last) + 1;
   bool isX86 = target == cir::CallConvTarget::X86_64;
   std::optional<mlir::abi::ABITypeMapper> x86TypeMapper;
   std::array<std::unique_ptr<llvm::abi::TargetInfo>, numAvxLevels> x86Targets;
@@ -713,6 +713,8 @@ void CallConvLoweringPass::runOnOperation() {
     x86TypeMapper.emplace(dl);
   auto x86TargetFor =
       [&](llvm::abi::X86AVXABILevel level) -> const llvm::abi::TargetInfo & {
+    assert(static_cast<unsigned>(level) < numAvxLevels &&
+           "a new X86AVXABILevel must move X86AVXABILevel::Last");
     std::unique_ptr<llvm::abi::TargetInfo> &slot =
         x86Targets[static_cast<unsigned>(level)];
     if (!slot)
