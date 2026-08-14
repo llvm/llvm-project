@@ -271,6 +271,8 @@ static Value adaptStructuredValue(OpBuilder &builder, Location loc, Value value,
 }
 
 static LogicalResult reconcileIfShape(scf::IfOp op, bool &changed) {
+  if (op.getNumResults() == 0)
+    return success();
   SmallVector<Type> resultTypes(op.getResultTypes());
   SmallVector<Type> joinedTypes;
   joinedTypes.reserve(op.getNumResults());

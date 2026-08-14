@@ -1,6 +1,7 @@
 #include <OffloadAPI.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -14,8 +15,8 @@
   do {                                                                         \
     ol_result_t result = (expr);                                               \
     if (result != OL_SUCCESS) {                                                \
-      fprintf(stderr, "FAIL %s:%d: %s -> %d: %s\n", __FILE__, __LINE__,      \
-              #expr, result->Code, result->Details);                           \
+      fprintf(stderr, "FAIL %s:%d: %s -> %d: %s\n", __FILE__, __LINE__, #expr, \
+              result->Code, result->Details);                                  \
       return 1;                                                                \
     }                                                                          \
   } while (0)
@@ -118,14 +119,43 @@ static ol_device_handle_t pickDevice() {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
-    fprintf(stderr, "usage: %s <zebin.bin>\n", argv[0]);
+  if (argc != 2 && argc != 4) {
+    fprintf(stderr, "usage: %s <zebin.bin> [size reduction-size]\n", argv[0]);
     return 1;
   }
 
-  constexpr int64_t m = 128;
-  constexpr int64_t n = 128;
-  constexpr int64_t k = 64;
+  const bool structuredRandom = argc == 4;
+  int64_t m = 128;
+  int64_t k = 64;
+  if (structuredRandom) {
+    auto parseInteger = [](const char *text, int64_t &value) {
+      const char *end = text + strlen(text);
+      const std::from_chars_result result = std::from_chars(text, end, value);
+      return result.ec == std::errc{} && result.ptr == end;
+    };
+    if (!parseInteger(argv[2], m) || !parseInteger(argv[3], k)) {
+      fprintf(stderr, "FAIL: size arguments must be integers\n");
+      return 1;
+    }
+  }
+  const int64_t n = m;
+  if (m < 64 || m % 64 != 0 || k < 32 || k % 32 != 0) {
+    fprintf(stderr,
+            "FAIL: size must be a multiple of 64 and reduction size must be "
+            "a multiple of 32\n");
+    return 1;
+  }
+  const uint64_t maxSize = std::numeric_limits<size_t>::max();
+  const uint64_t matrixSize = static_cast<uint64_t>(m);
+  const uint64_t reductionSize = static_cast<uint64_t>(k);
+  if (matrixSize > uint64_t{UINT32_MAX} * 64 ||
+      matrixSize > maxSize / sizeof(float) / matrixSize ||
+      matrixSize > maxSize / sizeof(_Float16) / reductionSize) {
+    fprintf(stderr, "FAIL: matrix dimensions are too large\n");
+    return 1;
+  }
+  const size_t matrixElements = matrixSize * matrixSize;
+  const size_t operandElements = matrixSize * reductionSize;
   CHECK(olInit(nullptr));
   ol_device_handle_t device = pickDevice();
   if (!device) {
@@ -148,37 +178,65 @@ int main(int argc, char **argv) {
   void *aStorage = nullptr;
   void *bStorage = nullptr;
   void *cStorage = nullptr;
-  CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED, m * k * sizeof(_Float16),
+  CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED,
+                   operandElements * sizeof(_Float16),
                    &aStorage));
-  CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED, k * n * sizeof(_Float16),
+  CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED,
+                   operandElements * sizeof(_Float16),
                    &bStorage));
-  CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED, m * n * sizeof(float),
+  CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED,
+                   matrixElements * sizeof(float),
                    &cStorage));
   auto *a = static_cast<_Float16 *>(aStorage);
   auto *b = static_cast<_Float16 *>(bStorage);
   auto *c = static_cast<float *>(cStorage);
 
+  std::vector<float> reference(matrixElements, 0.0f);
   std::mt19937 random(0x4D41544Du);
-  std::uniform_int_distribution<int> distribution(-8, 8);
-  for (int64_t index = 0; index < m * k; ++index)
-    a[index] = static_cast<_Float16>(distribution(random) * 0.125f);
-  for (int64_t index = 0; index < k * n; ++index)
-    b[index] = static_cast<_Float16>(distribution(random) * 0.125f);
+  if (structuredRandom) {
+    auto randomSign = [&]() { return (random() & 1) ? 1 : -1; };
+    std::vector<int> rowSigns(m);
+    std::vector<int> lhsSigns(k);
+    std::vector<int> rhsSigns(k);
+    std::vector<int> columnSigns(n);
+    std::generate(rowSigns.begin(), rowSigns.end(), randomSign);
+    std::generate(lhsSigns.begin(), lhsSigns.end(), randomSign);
+    std::generate(rhsSigns.begin(), rhsSigns.end(), randomSign);
+    std::generate(columnSigns.begin(), columnSigns.end(), randomSign);
+    for (int64_t row = 0; row < m; ++row)
+      for (int64_t inner = 0; inner < k; ++inner)
+        a[row * k + inner] =
+            static_cast<_Float16>(rowSigns[row] * lhsSigns[inner]);
+    for (int64_t inner = 0; inner < k; ++inner)
+      for (int64_t column = 0; column < n; ++column)
+        b[inner * n + column] =
+            static_cast<_Float16>(rhsSigns[inner] * columnSigns[column]);
+    int64_t reduction = 0;
+    for (int64_t inner = 0; inner < k; ++inner)
+      reduction += lhsSigns[inner] * rhsSigns[inner];
+    for (int64_t row = 0; row < m; ++row)
+      for (int64_t column = 0; column < n; ++column)
+        reference[row * n + column] =
+            static_cast<float>(rowSigns[row] * columnSigns[column] * reduction);
+  } else {
+    std::uniform_int_distribution<int> distribution(-8, 8);
+    for (int64_t index = 0; index < m * k; ++index)
+      a[index] = static_cast<_Float16>(distribution(random) * 0.125f);
+    for (int64_t index = 0; index < k * n; ++index)
+      b[index] = static_cast<_Float16>(distribution(random) * 0.125f);
+    for (int64_t row = 0; row < m; ++row)
+      for (int64_t column = 0; column < n; ++column)
+        for (int64_t inner = 0; inner < k; ++inner)
+          reference[row * n + column] +=
+              static_cast<float>(a[row * k + inner]) *
+              static_cast<float>(b[inner * n + column]);
+  }
   for (int64_t index = 0; index < m * n; ++index)
     c[index] = std::numeric_limits<float>::quiet_NaN();
 
-  std::vector<float> reference(m * n, 0.0f);
-  for (int64_t row = 0; row < m; ++row)
-    for (int64_t column = 0; column < n; ++column)
-      for (int64_t inner = 0; inner < k; ++inner)
-        reference[row * n + column] +=
-            static_cast<float>(a[row * k + inner]) *
-            static_cast<float>(b[inner * n + column]);
-
-  std::vector<void *> pointerValues = {aStorage, aStorage, bStorage, bStorage,
-                                       cStorage, cStorage};
-  std::vector<int64_t> scalars = {0, m, k, k, 1, 0, k, n, n, 1,
-                                  0, m, n, n, 1};
+  std::vector<void *> pointerValues = {aStorage, aStorage, bStorage,
+                                       bStorage, cStorage, cStorage};
+  std::vector<int64_t> scalars = {0, m, k, k, 1, 0, k, n, n, 1, 0, m, n, n, 1};
   std::vector<void *> arguments;
   std::vector<size_t> argumentSizes(21, sizeof(uint64_t));
   int pointerIndex = 0;
@@ -192,7 +250,8 @@ int main(int argc, char **argv) {
 
   ol_kernel_launch_size_args_t launch;
   launch.Dimensions = 3;
-  launch.NumGroups = {2, 2, 1};
+  launch.NumGroups = {static_cast<uint32_t>(m / 64),
+                      static_cast<uint32_t>(n / 64), 1};
   launch.GroupSize = {256, 1, 1};
   launch.DynSharedMemory = 0;
   CHECK(olLaunchKernel(nullptr, device, kernel, &launch, nullptr,
@@ -204,13 +263,13 @@ int main(int argc, char **argv) {
     float error = std::abs(c[index] - reference[index]);
     maxError = std::max(maxError, error);
     if (!std::isfinite(c[index]) || error != 0.0f) {
-      fprintf(stderr,
-              "FAIL: C[%ld,%ld] = %.9g, expected %.9g (error %.9g)\n",
+      fprintf(stderr, "FAIL: C[%ld,%ld] = %.9g, expected %.9g (error %.9g)\n",
               index / n, index % n, c[index], reference[index], error);
       return 1;
     }
   }
-  printf("PASS: 128x128x64 random f16 matmul, max error %.9g\n", maxError);
+  printf("PASS: %ldx%ldx%ld %s f16 matmul, max error %.9g\n", m, n, k,
+         structuredRandom ? "structured-random" : "random", maxError);
 
   CHECK(olMemFree(aStorage));
   CHECK(olMemFree(bStorage));

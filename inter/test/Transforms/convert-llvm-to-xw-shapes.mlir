@@ -34,6 +34,17 @@ module {
   // CHECK: %[[IF_SPLAT:.*]] = xw.splat {{.*}} : i32 -> !xw.simd<i32, 16>
   // CHECK: scf.yield %[[IF_SPLAT]] : !xw.simd<i32, 16>
 
+  func.func @resultless_if(%condition: i1) {
+    scf.if %condition {
+      %token = xw.token : !xw.mem.token
+    }
+    return
+  }
+
+  // CHECK-LABEL: func.func @resultless_if
+  // CHECK: scf.if %{{.*}} {
+  // CHECK: xw.token
+
   func.func @for_iter_arg(%scalar: i32)
       attributes {xw.simd_width = 16 : i64} {
     %zero = arith.constant 0 : index
