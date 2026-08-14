@@ -139,7 +139,6 @@ define i32 @test_lrint_i32_f80(x86_fp80 %x) nounwind {
   ret i32 %conv
 }
 
-; FIXME(#44744): incorrect libcall
 define i32 @test_lrint_i32_f16_strict(half %x) nounwind strictfp {
 ; X86-NOSSE-LABEL: test_lrint_i32_f16_strict:
 ; X86-NOSSE:       # %bb.0:
