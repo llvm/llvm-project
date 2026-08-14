@@ -1,7 +1,7 @@
 // clang-format off
-// RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && env KMP_G_DEBUG=10 %libomp-run 2>&1 | FileCheck %s
+// RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && env KMP_TASKGRAPH_TRACE=1 %libomp-run 2>&1 | FileCheck %s
 
-// REQUIRES: omp_taskgraph_experimental, libomp_debug
+// REQUIRES: omp_taskgraph_experimental
 
 int main()
 {
@@ -39,38 +39,21 @@ int main()
   return 0;
 }
 
+// This dependence graph is irreducible (it has no series-parallel
+// decomposition), so the whole residual tangle is carved into a single
+// TASKGRAPH_REGION_IRREDUCIBLE container whose children (the nine task arms)
+// carry explicit intra edges rather than being nested into parallel/sequential
+// regions.
 // CHECK:      Processed taskgraph 0x[[#%x,GRAPHPTR:]] (graph_id 0):
-// CHECK-NEXT: parallel {
-// CHECK-NEXT:   sequential {
-// CHECK-NEXT:     node: 0x[[#%x,NODE1:]] (* 2)
-// CHECK-NEXT:     sequential {
-// CHECK-NEXT:       parallel {
-// CHECK-NEXT:         node: 0x{{[[:xdigit:]]+}}
-// CHECK-NEXT:         node: 0x[[#%x,NODE2:]] (* 2)
-// CHECK-NEXT:       }
-// CHECK-NEXT:       node: 0x{{[[:xdigit:]]+}}
-// CHECK-NEXT:     }
-// CHECK-NEXT:   }
-// CHECK-NEXT:   sequential {
-// CHECK-NEXT:     parallel {
-// CHECK-NEXT:       sequential {
-// CHECK-NEXT:         node: 0x[[#%x,NODE3:]] (* 2)
-// CHECK-NEXT:         parallel {
-// CHECK-NEXT:           node: 0x[[#%x,NODE4:]] (* 2)
-// CHECK-NEXT:           node: 0x{{[[:xdigit:]]+}}
-// CHECK-NEXT:         }
-// CHECK-NEXT:       }
-// CHECK-NEXT:       sequential {
-// CHECK-NEXT:         node: 0x[[#NODE1]] (* 2)
-// CHECK-NEXT:         node: 0x[[#NODE2]] (* 2)
-// CHECK-NEXT:       }
-// CHECK-NEXT:     }
-// CHECK-NEXT:     node: 0x{{[[:xdigit:]]+}}
-// CHECK-NEXT:   }
-// CHECK-NEXT:   sequential {
-// CHECK-NEXT:     node: 0x[[#NODE3]] (* 2)
-// CHECK-NEXT:     node: 0x[[#NODE4]] (* 2)
-// CHECK-NEXT:     node: 0x{{[[:xdigit:]]+}}
-// CHECK-NEXT:   }
+// CHECK-NEXT: irreducible {
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
+// CHECK-NEXT:   node: 0x{{[[:xdigit:]]+}}
 // CHECK-NEXT: }
 // CHECK-NEXT: Replay taskgraph 0x[[#GRAPHPTR]] from task 0x{{[[:xdigit:]]+}}

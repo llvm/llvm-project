@@ -1,4 +1,4 @@
-// RUN: %clang -### -fsycl --offload-targets=spirv64 -nogpuinc %s -ccc-print-bindings 2>&1 \
+// RUN: %clang -### -fsycl --offload-targets=spirv64 -nogpuinc -x c++ %s -ccc-print-bindings 2>&1 \
 // RUN: | FileCheck %s -check-prefix=SYCL
 // SYCL: "spirv64" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[SYCL_BC:.+]]"
 

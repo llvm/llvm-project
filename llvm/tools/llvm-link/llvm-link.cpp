@@ -363,8 +363,9 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     // definition, so make the import type definition directly.
     // FIXME: A follow-up patch should add test coverage for import declaration
     // in `llvm-link` CLI (e.g., by introducing a new command line option).
+    const auto GUID = F->getGUIDOrFallback();
     ImportList.addDefinition(
-        FileNameStringCache.insert(FileName).first->getKey(), F->getGUID());
+        FileNameStringCache.insert(FileName).first->getKey(), GUID);
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(std::string(Identifier));
@@ -516,7 +517,6 @@ int main(int argc, char **argv) {
 
   if (Verbose)
     errs() << "Writing bitcode...\n";
-  Composite->removeDebugIntrinsicDeclarations();
   if (OutputAssembly) {
     Composite->print(Out.os(), nullptr, /* ShouldPreserveUseListOrder */ false);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {

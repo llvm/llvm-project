@@ -52,11 +52,11 @@ entry:
 }
 
 ; explicit
-attributes #0 = { "target-cpu"="pwr7" "target-features"="+allow-unaligned-fp-access" }
-attributes #1 = { "target-cpu"="pwr7" "target-features"="-allow-unaligned-fp-access" }
+attributes #0 = { "target-cpu"="pwr7" "target-features"="-allow-unaligned-fp-access" }
+attributes #1 = { "target-cpu"="pwr7" "target-features"="+allow-unaligned-fp-access" }
 
 ; pwr7 by default implies +vsx
 attributes #3 = { "target-cpu"="pwr7" }
-attributes #4 = { "target-cpu"="pwr7" "target-features"="-vsx" }
+attributes #4 = { "target-cpu"="pwr7" "target-features"="+power8-vector" }
 attributes #5 = { "target-cpu"="pwr7" "target-features"="+vsx" }
 

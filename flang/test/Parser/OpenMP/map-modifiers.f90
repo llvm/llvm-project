@@ -18,7 +18,7 @@ end
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Ompx_Hold
+!PARSE-TREE: | | Modifier -> OmpxHoldModifier -> Value = Ompx_Hold
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
@@ -43,7 +43,7 @@ end
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Ompx_Hold
+!PARSE-TREE: | | Modifier -> OmpxHoldModifier -> Value = Ompx_Hold
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
@@ -108,7 +108,7 @@ end
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Ompx_Hold
+!PARSE-TREE: | | Modifier -> OmpxHoldModifier -> Value = Ompx_Hold
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close
@@ -133,7 +133,7 @@ end
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Map -> OmpMapClause
-!PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Ompx_Hold
+!PARSE-TREE: | | Modifier -> OmpxHoldModifier -> Value = Ompx_Hold
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Always
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Present
 !PARSE-TREE: | | Modifier -> OmpMapTypeModifier -> Value = Close

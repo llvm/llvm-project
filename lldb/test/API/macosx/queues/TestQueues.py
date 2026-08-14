@@ -9,20 +9,20 @@ from lldbsuite.test import lldbutil
 
 
 class TestQueues(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     @add_test_categories(["pyapi"])
     def test_with_python_api_queues(self):
         """Test queues inspection SB APIs."""
         self.build()
         self.queues()
 
-    @skipUnlessDarwin
+    @requireDarwin
     @add_test_categories(["pyapi"])
     def test_queue_specific_breakpoints(self):
         self.build()
         self.queue_specific_breakpoints()
 
-    @skipUnlessDarwin
+    @requireDarwin
     @add_test_categories(["pyapi"])
     def test_with_python_api_queues_with_backtrace(self):
         """Test queues inspection SB APIs."""
