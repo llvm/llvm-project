@@ -32,9 +32,9 @@ void test1() {
 // CIR:   cir.return
 
 // LLVM: define dso_local void @_Z5test1v()
-// LLVM:   %[[A:.+]] = alloca %class.A, i64 1
-// LLVM:   %[[REF_TMP:.+]] = alloca %class.A, i64 1
-// LLVM:   %[[TMP:.+]] = alloca %class.A, i64 1
+// LLVM:   %[[A:.+]] = alloca %class.A, 
+// LLVM:   %[[REF_TMP:.+]] = alloca %class.A, 
+// LLVM:   %[[TMP:.+]] = alloca %class.A, 
 // LLVM:   br label %[[LBL4:.+]]
 // LLVM: [[LBL4]]:
 // LLVM:     call void @_ZN1AC2Ev(ptr {{.*}} %[[A]])
@@ -74,7 +74,7 @@ void cleanup() {
 // CIR:   cir.return
 
 // LLVM: define dso_local void @_Z7cleanupv()
-// LLVM:   %[[WD:.+]] = alloca %struct.with_dtor, i64 1
+// LLVM:   %[[WD:.+]] = alloca %struct.with_dtor, 
 // LLVM:   br label %[[LBL2:.+]]
 // LLVM: [[LBL2]]:
 // LLVM:     call void @_ZN9with_dtorD1Ev(ptr {{.*}} %[[WD]])
@@ -103,9 +103,9 @@ void gnu_statement_extension() {
 // CIR: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: cir.store {{.*}} %[[REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 
-// LLVM:   %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM:   %[[B_ADDR:.*]] = alloca float, i64 1, align 4
-// LLVM:   %[[TMP_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca float, align 4
+// LLVM:   %[[TMP_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM:   br label %[[LABEL_1:.*]]
 // LLVM: [[LABEL_1]]:
 // LLVM:   %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4

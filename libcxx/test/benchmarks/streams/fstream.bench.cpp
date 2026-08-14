@@ -12,8 +12,9 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
-static void bm_ofstream_write(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_ofstream_write(benchmark::State& state) {
   std::vector<char> buffer;
   buffer.resize(16384);
 
@@ -24,7 +25,7 @@ static void bm_ofstream_write(benchmark::State& state) {
 }
 BENCHMARK(bm_ofstream_write)->Name("std::ofstream::write(char*, size)");
 
-static void bm_ifstream_read(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_ifstream_read(benchmark::State& state) {
   std::vector<char> buffer;
   buffer.resize(16384);
 

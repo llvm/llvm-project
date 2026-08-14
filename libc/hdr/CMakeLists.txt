@@ -113,6 +113,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  semaphore_macros
+  HDRS
+    semaphore_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.semaphore_macros
+)
+
+add_proxy_header_library(
   signal_macros
   HDRS
     signal_macros.h

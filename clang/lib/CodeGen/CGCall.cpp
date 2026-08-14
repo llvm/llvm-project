@@ -59,7 +59,12 @@ using namespace CodeGen;
 
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
-  default:
+  case CC_C:
+    // On SPIR/SPIR-V, CC_C is the AST-level default calling convention, but
+    // it still needs to lower to spir_func so IR consumers can rely on the
+    // calling convention to distinguish device functions.
+    if (Target.getTriple().isSPIROrSPIRV())
+      return llvm::CallingConv::SPIR_FUNC;
     return llvm::CallingConv::C;
   case CC_X86StdCall:
     return llvm::CallingConv::X86_StdCall;
@@ -3185,6 +3190,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
       break;
     case ABIArgInfo::Indirect: {
+      assert(!ParamType->isIncompleteType() &&
+             "Pass-by-value parameter has incomplete definition?");
+
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
@@ -3237,6 +3245,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // if a load to this pointer can be speculatively executed.
       assert(!Align.isZero());
       Attrs.addAlignmentAttr(Align.getQuantity());
+
+      // The `nofree` and `dereferenceable` attributes can already be inferred
+      // for `byval` arguments. We'll need to provide additional hints
+      // otherwise.
+      if (!AI.getIndirectByVal()) {
+        // Both 6.9.1 of the C standard and [basic.stc.auto] of the C++ standard
+        // require parameters to have automatic storage duration. Therefore, the
+        // underlying object of this pointer will not be freed during the
+        // function's execution.
+        Attrs.addAttribute(llvm::Attribute::NoFree);
+        Attrs.addDereferenceableAttr(
+            Context.getTypeSizeInChars(ParamType).getQuantity());
+      }
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();

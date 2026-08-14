@@ -7,13 +7,7 @@ import uuid
 from pathlib import Path
 
 from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import (
-    expectedFailureWindows,
-    expectedFailureWindowsAndNoLLDBServer,
-    requireNotWasm,
-    skipIf,
-    skipIfWindowsAndLLDBServer,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import (
     AttachArgs,
@@ -25,7 +19,7 @@ from lldbsuite.test.tools.lldb_dap.types import (
 # Often fails on Arm Linux, but not specifically because it's Arm, something in
 # process scheduling can cause a massive (minutes) delay during this test.
 @skipIf(oslist=["linux"], archs=["arm$"])
-@requireNotWasm  # No attach support
+@requireNotWasm("no attach support")
 class TestDAP_attach(DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
