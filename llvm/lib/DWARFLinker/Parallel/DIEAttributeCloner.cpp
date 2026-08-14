@@ -525,6 +525,16 @@ size_t DIEAttributeCloner::cloneScalarAttr(
       !OutUnit.isCompileUnit())
     return 0;
 
+  // A nested scope inherits the range its parent function overran, so every
+  // range is constrained, not just the subprogram's own.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc && FuncAddressAdjustment) {
+    if (std::optional<uint64_t> LowPC =
+            dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc)))
+      Value = InUnit.getContaingFile().Addresses->constrainCodeRangeHighPC(
+                  *LowPC, *LowPC + Value, *FuncAddressAdjustment) -
+              *LowPC;
+  }
+
   auto Result =
       Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value);
   // Record DW_AT_LLVM_stmt_sequence so the attribute value can be
@@ -679,6 +689,12 @@ size_t DIEAttributeCloner::cloneAddressAttr(
     else
       return 0;
   } else {
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc && FuncAddressAdjustment) {
+      if (std::optional<uint64_t> LowPC =
+              dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc)))
+        Addr = InUnit.getContaingFile().Addresses->constrainCodeRangeHighPC(
+            *LowPC, *Addr, *FuncAddressAdjustment);
+    }
     if (VarAddressAdjustment)
       *Addr += *VarAddressAdjustment;
     else if (FuncAddressAdjustment)
