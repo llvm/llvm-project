@@ -1228,6 +1228,8 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
+  if (val_type.IsNullPtrType())
+    return false;
 
   return llvm::createStringError("type cannot be converted to bool");
 }
@@ -2913,9 +2915,6 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
 }
 
 ValueObjectSP ValueObject::AddressOf(Status &error) {
-  if (m_addr_of_valobj_sp)
-    return m_addr_of_valobj_sp;
-
   auto [addr, address_type] = GetAddressOf(/*scalar_is_load_address=*/false);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {
@@ -2929,6 +2928,10 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 
     case eAddressTypeFile:
     case eAddressTypeLoad: {
+      if (m_addr_of_valobj_sp &&
+          m_addr_of_valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS) == addr)
+        return m_addr_of_valobj_sp;
+      m_addr_of_valobj_sp.reset();
       CompilerType compiler_type = GetCompilerType();
       if (compiler_type) {
         std::string name(1, '&');

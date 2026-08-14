@@ -49,6 +49,12 @@ static std::string findPassPlugin(const Driver &D,
   return std::string();
 }
 
+// Is the in-tree SPIR-V backend built into this clang?
+static bool isSPIRVBackendAvailable(const llvm::Triple &T) {
+  std::string IgnoredError;
+  return llvm::TargetRegistry::lookupTarget(T, IgnoredError);
+}
+
 // Runs the HipSpvPasses plugin via `opt` on TempFile when the plugin is found.
 // Returns the lowered bitcode path, or TempFile unchanged if no plugin exists.
 static const char *runHipSpvPasses(Compilation &C, const JobAction &JA,
@@ -108,7 +114,9 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output,
                                Args, Name, TempFile);
 
-    if (!getToolChain().useIntegratedBackend()) {
+    // Note that useIntegratedBackend() is consulted first so that an explicit
+    // -f(no-)integrated-objemitter still gets diagnosed against this toolchain.
+    if (!getToolChain().useIntegratedBackend() || !isSPIRVBackendAvailable(T)) {
       // External translator path: BC -> SPIR-V via llvm-spirv.
       llvm::opt::ArgStringList TrArgs;
       if (T.getSubArch() == llvm::Triple::NoSubArch)
@@ -254,15 +262,8 @@ HIPSPVToolChain::HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool HIPSPVToolChain::IsIntegratedBackendSupported() const {
-  // The in-tree SPIR-V backend can only be used when it is built.
-  std::string IgnoredError;
-  return llvm::TargetRegistry::lookupTarget(getTriple(), IgnoredError);
-}
-
-bool HIPSPVToolChain::IsIntegratedBackendDefault() const {
-  // Prefer the in-tree SPIR-V backend; fall back to the external llvm-spirv
-  // translator when the backend is not built.
-  return IsIntegratedBackendSupported();
+  // The in-tree SPIR-V backend can only be requested when it is built.
+  return isSPIRVBackendAvailable(getTriple());
 }
 
 void HIPSPVToolChain::addClangTargetOptions(

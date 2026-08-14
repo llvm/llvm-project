@@ -58,11 +58,10 @@ static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
                                   llvm::SmallVector<mlir::Value> &ops,
                                   cir::CmpOpKind pred, bool shouldInvert) {
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &expr);
-  // TODO(cir): Add isSignaling boolean once emitConstrainedFPCall implemented
-  assert(!cir::MissingFeatures::emitConstrainedFPCall());
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value cmp = builder.createVecCompare(cgf.getLoc(expr.getExprLoc()),
                                              pred, ops[0], ops[1]);
+  // TODO(cir): Add dedicated predicates to avoid the need to invert this.
   mlir::Value bitCast = builder.createBitcast(
       shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
   return bitCast;
@@ -209,8 +208,10 @@ emitEncodeKey(mlir::MLIRContext *context, CIRGenBuilderTy &builder,
   llvm::SmallVector<mlir::Type> members{builder.getUInt32Ty()};
   llvm::append_range(members,
                      llvm::SmallVector<mlir::Type>(vecOutputCount, resVector));
-  cir::StructType resRecord = cir::StructType::get(
-      context, members, /*packed=*/false, /*padded=*/false, /*is_class=*/false);
+  cir::StructType resRecord =
+      cir::StructType::get(context, members, /*packed=*/false,
+                           /*padded=*/false, /*is_class=*/false,
+                           cir::RecordType::getAllDataKinds(members));
 
   mlir::Value outputPtr =
       builder.createBitcast(outputOperand, cir::PointerType::get(resVector));
@@ -693,7 +694,10 @@ static mlir::Value emitX86Aes(CIRGenBuilderTy &builder, mlir::Location loc,
   // Create return struct type and call intrinsic function.
   mlir::Type vecType =
       mlir::cast<cir::PointerType>(ops[0].getType()).getPointee();
-  cir::RecordType rstRecTy = builder.getAnonRecordTy({retType, vecType});
+  mlir::Type rstMembers[] = {retType, vecType};
+  cir::RecordType rstRecTy =
+      builder.getAnonRecordTy(rstMembers, /*packed=*/false, /*padded=*/false,
+                              cir::RecordType::getAllDataKinds(rstMembers));
   mlir::Value rstValueRec = builder.emitIntrinsicCallOp(
       loc, intrinsicName, rstRecTy, mlir::ValueRange{ops[1], ops[2]});
 
@@ -750,7 +754,9 @@ static mlir::Value emitX86Aeswide(CIRGenBuilderTy &builder, mlir::Location loc,
         builder.createAlignedLoad(loc, vecType, nextInElePtr,
                                   /*align=*/CharUnits::fromQuantity(16));
   }
-  cir::RecordType rstRecTy = builder.getAnonRecordTy(recTypes);
+  cir::RecordType rstRecTy =
+      builder.getAnonRecordTy(recTypes, /*packed=*/false, /*padded=*/false,
+                              cir::RecordType::getAllDataKinds(recTypes));
   mlir::Value rstValueRec =
       builder.emitIntrinsicCallOp(loc, intrinsicName, rstRecTy, arguments);
 
@@ -928,7 +934,9 @@ cir::GetGlobalOp CIRGenFunction::createGetCpuModel(mlir::Location loc) {
     // unsigned int __cpu_subtype;
     // unsigned int __cpu_features[1];
     mlir::Type tys[] = {u32, u32, u32, cir::ArrayType::get(u32, 1)};
-    mlir::Type modelTy = builder.getAnonRecordTy(tys, /*incomplete=*/false);
+    mlir::Type modelTy =
+        builder.getAnonRecordTy(tys, /*packed=*/false, /*padded=*/false,
+                                cir::RecordType::getAllDataKinds(tys));
     cpuModel =
         cgm.createGlobalOp(loc, "__cpu_model", modelTy, /*isConstant=*/false);
     cpuModel.setDsoLocal(true);
@@ -1133,7 +1141,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Type i64Ty = builder.getUInt64Ty();
     mlir::Type i32Ty = builder.getUInt32Ty();
-    mlir::Type structTy = builder.getAnonRecordTy({i64Ty, i32Ty});
+    mlir::Type members[] = {i64Ty, i32Ty};
+    mlir::Type structTy =
+        builder.getAnonRecordTy(members, /*packed=*/false, /*padded=*/false,
+                                cir::RecordType::getAllDataKinds(members));
     mlir::Value result =
         builder.emitIntrinsicCallOp(loc, "x86.rdtscp", structTy);
 
@@ -2495,7 +2506,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                                                     builder.getUInt32Ty()};
     cir::StructType resRecord =
         cir::StructType::get(&getMLIRContext(), resultTypes, /*packed=*/false,
-                             /*padded=*/false, /*is_class=*/false);
+                             /*padded=*/false, /*is_class=*/false,
+                             cir::RecordType::getAllDataKinds(resultTypes));
 
     mlir::Value call =
         builder.emitIntrinsicCallOp(loc, intrinsicName, resRecord);
@@ -2560,12 +2572,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
       break;
     }
 
-    auto resVector = cir::VectorType::get(builder.getBoolTy(), numElts);
+    auto resVector = cir::VectorType::get(builder.getSIntNTy(1), numElts);
 
-    cir::StructType resRecord =
-        cir::StructType::get(&getMLIRContext(), {resVector, resVector},
-                             /*packed=*/false, /*padded=*/false,
-                             /*is_class=*/false);
+    mlir::Type resMembers[] = {resVector, resVector};
+    cir::StructType resRecord = cir::StructType::get(
+        &getMLIRContext(), resMembers, /*packed=*/false, /*padded=*/false,
+        /*is_class=*/false, cir::RecordType::getAllDataKinds(resMembers));
 
     mlir::Value call = builder.emitIntrinsicCallOp(
         getLoc(expr->getExprLoc()), intrinsicName, resRecord,

@@ -908,14 +908,20 @@ Write a Chrome tracing-format JSON time trace for the compilation.
 Without a path, Clang derives the JSON filename from the compilation output.
 A path names the JSON file or a directory that will contain it.
 
-{option}`-ftime-trace-granularity` sets the minimum recorded duration in
-microseconds (500 by default).
-{option}`-ftime-trace-verbose` records additional event details, including
-source filenames, and can increase the trace size by two to three times.
-
 ```console
 $ clang -c foo.c -ftime-trace=compile-trace.json -o foo.o
 ```
+:::
+
+:::{option} -ftime-trace-granularity
+
+Sets the minimum recorded duration in microseconds (500 by default).
+:::
+
+:::{option} -ftime-trace-verbose
+
+Records additional event details, including source filenames, and can increase
+the trace size by two to three times.
 :::
 
 :::{option} -fproc-stat-report=

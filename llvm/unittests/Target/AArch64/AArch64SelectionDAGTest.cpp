@@ -1419,7 +1419,8 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_extload_known01) {
   MDBuilder MDHelper(*DAG->getContext());
   MDNode *Range = MDHelper.createRange(APInt(8, 0), APInt(8, 2));
   MachineMemOperand *MMO = DAG->getMachineFunction().getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOLoad, 8, Align(8), AA, Range);
+      PtrInfo, MachineMemOperand::MOLoad, 8, Align(8),
+      MMOMetadata(/*AAInfo=*/AA, /*Ranges=*/Range));
 
   auto ALoad = DAG->getExtLoad(ISD::EXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
                                Ptr, Int8VT, MMO);
@@ -1452,7 +1453,8 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_extload_knownnegative) {
   MDBuilder MDHelper(*DAG->getContext());
   MDNode *Range = MDHelper.createRange(APInt(8, 0xf0), APInt(8, 0xff));
   MachineMemOperand *MMO = DAG->getMachineFunction().getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOLoad, 8, Align(8), AA, Range);
+      PtrInfo, MachineMemOperand::MOLoad, 8, Align(8),
+      MMOMetadata(/*AAInfo=*/AA, /*Ranges=*/Range));
 
   auto ALoad = DAG->getExtLoad(ISD::EXTLOAD, Loc, Int32VT, DAG->getEntryNode(),
                                Ptr, Int8VT, MMO);
