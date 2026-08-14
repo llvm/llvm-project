@@ -6,7 +6,7 @@
 !CHECK-LABEL: func.func @_QPmap_full_block
 !CHECK: %[[CB_ADDR:.*]] = fir.address_of(@var_common_) : !fir.ref<!fir.array<8xi8>>
 !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[CB_ADDR]] : !fir.ref<!fir.array<8xi8>>, !fir.array<8xi8>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.array<8xi8>> {name = "var_common"}
-!CHECK: omp.target map_entries(%[[MAP]] -> %[[MAP_ARG:.*]] : !fir.ref<!fir.array<8xi8>>) {
+!CHECK: omp.target kernel_type(generic) map_entries(%[[MAP]] -> %[[MAP_ARG:.*]] : !fir.ref<!fir.array<8xi8>>) {
 !CHECK:    %[[INDEX:.*]] = arith.constant 0 : index
 !CHECK:    %[[COORD:.*]] = fir.coordinate_of %[[MAP_ARG]], %[[INDEX]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK:    %[[CONV2:.*]] = fir.convert %[[COORD]] : (!fir.ref<i8>) -> !fir.ref<i32>
@@ -37,7 +37,7 @@ end
 !CHECK: %[[CB_MEMBER_2:.*]]:2 = hlfir.declare %[[CONV]] storage(%[[COMMON_BLOCK]][4]) {uniq_name = "_QFmap_mix_of_membersEvar2"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[MAP_EXP:.*]] = omp.map.info var_ptr(%[[CB_MEMBER_2]]#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "var2"}
 !CHECK: %[[MAP_IMP:.*]] = omp.map.info var_ptr(%[[CB_MEMBER_1]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "var1"}
-!CHECK: omp.target map_entries(%[[MAP_EXP]] -> %[[ARG_EXP:.*]], %[[MAP_IMP]] -> %[[ARG_IMP:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+!CHECK: omp.target kernel_type(generic) map_entries(%[[MAP_EXP]] -> %[[ARG_EXP:.*]], %[[MAP_IMP]] -> %[[ARG_IMP:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
 !CHECK:  %[[EXP_MEMBER:.*]]:2 = hlfir.declare %[[ARG_EXP]] {uniq_name = "_QFmap_mix_of_membersEvar2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:  %[[IMP_MEMBER:.*]]:2 = hlfir.declare %[[ARG_IMP]] {uniq_name = "_QFmap_mix_of_membersEvar1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine map_mix_of_members
@@ -53,7 +53,7 @@ end
 !CHECK-LABEL: @_QQmain
 !CHECK: %[[DECL_TAR_CB:.*]] = fir.address_of(@var_common_link_) : !fir.ref<!fir.array<8xi8>>
 !CHECK: %[[MAP_DECL_TAR_CB:.*]] = omp.map.info var_ptr(%[[DECL_TAR_CB]] : !fir.ref<!fir.array<8xi8>>, !fir.array<8xi8>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.array<8xi8>> {name = "var_common_link"}
-!CHECK: omp.target map_entries(%[[MAP_DECL_TAR_CB]] -> %[[MAP_DECL_TAR_ARG:.*]] : !fir.ref<!fir.array<8xi8>>) {
+!CHECK: omp.target kernel_type(generic) map_entries(%[[MAP_DECL_TAR_CB]] -> %[[MAP_DECL_TAR_ARG:.*]] : !fir.ref<!fir.array<8xi8>>) {
 !CHECK:  %[[INDEX:.*]] = arith.constant 0 : index
 !CHECK:  %[[COORD:.*]] = fir.coordinate_of %[[MAP_DECL_TAR_ARG]], %[[INDEX]] : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK:  %[[CONV:.*]] = fir.convert %[[COORD]] : (!fir.ref<i8>) -> !fir.ref<i32>

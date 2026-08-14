@@ -72,4 +72,4 @@ vldr d0, [r1]
 # CHECK-NEXT: 0.     1     0.0    0.0    0.0       add.w	r1, r1, #1
 # CHECK-NEXT: 1.     1     0.0    0.0    0.0       add.w	r1, r1, #2
 # CHECK-NEXT: 2.     1     0.0    0.0    0.0       vldr	d0, [r1]
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        3     0.0    0.0    0.0       <total>

@@ -10,7 +10,7 @@ using hlsl::floor;
 // NATIVE_HALF-LABEL: define hidden noundef nofpclass(nan inf) half @_Z15test_floor_half
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn half @llvm.floor.f16(
 // NO_HALF-LABEL: define hidden noundef nofpclass(nan inf) float @_Z15test_floor_half
-// NO_HALF: call reassoc nnan ninf nsz arcp afn float @llvm.floor.f32(float %0)
+// NO_HALF: call reassoc nnan ninf nsz arcp afn float @llvm.floor.f32(float %[[#]])
 half test_floor_half(half p0) { return floor(p0); }
 // NATIVE_HALF-LABEL: define hidden noundef nofpclass(nan inf) <2 x half> @_Z16test_floor_half2
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.floor.v2f16(

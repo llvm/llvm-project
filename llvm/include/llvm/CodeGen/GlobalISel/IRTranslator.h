@@ -63,7 +63,7 @@ class Value;
 // the information from the LLVM IR.
 // The idea is that ultimately we would be able to free up the memory used
 // by the LLVM IR as soon as the translation is over.
-class IRTranslator : public MachineFunctionPass {
+class LLVM_ABI IRTranslator : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -802,7 +802,7 @@ public:
   //     getMBB(bb)
   //     for each inst in bb
   //       if (!translate(MIRBuilder, inst, ValToVReg, ConstantToSequence))
-  //         report_fatal_error("Don't know how to translate input");
+  //         reportFatalUsageError("Don't know how to translate input");
   //   finalize()
   bool runOnMachineFunction(MachineFunction &MF) override;
 };

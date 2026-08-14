@@ -123,12 +123,14 @@ func.func @dead_store(%arg0: memref<4xf32>, %arg1: f32) {
 
 // -----
 
-// CHECK-LABEL: func @dead_atomic_add
-func.func @dead_atomic_add(%arg0: memref<4xf32>, %arg1: f32) {
+// CHECK-LABEL: func @oob_atomic_add
+func.func @oob_atomic_add(%arg0: memref<4xf32>, %arg1: f32) -> f32 {
   // CHECK-NOT: amdgpu.raw_buffer_atomic_fadd
+  // CHECK: %[[zero:.*]] = arith.constant 0.000000e+00 : f32
+  // CHECK: return %[[zero]] : f32
   %c4_i32 = arith.constant 4 : i32
-  amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %arg1 -> %arg0[%c4_i32] : f32 -> memref<4xf32>, i32
-  func.return
+  %0 = amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %arg1 -> %arg0[%c4_i32] : f32 -> memref<4xf32>, i32
+  func.return %0 : f32
 }
 
 // -----
@@ -157,6 +159,35 @@ func.func @fold_gather_to_lds_of_cast_dest(%global: memref<128x72xf32, 1>, %lds:
   // CHECK-SAME: : f32, memref<128x72xf32, 1>, memref<64x64xf32, 3>
   amdgpu.gather_to_lds %global[%c0, %c0], %0[%c0, %c0]
     : f32, memref<128x72xf32, 1>, memref<?x?xf32, 3>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_true_mask
+// CHECK-SAME: %[[SRC:.*]]: memref<16xf32, #gpu.address_space<global>>, %[[DST:.*]]: memref<16xf32, #gpu.address_space<workgroup>>
+func.func @global_load_async_to_lds_true_mask(%src: memref<16xf32, #gpu.address_space<global>>, %dst: memref<16xf32, #gpu.address_space<workgroup>>) {
+  // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-NEXT: amdgpu.global_load_async_to_lds %[[SRC]][%[[C0]]], %[[DST]][%[[C0]]] : f32, memref<16xf32, #gpu.address_space<global>>, memref<16xf32, #gpu.address_space<workgroup>>
+  // CHECK-NEXT: return
+  %c0 = arith.constant 0 : index
+  %true = arith.constant true
+  amdgpu.global_load_async_to_lds %src[%c0], %dst[%c0], %true
+    : f32, memref<16xf32, #gpu.address_space<global>>,
+      memref<16xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_false_mask
+func.func @global_load_async_to_lds_false_mask(%src: memref<16xf32, #gpu.address_space<global>>, %dst: memref<16xf32, #gpu.address_space<workgroup>>) {
+  // CHECK-NEXT: return
+  %c0 = arith.constant 0 : index
+  %false = arith.constant false
+  amdgpu.global_load_async_to_lds %src[%c0], %dst[%c0], %false
+    : f32, memref<16xf32, #gpu.address_space<global>>,
+      memref<16xf32, #gpu.address_space<workgroup>>
   func.return
 }
 
