@@ -924,6 +924,11 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 
     auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, B.Name, QT);
 
+    if (BD->isParameterPack()) {
+      if (sema::CapturingScopeInfo *CSI = getEnclosingLambdaOrBlock())
+        CSI->LocalPacks.push_back(BD);
+    }
+
     ProcessDeclAttributeList(S, BD, *B.Attrs);
 
     // Find the shadowed declaration before filtering for scope.
