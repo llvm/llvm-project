@@ -1332,3 +1332,102 @@ loop:
 exit:
   ret void
 }
+
+; The stored AND reduction simplifies to 0, which is also the start value of a
+; second (live-out) reduction. The target VPReductionPHIRecipe may no longer
+; exist when the invariant-store rewrite is performed.
+; Regression test for #215071.
+define i32 @simplifiable_reduction_with_shared_start(ptr %p) {
+; CHECK-LABEL: define i32 @simplifiable_reduction_with_shared_start(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1]] = or <4 x i32> [[VEC_PHI]], splat (i32 1)
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP88:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+entry:
+  br label %loop
+
+loop:
+  %and.rdx = phi i32 [ 0, %entry ], [ %and.next, %loop ]
+  %or.rdx = phi i32 [ 0, %entry ], [ %or.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %and.next = and i32 0, %and.rdx
+  store i32 %and.next, ptr %p
+  %or.next = or i32 %or.rdx, 1
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %or.next
+}
+
+; Keep the stored reduction alive while another reduction uses the same start
+; value. The invariant-store check must inspect the stored reduction's PHI,
+; rather than the other reduction's PHI.
+define i32 @reduc_store_with_shared_start(ptr noalias %p, ptr noalias readonly %src) {
+; CHECK-LABEL: define i32 @reduc_store_with_shared_start(
+; CHECK:       call i32 @llvm.vector.reduce.add.v4i32
+; CHECK:       call i32 @llvm.vector.reduce.or.v4i32
+; CHECK:       store i32 {{.*}}, ptr [[P:%.*]], align 4
+;
+entry:
+  br label %loop
+
+loop:
+  %add.rdx = phi i32 [ 0, %entry ], [ %add.next, %loop ]
+  %or.rdx = phi i32 [ 0, %entry ], [ %or.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i32 %iv
+  %src.val = load i32, ptr %src.ptr, align 4
+  %add.next = add i32 %add.rdx, %src.val
+  store i32 %add.next, ptr %p, align 4
+  %or.next = or i32 %or.rdx, %src.val
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %or.next
+}
+
+; The stored OR reduction simplifies to -1. The other reduction uses -1 as
+; its start value but has a distinct backedge value.
+define i32 @simplifiable_nonzero_reduction_with_shared_start(ptr noalias %p, ptr noalias readonly %src) {
+; CHECK-LABEL: define i32 @simplifiable_nonzero_reduction_with_shared_start(
+; CHECK:       call i32 @llvm.vector.reduce.and.v4i32
+; CHECK:       store i32 -1, ptr [[P:%.*]], align 4
+;
+entry:
+  br label %loop
+
+loop:
+  %or.rdx = phi i32 [ -1, %entry ], [ %or.next, %loop ]
+  %and.rdx = phi i32 [ -1, %entry ], [ %and.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i32 %iv
+  %src.val = load i32, ptr %src.ptr, align 4
+  %or.next = or i32 -1, %or.rdx
+  store i32 %or.next, ptr %p, align 4
+  %and.next = and i32 %and.rdx, %src.val
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %and.next
+}

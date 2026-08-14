@@ -6385,10 +6385,37 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       // if tail folded.
       if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
         Val = Blend;
-      [[maybe_unused]] auto *Rdx =
-          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
-      assert((!Rdx || Rdx->getBackedgeValue() == Val) &&
+#ifndef NDEBUG
+      // Identify the reduction associated with SI directly. Looking through
+      // Val's users is ambiguous when Val is also the start value of another
+      // reduction. Its recipe may have been removed by simplification.
+      PHINode *TargetPhi = nullptr;
+      for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+        if (RdxDesc.IntermediateStore == SI) {
+          TargetPhi = Phi;
+          break;
+        }
+      }
+      assert(TargetPhi && "Expected store to belong to a reduction");
+
+      VPReductionPHIRecipe *TargetRdx = nullptr;
+      for (VPBasicBlock *VPBB :
+           VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
+               Plan.getVectorLoopRegion()->getEntryBasicBlock()))) {
+        for (VPRecipeBase &R : *VPBB) {
+          auto *Rdx = dyn_cast<VPReductionPHIRecipe>(&R);
+          if (Rdx && Rdx->getUnderlyingInstr() == TargetPhi) {
+            TargetRdx = Rdx;
+            break;
+          }
+        }
+        if (TargetRdx)
+          break;
+      }
+
+      assert((!TargetRdx || TargetRdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
+#endif
       auto *Recipe = new VPReplicateRecipe(
           SI, {Val, Addr}, true /* IsUniform */, nullptr /*Mask*/, *VPI, *VPI,
           VPI->getDebugLoc());
