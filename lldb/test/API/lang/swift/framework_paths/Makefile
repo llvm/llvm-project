@@ -21,6 +21,9 @@ Direct.framework: $(SRCDIR)/Direct.swift.in Discovered.framework \
                   $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 	$(call MKDIR_P,$(BUILDDIR)/secret_path)
 	$(call CP,$<,$(BUILDDIR)/Direct.swift)
+	# Clear the destination: this rule re-runs whenever the toolchain changes,
+	# and mv refuses to replace a non-empty directory.
+	$(call RM_RF,$(BUILDDIR)/secret_path/Discovered.framework)
 	mv Discovered.framework $(BUILDDIR)/secret_path
 	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_NAME=Direct \
