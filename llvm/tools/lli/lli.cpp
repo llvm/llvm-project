@@ -951,14 +951,6 @@ static int runOrcJIT(const char *ProgName) {
     Builder.getJITTargetMachineBuilder()->getTargetTriple().setArchName(
         codegen::getMArch());
 
-  // Record the triple the JIT compiles for on triple-less modules.
-  const Triple &JITTriple =
-      Builder.getJITTargetMachineBuilder()->getTargetTriple();
-  MainModule.withModuleDo([&](Module &M) {
-    if (M.getTargetTriple().empty())
-      M.setTargetTriple(JITTriple);
-  });
-
   Builder.getJITTargetMachineBuilder()
       ->setCPU(codegen::getCPUStr())
       .addFeatures(codegen::getFeatureList())

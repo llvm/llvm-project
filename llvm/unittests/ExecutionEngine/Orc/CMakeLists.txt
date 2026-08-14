@@ -28,6 +28,7 @@ add_llvm_unittest(OrcJITTests
   IndirectionUtilsTest.cpp
   InProcessEPCTest.cpp
   JITTargetMachineBuilderTest.cpp
+  LLJITTest.cpp
   LazyCallThroughAndReexportsTest.cpp
   LibraryResolverTest.cpp
   LinkGraphLinkingLayerTest.cpp

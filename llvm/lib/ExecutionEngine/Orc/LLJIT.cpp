@@ -912,7 +912,7 @@ Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err =
-          TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
+          TSM.withModuleDo([&](Module &M) { return applyTargetConfig(M); }))
     return Err;
 
   return InitHelperTransformLayer->add(std::move(RT), std::move(TSM));
@@ -1107,13 +1107,22 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
   return MangledName;
 }
 
-Error LLJIT::applyDataLayout(Module &M) {
+Error LLJIT::applyTargetConfig(Module &M) {
+  if (M.getTargetTriple().empty()) {
+    M.setTargetTriple(TT);
+  } else if (!M.getTargetTriple().isCompatibleWith(TT)) {
+    return make_error<StringError>("added module has an incompatible triple: " +
+                                       M.getTargetTriple().str() +
+                                       " (module) vs " + TT.str() + " (jit)",
+                                   inconvertibleErrorCode());
+  }
+
   if (M.getDataLayout().isDefault())
     M.setDataLayout(DL);
 
   if (M.getDataLayout() != DL)
     return make_error<StringError>(
-        "Added modules have incompatible data layouts: " +
+        "added module has an incompatible data layout: " +
             M.getDataLayout().getStringRepresentation() + " (module) vs " +
             DL.getStringRepresentation() + " (jit)",
         inconvertibleErrorCode());
@@ -1306,7 +1315,7 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err = TSM.withModuleDo(
-          [&](Module &M) -> Error { return applyDataLayout(M); }))
+          [&](Module &M) -> Error { return applyTargetConfig(M); }))
     return Err;
 
   return CODLayer->add(JD, std::move(TSM));
