@@ -94,9 +94,6 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Improvements to clang-tidy
 
-- Improved {program}`clang-tidy` by resolving tool names without a path in
-  compilation databases through `PATH`.
-
 - Improved {program}`check_clang_tidy.py` by adding support of
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.
