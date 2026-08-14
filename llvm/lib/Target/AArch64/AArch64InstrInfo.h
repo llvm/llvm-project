@@ -355,7 +355,7 @@ public:
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                         const DebugLoc &DL, MCRegister DestReg,
-                        MCRegister SrcReg, bool KillSrc, unsigned Opcode,
+                        MCRegister SrcReg, bool KillSrc,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                        const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
