@@ -1368,6 +1368,10 @@ void TextDiagnostic::emitSnippetAndCaret(
   // multiple times if one loc has multiple diagnostics.
   if (!DiagOpts.ShowCarets)
     return;
+  if (Level == DiagnosticsEngine::Note && !DiagOpts.ShowNoteSnippets) {
+    emitParseableFixits(Hints, Loc.getManager());
+    return;
+  }
   if (Loc == LastLoc && Ranges.empty() && Hints.empty() &&
       (LastLevel != DiagnosticsEngine::Note || Level == LastLevel))
     return;

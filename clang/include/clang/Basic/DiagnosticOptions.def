@@ -53,6 +53,7 @@ DIAGOPT(ShowLocation, 1, 1)     /// Show source location information.
 DIAGOPT(ShowLevel, 1, 1)        /// Show diagnostic level.
 DIAGOPT(AbsolutePath, 1, 0)     /// Use absolute paths.
 DIAGOPT(ShowCarets, 1, 1)       /// Show carets in diagnostics.
+DIAGOPT(ShowNoteSnippets, 1, 1) /// Show source snippets for notes.
 DIAGOPT(ShowFixits, 1, 1)       /// Show fixit information.
 DIAGOPT(ShowSourceRanges, 1, 0) /// Show source ranges in numeric form.
 DIAGOPT(ShowParseableFixits, 1, 0) /// Show machine parseable fix-its.

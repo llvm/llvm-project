@@ -268,6 +268,17 @@ test.c:28:8: warning: extra tokens at end of #endif directive [-Wextra-tokens]
 ```
 :::
 
+:::{option} -f[no-]diagnostics-show-note-snippets
+
+Print source line and caret snippets for note diagnostics.
+This option, which defaults to on, controls whether or not Clang
+prints the source line, source ranges, and caret for notes. When
+disabled, errors and warnings still show their snippets, but notes
+only show their message line. This makes output much shorter for
+diagnostics with many notes, such as overload resolution failures
+or template instantiation backtraces.
+:::
+
 :::{option} -f[no-]color-diagnostics
 
 This option, which defaults to on when a color-capable terminal is
