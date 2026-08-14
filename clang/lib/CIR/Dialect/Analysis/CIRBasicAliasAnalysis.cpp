@@ -11,6 +11,9 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/MathExtras.h"
+
+#include <limits>
 
 #define DEBUG_TYPE "cir-basic-alias-analysis"
 
@@ -23,8 +26,97 @@ using namespace cir;
 
 static constexpr unsigned MaxLookupDepth = 6;
 
-mlir::Value CIRBasicAliasAnalysis::getUnderlyingObject(mlir::Value val) {
-  LDBG() << "Getting underlying object for: " << val;
+/// Return the size in bytes of \p type, or std::nullopt when that size isn't
+/// statically known (void, function types, incomplete records, ...).
+static std::optional<int64_t>
+getTypeSizeInBytes(mlir::Type type, const mlir::DataLayout &dataLayout) {
+  if (!cir::isSized(type))
+    return std::nullopt;
+
+  llvm::TypeSize size = dataLayout.getTypeSize(type);
+  if (size.isScalable())
+    return std::nullopt;
+  return size.getFixedValue();
+}
+
+/// If \p val is a constant integer that fits in an int64_t, return its value.
+/// The constant is interpreted according to the signedness of its type.
+static std::optional<int64_t> getConstantIndex(mlir::Value val) {
+  auto constOp =
+      mlir::dyn_cast_if_present<cir::ConstantOp>(val.getDefiningOp());
+  if (!constOp)
+    return std::nullopt;
+
+  auto intAttr = mlir::dyn_cast<cir::IntAttr>(constOp.getValue());
+  if (!intAttr)
+    return std::nullopt;
+
+  const APInt &value = intAttr.getValue();
+  if (intAttr.isSigned())
+    return value.trySExtValue();
+  return value.tryZExtValue();
+}
+
+/// Return `count * size`, or std::nullopt if either input is unknown or the
+/// product overflows.
+static std::optional<int64_t> scaleOffset(std::optional<int64_t> count,
+                                          std::optional<int64_t> size) {
+  if (!count || !size)
+    return std::nullopt;
+  auto [product, overflow] = MulOverflow(*count, *size);
+  if (overflow)
+    return std::nullopt;
+  return product;
+}
+
+/// Add \p delta bytes to \p offset, making the offset unknown if \p delta is
+/// unknown or if the sum overflows.
+static void addToOffset(std::optional<int64_t> &offset,
+                        std::optional<int64_t> delta) {
+  if (!offset)
+    return;
+  if (!delta) {
+    offset.reset();
+    return;
+  }
+  auto [sum, overflow] = AddOverflow(*offset, *delta);
+  if (overflow)
+    offset.reset();
+  else
+    offset = sum;
+}
+
+namespace {
+/// A pointer expressed as a byte offset into the object it points into.
+struct PointerOffset {
+  /// The value the pointer was traced back to. This is an allocation, a block
+  /// argument, or the result of an operation this analysis cannot look through.
+  mlir::Value base;
+
+  /// Byte offset of the pointer from the start of `base`. The offset can be
+  /// negative. If this is std::nullopt, the offset is not a compile-time
+  /// constant.
+  std::optional<int64_t> offset;
+};
+} // namespace
+
+/// Trace \p val back to the object it points into, accumulating the byte offset
+/// of \p val from the start of that object.
+///
+/// The walk stops at a block argument, at an allocation, or at any operation
+/// whose result cannot be described as an offset from one of its operands. The
+/// returned base and offset always describe \p val, even when the walk stops
+/// early because the depth limit was reached.
+///
+/// Operations contributing an offset that isn't a compile-time constant (a
+/// dynamic cir.ptr_stride index, for example) are still traced through, leaving
+/// the offset unknown. Knowing which object a pointer points into is useful
+/// even when the offset within that object is not known.
+static PointerOffset decomposePointer(mlir::Value val,
+                                      const mlir::DataLayout &dataLayout) {
+  LDBG() << "Decomposing pointer: " << val;
+
+  std::optional<int64_t> offset = 0;
 
   for (unsigned depth = 0; depth < MaxLookupDepth; ++depth) {
     mlir::Operation *defOp = val.getDefiningOp();
@@ -33,9 +125,8 @@ mlir::Value CIRBasicAliasAnalysis::getUnderlyingObject(mlir::Value val) {
       break; // Block argument (e.g. function parameter) — stop here.
     }
 
-    // Bitcast and address-space casts don't change the underlying object.
-    // array_to_ptrdecay produces an element pointer to the same storage as
-    // the array pointer, so strip through it too.
+    // Bitcasts and address-space casts don't change the address, and
+    // array_to_ptrdecay produces a pointer to the first element of the array.
     if (auto castOp = mlir::dyn_cast<cir::CastOp>(defOp)) {
       if (castOp.isAllocaPreservingCast() ||
           castOp.getKind() == cir::CastKind::array_to_ptrdecay) {
@@ -47,114 +138,96 @@ mlir::Value CIRBasicAliasAnalysis::getUnderlyingObject(mlir::Value val) {
       break;
     }
 
-    // Pointer stride: only strip through when we can prove the access stays
-    // within the bounds of the underlying allocation.
+    // A stride moves the pointer by `stride * sizeof(pointee)` bytes.
     if (auto strideOp = mlir::dyn_cast<cir::PtrStrideOp>(defOp)) {
-      auto constOp = strideOp.getStride().getDefiningOp<cir::ConstantOp>();
-      if (constOp) {
-        if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(constOp.getValue())) {
-          APInt stride = intAttr.getValue();
-
-          // Zero stride is trivially in-bounds.
-          if (stride.isZero()) {
-            LDBG() << "Walking past zero-strided PtrStrideOp";
-            val = strideOp.getBase();
-            continue;
-          }
-        }
-      }
-      // Dynamic stride or unverifiable bounds — stop here conservatively.
-      LDBG() << "Non-zero or dynamic PtrStrideOp, stopping";
-      break;
-    }
-
-    // Handle special cases for zero-offset sub-object accesses.
-    if (auto op = mlir::dyn_cast<cir::GetMemberOp>(defOp)) {
-      if (op.getIndex() == 0) {
-        LDBG() << "GetMemberOp[0], following to underlying object";
-        val = op.getAddr();
-        continue;
-      } else {
-        LDBG() << "GetMemberOp, non-zero index, stopping";
-        break;
-      }
-    }
-    if (auto op = mlir::dyn_cast<cir::GetElementOp>(defOp)) {
-      cir::IntAttr index;
-      if (auto constOp = op.getIndex().getDefiningOp<cir::ConstantOp>())
-        index = mlir::dyn_cast<cir::IntAttr>(constOp.getValue());
-      if (index && index.getValue().isZero()) {
-        LDBG() << "GetElementOp[0], following to underlying object";
-        val = op.getBase();
-        continue;
-      }
-      LDBG() << "GetElementOp, non-zero or dynamic index, stopping";
-      break;
-    }
-    if (auto op = mlir::dyn_cast<cir::BaseClassAddrOp>(defOp)) {
-      // A zero byte offset means the base subobject starts at the same address
-      // as the derived object.
-      if (op.getOffset().isZero()) {
-        LDBG() << "BaseClassAddrOp[0], following to underlying object";
-        val = op.getDerivedAddr();
-        continue;
-      }
-      LDBG() << "BaseClassAddrOp, non-zero offset, stopping";
-      break;
-    }
-    if (auto op = mlir::dyn_cast<cir::DerivedClassAddrOp>(defOp)) {
-      // The offset is stored unsigned but applied as a negative adjustment. A
-      // zero offset means the derived object starts at the same address as the
-      // base subobject.
-      if (op.getOffset().isZero()) {
-        LDBG() << "DerivedClassAddrOp[0], following to underlying object";
-        val = op.getBaseAddr();
-        continue;
-      }
-      LDBG() << "DerivedClassAddrOp, non-zero offset, stopping";
-      break;
-    }
-    if (auto op = mlir::dyn_cast<cir::ComplexRealPtrOp>(defOp)) {
-      LDBG() << "Getting input pointer for ComplexRealPtrOp";
-      val = op.getOperand();
+      LDBG() << "Walking past PtrStrideOp";
+      addToOffset(offset,
+                  scaleOffset(getConstantIndex(strideOp.getStride()),
+                              getTypeSizeInBytes(strideOp.getElementType(),
+                                                 dataLayout)));
+      val = strideOp.getBase();
       continue;
     }
-    if (auto op = mlir::dyn_cast<cir::ComplexImagPtrOp>(defOp)) {
-      LDBG() << "ComplexImagPtrOp, stopping";
-      break;
+
+    // A record member sits at a fixed offset given by the record layout.
+    if (auto memberOp = mlir::dyn_cast<cir::GetMemberOp>(defOp)) {
+      LDBG() << "Walking past GetMemberOp";
+      auto recordTy =
+          mlir::cast<cir::RecordType>(memberOp.getAddrTy().getPointee());
+      std::optional<int64_t> memberOffset;
+      if (!recordTy.isIncomplete())
+        memberOffset =
+            recordTy.getElementOffset(dataLayout, memberOp.getIndex());
+      addToOffset(offset, memberOffset);
+      val = memberOp.getAddr();
+      continue;
+    }
+
+    // An array element sits at `index * sizeof(element)` bytes into the array.
+    if (auto elementOp = mlir::dyn_cast<cir::GetElementOp>(defOp)) {
+      LDBG() << "Walking past GetElementOp";
+      addToOffset(offset,
+                  scaleOffset(getConstantIndex(elementOp.getIndex()),
+                              getTypeSizeInBytes(elementOp.getElementType(),
+                                                 dataLayout)));
+      val = elementOp.getBase();
+      continue;
+    }
+
+    // A base class subobject starts the given number of bytes into the derived
+    // object.
+    if (auto baseOp = mlir::dyn_cast<cir::BaseClassAddrOp>(defOp)) {
+      LDBG() << "Walking past BaseClassAddrOp";
+      addToOffset(offset, baseOp.getOffset().tryZExtValue());
+      val = baseOp.getDerivedAddr();
+      continue;
+    }
+
+    // Conversely, the derived object starts that many bytes before the base
+    // subobject, so the offset is applied as a negative adjustment.
+    if (auto derivedOp = mlir::dyn_cast<cir::DerivedClassAddrOp>(defOp)) {
+      LDBG() << "Walking past DerivedClassAddrOp";
+      std::optional<int64_t> baseOffset = derivedOp.getOffset().tryZExtValue();
+      if (baseOffset)
+        baseOffset = -*baseOffset;
+      addToOffset(offset, baseOffset);
+      val = derivedOp.getBaseAddr();
+      continue;
+    }
+
+    // The real part of a complex value is at offset zero, the imaginary part
+    // right behind it.
+    if (auto realOp = mlir::dyn_cast<cir::ComplexRealPtrOp>(defOp)) {
+      LDBG() << "Walking past ComplexRealPtrOp";
+      val = realOp.getOperand();
+      continue;
+    }
+    if (auto imagOp = mlir::dyn_cast<cir::ComplexImagPtrOp>(defOp)) {
+      LDBG() << "Walking past ComplexImagPtrOp";
+      auto ptrTy = mlir::cast<cir::PointerType>(imagOp.getOperand().getType());
+      auto complexTy = mlir::cast<cir::ComplexType>(ptrTy.getPointee());
+      addToOffset(offset,
+                  getTypeSizeInBytes(complexTy.getElementType(), dataLayout));
+      val = imagOp.getOperand();
+      continue;
     }
 
     LDBG() << "Unhandled operation, stopping";
-    break; // Unknown op — stop here conservatively.
+    break; // Not expressible as an offset from another pointer.
   }
-  return val;
+
+  return {val, offset};
 }
 
-CIRBasicAliasAnalysis::ObjectRelation
-CIRBasicAliasAnalysis::classifyObjects(mlir::Value lhs, mlir::Value rhs) {
-  LDBG() << "Checking if " << lhs << " and " << rhs << " are distinct objects";
-
-  // Two values are distinct allocations if they originate from different
-  // cir.alloca operations (or other allocation ops) in the same function.
-  // TODO: Extend to cover global addresses, function arguments with noalias,
-  // and heap allocations.
-  mlir::Value lhsObj = getUnderlyingObject(lhs);
-  mlir::Value rhsObj = getUnderlyingObject(rhs);
-
-  if (lhsObj == rhsObj) {
-    LDBG() << "Identical values, not distinct";
-    return ObjectRelation::Identical;
-  }
-
-  // Different cir.alloca ops in the same function cannot alias.
-  if (mlir::isa_and_nonnull<cir::AllocaOp>(lhsObj.getDefiningOp()) &&
-      mlir::isa_and_nonnull<cir::AllocaOp>(rhsObj.getDefiningOp())) {
-    LDBG() << "Different cir.alloca ops in the same function, distinct";
-    return ObjectRelation::Distinct;
-  }
-
-  LDBG() << "Conservative fallback, not distinct";
-  return ObjectRelation::Unknown;
+/// Return true if \p lhs and \p rhs are provably different objects.
+///
+/// TODO: Extend to cover global addresses, function arguments with noalias, and
+/// heap allocations.
+static bool areDistinctObjects(mlir::Value lhs, mlir::Value rhs) {
+  // Distinct cir.alloca ops allocate distinct storage.
+  return lhs != rhs &&
+         mlir::isa_and_nonnull<cir::AllocaOp>(lhs.getDefiningOp()) &&
+         mlir::isa_and_nonnull<cir::AllocaOp>(rhs.getDefiningOp());
 }
 
 //===----------------------------------------------------------------------===//
@@ -170,20 +243,37 @@ mlir::AliasResult CIRBasicAliasAnalysis::alias(mlir::Value lhs,
     return mlir::AliasResult::MustAlias;
   }
 
-  ObjectRelation relation = classifyObjects(lhs, rhs);
-  switch (relation) {
-  case ObjectRelation::Distinct:
-    LDBG() << "No alias between distinct objects";
-    return mlir::AliasResult::NoAlias;
-  case ObjectRelation::Identical:
-    LDBG() << "Must alias between identical objects";
-    return mlir::AliasResult::MustAlias;
-  case ObjectRelation::Unknown:
-    // Conservative fallback — the aggregate will try other implementations.
-    LDBG() << "Conservative fallback, may alias";
+  PointerOffset lhsPtr = decomposePointer(lhs, dataLayout);
+  PointerOffset rhsPtr = decomposePointer(rhs, dataLayout);
+
+  if (lhsPtr.base != rhsPtr.base) {
+    if (areDistinctObjects(lhsPtr.base, rhsPtr.base)) {
+      LDBG() << "No alias between pointers into distinct objects";
+      return mlir::AliasResult::NoAlias;
+    }
+    LDBG() << "Unrelated base objects, may alias";
     return mlir::AliasResult::MayAlias;
   }
-  llvm_unreachable("Unhandled ObjectRelation");
+
+  // Both pointers point into the same object, so their offsets can be compared
+  // directly.
+  if (!lhsPtr.offset || !rhsPtr.offset) {
+    LDBG() << "Same object at an unknown offset, may alias";
+    return mlir::AliasResult::MayAlias;
+  }
+
+  // Equal offsets means both pointers start at exactly the same address, which
+  // is all MustAlias claims. How many bytes each access touches doesn't matter.
+  if (*lhsPtr.offset == *rhsPtr.offset) {
+    LDBG() << "Must alias at the same address within the same object";
+    return mlir::AliasResult::MustAlias;
+  }
+
+  // TODO: Two pointers at different offsets into the same object only overlap
+  // if the accesses are large enough to reach one another. Comparing the byte
+  // ranges the accesses cover would prove NoAlias or PartialAlias here.
+  LDBG() << "Same object at different offsets, may alias";
+  return mlir::AliasResult::MayAlias;
 }
 
 mlir::ModRefResult CIRBasicAliasAnalysis::getModRef(mlir::Operation *op,
@@ -213,10 +303,7 @@ mlir::ModRefResult CIRBasicAliasAnalysis::getModRef(mlir::Operation *op,
       LDBG() << "    Checking alias between affected location "
              << affectedLocation << " and query location " << location;
       aliasResult = alias(affectedLocation, location);
-      LDBG() << "    Alias result: "
-             << (aliasResult.isMust() ? "MustAlias"
-                 : aliasResult.isNo() ? "NoAlias"
-                                      : "MayAlias");
+      LDBG() << "    Alias result: " << aliasResult;
     } else {
       // An effect on a non-addressable resource cannot affect a
       // pointer-based location.

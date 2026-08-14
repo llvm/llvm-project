@@ -59,16 +59,20 @@ cir.func @ptr_stride_zero_strips_to_alloca() {
 
 // -----
 
-// CHECK-LABEL: Testing : "ptr_stride_inbounds_strips_to_alloca"
+// CHECK-LABEL: Testing : "ptr_stride_constant_offsets"
 // CHECK-DAG: arr#0 <-> other#0: NoAlias
 // CHECK-DAG: arr#0 <-> ptr#0: MustAlias
-// CHECK-DAG: other#0 <-> ptr#0: NoAlias
 // CHECK-DAG: arr#0 <-> elem#0: MayAlias
-// CHECK-DAG: other#0 <-> elem#0: MayAlias
+// CHECK-DAG: arr#0 <-> elem2#0: MayAlias
+// CHECK-DAG: other#0 <-> ptr#0: NoAlias
+// CHECK-DAG: other#0 <-> elem#0: NoAlias
+// CHECK-DAG: other#0 <-> elem2#0: NoAlias
 // CHECK-DAG: ptr#0 <-> elem#0: MayAlias
+// CHECK-DAG: ptr#0 <-> elem2#0: MayAlias
+// CHECK-DAG: elem#0 <-> elem2#0: MayAlias
 
 !s32i = !cir.int<s, 32>
-cir.func @ptr_stride_inbounds_strips_to_alloca() {
+cir.func @ptr_stride_constant_offsets() {
   %arr   = cir.alloca "arr"   align(4) : !cir.ptr<!cir.array<!s32i x 4>> {test.ptr = "arr"}
   %other = cir.alloca "other" align(4) : !cir.ptr<!s32i> {test.ptr = "other"}
   %ptr   = cir.cast array_to_ptrdecay %arr
@@ -76,21 +80,60 @@ cir.func @ptr_stride_inbounds_strips_to_alloca() {
   %two   = cir.const #cir.int<2> : !s32i
   %elem  = cir.ptr_stride %ptr, %two : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
              {test.ptr = "elem"}
+  %one  = cir.const #cir.int<1> : !s32i
+  %elem2  = cir.ptr_stride %elem, %one : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+             {test.ptr = "elem2"}
   cir.return
 }
 
 // -----
 
-// CHECK-LABEL: Testing : "ptr_stride_dynamic_not_stripped"
+// CHECK-LABEL: Testing : "ptr_stride_out_of_bounds"
 // CHECK-DAG: arr#0 <-> other#0: NoAlias
 // CHECK-DAG: arr#0 <-> ptr#0: MustAlias
+// CHECK-DAG: arr#0 <-> oob#0: MayAlias
+// CHECK-DAG: arr#0 <-> inbounds#0: MayAlias
+// CHECK-DAG: arr#0 <-> oob2#0: MayAlias
 // CHECK-DAG: other#0 <-> ptr#0: NoAlias
+// CHECK-DAG: other#0 <-> oob#0: NoAlias
+// CHECK-DAG: other#0 <-> inbounds#0: NoAlias
+// CHECK-DAG: other#0 <-> oob2#0: NoAlias
+// CHECK-DAG: ptr#0 <-> oob#0: MayAlias
+// CHECK-DAG: ptr#0 <-> inbounds#0: MayAlias
+// CHECK-DAG: ptr#0 <-> oob2#0: MayAlias
+// CHECK-DAG: oob#0 <-> inbounds#0: MayAlias
+// CHECK-DAG: oob#0 <-> oob2#0: MustAlias
+// CHECK-DAG: inbounds#0 <-> oob2#0: MayAlias
+
+!s32i = !cir.int<s, 32>
+cir.func @ptr_stride_out_of_bounds() {
+  %arr   = cir.alloca "arr"   align(4) : !cir.ptr<!cir.array<!s32i x 4>> {test.ptr = "arr"}
+  %other = cir.alloca "other" align(4) : !cir.ptr<!s32i> {test.ptr = "other"}
+  %ptr   = cir.cast array_to_ptrdecay %arr
+             : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i> {test.ptr = "ptr"}
+  %four  = cir.const #cir.int<4> : !s32i
+  %oob   = cir.ptr_stride %ptr, %four : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+             {test.ptr = "oob"}
+  %two  = cir.const #cir.int<2> : !s32i
+  %inbounds = cir.ptr_stride %ptr, %two : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+             {test.ptr = "inbounds"}
+  %oob2 = cir.ptr_stride %inbounds, %two : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+             {test.ptr = "oob2"}
+  cir.return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "ptr_stride_dynamic_offset"
+// CHECK-DAG: arr#0 <-> other#0: NoAlias
+// CHECK-DAG: arr#0 <-> ptr#0: MustAlias
 // CHECK-DAG: arr#0 <-> dyn#0: MayAlias
-// CHECK-DAG: other#0 <-> dyn#0: MayAlias
+// CHECK-DAG: other#0 <-> ptr#0: NoAlias
+// CHECK-DAG: other#0 <-> dyn#0: NoAlias
 // CHECK-DAG: ptr#0 <-> dyn#0: MayAlias
 
 !s32i = !cir.int<s, 32>
-cir.func @ptr_stride_dynamic_not_stripped(%n: !s32i) {
+cir.func @ptr_stride_dynamic_offset(%n: !s32i) {
   %arr   = cir.alloca "arr"   align(4) : !cir.ptr<!cir.array<!s32i x 4>> {test.ptr = "arr"}
   %other = cir.alloca "other" align(4) : !cir.ptr<!s32i> {test.ptr = "other"}
   %ptr   = cir.cast array_to_ptrdecay %arr
@@ -107,16 +150,16 @@ cir.func @ptr_stride_dynamic_not_stripped(%n: !s32i) {
 // CHECK-DAG: s1#0 <-> m1_0#0: MustAlias
 // CHECK-DAG: s2#0 <-> m1_0#0: NoAlias
 // CHECK-DAG: s1#0 <-> m1_1#0: MayAlias
-// CHECK-DAG: s2#0 <-> m1_1#0: MayAlias
+// CHECK-DAG: s2#0 <-> m1_1#0: NoAlias
 // CHECK-DAG: m1_0#0 <-> m1_1#0: MayAlias
 // CHECK-DAG: s1#0 <-> m2_0#0: NoAlias
 // CHECK-DAG: s2#0 <-> m2_0#0: MustAlias
 // CHECK-DAG: m1_0#0 <-> m2_0#0: NoAlias
-// CHECK-DAG: m1_1#0 <-> m2_0#0: MayAlias
-// CHECK-DAG: s1#0 <-> m2_1#0: MayAlias
+// CHECK-DAG: m1_1#0 <-> m2_0#0: NoAlias
+// CHECK-DAG: s1#0 <-> m2_1#0: NoAlias
 // CHECK-DAG: s2#0 <-> m2_1#0: MayAlias
-// CHECK-DAG: m1_0#0 <-> m2_1#0: MayAlias
-// CHECK-DAG: m1_1#0 <-> m2_1#0: MayAlias
+// CHECK-DAG: m1_0#0 <-> m2_1#0: NoAlias
+// CHECK-DAG: m1_1#0 <-> m2_1#0: NoAlias
 // CHECK-DAG: m2_0#0 <-> m2_1#0: MayAlias
 
 !s32i = !cir.int<s, 32>
@@ -137,6 +180,55 @@ cir.func @get_member_distinct_allocas() {
 
 // -----
 
+// CHECK-LABEL: Testing : "get_member_nested_records"
+// CHECK-DAG: o#0 <-> inner#0: MustAlias
+// CHECK-DAG: o#0 <-> i0#0: MustAlias
+// CHECK-DAG: inner#0 <-> i0#0: MustAlias
+// CHECK-DAG: o#0 <-> i1#0: MayAlias
+// CHECK-DAG: inner#0 <-> i1#0: MayAlias
+// CHECK-DAG: i0#0 <-> i1#0: MayAlias
+// CHECK-DAG: o#0 <-> z#0: MayAlias
+// CHECK-DAG: inner#0 <-> z#0: MayAlias
+// CHECK-DAG: i0#0 <-> z#0: MayAlias
+// CHECK-DAG: i1#0 <-> z#0: MayAlias
+
+!s32i = !cir.int<s, 32>
+!rec_Inner = !cir.struct<"Inner" {data !s32i, data !s32i}>
+!rec_Outer = !cir.struct<"Outer" {data !rec_Inner, data !s32i}>
+cir.func @get_member_nested_records() {
+  %o = cir.alloca "o" align(4) : !cir.ptr<!rec_Outer> {test.ptr = "o"}
+  %inner = cir.get_member %o[0] {name = "inner", test.ptr = "inner"}
+           : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Inner>
+  %i0 = cir.get_member %inner[0] {name = "x", test.ptr = "i0"}
+        : !cir.ptr<!rec_Inner> -> !cir.ptr<!s32i>
+  %i1 = cir.get_member %inner[1] {name = "y", test.ptr = "i1"}
+        : !cir.ptr<!rec_Inner> -> !cir.ptr<!s32i>
+  %z = cir.get_member %o[1] {name = "z", test.ptr = "z"}
+       : !cir.ptr<!rec_Outer> -> !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "get_member_union"
+// CHECK-DAG: u#0 <-> m_int#0: MustAlias
+// CHECK-DAG: u#0 <-> m_char#0: MustAlias
+// CHECK-DAG: m_int#0 <-> m_char#0: MustAlias
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_U = !cir.union<"U" {data !s32i, data !u8i}>
+cir.func @get_member_union() {
+  %u = cir.alloca "u" align(4) : !cir.ptr<!rec_U> {test.ptr = "u"}
+  %m_int = cir.get_member %u[0] {name = "i", test.ptr = "m_int"}
+           : !cir.ptr<!rec_U> -> !cir.ptr<!s32i>
+  %m_char = cir.get_member %u[1] {name = "c", test.ptr = "m_char"}
+            : !cir.ptr<!rec_U> -> !cir.ptr<!u8i>
+  cir.return
+}
+
+// -----
+
 // CHECK-LABEL: Testing : "get_element_distinct_allocas"
 // CHECK-DAG: a1#0 <-> a2#0: NoAlias
 // CHECK-DAG: a1#0 <-> e1_0#0: MustAlias
@@ -145,14 +237,14 @@ cir.func @get_member_distinct_allocas() {
 // CHECK-DAG: a2#0 <-> e2_0#0: MustAlias
 // CHECK-DAG: e1_0#0 <-> e2_0#0: NoAlias
 // CHECK-DAG: a1#0 <-> e1_1#0: MayAlias
-// CHECK-DAG: a2#0 <-> e1_1#0: MayAlias
+// CHECK-DAG: a2#0 <-> e1_1#0: NoAlias
 // CHECK-DAG: e1_0#0 <-> e1_1#0: MayAlias
-// CHECK-DAG: e2_0#0 <-> e1_1#0: MayAlias
-// CHECK-DAG: a1#0 <-> e2_1#0: MayAlias
+// CHECK-DAG: e2_0#0 <-> e1_1#0: NoAlias
+// CHECK-DAG: a1#0 <-> e2_1#0: NoAlias
 // CHECK-DAG: a2#0 <-> e2_1#0: MayAlias
-// CHECK-DAG: e1_0#0 <-> e2_1#0: MayAlias
+// CHECK-DAG: e1_0#0 <-> e2_1#0: NoAlias
 // CHECK-DAG: e2_0#0 <-> e2_1#0: MayAlias
-// CHECK-DAG: e1_1#0 <-> e2_1#0: MayAlias
+// CHECK-DAG: e1_1#0 <-> e2_1#0: NoAlias
 
 !s32i = !cir.int<s, 32>
 cir.func @get_element_distinct_allocas() {
@@ -173,11 +265,42 @@ cir.func @get_element_distinct_allocas() {
 
 // -----
 
+// CHECK-LABEL: Testing : "get_element_of_records"
+// CHECK-DAG: arr#0 <-> e0#0: MustAlias
+// CHECK-DAG: arr#0 <-> e1#0: MayAlias
+// CHECK-DAG: e0#0 <-> e1#0: MayAlias
+// CHECK-DAG: arr#0 <-> e0_y#0: MayAlias
+// CHECK-DAG: e0#0 <-> e0_y#0: MayAlias
+// CHECK-DAG: e1#0 <-> e0_y#0: MayAlias
+// CHECK-DAG: arr#0 <-> e1_y#0: MayAlias
+// CHECK-DAG: e0#0 <-> e1_y#0: MayAlias
+// CHECK-DAG: e1#0 <-> e1_y#0: MayAlias
+// CHECK-DAG: e0_y#0 <-> e1_y#0: MayAlias
+
+!s32i = !cir.int<s, 32>
+!rec_P = !cir.struct<"P" {data !s32i, data !s32i}>
+cir.func @get_element_of_records() {
+  %arr = cir.alloca "arr" align(4) : !cir.ptr<!cir.array<!rec_P x 2>> {test.ptr = "arr"}
+  %zero = cir.const #cir.int<0> : !s32i
+  %one = cir.const #cir.int<1> : !s32i
+  %e0 = cir.get_element %arr[%zero : !s32i] {test.ptr = "e0"}
+        : !cir.ptr<!cir.array<!rec_P x 2>> -> !cir.ptr<!rec_P>
+  %e1 = cir.get_element %arr[%one : !s32i] {test.ptr = "e1"}
+        : !cir.ptr<!cir.array<!rec_P x 2>> -> !cir.ptr<!rec_P>
+  %e0_y = cir.get_member %e0[1] {name = "y", test.ptr = "e0_y"}
+          : !cir.ptr<!rec_P> -> !cir.ptr<!s32i>
+  %e1_y = cir.get_member %e1[1] {name = "y", test.ptr = "e1_y"}
+          : !cir.ptr<!rec_P> -> !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
 // CHECK-LABEL: Testing : "base_class_addr_distinct_allocas"
 // CHECK-DAG: d1#0 <-> d2#0: NoAlias
 // CHECK-DAG: d1#0 <-> base1#0: MustAlias
-// CHECK-DAG: d2#0 <-> base1#0: NoAlias
 // CHECK-DAG: d1#0 <-> base2#0: NoAlias
+// CHECK-DAG: d2#0 <-> base1#0: NoAlias
 // CHECK-DAG: d2#0 <-> base2#0: MustAlias
 // CHECK-DAG: base1#0 <-> base2#0: NoAlias
 
@@ -197,73 +320,26 @@ cir.func @base_class_addr_distinct_allocas() {
 
 // -----
 
-// CHECK-LABEL: Testing : "base_class_addr_nonzero_offset"
-// CHECK-DAG: d1#0 <-> d2#0: NoAlias
-// CHECK-DAG: d1#0 <-> base1#0: MayAlias
-// CHECK-DAG: d2#0 <-> base1#0: MayAlias
-// CHECK-DAG: d1#0 <-> base2#0: MayAlias
-// CHECK-DAG: d2#0 <-> base2#0: MayAlias
-// CHECK-DAG: base1#0 <-> base2#0: MayAlias
+// CHECK-LABEL: Testing : "base_and_derived_class_addr"
+// CHECK-DAG: d#0 <-> base#0: MayAlias
+// CHECK-DAG: d#0 <-> derived#0: MustAlias
+// CHECK-DAG: base#0 <-> derived#0: MayAlias
+// CHECK-DAG: d#0 <-> first#0: MustAlias
+// CHECK-DAG: base#0 <-> first#0: MayAlias
+// CHECK-DAG: derived#0 <-> first#0: MustAlias
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
 !rec_Base    = !cir.struct<"Base"    {data !u8i}>
 !rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
-cir.func @base_class_addr_nonzero_offset() {
-  %d1    = cir.alloca "d1" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d1"}
-  %d2    = cir.alloca "d2" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d2"}
-  %base1 = cir.base_class_addr %d1 : !cir.ptr<!rec_Derived> nonnull [4]
-              -> !cir.ptr<!rec_Base> {test.ptr = "base1"}
-  %base2 = cir.base_class_addr %d2 : !cir.ptr<!rec_Derived> nonnull [4]
-              -> !cir.ptr<!rec_Base> {test.ptr = "base2"}
-  cir.return
-}
-
-// -----
-
-// CHECK-LABEL: Testing : "derived_class_addr_zero_offset"
-// CHECK-DAG: b1#0 <-> b2#0: NoAlias
-// CHECK-DAG: b1#0 <-> d1#0: MustAlias
-// CHECK-DAG: b2#0 <-> d1#0: NoAlias
-// CHECK-DAG: b1#0 <-> d2#0: NoAlias
-// CHECK-DAG: b2#0 <-> d2#0: MustAlias
-// CHECK-DAG: d1#0 <-> d2#0: NoAlias
-
-!u8i = !cir.int<u, 8>
-!s32i = !cir.int<s, 32>
-!rec_Base    = !cir.struct<"Base"    {data !u8i}>
-!rec_Derived = !cir.struct<"Derived" {data !rec_Base, data !s32i}>
-cir.func @derived_class_addr_zero_offset() {
-  %b1    = cir.alloca "d1" align(4) : !cir.ptr<!rec_Base> {test.ptr = "b1"}
-  %b2    = cir.alloca "d2" align(4) : !cir.ptr<!rec_Base> {test.ptr = "b2"}
-  %d1 = cir.derived_class_addr %b1 : !cir.ptr<!rec_Base> nonnull [0]
-              -> !cir.ptr<!rec_Derived> {test.ptr = "d1"}
-  %d2 = cir.derived_class_addr %b2 : !cir.ptr<!rec_Base> nonnull [0]
-              -> !cir.ptr<!rec_Derived> {test.ptr = "d2"}
-  cir.return
-}
-
-// -----
-
-// CHECK-LABEL: Testing : "derived_class_addr_nonzero_offset"
-// CHECK-DAG: b1#0 <-> b2#0: NoAlias
-// CHECK-DAG: b1#0 <-> d1#0: MayAlias
-// CHECK-DAG: b2#0 <-> d1#0: MayAlias
-// CHECK-DAG: b1#0 <-> d2#0: MayAlias
-// CHECK-DAG: b2#0 <-> d2#0: MayAlias
-// CHECK-DAG: d1#0 <-> d2#0: MayAlias
-
-!u8i = !cir.int<u, 8>
-!s32i = !cir.int<s, 32>
-!rec_Base    = !cir.struct<"Base"    {data !u8i}>
-!rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
-cir.func @derived_class_addr_nonzero_offset() {
-  %b1    = cir.alloca "d1" align(4) : !cir.ptr<!rec_Base> {test.ptr = "b1"}
-  %b2    = cir.alloca "d2" align(4) : !cir.ptr<!rec_Base> {test.ptr = "b2"}
-  %d1 = cir.derived_class_addr %b1 : !cir.ptr<!rec_Base> nonnull [4]
-              -> !cir.ptr<!rec_Derived> {test.ptr = "d1"}
-  %d2 = cir.derived_class_addr %b2 : !cir.ptr<!rec_Base> nonnull [4]
-              -> !cir.ptr<!rec_Derived> {test.ptr = "d2"}
+cir.func @base_and_derived_class_addr() {
+  %d = cir.alloca "d" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d"}
+  %base = cir.base_class_addr %d : !cir.ptr<!rec_Derived> nonnull [4]
+             -> !cir.ptr<!rec_Base> {test.ptr = "base"}
+  %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> nonnull [4]
+             -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
+  %first = cir.get_member %d[0] {name = "x", test.ptr = "first"}
+           : !cir.ptr<!rec_Derived> -> !cir.ptr<!s32i>
   cir.return
 }
 
@@ -272,18 +348,18 @@ cir.func @derived_class_addr_nonzero_offset() {
 // CHECK-LABEL: Testing : "complex_parts_distinct_allocas"
 // CHECK-DAG: c1#0 <-> c2#0: NoAlias
 // CHECK-DAG: c1#0 <-> real1#0: MustAlias
-// CHECK-DAG: c2#0 <-> real1#0: NoAlias
 // CHECK-DAG: c1#0 <-> imag1#0: MayAlias
-// CHECK-DAG: c2#0 <-> imag1#0: MayAlias
-// CHECK-DAG: real1#0 <-> imag1#0: MayAlias
 // CHECK-DAG: c1#0 <-> real2#0: NoAlias
+// CHECK-DAG: c1#0 <-> imag2#0: NoAlias
+// CHECK-DAG: c2#0 <-> real1#0: NoAlias
+// CHECK-DAG: c2#0 <-> imag1#0: NoAlias
 // CHECK-DAG: c2#0 <-> real2#0: MustAlias
-// CHECK-DAG: real1#0 <-> real2#0: NoAlias
-// CHECK-DAG: imag1#0 <-> real2#0: MayAlias
-// CHECK-DAG: c1#0 <-> imag2#0: MayAlias
 // CHECK-DAG: c2#0 <-> imag2#0: MayAlias
-// CHECK-DAG: real1#0 <-> imag2#0: MayAlias
-// CHECK-DAG: imag1#0 <-> imag2#0: MayAlias
+// CHECK-DAG: real1#0 <-> imag1#0: MayAlias
+// CHECK-DAG: real1#0 <-> real2#0: NoAlias
+// CHECK-DAG: real1#0 <-> imag2#0: NoAlias
+// CHECK-DAG: imag1#0 <-> real2#0: NoAlias
+// CHECK-DAG: imag1#0 <-> imag2#0: NoAlias
 // CHECK-DAG: real2#0 <-> imag2#0: MayAlias
 
 cir.func @complex_parts_distinct_allocas() {
@@ -301,5 +377,23 @@ cir.func @complex_parts_distinct_allocas() {
   %imag2 = cir.complex.imag_ptr %c2
               : !cir.ptr<!cir.complex<!cir.float>> -> !cir.ptr<!cir.float>
               {test.ptr = "imag2"}
+  cir.return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "offsets_from_pointer_argument"
+// CHECK-DAG: px#0 <-> py#0: MayAlias
+// CHECK-DAG: px#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: py#0 <-> func.region0#0: MayAlias
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
+cir.func @offsets_from_pointer_argument(%s: !cir.ptr<!rec_S>)
+    attributes {test.ptr = "func"} {
+  %px = cir.get_member %s[0] {name = "x", test.ptr = "px"}
+        : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  %py = cir.get_member %s[1] {name = "y", test.ptr = "py"}
+        : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
   cir.return
 }
