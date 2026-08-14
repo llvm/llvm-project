@@ -1269,9 +1269,7 @@ def testOperationEquivalence():
         assert not sub3.is_structurally_equivalent(sub5, ignore_locations)
         assert not c42a.is_structurally_equivalent(sub3, ignore_locations)
 
-        discardable_flags = (
-            ignore_locations | flags.IGNORE_DISCARDABLE_ATTRS
-        )
+        discardable_flags = ignore_locations | flags.IGNORE_DISCARDABLE_ATTRS
         assert not sub3.is_structurally_equivalent(sub6, ignore_locations)
         assert sub3.is_structurally_equivalent(sub6, discardable_flags)
 
