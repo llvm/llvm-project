@@ -1765,6 +1765,11 @@ bool DIExpression::ExprOperand::isNonEmitting() const {
   return isOneOf(dwarf::DW_OP_LLVM_tag_offset, dwarf::DW_OP_LLVM_label);
 }
 
+bool DIExpression::ExprOperand::isSymbolicControlFlow() const {
+  return isOneOf(dwarf::DW_OP_LLVM_label, dwarf::DW_OP_LLVM_bra,
+                 dwarf::DW_OP_LLVM_skip);
+}
+
 bool DIExpression::ArgOp::classof(const ExprOperand *Op) {
   return Op->is(dwarf::DW_OP_LLVM_arg);
 }

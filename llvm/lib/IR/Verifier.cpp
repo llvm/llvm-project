@@ -7221,8 +7221,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   if (DVR.hasArgList() && Expr->isValid()) {
     bool HasSymbolicControlFlow =
         llvm::any_of(Expr->expr_ops(), [](DIExpression::ExprOperand Op) {
-          return Op.isOneOf(dwarf::DW_OP_LLVM_label, dwarf::DW_OP_LLVM_bra,
-                            dwarf::DW_OP_LLVM_skip);
+          return Op.isSymbolicControlFlow();
         });
     CheckDI(!HasSymbolicControlFlow,
             "DIArgList doesn't support symbolic branches", &DVR, MD, Expr, BB,
