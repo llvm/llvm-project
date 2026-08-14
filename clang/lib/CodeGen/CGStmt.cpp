@@ -786,10 +786,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool noinline = InNoInlineAttributedStmt;
   bool alwaysinline = InAlwaysInlineAttributedStmt;
   bool noconvergent = InNoConvergentAttributedStmt;
-  StringRef amdgpuAVMode;
-  HLSLControlFlowHintAttr::Spelling flattenOrBranch =
-      HLSLControlFlowHintAttr::SpellingNotCalculated;
-  const CallExpr *musttail = nullptr;
+  StringRef amdgpuAVMode = AMDGPUAvailableVisibleMode;
+  HLSLControlFlowHintAttr::Spelling flattenOrBranch = HLSLControlFlowAttr;
+  const CallExpr *musttail = MustTailCall;
   const AtomicAttr *AA = nullptr;
 
   for (const auto *A : S.getAttrs()) {

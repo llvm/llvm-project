@@ -92,7 +92,7 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
 
   bool noinline = inNoInlineAttributedStmt;
   bool alwaysinline = inAlwaysInlineAttributedStmt;
-  const CallExpr *musttail = nullptr;
+  const CallExpr *musttail = mustTailCall;
 
   for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
