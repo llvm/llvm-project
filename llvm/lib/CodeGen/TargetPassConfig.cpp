@@ -1085,7 +1085,8 @@ bool TargetPassConfig::addISelPasses() {
   // PreISelIntrinsicLowering.
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createObjCARCContractPass());
-  addPass(createPreISelIntrinsicLoweringPass());
+  addPass(createPreISelIntrinsicLoweringPass(
+      getOptLevel() != CodeGenOptLevel::None && !DisableReplaceWithVecLib));
   addPass(createExpandIRInstsPass(getOptLevel()));
   addIRPasses();
 

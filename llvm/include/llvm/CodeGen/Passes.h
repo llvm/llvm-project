@@ -508,7 +508,10 @@ LLVM_ABI ModulePass *createLibcallLoweringInfoWrapper();
 /// instructions.  This is unsafe to do earlier because a pass may combine the
 /// constant initializer into the load, which may result in an overflowing
 /// evaluation.
-LLVM_ABI ModulePass *createPreISelIntrinsicLoweringPass();
+/// If \p UseVeclibCalls is true, vector math intrinsics that have a vector
+/// library mapping are left for ReplaceWithVeclib instead of being expanded.
+LLVM_ABI ModulePass *
+createPreISelIntrinsicLoweringPass(bool UseVeclibCalls = false);
 
 /// GlobalMerge - This pass merges internal (by default) globals into structs
 /// to enable reuse of a base pointer by indexed addressing modes.
