@@ -949,3 +949,171 @@ latch:
 exit:
   ret void
 }
+
+; @outermost_uniform_branch
+;          bb0 (u)
+;         /    \
+;       bb1 (v) \
+;       / |      |
+;     bb2 |      |
+;       \ |      |
+;      bb3 [phi] |
+;          \    /
+;           bb4 [phi]
+;
+; bb0's uniform branch can be easily preserved.
+
+; @outermost_uniform_branch_more_blocks
+;          bb0 (u)
+;         /      \
+;       bb2 (v)  bb1
+;       / \       |
+;     bb4  bb3    |
+;       \  /      |
+;      bb5 [phi]  |
+;          \     /
+;           bb6 [phi]
+;
+; Similar to above, but with extra blocks on some edges. Probably doesn't
+; require any extra handling but nice to test explicitly.
+
+; @uniform_branch_after_varying_branch
+;          bb0 (v)
+;          /    \
+;        bb4   bb1 (u)
+;         |    / |
+;         |  bb2 |
+;         |    \ |
+;         |   bb3 [phi]
+;          \   /
+;          bb5 [phi]
+
+; @uniform_branch_after_varying_branch_more_blocks
+;         bb0 (v)
+;         /     \
+;       bb5    bb1 (u)
+;        |     /  \
+;        |   bb3  bb2
+;        |     \  /
+;        |    bb4 [phi]
+;         \   /
+;          bb6 [phi]
+;
+; Similar to above, but with extra blocks on some edges. Probably doesn't
+; require any extra handling but nice to test explicitly.
+
+; @uniform_branch_after_varying_branch_more_blocks_mirrored
+;          bb0 (v)
+;          /   \
+;      bb2 (u)  bb1
+;      /  \      |
+;    bb4  bb3    |
+;      \  /      |
+;      bb5 [phi] |
+;          \    /
+;           bb6 [phi]
+;
+; Mirror of the above test so that "(u)" block would be processed before/after
+; the other "(v)" destination by the RPOT.
+
+; @uniform_branch_on_masked_def
+;          bb0 (v)
+;           /   \
+;          |    bb1 (br i1 (load i1 %uni.ptr))
+;          |   /  \
+;          | bb3  bb2
+;          |    \ /
+;          |    bb4
+;           \  /
+;          bb5 [phi]
+;
+; bb1's condition is uniform, but its value is loaded only along one path of
+; bb0's varying branch. It cannot be preserved trivially, because some the load
+; may never be executed.
+
+
+; All @uniform_branch_unstructured_merge[0-4] below have the same structure of uniform
+; control flow merging into the middle of the varying diamond, but "covering"
+; different potential RPOT traversals.
+
+; @uniform_branch_unstructured_merge1
+;          bb0 (u)
+;         /       \
+;      bb2 (v)   bb1
+;       /   \     /
+;     bb4   bb3 [phi]
+;       \   /
+;      bb5 [phi]
+;
+
+; @uniform_branch_unstructured_merge2
+;          bb0 (u)
+;         /       \
+;      bb2 (v)   bb1
+;       /   \     /
+;      |   +-\---+
+;      |  /   \
+;  bb4 [phi]  bb3
+;       \    /
+;      bb5 [phi]
+;
+
+; @uniform_branch_unstructured_merge3
+;         bb0 (u)
+;         /  \
+;      bb3   bb1 (v)
+;        \   /    \
+;        bb4 [phi] bb2
+;           \      /
+;          bb5 [phi]
+;
+
+; @uniform_branch_unstructured_merge4
+;         bb0 (u)
+;         /  \
+;      bb3   bb1 (v)
+;        \   /    \
+;         +-/--+   \
+;          /    \   \
+;        bb4      bb2 [phi]
+;           \      /
+;          bb5 [phi]
+
+
+
+; @uniform_branch_shared_join_with_varying
+;          bb0 (u)
+;         /     \
+;      bb2 (v)   bb1
+;       / |      |
+;     bb3 |     /
+;       \ |    /
+;      bb4 [phi]
+;
+; Theoretically can be done, but would require a combination of a blend and a phi.
+
+;    @unstructured_uniform_only
+;             bb0 (u)
+;            /       \
+;         bb2 (u)   bb1
+;          /   \     /
+;        bb4   bb3 [phi]
+;          \   /
+;         bb5 [phi]
+;
+; Triviallly preservable, but detection might not be easy.
+
+; @unstructured_uniform_only_sese_region
+;             bb0 (v)
+;            /       \
+;         bb6       bb1 (u)
+;          |        /     \
+;          |     bb3 (u)   bb2
+;          |      /   \   /
+;          |    bb5   bb4 [phi]
+;          |      \   /
+;          |     bb7 [phi]
+;           \       /
+;            \    /
+;             bb8 [phi]
+;
