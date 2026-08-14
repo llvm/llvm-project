@@ -1,6 +1,7 @@
 ; AIX and zOS don't support DWARF 6 DW_AT_language_name
 ; XFAIL: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
-; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - \
+; RUN:   | FileCheck %s --implicit-check-not=DW_AT_identifier_case
 
 ; Test that DW_AT_identifier_case is emitted for case-insensitive languages
 ; (Fortran) and omitted for case-sensitive languages (C++).
@@ -11,8 +12,6 @@
 
 ; C++ via old-style language field — no DW_AT_identifier_case emitted
 ; CHECK:      DW_AT_language (DW_LANG_C_plus_plus)
-; CHECK-NOT:  DW_AT_identifier_case
-; CHECK:      DW_AT_name
 
 ; Fortran via sourceLanguageName
 ; CHECK:      DW_AT_language_name (DW_LNAME_Fortran)
@@ -20,8 +19,6 @@
 
 ; C++ via sourceLanguageName — no DW_AT_identifier_case emitted
 ; CHECK:      DW_AT_language_name (DW_LNAME_C_plus_plus)
-; CHECK-NOT:  DW_AT_identifier_case
-; CHECK:      DW_AT_name
 
 @x = global i32 0, align 4, !dbg !0
 
