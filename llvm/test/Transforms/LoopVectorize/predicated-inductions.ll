@@ -68,20 +68,57 @@ define i64 @predicated_iv_with_liveout(ptr %dst, i64 %n) {
 ; THRESHOLD0-LABEL: define i64 @predicated_iv_with_liveout(
 ; THRESHOLD0-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; THRESHOLD0-NEXT:  [[ENTRY:.*]]:
+; THRESHOLD0-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; THRESHOLD0-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; THRESHOLD0-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; THRESHOLD0:       [[VECTOR_SCEVCHECK]]:
+; THRESHOLD0-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; THRESHOLD0-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -1
+; THRESHOLD0-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP1]], 65535
+; THRESHOLD0-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; THRESHOLD0:       [[VECTOR_PH]]:
+; THRESHOLD0-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 3
+; THRESHOLD0-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP3]]
+; THRESHOLD0-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD0-NEXT:    br label %[[LOOP:.*]]
 ; THRESHOLD0:       [[LOOP]]:
-; THRESHOLD0-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; THRESHOLD0-NEXT:    [[DEAD_IV:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[DEAD_IV_NEXT:%.*]], %[[LOOP]] ]
-; THRESHOLD0-NEXT:    [[PREV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[EXT:%.*]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[VEC_IND1]], splat (i16 1)
+; THRESHOLD0-NEXT:    [[TMP6]] = zext <4 x i16> [[TMP5]] to <4 x i64>
+; THRESHOLD0-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP6]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; THRESHOLD0-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP7]], i64 0
+; THRESHOLD0-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP8]]
+; THRESHOLD0-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP9]], align 8
+; THRESHOLD0-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; THRESHOLD0-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; THRESHOLD0-NEXT:    [[VEC_IND_NEXT2]] = add <4 x i16> [[VEC_IND1]], splat (i16 4)
+; THRESHOLD0-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; THRESHOLD0-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; THRESHOLD0:       [[MIDDLE_BLOCK]]:
+; THRESHOLD0-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP6]], i64 3
+; THRESHOLD0-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; THRESHOLD0-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; THRESHOLD0:       [[SCALAR_PH]]:
+; THRESHOLD0-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD0-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i16 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD0-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD0-NEXT:    br label %[[LOOP1:.*]]
+; THRESHOLD0:       [[LOOP1]]:
+; THRESHOLD0-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; THRESHOLD0-NEXT:    [[DEAD_IV:%.*]] = phi i16 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[DEAD_IV_NEXT:%.*]], %[[LOOP1]] ]
+; THRESHOLD0-NEXT:    [[PREV:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[EXT:%.*]], %[[LOOP1]] ]
 ; THRESHOLD0-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; THRESHOLD0-NEXT:    [[DEAD_IV_NEXT]] = add i16 [[DEAD_IV]], 1
 ; THRESHOLD0-NEXT:    [[EXT]] = zext i16 [[DEAD_IV_NEXT]] to i64
 ; THRESHOLD0-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[PREV]]
 ; THRESHOLD0-NEXT:    store i64 [[IV]], ptr [[GEP]], align 8
 ; THRESHOLD0-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; THRESHOLD0-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; THRESHOLD0-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; THRESHOLD0:       [[EXIT]]:
-; THRESHOLD0-NEXT:    [[RESULT:%.*]] = phi i64 [ [[EXT]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    [[RESULT:%.*]] = phi i64 [ [[EXT]], %[[LOOP1]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
 ; THRESHOLD0-NEXT:    ret i64 [[RESULT]]
 ;
 ; THRESHOLD1-LABEL: define i64 @predicated_iv_with_liveout(
@@ -224,7 +261,7 @@ define void @dead_predicated_iv1(ptr %dst, i64 %n) {
 ; THRESHOLD0-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; THRESHOLD0-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; THRESHOLD0-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; THRESHOLD0-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; THRESHOLD0-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; THRESHOLD0:       [[MIDDLE_BLOCK]]:
 ; THRESHOLD0-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
 ; THRESHOLD0-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -241,7 +278,7 @@ define void @dead_predicated_iv1(ptr %dst, i64 %n) {
 ; THRESHOLD0-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[IV]]
 ; THRESHOLD0-NEXT:    store i64 [[EXT]], ptr [[GEP]], align 8
 ; THRESHOLD0-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; THRESHOLD0-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; THRESHOLD0-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP5:![0-9]+]]
 ; THRESHOLD0:       [[EXIT]]:
 ; THRESHOLD0-NEXT:    ret void
 ;
