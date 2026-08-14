@@ -413,7 +413,6 @@ enum class instrprof_error {
   unrecognized_format,
   bad_magic,
   bad_header,
-  header_size_mismatch,
   unsupported_version,
   unsupported_hash_type,
   too_large,
