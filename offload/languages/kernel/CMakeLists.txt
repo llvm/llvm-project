@@ -39,11 +39,14 @@ add_llvm_library(
   src/LanguageLaunch.cpp
   src/LanguageRegistration.cpp
   src/State.cpp
-
-  LINK_COMPONENTS
-  Support
-  Offload
   )
+
+if(LLVM_LINK_LLVM_DYLIB)
+  set(llvm_libs LLVM)
+else()
+  llvm_map_components_to_libnames(llvm_libs Support)
+endif()
+target_link_libraries(LLVMOffloadKernel PRIVATE ${llvm_libs} LLVMOffload)
 
 if(LLVM_HAVE_LINK_VERSION_SCRIPT)
   target_link_libraries(LLVMOffloadKernel PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
@@ -75,4 +78,6 @@ install(FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/DefineLanguageNames.inc
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/LanguageRuntime.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/UndefineLanguageNames.inc
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/LanguageLaunch.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Types.h
         DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload/kernel/)
