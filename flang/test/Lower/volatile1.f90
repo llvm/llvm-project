@@ -76,18 +76,17 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPdeclared_volatile_in_this_scope(
 ! CHECK-SAME:                                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "v"},
-! CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) attributes {{.+}} {
+! CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n", fir.read_only}) attributes {{.+}} {
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_4]] {{.+}} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i32) -> index
-! CHECK:           %[[VAL_8:.*]] = arith.cmpi sgt, %[[VAL_7]], %[[VAL_3]] : index
-! CHECK:           %[[VAL_9:.*]] = arith.select %[[VAL_8]], %[[VAL_7]], %[[VAL_3]] : index
-! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_11:.*]] = fir.volatile_cast %[[VAL_0]] : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>, volatile>
-! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]](%[[VAL_10]]) dummy_scope %[[VAL_4]] {{.+}} : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.ref<!fir.array<?xi32>, volatile>)
-! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_12]]#0 : i32, !fir.box<!fir.array<?xi32>, volatile>
+! CHECK:           %[[VAL_8:.*]] = arith.maxsi %[[VAL_7]], %[[VAL_3]] : index
+! CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_10:.*]] = fir.volatile_cast %[[VAL_0]] : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>, volatile>
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_9]]) dummy_scope %[[VAL_4]] {{.+}} : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.ref<!fir.array<?xi32>, volatile>)
+! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_11]]#0 : i32, !fir.box<!fir.array<?xi32>, volatile>
 ! CHECK:           return
 ! CHECK:         }

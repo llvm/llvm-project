@@ -1,0 +1,221 @@
+# Check that semantically incorrect type references are handled without errors/crashes.
+
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t
+# RUN: lldb-test symbols %t | FileCheck %s
+
+# CHECK:        CompileUnit
+# CHECK-NEXT:     Function{{.*}}, demangled = main
+# CHECK-NEXT:     Block{{.*}}, ranges = [0x00000fff-0x0000101b)
+# CHECK-NEXT:     Function{{.*}}, demangled = AStruct::a_method
+# CHECK-NEXT:     Block{{.*}}, ranges = [0x0000101f-0x0000102b)
+
+# This was compiled with clang-cl from
+
+# > clang-cl main.cpp /GS- /GR- /Z7 /link /nodefaultlib /entry:main
+# > cat main.cpp
+# struct AStruct {
+#   int a_method() { return 42; }
+# };
+# int main() {
+#   AStruct a;
+#   return a.a_method();
+# }
+
+# The output was trimmed to only include necessary parts.
+# Changes to references are marked with "CHANGED:".
+
+---
+PdbStream:
+  Features:        [ VC140 ]
+DbiStream:
+  MachineType:     Amd64
+  Modules:
+    - Module:          'C:\Users\johannes\AppData\Local\Temp\main-b7a866.obj'
+      SourceFiles:
+        - 'F:\Dev\dummy\invalid-refs\main.cpp'
+      Modi:
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      'C:\Users\johannes\AppData\Local\Temp\main-b7a866.obj'
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Machine:         X64
+              FrontendMajor:   22
+              FrontendMinor:   1
+              FrontendBuild:   4
+              FrontendQFE:     0
+              BackendMajor:    22014
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         'clang version 22.1.4 (https://github.com/llvm/llvm-project 35990504507d79e0b9deb809c8ee5e1b34ceef20)'
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrEnd:          300
+              CodeSize:        28
+              DbgStart:        0
+              DbgEnd:          0
+              # CHANGED: Should be 4097 (LF_PROCEDURE). Changed to 4099 (LF_POINTER).
+              FunctionType:    4099
+              Segment:         1
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     main
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 40
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            4102
+              Flags:           [  ]
+              VarName:         a
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          35
+              Range:
+                OffsetStart:     12
+                ISectStart:      1
+                Range:           16
+              Gaps:            []
+          - Kind:            S_END
+            ScopeEndSym:     {}
+          - Kind:            S_BUILDINFO
+            BuildInfoSym:
+              BuildId:         4105
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrEnd:          436
+              CodeSize:        12
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4100
+              Offset:          32
+              Segment:         1
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     'AStruct::a_method'
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 8
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            4103
+              Flags:           [ IsParameter ]
+              VarName:         this
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          0
+              Range:
+                OffsetStart:     37
+                ISectStart:      1
+                Range:           7
+              Gaps:            []
+          - Kind:            S_END
+            ScopeEndSym:     {}
+  SectionHeaders:
+    - Name:            .text
+      VirtualSize:     44
+      VirtualAddress:  4096
+      SizeOfRawData:   512
+      PointerToRawData: 1024
+      Characteristics: 1610612768
+    - Name:            .rdata
+      VirtualSize:     104
+      VirtualAddress:  8192
+      SizeOfRawData:   512
+      PointerToRawData: 1536
+      Characteristics: 1073741888
+    - Name:            .pdata
+      VirtualSize:     24
+      VirtualAddress:  12288
+      SizeOfRawData:   512
+      PointerToRawData: 2048
+      Characteristics: 1073741888
+TpiStream:
+  Records:
+    # 4096
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [  ]
+    # 4097
+    - Kind:            LF_PROCEDURE 
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4096
+    # 4098
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            AStruct
+        UniqueName:      '.?AUAStruct@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    # 4099
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4098
+        Attrs:           66572
+    # 4100
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      116
+        # CHANGED: Should be 4098 (LF_STRUCTURE). Changed to 4097 (LF_PROCEDURE).
+        ClassType:       4097
+        ThisType:        4099
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4096
+        ThisPointerAdjustment: 0
+    # 4101
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ONEMETHOD
+          OneMethod:
+            Type:            4100
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            a_method
+    # 4102
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4101
+        Name:            AStruct
+        UniqueName:      '.?AUAStruct@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            1
+    # 4103
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4098
+        Attrs:           65548
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Segment:         1
+        Name:            main
+...

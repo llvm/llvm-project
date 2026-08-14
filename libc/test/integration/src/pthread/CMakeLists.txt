@@ -7,6 +7,7 @@ add_integration_test(
   SRCS
     pthread_mutex_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.include.pthread
     libc.src.errno.errno
@@ -165,6 +166,8 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_equal
+    libc.src.pthread.pthread_getthreadid_np
+    libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_self
 )
@@ -278,6 +281,7 @@ add_integration_test(
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_destroy
+    libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_self
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
@@ -286,4 +290,27 @@ add_integration_test(
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.array
     libc.src.__support.CPP.new
+)
+
+add_integration_test(
+  pthread_setschedparam_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_setschedparam_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sched_macros
+    libc.hdr.types.pthread_t
+    libc.hdr.types.struct_sched_param
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_getschedparam
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
+    libc.src.pthread.pthread_self
+    libc.src.pthread.pthread_setschedparam
 )

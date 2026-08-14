@@ -53,6 +53,10 @@ static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
                << "--scalable vectors are not supported -> BAIL\n");
     return std::nullopt;
   }
+  if (vecType.getRank() == 0) {
+    LLVM_DEBUG(llvm::dbgs() << "--0-D vectors are not supported -> BAIL\n");
+    return std::nullopt;
+  }
   SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
   std::optional<SmallVector<int64_t>> targetShape = SmallVector<int64_t>(
       1, mlir::spirv::getComputeVectorSize(vecType.getShape().back()));
@@ -1376,15 +1380,18 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   SmallVector<Value, 2> linearizedIndices;
   auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
 
-  // Add a '0' at the start to index into the struct.
-  linearizedIndices.push_back(zero);
-
   if (baseType.getRank() == 0) {
     linearizedIndices.push_back(zero);
   } else {
     linearizedIndices.push_back(
         linearizeIndex(indices, strides, offset, indexType, loc, builder));
   }
+
+  const Type pointeeType =
+      cast<spirv::PointerType>(basePtr.getType()).getPointeeType();
+  // Interface memrefs are wrapped in a struct: index to its first elem.
+  if (isa<spirv::StructType>(pointeeType))
+    linearizedIndices.insert(linearizedIndices.begin(), zero);
   return spirv::AccessChainOp::create(builder, loc, basePtr, linearizedIndices);
 }
 
@@ -1471,6 +1478,8 @@ std::optional<SmallVector<int64_t>>
 mlir::spirv::getNativeVectorShape(Operation *op) {
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
     if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
+      if (vecType.getRank() == 0)
+        return std::nullopt;
       SmallVector<int64_t> nativeSize(vecType.getRank(), 1);
       nativeSize.back() =
           mlir::spirv::getComputeVectorSize(vecType.getShape().back());
