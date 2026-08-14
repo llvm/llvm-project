@@ -1125,7 +1125,7 @@ void SPIRVNonSemanticDebugHandler::resetPerFunctionDebugState() {
   CurrentMF = nullptr;
   LastFunctionOpVariable = nullptr;
   DebugFunctionDefinitionEmitted = false;
-  LastLineState.reset();
+  LastLineMI = nullptr;
 }
 
 void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
@@ -1222,10 +1222,8 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
     return;
 
   // The range of DebugLine must be reset at each basic block boundary.
-  bool IsNewBlock = LastLineState && MI->getParent() != LastLineState->MBB;
-  if (IsNewBlock) {
-    LastLineState.reset();
-  }
+  if (LastLineMI && MI->getParent() != LastLineMI->getParent())
+    LastLineMI = nullptr;
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
   MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
@@ -1233,20 +1231,19 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   const DILocation *DL = MI->getDebugLoc().get();
   if (!DL) {
     // No location for the current instruction
-    if (LastLineState) {
+    if (LastLineMI) {
       // Close the current DebugLine region.
       emitExtInst(SPIRV::NonSemanticExtInst::DebugNoLine, VoidTypeReg,
                   ExtInstSetReg, {}, MAI);
-      LastLineState.reset();
+      LastLineMI = nullptr;
     }
     // No DebugLine region to close.
     return;
   }
 
   // At this point, there is a location for the current instruction.
-  // If it matches the one in the current state, no new DebugLine region is
-  // needed. Otherwise, emit a new DebugLine region and update the current
-  // state.
+  // If it matches the last emitted DebugLine, no new DebugLine region is
+  // needed. Otherwise, emit a new DebugLine region and update LastLineMI.
 
   MCRegister FileStrReg = getCachedScopePathOpStringReg(
       DL->getScope(), /*UseEmptyPathIfNullScope=*/true);
@@ -1267,17 +1264,15 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
       !ColEndReg.isValid())
     return;
 
-  // Current location matches the one of the current state, no new DebugLine
-  // region is needed.
-  if (LastLineState && SrcReg == LastLineState->SrcReg &&
-      Line == LastLineState->Line && Col == LastLineState->Col)
+  // Current location matches the last emitted DebugLine region.
+  if (LastLineMI && MI->getDebugLoc() == LastLineMI->getDebugLoc())
     return;
 
-  // A new DebugLine region is needed. Emit it and update the current state.
+  // A new DebugLine region is needed. Emit it and update LastLineMI.
   emitExtInst(SPIRV::NonSemanticExtInst::DebugLine, VoidTypeReg, ExtInstSetReg,
               {SrcReg, LineReg, LineReg, ColStartReg, ColEndReg}, MAI);
 
-  LastLineState = DebugLineState{SrcReg, Line, Col, MI->getParent()};
+  LastLineMI = MI;
 }
 
 void SPIRVNonSemanticDebugHandler::endInstruction() {

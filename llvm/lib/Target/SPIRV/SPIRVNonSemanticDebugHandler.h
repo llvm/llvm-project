@@ -172,13 +172,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   bool DebugFunctionDefinitionEmitted = false;
 
-  struct DebugLineState {
-    MCRegister SrcReg;
-    unsigned Line;
-    unsigned Col;
-    const MachineBasicBlock *MBB;
-  };
-  std::optional<DebugLineState> LastLineState;
+  const MachineInstr *LastLineMI = nullptr;
 
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
