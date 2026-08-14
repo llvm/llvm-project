@@ -7223,13 +7223,19 @@ DW_OP_LLVM_bra,   <label-id>
 DW_OP_LLVM_skip,  <label-id>
 ```
 
-`DW_OP_LLVM_label` declares a label ID and emits no bytes. `DW_OP_LLVM_bra`
-branches when the top of the stack is non-zero; `DW_OP_LLVM_skip` always
-branches. Label IDs are local to the expression. Every branch needs a matching
-label, labels without branches are valid, and each ID can only be declared
-once. Raw `DW_OP_bra` and `DW_OP_skip` aren't valid in LLVM IR.
+`DW_OP_LLVM_bra` and `DW_OP_LLVM_skip` have the same semantics as the standard
+DWARF `DW_OP_bra` and `DW_OP_skip` operations. The LLVM forms use a label ID
+because the byte offset isn't known until emission. CodeGen resolves each
+branch's label ID and replaces the LLVM form with the corresponding standard
+operation and byte offset. `DW_OP_LLVM_label` declares the target for a label
+ID and emits no bytes.
 
-See {ref}`symbolic control flow <symbolic-control-flow>` for the full rules.
+Label IDs are local to the expression. Every branch needs a matching label,
+labels without branches are valid, and each ID can only be declared once. The
+standard `DW_OP_bra` and `DW_OP_skip` operations aren't valid in LLVM IR. See
+[the DWARF standard](https://dwarfstd.org/) for the standard operations and
+{ref}`symbolic control flow <symbolic-control-flow>` for the LLVM-specific
+rules.
 
 ##### DIAssignID
 
