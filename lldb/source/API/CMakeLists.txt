@@ -315,7 +315,8 @@ foreach(header
         ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py
         -i ${header} -o ${staged_header}
         -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH})
-  elseif(unifdef_EXECUTABLE)
+  endif()
+  if(unifdef_EXECUTABLE)
     # unifdef returns 0 when the file is unchanged and 1 if something was changed.
     # That means if we successfully remove SWIG code, the build system believes
     # that the command has failed and stops. This is undesirable.
