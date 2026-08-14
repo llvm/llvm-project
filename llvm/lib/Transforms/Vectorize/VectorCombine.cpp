@@ -156,6 +156,7 @@ private:
   bool foldEquivalentReductionCmp(Instruction &I);
   bool foldReduceAddCmpZero(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
+  bool foldInterleaveOfReversedDeinterleave(Instruction &I);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
   bool foldBitcastOfVPLoad(Instruction &I);
@@ -6145,6 +6146,65 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   return true;
 }
 
+/// Fold a reversed deinterleave with reversed field order to a vector reverse.
+/// i.e.
+/// interleaveN(reverse(deinterleaveN(X)[N-1]), ...,
+///             reverse(deinterleaveN(X)[0])) --> reverse(X).
+bool VectorCombine::foldInterleaveOfReversedDeinterleave(Instruction &I) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+  unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
+  if (!Factor)
+    return false;
+
+  IntrinsicInst *Deinterleave = nullptr;
+  for (unsigned Idx = 0; Idx != Factor; ++Idx) {
+    Value *Op = II->getArgOperand(Idx);
+    // Every reverse must feed only this interleave, otherwise
+    // it's not profitable to fold.
+    if (!Op->hasOneUse())
+      return false;
+
+    Value *Reversed = nullptr;
+    if (auto *Shuffle = dyn_cast<ShuffleVectorInst>(Op)) {
+      ArrayRef<int> Mask = Shuffle->getShuffleMask();
+      if (!Shuffle->isReverse() ||
+          !llvm::all_of(Mask, [NumElts = static_cast<int>(Mask.size())](
+                                  int MaskElt) { return MaskElt < NumElts; }))
+        return false;
+      Reversed = Shuffle->getOperand(0);
+    } else if (!match(Op, m_Intrinsic<Intrinsic::vector_reverse>(
+                              m_Value(Reversed)))) {
+      return false;
+    }
+
+    auto *Extract = dyn_cast<ExtractValueInst>(Reversed);
+    if (!Extract || !Extract->hasOneUse() || Extract->getNumIndices() != 1 ||
+        *Extract->idx_begin() != (Factor - Idx - 1))
+      return false;
+    auto *CurrentDeinterleave =
+        dyn_cast<IntrinsicInst>(Extract->getAggregateOperand());
+    if (!CurrentDeinterleave)
+      return false;
+    if (CurrentDeinterleave->getIntrinsicID() !=
+            Intrinsic::getDeinterleaveIntrinsicID(Factor) ||
+        (Deinterleave && Deinterleave != CurrentDeinterleave))
+      return false;
+
+    Deinterleave = CurrentDeinterleave;
+  }
+
+  if (!Deinterleave->hasNUses(Factor))
+    return false;
+
+  Value *Input = Deinterleave->getArgOperand(0);
+  Value *Reverse = Builder.CreateIntrinsic(Intrinsic::vector_reverse,
+                                           {Input->getType()}, {Input});
+  replaceValue(I, *Reverse);
+  return true;
+}
+
 /// If we're interleaving 2 constant splats, for instance `<vscale x 8 x i32>
 /// <splat of 666>` and `<vscale x 8 x i32> <splat of 777>`, we can create a
 /// larger splat `<vscale x 8 x i64> <splat of ((777 << 32) | 666)>` first
@@ -6793,6 +6853,8 @@ bool VectorCombine::run() {
       if (scalarizeExtExtract(I))
         return true;
       if (scalarizeVPIntrinsic(I))
+        return true;
+      if (foldInterleaveOfReversedDeinterleave(I))
         return true;
       if (foldInterleaveIntrinsics(I))
         return true;

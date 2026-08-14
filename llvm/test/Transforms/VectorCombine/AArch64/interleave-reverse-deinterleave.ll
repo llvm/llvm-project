@@ -4,14 +4,7 @@
 define <24 x i16> @reverse_interleave3(<24 x i16> %x) {
 ; CHECK-LABEL: define <24 x i16> @reverse_interleave3(
 ; CHECK-SAME: <24 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[DEINTERLEAVE:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.vector.deinterleave3.v24i16(<24 x i16> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 2
-; CHECK-NEXT:    [[R0:%.*]] = shufflevector <8 x i16> [[E0]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <8 x i16> [[E1]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[R2:%.*]] = shufflevector <8 x i16> [[E2]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <24 x i16> @llvm.vector.interleave3.v24i16(<8 x i16> [[R2]], <8 x i16> [[R1]], <8 x i16> [[R0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <24 x i16> @llvm.vector.reverse.v24i16(<24 x i16> [[X]])
 ; CHECK-NEXT:    ret <24 x i16> [[INTERLEAVE]]
 ;
   %deinterleave = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.vector.deinterleave3(<24 x i16> %x)
@@ -28,14 +21,7 @@ define <24 x i16> @reverse_interleave3(<24 x i16> %x) {
 define <24 x i16> @reverse_intrinsic_interleave3(<24 x i16> %x) {
 ; CHECK-LABEL: define <24 x i16> @reverse_intrinsic_interleave3(
 ; CHECK-SAME: <24 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[DEINTERLEAVE:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.vector.deinterleave3.v24i16(<24 x i16> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 2
-; CHECK-NEXT:    [[R0:%.*]] = call <8 x i16> @llvm.vector.reverse.v8i16(<8 x i16> [[E0]])
-; CHECK-NEXT:    [[R1:%.*]] = call <8 x i16> @llvm.vector.reverse.v8i16(<8 x i16> [[E1]])
-; CHECK-NEXT:    [[R2:%.*]] = call <8 x i16> @llvm.vector.reverse.v8i16(<8 x i16> [[E2]])
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <24 x i16> @llvm.vector.interleave3.v24i16(<8 x i16> [[R2]], <8 x i16> [[R1]], <8 x i16> [[R0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <24 x i16> @llvm.vector.reverse.v24i16(<24 x i16> [[X]])
 ; CHECK-NEXT:    ret <24 x i16> [[INTERLEAVE]]
 ;
   %deinterleave = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.vector.deinterleave3(<24 x i16> %x)
@@ -52,14 +38,7 @@ define <24 x i16> @reverse_intrinsic_interleave3(<24 x i16> %x) {
 define <vscale x 24 x i16> @reverse_intrinsic_interleave3_scalable(<vscale x 24 x i16> %x) {
 ; CHECK-LABEL: define <vscale x 24 x i16> @reverse_intrinsic_interleave3_scalable(
 ; CHECK-SAME: <vscale x 24 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[DEINTERLEAVE:%.*]] = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.vector.deinterleave3.nxv24i16(<vscale x 24 x i16> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[DEINTERLEAVE]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[DEINTERLEAVE]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[DEINTERLEAVE]], 2
-; CHECK-NEXT:    [[R0:%.*]] = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> [[E0]])
-; CHECK-NEXT:    [[R1:%.*]] = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> [[E1]])
-; CHECK-NEXT:    [[R2:%.*]] = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> [[E2]])
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <vscale x 24 x i16> @llvm.vector.interleave3.nxv24i16(<vscale x 8 x i16> [[R2]], <vscale x 8 x i16> [[R1]], <vscale x 8 x i16> [[R0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <vscale x 24 x i16> @llvm.vector.reverse.nxv24i16(<vscale x 24 x i16> [[X]])
 ; CHECK-NEXT:    ret <vscale x 24 x i16> [[INTERLEAVE]]
 ;
   %deinterleave = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.vector.deinterleave3(<vscale x 24 x i16> %x)
@@ -120,12 +99,7 @@ define <6 x i16> @reverse_second_operand_interleave2(<6 x i16> %x) {
 define <6 x i16> @reverse_poison_mask_interleave2(<6 x i16> %x) {
 ; CHECK-LABEL: define <6 x i16> @reverse_poison_mask_interleave2(
 ; CHECK-SAME: <6 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[DEINTERLEAVE:%.*]] = call { <3 x i16>, <3 x i16> } @llvm.vector.deinterleave2.v6i16(<6 x i16> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <3 x i16>, <3 x i16> } [[DEINTERLEAVE]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <3 x i16>, <3 x i16> } [[DEINTERLEAVE]], 1
-; CHECK-NEXT:    [[R0:%.*]] = shufflevector <3 x i16> [[E0]], <3 x i16> poison, <3 x i32> <i32 2, i32 poison, i32 0>
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <3 x i16> [[E1]], <3 x i16> poison, <3 x i32> <i32 2, i32 1, i32 poison>
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <6 x i16> @llvm.vector.interleave2.v6i16(<3 x i16> [[R1]], <3 x i16> [[R0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <6 x i16> @llvm.vector.reverse.v6i16(<6 x i16> [[X]])
 ; CHECK-NEXT:    ret <6 x i16> [[INTERLEAVE]]
 ;
   %deinterleave = call { <3 x i16>, <3 x i16> } @llvm.vector.deinterleave2(<6 x i16> %x)
@@ -140,16 +114,7 @@ define <6 x i16> @reverse_poison_mask_interleave2(<6 x i16> %x) {
 define <16 x i16> @reverse_interleave4(<16 x i16> %x) {
 ; CHECK-LABEL: define <16 x i16> @reverse_interleave4(
 ; CHECK-SAME: <16 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[DEINTERLEAVE:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.vector.deinterleave4.v16i16(<16 x i16> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[DEINTERLEAVE]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[DEINTERLEAVE]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[DEINTERLEAVE]], 2
-; CHECK-NEXT:    [[E3:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[DEINTERLEAVE]], 3
-; CHECK-NEXT:    [[R0:%.*]] = shufflevector <4 x i16> [[E0]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <4 x i16> [[E1]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[R2:%.*]] = shufflevector <4 x i16> [[E2]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[R3:%.*]] = shufflevector <4 x i16> [[E3]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <16 x i16> @llvm.vector.interleave4.v16i16(<4 x i16> [[R3]], <4 x i16> [[R2]], <4 x i16> [[R1]], <4 x i16> [[R0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <16 x i16> @llvm.vector.reverse.v16i16(<16 x i16> [[X]])
 ; CHECK-NEXT:    ret <16 x i16> [[INTERLEAVE]]
 ;
   %deinterleave = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.vector.deinterleave4(<16 x i16> %x)
@@ -168,14 +133,7 @@ define <16 x i16> @reverse_interleave4(<16 x i16> %x) {
 define <24 x i16> @mixed_reverse_interleave3(<24 x i16> %x) {
 ; CHECK-LABEL: define <24 x i16> @mixed_reverse_interleave3(
 ; CHECK-SAME: <24 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[DEINTERLEAVE:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.vector.deinterleave3.v24i16(<24 x i16> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[DEINTERLEAVE]], 2
-; CHECK-NEXT:    [[R0:%.*]] = shufflevector <8 x i16> [[E0]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[R1:%.*]] = call <8 x i16> @llvm.vector.reverse.v8i16(<8 x i16> [[E1]])
-; CHECK-NEXT:    [[R2:%.*]] = shufflevector <8 x i16> [[E2]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <24 x i16> @llvm.vector.interleave3.v24i16(<8 x i16> [[R2]], <8 x i16> [[R1]], <8 x i16> [[R0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <24 x i16> @llvm.vector.reverse.v24i16(<24 x i16> [[X]])
 ; CHECK-NEXT:    ret <24 x i16> [[INTERLEAVE]]
 ;
   %deinterleave = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.vector.deinterleave3(<24 x i16> %x)
