@@ -10,9 +10,9 @@ define void @test_st_async_mbarrier_b128(ptr addrspace(7) %addr, i128 %value, pt
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_st_async_mbarrier_b128_param_0];
-; CHECK-PTX64-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_st_async_mbarrier_b128_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd4, [test_st_async_mbarrier_b128_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_st_async_mbarrier_b128_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_st_async_mbarrier_b128_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd4, [test_st_async_mbarrier_b128_param_2];
 ; CHECK-PTX64-NEXT:    {
 ; CHECK-PTX64-NEXT:    .reg .b128 %in_128;
 ; CHECK-PTX64-NEXT:    mov.b128 %in_128, {%rd2, %rd3};
@@ -26,9 +26,9 @@ define void @test_st_async_mbarrier_b128(ptr addrspace(7) %addr, i128 %value, pt
 ; CHECK-SHARED32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-SHARED32-EMPTY:
 ; CHECK-SHARED32-NEXT:  // %bb.0:
-; CHECK-SHARED32-NEXT:    ld.param.b32 %r1, [test_st_async_mbarrier_b128_param_0];
-; CHECK-SHARED32-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_st_async_mbarrier_b128_param_1];
-; CHECK-SHARED32-NEXT:    ld.param.b32 %r2, [test_st_async_mbarrier_b128_param_2];
+; CHECK-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_st_async_mbarrier_b128_param_0];
+; CHECK-SHARED32-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [test_st_async_mbarrier_b128_param_1];
+; CHECK-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_st_async_mbarrier_b128_param_2];
 ; CHECK-SHARED32-NEXT:    {
 ; CHECK-SHARED32-NEXT:    .reg .b128 %in_128;
 ; CHECK-SHARED32-NEXT:    mov.b128 %in_128, {%rd1, %rd2};

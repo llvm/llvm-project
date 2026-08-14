@@ -104,9 +104,25 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
 }
 
 void MachineModuleInfo::deleteMachineFunctionFor(Function &F) {
-  MachineFunctions.erase(&F);
+  FinalizedMFs.insert(&F);
   LastRequest = nullptr;
   LastResult = nullptr;
+  auto Leader = MFDeletionGrouping.findLeader(&F);
+  if (Leader == MFDeletionGrouping.member_end()) {
+    MachineFunctions.erase(&F);
+    return;
+  }
+
+  if (llvm::all_of(MFDeletionGrouping.members(*Leader),
+                   [this](const Function *Member) {
+                     return FinalizedMFs.count(Member);
+                   })) {
+    // All functions in the same deletion grouping have been finalized,
+    // so delete all of them.
+    for (const Function *Member : MFDeletionGrouping.members(*Leader)) {
+      MachineFunctions.erase(Member);
+    }
+  }
 }
 
 void MachineModuleInfo::insertFunction(const Function &F,

@@ -1340,5 +1340,5 @@ attributes #3 = { "target-cpu"="neoverse-v2" }
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!2 = !{!"llvm.loop.vectorize.scalable.disable"}
 !3 = !{!"llvm.loop.vectorize.enable"}
