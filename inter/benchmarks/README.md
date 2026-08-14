@@ -20,6 +20,11 @@ Defaults are five alternating Inter/IGC runs. Each run performs 200 validated
 warmup launches followed by 15 batches of 1,000 timestamped launches. Use
 `--runs`, `--warmups`, `--batches`, and `--iterations` for shorter experiments.
 Each compiler run has a 120-second timeout; override it with `--timeout`.
+Inputs are deterministic dense `{-1, 0, +1}` matrices. Validation combines
+1,024 exact CPU dot products, complete finite/integer/output-bound scans, two
+independent Freivalds projections, and canaries around C. Between timed batches,
+an untimed launch writes a freshly poisoned C allocation; another untimed launch
+restores GPU residency after host validation.
 The default runtime device substring is `B60`, paired with IGC's `bmg-g21`
 target. Override both `--device` and `--igc-device` together when targeting a
 different GPU architecture.
