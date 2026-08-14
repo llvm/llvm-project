@@ -16,7 +16,7 @@ void conditional_initialization(uint idx) {
 }
 
 // The plain `if (cond) { Out = Out1; }` reassignment is covered by the
-// dedicated local_resource_branched_reassign_ambiguous.hlsl.
+// dedicated branched_reassign_ambiguous.hlsl.
 
 void branched_assignment_with_array(uint idx) {
     RWStructuredBuffer<uint> Out = Out0; // expected-note {{variable 'Out' is declared here}}

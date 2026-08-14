@@ -12,10 +12,11 @@ cbuffer c {
 };
 
 // The uninitialized-use cases that were here (`no_initial_assignment` and
-// `assignment_to_uninitialized`) are covered by the dedicated
-// local_resource_conditional_single_path_assign.hlsl and
-// local_resource_default_init_store.hlsl, which expect the diagnostic we
-// ought to emit rather than asserting no diagnostic.
+// `assignment_to_uninitialized`) were removed rather than pinned with
+// expected-no-diagnostics: we ought to diagnose them, so asserting silence
+// would entrench a bug. Tracked by
+// https://github.com/llvm/llvm-project/issues/216193, which carries both
+// repros and should restore coverage here once we diagnose.
 
 void same_assignment(uint idx) {
     RWStructuredBuffer<uint> Out = Out1;

@@ -6,7 +6,7 @@
 // Using two distinct globals (u0/u1) lets us prove that only GBuf0's binding
 // materializes — all other reassignments fold away.
 //
-// Arrays of resources are covered separately by local_resource_array.hlsl.
+// Arrays of resources are covered separately by array.hlsl.
 
 RWByteAddressBuffer GBuf0 : register(u0);
 RWByteAddressBuffer GBuf1 : register(u1);
