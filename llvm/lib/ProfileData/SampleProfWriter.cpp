@@ -806,10 +806,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   OS << "\n";
   LineCount++;
 
-  SampleSorter<LineLocation, SampleRecord> SortedSamples(S.getBodySamples());
-  for (const auto &I : SortedSamples.get()) {
-    LineLocation Loc = I->first;
-    const SampleRecord &Sample = I->second;
+  for (const auto &[Loc, Sample] : S.getBodySamples()) {
     OS.indent(Indent + 1);
     Loc.print(OS);
     OS << ": " << Sample.getSamples();
@@ -833,12 +830,8 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     }
   }
 
-  SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
-      S.getCallsiteSamples());
   Indent += 1;
-  for (const auto *Element : SortedCallsiteSamples.get()) {
-    // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
-    const auto &[Loc, FunctionSamplesMap] = *Element;
+  for (const auto &[Loc, FunctionSamplesMap] : S.getCallsiteSamples()) {
     for (const FunctionSamples &CalleeSamples :
          make_second_range(FunctionSamplesMap)) {
       OS.indent(Indent);
