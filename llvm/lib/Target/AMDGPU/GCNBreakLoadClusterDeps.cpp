@@ -40,9 +40,9 @@
 
 #include <algorithm>
 #include <bitset>
+#include <tuple>
 #include <unordered_set>
 #include <utility>
-#include <tuple>
 #include <vector>
 
 using std::bitset;
@@ -64,12 +64,12 @@ class GCNBreakLoadClusterDepsImpl {
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
-  unsigned occupancy_budget;
+  unsigned OccupancyBudget;
 
   bitset<AMDGPU::NUM_TARGET_REGS> getVGPR32Lanes(Register Reg) const;
   pair<bitset<AMDGPU::NUM_TARGET_REGS>, bitset<AMDGPU::NUM_TARGET_REGS>>
-  get_uses_and_defs_for(MachineInstr &MI) const;
-  Register rename_register(Register from_reg, Register to_reg, Register rename_reg);
+  getUsesAndDefsFor(MachineInstr &MI) const;
+  Register renameRegister(Register FromReg, Register ToReg, Register RenameReg);
 
 public:
   bool run(MachineFunction &MF);
@@ -97,194 +97,203 @@ public:
 
 } // end anonymous namespace
 
-  // Append the 32-bit VGPR lanes of physical VGPR `Reg` (any width) to `Lanes`.
-bitset<AMDGPU::NUM_TARGET_REGS> GCNBreakLoadClusterDepsImpl::getVGPR32Lanes(Register Reg) const {
-  bitset<AMDGPU::NUM_TARGET_REGS> to_return;
-  if (!TRI->isVGPR(*MRI,Reg))
-    return to_return;
-  
+// Append the 32-bit VGPR lanes of physical VGPR `Reg` (any width) to `Lanes`.
+bitset<AMDGPU::NUM_TARGET_REGS>
+GCNBreakLoadClusterDepsImpl::getVGPR32Lanes(Register Reg) const {
+  bitset<AMDGPU::NUM_TARGET_REGS> ToReturn;
+  if (!TRI->isVGPR(*MRI, Reg))
+    return ToReturn;
+
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
   unsigned NumLanes = TRI->getRegSizeInBits(*RC).getFixedValue() / 32;
   if (NumLanes <= 1) { // already a VGPR_32
-    to_return[Reg] = true;
-    return to_return;
+    ToReturn[Reg] = true;
+    return ToReturn;
   }
   for (unsigned C = 0; C < NumLanes; ++C)
-    to_return[TRI->getSubReg(Reg, TRI->getSubRegFromChannel(C))] = true;
-  return to_return;
+    ToReturn[TRI->getSubReg(Reg, TRI->getSubRegFromChannel(C))] = true;
+  return ToReturn;
 }
 
 pair<bitset<AMDGPU::NUM_TARGET_REGS>, bitset<AMDGPU::NUM_TARGET_REGS>>
-GCNBreakLoadClusterDepsImpl::get_uses_and_defs_for(MachineInstr &MI) const {
+GCNBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
   pair<bitset<AMDGPU::NUM_TARGET_REGS>, bitset<AMDGPU::NUM_TARGET_REGS>>
-      to_return;
-  for (unsigned i = 0; i < MI.getNumExplicitOperands(); i++)
-    if (MI.getOperand(i).isReg())
-      (*(MI.getOperand(i).isDef()
-             ? &to_return.first
-         : &to_return.second)) |= getVGPR32Lanes(MI.getOperand(i).getReg());
-  return to_return;
+      ToReturn;
+  for (unsigned I = 0; I < MI.getNumExplicitOperands(); I++)
+    if (MI.getOperand(I).isReg())
+      (*(MI.getOperand(I).isDef() ? &ToReturn.first : &ToReturn.second)) |=
+          getVGPR32Lanes(MI.getOperand(I).getReg());
+  return ToReturn;
 }
 
-Register GCNBreakLoadClusterDepsImpl::rename_register(Register from_reg, Register to_reg, Register rename_reg) {
-  if (rename_reg == from_reg)
-    return to_reg;
+Register GCNBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
+                                                     Register ToReg,
+                                                     Register RenameReg) {
+  if (RenameReg == FromReg)
+    return ToReg;
   if (unsigned Idx =
-      TRI->getSubRegIndex(from_reg.asMCReg(), rename_reg.asMCReg()))
-    return TRI->getSubReg(to_reg.asMCReg(), Idx);
-  return rename_reg;
+          TRI->getSubRegIndex(FromReg.asMCReg(), RenameReg.asMCReg()))
+    return TRI->getSubReg(ToReg.asMCReg(), Idx);
+  return RenameReg;
 }
 
 bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
     MachineBasicBlock &MBB) {
-  bool to_return = false;
+  bool ToReturn = false;
 
   // Find clusterable loads whose address operands share a register with an
   // earlier load's address, or whose address def chains funnel through a
   // common scratch register (WAR/WAW anti-dependencies).
-  vector<MachineInstr *> all_vector_loads;
+  vector<MachineInstr *> AllVectorLoads;
   for (MachineInstr &MI : MBB)
-    if (MI.mayLoad() && MI.getOperand(0).isReg() && TRI->isVGPR(*MRI,MI.getOperand(0).getReg()))
-      all_vector_loads.push_back(&MI);
+    if (MI.mayLoad() && MI.getOperand(0).isReg() &&
+        TRI->isVGPR(*MRI, MI.getOperand(0).getReg()))
+      AllVectorLoads.push_back(&MI);
 
-  reverse(all_vector_loads.begin(), all_vector_loads.end()); // efficiency
-  bitset<AMDGPU::NUM_TARGET_REGS> used_load_source_physregs, used_load_dest_physregs;
-  while (!all_vector_loads.empty()) {
-    MachineInstr& vec_load_ins = *all_vector_loads.back();
-    bitset<AMDGPU::NUM_TARGET_REGS> ins_defs, ins_uses;
-    tie(ins_defs, ins_uses) = get_uses_and_defs_for(vec_load_ins);
-    
+  reverse(AllVectorLoads.begin(), AllVectorLoads.end()); // efficiency
+  bitset<AMDGPU::NUM_TARGET_REGS> UsedLoadSourcePhysregs, UsedLoadDestPhysregs;
+  while (!AllVectorLoads.empty()) {
+    MachineInstr &VecLoadIns = *AllVectorLoads.back();
+    bitset<AMDGPU::NUM_TARGET_REGS> InsDefs, InsUses;
+    tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
+
     // This means the load is not independent from previous loads
-    if ((ins_defs & used_load_dest_physregs).any()) {
-      used_load_source_physregs.reset();
-      used_load_dest_physregs.reset();
-      all_vector_loads.pop_back();
+    if ((InsDefs & UsedLoadDestPhysregs).any()) {
+      UsedLoadSourcePhysregs.reset();
+      UsedLoadDestPhysregs.reset();
+      AllVectorLoads.pop_back();
       continue;
     }
 
     // Check if we have something to rename
-    bitset<AMDGPU::NUM_TARGET_REGS> war_conflicts =
-        ins_uses & used_load_source_physregs;
-    while (war_conflicts.any()) {
-      Register old_reg = war_conflicts._Find_first();
-      bitset<AMDGPU::NUM_TARGET_REGS> old_reg_war_conflicts;
-      for (const MachineOperand &operand : vec_load_ins.operands())
-        if (operand.isReg() && operand.isUse() &&
-            TRI->regsOverlap(old_reg, operand.getReg())) {
-          old_reg_war_conflicts |= getVGPR32Lanes(operand.getReg());
-          if (TRI->getPhysRegBaseClass(operand.getReg())->getSizeInBits() >
-              TRI->getPhysRegBaseClass(old_reg)->getSizeInBits())
-            old_reg = operand.getReg();
+    bitset<AMDGPU::NUM_TARGET_REGS> WarConflicts =
+        InsUses & UsedLoadSourcePhysregs;
+    while (WarConflicts.any()) {
+      Register OldReg = WarConflicts._Find_first();
+      bitset<AMDGPU::NUM_TARGET_REGS> OldRegWarConflicts;
+      for (const MachineOperand &Operand : VecLoadIns.operands())
+        if (Operand.isReg() && Operand.isUse() &&
+            TRI->regsOverlap(OldReg, Operand.getReg())) {
+          OldRegWarConflicts |= getVGPR32Lanes(Operand.getReg());
+          if (TRI->getPhysRegBaseClass(Operand.getReg())->getSizeInBits() >
+              TRI->getPhysRegBaseClass(OldReg)->getSizeInBits())
+            OldReg = Operand.getReg();
         }
 
-      bitset<AMDGPU::NUM_TARGET_REGS> rit_reg_war_conflicts;
+      bitset<AMDGPU::NUM_TARGET_REGS> RitRegWarConflicts;
       for (MachineBasicBlock::reverse_iterator RIt =
-               ++vec_load_ins.getReverseIterator();
+               ++VecLoadIns.getReverseIterator();
            RIt != MBB.rend(); ++RIt) {
-        if (RIt->modifiesRegister(old_reg, TRI))
-          rit_reg_war_conflicts |= get_uses_and_defs_for(*RIt).first;
+        if (RIt->modifiesRegister(OldReg, TRI))
+          RitRegWarConflicts |= getUsesAndDefsFor(*RIt).first;
 
-        if((old_reg_war_conflicts & ~rit_reg_war_conflicts).any())
+        if ((OldRegWarConflicts & ~RitRegWarConflicts).any())
           continue;
-      
+
         // First, make sure we don't modify EXEC before redefining register.
-        bool exec_modified = false, redefined = false;
+        bool ExecModified = false, Redefined = false;
         for (MachineBasicBlock::iterator It = std::next(RIt->getIterator());
              It != MBB.end(); ++It)
           if (It->definesRegister(AMDGPU::EXEC, TRI)) {
-            exec_modified = true;
+            ExecModified = true;
             break;
-          } else if (It->modifiesRegister(old_reg, TRI)) {
-            redefined = true;
+          } else if (It->modifiesRegister(OldReg, TRI)) {
+            Redefined = true;
           }
-        
-        //Can't do anything if EXEC modified
-        if (exec_modified)
+
+        // Can't do anything if EXEC modified
+        if (ExecModified)
           break;
-        
+
         LiveRegUnits LRU(*TRI);
         LRU.addLiveOuts(MBB);
-        
+
         // If we're live out of the block and the conflicing reg hasn't been
         // redefined, we can't do this with a block-local analysis.
-        if (!redefined && !LRU.available(old_reg))
+        if (!Redefined && !LRU.available(OldReg))
           break;
 
         // Find the instruction which kills the def in RIt
-        bitset<AMDGPU::NUM_TARGET_REGS> killed_subregs;
-        MachineBasicBlock::iterator KillerIns = vec_load_ins;
+        bitset<AMDGPU::NUM_TARGET_REGS> KilledSubregs;
+        MachineBasicBlock::iterator KillerIns = VecLoadIns;
         for (MachineBasicBlock::iterator CandidateKiller = KillerIns;
              CandidateKiller != MBB.end(); ++CandidateKiller) {
-          if (CandidateKiller->modifiesRegister(old_reg, TRI)) {
-            killed_subregs |= get_uses_and_defs_for(*CandidateKiller).first;
-            if((rit_reg_war_conflicts & ~killed_subregs).none())
+          if (CandidateKiller->modifiesRegister(OldReg, TRI)) {
+            KilledSubregs |= getUsesAndDefsFor(*CandidateKiller).first;
+            if ((RitRegWarConflicts & ~KilledSubregs).none())
               break;
           }
-          if (CandidateKiller->readsRegister(old_reg, TRI))
+          if (CandidateKiller->readsRegister(OldReg, TRI))
             KillerIns = CandidateKiller;
         }
-        
+
         // See what's free
-        for (MachineBasicBlock::reverse_iterator LiveRIt = MBB.rbegin(); &*LiveRIt != &*KillerIns; ++LiveRIt)
+        for (MachineBasicBlock::reverse_iterator LiveRIt = MBB.rbegin();
+             &*LiveRIt != &*KillerIns; ++LiveRIt)
           LRU.stepBackward(*LiveRIt);
-          for (MachineBasicBlock::reverse_iterator AccumIt =
-                   KillerIns->getReverseIterator();
-               AccumIt != MBB.rend(); ++AccumIt)
-            LRU.accumulate(*AccumIt);
+        for (MachineBasicBlock::reverse_iterator AccumIt =
+                 KillerIns->getReverseIterator();
+             AccumIt != MBB.rend(); ++AccumIt)
+          LRU.accumulate(*AccumIt);
 
-          // Iterate over registers in physical register class
-          const TargetRegisterClass &DefinedRegClass =
-              *TRI->getPhysRegBaseClass(old_reg);
-          unsigned i;
-          for (i = 0;
-               i < DefinedRegClass.getRegisters().size() &&
-               i * DefinedRegClass.getSizeInBits() / 32 < occupancy_budget;
-               i++)
-            if (LRU.available(DefinedRegClass.getRegisters()[i]))
-              break;
+        // Iterate over registers in physical register class
+        const TargetRegisterClass &DefinedRegClass =
+            *TRI->getPhysRegBaseClass(OldReg);
+        unsigned I;
+        for (I = 0; I < DefinedRegClass.getRegisters().size() &&
+                    I * DefinedRegClass.getSizeInBits() / 32 < OccupancyBudget;
+             I++)
+          if (LRU.available(DefinedRegClass.getRegisters()[I]))
+            break;
 
-          // Actually rename the register
-          if (i < DefinedRegClass.getRegisters().size() &&
-              i * DefinedRegClass.getSizeInBits() / 32 < occupancy_budget) {
-            for (unsigned op = 0; op < RIt->getNumExplicitOperands(); op++)
-              if (RIt->getOperand(op).isReg() && RIt->getOperand(op).isDef() &&
-                  TRI->regsOverlap(RIt->getOperand(op).getReg(),old_reg))
-                RIt->getOperand(op).setReg(rename_register(old_reg,DefinedRegClass.getRegisters()[i],RIt->getOperand(op).getReg()));
-            for (MachineBasicBlock::iterator RenameIt =
-                     std::next(RIt->getIterator());
-                 RenameIt != KillerIns; ++RenameIt)
-              for (unsigned op = 0; op < RenameIt->getNumExplicitOperands(); op++)
-                if (RenameIt->getOperand(op).isReg() &&
-                    TRI->regsOverlap(RenameIt->getOperand(op).getReg(),old_reg))
-                  RenameIt->getOperand(op).setReg(rename_register(old_reg,DefinedRegClass.getRegisters()[i],RenameIt->getOperand(op).getReg()));
-            for (unsigned op = 0; op < KillerIns->getNumExplicitOperands(); op++)
-              if (KillerIns->getOperand(op).isReg() &&
-                  KillerIns->getOperand(op).isUse() &&
-                  TRI->regsOverlap(KillerIns->getOperand(op).getReg(),old_reg))
-                KillerIns->getOperand(op).setReg(rename_register(old_reg,DefinedRegClass.getRegisters()[i],KillerIns->getOperand(op).getReg()));
-          }
-
-          // If we renamed, we're done.  If we didn't rename, we can't get
-          // around this conflict, so we're also done.
-          break;
+        // Actually rename the register
+        if (I < DefinedRegClass.getRegisters().size() &&
+            I * DefinedRegClass.getSizeInBits() / 32 < OccupancyBudget) {
+          for (unsigned Op = 0; Op < RIt->getNumExplicitOperands(); Op++)
+            if (RIt->getOperand(Op).isReg() && RIt->getOperand(Op).isDef() &&
+                TRI->regsOverlap(RIt->getOperand(Op).getReg(), OldReg))
+              RIt->getOperand(Op).setReg(
+                  renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                                 RIt->getOperand(Op).getReg()));
+          for (MachineBasicBlock::iterator RenameIt =
+                   std::next(RIt->getIterator());
+               RenameIt != KillerIns; ++RenameIt)
+            for (unsigned Op = 0; Op < RenameIt->getNumExplicitOperands(); Op++)
+              if (RenameIt->getOperand(Op).isReg() &&
+                  TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg))
+                RenameIt->getOperand(Op).setReg(
+                    renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                                   RenameIt->getOperand(Op).getReg()));
+          for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
+            if (KillerIns->getOperand(Op).isReg() &&
+                KillerIns->getOperand(Op).isUse() &&
+                TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg))
+              KillerIns->getOperand(Op).setReg(
+                  renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                                 KillerIns->getOperand(Op).getReg()));
         }
 
-      tie(ins_defs, ins_uses) = get_uses_and_defs_for(vec_load_ins);
-      war_conflicts &= ~getVGPR32Lanes(old_reg);
+        // If we renamed, we're done.  If we didn't rename, we can't get
+        // around this conflict, so we're also done.
+        break;
+      }
+
+      tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
+      WarConflicts &= ~getVGPR32Lanes(OldReg);
     }
 
     // Coda
-    used_load_dest_physregs |= ins_defs;
-    used_load_source_physregs |= ins_uses;
-    all_vector_loads.pop_back();
+    UsedLoadDestPhysregs |= InsDefs;
+    UsedLoadSourcePhysregs |= InsUses;
+    AllVectorLoads.pop_back();
   }
 
   // Scavenge free VGPRs and rename along each address def chain so the chains
   // become register-disjoint, staying within the budget.  The downstream
   // post-RA load-cluster scheduler then reorders the now independent loads into
   // a burst.
-  
-  return to_return;
+
+  return ToReturn;
 }
 
 bool GCNBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
@@ -296,17 +305,17 @@ bool GCNBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
       MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled()
           ? MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize()
           : false;
-  occupancy_budget = ST->getMaxNumVGPRs(
+  OccupancyBudget = ST->getMaxNumVGPRs(
       ST->getOccupancyWithNumVGPRs(
           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
           DynamicBlockSize),
       DynamicBlockSize);
 
-  bool to_return = false;
+  bool ToReturn = false;
   for (MachineBasicBlock &MBB : MF)
-    to_return |= runOnMachineBasicBlock(MBB);
-  
-  return to_return;
+    ToReturn |= runOnMachineBasicBlock(MBB);
+
+  return ToReturn;
 }
 
 bool GCNBreakLoadClusterDepsLegacy::runOnMachineFunction(MachineFunction &MF) {
