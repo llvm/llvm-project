@@ -13,7 +13,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H
 
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "builtin.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_BUILTIN_IMPL
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_generic.h" // generic::splat
 #include "src/string/memory_utils/utils.h"      // Ptr, CPtr
@@ -51,9 +52,10 @@ namespace LIBC_NAMESPACE_DECL {
 // memcpy
 ///////////////////////////////////////////////////////////////////////////////
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_aligned_access_32bit(Ptr __restrict dst, CPtr __restrict src,
-                                   size_t count) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(
+    memcpy) void inline_memcpy_aligned_access_32bit(Ptr __restrict dst,
+                                                    CPtr __restrict src,
+                                                    size_t count) {
   constexpr size_t kAlign = sizeof(uint32_t);
   if (count <= 2 * kAlign)
     return inline_memcpy_byte_per_byte(dst, src, count);
@@ -69,9 +71,10 @@ inline_memcpy_aligned_access_32bit(Ptr __restrict dst, CPtr __restrict src,
   inline_memcpy_byte_per_byte(dst, src, count, offset);
 }
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_aligned_access_64bit(Ptr __restrict dst, CPtr __restrict src,
-                                   size_t count) {
+[[maybe_unused]] LIBC_BULTIN_IMPL(
+    memcpy) void inline_memcpy_aligned_access_64bit(Ptr __restrict dst,
+                                                    CPtr __restrict src,
+                                                    size_t count) {
   constexpr size_t kAlign = sizeof(uint64_t);
   if (count <= 2 * kAlign)
     return inline_memcpy_byte_per_byte(dst, src, count);

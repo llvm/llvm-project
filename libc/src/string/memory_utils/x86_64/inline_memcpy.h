@@ -11,7 +11,7 @@
 #include <stddef.h> // size_t
 
 #include "hdr/stdint_proxy.h"                // SIZE_MAX
-#include "src/__support/macros/attributes.h" // LIBC_INLINE_VAR
+#include "src/__support/macros/attributes.h" // LIBC_INLINE_VAR, LIBC_BUILTIN_IMPL
 #include "src/__support/macros/is_defined.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/op_builtin.h"
@@ -68,9 +68,8 @@ struct alignas(32) m256i {
 
 } // namespace x86
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_x86_sse2_ge64(Ptr __restrict dst, CPtr __restrict src,
-                            size_t count) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_x86_sse2_ge64(
+    Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count <= 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
   builtin::Memcpy<32>::block(dst, src);
@@ -78,9 +77,8 @@ inline_memcpy_x86_sse2_ge64(Ptr __restrict dst, CPtr __restrict src,
   return builtin::Memcpy<32>::loop_and_tail(dst, src, count);
 }
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_x86_avx_ge64(Ptr __restrict dst, CPtr __restrict src,
-                           size_t count) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_x86_avx_ge64(
+    Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count <= 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
   if (count < 256)
@@ -90,16 +88,16 @@ inline_memcpy_x86_avx_ge64(Ptr __restrict dst, CPtr __restrict src,
   return builtin::Memcpy<64>::loop_and_tail(dst, src, count);
 }
 
-[[maybe_unused]] LIBC_INLINE void inline_memcpy_prefetch(Ptr __restrict dst,
-                                                         CPtr __restrict src,
-                                                         size_t distance) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_prefetch(
+    Ptr __restrict dst, CPtr __restrict src, size_t distance) {
   prefetch_to_local_cache(src + distance);
   prefetch_for_write(dst + distance);
 }
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
-                                           CPtr __restrict src, size_t count) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(
+    memcpy) void inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
+                                                            CPtr __restrict src,
+                                                            size_t count) {
   using namespace LIBC_NAMESPACE::x86;
   inline_memcpy_prefetch(dst, src, K_ONE_CACHELINE);
   if (count <= 128)
@@ -144,9 +142,10 @@ inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
   return builtin::Memcpy<32>::tail(dst, src, count);
 }
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
-                                          CPtr __restrict src, size_t count) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(
+    memcpy) void inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
+                                                           CPtr __restrict src,
+                                                           size_t count) {
   using namespace LIBC_NAMESPACE::x86;
   inline_memcpy_prefetch(dst, src, K_ONE_CACHELINE);
   if (count <= 128)
@@ -201,8 +200,8 @@ inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
   return builtin::Memcpy<64>::tail(dst, src, count);
 }
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(memcpy) void inline_memcpy_x86(
+    Ptr __restrict dst, CPtr __restrict src, size_t count) {
   constexpr size_t VECTOR_SIZE = x86::K_AVX512_F ? 64
                                  : x86::K_AVX    ? 32
                                  : x86::K_SSE2   ? 16
@@ -249,9 +248,10 @@ inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   }
 }
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
-                                           CPtr __restrict src, size_t count) {
+[[maybe_unused]] LIBC_BUILTIN_IMPL(
+    memcpy) void inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
+                                                            CPtr __restrict src,
+                                                            size_t count) {
   if constexpr (x86::K_REP_MOVSB_THRESHOLD == 0) {
     return x86::Memcpy::repmovsb(dst, src, count);
   } else if constexpr (x86::K_REP_MOVSB_THRESHOLD == SIZE_MAX) {

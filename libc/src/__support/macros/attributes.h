@@ -165,4 +165,11 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_NO_SANITIZE_OOB_ACCESS
 #endif
 
+#if defined(__clang__)
+#define LIBC_BUILTIN_IMPL(BUILTIN)                                             \
+  LIBC_INLINE __attribute__((no_builtin(#BUILTIN)))
+#else
+#define LIBC_BUILTIN_IMPL LIBC_INLINE
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
