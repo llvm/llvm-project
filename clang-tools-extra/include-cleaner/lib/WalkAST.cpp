@@ -620,11 +620,14 @@ public:
 
 } // namespace
 
-void walkAST(Decl &Root, DeclCallback Callback) {
+void walkAST(llvm::ArrayRef<Decl *> Roots, DeclCallback Callback) {
+  if (Roots.empty())
+    return;
   ASTWalker Walker(Callback);
-  Walker.TraverseDecl(&Root);
+  for (auto *Root : Roots)
+    Walker.TraverseDecl(Root);
 
-  ASTContext &Ctx = Root.getASTContext();
+  ASTContext &Ctx = Roots.front()->getASTContext();
   if (!Ctx.getLangOpts().ObjC)
     return;
 

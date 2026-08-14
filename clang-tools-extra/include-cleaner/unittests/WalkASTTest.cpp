@@ -67,19 +67,20 @@ testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode,
   std::vector<Decl::Kind> TargetDecls;
   // Perform the walk, and capture the offsets of the referenced targets.
   std::unordered_map<RefType, std::vector<size_t>> ReferencedOffsets;
+  llvm::SmallVector<Decl *> TopLevelDecls;
   for (Decl *D : AST.context().getTranslationUnitDecl()->decls()) {
-    if (ReferencingFile != SM.getDecomposedExpansionLoc(D->getLocation()).first)
-      continue;
-    walkAST(*D, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
-      if (SM.getFileLoc(Loc) != ReferencingLoc)
-        return;
-      auto NDLoc = SM.getDecomposedLoc(SM.getFileLoc(ND.getLocation()));
-      if (NDLoc.first != TargetFile)
-        return;
-      ReferencedOffsets[RT].push_back(NDLoc.second);
-      TargetDecls.push_back(ND.getKind());
-    });
+    if (ReferencingFile == SM.getDecomposedExpansionLoc(D->getLocation()).first)
+      TopLevelDecls.push_back(D);
   }
+  walkAST(TopLevelDecls, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
+    if (SM.getFileLoc(Loc) != ReferencingLoc)
+      return;
+    auto NDLoc = SM.getDecomposedLoc(SM.getFileLoc(ND.getLocation()));
+    if (NDLoc.first != TargetFile)
+      return;
+    ReferencedOffsets[RT].push_back(NDLoc.second);
+    TargetDecls.push_back(ND.getKind());
+  });
   for (auto &Entry : ReferencedOffsets)
     llvm::sort(Entry.second);
 
