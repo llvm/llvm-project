@@ -50,6 +50,13 @@
 #define GOOD33(x)         if (!a__##x) a_##x = &f(#x)
 #define GOOD34(x, y)      if (x) goto y;
 #define GOOD35(x, y)      if (x) goto *(y);
+#if __STDC_VERSION__ >= 201112L
+#define GOOD36(expr, type) _Generic((expr), type : (expr))
+#endif
+#if __STDC_VERSION__ >= 201112L
+#define GOOD37(expr, type, inner_expr, inner_type) \
+  _Generic((expr), type : _Generic((inner_expr), inner_type : (inner_expr)))
+#endif
 
 // These are allowed for now..
 #define MAYBE1            *12.34

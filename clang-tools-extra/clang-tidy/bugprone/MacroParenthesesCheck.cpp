@@ -179,7 +179,25 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
   // Skip the goto argument with an arbitrary number of subsequent stars.
   bool FoundGoto = false;
 
+  // Tracks, for each open paren/brace/square, whether it's the argument
+  // list of a C11 _Generic selection -- e.g. _Generic(expr, type: value).
+  // An argument in the type-name position must not be parenthesized.
+  llvm::SmallVector<char, 8> GenericAssocStack;
+  bool PendingGeneric = false;
+
   for (auto TI = MI->tokens_begin(), TE = MI->tokens_end(); TI != TE; ++TI) {
+    const Token &Tok = *TI;
+
+    if (Tok.isOneOf(tok::l_paren, tok::l_brace, tok::l_square)) {
+      GenericAssocStack.push_back(PendingGeneric && Tok.is(tok::l_paren));
+      PendingGeneric = false;
+    } else if (Tok.isOneOf(tok::r_paren, tok::r_brace, tok::r_square)) {
+      if (!GenericAssocStack.empty())
+        GenericAssocStack.pop_back();
+    } else if (Tok.is(tok::kw__Generic)) {
+      PendingGeneric = true;
+    }
+
     // First token.
     if (TI == MI->tokens_begin())
       continue;
@@ -190,8 +208,6 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
 
     const Token &Prev = *std::prev(TI);
     const Token &Next = *std::next(TI);
-
-    const Token &Tok = *TI;
 
     // There should not be extra parentheses in possible variable declaration.
     if (VarDecl) {
@@ -231,6 +247,11 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
 
     // Argument is a namespace or class.
     if (Next.is(tok::coloncolon))
+      continue;
+
+    // Argument is the type-name of a C11 _Generic association.
+    if (Next.is(tok::colon) && !GenericAssocStack.empty() &&
+        GenericAssocStack.back())
       continue;
 
     // String concatenation.
