@@ -56,3 +56,56 @@ subroutine test_extends_type_of()
   !ERROR: Actual argument for 'a=' has type 'vector(real(4))', but was expected to be an extensible or unlimited polymorphic type
   res = extends_type_of(vr, vr)
 end subroutine
+
+! Test scalar POINTER and ALLOCATABLE vector type declarations (not supported)
+subroutine test_scalar_pointer()
+  !ERROR: Pointer to vector(integer(4)) type is not supported
+  vector(integer(4)), pointer :: p
+end subroutine
+
+subroutine test_scalar_allocatable()
+  !ERROR: Allocatable entity of vector(integer(4)) type is not supported
+  vector(integer(4)), allocatable :: v
+end subroutine
+
+! SAME_TYPE_AS with one unlimited polymorphic arg and one vector arg
+subroutine test_same_type_as_mixed(x)
+  class(*), intent(in) :: x
+  vector(integer(4)) :: vi(2)
+  logical :: res
+  !ERROR: Actual argument for 'b=' has type 'vector(integer(4))', but was expected to be an extensible or unlimited polymorphic type
+  res = same_type_as(x, vi)
+end subroutine
+
+! UDTI: dtv argument must not be a vector type
+module test_udti_vector_read_mod
+  interface read(formatted)
+    module procedure rf
+  end interface
+contains
+  subroutine rf(dtv, unit, iotype, vlist, iostat, iomsg)
+    !ERROR: Dummy argument 'dtv' of a defined input/output procedure must not be a vector type
+    vector(integer(4)), intent(inout) :: dtv
+    integer, intent(in) :: unit
+    character(*), intent(in) :: iotype
+    integer, intent(in) :: vlist(:)
+    integer, intent(out) :: iostat
+    character(*), intent(inout) :: iomsg
+  end subroutine
+end module
+
+module test_udti_vector_write_mod
+  interface write(formatted)
+    module procedure wf
+  end interface
+contains
+  subroutine wf(dtv, unit, iotype, vlist, iostat, iomsg)
+    !ERROR: Dummy argument 'dtv' of a defined input/output procedure must not be a vector type
+    vector(integer(4)), intent(in) :: dtv
+    integer, intent(in) :: unit
+    character(*), intent(in) :: iotype
+    integer, intent(in) :: vlist(:)
+    integer, intent(out) :: iostat
+    character(*), intent(inout) :: iomsg
+  end subroutine
+end module

@@ -1323,6 +1323,12 @@ void CheckHelper::CheckObjectEntity(
       SayWithDeclaration(symbol,
           "Assumed rank entity of %s type is not supported"_err_en_US,
           typeName);
+    } else if (IsPointer(symbol)) {
+      SayWithDeclaration(
+          symbol, "Pointer to %s type is not supported"_err_en_US, typeName);
+    } else if (IsAllocatable(symbol)) {
+      SayWithDeclaration(symbol,
+          "Allocatable entity of %s type is not supported"_err_en_US, typeName);
     }
   }
 }
@@ -3679,6 +3685,12 @@ void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
     if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+      if (derivedType->IsVectorType()) {
+        messages_.Say(arg.name(),
+            "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,
+            arg.name());
+        return;
+      }
       CheckAlreadySeenDefinedIo(*derivedType, ioKind, proc, generic);
       bool isPolymorphic{type->IsPolymorphic()};
       if (isPolymorphic != IsExtensibleType(derivedType)) {
