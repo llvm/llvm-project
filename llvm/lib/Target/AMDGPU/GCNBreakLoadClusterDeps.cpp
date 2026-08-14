@@ -236,6 +236,18 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
              AccumIt != MBB.rend(); ++AccumIt)
           LRU.accumulate(*AccumIt);
 
+        // If it's used by a load that could be in our cluster, it's _NOT_ free.
+        bitset<AMDGPU::NUM_TARGET_REGS> BannedRegs =
+            UsedLoadDestPhysregs | InsDefs;
+        for (auto VecIt = AllVectorLoads.rbegin();
+             VecIt != AllVectorLoads.rend(); VecIt++) {
+          bitset<AMDGPU::NUM_TARGET_REGS> FutureInsDefs =
+              getUsesAndDefsFor(**VecIt).first;
+          if ((FutureInsDefs & BannedRegs).any())
+            break;
+          BannedRegs |= FutureInsDefs;
+        }
+
         // Iterate over registers in physical register class
         const TargetRegisterClass &DefinedRegClass =
             *TRI->getPhysRegBaseClass(OldReg);
@@ -243,7 +255,9 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
         for (I = 0; I < DefinedRegClass.getRegisters().size() &&
                     I * DefinedRegClass.getSizeInBits() / 32 < OccupancyBudget;
              I++)
-          if (LRU.available(DefinedRegClass.getRegisters()[I]))
+          if (LRU.available(DefinedRegClass.getRegisters()[I]) &&
+              (getVGPR32Lanes(DefinedRegClass.getRegisters()[I]) & BannedRegs)
+                  .none())
             break;
 
         // Actually rename the register
