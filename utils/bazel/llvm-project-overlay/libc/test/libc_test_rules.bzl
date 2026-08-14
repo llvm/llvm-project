@@ -63,6 +63,7 @@ def libc_test(
 
     if full_build:
         copts = copts + _FULL_BUILD_COPTS
+
         # Temporarily disable full_build tests (currently broken) to unblock CI.
         tags = tags + ["manual", "notap"]
     cc_test(
