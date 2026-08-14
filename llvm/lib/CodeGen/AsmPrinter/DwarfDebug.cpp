@@ -191,8 +191,14 @@ void DebugLocDwarfExpression::emitUnsigned(uint64_t Value) {
   getActiveStreamer().emitULEB128(Value, Twine(Value));
 }
 
-void DebugLocDwarfExpression::emitData1(uint8_t Value) {
-  getActiveStreamer().emitInt8(Value, Twine(Value));
+void DebugLocDwarfExpression::emitData(uint64_t Value, unsigned Size) {
+  assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
+         "fixed-width data size must be 1, 2, 4, or 8 bytes");
+  bool IsLittleEndian = CU.getAsmPrinter()->getDataLayout().isLittleEndian();
+  for (unsigned I = 0; I != Size; ++I) {
+    unsigned Byte = IsLittleEndian ? I : Size - I - 1;
+    getActiveStreamer().emitInt8(Value >> (Byte * 8), Twine(Value));
+  }
 }
 
 void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
@@ -230,6 +236,23 @@ void DebugLocDwarfExpression::commitTemporaryBuffer() {
   }
   TmpBuf->Bytes.clear();
   TmpBuf->Comments.clear();
+}
+
+void DebugLocDwarfExpression::replaceTemporaryBufferData(unsigned Offset,
+                                                         uint64_t Value,
+                                                         unsigned Size) {
+  assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
+         "fixed-width data size must be 1, 2, 4, or 8 bytes");
+  assert(TmpBuf && Offset < TmpBuf->Bytes.size() &&
+         Size <= TmpBuf->Bytes.size() - Offset &&
+         "invalid temporary buffer offset");
+  bool IsLittleEndian = CU.getAsmPrinter()->getDataLayout().isLittleEndian();
+  for (unsigned I = 0; I != Size; ++I) {
+    unsigned Byte = IsLittleEndian ? I : Size - I - 1;
+    TmpBuf->Bytes[Offset + I] = Value >> (Byte * 8);
+    if (Offset + I < TmpBuf->Comments.size())
+      TmpBuf->Comments[Offset + I].clear();
+  }
 }
 
 const DIType *DbgVariable::getType() const {

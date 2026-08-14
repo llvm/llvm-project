@@ -7215,6 +7215,22 @@ Some examples of expressions:
 !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 ```
 
+`DIExpression` uses three pseudo-ops for local control flow:
+
+```text
+DW_OP_LLVM_label, <label-id>
+DW_OP_LLVM_bra,   <label-id>
+DW_OP_LLVM_skip,  <label-id>
+```
+
+`DW_OP_LLVM_label` declares a label ID and emits no bytes. `DW_OP_LLVM_bra`
+branches when the top of the stack is non-zero; `DW_OP_LLVM_skip` always
+branches. Label IDs are local to the expression. Every branch needs a matching
+label, labels without branches are valid, and each ID can only be declared
+once. Raw `DW_OP_bra` and `DW_OP_skip` aren't valid in LLVM IR.
+
+See {ref}`symbolic control flow <symbolic-control-flow>` for the full rules.
+
 ##### DIAssignID
 
 `DIAssignID` nodes have no operands and are always distinct. They are used to

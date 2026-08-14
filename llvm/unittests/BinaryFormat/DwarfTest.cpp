@@ -47,6 +47,13 @@ TEST(DwarfTest, getOperationEncoding) {
   // Some valid ops.
   EXPECT_EQ(DW_OP_deref, getOperationEncoding("DW_OP_deref"));
   EXPECT_EQ(DW_OP_bit_piece, getOperationEncoding("DW_OP_bit_piece"));
+  // These are metadata-only ops, but they still need names in both directions.
+  EXPECT_EQ(DW_OP_LLVM_label, getOperationEncoding("DW_OP_LLVM_label"));
+  EXPECT_EQ(DW_OP_LLVM_bra, getOperationEncoding("DW_OP_LLVM_bra"));
+  EXPECT_EQ(DW_OP_LLVM_skip, getOperationEncoding("DW_OP_LLVM_skip"));
+  EXPECT_EQ("DW_OP_LLVM_label", OperationEncodingString(DW_OP_LLVM_label));
+  EXPECT_EQ("DW_OP_LLVM_bra", OperationEncodingString(DW_OP_LLVM_bra));
+  EXPECT_EQ("DW_OP_LLVM_skip", OperationEncodingString(DW_OP_LLVM_skip));
 
   // Invalid ops.
   EXPECT_EQ(0u, getOperationEncoding("DW_OP_otherthings"));

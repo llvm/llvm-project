@@ -7215,6 +7215,19 @@ void Verifier::visit(DbgVariableRecord &DVR) {
           F);
   visitMDNode(*DVR.getExpression(), AreDebugLocsAllowed::No);
 
+  // A DIArgList can have a valid branch expression which doesn't use
+  // DW_OP_LLVM_arg, so check the record as well.
+  if (DVR.hasArgList() && DVR.getExpression()->isValid()) {
+    bool HasControlFlow = llvm::any_of(
+        DVR.getExpression()->expr_ops(), [](DIExpression::ExprOperand Op) {
+          return Op.getOp() == dwarf::DW_OP_LLVM_label ||
+                 Op.getOp() == dwarf::DW_OP_LLVM_bra ||
+                 Op.getOp() == dwarf::DW_OP_LLVM_skip;
+        });
+    CheckDI(!HasControlFlow, "DIArgList doesn't support symbolic branches",
+            &DVR, MD, DVR.getExpression(), BB, F);
+  }
+
   if (DVR.isDbgAssign()) {
     CheckDI(isa_and_nonnull<DIAssignID>(DVR.getRawAssignID()),
             "invalid #dbg_assign DIAssignID", &DVR, DVR.getRawAssignID(), BB,

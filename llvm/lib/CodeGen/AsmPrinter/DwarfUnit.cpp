@@ -37,6 +37,27 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
 
+static dwarf::Form getDataForm(unsigned Size) {
+  switch (Size) {
+  case 1:
+    return dwarf::DW_FORM_data1;
+  case 2:
+    return dwarf::DW_FORM_data2;
+  case 4:
+    return dwarf::DW_FORM_data4;
+  case 8:
+    return dwarf::DW_FORM_data8;
+  default:
+    llvm_unreachable("fixed-width data size must be 1, 2, 4, or 8 bytes");
+  }
+}
+
+static uint64_t getDataValue(uint64_t Value, unsigned Size) {
+  if (Size == sizeof(Value))
+    return Value;
+  return Value & ((uint64_t(1) << (Size * 8)) - 1);
+}
+
 DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP,
                                        DwarfCompileUnit &CU, DIELoc &DIE)
     : DwarfExpression(AP.getDwarfVersion(), CU), AP(AP), OutDIE(DIE) {}
@@ -53,8 +74,8 @@ void DIEDwarfExpression::emitUnsigned(uint64_t Value) {
   CU.addUInt(getActiveDIE(), dwarf::DW_FORM_udata, Value);
 }
 
-void DIEDwarfExpression::emitData1(uint8_t Value) {
-  CU.addUInt(getActiveDIE(), dwarf::DW_FORM_data1, Value);
+void DIEDwarfExpression::emitData(uint64_t Value, unsigned Size) {
+  CU.addUInt(getActiveDIE(), getDataForm(Size), getDataValue(Value, Size));
 }
 
 void DIEDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
@@ -69,10 +90,35 @@ void DIEDwarfExpression::enableTemporaryBuffer() {
 void DIEDwarfExpression::disableTemporaryBuffer() { IsBuffering = false; }
 
 unsigned DIEDwarfExpression::getTemporaryBufferSize() {
-  return TmpDIE.computeSize(AP.getDwarfFormParams());
+  unsigned Size = 0;
+  for (const DIEValue &V : TmpDIE.values())
+    Size += V.sizeOf(AP.getDwarfFormParams());
+  return Size;
 }
 
 void DIEDwarfExpression::commitTemporaryBuffer() { OutDIE.takeValues(TmpDIE); }
+
+void DIEDwarfExpression::replaceTemporaryBufferData(unsigned Offset,
+                                                    uint64_t Value,
+                                                    unsigned Size) {
+  dwarf::Form Form = getDataForm(Size);
+  // Keep the form so replacing the value doesn't move later labels.
+  unsigned CurrentOffset = 0;
+  for (DIEValue &V : TmpDIE.values()) {
+    unsigned ValueSize = V.sizeOf(AP.getDwarfFormParams());
+    if (Offset < CurrentOffset + ValueSize) {
+      assert(Offset == CurrentOffset && ValueSize == Size &&
+             V.getType() == DIEValue::isInteger && V.getForm() == Form &&
+             V.getDIEInteger().getValue() == 0 &&
+             "symbolic branch fixup does not match its placeholder");
+      V = DIEValue(V.getAttribute(), V.getForm(),
+                   DIEInteger(getDataValue(Value, Size)));
+      return;
+    }
+    CurrentOffset += ValueSize;
+  }
+  llvm_unreachable("invalid temporary DIE offset");
+}
 
 bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
                                          llvm::Register MachineReg) {
