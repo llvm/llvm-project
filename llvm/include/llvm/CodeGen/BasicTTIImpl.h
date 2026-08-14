@@ -2607,8 +2607,6 @@ public:
 
       Align Alignment = thisT()->DL.getABITypeAlign(EltTy);
       InstructionCost Cost = 0;
-      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, PtrsTy,
-                                          CostKind, 1, nullptr, nullptr);
       Cost += thisT()->getMemoryOpCost(Instruction::Load, EltTy, Alignment, 0,
                                        CostKind);
       switch (IID) {
@@ -2637,6 +2635,13 @@ public:
       Cost += thisT()->getMemoryOpCost(Instruction::Store, EltTy, Alignment, 0,
                                        CostKind);
       Cost *= PtrsTy->getNumElements();
+
+      // Add in the cost of the extracts; the lanes may have different costs.
+      for (unsigned Lane = 0; Lane < PtrsTy->getNumElements(); ++Lane) {
+        Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, PtrsTy,
+                                            CostKind, Lane, nullptr, nullptr);
+      }
+
       return Cost;
     }
     case Intrinsic::get_active_lane_mask: {
