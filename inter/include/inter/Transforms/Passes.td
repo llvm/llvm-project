@@ -77,6 +77,12 @@ def SelectToMachine : Pass<"inter-select-to-machine", "::mlir::ModuleOp"> {
     "mlir::func::FuncDialect",
     "mlir::ub::UBDialect",
   ];
+  let options = [
+    Option<"chip", "chip", "std::string", "\"bmg\"",
+           "Intel GPU target chip">,
+    ListOption<"targetFeatures", "target-features", "std::string",
+               "Intel GPU target features">,
+  ];
 }
 
 def CoalesceTuples : Pass<"inter-coalesce-tuples", "::mlir::func::FuncOp"> {

@@ -46,6 +46,17 @@ def XeMachine_TargetAttr : AttrDef<XeMachineDialect, "Target"> {
   let summary = "Compilation target chip, e.g. #xemachine.target<chip = \"bmg\">";
   let parameters = (ins "mlir::StringAttr":$chip);
   let assemblyFormat = "`<` `chip` `=` $chip `>`";
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins "::inter::xemachine::TargetChip":$chip), [{
+      switch (chip) {
+      case ::inter::xemachine::TargetChip::bmg:
+        return $_get($_ctxt, ::mlir::StringAttr::get($_ctxt, "bmg"));
+      }
+      llvm_unreachable("unknown Intel GPU target chip");
+    }]>
+  ];
+  let genVerifyDecl = 1;
 }
 
 def XeMachine_KernelArgKind : I32EnumAttr<"KernelArgKind",

@@ -47,6 +47,13 @@ Function attributes carry target and ABI inputs:
 - inline and per-thread payload sizes
 - local-memory and scratch sizes
 
+`xemachine.target` accepts checked textual construction or a typed target-chip
+value; there is no unchecked string builder. The immutable target configuration
+resolves the chip before selection and owns its architecture, GRF geometry,
+supported SIMD widths, and Zebin compatibility identity. BMG is the only
+accepted chip today; unknown chips and feature requests fail before selection
+mutates a kernel.
+
 After physical lowering, resource analysis adds highest GRF use, barrier presence,
 global atomic use, stateless-write status, and DPAS use. Zebin emission
 recomputes and cross-checks these derived facts.

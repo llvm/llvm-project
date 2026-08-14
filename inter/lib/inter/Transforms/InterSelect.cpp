@@ -11,6 +11,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <array>
@@ -43,7 +44,20 @@ struct WideValue {
 class SelectToMachine final
     : public inter::impl::SelectToMachineBase<SelectToMachine> {
 public:
+  using SelectToMachineBase::SelectToMachineBase;
+
   void runOnOperation() override {
+    SmallVector<StringRef> featureNames;
+    for (const std::string &feature : targetFeatures)
+      featureNames.push_back(feature);
+    llvm::Expected<TargetConfig> resolvedTarget =
+        TargetConfig::resolve(chip, featureNames);
+    if (!resolvedTarget) {
+      getOperation().emitError(llvm::toString(resolvedTarget.takeError()));
+      return signalPassFailure();
+    }
+    target.emplace(*resolvedTarget);
+
     SmallVector<func::FuncOp> kernels;
     getOperation().walk([&](func::FuncOp function) {
       if (function->hasAttr("xw.kernel") ||
@@ -60,6 +74,7 @@ public:
   }
 
 private:
+  std::optional<TargetConfig> target;
   MLIRContext *context = nullptr;
   std::optional<Location> location;
   std::optional<OpBuilder> builder;
@@ -407,6 +422,10 @@ private:
     if (!width)
       return kernel.emitOpError("missing xw.simd_width");
     simdWidth = width.getInt();
+    if (simdWidth < 0 ||
+        !target->supportsSimdWidth(static_cast<uint32_t>(simdWidth)))
+      return kernel.emitOpError("SIMD width is unsupported by target '")
+             << target->getChipName() << "'";
 
     WalkResult idWalk = kernel.walk([&](Operation *operation) {
       if (isa<xw::SubgroupIdOp>(operation)) {
@@ -441,14 +460,13 @@ private:
     func::FuncOp machineFunction = func::FuncOp::create(
         moduleBuilder, kernel.getLoc(), (kernel.getName() + "_xm").str(),
         moduleBuilder.getFunctionType({}, {}));
-    machineFunction->setAttr(
-        kTargetAttrName,
-        TargetAttr::get(context, moduleBuilder.getStringAttr("bmg")));
+    machineFunction->setAttr(kTargetAttrName, target->getAttr(context));
     machineFunction->setAttr(kKernelArgsAttrName, kernelArguments);
-    machineFunction->setAttr(kGrfCountAttrName,
-                             moduleBuilder.getI32IntegerAttr(128));
-    machineFunction->setAttr(kReservedGrfCountAttrName,
-                             moduleBuilder.getI32IntegerAttr(5));
+    machineFunction->setAttr(kGrfCountAttrName, moduleBuilder.getI32IntegerAttr(
+                                                    target->getGrfCount()));
+    machineFunction->setAttr(
+        kReservedGrfCountAttrName,
+        moduleBuilder.getI32IntegerAttr(target->getReservedGrfCount()));
     machineFunction->setAttr(kSimdSizeAttrName,
                              moduleBuilder.getI32IntegerAttr(simdWidth));
     if (ArrayAttr workGroupSize =

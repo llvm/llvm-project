@@ -215,7 +215,7 @@ There is no silent generic fallback below this boundary.
 
 ## Current limits
 
-- Target and GRF mode are fixed to BMG and 128 GRFs.
+- Target configuration currently resolves only BMG/Xe2 with 128 GRFs.
 - Ordinary memory supports dword elements.
 - Block2D descriptors cover the canonicalized Lighthouse forms.
 - DPAS supports f16/bf16 source packets and f32 accumulation.

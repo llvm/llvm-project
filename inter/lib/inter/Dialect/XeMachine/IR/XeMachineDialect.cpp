@@ -34,6 +34,17 @@ void XeMachineDialect::initialize() {
 }
 
 mlir::LogicalResult
+TargetAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                   mlir::StringAttr chip) {
+  if (!chip)
+    return emitError() << "target chip cannot be null";
+  llvm::Expected<TargetConfig> target = TargetConfig::resolve(chip.getValue());
+  if (!target)
+    return emitError() << llvm::toString(target.takeError());
+  return mlir::success();
+}
+
+mlir::LogicalResult
 inter::xemachine::verifyKernelArgLayout(mlir::ArrayAttr arguments,
                                         mlir::Operation *owner) {
   constexpr uint64_t firstExplicitArgument = 24;

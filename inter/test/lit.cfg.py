@@ -44,6 +44,11 @@ tools = [
         unresolved="fatal",
     ),
     ToolSubst(
+        "inter-target-info",
+        command=config.inter_target_info,
+        unresolved="fatal",
+    ),
+    ToolSubst(
         "inter-translate", command=config.inter_translate, unresolved="fatal"
     ),
     ToolSubst(

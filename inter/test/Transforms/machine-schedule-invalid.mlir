@@ -21,14 +21,3 @@ module {
     return
   }
 }
-
-// -----
-
-module {
-  // expected-error@+1 {{machine scheduling does not support target 'xe3'}}
-  func.func @unsupported_target() attributes {
-      xemachine.target = #xemachine.target<chip = "xe3">} {
-    %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
-    return
-  }
-}

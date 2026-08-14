@@ -6,6 +6,7 @@ add_mlir_dialect_library(InterXeMachine
   XeMachineRegAlloc.cpp
   XeMachineRegAllocPreparation.cpp
   XeMachineRegionFlow.cpp
+  XeMachineTarget.cpp
 
   DEPENDS
   InterXeMachineIRIncGen

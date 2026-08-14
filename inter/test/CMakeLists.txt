@@ -13,6 +13,9 @@ target_link_libraries(inter-timing-dump PRIVATE
   MLIRFuncDialect
   MLIRParser)
 
+add_executable(inter-target-info target-info.cpp)
+target_link_libraries(inter-target-info PRIVATE InterXeMachine)
+
 set(INTER_TEST_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(INTER_TEST_EXEC_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(INTER_TEST_IS_INTEGRATION 0)
@@ -27,6 +30,7 @@ set(INTER_TEST_DEPENDS
   inter-alias-dump
   inter-ged-dump
   inter-opt
+  inter-target-info
   inter-timing-dump
   inter-translate
   llvm-objcopy
