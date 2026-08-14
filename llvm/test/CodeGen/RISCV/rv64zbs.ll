@@ -123,8 +123,8 @@ define i64 @bclr_i64_mask_multiple(i64 %a, i64 %b, i64 %shamt) nounwind {
 ;
 ; RV64ZBS-LABEL: bclr_i64_mask_multiple:
 ; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    bclr a0, a0, a2
 ; RV64ZBS-NEXT:    bset a1, a1, a2
+; RV64ZBS-NEXT:    bclr a0, a0, a2
 ; RV64ZBS-NEXT:    add a0, a0, a1
 ; RV64ZBS-NEXT:    ret
   %shamt_masked = and i64 %shamt, 63

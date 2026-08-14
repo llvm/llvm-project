@@ -13,7 +13,6 @@ func.func @nvvm_cos_ftz_f32(%arg0: f32) -> f32 {
   %0 = nvvm.cos %arg0 {ftz = true} : f32
   return %0 : f32
 }
-// RUN: mlir-opt %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @nvvm_sin_f32
 func.func @nvvm_sin_f32(%arg0: f32) -> f32 {

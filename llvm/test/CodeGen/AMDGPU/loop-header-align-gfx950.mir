@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -start-before=block-placement -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50 -start-before=block-placement -o - %s | FileCheck %s
 
 # Test that loop headers are aligned to 32 bytes on GFX950 when the first
 # instruction is 8 bytes, to prevent the instruction from being split by the

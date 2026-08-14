@@ -10,8 +10,7 @@ define <vscale x 16 x i8> @add_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.add.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.add.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -22,8 +21,7 @@ define <vscale x 8 x i16> @add_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.add.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.add.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -34,8 +32,7 @@ define <vscale x 4 x i32> @add_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.add.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.add.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -46,8 +43,7 @@ define <vscale x 2 x i64> @add_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.add.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.add.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -62,8 +58,7 @@ define <vscale x 16 x i8> @sub_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -74,8 +69,7 @@ define <vscale x 8 x i16> @sub_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sub.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sub.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -86,8 +80,7 @@ define <vscale x 4 x i32> @sub_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -98,8 +91,7 @@ define <vscale x 2 x i64> @sub_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sub.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sub.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -111,8 +103,7 @@ define <vscale x 4 x i32> @sub_i32_ptrue_all_b(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
+  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> splat (i1 true))
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                       <vscale x 4 x i32> %a,
                                                                       <vscale x 4 x i32> %b)
@@ -125,8 +116,7 @@ define <vscale x 4 x i32> @sub_i32_ptrue_all_h(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                       <vscale x 4 x i32> %a,
@@ -142,8 +132,7 @@ define <vscale x 4 x i32> @sub_i32_ptrue_all_d(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sub z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sub.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                     <vscale x 4 x i32> %a,
@@ -160,8 +149,7 @@ define <vscale x 16 x i8> @mul_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.mul.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -172,8 +160,7 @@ define <vscale x 8 x i16> @mul_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -184,8 +171,7 @@ define <vscale x 4 x i32> @mul_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -196,8 +182,7 @@ define <vscale x 2 x i64> @mul_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -212,8 +197,7 @@ define <vscale x 16 x i8> @smulh_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    smulh z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.smulh.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.smulh.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                    <vscale x 16 x i8> %a,
                                                                    <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -224,8 +208,7 @@ define <vscale x 8 x i16> @smulh_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    smulh z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.smulh.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.smulh.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                    <vscale x 8 x i16> %a,
                                                                    <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -236,8 +219,7 @@ define <vscale x 4 x i32> @smulh_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    smulh z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.smulh.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.smulh.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                    <vscale x 4 x i32> %a,
                                                                    <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -248,8 +230,7 @@ define <vscale x 2 x i64> @smulh_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    smulh z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.smulh.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.smulh.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                    <vscale x 2 x i64> %a,
                                                                    <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -264,8 +245,7 @@ define <vscale x 16 x i8> @umulh_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umulh z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.umulh.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.umulh.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                    <vscale x 16 x i8> %a,
                                                                    <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -276,8 +256,7 @@ define <vscale x 8 x i16> @umulh_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umulh z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.umulh.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.umulh.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                    <vscale x 8 x i16> %a,
                                                                    <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -288,8 +267,7 @@ define <vscale x 4 x i32> @umulh_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umulh z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                    <vscale x 4 x i32> %a,
                                                                    <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -300,8 +278,7 @@ define <vscale x 2 x i64> @umulh_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umulh z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.umulh.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.umulh.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                    <vscale x 2 x i64> %a,
                                                                    <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -313,8 +290,7 @@ define <vscale x 4 x i32> @umulh_i32_ptrue_all_b(<vscale x 4 x i32> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umulh z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
+  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> splat (i1 true))
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                         <vscale x 4 x i32> %a,
                                                                         <vscale x 4 x i32> %b)
@@ -327,8 +303,7 @@ define <vscale x 4 x i32> @umulh_i32_ptrue_all_h(<vscale x 4 x i32> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umulh z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.u.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                         <vscale x 4 x i32> %a,
@@ -344,8 +319,7 @@ define <vscale x 4 x i32> @umulh_i32_ptrue_all_d(<vscale x 4 x i32> %a, <vscale 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.umulh.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                       <vscale x 4 x i32> %a,
@@ -362,8 +336,7 @@ define <vscale x 16 x i8> @and_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.and.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.and.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -374,8 +347,7 @@ define <vscale x 8 x i16> @and_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.and.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.and.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -386,8 +358,7 @@ define <vscale x 4 x i32> @and_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -398,8 +369,7 @@ define <vscale x 2 x i64> @and_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.and.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -414,8 +384,7 @@ define <vscale x 16 x i8> @bic_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.bic.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.bic.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -426,8 +395,7 @@ define <vscale x 8 x i16> @bic_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.bic.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.bic.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -438,8 +406,7 @@ define <vscale x 4 x i32> @bic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.bic.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.bic.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -450,8 +417,7 @@ define <vscale x 2 x i64> @bic_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.bic.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.bic.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -466,8 +432,7 @@ define <vscale x 16 x i8> @eor_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.eor.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.eor.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -478,8 +443,7 @@ define <vscale x 8 x i16> @eor_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.eor.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.eor.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -490,8 +454,7 @@ define <vscale x 4 x i32> @eor_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -502,8 +465,7 @@ define <vscale x 2 x i64> @eor_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.eor.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.eor.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -518,8 +480,7 @@ define <vscale x 16 x i8> @orr_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.orr.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.orr.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -530,8 +491,7 @@ define <vscale x 8 x i16> @orr_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.orr.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.orr.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -542,8 +502,7 @@ define <vscale x 4 x i32> @orr_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -554,8 +513,7 @@ define <vscale x 2 x i64> @orr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.orr.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.orr.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -567,8 +525,7 @@ define <vscale x 4 x i32> @orr_i32_ptrue_all_b(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
+  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> splat (i1 true))
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                       <vscale x 4 x i32> %a,
                                                                       <vscale x 4 x i32> %b)
@@ -581,8 +538,7 @@ define <vscale x 4 x i32> @orr_i32_ptrue_all_h(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.orr.u.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                       <vscale x 4 x i32> %a,
@@ -598,8 +554,7 @@ define <vscale x 4 x i32> @orr_i32_ptrue_all_d(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    orr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.orr.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                     <vscale x 4 x i32> %a,
@@ -616,8 +571,7 @@ define <vscale x 16 x i8> @sqadd_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqadd z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sqadd.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sqadd.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -628,8 +582,7 @@ define <vscale x 8 x i16> @sqadd_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqadd z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sqadd.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sqadd.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -640,8 +593,7 @@ define <vscale x 4 x i32> @sqadd_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqadd z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sqadd.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sqadd.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -652,8 +604,7 @@ define <vscale x 2 x i64> @sqadd_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqadd z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqadd.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqadd.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -668,8 +619,7 @@ define <vscale x 16 x i8> @sqsub_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqsub z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sqsub.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sqsub.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                    <vscale x 16 x i8> %a,
                                                                    <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -680,8 +630,7 @@ define <vscale x 8 x i16> @sqsub_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqsub z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sqsub.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sqsub.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                    <vscale x 8 x i16> %a,
                                                                    <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -692,8 +641,7 @@ define <vscale x 4 x i32> @sqsub_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqsub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sqsub.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sqsub.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                    <vscale x 4 x i32> %a,
                                                                    <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -704,8 +652,7 @@ define <vscale x 2 x i64> @sqsub_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqsub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqsub.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqsub.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                    <vscale x 2 x i64> %a,
                                                                    <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -720,8 +667,7 @@ define <vscale x 16 x i8> @uqadd_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqadd z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uqadd.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uqadd.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                  <vscale x 16 x i8> %a,
                                                                  <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -732,8 +678,7 @@ define <vscale x 8 x i16> @uqadd_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqadd z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uqadd.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uqadd.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                  <vscale x 8 x i16> %a,
                                                                  <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -744,8 +689,7 @@ define <vscale x 4 x i32> @uqadd_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqadd z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uqadd.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uqadd.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                  <vscale x 4 x i32> %a,
                                                                  <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -756,8 +700,7 @@ define <vscale x 2 x i64> @uqadd_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqadd z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uqadd.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uqadd.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                  <vscale x 2 x i64> %a,
                                                                  <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -772,8 +715,7 @@ define <vscale x 16 x i8> @uqsub_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqsub z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uqsub.u.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.uqsub.u.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                    <vscale x 16 x i8> %a,
                                                                    <vscale x 16 x i8> %b)
   ret <vscale x 16 x i8> %out
@@ -784,8 +726,7 @@ define <vscale x 8 x i16> @uqsub_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqsub z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uqsub.u.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.uqsub.u.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                    <vscale x 8 x i16> %a,
                                                                    <vscale x 8 x i16> %b)
   ret <vscale x 8 x i16> %out
@@ -796,8 +737,7 @@ define <vscale x 4 x i32> @uqsub_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqsub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.u.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.u.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                    <vscale x 4 x i32> %a,
                                                                    <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %out
@@ -808,8 +748,7 @@ define <vscale x 2 x i64> @uqsub_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqsub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uqsub.u.nxv2i64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.uqsub.u.nxv2i64(<vscale x 2 x i1> splat (i1 true),
                                                                    <vscale x 2 x i64> %a,
                                                                    <vscale x 2 x i64> %b)
   ret <vscale x 2 x i64> %out
@@ -821,8 +760,7 @@ define <vscale x 4 x i32> @uqsub_i32_ptrue_all_b(<vscale x 4 x i32> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqsub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
+  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> splat (i1 true))
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.u.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                         <vscale x 4 x i32> %a,
                                                                         <vscale x 4 x i32> %b)
@@ -835,8 +773,7 @@ define <vscale x 4 x i32> @uqsub_i32_ptrue_all_h(<vscale x 4 x i32> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uqsub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.u.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                         <vscale x 4 x i32> %a,
@@ -852,8 +789,7 @@ define <vscale x 4 x i32> @uqsub_i32_ptrue_all_d(<vscale x 4 x i32> %a, <vscale 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uqsub z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqsub.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                       <vscale x 4 x i32> %a,
@@ -870,8 +806,7 @@ define <vscale x 16 x i8> @asr_i8(<vscale x 16 x i8> %a, <vscale x 2 x i64> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr z0.b, z0.b, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.wide.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.asr.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                     <vscale x 16 x i8> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 16 x i8> %out
@@ -882,8 +817,7 @@ define <vscale x 8 x i16> @asr_i16(<vscale x 8 x i16> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr z0.h, z0.h, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.wide.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.asr.wide.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                     <vscale x 8 x i16> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 8 x i16> %out
@@ -894,8 +828,7 @@ define <vscale x 4 x i32> @asr_i32(<vscale x 4 x i32> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr z0.s, z0.s, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.wide.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.asr.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                     <vscale x 4 x i32> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 4 x i32> %out
@@ -910,8 +843,7 @@ define <vscale x 16 x i8> @lsl_i8(<vscale x 16 x i8> %a, <vscale x 2 x i64> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl z0.b, z0.b, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.wide.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.lsl.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                     <vscale x 16 x i8> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 16 x i8> %out
@@ -922,8 +854,7 @@ define <vscale x 8 x i16> @lsl_i16(<vscale x 8 x i16> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl z0.h, z0.h, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.wide.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.wide.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                     <vscale x 8 x i16> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 8 x i16> %out
@@ -934,8 +865,7 @@ define <vscale x 4 x i32> @lsl_i32(<vscale x 4 x i32> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl z0.s, z0.s, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.wide.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                     <vscale x 4 x i32> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 4 x i32> %out
@@ -950,8 +880,7 @@ define <vscale x 16 x i8> @lsr_i8(<vscale x 16 x i8> %a, <vscale x 2 x i64> %b) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr z0.b, z0.b, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.wide.nxv16i8(<vscale x 16 x i1> %pg,
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.lsr.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true),
                                                                     <vscale x 16 x i8> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 16 x i8> %out
@@ -962,8 +891,7 @@ define <vscale x 8 x i16> @lsr_i16(<vscale x 8 x i16> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr z0.h, z0.h, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.wide.nxv8i16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.wide.nxv8i16(<vscale x 8 x i1> splat (i1 true),
                                                                     <vscale x 8 x i16> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 8 x i16> %out
@@ -974,8 +902,7 @@ define <vscale x 4 x i32> @lsr_i32(<vscale x 4 x i32> %a, <vscale x 2 x i64> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr z0.s, z0.s, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.wide.nxv4i32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true),
                                                                     <vscale x 4 x i32> %a,
                                                                     <vscale x 2 x i64> %b)
   ret <vscale x 4 x i32> %out
@@ -987,8 +914,7 @@ define <vscale x 4 x i32> @lsr_i32_ptrue_all_b(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr z0.s, z0.s, z1.d
 ; CHECK-NEXT:    ret
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
+  %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> splat (i1 true))
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.wide.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                          <vscale x 4 x i32> %a,
                                                                          <vscale x 2 x i64> %b)
@@ -1001,8 +927,7 @@ define <vscale x 4 x i32> @lsr_i32_ptrue_all_h(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr z0.s, z0.s, z1.d
 ; CHECK-NEXT:    ret
-  %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.wide.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                          <vscale x 4 x i32> %a,
@@ -1018,8 +943,7 @@ define <vscale x 4 x i32> @lsr_i32_ptrue_all_d(<vscale x 4 x i32> %a, <vscale x 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.d
 ; CHECK-NEXT:    ret
-  %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
+  %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %out = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.wide.nxv4i32(<vscale x 4 x i1> %pg.s,
                                                                          <vscale x 4 x i32> %a,
@@ -1036,8 +960,7 @@ define <vscale x 8 x half> @fadd_half(<vscale x 8 x half> %a, <vscale x 8 x half
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1> splat (i1 true),
                                                                    <vscale x 8 x half> %a,
                                                                    <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %out
@@ -1048,8 +971,7 @@ define <vscale x 4 x float> @fadd_float(<vscale x 4 x float> %a, <vscale x 4 x f
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.u.nxv4f32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.u.nxv4f32(<vscale x 4 x i1> splat (i1 true),
                                                                     <vscale x 4 x float> %a,
                                                                     <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %out
@@ -1060,8 +982,7 @@ define <vscale x 2 x double> @fadd_double(<vscale x 2 x double> %a, <vscale x 2 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fadd.u.nxv2f64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fadd.u.nxv2f64(<vscale x 2 x i1> splat (i1 true),
                                                                      <vscale x 2 x double> %a,
                                                                      <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %out
@@ -1076,8 +997,7 @@ define <vscale x 8 x half> @fsub_half(<vscale x 8 x half> %a, <vscale x 8 x half
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> splat (i1 true),
                                                                    <vscale x 8 x half> %a,
                                                                    <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %out
@@ -1088,8 +1008,7 @@ define <vscale x 4 x float> @fsub_float(<vscale x 4 x float> %a, <vscale x 4 x f
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> splat (i1 true),
                                                                     <vscale x 4 x float> %a,
                                                                     <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %out
@@ -1100,8 +1019,7 @@ define <vscale x 2 x double> @fsub_double(<vscale x 2 x double> %a, <vscale x 2 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> splat (i1 true),
                                                                      <vscale x 2 x double> %a,
                                                                      <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %out
@@ -1116,8 +1034,7 @@ define <vscale x 8 x half> @fmul_half(<vscale x 8 x half> %a, <vscale x 8 x half
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> %pg,
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> splat (i1 true),
                                                                    <vscale x 8 x half> %a,
                                                                    <vscale x 8 x half> %b)
   ret <vscale x 8 x half> %out
@@ -1128,8 +1045,7 @@ define <vscale x 4 x float> @fmul_float(<vscale x 4 x float> %a, <vscale x 4 x f
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> %pg,
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> splat (i1 true),
                                                                     <vscale x 4 x float> %a,
                                                                     <vscale x 4 x float> %b)
   ret <vscale x 4 x float> %out
@@ -1140,8 +1056,7 @@ define <vscale x 2 x double> @fmul_double(<vscale x 2 x double> %a, <vscale x 2 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> %pg,
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> splat (i1 true),
                                                                      <vscale x 2 x double> %a,
                                                                      <vscale x 2 x double> %b)
   ret <vscale x 2 x double> %out
@@ -1251,8 +1166,3 @@ declare <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 16 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1>)
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32)

@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
@@ -244,7 +245,7 @@ struct FieldInfo {
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
         IsUnnamedBitfield(IsUnnamedBitField) {}
 
-  bool isEmpty() const;
+  LLVM_ABI bool isEmpty() const;
 };
 
 enum class StructPacking { Default, Packed, ExplicitPacking };
@@ -308,7 +309,13 @@ public:
     return VirtualBaseClasses;
   }
 
-  bool isEmpty() const;
+  LLVM_ABI bool isEmpty() const;
+
+  /// Returns the field, base, or virtual base whose extent contains
+  /// \p OffsetInBits, or nullptr if no such element exists. Empty bases and
+  /// unnamed bitfields are skipped.
+  LLVM_ABI const FieldInfo *
+  getElementContainingOffset(unsigned OffsetInBits) const;
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Record;

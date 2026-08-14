@@ -129,8 +129,8 @@ class AMDGPUPromoteAllocaImpl {
 private:
   const TargetMachine &TM;
   LoopInfo &LI;
-  Module *Mod = nullptr;
-  const DataLayout *DL = nullptr;
+  Module &Mod;
+  const DataLayout &DL;
 
   // FIXME: This should be per-kernel.
   uint32_t LocalMemLimit = 0;
@@ -172,9 +172,9 @@ private:
   void setFunctionLimits(const Function &F);
 
 public:
-  AMDGPUPromoteAllocaImpl(TargetMachine &TM, LoopInfo &LI) : TM(TM), LI(LI) {
-
-    const Triple &TT = TM.getTargetTriple();
+  AMDGPUPromoteAllocaImpl(TargetMachine &TM, Module &M, LoopInfo &LI)
+      : TM(TM), LI(LI), Mod(M), DL(M.getDataLayout()) {
+    const Triple &TT = M.getTargetTriple();
     IsAMDGCN = TT.isAMDGCN();
     IsAMDHSA = TT.getOS() == Triple::AMDHSA;
   }
@@ -194,7 +194,7 @@ public:
       return false;
     if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>())
       return AMDGPUPromoteAllocaImpl(
-                 TPC->getTM<TargetMachine>(),
+                 TPC->getTM<TargetMachine>(), *F.getParent(),
                  getAnalysis<LoopInfoWrapperPass>().getLoopInfo())
           .run(F, /*PromoteToLDS*/ true);
     return false;
@@ -211,9 +211,6 @@ public:
 
 static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
                             const Function &F) {
-  if (!TM.getTargetTriple().isAMDGCN())
-    return 128;
-
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
 
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
@@ -253,7 +250,8 @@ char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
 PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, LI).run(F, /*PromoteToLDS=*/true);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
+                     .run(F, /*PromoteToLDS=*/true);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -265,7 +263,8 @@ PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
 PreservedAnalyses
 AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, LI).run(F, /*PromoteToLDS=*/false);
+  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
+                     .run(F, /*PromoteToLDS=*/false);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -372,11 +371,8 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   if (DisablePromoteAllocaToLDS && DisablePromoteAllocaToVector)
     return false;
 
-  Mod = F.getParent();
-  DL = &Mod->getDataLayout();
-
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
-  MaxVGPRs = getMaxVGPRs(CurrentLocalMemUsage, TM, F);
+  MaxVGPRs = IsAMDGCN ? getMaxVGPRs(CurrentLocalMemUsage, TM, F) : 128;
   setFunctionLimits(F);
 
   unsigned VectorizationBudget =
@@ -422,7 +418,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   SetVector<IntrinsicInst *> DeferredIntrs;
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
-      std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(*DL);
+      std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(DL);
       assert(Size); // Expected to succeed on non-array alloca.
       const unsigned AllocaCost = Size->getFixedValue() * 8;
       // First, check if we have enough budget to vectorize this alloca.
@@ -923,9 +919,9 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
     }
 
     if (VectorType::isValidElementType(ElemTy) && NumElems > 0) {
-      unsigned ElementSize = DL->getTypeSizeInBits(ElemTy) / 8;
+      unsigned ElementSize = DL.getTypeSizeInBits(ElemTy) / 8;
       if (ElementSize > 0) {
-        unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
+        unsigned AllocaSize = DL.getTypeStoreSize(AllocaTy);
         // Expand vector if required to match padding of inner type,
         // i.e. odd size subvectors.
         // Storage size of new vector must match that of alloca for correct
@@ -943,7 +939,7 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   }
 
   const unsigned MaxElements =
-      (MaxVectorRegs * 32) / DL->getTypeSizeInBits(VectorTy->getElementType());
+      (MaxVectorRegs * 32) / DL.getTypeSizeInBits(VectorTy->getElementType());
 
   if (VectorTy->getNumElements() > MaxElements ||
       VectorTy->getNumElements() < 2) {
@@ -953,8 +949,8 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   }
 
   Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
-  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
+  unsigned ElementSizeInBits = DL.getTypeSizeInBits(VecEltTy);
+  if (ElementSizeInBits != DL.getTypeAllocSizeInBits(VecEltTy)) {
     LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
                          "does not match the type's size\n");
     return nullptr;
@@ -981,7 +977,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   };
 
   Type *VecEltTy = AA.Vector.Ty->getElementType();
-  unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
+  unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
   assert(ElementSize > 0);
   for (auto *U : AA.Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
@@ -1005,13 +1001,13 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
 
       // Alloca already accessed as vector.
       if (Ptr == AA.Alloca &&
-          DL->getTypeStoreSize(AA.Alloca->getAllocatedType()) ==
-              DL->getTypeStoreSize(AccessTy)) {
+          DL.getTypeStoreSize(AA.Alloca->getAllocatedType()) ==
+              DL.getTypeStoreSize(AccessTy)) {
         AA.Vector.Worklist.push_back(Inst);
         continue;
       }
 
-      if (!isSupportedAccessType(AA.Vector.Ty, AccessTy, *DL))
+      if (!isSupportedAccessType(AA.Vector.Ty, AccessTy, DL))
         return RejectUser(Inst, "not a supported access type");
 
       AA.Vector.Worklist.push_back(Inst);
@@ -1021,7 +1017,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
-      auto Index = computeGEPToVectorIndex(GEP, AA.Alloca, VecEltTy, *DL);
+      auto Index = computeGEPToVectorIndex(GEP, AA.Alloca, VecEltTy, DL);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
@@ -1031,7 +1027,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     }
 
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst);
-        MSI && isSupportedMemset(MSI, AA.Alloca, *DL)) {
+        MSI && isSupportedMemset(MSI, AA.Alloca, DL)) {
       AA.Vector.Worklist.push_back(Inst);
       continue;
     }
@@ -1117,10 +1113,10 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   LLVM_DEBUG(dbgs() << "Promoting to vectors: " << *AA.Alloca << '\n');
   LLVM_DEBUG(dbgs() << "  type conversion: " << *AA.Alloca->getAllocatedType()
                     << " -> " << *AA.Vector.Ty << '\n');
-  const unsigned VecStoreSize = DL->getTypeStoreSize(AA.Vector.Ty);
+  const unsigned VecStoreSize = DL.getTypeStoreSize(AA.Vector.Ty);
 
   Type *VecEltTy = AA.Vector.Ty->getElementType();
-  const unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
+  const unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
 
   // Alloca is uninitialized memory. Imitate that by making the first value
   // undef.
@@ -1159,7 +1155,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
       return Placeholders.back();
     };
 
-    Value *Result = promoteAllocaUserToVector(I, *DL, AA, VecStoreSize,
+    Value *Result = promoteAllocaUserToVector(I, DL, AA, VecStoreSize,
                                               ElementSize, GetCurVal);
     // If the returned result is a placeholder, it means the instruction does
     // not really modify the alloca. So no need to make it being available value
@@ -1203,10 +1199,10 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
 
   if (!IsAMDHSA) {
-    CallInst *LocalSizeY =
-        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {});
-    CallInst *LocalSizeZ =
-        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {});
+    CallInst *LocalSizeY = Builder.CreateIntrinsicWithoutFolding(
+        Intrinsic::r600_read_local_size_y, {});
+    CallInst *LocalSizeZ = Builder.CreateIntrinsicWithoutFolding(
+        Intrinsic::r600_read_local_size_z, {});
 
     ST.makeLIDRangeMetadata(LocalSizeY);
     ST.makeLIDRangeMetadata(LocalSizeZ);
@@ -1249,7 +1245,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   //   } hsa_kernel_dispatch_packet_t
   //
   CallInst *DispatchPtr =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {});
+      Builder.CreateIntrinsicWithoutFolding(Intrinsic::amdgcn_dispatch_ptr, {});
   DispatchPtr->addRetAttr(Attribute::NoAlias);
   DispatchPtr->addRetAttr(Attribute::NonNull);
   F.removeFnAttr("amdgpu-no-dispatch-ptr");
@@ -1257,7 +1253,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   // Size of the dispatch packet struct.
   DispatchPtr->addDereferenceableRetAttr(64);
 
-  Type *I32Ty = Type::getInt32Ty(Mod->getContext());
+  Type *I32Ty = Type::getInt32Ty(Mod.getContext());
 
   // We could do a single 64-bit load here, but it's likely that the basic
   // 32-bit and extract sequence is already present, and it is probably easier
@@ -1268,7 +1264,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(I32Ty, DispatchPtr, 2);
   LoadInst *LoadZU = Builder.CreateAlignedLoad(I32Ty, GEPZU, Align(4));
 
-  MDNode *MD = MDNode::get(Mod->getContext(), {});
+  MDNode *MD = MDNode::get(Mod.getContext(), {});
   LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
   LoadZU->setMetadata(LLVMContext::MD_invariant_load, MD);
   ST.makeLIDRangeMetadata(LoadZU);
@@ -1307,7 +1303,7 @@ Value *AMDGPUPromoteAllocaImpl::getWorkitemID(IRBuilder<> &Builder,
     llvm_unreachable("invalid dimension");
   }
 
-  Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(Mod, IntrID);
+  Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(&Mod, IntrID);
   CallInst *CI = Builder.CreateCall(WorkitemIdFn);
   ST.makeLIDRangeMetadata(CI);
   F->removeFnAttr(AttrName);
@@ -1507,7 +1503,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
     return false;
   };
 
-  for (GlobalVariable &GV : Mod->globals()) {
+  for (GlobalVariable &GV : Mod.globals()) {
     if (GV.getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
       continue;
 
@@ -1529,7 +1525,6 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
     }
   }
 
-  const DataLayout &DL = Mod->getDataLayout();
   SmallVector<std::pair<uint64_t, Align>, 16> AllocatedSizes;
   AllocatedSizes.reserve(UsedLDS.size());
 
@@ -1603,7 +1598,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   if (!SufficientLDS)
     return false;
 
-  const DataLayout &DL = Mod->getDataLayout();
   IRBuilder<> Builder(AA.Alloca);
 
   const Function &ContainingFunction = *AA.Alloca->getParent()->getParent();
@@ -1639,7 +1633,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
 
   Type *GVTy = ArrayType::get(AA.Alloca->getAllocatedType(), WorkGroupSize);
   GlobalVariable *GV = new GlobalVariable(
-      *Mod, GVTy, false, GlobalValue::InternalLinkage, PoisonValue::get(GVTy),
+      Mod, GVTy, false, GlobalValue::InternalLinkage, PoisonValue::get(GVTy),
       Twine(F->getName()) + Twine('.') + AA.Alloca->getName(), nullptr,
       GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
@@ -1658,7 +1652,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   Value *TID = Builder.CreateAdd(Tmp0, Tmp1);
   TID = Builder.CreateAdd(TID, TIdZ);
 
-  LLVMContext &Context = Mod->getContext();
+  LLVMContext &Context = Mod.getContext();
   Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Context)), TID};
 
   Value *Offset = Builder.CreateInBoundsGEP(GVTy, GV, Indices);
@@ -1760,7 +1754,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     case Intrinsic::objectsize: {
       Value *Src = Intr->getOperand(0);
 
-      CallInst *NewCall = Builder.CreateIntrinsic(
+      Value *NewCall = Builder.CreateIntrinsic(
           Intrinsic::objectsize,
           {Intr->getType(), PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS)},
           {Src, Intr->getOperand(1), Intr->getOperand(2), Intr->getOperand(3)});
