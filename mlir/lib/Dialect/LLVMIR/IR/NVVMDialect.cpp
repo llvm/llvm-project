@@ -5298,8 +5298,6 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
                                       LLVM::ModuleTranslation &mt,
                                       llvm::SmallVector<llvm::Value *> &args) {
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
-  unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
-                    .getAddressSpace();
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
