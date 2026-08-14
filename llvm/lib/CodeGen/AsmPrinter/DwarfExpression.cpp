@@ -571,7 +571,7 @@ bool DwarfExpression::addExpression(
   // Iterating over ExprCursor doesn't consume it.
   bool HasSymbolicBranches =
       llvm::any_of(ExprCursor, [](DIExpression::ExprOperand Op) {
-        return dwarf::isSymbolicBranchOp(Op.getOp());
+        return Op.isOneOf(dwarf::DW_OP_LLVM_bra, dwarf::DW_OP_LLVM_skip);
       });
 
   SmallVector<LabelOffset, 4> Labels;
@@ -602,12 +602,12 @@ bool DwarfExpression::addExpression(
         report_fatal_error(Twine("cannot lower DW_OP_LLVM_convert across ") +
                            dwarf::OperationEncodingString(OpNum) +
                            " without DW_OP_convert support");
-      if (OpNum == dwarf::DW_OP_LLVM_label) {
+      if (Op->is(dwarf::DW_OP_LLVM_label)) {
         Labels.push_back({Op->getArg(0), getTemporaryBufferSize()});
         break;
       }
-      emitOp(OpNum == dwarf::DW_OP_LLVM_bra ? dwarf::DW_OP_bra
-                                            : dwarf::DW_OP_skip);
+      emitOp(Op->is(dwarf::DW_OP_LLVM_bra) ? dwarf::DW_OP_bra
+                                           : dwarf::DW_OP_skip);
       Fixups.push_back({Op->getArg(0), getTemporaryBufferSize()});
       emitData2(0);
       break;
