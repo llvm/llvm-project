@@ -1,6 +1,6 @@
 // Magic
-RUN: printf '\x81rforpl\xff' > %t.profraw
-// Version (11 = 0x0B)
+RUN: printf '\201rforpl\377' > %t.profraw
+// Version (11 = 0o13)
 RUN: printf '\13\0\0\0\0\0\0\0' >> %t.profraw
 // BinaryIdsSize
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
@@ -23,13 +23,13 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 // UniformCountersDelta
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 // NamesSize
-RUN: printf '\x10\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\20\0\0\0\0\0\0\0' >> %t.profraw
 // CountersDelta
-RUN: printf '\xF8\xFF\xFF\xFF\0\0\0\0' >> %t.profraw
+RUN: printf '\370\377\377\377\0\0\0\0' >> %t.profraw
 // BitmapDelta
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 // NamesDelta
-RUN: printf '\x58\x87\x00\x10\0\0\0\0' >> %t.profraw
+RUN: printf '\130\207\0\20\0\0\0\0' >> %t.profraw
 // NumVTables
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 // VNamesSize
@@ -37,7 +37,7 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 // ValueKindLast
 RUN: printf '\3\0\0\0\0\0\0\0' >> %t.profraw
 // No Binary Ids
-// Array of __llvm_prof_data goes next but we'll truncate it to 4 bytes 
+// Array of __llvm_prof_data goes next but we'll truncate it to 4 bytes
 RUN: printf '\0\0\0\0' >> %t.profraw
 
 RUN: not llvm-profdata show  %t.profraw 2>&1 | FileCheck %s
