@@ -120,6 +120,9 @@ public:
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX82);
   }
   bool hasDotInstructions() const { return hasFeature(NVPTX::SM61); }
+  bool hasCLMAD() const {
+    return hasFeature(NVPTX::SM80) && hasFeature(NVPTX::PTX93);
+  }
   // Cache hint SM/PTX version requirements
   bool hasL1EvictionHint() const {
     return hasFeature(NVPTX::SM70) && hasFeature(NVPTX::PTX74);
