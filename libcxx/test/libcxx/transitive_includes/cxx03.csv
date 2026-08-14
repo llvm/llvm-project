@@ -696,6 +696,7 @@ stack limits
 stack stdexcept
 stack tuple
 stack version
+stacktrace version
 stop_token version
 streambuf cctype
 streambuf cerrno

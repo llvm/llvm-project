@@ -895,7 +895,6 @@ stacktrace cstdint
 stacktrace cstdio
 stacktrace cstdlib
 stacktrace cstring
-stacktrace ctime
 stacktrace cwchar
 stacktrace cwctype
 stacktrace format
@@ -905,14 +904,13 @@ stacktrace iosfwd
 stacktrace iostream
 stacktrace istream
 stacktrace limits
-stacktrace optional
 stacktrace ostream
 stacktrace print
-stacktrace ratio
 stacktrace stdexcept
 stacktrace streambuf
 stacktrace string
 stacktrace string_view
+stacktrace text_encoding
 stacktrace tuple
 stacktrace typeinfo
 stacktrace utility

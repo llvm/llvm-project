@@ -854,6 +854,7 @@ stack limits
 stack stdexcept
 stack tuple
 stack version
+stacktrace version
 stop_token climits
 stop_token cstdint
 stop_token cstring
