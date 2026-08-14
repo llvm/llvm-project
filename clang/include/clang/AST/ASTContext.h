@@ -46,7 +46,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
