@@ -405,6 +405,9 @@ ifneq "$(MAKE_DSYM)" "NO"
 ifneq "$(DS)" ""
 	"$(DS)" $(DSFLAGS) "$(DYLIB_FILENAME)"
 ifneq "$(FRAMEWORK)" ""
+	# Clear the destination first: mv refuses to replace a non-empty directory,
+	# and this rule re-runs whenever the toolchain changes.
+	$(call RM_RF,"$(DYLIB_FILENAME).framework.dSYM")
 	mv "$(DYLIB_FILENAME).dSYM"  "$(DYLIB_FILENAME).framework.dSYM"
 endif
 endif
