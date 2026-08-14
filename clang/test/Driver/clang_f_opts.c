@@ -51,6 +51,13 @@
 // RUN: %clang -### -S -floop-interchange -fno-loop-interchange %s 2>&1 | FileCheck -check-prefix=CHECK-NO-INTERCHANGE-LOOPS %s
 // CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
 // CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
+//
+// Loop interchange is enabled by default only at -O3.
+// RUN: %clang -c -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
+// RUN: %clang -c -mllvm -print-pipeline-passes -O2 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-OFF %s
+// RUN: %clang -c -fno-loop-interchange -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-OFF %s
+// INTERCHANGE-ON: loop-interchange
+// INTERCHANGE-OFF-NOT: loop-interchange
 
 // RUN: %clang -### -S -fexperimental-loop-fusion %s -o /dev/null 2>&1 | FileCheck -check-prefix=CHECK-FUSE-LOOPS %s
 // CHECK-FUSE-LOOPS: "-fexperimental-loop-fusion"
