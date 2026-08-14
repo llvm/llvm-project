@@ -573,10 +573,23 @@ static bool isDivOrRem(unsigned Opcode) {
 
 static bool isCheapConstantDivisor(Value *V, const TargetLowering *TLI,
                                    const DataLayout &DL, AttributeList Attr) {
-  auto *C = dyn_cast<ConstantInt>(V);
-  if (!C || C->isZero())
+  auto *C = dyn_cast<Constant>(V);
+  if (!C)
     return false;
-  return !TLI->isIntDivCheap(TLI->getValueType(DL, C->getType()), Attr);
+  Type *ScalarTy = C->getType()->getScalarType();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(C->getType())) {
+    // BuildSDIV compute per lane so divisors can be nonuniform
+    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I) {
+      auto *CI = dyn_cast_or_null<ConstantInt>(C->getAggregateElement(I));
+      if (!CI || CI->isZero())
+        return false;
+    }
+  } else {
+    auto *CI = dyn_cast<ConstantInt>(C);
+    if (!CI || CI->isZero())
+      return false;
+  }
+  return !TLI->isIntDivCheap(TLI->getValueType(DL, ScalarTy), Attr);
 }
 
 /// Fold a div/rem of a select divisor with a cheap constant arm into a
@@ -589,7 +602,7 @@ static bool splitDivRemBySelectDivisor(Instruction *I,
                                        const TargetLowering *TLI,
                                        const DataLayout &DL,
                                        DomTreeUpdater *DTU, LoopInfo *LI) {
-  if (!isDivOrRem(I->getOpcode()) || I->getType()->isVectorTy())
+  if (!isDivOrRem(I->getOpcode()))
     return false;
 
   // Don't touch loops. foldURemOfLoopIncrement handles that case
@@ -601,6 +614,10 @@ static bool splitDivRemBySelectDivisor(Instruction *I,
   // division
   auto *Sel = dyn_cast<SelectInst>(I->getOperand(1));
   if (!Sel || !Sel->hasOneUse())
+    return false;
+
+  // Lanes pick different divisors which a branch can't express.
+  if (Sel->getCondition()->getType()->isVectorTy())
     return false;
 
   // If the dividend is also constant, foldBinOpIntoSelect handles it.

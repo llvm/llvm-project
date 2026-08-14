@@ -134,14 +134,88 @@ define i32 @sdiv_by_select_zero_const_arm(i32 %x, i32 %y, i1 %k) {
   ret i32 %r
 }
 
-; Negative test - vectors are out of scope
-define <4 x i32> @sdiv_by_select_const_arm_vector(<4 x i32> %x, <4 x i32> %y, i1 %k) {
-; CHECK-LABEL: @sdiv_by_select_const_arm_vector(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[K:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> splat (i32 7)
+; Negative test - zero divisor is UB
+define <4 x i32> @sdiv_by_select_zero_const_arm_vector(<4 x i32> %x, <4 x i32> %y, i1 %k) {
+; CHECK-LABEL: @sdiv_by_select_zero_const_arm_vector(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[K:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = sdiv <4 x i32> [[X:%.*]], [[SEL]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
+  %sel = select i1 %k, <4 x i32> %y, <4 x i32> zeroinitializer
+  %r = sdiv <4 x i32> %x, %sel
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @sdiv_by_select_const_arm_vector(<4 x i32> %x, <4 x i32> %y, i1 %k) {
+; CHECK-LABEL: @sdiv_by_select_const_arm_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[K:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP4:%.*]]
+; CHECK:       select.true:
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       select.false:
+; CHECK-NEXT:    [[TMP5:%.*]] = sdiv <4 x i32> [[X]], splat (i32 7)
+; CHECK-NEXT:    br label [[DOTSPLIT]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ [[TMP3]], [[TMP2]] ], [ [[TMP5]], [[TMP4]] ]
+; CHECK-NEXT:    ret <4 x i32> [[TMP6]]
+;
   %sel = select i1 %k, <4 x i32> %y, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+  %r = sdiv <4 x i32> %x, %sel
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @sdiv_by_select_const_arm_vector_nonsplat(<4 x i32> %x, <4 x i32> %y, i1 %k) {
+; CHECK-LABEL: @sdiv_by_select_const_arm_vector_nonsplat(
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[K:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP4:%.*]]
+; CHECK:       select.true:
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       select.false:
+; CHECK-NEXT:    [[TMP5:%.*]] = sdiv <4 x i32> [[X]], <i32 5, i32 7, i32 9, i32 11>
+; CHECK-NEXT:    br label [[DOTSPLIT]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ [[TMP3]], [[TMP2]] ], [ [[TMP5]], [[TMP4]] ]
+; CHECK-NEXT:    ret <4 x i32> [[TMP6]]
+;
+  %sel = select i1 %k, <4 x i32> %y, <4 x i32> <i32 5, i32 7, i32 9, i32 11>
+  %r = sdiv <4 x i32> %x, %sel
+  ret <4 x i32> %r
+}
+
+; Negative test - vector cond
+define <4 x i32> @sdiv_by_select_const_arm_vector_cond(<4 x i32> %x, <4 x i32> %y, <4 x i1> %k) {
+; CHECK-LABEL: @sdiv_by_select_const_arm_vector_cond(
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[K:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> splat (i32 7)
+; CHECK-NEXT:    [[R:%.*]] = sdiv <4 x i32> [[X:%.*]], [[SEL]]
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %sel = select <4 x i1> %k, <4 x i32> %y, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+  %r = sdiv <4 x i32> %x, %sel
+  ret <4 x i32> %r
+}
+
+; Negative test - one lane is zero
+define <4 x i32> @sdiv_by_select_const_arm_vector_partial_zero(<4 x i32> %x, <4 x i32> %y, i1 %k) {
+; CHECK-LABEL: @sdiv_by_select_const_arm_vector_partial_zero(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[K:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 2, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = sdiv <4 x i32> [[X:%.*]], [[SEL]]
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %sel = select i1 %k, <4 x i32> %y, <4 x i32> <i32 2, i32 0, i32 1, i32 2>
+  %r = sdiv <4 x i32> %x, %sel
+  ret <4 x i32> %r
+}
+
+; Negative test - one lane is poison
+define <4 x i32> @sdiv_by_select_const_arm_vector_partial_poison(<4 x i32> %x, <4 x i32> %y, i1 %k) {
+; CHECK-LABEL: @sdiv_by_select_const_arm_vector_partial_poison(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[K:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 2, i32 poison, i32 1, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = sdiv <4 x i32> [[X:%.*]], [[SEL]]
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %sel = select i1 %k, <4 x i32> %y, <4 x i32> <i32 2, i32 poison, i32 1, i32 2>
   %r = sdiv <4 x i32> %x, %sel
   ret <4 x i32> %r
 }
