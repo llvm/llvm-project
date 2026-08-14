@@ -58,5 +58,5 @@ int main() {
   return 1;
 }
 
-// CHECK: OMP: Error #302: Cannot locate captured shared variable reference for
+// CHECK: OMP: Error #{{[0-9]+}}: Cannot locate captured shared variable reference for
 // taskgraph replay

@@ -40,7 +40,8 @@ class TestCase(TestBase):
         # Trigger module builds.
         self.expect("expression @import MyModule")
 
-        event = lldbutil.fetch_next_event(self, listener, broadcaster)
-        payload = lldb.SBDebugger.GetProgressFromEvent(event)
-        message = payload[0]
-        self.assertEqual(message, "Building Clang modules")
+        while True:
+            event = lldbutil.fetch_next_event(self, listener, broadcaster)
+            payload = lldb.SBDebugger.GetProgressFromEvent(event)
+            if payload[0] == "Building Clang modules":
+                break

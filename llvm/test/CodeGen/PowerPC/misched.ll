@@ -1,4 +1,4 @@
-; RUN: llc < %s -enable-misched -verify-machineinstrs
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -enable-misched -verify-machineinstrs
 ; PR14302
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 

@@ -26,7 +26,7 @@ class SelectOptimizePass : public OptionalPassInfoMixin<SelectOptimizePass> {
 
 public:
   explicit SelectOptimizePass(const TargetMachine &TM) : TM(&TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

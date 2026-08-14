@@ -232,6 +232,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -246,6 +250,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_string
@@ -434,6 +442,10 @@
 
 #  ifdef __cpp_lib_incomplete_container_elements
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should not be defined before c++14"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -678,6 +690,10 @@
 
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -932,6 +948,10 @@
 #    error "__cpp_lib_unwrap_ref should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should not be defined before c++14"
+#  endif
+
 #  ifdef __cpp_lib_variant
 #    error "__cpp_lib_variant should not be defined before c++17"
 #  endif
@@ -1160,6 +1180,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -1174,6 +1198,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_string
@@ -1368,6 +1396,13 @@
 
 #  ifdef __cpp_lib_incomplete_container_elements
 #    error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++14"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++14"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -1642,6 +1677,10 @@
 
 #  ifdef __cpp_lib_ranges_find_last
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_ranges_indices
@@ -1926,6 +1965,13 @@
 #    error "__cpp_lib_unwrap_ref should not be defined before c++20"
 #  endif
 
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++14"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++14"
+#  endif
+
 #  ifdef __cpp_lib_variant
 #    error "__cpp_lib_variant should not be defined before c++17"
 #  endif
@@ -2190,6 +2236,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -2204,6 +2254,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_string
@@ -2434,6 +2488,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++17"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++17"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++17"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -2773,6 +2834,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_indices
 #    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
@@ -3104,6 +3169,13 @@
 
 #  ifdef __cpp_lib_unwrap_ref
 #    error "__cpp_lib_unwrap_ref should not be defined before c++20"
+#  endif
+
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++17"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++17"
 #  endif
 
 #  ifndef __cpp_lib_variant
@@ -3460,6 +3532,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should be defined in c++20"
 #  endif
@@ -3480,6 +3556,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -3758,6 +3838,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++20"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++20"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -4169,6 +4256,10 @@
 #    error "__cpp_lib_ranges_find_last should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_indices
 #    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
@@ -4554,6 +4645,13 @@
 #  endif
 #  if __cpp_lib_unwrap_ref != 201811L
 #    error "__cpp_lib_unwrap_ref should have the value 201811L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++20"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_variant
@@ -4946,6 +5044,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should be defined in c++23"
 #  endif
@@ -4966,6 +5068,10 @@
 
 #  ifdef __cpp_lib_constexpr_queue
 #    error "__cpp_lib_constexpr_queue should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -5274,6 +5380,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++23"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++23"
 #  endif
 
 #  ifdef __cpp_lib_inplace_vector
@@ -5763,6 +5876,13 @@
 #    error "__cpp_lib_ranges_find_last should have the value 202207L in c++23"
 #  endif
 
+#  ifndef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_fold != 202207L
+#    error "__cpp_lib_ranges_fold should have the value 202207L in c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_indices
 #    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
@@ -6231,6 +6351,13 @@
 #    error "__cpp_lib_unwrap_ref should have the value 201811L in c++23"
 #  endif
 
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++23"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++23"
+#  endif
+
 #  ifndef __cpp_lib_variant
 #    error "__cpp_lib_variant should be defined in c++23"
 #  endif
@@ -6371,17 +6498,11 @@
 #    error "__cpp_lib_atomic_lock_free_type_aliases should have the value 201907L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_atomic_min_max
-#      error "__cpp_lib_atomic_min_max should be defined in c++26"
-#    endif
-#    if __cpp_lib_atomic_min_max != 202403L
-#      error "__cpp_lib_atomic_min_max should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_atomic_min_max
-#      error "__cpp_lib_atomic_min_max should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_atomic_min_max
+#    error "__cpp_lib_atomic_min_max should be defined in c++26"
+#  endif
+#  if __cpp_lib_atomic_min_max != 202403L
+#    error "__cpp_lib_atomic_min_max should have the value 202403L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_atomic_ref
@@ -6566,8 +6687,8 @@
 #  ifndef __cpp_lib_constant_wrapper
 #    error "__cpp_lib_constant_wrapper should be defined in c++26"
 #  endif
-#  if __cpp_lib_constant_wrapper != 202603L
-#    error "__cpp_lib_constant_wrapper should have the value 202603L in c++26"
+#  if __cpp_lib_constant_wrapper != 202606L
+#    error "__cpp_lib_constant_wrapper should have the value 202606L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -6660,6 +6781,13 @@
 #    error "__cpp_lib_constexpr_list should have the value 202502L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_map != 202502L
+#    error "__cpp_lib_constexpr_map should have the value 202502L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should be defined in c++26"
 #  endif
@@ -6692,6 +6820,13 @@
 #  endif
 #  if __cpp_lib_constexpr_queue != 202502L
 #    error "__cpp_lib_constexpr_queue should have the value 202502L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_set
+#    error "__cpp_lib_constexpr_set should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_set != 202502L
+#    error "__cpp_lib_constexpr_set should have the value 202502L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_string
@@ -7061,17 +7196,11 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_function_ref
-#      error "__cpp_lib_function_ref should be defined in c++26"
-#    endif
-#    if __cpp_lib_function_ref != 202306L
-#      error "__cpp_lib_function_ref should have the value 202306L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_function_ref
-#      error "__cpp_lib_function_ref should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_function_ref
+#    error "__cpp_lib_function_ref should be defined in c++26"
+#  endif
+#  if __cpp_lib_function_ref != 202603L
+#    error "__cpp_lib_function_ref should have the value 202603L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_gcd_lcm
@@ -7147,6 +7276,13 @@
 #  endif
 #  if __cpp_lib_incomplete_container_elements != 201505L
 #    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_initializer_list
+#    error "__cpp_lib_initializer_list should be defined in c++26"
+#  endif
+#  if __cpp_lib_initializer_list != 202511L
+#    error "__cpp_lib_initializer_list should have the value 202511L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -7668,17 +7804,11 @@
 #    error "__cpp_lib_ranges_chunk_by should have the value 202202L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_concat
-#      error "__cpp_lib_ranges_concat should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_concat != 202403L
-#      error "__cpp_lib_ranges_concat should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_concat
-#      error "__cpp_lib_ranges_concat should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_concat
+#    error "__cpp_lib_ranges_concat should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_concat != 202403L
+#    error "__cpp_lib_ranges_concat should have the value 202403L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_contains
@@ -7700,6 +7830,13 @@
 #  endif
 #  if __cpp_lib_ranges_find_last != 202207L
 #    error "__cpp_lib_ranges_find_last should have the value 202207L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_ranges_fold
+#    error "__cpp_lib_ranges_fold should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_fold != 202207L
+#    error "__cpp_lib_ranges_fold should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_indices
@@ -7781,8 +7918,8 @@
 #  ifndef __cpp_lib_raw_memory_algorithms
 #    error "__cpp_lib_raw_memory_algorithms should be defined in c++26"
 #  endif
-#  if __cpp_lib_raw_memory_algorithms != 201606L
-#    error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++26"
+#  if __cpp_lib_raw_memory_algorithms != 202411L
+#    error "__cpp_lib_raw_memory_algorithms should have the value 202411L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -7946,17 +8083,11 @@
 #    error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_smart_ptr_owner_equality
-#      error "__cpp_lib_smart_ptr_owner_equality should be defined in c++26"
-#    endif
-#    if __cpp_lib_smart_ptr_owner_equality != 202306L
-#      error "__cpp_lib_smart_ptr_owner_equality should have the value 202306L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_smart_ptr_owner_equality
-#      error "__cpp_lib_smart_ptr_owner_equality should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_smart_ptr_owner_equality
+#    error "__cpp_lib_smart_ptr_owner_equality should be defined in c++26"
+#  endif
+#  if __cpp_lib_smart_ptr_owner_equality != 202306L
+#    error "__cpp_lib_smart_ptr_owner_equality should have the value 202306L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_source_location
@@ -8095,17 +8226,11 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_text_encoding
-#      error "__cpp_lib_text_encoding should be defined in c++26"
-#    endif
-#    if __cpp_lib_text_encoding != 202306L
-#      error "__cpp_lib_text_encoding should have the value 202306L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_text_encoding
-#      error "__cpp_lib_text_encoding should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_text_encoding
+#    error "__cpp_lib_text_encoding should be defined in c++26"
+#  endif
+#  if __cpp_lib_text_encoding != 202306L
+#    error "__cpp_lib_text_encoding should have the value 202306L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_three_way_comparison
@@ -8243,6 +8368,13 @@
 #  endif
 #  if __cpp_lib_unwrap_ref != 201811L
 #    error "__cpp_lib_unwrap_ref should have the value 201811L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_valarray
+#    error "__cpp_lib_valarray should be defined in c++26"
+#  endif
+#  if __cpp_lib_valarray != 202511L
+#    error "__cpp_lib_valarray should have the value 202511L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_variant

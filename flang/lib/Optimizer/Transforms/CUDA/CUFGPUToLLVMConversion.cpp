@@ -12,7 +12,6 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/common.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -29,7 +28,6 @@ namespace fir {
 
 using namespace fir;
 using namespace mlir;
-using namespace Fortran::runtime;
 
 namespace {
 

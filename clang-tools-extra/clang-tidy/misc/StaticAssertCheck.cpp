@@ -31,7 +31,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
       expr(anyOf(cxxBoolLiteral(equals(false)), integerLiteral(equals(0)),
                  cxxNullPtrLiteralExpr(), gnuNullExpr(), NegatedString))
           .bind("isAlwaysFalse");
-  auto IsAlwaysFalseWithCast = ignoringParenImpCasts(anyOf(
+  const auto IsAlwaysFalseWithCast = ignoringParenImpCasts(anyOf(
       IsAlwaysFalse, cStyleCastExpr(has(ignoringParenImpCasts(IsAlwaysFalse)))
                          .bind("castExpr")));
   auto AssertExprRoot = anyOf(
@@ -56,7 +56,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
                                    ignoringParenCasts(AssertExprRoot))))))),
            unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
           .bind("condition");
-  auto Condition =
+  const auto Condition =
       anyOf(ignoringParenImpCasts(callExpr(
                 hasDeclaration(functionDecl(hasName("__builtin_expect"))),
                 hasArgument(0, AssertCondition))),

@@ -39,10 +39,8 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Host/common/DomainSocket.h"
 #include "lldb/Host/common/TCPSocket.h"
-#if LLDB_ENABLE_POSIX
-#include "lldb/Host/posix/DomainSocket.h"
-#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
@@ -205,7 +203,7 @@ static Status parse_listen_host_port(Socket::SocketProtocol &protocol,
 
 static Status save_socket_id_to_file(const std::string &socket_id,
                                      const FileSpec &file_spec) {
-  FileSpec temp_file_spec(file_spec.GetDirectory().GetStringRef());
+  FileSpec temp_file_spec(file_spec.GetDirectory());
   Status status(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (status.Fail())
     return Status::FromErrorStringWithFormat(
@@ -493,7 +491,7 @@ int main_platform(int argc, char *argv[]) {
   }
 
   if (!LLDBServerUtilities::SetupLogging(log_file, log_channels, 0))
-    return -1;
+    return EXIT_FAILURE;
 
   // Print usage and exit if no listening port is specified.
   if (listen_host_port.empty() && fd == SharedSocket::kInvalidFD) {

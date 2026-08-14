@@ -11,7 +11,7 @@ define void @foo(ptr %a, ptr %b, i32 %j) {
 ; PTX-LABEL: foo(
 ; PTX:       {
 ; PTX-NEXT:    .reg .b32 %r<4>;
-; PTX-NEXT:    .reg .b64 %rd<9>;
+; PTX-NEXT:    .reg .b64 %rd<8>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    ld.param.b64 %rd1, [foo_param_0];
@@ -24,42 +24,41 @@ define void @foo(ptr %a, ptr %b, i32 %j) {
 ; PTX-NEXT:    st.b32 [%rd4], 0;
 ; PTX-NEXT:    add.s64 %rd5, %rd4, %rd3;
 ; PTX-NEXT:    st.b32 [%rd5], 1;
-; PTX-NEXT:    add.s64 %rd6, %rd5, 4;
 ; PTX-NEXT:    st.b32 [%rd5+4], 2;
+; PTX-NEXT:    add.s64 %rd6, %rd5, %rd3;
+; PTX-NEXT:    st.b32 [%rd6+4], 3;
 ; PTX-NEXT:    add.s64 %rd7, %rd6, %rd3;
-; PTX-NEXT:    st.b32 [%rd7], 3;
-; PTX-NEXT:    add.s64 %rd8, %rd7, %rd3;
-; PTX-NEXT:    st.b32 [%rd8], 4;
+; PTX-NEXT:    st.b32 [%rd7+4], 4;
 ; PTX-NEXT:    ret;
   %i.0 = load i32, ptr %a, align 8
-  %i = add i32 %i.0, %j
+  %i = add nsw i32 %i.0, %j
   ; CHECK: [[L:%.*]] = load i32, ptr %a, align 8
-  ; CHECK: [[I:%.*]] = add i32 [[L]], %j
+  ; CHECK: [[I:%.*]] = add nsw i32 [[L]], %j
   %gep.24 = getelementptr float, ptr %b, i32 %i
   ; CHECK: [[GEP0:%.*]] = getelementptr float, ptr %b, i32 [[I]]
   ; CHECK: store i32 0, ptr [[GEP0]]
   store i32 0, ptr %gep.24
-  %gep.24.sum1 = add i32 %i, %i
+  %gep.24.sum1 = add nsw i32 %i, %i
   %gep.25 = getelementptr float, ptr %b, i32 %gep.24.sum1
   ; CHECK: [[EXT1:%.*]] = sext i32 [[I]] to i64
   ; CHECK: [[MUL1:%.*]] = shl i64 [[EXT1]], 2
   ; CHECK: [[GEP1:%.*]] = getelementptr i8, ptr [[GEP0]], i64 [[MUL1]]
   ; CHECK: store i32 1, ptr [[GEP1]]
   store i32 1, ptr %gep.25
-  %gep.26.sum3 = add i32 1, %i
-  %gep.27.sum = add i32 %gep.26.sum3, %i
+  %gep.26.sum3 = add nsw i32 1, %i
+  %gep.27.sum = add nsw i32 %gep.26.sum3, %i
   %gep.28 = getelementptr float, ptr %b, i32 %gep.27.sum
   ; CHECK: [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 4
   ; CHECK: store i32 2, ptr [[GEP2]]
   store i32 2, ptr %gep.28
-  %gep.28.sum = add i32 %gep.27.sum, %i
+  %gep.28.sum = add nsw i32 %gep.27.sum, %i
   %gep.29 = getelementptr float, ptr %b, i32 %gep.28.sum
   ; CHECK: [[EXT2:%.*]] = sext i32 [[I]] to i64
   ; CHECK: [[MUL2:%.*]] = shl i64 [[EXT2]], 2
   ; CHECK: [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 [[MUL2]]
   ; CHECK: store i32 3, ptr [[GEP3]]
   store i32 3, ptr %gep.29
-  %gep.29.sum = add i32 %gep.28.sum, %i
+  %gep.29.sum = add nsw i32 %gep.28.sum, %i
   %gep.30 = getelementptr float, ptr %b, i32 %gep.29.sum
   ; CHECK: [[EXT3:%.*]] = sext i32 [[I]] to i64
   ; CHECK: [[MUL3:%.*]] = shl i64 [[EXT3]], 2

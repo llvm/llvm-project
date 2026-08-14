@@ -54,11 +54,13 @@ public:
   void run(raw_ostream &OS, bool Enums);
 
   void EmitEnumInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
-  void EmitAnyKind(raw_ostream &OS);
+  void EmitAnyKindEnums(raw_ostream &OS);
   void EmitIITInfo(raw_ostream &OS);
   void EmitTargetInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitIntrinsicToNameTable(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
+  void EmitIntrinsicToTargetFeaturesTable(const CodeGenIntrinsicTable &Ints,
+                                          raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
   void EmitIntrinsicToScalarizableTable(const CodeGenIntrinsicTable &Ints,
@@ -73,6 +75,8 @@ public:
   void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitPrettyPrintArguments(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
+  void EmitDefaultArgValuesTable(const CodeGenIntrinsicTable &Ints,
+                                 raw_ostream &OS);
   void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints,
                                  bool IsClang, raw_ostream &OS);
 };
@@ -99,8 +103,8 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
     // Emit the enum information.
     EmitEnumInfo(Ints, OS);
 
-    // Emit AnyKind for Intrinsics.h.
-    EmitAnyKind(OS);
+    // Emit AnyKind enums for Intrinsics.h.
+    EmitAnyKindEnums(OS);
   } else {
     // Emit IIT_Info constants.
     EmitIITInfo(OS);
@@ -110,6 +114,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic ID -> name table.
     EmitIntrinsicToNameTable(Ints, OS);
+
+    // Emit the intrinsic ID -> required target features table.
+    EmitIntrinsicToTargetFeaturesTable(Ints, OS);
 
     // Emit the intrinsic ID -> overload table.
     EmitIntrinsicToOverloadTable(Ints, OS);
@@ -128,6 +135,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit Pretty Print attribute.
     EmitPrettyPrintArguments(Ints, OS);
+
+    // Emit the default-argument values table and lookup function.
+    EmitDefaultArgValuesTable(Ints, OS);
 
     // Emit code to translate Clang builtins into LLVM intrinsics.
     EmitIntrinsicToBuiltinMap(Ints, true, OS);
@@ -204,17 +214,26 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     OS << "}; // enum\n";
 }
 
-void IntrinsicEmitter::EmitAnyKind(raw_ostream &OS) {
+void IntrinsicEmitter::EmitAnyKindEnums(raw_ostream &OS) {
   if (!IntrinsicPrefix.empty())
     return;
-  IfDefEmitter IfDef(OS, "GET_INTRINSIC_ANYKIND");
-  OS << "// llvm::Intrinsic::IITDescriptor::AnyKind.\n";
-  if (const auto RecAnyKind = Records.getDef("AnyKind")) {
-    for (const auto &RV : RecAnyKind->getValues())
-      OS << "    AK_" << RV.getName() << " = " << *RV.getValue() << ",\n";
-  } else {
-    OS << "#error \"AnyKind is not defined\"\n";
-  }
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_ANYKIND_ENUMS");
+
+  auto GenerateAnyKindEnums = [&OS, this](StringRef EnumName,
+                                          StringRef Prefix) {
+    OS << "// llvm::Intrinsic::IITDescriptor::" << EnumName << "\n";
+    if (const Record *EnumDef = Records.getDef(EnumName)) {
+      OS << "enum " << EnumName << " {\n";
+      for (const auto &RV : EnumDef->getValues())
+        OS << "  " << Prefix << RV.getName() << " = " << *RV.getValue()
+           << ",\n";
+      OS << "}; // " << EnumName << "\n\n";
+    } else {
+      OS << "#error \"" << EnumName << " is not defined\"\n";
+    }
+  };
+  GenerateAnyKindEnums("AnyKindVectorConstraint", "VC_");
+  GenerateAnyKindEnums("AnyKindElementConstraint", "EC_");
 }
 
 void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
@@ -306,6 +325,33 @@ static constexpr unsigned IntrinsicNameOffsetTable[] = {
   OS << "\n}; // IntrinsicNameOffsetTable\n";
 }
 
+void IntrinsicEmitter::EmitIntrinsicToTargetFeaturesTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  StringToOffsetTable Table;
+  for (const CodeGenIntrinsic &Int : Ints)
+    Table.GetOrAddStringOffset(Int.TargetFeatures);
+
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_TARGET_FEATURES_TABLE");
+  OS << R"(// Intrinsic ID to required target features table.
+// Note that entry #0 is the invalid intrinsic!
+
+)";
+
+  Table.EmitStringTableDef(OS, "IntrinsicTargetFeaturesTable");
+
+  OS << R"(
+static constexpr unsigned IntrinsicTargetFeaturesOffsetTable[] = {
+)";
+
+  OS << "  0, // not_intrinsic\n";
+  for (const CodeGenIntrinsic &Int : Ints) {
+    OS << formatv("  {}, // {}\n", *Table.GetStringOffset(Int.TargetFeatures),
+                  Int.Name);
+  }
+
+  OS << "\n}; // IntrinsicTargetFeaturesOffsetTable\n";
+}
+
 void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
   EmitIntrinsicBitTable(
@@ -330,17 +376,29 @@ static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   const Record *TypeInfo = Int.TheDef->getValueAsDef("TypeInfo");
   const ListInit *TypeList = TypeInfo->getValueAsListInit("TypeSig");
 
-  for (const auto *TypeListEntry : TypeList->getElements())
-    TypeSig.emplace_back(cast<IntInit>(TypeListEntry)->getValue());
+  for (const auto *TypeListEntry : TypeList->getElements()) {
+    int64_t Value = cast<IntInit>(TypeListEntry)->getValue();
+    if (Value < 0 || Value > 255)
+      PrintFatalError(Int.TheDef, "Unresolved type signature");
+    TypeSig.emplace_back(Value);
+  }
   return TypeSig;
 }
 
-// Pack the type signature into 32-bit fixed encoding word.
-static std::optional<uint32_t> encodePacked(const TypeSigTy &TypeSig) {
-  if (TypeSig.size() > 8)
+// Note: the code below can be switched to use 32-bit fixed encoding by
+// flipping the flag below.
+constexpr bool Use16BitFixedEncoding = true;
+using FixedEncodingTy =
+    std::conditional_t<Use16BitFixedEncoding, uint16_t, uint32_t>;
+
+// Pack the type signature into 16/32-bit fixed encoding word, where each byte
+// in the type signature is packed into a nibble (4 bits) if possible.
+static std::optional<FixedEncodingTy> encodePacked(const TypeSigTy &TypeSig) {
+  constexpr size_t NUM_NIBBLES = sizeof(FixedEncodingTy) * 2;
+  if (TypeSig.size() > NUM_NIBBLES)
     return std::nullopt;
 
-  uint32_t Result = 0;
+  FixedEncodingTy Result = 0;
   for (unsigned char C : reverse(TypeSig)) {
     if (C > 15)
       return std::nullopt;
@@ -351,15 +409,10 @@ static std::optional<uint32_t> encodePacked(const TypeSigTy &TypeSig) {
 
 void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
                                      raw_ostream &OS) {
-  // Note: the code below can be switched to use 32-bit fixed encoding by
-  // flipping the flag below.
-  constexpr bool Use16BitFixedEncoding = true;
-  using FixedEncodingTy =
-      std::conditional_t<Use16BitFixedEncoding, uint16_t, uint32_t>;
   constexpr unsigned FixedEncodingBits = sizeof(FixedEncodingTy) * CHAR_BIT;
   constexpr unsigned MSBPosition = FixedEncodingBits - 1;
   // Mask with all bits 1 except the most significant bit.
-  constexpr unsigned Mask = (1U << MSBPosition) - 1;
+  constexpr FixedEncodingTy Mask = (1U << MSBPosition) - 1;
   StringRef FixedEncodingTypeName =
       Use16BitFixedEncoding ? "uint16_t" : "uint32_t";
 
@@ -380,9 +433,9 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
     TypeSigTy TypeSig = ComputeTypeSignature(Int);
 
     // Check to see if we can encode it into a 16/32 bit word.
-    std::optional<uint32_t> Result = encodePacked(TypeSig);
+    std::optional<FixedEncodingTy> Result = encodePacked(TypeSig);
     if (Result && (*Result & Mask) == *Result) {
-      FixedEncodings.push_back(static_cast<FixedEncodingTy>(*Result));
+      FixedEncodings.push_back(*Result);
       continue;
     }
 
@@ -859,7 +912,8 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
     OS << "    switch (ArgIdx) {\n";
     for (const auto [ArgIdx, ArgName, FuncName] : Int.PrettyPrintFunctions) {
       OS << "    case " << ArgIdx << ":\n";
-      OS << "      OS << \"" << ArgName << "=\";\n";
+      if (!ArgName.empty())
+        OS << "      OS << \"" << ArgName << "=\";\n";
       if (!FuncName.empty()) {
         OS << "      ";
         if (!Int.TargetPrefix.empty())
@@ -875,6 +929,96 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
     break;
   }
 })";
+}
+
+void IntrinsicEmitter::EmitDefaultArgValuesTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  // Build the per-intrinsic default-value sequences:
+  //   [Header = (NumDefaults << 32) | FirstDefault, val0, val1, ...]
+  // Each value is the (non-negative) default for one parameter, stored as a
+  // uint64_t bit pattern.
+  //
+  // Offset 0 of the values table is reserved as the "no defaults" sentinel
+  // (a single 0 word, decoding to NumDefaults = 0). Intrinsics without
+  // defaults point to offset 0; real sequences are emitted after it.
+  // SequenceToOffsetTable deduplicates the real sequences.
+
+  using Sequence = SmallVector<uint64_t, 8>;
+
+  SequenceToOffsetTable<Sequence> Table;
+  // An empty Sequence means "no defaults" (maps to the reserved offset 0);
+  // otherwise it holds the intrinsic's value sequence.
+  SmallVector<Sequence> PerIntrinsic;
+  PerIntrinsic.reserve(Ints.size());
+
+  for (const CodeGenIntrinsic &Int : Ints) {
+    if (Int.ParamDefaultValues.empty()) {
+      PerIntrinsic.push_back({});
+      continue;
+    }
+
+    // Find the first parameter with a default.
+    unsigned FirstDefault = 0;
+    for (size_t j = 0U, N = Int.ParamDefaultValues.size(); j < N; ++j) {
+      if (Int.ParamDefaultValues[j].has_value()) {
+        FirstDefault = j;
+        break;
+      }
+    }
+    unsigned NumDefaults =
+        static_cast<unsigned>(Int.ParamDefaultValues.size()) - FirstDefault;
+
+    Sequence Seq;
+    Seq.push_back((static_cast<uint64_t>(NumDefaults) << 32) | FirstDefault);
+    for (size_t j = FirstDefault, N = Int.ParamDefaultValues.size(); j < N;
+         ++j) {
+      assert(Int.ParamDefaultValues[j].has_value() &&
+             "Default block must be contiguous");
+      Seq.push_back(*Int.ParamDefaultValues[j]);
+    }
+    Table.add(Seq);
+    PerIntrinsic.push_back(std::move(Seq));
+  }
+
+  Table.layout();
+
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_DEFAULT_ARG_VALUES");
+
+  // Emit the flat values table. Offset 0 is the reserved "no defaults"
+  // sentinel; the deduplicated real sequences follow it.
+  OS << "static constexpr uint64_t DefaultArgValuesTable[] = {\n";
+  OS << "  0, // offset 0: sentinel for intrinsics without defaults\n";
+  Table.emit(OS, [](raw_ostream &OS, uint64_t Val) { OS << "  " << Val; });
+  OS << "};\n\n";
+
+  // Emit the per-intrinsic offset table. Entry #0 is for the invalid
+  // Intrinsic::not_intrinsic (IID 0); it and every intrinsic without defaults
+  // point to the reserved sentinel at offset 0. Real sequences are shifted by
+  // +1 to skip past the sentinel slot.
+  OS << "static constexpr uint32_t DefaultArgValuesTableOffset[] = {\n";
+  OS << "  0, // not_intrinsic\n";
+  for (const Sequence &Seq : PerIntrinsic) {
+    if (!Seq.empty())
+      OS << "  " << (Table.get(Seq) + 1) << ",\n";
+    else
+      OS << "  0,\n";
+  }
+  OS << "};\n\n";
+
+  // Emit the lookup function body.
+  OS << R"(
+std::pair<unsigned, ArrayRef<uint64_t>>
+Intrinsic::getAllDefaultArgValues(ID IID) {
+  uint32_t Offset = DefaultArgValuesTableOffset[IID];
+  uint64_t Header = DefaultArgValuesTable[Offset];
+  uint32_t FirstDefault = Header & 0xFFFFFFFFu;
+  uint32_t NumDefaults = (Header >> 32) & 0xFFFFFFFFu;
+  if (NumDefaults == 0)
+    return {0, {}};
+  return {FirstDefault,
+          ArrayRef(&DefaultArgValuesTable[Offset + 1], NumDefaults)};
+}
+)";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
@@ -937,7 +1081,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
 // C front-end. The builtin name is passed in as BuiltinName, and a target
 // prefix (e.g. 'ppc') is passed in as TargetPrefix.
 Intrinsic::ID
-Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix, 
+Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
                                       StringRef BuiltinName) {{
   using namespace Intrinsic;
 )",

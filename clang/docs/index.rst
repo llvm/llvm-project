@@ -29,7 +29,7 @@ Using Clang as a Compiler
    ThreadSafetyAnalysis
    LifetimeSafety
    SafeBuffers
-   ScalableStaticAnalysisFramework/index
+   ScalableStaticAnalysis/index
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    AddressSanitizer
