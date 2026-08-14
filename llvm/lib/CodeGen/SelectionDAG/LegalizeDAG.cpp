@@ -5893,6 +5893,18 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp1.getValue(1));
     break;
   case ISD::FMA:
+    // Promote scalar operations to vector using SCALAR_TO_VECTOR
+    if (!OVT.isVector() && NVT.isVector() &&
+        NVT.getVectorElementType() == OVT) {
+      Tmp1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(1));
+      Tmp3 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(2));
+      SDValue Result = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Tmp3,
+                                   Node->getFlags());
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, OVT, Result,
+                                    DAG.getConstant(0, dl, MVT::i32)));
+      break;
+    }
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(2));

@@ -617,6 +617,23 @@ public:
     return fmfString;
   }
 
+  /// RAII helper to set FastMathFlags for a scope and restore the previous
+  /// value on destruction.
+  class FastMathFlagGuard {
+  public:
+    FastMathFlagGuard(FirOpBuilder &builder, mlir::arith::FastMathFlags flags)
+        : builder{builder}, savedFlags{builder.getFastMathFlags()} {
+      builder.setFastMathFlags(flags);
+    }
+    FastMathFlagGuard(const FastMathFlagGuard &) = delete;
+    FastMathFlagGuard &operator=(const FastMathFlagGuard &) = delete;
+    ~FastMathFlagGuard() { builder.setFastMathFlags(savedFlags); }
+
+  private:
+    FirOpBuilder &builder;
+    mlir::arith::FastMathFlags savedFlags;
+  };
+
   /// Set default IntegerOverflowFlags value for all operations
   /// supporting mlir::arith::IntegerOverflowFlagsAttr that will be created
   /// by this builder.

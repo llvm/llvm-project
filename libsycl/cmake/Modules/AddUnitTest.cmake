@@ -8,15 +8,9 @@ function(add_sycl_unittest test_name)
   target_compile_definitions(${test_name}
                               PRIVATE _LIBSYCL_BUILDING_LIBRARY)
 
-    add_custom_target(check-sycl-${test_name}
-        ${CMAKE_COMMAND} -E env
-        ${CMAKE_CURRENT_BINARY_DIR}/${test_name}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS
-        ${test_name}
-    )
-
-  add_dependencies(check-sycl-unittests check-sycl-${test_name})
+  # Use a common suffix so the test executables can be discovered and run by
+  # lit's GoogleTest format (see unittests/lit.cfg.py).
+  set_target_properties(${test_name} PROPERTIES OUTPUT_NAME ${test_name}.unittests)
 
   target_link_libraries(${test_name}
     PRIVATE
