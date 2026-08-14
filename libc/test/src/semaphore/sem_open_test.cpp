@@ -29,7 +29,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcSemOpenTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcSemOpenTest, OpenCloseUnlink) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_open");
+  const char name[] = "/llvmlibc_sem_open";
 
   // Clear any leftover from a previous run
   LIBC_NAMESPACE::sem_unlink(name);
@@ -52,7 +52,7 @@ TEST_F(LlvmLibcSemOpenTest, OpenCloseUnlink) {
 }
 
 TEST_F(LlvmLibcSemOpenTest, OpenExisting) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_open_existing");
+  const char name[] = "/llvmlibc_sem_open_existing";
 
   LIBC_NAMESPACE::sem_unlink(name);
   LIBC_NAMESPACE::libc_errno = 0;
@@ -74,7 +74,7 @@ TEST_F(LlvmLibcSemOpenTest, OpenExisting) {
 }
 
 TEST_F(LlvmLibcSemOpenTest, DistinctHandlesShareState) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_open_handles");
+  const char name[] = "/llvmlibc_sem_open_handles";
 
   LIBC_NAMESPACE::sem_unlink(name);
   LIBC_NAMESPACE::libc_errno = 0;
@@ -106,7 +106,7 @@ TEST_F(LlvmLibcSemOpenTest, DistinctHandlesShareState) {
 }
 
 TEST_F(LlvmLibcSemOpenTest, OpenExclusiveTwiceFails) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_open_excl");
+  const char name[] = "/llvmlibc_sem_open_excl";
 
   LIBC_NAMESPACE::sem_unlink(name);
   LIBC_NAMESPACE::libc_errno = 0;
@@ -117,14 +117,13 @@ TEST_F(LlvmLibcSemOpenTest, OpenExclusiveTwiceFails) {
   EXPECT_EQ(LIBC_NAMESPACE::sem_open(name, O_CREAT | O_EXCL, 0644, 1),
             SEM_FAILED);
   ASSERT_ERRNO_EQ(EEXIST);
-  LIBC_NAMESPACE::libc_errno = 0;
 
   ASSERT_THAT(LIBC_NAMESPACE::sem_close(sem), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::sem_unlink(name), Succeeds());
 }
 
 TEST_F(LlvmLibcSemOpenTest, OpenNonExistent) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_missing");
+  const char name[] = "/llvmlibc_sem_missing";
 
   // Without O_CREAT the name must already exist.
   EXPECT_EQ(LIBC_NAMESPACE::sem_open(name, 0), SEM_FAILED);
