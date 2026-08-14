@@ -943,11 +943,6 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command == "disconnect") {
-    std::lock_guard<std::mutex> guard(m_queue_mutex);
-    m_disconnecting = true;
-  }
-
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");
   if (cancel_args) {
@@ -1065,8 +1060,13 @@ llvm::Error DAP::Loop() {
   // Don't wait to join the mainloop thread if our callback wasn't added
   // successfully, or we'll wait forever.
   if (m_loop.AddPendingCallback(
-          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+          [](MainLoopBase &loop) { loop.RequestTermination(); })) {
     thread.join();
+  } else {
+    DAP_LOG(log, "failed to terminate stop the main loop. Detaching the "
+                 "Transport Handler thread.");
+    thread.detach();
+  }
 
   if (m_error_occurred)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
