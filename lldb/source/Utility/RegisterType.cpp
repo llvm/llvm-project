@@ -8,7 +8,15 @@
 
 #include "lldb/Utility/RegisterType.h"
 
+#include <atomic>
+
 using namespace lldb_private;
+
+static std::atomic<uint64_t> g_next_register_type_uid{1};
+
+RegisterType::RegisterType(RegisterTypeKind kind, std::string id)
+    : m_kind(kind), m_id(std::move(id)),
+      m_uid(g_next_register_type_uid.fetch_add(1, std::memory_order_relaxed)) {}
 
 void RegisterType::ToXML(
     Stream &strm, std::unordered_set<const RegisterType *> &previously_emitted,
