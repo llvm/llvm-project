@@ -845,5 +845,17 @@ bb:
   ret i32 %i35
 }
 
+define void @PR214650(ptr %q, i32 %s) {
+; CHECK-LABEL: @PR214650(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i32>, ptr [[Q:%.*]], i64 0, i64 1
+; CHECK-NEXT:    store i32 [[S:%.*]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ld = load <8 x i32>, ptr %q, align 32
+  %v1 = insertelement <8 x i32> %ld, i32 %s, i1 true
+  store <8 x i32> %v1, ptr %q, align 32
+  ret void
+}
+
 declare i32 @bar(i32, i1) readonly
 declare double @llvm.log2.f64(double)
