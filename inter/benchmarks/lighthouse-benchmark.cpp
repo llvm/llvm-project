@@ -75,15 +75,14 @@ static bool selectDevice(const char *requiredName, ze_driver_handle_t &driver,
 }
 
 int main(int argc, char **argv) {
-  if ((argc != 10 && argc != 11) ||
-      (std::string(argv[1]) != "inter" && std::string(argv[1]) != "igc")) {
+  if ((argc != 10 && argc != 11) || (std::string(argv[1]) != "inter" &&
+                                     std::string(argv[1]) != "lighthouse")) {
     fprintf(stderr,
-            "usage: %s inter|igc <zebin> <device> <warmups> <batches> "
+            "usage: %s inter|lighthouse <zebin> <device> <warmups> <batches> "
             "<iterations> <size> <reduction-size> <kernel> [padding-k-tiles]\n",
             argv[0]);
     return 1;
   }
-  const bool inter = std::string(argv[1]) == "inter";
   const int warmups = std::atoi(argv[4]);
   const int batches = std::atoi(argv[5]);
   const int iterations = std::atoi(argv[6]);
@@ -184,26 +183,20 @@ int main(int argc, char **argv) {
   };
   poisonOutput();
 
-  if (inter) {
-    void *pointers[] = {aStorage, aStorage, bStorage,
-                        bStorage, cStorage, cStorage};
-    int64_t scalars[] = {0, m, k, k, 1, 0, k, n, n, 1, 0, m, n, n, 1};
-    unsigned argument = 0;
-    int pointerIndex = 0;
-    int scalarIndex = 0;
-    for (int descriptor = 0; descriptor < 3; ++descriptor) {
-      ZE_CHECK(zeKernelSetArgumentValue(kernel, argument++, sizeof(void *),
-                                        &pointers[pointerIndex++]));
-      ZE_CHECK(zeKernelSetArgumentValue(kernel, argument++, sizeof(void *),
-                                        &pointers[pointerIndex++]));
-      for (int field = 0; field < 5; ++field)
-        ZE_CHECK(zeKernelSetArgumentValue(kernel, argument++, sizeof(int64_t),
-                                          &scalars[scalarIndex++]));
-    }
-  } else {
-    ZE_CHECK(zeKernelSetArgumentValue(kernel, 0, sizeof(void *), &aStorage));
-    ZE_CHECK(zeKernelSetArgumentValue(kernel, 1, sizeof(void *), &bStorage));
-    ZE_CHECK(zeKernelSetArgumentValue(kernel, 2, sizeof(void *), &cStorage));
+  void *pointers[] = {aStorage, aStorage, bStorage,
+                      bStorage, cStorage, cStorage};
+  int64_t scalars[] = {0, m, k, k, 1, 0, k, n, n, 1, 0, m, n, n, 1};
+  unsigned argument = 0;
+  int pointerIndex = 0;
+  int scalarIndex = 0;
+  for (int descriptor = 0; descriptor < 3; ++descriptor) {
+    ZE_CHECK(zeKernelSetArgumentValue(kernel, argument++, sizeof(void *),
+                                      &pointers[pointerIndex++]));
+    ZE_CHECK(zeKernelSetArgumentValue(kernel, argument++, sizeof(void *),
+                                      &pointers[pointerIndex++]));
+    for (int field = 0; field < 5; ++field)
+      ZE_CHECK(zeKernelSetArgumentValue(kernel, argument++, sizeof(int64_t),
+                                        &scalars[scalarIndex++]));
   }
 
   constexpr int64_t spotCheckCount = 1024;

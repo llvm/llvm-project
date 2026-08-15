@@ -214,8 +214,9 @@ through liboffload's Level Zero backend with `olIsValidBinary` and
 - Emission tests check GED fields, disassembly, resource metadata, and zebin.
 - Integration tests launch serialized hardware workloads on B60.
 - Performance goldens freeze reviewed machine assembly.
-- The Lighthouse benchmark rebuilds both compilers, validates dense randomized
-  matrix products, and compares Level Zero kernel timestamps.
+- The Lighthouse benchmark rebuilds Inter and the pinned Lighthouse
+  MLIR-to-XeVM pipeline, validates dense randomized matrix products, and
+  compares Level Zero kernel timestamps.
 
 Hardware-test instructions are in `test/Integration/README.md`; benchmark
 methodology is in `benchmarks/README.md`.

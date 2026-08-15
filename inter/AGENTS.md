@@ -30,7 +30,7 @@
 
 ## Benchmarking
 
-- Use `benchmarks/lighthouse.py` for the Lighthouse Inter-versus-IGC comparison.
+- Use `benchmarks/lighthouse.py` for the Inter-versus-Lighthouse comparison.
   Build `inter-opt`, `inter-translate`, and `inter-lighthouse-benchmark`, then
   run `python3 inter/benchmarks/lighthouse.py --build-dir <build>`.
 - Benchmark runs must be serialized and correctness-checked. Do not report
@@ -38,11 +38,11 @@
 - Compare identical problem sizes, workgroup geometry, warmup count, batch
   count, iteration count, and Level Zero timestamp source. Alternate compiler
   order across repeated runs to reduce temperature and clock-order bias.
-- Keep the runtime device and IGC compile target paired. When overriding the
-  default B60 device, also pass the corresponding `--igc-device` target.
+- Generate the reference binary through the pinned Lighthouse MLIR pipeline.
+  Do not substitute an OpenCL reconstruction of the kernel.
 - Report the distribution and method, not one favorable sample. At minimum,
   include median latency, observed range, run count, batches, iterations, and
-  relative Inter/IGC performance.
+  relative Inter/Lighthouse performance.
 - Regenerate both compiler outputs from source for a comparison. Do not use
   stale binaries from `/tmp`, previous commits, or a different driver/compiler
   installation without explicitly identifying that mismatch.

@@ -3,23 +3,24 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
-import shutil
 import statistics
 import subprocess
 import sys
 from pathlib import Path
 
-from lighthouse_input import drop_loop_prefetches, specialize_inter_source
-
+from lighthouse_input import specialize_inter_source
 
 HERE = Path(__file__).resolve().parent
 INTER_ROOT = HERE.parent
-INTER_SOURCE = (
-    INTER_ROOT / "test" / "Integration" / "Inputs" / "lighthouse-matmul.mlir"
+INTER_SOURCE = INTER_ROOT / "test" / "Integration" / "Inputs" / "lighthouse-matmul.mlir"
+LIGHTHOUSE_REVISION = "ec3a77574cc5f049736f47b121bdd4aeeb854201"
+RESULT = re.compile(r"^(inter|lighthouse) median_us=([0-9.]+).*$")
+GPU_OBJECT = re.compile(
+    r'gpu\.binary\s+@payload_kernel\b[^\n]*?#gpu\.object<[^\"]*?"'
+    r'((?:\\[0-9A-Fa-f]{2}|\\.|[^"\\])*)"'
 )
-IGC_SOURCE = HERE / "lighthouse-matmul.cl"
-RESULT = re.compile(r"^(inter|igc) median_us=([0-9.]+).*$")
 
 
 def run(
@@ -47,13 +48,116 @@ def require(path: Path) -> Path:
     return path
 
 
+def decode_mlir_string(value: str) -> bytes:
+    result = bytearray()
+    index = 0
+    escapes = {"n": b"\n", "t": b"\t", '"': b'"', "\\": b"\\"}
+    while index < len(value):
+        if value[index] != "\\":
+            result.extend(value[index].encode())
+            index += 1
+            continue
+        if index + 2 < len(value) and all(
+            character in "0123456789abcdefABCDEF"
+            for character in value[index + 1 : index + 3]
+        ):
+            result.append(int(value[index + 1 : index + 3], 16))
+            index += 3
+            continue
+        if index + 1 >= len(value) or value[index + 1] not in escapes:
+            raise ValueError(f"unsupported MLIR string escape at byte {index}")
+        result.extend(escapes[value[index + 1]])
+        index += 2
+    return bytes(result)
+
+
+def build_lighthouse_binary(
+    lighthouse_root: Path,
+    lighthouse_python: Path,
+    output_dir: Path,
+    size: int,
+    reduction_size: int,
+) -> tuple[Path, str]:
+    generator = require(lighthouse_root / "examples" / "xegpu" / "matmul.py")
+    revision = run(
+        ["git", "-C", str(lighthouse_root), "rev-parse", "HEAD"], capture=True
+    ).strip()
+    if revision != LIGHTHOUSE_REVISION:
+        raise SystemExit(
+            f"Lighthouse revision {revision} does not match the benchmark input's "
+            f"pinned revision {LIGHTHOUSE_REVISION}"
+        )
+    command = [
+        str(lighthouse_python),
+        str(generator),
+        "--sizes",
+        str(size),
+        str(size),
+        str(reduction_size),
+        "--wg-tile",
+        "64",
+        "64",
+        "--sg-tile",
+        "16",
+        "16",
+        "--k-tile",
+        "32",
+        "--load-tile-a",
+        "8",
+        "16",
+        "--load-tile-b",
+        "16",
+        "16",
+        "--prefetch-tile-a",
+        "8",
+        "16",
+        "--prefetch-tile-b",
+        "8",
+        "16",
+        "--prefetch-a-nb",
+        "1",
+        "--prefetch-b-nb",
+        "1",
+        "--dump-kernel=final",
+        "--no-accumulate-c",
+    ]
+    try:
+        process = subprocess.run(
+            command,
+            cwd=lighthouse_root,
+            env=os.environ.copy(),
+            text=True,
+            stdout=subprocess.PIPE,
+        )
+    except OSError as error:
+        raise SystemExit(f"failed to execute Lighthouse generator: {error}") from error
+    if process.returncode != 0:
+        raise SystemExit(process.returncode)
+    generated_mlir = output_dir / "lighthouse-generated.mlir"
+    generated_mlir.write_text(process.stdout)
+    matches = GPU_OBJECT.findall(process.stdout)
+    if len(matches) != 1:
+        raise SystemExit(
+            f"expected one payload_kernel GPU object from Lighthouse, found {len(matches)}"
+        )
+    try:
+        binary = decode_mlir_string(matches[0])
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    if not binary.startswith(b"\x7fELF"):
+        raise SystemExit("Lighthouse GPU object is not an ELF binary")
+    lighthouse_binary = output_dir / "lighthouse-native.bin"
+    lighthouse_binary.write_bytes(binary)
+    return lighthouse_binary, revision
+
+
 def build_binaries(
     build_dir: Path,
     output_dir: Path,
-    igc_device: str,
+    lighthouse_root: Path,
+    lighthouse_python: Path,
     size: int,
     reduction_size: int,
-    drop_loop_prefetch: bool,
 ) -> tuple[Path, Path, str]:
     inter_opt = require(build_dir / "tools" / "inter-opt" / "inter-opt")
     inter_translate = require(
@@ -68,8 +172,6 @@ def build_binaries(
         source_text = specialize_inter_source(
             INTER_SOURCE.read_text(), size, reduction_size
         )
-        if drop_loop_prefetch:
-            source_text = drop_loop_prefetches(source_text)
     except ValueError as error:
         raise SystemExit(str(error)) from error
     inter_source.write_text(source_text)
@@ -78,9 +180,6 @@ def build_binaries(
         f"transform-preload-library{{transform-library-paths={pipelines}}},"
         "transform-interpreter{entry-point=inter_backend})"
     )
-    compile_options = f"-DMATRIX_SIZE={size} -DREDUCTION_SIZE={reduction_size}"
-    if drop_loop_prefetch:
-        compile_options += " -DDROP_LOOP_PREFETCH"
     run(
         [
             str(inter_opt),
@@ -100,35 +199,14 @@ def build_binaries(
         ]
     )
 
-    ocloc = shutil.which("ocloc")
-    if not ocloc:
-        raise SystemExit("required tool is missing: ocloc")
-    ocloc_version = run([ocloc, "--version"], capture=True).strip()
-    igc_dir = output_dir / "igc"
-    if igc_dir.exists():
-        shutil.rmtree(igc_dir)
-    igc_dir.mkdir()
-    run(
-        [
-            ocloc,
-            "compile",
-            "-file",
-            str(IGC_SOURCE),
-            "-device",
-            igc_device,
-            "-options",
-            compile_options,
-            "-out_dir",
-            str(igc_dir),
-        ]
+    lighthouse_binary, lighthouse_revision = build_lighthouse_binary(
+        lighthouse_root,
+        lighthouse_python,
+        output_dir,
+        size,
+        reduction_size,
     )
-    igc_binaries = list(igc_dir.glob("lighthouse-matmul_*.bin"))
-    if len(igc_binaries) != 1:
-        raise SystemExit(
-            f"expected one IGC native binary in {igc_dir}, found {len(igc_binaries)}"
-        )
-    igc_binary = igc_binaries[0]
-    return inter_binary, igc_binary, ocloc_version
+    return inter_binary, lighthouse_binary, lighthouse_revision
 
 
 def measure(
@@ -170,12 +248,15 @@ def measure(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Compare Inter and IGC Lighthouse matmul performance on BMG"
+        description="Compare Inter and Lighthouse matmul performance on BMG"
     )
     parser.add_argument("--build-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--device", default="B60")
-    parser.add_argument("--igc-device", default="bmg-g21")
+    parser.add_argument(
+        "--lighthouse-root", type=Path, default=Path.home() / "llvm" / "lighthouse"
+    )
+    parser.add_argument("--lighthouse-python", type=Path, default=Path(sys.executable))
     parser.add_argument("--size", type=int, default=128)
     parser.add_argument("--reduction-size", type=int, default=64)
     parser.add_argument("--runs", type=int, default=5)
@@ -183,7 +264,6 @@ def main() -> int:
     parser.add_argument("--batches", type=int, default=15)
     parser.add_argument("--iterations", type=int, default=1000)
     parser.add_argument("--timeout", type=float, default=120.0)
-    parser.add_argument("--drop-loop-prefetch", action="store_true")
     parser.add_argument("--padding-k-tiles", type=int, default=0)
     args = parser.parse_args()
     if min(args.runs, args.warmups, args.batches, args.iterations) < 1:
@@ -200,29 +280,30 @@ def main() -> int:
     build_dir = args.build_dir.resolve()
     output_dir = (args.output_dir or build_dir / "benchmarks" / "lighthouse").resolve()
     runner = require(build_dir / "benchmarks" / "inter-lighthouse-benchmark")
-    inter_binary, igc_binary, ocloc_version = build_binaries(
+    inter_binary, lighthouse_binary, lighthouse_revision = build_binaries(
         build_dir,
         output_dir,
-        args.igc_device,
+        args.lighthouse_root.resolve(),
+        args.lighthouse_python.resolve(),
         args.size,
         args.reduction_size,
-        args.drop_loop_prefetch,
     )
     print(
-        f"configuration device={args.device} igc_device={args.igc_device} "
+        f"configuration device={args.device} "
         f"shape={args.size}x{args.size}x{args.reduction_size} "
         f"runs={args.runs} warmups={args.warmups} batches={args.batches} "
         f"iterations={args.iterations} timestamp=level-zero-kernel "
         f"timeout={args.timeout:g}s "
-        f"loop_prefetch={'off' if args.drop_loop_prefetch else 'on'} "
         f"padding_k_tiles={args.padding_k_tiles} "
-        f"ocloc={ocloc_version}"
+        f"lighthouse_revision={lighthouse_revision}"
     )
-    samples: dict[str, list[float]] = {"inter": [], "igc": []}
+    samples: dict[str, list[float]] = {"inter": [], "lighthouse": []}
     for run_index in range(args.runs):
-        order = ("inter", "igc") if run_index % 2 == 0 else ("igc", "inter")
+        order = (
+            ("inter", "lighthouse") if run_index % 2 == 0 else ("lighthouse", "inter")
+        )
         for compiler in order:
-            binary = inter_binary if compiler == "inter" else igc_binary
+            binary = inter_binary if compiler == "inter" else lighthouse_binary
             samples[compiler].append(
                 measure(
                     runner,
@@ -240,14 +321,16 @@ def main() -> int:
             )
 
     inter_median = statistics.median(samples["inter"])
-    igc_median = statistics.median(samples["igc"])
+    lighthouse_median = statistics.median(samples["lighthouse"])
     print(
         f"summary inter_median_us={inter_median:.6f} "
         f"inter_range_us={min(samples['inter']):.6f}..{max(samples['inter']):.6f} "
-        f"igc_median_us={igc_median:.6f} "
-        f"igc_range_us={min(samples['igc']):.6f}..{max(samples['igc']):.6f} "
-        f"igc_speedup={inter_median / igc_median:.4f}x "
-        f"inter_vs_igc={(inter_median / igc_median - 1.0) * 100.0:.2f}%"
+        f"lighthouse_median_us={lighthouse_median:.6f} "
+        f"lighthouse_range_us={min(samples['lighthouse']):.6f}.."
+        f"{max(samples['lighthouse']):.6f} "
+        f"lighthouse_speedup={inter_median / lighthouse_median:.4f}x "
+        f"inter_vs_lighthouse="
+        f"{(inter_median / lighthouse_median - 1.0) * 100.0:.2f}%"
     )
     return 0
 
