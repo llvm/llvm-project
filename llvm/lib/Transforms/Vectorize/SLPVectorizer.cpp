@@ -14386,10 +14386,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   // for chains that do not allow reassociation. A reassociative chain can be
   // vectorized into a vector fmul feeding a reduction, which is usually
   // better than the scalar fma chain this check protects.
-  bool AllowReassoc = any_of(VL, [](Value *V) {
-    auto *FPCI = dyn_cast<FPMathOperator>(V);
-    return FPCI && FPCI->getFastMathFlags().allowReassoc();
-  });
+  bool AllowReassoc = any_of(
+      VL, [](Value *V) { return match(V, m_AllowReassoc(m_Value())); });
   auto GetFMulOperandIdx = [&]() -> std::optional<unsigned> {
     for (unsigned Idx : seq<unsigned>(0, AllowReassoc ? 1 : Operands.size())) {
       InstructionsState CandS = getSameOpcode(Operands[Idx], TLI);
@@ -14414,6 +14412,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   // would let targets that model the fusion discount the unfused side of the
   // comparison as well.
   auto GetUnfusedFMulCost = [&](Instruction *I) {
+    assert(I->getOpcode() == Instruction::FMul && "Expected an fmul");
     TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
     TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
     return TTI.getArithmeticInstrCost(Instruction::FMul, I->getType(), CostKind,
@@ -14446,9 +14445,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     ++NumOps;
     if (auto *FPCI = dyn_cast<FPMathOperator>(I))
       FMF &= FPCI->getFastMathFlags();
-    FMulPlusFAddCost += I->getOpcode() == Instruction::FMul
-                            ? GetUnfusedFMulCost(I)
-                            : TTI.getInstructionCost(I, CostKind);
+    FMulPlusFAddCost += GetUnfusedFMulCost(I);
   }
   Type *Ty = VL.front()->getType();
   IntrinsicCostAttributes ICA(Intrinsic::fmuladd, Ty, {Ty, Ty, Ty}, FMF);
