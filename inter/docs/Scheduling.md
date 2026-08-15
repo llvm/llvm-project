@@ -57,9 +57,9 @@ Hazard tracking is GRF-granular, not byte/subregister-granular.
 
 ### Destructive and live-out storage
 
-Definitions whose alias chain reaches a destructive update or escapes the
-segment are pinned against earlier operations. DPAS accumulator chains are
-followed to their live continuation so the chain endpoint, rather than every
+Definitions whose alias chain reaches a partial destructive update or escapes
+the segment are pinned against earlier operations. Full-width, zero-offset
+destructive continuations are followed so the chain endpoint, rather than every
 ancestor, receives the conservative ordering.
 
 ### Loop-carried storage
@@ -91,9 +91,9 @@ For each segment:
 9. Commit timing state and continue.
 10. Apply the new order only if final pressure remains acceptable.
 
-A candidate that already stalls can fill another stalled slot only when both
-candidate and baseline are systolic instructions. This permits interleaving
-independent DPAS chains.
+A full destructive continuation that already stalls may interleave with another
+such continuation when it fills an earlier part of the baseline's stall and
+does not delay the baseline.
 
 Zero-byte tuple and token operations propagate readiness without consuming an
 issue cycle.
@@ -137,9 +137,8 @@ contributes its dword extent rounded up to whole GRFs. The model records
 in-segment definitions/uses, live-in/live-after state, external definitions,
 zero-byte forwarding, and send payload lifetime through token completion.
 
-The original-order peak is the baseline. Candidate movement is accepted when it
-does not exceed that peak. A DPAS-before-DPAS exception may increase pressure up
-to `xemachine.grf_count`.
+The original-order peak is the baseline. Candidate movement is accepted only
+when it does not exceed that peak.
 
 This is aggregate whole-GRF pressure. It does not model fragmentation, exact
 subregister liveness, fixed-register placement pressure, or the reserved-GRF

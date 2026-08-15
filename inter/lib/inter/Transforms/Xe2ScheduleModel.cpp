@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <optional>
 
 using namespace mlir;
 using namespace inter::xemachine;
@@ -76,6 +75,26 @@ collectAliasDefinitions(Value root,
   }
 }
 
+static bool isFullDestructiveContinuation(Operation *operation) {
+  if (operation->hasTrait<OpTrait::xemachine::NoMachineInst>())
+    return false;
+  RegisterStorageAliasOpInterface aliasOp =
+      dyn_cast<RegisterStorageAliasOpInterface>(operation);
+  if (!aliasOp)
+    return false;
+  SmallVector<RegisterStorageAlias, 2> relations;
+  aliasOp.getRegisterStorageAliases(relations);
+  if (relations.size() != 1)
+    return false;
+  const RegisterStorageAlias &relation = relations.front();
+  RegType storageType = dyn_cast<RegType>(relation.storage.getType());
+  RegType aliasType = dyn_cast<RegType>(relation.alias.getType());
+  return relation.destructive && relation.offset == 0 && storageType &&
+         aliasType &&
+         storageType.getWidthDwords() == aliasType.getWidthDwords() &&
+         relation.storage.getDefiningOp() == operation;
+}
+
 static bool
 requiresPinnedDefinition(Value root,
                          const DenseMap<Operation *, unsigned> &nodes,
@@ -96,9 +115,7 @@ requiresPinnedDefinition(Value root,
         if (alias.owner != user)
           continue;
         if (alias.destructive) {
-          // DPAS defines the full accumulator through one SSA continuation.
-          // Pin its live-out definition, not every ancestor in the chain.
-          if (isa<DpasOp>(user)) {
+          if (isFullDestructiveContinuation(user)) {
             forwards = true;
             continue;
           }
@@ -344,44 +361,22 @@ public:
   Xe2RegionSession(ArrayRef<Operation *> operations,
                    const RegisterAliasAnalysis &aliases,
                    const DenseMap<Operation *, int64_t> &positions)
-      : operations(operations),
-        pressureModel(buildPressureModel(operations, aliases, positions)),
+      : pressureModel(buildPressureModel(operations, aliases, positions)),
         nodeCount(operations.size()) {
     SmallVector<unsigned, 16> original;
     llvm::append_range(original, llvm::seq<unsigned>(nodeCount));
     originalPeak = getPeakPressure(original, pressureModel.values, nodeCount);
-    func::FuncOp function = operations.front()->getParentOfType<func::FuncOp>();
-    if (IntegerAttr grfCount =
-            function->getAttrOfType<IntegerAttr>(kGrfCountAttrName))
-      pressureLimit = grfCount.getInt();
   }
 
   bool canSchedulePrefix(ArrayRef<unsigned> prefix) const override {
     unsigned peak = getPeakPressure(prefix, pressureModel.values, nodeCount);
-    if (peak <= originalPeak)
-      return true;
-    if (!pressureLimit || peak > *pressureLimit)
-      return false;
-
-    BitVector scheduled(nodeCount);
-    for (unsigned node : prefix) {
-      unsigned baseline = 0;
-      while (baseline < nodeCount && scheduled.test(baseline))
-        ++baseline;
-      if (node > baseline && isa<DpasOp>(operations[node]) &&
-          isa<DpasOp>(operations[baseline]))
-        return true;
-      scheduled.set(node);
-    }
-    return false;
+    return peak <= originalPeak;
   }
 
 private:
-  SmallVector<Operation *, 16> operations;
   PressureModel pressureModel;
   unsigned nodeCount;
   unsigned originalPeak;
-  std::optional<unsigned> pressureLimit;
 };
 
 class Xe2ScheduleModel final : public inter::MachineScheduleModel {
@@ -601,18 +596,10 @@ public:
     if (!candidatePreview->instruction ||
         candidatePreview->cycle >= baselineBefore->cycle)
       return false;
-    if (candidatePreview->stallCycles != 0) {
-      FailureOr<Xe2InstructionTiming> baselineTiming =
-          getXe2InstructionTiming(baseline);
-      FailureOr<Xe2InstructionTiming> candidateTiming =
-          getXe2InstructionTiming(candidate);
-      if (failed(baselineTiming) || failed(candidateTiming))
-        return failure();
-      if (baselineTiming->issueClass != InstructionIssueClass::systolic ||
-          candidateTiming->issueClass != InstructionIssueClass::systolic)
-        return false;
-    }
-
+    if (candidatePreview->stallCycles != 0 &&
+        (!isFullDestructiveContinuation(baseline) ||
+         !isFullDestructiveContinuation(candidate)))
+      return false;
     Xe2ScheduleState trial = *this;
     if (failed(trial.commitIssue(candidate, candidateDependencies)))
       return failure();
