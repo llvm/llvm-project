@@ -1796,44 +1796,61 @@ define <2 x i64> @partial_reduce_smull_v8i16_v2i64(<2 x i64> %acc, <8 x i16> %a,
 }
 
 define <2 x i64> @udot_in_loop_8to64(ptr %p1, ptr %p2){
-; CHECK-COMMON-LABEL: udot_in_loop_8to64:
-; CHECK-COMMON:       // %bb.0: // %entry
-; CHECK-COMMON-NEXT:    adrp x8, .LCPI54_0
-; CHECK-COMMON-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-COMMON-NEXT:    adrp x9, .LCPI54_2
-; CHECK-COMMON-NEXT:    ldr q2, [x8, :lo12:.LCPI54_0]
-; CHECK-COMMON-NEXT:    adrp x8, .LCPI54_1
-; CHECK-COMMON-NEXT:    adrp x10, .LCPI54_3
-; CHECK-COMMON-NEXT:    ldr q3, [x8, :lo12:.LCPI54_1]
-; CHECK-COMMON-NEXT:    ldr q4, [x9, :lo12:.LCPI54_2]
-; CHECK-COMMON-NEXT:    ldr q5, [x10, :lo12:.LCPI54_3]
-; CHECK-COMMON-NEXT:    mov x8, xzr
-; CHECK-COMMON-NEXT:  .LBB54_1: // %vector.body
-; CHECK-COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-COMMON-NEXT:    ldr q6, [x0, x8]
-; CHECK-COMMON-NEXT:    ldr q7, [x1, x8]
-; CHECK-COMMON-NEXT:    mov v0.16b, v1.16b
-; CHECK-COMMON-NEXT:    add x8, x8, #16
-; CHECK-COMMON-NEXT:    tbl v16.16b, { v6.16b }, v2.16b
-; CHECK-COMMON-NEXT:    tbl v17.16b, { v7.16b }, v2.16b
-; CHECK-COMMON-NEXT:    tbl v18.16b, { v6.16b }, v3.16b
-; CHECK-COMMON-NEXT:    tbl v19.16b, { v7.16b }, v3.16b
-; CHECK-COMMON-NEXT:    cmp x8, #16
-; CHECK-COMMON-NEXT:    umlal v1.2d, v16.2s, v17.2s
-; CHECK-COMMON-NEXT:    umlal2 v1.2d, v16.4s, v17.4s
-; CHECK-COMMON-NEXT:    tbl v16.16b, { v6.16b }, v4.16b
-; CHECK-COMMON-NEXT:    tbl v17.16b, { v7.16b }, v4.16b
-; CHECK-COMMON-NEXT:    tbl v6.16b, { v6.16b }, v5.16b
-; CHECK-COMMON-NEXT:    tbl v7.16b, { v7.16b }, v5.16b
-; CHECK-COMMON-NEXT:    umlal v1.2d, v18.2s, v19.2s
-; CHECK-COMMON-NEXT:    umlal2 v1.2d, v18.4s, v19.4s
-; CHECK-COMMON-NEXT:    umlal v1.2d, v16.2s, v17.2s
-; CHECK-COMMON-NEXT:    umlal2 v1.2d, v16.4s, v17.4s
-; CHECK-COMMON-NEXT:    umlal v1.2d, v6.2s, v7.2s
-; CHECK-COMMON-NEXT:    umlal2 v1.2d, v6.4s, v7.4s
-; CHECK-COMMON-NEXT:    b.ne .LBB54_1
-; CHECK-COMMON-NEXT:  // %bb.2: // %end
-; CHECK-COMMON-NEXT:    ret
+; CHECK-NODOT-LABEL: udot_in_loop_8to64:
+; CHECK-NODOT:       // %bb.0: // %entry
+; CHECK-NODOT-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NODOT-NEXT:    mov x8, xzr
+; CHECK-NODOT-NEXT:  .LBB54_1: // %vector.body
+; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NODOT-NEXT:    ldr q0, [x0, x8]
+; CHECK-NODOT-NEXT:    ldr q2, [x1, x8]
+; CHECK-NODOT-NEXT:    add x8, x8, #16
+; CHECK-NODOT-NEXT:    cmp x8, #16
+; CHECK-NODOT-NEXT:    umull v3.8h, v0.8b, v2.8b
+; CHECK-NODOT-NEXT:    umull2 v0.8h, v0.16b, v2.16b
+; CHECK-NODOT-NEXT:    uaddlp v2.4s, v3.8h
+; CHECK-NODOT-NEXT:    uadalp v2.4s, v0.8h
+; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-NODOT-NEXT:    uadalp v1.2d, v2.4s
+; CHECK-NODOT-NEXT:    b.ne .LBB54_1
+; CHECK-NODOT-NEXT:  // %bb.2: // %end
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: udot_in_loop_8to64:
+; CHECK-DOT:       // %bb.0: // %entry
+; CHECK-DOT-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-DOT-NEXT:    mov x8, xzr
+; CHECK-DOT-NEXT:  .LBB54_1: // %vector.body
+; CHECK-DOT-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-DOT-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-DOT-NEXT:    ldr q0, [x0, x8]
+; CHECK-DOT-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-NEXT:    add x8, x8, #16
+; CHECK-DOT-NEXT:    cmp x8, #16
+; CHECK-DOT-NEXT:    udot v2.4s, v0.16b, v3.16b
+; CHECK-DOT-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-NEXT:    uadalp v1.2d, v2.4s
+; CHECK-DOT-NEXT:    b.ne .LBB54_1
+; CHECK-DOT-NEXT:  // %bb.2: // %end
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: udot_in_loop_8to64:
+; CHECK-DOT-I8MM:       // %bb.0: // %entry
+; CHECK-DOT-I8MM-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-DOT-I8MM-NEXT:    mov x8, xzr
+; CHECK-DOT-I8MM-NEXT:  .LBB54_1: // %vector.body
+; CHECK-DOT-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-DOT-I8MM-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-DOT-I8MM-NEXT:    ldr q0, [x0, x8]
+; CHECK-DOT-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-DOT-I8MM-NEXT:    add x8, x8, #16
+; CHECK-DOT-I8MM-NEXT:    cmp x8, #16
+; CHECK-DOT-I8MM-NEXT:    udot v2.4s, v0.16b, v3.16b
+; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v1.16b
+; CHECK-DOT-I8MM-NEXT:    uadalp v1.2d, v2.4s
+; CHECK-DOT-I8MM-NEXT:    b.ne .LBB54_1
+; CHECK-DOT-I8MM-NEXT:  // %bb.2: // %end
+; CHECK-DOT-I8MM-NEXT:    ret
 entry:
   br label %vector.body
 
