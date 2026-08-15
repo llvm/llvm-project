@@ -44,6 +44,7 @@ using namespace mlir;
 using namespace cir;
 
 namespace mlir {
+#define GEN_PASS_DEF_COMPLEXLOWERING
 #define GEN_PASS_DEF_LOWERINGPREPARE
 #include "clang/CIR/Dialect/Passes.h.inc"
 } // namespace mlir
@@ -88,8 +89,6 @@ struct LoweringPreparePass
   void runOnOp(mlir::Operation *op);
   void lowerCastOp(cir::CastOp op);
   void lowerComplexConjOp(cir::ComplexConjOp op);
-  void lowerComplexDivOp(cir::ComplexDivOp op);
-  void lowerComplexMulOp(cir::ComplexMulOp op);
   void lowerGetGlobalOp(cir::GetGlobalOp op);
   void lowerGlobalOp(cir::GlobalOp op);
   void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
@@ -505,6 +504,26 @@ struct LoweringPreparePass
   void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
+/// Expand `cir.complex.mul` and `cir.complex.div`.  See the pass description
+/// in Passes.td for why this cannot run with the rest of LoweringPrepare.
+struct ComplexLoweringPass
+    : public impl::ComplexLoweringBase<ComplexLoweringPass> {
+  ComplexLoweringPass() = default;
+
+  void runOnOperation() override;
+
+  void lowerComplexDivOp(cir::ComplexDivOp op);
+  void lowerComplexMulOp(cir::ComplexMulOp op);
+
+  void setASTContext(clang::ASTContext *c) { astCtx = c; }
+
+  /// Read by the promoted-range division path, which asks the target for the
+  /// semantics of a higher-precision element type.
+  clang::ASTContext *astCtx = nullptr;
+
+  mlir::ModuleOp mlirModule;
+};
+
 } // namespace
 
 cir::GlobalOp LoweringPreparePass::getOrCreateRuntimeVariable(
@@ -525,9 +544,13 @@ cir::GlobalOp LoweringPreparePass::getOrCreateRuntimeVariable(
   return g;
 }
 
-cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
-    mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-    cir::FuncType type, cir::GlobalLinkageKind linkage) {
+/// Declare `name` in `mlirModule` if it is not already declared there, and
+/// return the declaration.  Free-standing so that ComplexLoweringPass can
+/// reach it without a LoweringPreparePass instance.
+static cir::FuncOp buildRuntimeFunction(
+    mlir::OpBuilder &builder, mlir::ModuleOp mlirModule, llvm::StringRef name,
+    mlir::Location loc, cir::FuncType type,
+    cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage) {
   cir::FuncOp f = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
       mlirModule, StringAttr::get(mlirModule->getContext(), name)));
   if (!f) {
@@ -540,6 +563,12 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
   }
   return f;
+}
+
+cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
+    mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
+    cir::FuncType type, cir::GlobalLinkageKind linkage) {
+  return ::buildRuntimeFunction(builder, mlirModule, name, loc, type, linkage);
 }
 
 static mlir::Value lowerScalarToComplexCast(mlir::MLIRContext &ctx,
@@ -628,7 +657,7 @@ void LoweringPreparePass::lowerCastOp(cir::CastOp op) {
 }
 
 static mlir::Value buildComplexBinOpLibCall(
-    LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
+    mlir::ModuleOp mlirModule, CIRBaseBuilderTy &builder,
     llvm::StringRef (*libFuncNameGetter)(llvm::APFloat::Semantics),
     mlir::Location loc, cir::ComplexType ty, mlir::Value lhsReal,
     mlir::Value lhsImag, mlir::Value rhsReal, mlir::Value rhsImag) {
@@ -646,8 +675,9 @@ static mlir::Value buildComplexBinOpLibCall(
   cir::FuncOp libFunc;
   {
     mlir::OpBuilder::InsertionGuard ipGuard{builder};
-    builder.setInsertionPointToStart(pass.mlirModule.getBody());
-    libFunc = pass.buildRuntimeFunction(builder, libFuncName, loc, libFuncTy);
+    builder.setInsertionPointToStart(mlirModule.getBody());
+    libFunc =
+        buildRuntimeFunction(builder, mlirModule, libFuncName, loc, libFuncTy);
   }
 
   cir::CallOp call =
@@ -864,7 +894,7 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
 }
 
 static mlir::Value
-lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
+lowerComplexDiv(mlir::ModuleOp mlirModule, CIRBaseBuilderTy &builder,
                 mlir::Location loc, cir::ComplexDivOp op, mlir::Value lhsReal,
                 mlir::Value lhsImag, mlir::Value rhsReal, mlir::Value rhsImag,
                 mlir::MLIRContext &mlirCx, clang::ASTContext &cc) {
@@ -876,9 +906,9 @@ lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
                                            rhsReal, rhsImag);
 
     if (range == cir::ComplexRangeKind::Full)
-      return buildComplexBinOpLibCall(pass, builder, &getComplexDivLibCallName,
-                                      loc, complexTy, lhsReal, lhsImag, rhsReal,
-                                      rhsImag);
+      return buildComplexBinOpLibCall(mlirModule, builder,
+                                      &getComplexDivLibCallName, loc, complexTy,
+                                      lhsReal, lhsImag, rhsReal, rhsImag);
 
     if (range == cir::ComplexRangeKind::Promoted) {
       mlir::Type originalElementType = complexTy.getElementType();
@@ -918,7 +948,7 @@ lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
                                   rhsImag);
 }
 
-void LoweringPreparePass::lowerComplexDivOp(cir::ComplexDivOp op) {
+void ComplexLoweringPass::lowerComplexDivOp(cir::ComplexDivOp op) {
   cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
   mlir::Location loc = op.getLoc();
@@ -930,7 +960,7 @@ void LoweringPreparePass::lowerComplexDivOp(cir::ComplexDivOp op) {
   mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
 
   mlir::Value loweredResult =
-      lowerComplexDiv(*this, builder, loc, op, lhsReal, lhsImag, rhsReal,
+      lowerComplexDiv(mlirModule, builder, loc, op, lhsReal, lhsImag, rhsReal,
                       rhsImag, getContext(), *astCtx);
   op.replaceAllUsesWith(loweredResult);
   op.erase();
@@ -956,7 +986,7 @@ getComplexMulLibCallName(llvm::APFloat::Semantics semantics) {
   }
 }
 
-static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
+static mlir::Value lowerComplexMul(mlir::ModuleOp mlirModule,
                                    CIRBaseBuilderTy &builder,
                                    mlir::Location loc, cir::ComplexMulOp op,
                                    mlir::Value lhsReal, mlir::Value lhsImag,
@@ -1004,8 +1034,8 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
              builder, loc, resultRealAndImagAreNaN,
              [&](mlir::OpBuilder &, mlir::Location) {
                mlir::Value libCallResult = buildComplexBinOpLibCall(
-                   pass, builder, &getComplexMulLibCallName, loc, complexTy,
-                   lhsReal, lhsImag, rhsReal, rhsImag);
+                   mlirModule, builder, &getComplexMulLibCallName, loc,
+                   complexTy, lhsReal, lhsImag, rhsReal, rhsImag);
                builder.createYield(loc, libCallResult);
              },
              [&](mlir::OpBuilder &, mlir::Location) {
@@ -1014,7 +1044,7 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
       .getResult();
 }
 
-void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
+void ComplexLoweringPass::lowerComplexMulOp(cir::ComplexMulOp op) {
   cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
   mlir::Location loc = op.getLoc();
@@ -1024,10 +1054,26 @@ void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
   mlir::Value lhsImag = builder.createComplexImag(loc, lhs);
   mlir::Value rhsReal = builder.createComplexReal(loc, rhs);
   mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
-  mlir::Value loweredResult = lowerComplexMul(*this, builder, loc, op, lhsReal,
-                                              lhsImag, rhsReal, rhsImag);
+  mlir::Value loweredResult = lowerComplexMul(
+      mlirModule, builder, loc, op, lhsReal, lhsImag, rhsReal, rhsImag);
   op.replaceAllUsesWith(loweredResult);
   op.erase();
+}
+
+void ComplexLoweringPass::runOnOperation() {
+  mlirModule = cast<mlir::ModuleOp>(getOperation());
+
+  llvm::SmallVector<mlir::Operation *> opsToTransform;
+  mlirModule->walk([&](mlir::Operation *op) {
+    if (mlir::isa<cir::ComplexMulOp, cir::ComplexDivOp>(op))
+      opsToTransform.push_back(op);
+  });
+
+  for (mlir::Operation *o : opsToTransform)
+    if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(o))
+      lowerComplexDivOp(complexDiv);
+    else
+      lowerComplexMulOp(mlir::cast<cir::ComplexMulOp>(o));
 }
 
 void LoweringPreparePass::lowerComplexConjOp(cir::ComplexConjOp op) {
@@ -2297,10 +2343,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerCastOp(cast);
   } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
     lowerComplexConjOp(complexConj);
-  } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op)) {
-    lowerComplexDivOp(complexDiv);
-  } else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op)) {
-    lowerComplexMulOp(complexMul);
   } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
     if (auto regAttr = glob->getAttrOfType<CUDAVarRegistrationInfoAttr>(
@@ -2936,9 +2978,8 @@ void LoweringPreparePass::runOnOperation() {
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
-                  cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
-                  cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
-                  cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
+                  cir::ComplexConjOp, cir::DynamicCastOp, cir::FuncOp,
+                  cir::CallOp, cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
                   cir::CmpThreeWayOp, cir::LocalInitOp, cir::StdOpInterface>(
             op))
       opsToTransform.push_back(op);
@@ -2962,6 +3003,17 @@ std::unique_ptr<Pass> mlir::createLoweringPreparePass() {
 std::unique_ptr<Pass>
 mlir::createLoweringPreparePass(clang::ASTContext *astCtx) {
   auto pass = std::make_unique<LoweringPreparePass>();
+  pass->setASTContext(astCtx);
+  return std::move(pass);
+}
+
+std::unique_ptr<Pass> mlir::createComplexLoweringPass() {
+  return std::make_unique<ComplexLoweringPass>();
+}
+
+std::unique_ptr<Pass>
+mlir::createComplexLoweringPass(clang::ASTContext *astCtx) {
+  auto pass = std::make_unique<ComplexLoweringPass>();
   pass->setASTContext(astCtx);
   return std::move(pass);
 }
