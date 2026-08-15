@@ -4994,12 +4994,9 @@ define i32 @ceil_div_by_8_known_range(i32 range(i32 0, 100) %x) {
 
 define i32 @ceil_div_by_8_zext(i8 %x) {
 ; CHECK-LABEL: @ceil_div_by_8_zext(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[SHR]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[ZEXT]], [[EXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 7
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[TMP2]], 3
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %shr = lshr i8 %x, 3
