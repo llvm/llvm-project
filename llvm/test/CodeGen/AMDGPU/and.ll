@@ -23,15 +23,15 @@ define <2 x i32> @v_and_v2i32(<2 x i32> %num, <2 x i32> %den) {
 ; GFX6-LABEL: v_and_v2i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GFX6-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX6-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_and_v2i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GFX8-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX8-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
   %result = and <2 x i32> %num, %den
   ret <2 x i32> %result
