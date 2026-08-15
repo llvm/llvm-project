@@ -433,6 +433,48 @@ public:
     return lowerToBindAndAnnotateHandle(F);
   }
 
+  bool lowerHandleFromHeap(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int1Ty = IRB.getInt1Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+      dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+
+      Value *IndexOp = CI->getArgOperand(0);
+      Value *IsSamplerHeap = CI->getArgOperand(1);
+
+      std::pair<uint32_t, uint32_t> Props =
+          RI.getAnnotateProps(*F.getParent(), RTI);
+
+      bool NonUniformIndex = hasNonUniformIndex(IndexOp);
+      Constant *NonUniformOp = ConstantInt::get(Int1Ty, NonUniformIndex);
+
+      std::array<Value *, 3> Args{IndexOp, IsSamplerHeap, NonUniformOp};
+      Expected<CallInst *> OpCreateHandle = OpBuilder.tryCreateOp(
+          OpCode::CreateHandleFromHeap, Args, CI->getName());
+      if (Error E = OpCreateHandle.takeError())
+        return E;
+
+      std::array<Value *, 2> AnnotateArgs{
+          *OpCreateHandle, OpBuilder.getResProps(Props.first, Props.second)};
+      Expected<CallInst *> OpAnnotate = OpBuilder.tryCreateOp(
+          OpCode::AnnotateHandle, AnnotateArgs,
+          CI->hasName() ? CI->getName() + "_annot" : Twine());
+      if (Error E = OpAnnotate.takeError())
+        return E;
+
+      Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+      CI->replaceAllUsesWith(Cast);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
   /// Since we expect to be post-scalarization, make an effort to avoid vectors.
   Error replaceResRetUses(CallInst *Intrin, CallInst *Op, bool HasCheckBit) {
@@ -1280,6 +1322,9 @@ public:
 #include "DXILOperation.inc"
       case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
+        break;
+      case Intrinsic::dx_resource_handlefromheap:
+        HasErrors |= lowerHandleFromHeap(F);
         break;
       case Intrinsic::dx_resource_getbasepointer:
       case Intrinsic::dx_resource_getpointer:
