@@ -561,6 +561,8 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
       }
     }
 
+    if (!VNI->isPHIDef() && I != LI.begin() && !LI.getVNInfoBefore(VNI->def))
+      MayHaveSplitComponents = true;
     if (I->end != Def.getDeadSlot())
       continue;
     if (VNI->isPHIDef()) {
