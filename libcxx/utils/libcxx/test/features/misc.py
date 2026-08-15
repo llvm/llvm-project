@@ -7,7 +7,8 @@
 # ===----------------------------------------------------------------------===##
 
 from libcxx.test.dsl import compilerMacros, sourceBuilds, hasCompileFlag, programSucceeds, runScriptExitCode
-from libcxx.test.dsl import Feature, AddCompileFlag, AddLinkFlag
+from libcxx.test.dsl import Feature, AddCompileFlag, AddFlagIfSupported, AddLinkFlag
+from lit.BooleanExpression import BooleanExpression
 import platform
 import sys
 
@@ -298,6 +299,21 @@ features = [
     Feature(
         name="has-filecheck",
         when=lambda cfg: runScriptExitCode(cfg, ["FileCheck --version"]) == 0,
+    ),
+    # On 32-bit ARM Linux (EHABI unwinding via .ARM.exidx/.ARM.extab), unwind table
+    # emission is tied to -fexceptions, unlike on x86/AArch64 where it's on by default.
+    # -fno-exceptions test builds therefore silently lose the unwind info that
+    # std::stacktrace's default implementation needs to walk the stack, even though
+    # no exception is ever thrown. libunwind and libc++abi already force
+    # -funwind-tables for their own sources for the same reason (see the comment in
+    # libunwind/CMakeLists.txt above its own add_compile_flags_if_supported call).
+    Feature(
+        name="arm-no-exceptions-needs-funwind-tables",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "no-exceptions && target={{arm.*-linux-gnueabi.*}}",
+            cfg.available_features,
+        ),
+        actions=[AddFlagIfSupported("-funwind-tables")],
     ),
     Feature(
         name="has-splitfile",

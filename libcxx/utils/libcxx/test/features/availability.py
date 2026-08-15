@@ -215,7 +215,14 @@ features += [
     Feature(
         name="availability-stacktrace-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-23)",
+            "(!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-23))"
+            # 32-bit x86 Android's own (non-LLVM) unwinder is unreliable before API 24: it's the
+            # same legacy i686-linux-android(21|22|23) combination that llvm-libc++-android.cfg.in
+            # already works around a separate stack-misalignment bug for (see the -mstackrealign
+            # comment there and https://github.com/android/ndk/issues/693). Here it manifests as
+            # std::stacktrace::current() silently capturing an empty/truncated trace rather than
+            # a crash, so just treat stacktrace as unavailable on this narrow legacy combination.
+            "|| (target={{i686-linux-android.*}} && android-device-api={{2[123]}})",
             cfg.available_features,
         ),
     ),
