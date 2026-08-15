@@ -84,8 +84,8 @@ void JTFootprintReduction::checkOpportunities(BinaryFunction &Function,
       //    movslq  (%r11,%rdx,4), %rcx
       //    addq    %r11, %rcx
       //    jmpq    *%rcx # JUMPTABLE @0x402450
-      MCPhysReg BaseReg1;
-      MCPhysReg BaseReg2;
+      MCRegister BaseReg1;
+      MCRegister BaseReg2;
       uint64_t Offset;
       std::unique_ptr<MCPlusBuilder::MCInstMatcher> PICIndJmpMatcher =
           BC.MIB->matchIndJmp(BC.MIB->matchAdd(
@@ -135,7 +135,7 @@ bool JTFootprintReduction::tryOptimizeNonPIC(
 
   MCOperand Base;
   uint64_t Scale;
-  MCPhysReg Index;
+  MCRegister Index;
   MCOperand Offset;
   std::unique_ptr<MCPlusBuilder::MCInstMatcher> IndJmpMatcher =
       BC.MIB->matchIndJmp(BC.MIB->matchAnyOperand(Base),
@@ -152,8 +152,8 @@ bool JTFootprintReduction::tryOptimizeNonPIC(
   IndJmpMatcher->annotate(*BC.MIB, "DeleteMe");
 
   LivenessAnalysis &LA = Info.getLivenessAnalysis();
-  MCPhysReg Reg = LA.scavengeRegAfter(&*Inst);
-  assert(Reg != 0 && "Register scavenger failed!");
+  MCRegister Reg = LA.scavengeRegAfter(&*Inst);
+  assert(Reg && "Register scavenger failed!");
   MCOperand RegOp = MCOperand::createReg(Reg);
   SmallVector<MCInst, 4> NewFrag;
 
@@ -172,9 +172,9 @@ bool JTFootprintReduction::tryOptimizePIC(BinaryContext &BC,
                                           BinaryBasicBlock::iterator Inst,
                                           uint64_t JTAddr, JumpTable *JumpTable,
                                           DataflowInfoManager &Info) {
-  MCPhysReg BaseReg;
+  MCRegister BaseReg;
   uint64_t Scale;
-  MCPhysReg Index;
+  MCRegister Index;
   MCOperand Offset;
   MCOperand JumpTableRef;
   std::unique_ptr<MCPlusBuilder::MCInstMatcher> PICIndJmpMatcher =

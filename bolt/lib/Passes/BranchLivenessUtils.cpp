@@ -48,9 +48,9 @@ BranchLivenessInfo computeBranchLiveness(BinaryFunction &BF, RegAnalysis &RA) {
 
   DataflowInfoManager DIM(BF, &RA, nullptr);
   LivenessAnalysis &LA = DIM.getLivenessAnalysis();
-  const MCPhysReg FlagsReg = BC.MIB->getFlagsReg();
+  const MCRegister FlagsReg = BC.MIB->getFlagsReg();
   for (MCInst *Inst : Insts)
-    if (!LA.getLiveIn(*Inst).test(FlagsReg))
+    if (!LA.getLiveIn(*Inst).test(FlagsReg.id()))
       BLI.setFlagsDead(*Inst);
   return BLI;
 }

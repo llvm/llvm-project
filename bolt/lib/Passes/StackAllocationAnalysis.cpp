@@ -25,7 +25,7 @@ void StackAllocationAnalysis::preflight() {
 
   for (BinaryBasicBlock &BB : this->Func) {
     for (MCInst &Inst : BB) {
-      MCPhysReg From, To;
+      MCRegister From, To;
       if (!BC.MIB->isPush(Inst) &&
           (!BC.MIB->isRegToRegMove(Inst, From, To) ||
            To != BC.MIB->getStackPointer() ||
@@ -105,7 +105,7 @@ BitVector StackAllocationAnalysis::computeNext(const MCInst &Point,
     return Next;
   }
 
-  MCPhysReg From, To;
+  MCRegister From, To;
   int64_t SPOffset, FPOffset;
   std::tie(SPOffset, FPOffset) = *SPT.getStateBefore(Point);
   if (MIB->isRegToRegMove(Point, From, To) && To == MIB->getStackPointer() &&
@@ -123,16 +123,16 @@ BitVector StackAllocationAnalysis::computeNext(const MCInst &Point,
   }
   if (BC.MII->get(Point.getOpcode())
           .hasDefOfPhysReg(Point, MIB->getStackPointer(), *BC.MRI)) {
-    std::pair<MCPhysReg, int64_t> SP;
+    std::pair<MCRegister, int64_t> SP;
     if (SPOffset != SPT.EMPTY && SPOffset != SPT.SUPERPOSITION)
       SP = std::make_pair(MIB->getStackPointer(), SPOffset);
     else
-      SP = std::make_pair(0, 0);
-    std::pair<MCPhysReg, int64_t> FP;
+      SP = std::make_pair(MCRegister(), 0);
+    std::pair<MCRegister, int64_t> FP;
     if (FPOffset != SPT.EMPTY && FPOffset != SPT.SUPERPOSITION)
       FP = std::make_pair(MIB->getFramePointer(), FPOffset);
     else
-      FP = std::make_pair(0, 0);
+      FP = std::make_pair(MCRegister(), 0);
     int64_t Output;
     if (!MIB->evaluateStackOffsetExpr(Point, Output, SP, FP))
       return Next;

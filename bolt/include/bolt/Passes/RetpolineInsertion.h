@@ -34,7 +34,7 @@ public:
 
   union {
     // Register branch information
-    MCPhysReg BranchReg;
+    MCRegister BranchReg;
 
     // Memory branch information
     MemOpInfo Memory;

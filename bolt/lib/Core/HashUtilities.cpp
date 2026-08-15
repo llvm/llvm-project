@@ -83,7 +83,7 @@ std::string hashInstOperand(BinaryContext &BC, const MCOperand &Operand) {
   if (Operand.isImm())
     return hashInteger(Operand.getImm());
   if (Operand.isReg())
-    return hashInteger(Operand.getReg());
+    return hashInteger(Operand.getReg().id());
   if (Operand.isExpr())
     return hashExpr(BC, *Operand.getExpr());
 

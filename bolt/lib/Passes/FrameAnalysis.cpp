@@ -112,7 +112,7 @@ class FrameAccessAnalysis {
 
   bool decodeFrameAccess(const MCInst &Inst) {
     int32_t SrcImm = 0;
-    MCPhysReg Reg = 0;
+    MCRegister Reg;
     int64_t StackOffset = 0;
     bool IsIndexed = false;
     if (!BC.MIB->isStackAccess(
@@ -133,7 +133,7 @@ class FrameAccessAnalysis {
 
     FIE.RegOrImm = SrcImm;
     if (FIE.IsLoad || FIE.IsStoreFromReg)
-      FIE.RegOrImm = Reg;
+      FIE.RegOrImm = Reg.id();
 
     if (FIE.StackPtrReg == BC.MIB->getStackPointer() && SPOffset != SPT.EMPTY &&
         SPOffset != SPT.SUPERPOSITION) {

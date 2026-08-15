@@ -34,7 +34,7 @@ class RegReAssign : public BinaryFunctionPass {
   int64_t StaticBytesSaved{0};
   int64_t DynBytesSaved{0};
 
-  void swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B);
+  void swap(BinaryFunction &Function, MCRegister A, MCRegister B);
   void rankRegisters(BinaryFunction &Function);
   void aggressivePassOverFunction(BinaryFunction &Function);
   bool conservativePassOverFunction(BinaryFunction &Function);

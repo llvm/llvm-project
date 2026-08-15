@@ -36,7 +36,7 @@ static cl::opt<bool> AggressiveReAssign(
 namespace llvm {
 namespace bolt {
 
-void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
+void RegReAssign::swap(BinaryFunction &Function, MCRegister A, MCRegister B) {
   BinaryContext &BC = Function.getBinaryContext();
   const BitVector &AliasA = BC.MIB->getAliases(A, false);
   const BitVector &AliasB = BC.MIB->getAliases(B, false);
@@ -48,14 +48,14 @@ void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
         if (!Operand.isReg())
           continue;
 
-        unsigned Reg = Operand.getReg();
-        if (AliasA.test(Reg)) {
+        MCRegister Reg = Operand.getReg();
+        if (AliasA.test(Reg.id())) {
           Operand.setReg(BC.MIB->getAliasSized(B, BC.MIB->getRegSize(Reg)));
           --StaticBytesSaved;
           DynBytesSaved -= BB.getKnownExecutionCount();
           continue;
         }
-        if (!AliasB.test(Reg))
+        if (!AliasB.test(Reg.id()))
           continue;
         Operand.setReg(BC.MIB->getAliasSized(A, BC.MIB->getRegSize(Reg)));
         ++StaticBytesSaved;
@@ -78,15 +78,15 @@ void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
       switch (CFI->getOperation()) {
       case MCCFIInstruction::OpRegister: {
         const unsigned CFIReg2 = CFI->getRegister2();
-        const MCPhysReg Reg2 = *BC.MRI->getLLVMRegNum(CFIReg2, /*isEH=*/false);
-        if (AliasA.test(Reg2)) {
+        const MCRegister Reg2 = *BC.MRI->getLLVMRegNum(CFIReg2, /*isEH=*/false);
+        if (AliasA.test(Reg2.id())) {
           Function.setCFIFor(
               Inst, MCCFIInstruction::createRegister(
                         nullptr, CFI->getRegister(),
                         BC.MRI->getDwarfRegNum(
                             BC.MIB->getAliasSized(B, BC.MIB->getRegSize(Reg2)),
                             false)));
-        } else if (AliasB.test(Reg2)) {
+        } else if (AliasB.test(Reg2.id())) {
           Function.setCFIFor(
               Inst, MCCFIInstruction::createRegister(
                         nullptr, CFI->getRegister(),
@@ -115,13 +115,13 @@ void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
             break;
           CFIReg = *Reg;
         }
-        const MCPhysReg Reg = *BC.MRI->getLLVMRegNum(CFIReg, /*isEH=*/false);
-        if (AliasA.test(Reg))
+        const MCRegister Reg = *BC.MRI->getLLVMRegNum(CFIReg, /*isEH=*/false);
+        if (AliasA.test(Reg.id()))
           Function.mutateCFIRegisterFor(
               Inst,
               BC.MRI->getDwarfRegNum(
                   BC.MIB->getAliasSized(B, BC.MIB->getRegSize(Reg)), false));
-        else if (AliasB.test(Reg))
+        else if (AliasB.test(Reg.id()))
           Function.mutateCFIRegisterFor(
               Inst,
               BC.MRI->getDwarfRegNum(
@@ -169,7 +169,7 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
         if (Desc.getOperandConstraint(I, MCOI::TIED_TO) != -1)
           continue;
 
-        unsigned Reg = Operand.getReg();
+        MCRegister Reg = Operand.getReg();
         size_t RegEC = BC.MIB->getAliases(Reg, false).find_first();
         if (RegEC == 0)
           continue;
@@ -193,15 +193,15 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
         if (CannotUseREX) {
           RegScore[RegEC] =
               std::numeric_limits<decltype(RegScore)::value_type>::min();
-          RegScore[BC.MIB->getAliasSized(Reg, 1)] = RegScore[RegEC];
+          RegScore[BC.MIB->getAliasSized(Reg, 1).id()] = RegScore[RegEC];
           continue;
         }
 
         // Unsupported substitution, cannot swap BH with R* regs, bail
-        if (BC.MIB->isUpper8BitReg(Reg) && ClassicCSR.test(Reg)) {
+        if (BC.MIB->isUpper8BitReg(Reg) && ClassicCSR.test(Reg.id())) {
           RegScore[RegEC] =
               std::numeric_limits<decltype(RegScore)::value_type>::min();
-          RegScore[BC.MIB->getAliasSized(Reg, 1)] = RegScore[RegEC];
+          RegScore[BC.MIB->getAliasSized(Reg, 1).id()] = RegScore[RegEC];
           continue;
         }
 
@@ -360,23 +360,23 @@ bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
 
   // Try swapping R12, R13, R14 or R15 with RBX (we work with all callee-saved
   // regs except RBP)
-  MCPhysReg Candidate = 0;
+  MCRegister Candidate;
   for (int J : ExtendedCSR.set_bits())
-    if (RegScore[J] > RegScore[Candidate])
+    if (RegScore[J] > RegScore[Candidate.id()])
       Candidate = J;
 
-  if (!Candidate || RegScore[Candidate] < 0)
+  if (!Candidate || RegScore[Candidate.id()] < 0)
     return false;
 
   // Check if our classic callee-saved reg (RBX is the only one) has lower
   // score / utilization rate
-  MCPhysReg RBX = 0;
+  MCRegister RBX;
   for (int I : ClassicCSR.set_bits()) {
     int64_t ScoreRBX = RegScore[I];
     if (ScoreRBX <= 0)
       continue;
 
-    if (RegScore[Candidate] > (ScoreRBX + 10))
+    if (RegScore[Candidate.id()] > (ScoreRBX + 10))
       RBX = I;
   }
 
@@ -388,7 +388,7 @@ bool RegReAssign::conservativePassOverFunction(BinaryFunction &Function) {
   // low 8 bits of the register instead.
   if (BC.MIB->isUpper8BitReg(RBX)) {
     RBX = BC.MIB->getAliasSized(RBX, 1);
-    if (RegScore[RBX] < 0 || RegScore[RBX] > RegScore[Candidate])
+    if (RegScore[RBX.id()] < 0 || RegScore[RBX.id()] > RegScore[Candidate.id()])
       return false;
   }
 

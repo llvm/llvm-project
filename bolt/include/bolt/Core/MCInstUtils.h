@@ -275,7 +275,7 @@ public:
   }
 };
 
-class Reg : public OpMatcher<MCPhysReg> {
+class Reg : public OpMatcher<MCRegister> {
   bool matches(const MCOperand &Op) const {
     if (!Op.isReg())
       return false;
@@ -288,7 +288,7 @@ class Reg : public OpMatcher<MCPhysReg> {
 
 public:
   Reg(std::optional<MCPhysReg> RegToMatch = std::nullopt)
-      : OpMatcher<MCPhysReg>(RegToMatch) {}
+      : OpMatcher<MCRegister>(RegToMatch) {}
 };
 
 class Imm : public OpMatcher<int64_t> {
