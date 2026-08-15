@@ -85,7 +85,6 @@ void test_reset_ok() {
   a.reset();
 }
 
-// 
 // Edge case: should trigger for array new with wrong smart pointer
 void test_array_new() {
   std::shared_ptr<A[]> sp(new A); // This is actually wrong but not our check's concern

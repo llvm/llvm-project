@@ -102,7 +102,6 @@ void test_zero_reset_ok() {
   b.reset(0);
 }
 
-// 
 // Edge case: should trigger for array new with wrong smart pointer
 void test_array_new() {
   std::unique_ptr<A[]> sp(new A); // This is actually wrong but not our check's concern
