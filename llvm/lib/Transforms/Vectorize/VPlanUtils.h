@@ -97,6 +97,9 @@ bool isUniformAcrossVFsAndUFs(const VPValue *V);
 /// Get the WideningInfo for \p R.
 VPWideningInfo getWideningInfo(const VPRecipeBase &R);
 
+/// Get the WideningInfo for \p VPV.
+VPWideningInfo getWideningInfo(const VPValue *VPV);
+
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);
 

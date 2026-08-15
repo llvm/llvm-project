@@ -479,7 +479,7 @@ VPWideningInfo vputils::getWideningInfo(const VPRecipeBase &R) {
   llvm_unreachable("Fell off end of switch: unknown recipe class");
 }
 
-static VPWideningInfo getWideningInfo(const VPValue *VPV) {
+VPWideningInfo vputils::getWideningInfo(const VPValue *VPV) {
   if (!VPV->hasDefiningRecipe()) {
     // Only a CanonicalIV region value is single scalar.
     if (auto *RV = dyn_cast<VPRegionValue>(VPV))
@@ -491,7 +491,7 @@ static VPWideningInfo getWideningInfo(const VPValue *VPV) {
                ? VPWideningInfo::SingleScalar
                : VPWideningInfo::SingleScalar | VPWideningInfo::Agnostic;
   }
-  return vputils::getWideningInfo(*VPV->getDefiningRecipe());
+  return getWideningInfo(*VPV->getDefiningRecipe());
 }
 
 bool vputils::isElementwise(const VPValue *V) {
@@ -512,7 +512,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
       return false;
   }
   // FIXME: Marking WidenCast as a single-scalar leads to regressions.
-  VPWideningInfo Info = ::getWideningInfo(VPV);
+  VPWideningInfo Info = getWideningInfo(VPV);
   return Info.producesSingleScalarResult() ||
          (!isa<VPWidenCastRecipe>(VPV) &&
           Info.couldProduceSingleScalarResult() &&
@@ -557,7 +557,7 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
           V))
     return false;
 
-  VPWideningInfo Info = ::getWideningInfo(V);
+  VPWideningInfo Info = getWideningInfo(V);
   return Info.couldProduceSingleScalarResult() &&
          all_of(V->getDefiningRecipe()->operands(), isUniformAcrossVFsAndUFs);
 }

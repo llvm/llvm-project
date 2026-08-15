@@ -279,8 +279,7 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.vp.udiv.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i1> [[TMP6]], i32 [[TMP12]])
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP9]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP13]], [[INDEX]]
@@ -305,8 +304,7 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[TMP8:%.*]] = call <4 x i64> @llvm.masked.udiv.v4i64(<4 x i64> [[WIDE_LOAD1]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i1> [[TMP0]])
-; FIXED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select i1 [[TMP6]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -355,8 +353,7 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x i64> @llvm.vp.sdiv.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x i1> [[TMP6]], i32 [[TMP12]])
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[TMP6]], i64 0
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP9]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP13]], [[INDEX]]
@@ -381,8 +378,7 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[TMP8:%.*]] = call <4 x i64> @llvm.masked.sdiv.v4i64(<4 x i64> [[WIDE_LOAD1]], <4 x i64> [[BROADCAST_SPLAT]], <4 x i1> [[TMP0]])
-; FIXED-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; FIXED-NEXT:    [[PREDPHI2:%.*]] = select i1 [[TMP6]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP8]], <4 x i64> [[WIDE_LOAD1]]
 ; FIXED-NEXT:    store <4 x i64> [[PREDPHI2]], ptr [[TMP2]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
