@@ -223,11 +223,65 @@ __DEVICE__ float __fdividef(float __a, float __b) {
 }
 __DEVICE__ int __ffs(int __a) { return __nv_ffs(__a); }
 __DEVICE__ int __ffsll(long long __a) { return __nv_ffsll(__a); }
-__DEVICE__ int __finite(double __a) { return __nv_isfinited(__a); }
-__DEVICE__ int __finitef(float __a) { return __nv_finitef(__a); }
-#ifdef _MSC_VER
-__DEVICE__ int __finitel(long double __a);
-#endif
+
+// ---------------------------------------------------------------------------
+// Classification Function Internal Names
+// ---------------------------------------------------------------------------
+// WARNING: Do NOT consolidate these functions. CUDA's math_functions.hpp calls
+// distinct names (e.g., __signbit vs __signbitd). Removing one causes
+// "no matching function" errors.
+//
+// Note: We use __inline__ without static. This provides external linkage
+// semantics which matches the expectations of CUDA headers declaring these
+// as 'extern' for the GCC/MinGW environment, while still allowing inlining.
+// ---------------------------------------------------------------------------
+
+// Float implementations
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __finitef(float __a) { return __builtin_isfinite(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __isinff(float __a) { return __builtin_isinf(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __isnanf(float __a) { return __builtin_isnan(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __signbitf(float __a) { return __builtin_signbit(__a); }
+
+// Double implementations
+// Note: Both __finite and __isfinited are defined because CUDA headers
+// reference distinct names in different contexts (similar to __signbit/__signbitd).
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __finite(double __a) { return __builtin_isfinite(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __isfinited(double __a) { return __builtin_isfinite(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __isinf(double __a) { return __builtin_isinf(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __isnan(double __a) { return __builtin_isnan(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __signbit(double __a) { return __builtin_signbit(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __signbitd(double __a) { return __builtin_signbit(__a); }
+
+// Long double implementations (UNGUARDED - intentional)
+// IMPORTANT: Do NOT cast to double. Clang's builtins natively support long double.
+// Casting causes incorrect results on MinGW/Linux where long double has higher
+// precision than double (e.g. finite values that overflow double).
+// NOTE: Clang does NOT support __builtin_isfinitel. Using suffixed builtins
+// will fail. The generic builtin preserves precision for 80-bit long double
+// on MinGW hosts and handles double demotion on devices automatically.
+// NOTE: Do NOT add #if !defined(_MSC_VER) here. Unlike wrappers, these
+// are __inline__ with distinct names (__finitel vs __finite).
+// They have no linker visibility and are optimized away if unused.
+// CUDA headers may call these on any platform - define unconditionally.
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __finitel(long double __a) { return __builtin_isfinite(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __isinfl(long double __a) { return __builtin_isinf(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __isnanl(long double __a) { return __builtin_isnan(__a); }
+__inline__ __host__ __device__ __attribute__((always_inline))
+int __signbitl(long double __a) { return __builtin_signbit(__a); }
+
 __DEVICE__ int __float2int_rd(float __a) { return __nv_float2int_rd(__a); }
 __DEVICE__ int __float2int_rn(float __a) { return __nv_float2int_rn(__a); }
 __DEVICE__ int __float2int_ru(float __a) { return __nv_float2int_ru(__a); }
@@ -433,17 +487,7 @@ __DEVICE__ float __int2float_rn(int __a) { return __nv_int2float_rn(__a); }
 __DEVICE__ float __int2float_ru(int __a) { return __nv_int2float_ru(__a); }
 __DEVICE__ float __int2float_rz(int __a) { return __nv_int2float_rz(__a); }
 __DEVICE__ float __int_as_float(int __a) { return __nv_int_as_float(__a); }
-__DEVICE__ int __isfinited(double __a) { return __nv_isfinited(__a); }
-__DEVICE__ int __isinf(double __a) { return __nv_isinfd(__a); }
-__DEVICE__ int __isinff(float __a) { return __nv_isinff(__a); }
-#ifdef _MSC_VER
-__DEVICE__ int __isinfl(long double __a);
-#endif
-__DEVICE__ int __isnan(double __a) { return __nv_isnand(__a); }
-__DEVICE__ int __isnanf(float __a) { return __nv_isnanf(__a); }
-#ifdef _MSC_VER
-__DEVICE__ int __isnanl(long double __a);
-#endif
+
 __DEVICE__ double __ll2double_rd(long long __a) {
   return __nv_ll2double_rd(__a);
 }
@@ -515,8 +559,7 @@ __DEVICE__ unsigned int __sad(int __a, int __b, unsigned int __c) {
   return __nv_sad(__a, __b, __c);
 }
 __DEVICE__ float __saturatef(float __a) { return __nv_saturatef(__a); }
-__DEVICE__ int __signbitd(double __a) { return __nv_signbitd(__a); }
-__DEVICE__ int __signbitf(float __a) { return __nv_signbitf(__a); }
+
 __DEVICE__ void __sincosf(float __a, float *__s, float *__c) {
   return __nv_fast_sincosf(__a, __s, __c);
 }
