@@ -249,3 +249,29 @@ gpu.func @non_unit_inner_stride_3D(
 // CHECK:        %[[RES:.+]] = arith.select %[[MASK]], %[[V]], %[[PASS]] : vector<8xi1>, vector<8xf32>
 // CHECK:        gpu.return %[[RES]] : vector<8xf32>
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_1D_vector_i32_indices(%source: memref<8x16x32xf32>,
+     %off1: index, %off2: index, %off3: index,
+     %indices: vector<8xi32>, %mask: vector<8xi1>,
+     %pass_thru: vector<8xf32>) -> vector<8xf32> {
+  %0 = vector.gather %source[%off1, %off2, %off3][%indices], %mask,
+       %pass_thru : memref<8x16x32xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  gpu.return %0 : vector<8xf32>
+}
+// Indices that are not index typed are cast before the offset arithmetic.
+// CHECK-LABEL:  @load_1D_vector_i32_indices(
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// CHECK-SAME:   %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index,
+// CHECK-SAME:   %[[INDICES:.+]]: vector<8xi32>
+// CHECK-SAME:   %[[MASK:.+]]: vector<8xi1>
+// CHECK-SAME:   %[[PASS_THRU:.+]]: vector<8xf32>) -> vector<8xf32> {
+// CHECK:        %[[IDX:.+]] = arith.index_cast %[[INDICES]] : vector<8xi32> to vector<8xindex>
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
+// CHECK:        %[[LIN_IDX:.+]] = arith.addi %[[SPLAT]], %[[IDX]] : vector<8xindex>
+// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast {{.*}} : index to i64
+// CHECK:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[LIN_IDX]]{{\]}}, %[[MASK]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf32>
+// CHECK:        %[[RES:.+]] = arith.select %[[MASK]], %[[VEC]], %[[PASS_THRU]] : vector<8xi1>, vector<8xf32>
+// CHECK:        gpu.return %[[RES]] : vector<8xf32>
+}
