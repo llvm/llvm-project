@@ -462,3 +462,52 @@ func.func @no_coalesce_zero_step(%lb: index, %ub: index) {
   }
   return
 }
+
+// -----
+
+// Verify that coalescing is not attempted when an inner loop really carries a
+// value, i.e. it does not yield its iteration argument unchanged. Erasing such
+// a loop would leave its iteration argument used by the operations moved out
+// of it, and replacing that argument by the initial value would drop the
+// accumulation. Coalescing always introduces affine.apply ops, so their
+// absence shows the nest was left alone.
+
+// CHECK-LABEL: @no_coalesce_carried_value
+// CHECK-NOT:     affine.apply
+// CHECK:         affine.for
+// CHECK:         affine.for
+// CHECK:         affine.for {{.*}} iter_args
+// CHECK:         arith.addi
+func.func @no_coalesce_carried_value(%seed: i64, %out: memref<4xi64>) {
+  affine.for %i = 0 to 4 {
+    affine.for %j = 0 to 4 {
+      %r = affine.for %k = 0 to 4 iter_args(%acc = %seed) -> (i64) {
+        %t = arith.addi %acc, %acc : i64
+        memref.store %t, %out[%k] : memref<4xi64>
+        affine.yield %t : i64
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// Same for a two loop nest, where the carried value is also observed by a
+// store: coalescing it would store the initial value on every iteration.
+
+// CHECK-LABEL: @no_coalesce_observed_carried_value
+// CHECK-NOT:     affine.apply
+// CHECK:         affine.for
+// CHECK:         affine.for {{.*}} iter_args
+// CHECK:         memref.store
+func.func @no_coalesce_observed_carried_value(%seed: i64, %out: memref<4xi64>) {
+  affine.for %i = 0 to 4 {
+    %r = affine.for %k = 0 to 4 iter_args(%acc = %seed) -> (i64) {
+      memref.store %acc, %out[%k] : memref<4xi64>
+      %t = arith.addi %acc, %acc : i64
+      affine.yield %t : i64
+    }
+  }
+  return
+}
