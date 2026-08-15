@@ -94,7 +94,7 @@ public:
   }
 
   template <class _OtherExtents>
-    requires(is_constructible_v<extents_type, _OtherExtents> && _OtherExtents::rank() <= 1)
+    requires(extents_type::rank() <= 1 && is_constructible_v<extents_type, _OtherExtents>)
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
       mapping(const layout_left::mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
