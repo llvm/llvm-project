@@ -21,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 class CallInst;
@@ -402,7 +403,8 @@ public:
   };
 
 private:
-  ResourceBinding Binding;
+  std::optional<ResourceBinding> Binding;
+  uint32_t HeapResourceID = -1U;
   TargetExtType *HandleTy;
   StringRef Name;
   GlobalVariable *Symbol = nullptr;
@@ -415,16 +417,30 @@ public:
   ResourceInfo(uint32_t Space, uint32_t LowerBound, uint32_t Size,
                TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
-      : Binding{0, Space, LowerBound, Size}, HandleTy(HandleTy), Name(Name),
-        Symbol(Symbol) {}
+      : Binding{ResourceBinding{0, Space, LowerBound, Size}},
+        HandleTy(HandleTy), Name(Name), Symbol(Symbol) {}
 
-  void setBindingID(unsigned ID) { Binding.BindingID = ID; }
+  ResourceInfo(uint32_t HeapResourceID, TargetExtType *HandleTy)
+      : Binding{std::nullopt}, HeapResourceID(HeapResourceID),
+        HandleTy(HandleTy), Name(""), Symbol(nullptr) {}
+
+  bool hasBinding() const { return Binding.has_value(); }
+  void setBindingID(unsigned ID) {
+    assert(hasBinding() && "Resource does not have a binding");
+    Binding->BindingID = ID;
+  }
 
   bool hasCounter() const {
     return CounterDirection != ResourceCounterDirection::Unknown;
   }
 
-  const ResourceBinding &getBinding() const { return Binding; }
+  const ResourceBinding &getBinding() const {
+    assert(hasBinding() && "Resource does not have a binding");
+    return Binding.value();
+  }
+
+  uint32_t getSize() const { return Binding ? Binding->Size : 1; }
+
   TargetExtType *getHandleTy() const { return HandleTy; }
   StringRef getName() const { return Name; }
 
@@ -436,8 +452,9 @@ public:
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceInfo &RHS) const {
-    return std::tie(Binding, HandleTy, Symbol, Name) ==
-           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol, RHS.Name);
+    return std::tie(Binding, HandleTy, Symbol, Name, HeapResourceID) ==
+           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol, RHS.Name,
+                    RHS.HeapResourceID);
   }
   bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceInfo &RHS) const {
