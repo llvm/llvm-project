@@ -5295,7 +5295,6 @@ libc_support_library(
         ":__support_fputil_float128",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -11062,6 +11061,7 @@ libc_math_function(
 libc_math_function(
     name = "ceilf128",
     additional_deps = [
+        ":__support_cpp_bit",
         ":__support_math_ceilf128",
     ],
 )
