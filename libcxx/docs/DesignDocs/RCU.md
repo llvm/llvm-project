@@ -274,7 +274,7 @@ There are few places we can run the deleters:
 
 Folly currently takes the inline approach and runs the deleters at all three places mentioned above.
 
-In libc++'s design, we would like to start with the inline approach and only run the deleters inside `rcu_synchronize` and
+In libc++'s design, we use the inline approach and only run the deleters inside `rcu_synchronize` and
 `rcu_barrier` for simplicity. Whether or not running the deleters inside `rcu_retire` is debatable. On the one hand, running
 them will make `rcu_retire`  take more time to return. But not running them will make the retired objects stay in the queue
 for a longer time. In an extreme case, if the user never calls `rcu_synchronize` or `rcu_barrier` after calling `rcu_retire`,
