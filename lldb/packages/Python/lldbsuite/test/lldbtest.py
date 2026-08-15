@@ -8,14 +8,14 @@ common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 entire of part of the test suite .  Example:
 
 # Exercises the test suite in the types directory....
-/Volumes/data/lldb/svn/ToT/test $ ./dotest.py -A x86_64 types
+/Volumes/data/lldb/svn/ToT/test $ ./dotest.py types
 ...
 
 Session logs for test failures/errors/unexpected successes will go into directory '2012-05-16-13_35_42'
-Command invoked: python ./dotest.py -A x86_64 types
+Command invoked: python ./dotest.py types
 compilers=['clang']
 
-Configuration: arch=x86_64 compiler=clang
+Configuration: compiler=clang
 ----------------------------------------------------------------------
 Collected 72 tests
 
@@ -1586,18 +1586,6 @@ class Base(unittest.TestCase):
                 return True
 
         return False
-
-    def getRunOptions(self):
-        """Command line option for -A and -C to run this test again, called from
-        self.dumpSessionInfo()."""
-        arch = self.getArchitecture()
-        comp = self.getCompiler()
-        option_str = ""
-        if arch:
-            option_str = "-A " + arch
-        if comp:
-            option_str += " -C " + comp
-        return option_str
 
     def getVariant(self, variant_name):
         method = getattr(self, self.testMethodName)

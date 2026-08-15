@@ -2,7 +2,7 @@
 Test lldb-dap dataBreakpointInfo and setDataBreakpoints requests
 """
 
-from lldbsuite.test.decorators import requireNotWasm, skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import DataBreakpoint, LaunchArgs
