@@ -88,7 +88,9 @@ public:
       members.push_back(ta.getType());
     }
 
-    return cir::ConstRecordAttr::get(getAnonRecordTy(members), arrayAttr);
+    auto sTy = getAnonRecordTy(members, /*packed=*/false,
+                               cir::RecordType::getAllDataKinds(members));
+    return cir::ConstRecordAttr::get(sTy, arrayAttr);
   }
 
   cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
@@ -155,6 +157,13 @@ public:
     auto type = cir::StructType::get(getContext(), members, nameAttr, packed,
                                      /*is_class=*/false, memberKinds);
 
+    // If we found an existing type, verify that either it is incomplete or
+    // it matches the requested attributes.
+    assert(!type.isIncomplete() ||
+           (type.getMembers() == members && type.getPacked() == packed));
+
+    // Complete an incomplete record or ensure the existing complete record
+    // matches the requested attributes.
     type.complete(members, packed, memberKinds);
 
     return type;
@@ -380,11 +389,12 @@ public:
   cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
 
   /// Get a CIR anonymous struct type.
-  cir::StructType getAnonRecordTy(llvm::ArrayRef<mlir::Type> members,
-                                  bool packed = false) {
+  cir::StructType
+  getAnonRecordTy(llvm::ArrayRef<mlir::Type> members, bool packed,
+                  llvm::ArrayRef<cir::RecordMemberKind> memberKinds) {
     assert(!cir::MissingFeatures::astRecordDeclAttr());
     return cir::StructType::get(getContext(), members, packed,
-                                /*is_class=*/false);
+                                /*is_class=*/false, memberKinds);
   }
 
   //===--------------------------------------------------------------------===//

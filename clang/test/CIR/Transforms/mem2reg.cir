@@ -3,7 +3,7 @@
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !u16i = !cir.int<u, 16>
-!rec_Whole = !cir.struct<"Whole" {!u16i, !u16i}>
+!rec_Whole = !cir.struct<"Whole" {data !u16i, data !u16i}>
 !rec_AllPad = !cir.struct<"AllPad" {pad !u8i}>
 
 module {

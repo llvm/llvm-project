@@ -41,7 +41,7 @@ class TestOSPluginIndSYM(TestBase):
             return "{} not available".format(self.PORT)
         return None
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skip(bugnumber="github.com/llvm/llvm-project/issues/213380")
     def test_python_os_plugin(self):
         """Test that the OS plugin in a dSYM works on attach."""

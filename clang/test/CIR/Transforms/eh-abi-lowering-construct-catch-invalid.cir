@@ -17,7 +17,7 @@ cir.global constant linkonce_odr @_ZTI1E
     = #cir.typeinfo<{
         #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
             : !cir.ptr<!u8i>}>
-    : !cir.struct<{!cir.ptr<!u8i>}>
+    : !cir.struct<{data !cir.ptr<!u8i>}>
 
 cir.func private @_Z8mayThrowv()
 cir.func private @_ZN1EC1ERKS_(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)
@@ -75,7 +75,7 @@ cir.global constant linkonce_odr @_ZTI1E
     = #cir.typeinfo<{
         #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
             : !cir.ptr<!u8i>}>
-    : !cir.struct<{!cir.ptr<!u8i>}>
+    : !cir.struct<{data !cir.ptr<!u8i>}>
 
 cir.func private @_Z8mayThrowv()
 
@@ -128,7 +128,7 @@ cir.global constant linkonce_odr @_ZTI1E
     = #cir.typeinfo<{
         #cir.global_view<@_ZTVN10__cxxabiv117__class_type_infoE, [2 : i32]>
             : !cir.ptr<!u8i>}>
-    : !cir.struct<{!cir.ptr<!u8i>}>
+    : !cir.struct<{data !cir.ptr<!u8i>}>
 
 cir.func private @_Z8mayThrowv()
 cir.func private @_ZN1EC1ERKS_(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)

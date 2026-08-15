@@ -107,7 +107,6 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var c_test flags)
   _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
-  libc_add_definition(compile_options "LIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -203,7 +202,7 @@ function(get_object_files_for_test result skipped_entrypoints_list)
         get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
         if(object_file_raw)
           # TODO: Remove this once we stop suffixing the target with ".__internal__"
-          if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test.__unit__" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test.__unit__")
+          if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test")
             string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
           endif()
           list(APPEND dep_obj ${object_file_raw})
@@ -242,7 +241,7 @@ endfunction()
 
 # Rule to add a libc unittest.
 # Usage
-#    add_libc_unittest(
+#    create_libc_unittest(
 #      <target name>
 #      SUITE <name of the suite this test belongs to>
 #      SRCS  <list of .cpp files for the test>
@@ -265,11 +264,11 @@ function(create_libc_unittest fq_target_name)
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
-    message(FATAL_ERROR "'add_libc_unittest' target requires a SRCS list of .cpp "
+    message(FATAL_ERROR "'create_libc_unittest' target requires a SRCS list of .cpp "
       "files.")
   endif()
   if(NOT LIBC_UNITTEST_DEPENDS)
-    message(FATAL_ERROR "'add_libc_unittest' target requires a DEPENDS list of "
+    message(FATAL_ERROR "'create_libc_unittest' target requires a DEPENDS list of "
       "'add_entrypoint_object' targets.")
   endif()
 
@@ -282,7 +281,6 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
     "${LIBC_UNITTEST_FLAGS}")
-  libc_add_definition(compile_options "LIBC_TEST=UNIT")
 
   get_link_options(link_options
     ${compile_options}
@@ -406,7 +404,7 @@ function(create_libc_unittest fq_target_name)
   endif()
 endfunction()
 
-function(add_libc_unittest target_name)
+function(_add_libc_unittest target_name)
   add_target_with_flags(
     ${target_name}
     CREATE_TARGET create_libc_unittest
@@ -933,7 +931,13 @@ function(add_libc_hermetic test_name)
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1
       ${link_libraries}
+      ${fq_target_name}.__libc__
       LibcHermeticTestSupport.hermetic
+      # Working around dependency issues caused by compiler introduced libcalls.
+      # We need to repeat the libc target so that we can resolve libcalls which
+      # pull in functions from LibcHermeticTestSupport (which then foward to
+      # internal implementations).
+      # TODO: clean this up
       ${fq_target_name}.__libc__
       ${compiler_runtime}
   )
@@ -1020,30 +1024,25 @@ endfunction()
 function(add_libc_test test_name)
   cmake_parse_arguments(
     "LIBC_TEST"
-    "UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
     "" # Single value arguments
     "" # Multi-value arguments
     ${ARGN}
   )
-  if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
-    add_libc_unittest(${test_name}.__unit__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
-  endif()
-  if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
-    add_libc_hermetic(
-      ${test_name}.__hermetic__
-      LINK_LIBRARIES
-        LibcTest.hermetic
-        LibcDeathTestExecutors.hermetic
-        ${LIBC_TEST_UNPARSED_ARGUMENTS}
-    )
-    get_fq_target_name(${test_name} fq_test_name)
-    if(TARGET ${fq_test_name}.__hermetic__ AND TARGET ${fq_test_name}.__unit__)
-      # Tests like the file tests perform file operations on disk file. If we
-      # don't chain up the unit test and hermetic test, then those tests will
-      # step on each other's files.
-      if(NOT LIBC_TEST_HERMETIC_ONLY)
-        add_dependencies(${fq_test_name}.__hermetic__ ${fq_test_name}.__unit__)
-      endif()
+  if(LLVM_LIBC_FULL_BUILD)
+    if(NOT LIBC_TEST_OVERLAY_BUILD_ONLY)
+      add_libc_hermetic(
+        ${test_name}
+        LINK_LIBRARIES
+          LibcTest.hermetic
+          LibcDeathTestExecutors.hermetic
+          ${LIBC_TEST_UNPARSED_ARGUMENTS}
+      )
+    endif()
+  else()
+    # Overlay mode
+    if(NOT LIBC_TEST_FULL_BUILD_ONLY)
+      _add_libc_unittest(${test_name} ${LIBC_TEST_UNPARSED_ARGUMENTS})
     endif()
   endif()
 endfunction()

@@ -13,84 +13,82 @@
 // CHECK-DAG: !rec_S = !cir.struct<"S" incomplete>
 // CHECK-DAG: !rec_U = !cir.union<"U" incomplete>
 
-!rec_anon_struct = !cir.struct< packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
-!rec_anon_struct1 = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 5>}>
-!rec_anon_struct2 = !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-!rec_S1 = !cir.struct<"S1" {!s32i, !s32i}>
-!rec_Sc = !cir.struct<"Sc" {!u8i, !u16i, !u32i}>
+!rec_anon_struct = !cir.struct< packed {data !s32i, data !s32i, data !cir.array<!s32i x 8>}>
+!rec_anon_struct1 = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 5>}>
+!rec_anon_struct2 = !cir.struct<{data !cir.ptr<!u8i>, data !cir.ptr<!u8i>, data !cir.ptr<!u8i>}>
+!rec_S1 = !cir.struct<"S1" {data !s32i, data !s32i}>
+!rec_Sc = !cir.struct<"Sc" {data !u8i, data !u16i, data !u32i}>
 
-// CHECK-DAG: ![[ARR_TY:rec_anon_struct[0-9]*]] = !cir.struct<packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
-// CHECK-DAG: !cir.struct<{!cir.array<!cir.ptr<!u8i> x 5>}>
-// CHECK-DAG: !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-// CHECK-DAG: !rec_S1 = !cir.struct<"S1" {!s32i, !s32i}>
-// CHECK-DAG: !rec_Sc = !cir.struct<"Sc" {!u8i, !u16i, !u32i}>
+// CHECK-DAG: ![[ARR_TY:rec_anon_struct[0-9]*]] = !cir.struct<packed {data !s32i, data !s32i, data !cir.array<!s32i x 8>}>
+// CHECK-DAG: !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 5>}>
+// CHECK-DAG: !cir.struct<{data !cir.ptr<!u8i>, data !cir.ptr<!u8i>, data !cir.ptr<!u8i>}>
+// CHECK-DAG: !rec_S1 = !cir.struct<"S1" {data !s32i, data !s32i}>
+// CHECK-DAG: !rec_Sc = !cir.struct<"Sc" {data !u8i, data !u16i, data !u32i}>
 
 // A packed struct, and a packed and unpacked pair with the same members
-!rec_P1 = !cir.struct<"P1" packed {!s32i, !s32i}>
-!rec_P2 = !cir.struct<"P2" {!u8i, pad !u8i, !u16i, !u32i}>
-!rec_P3 = !cir.struct<"P3" packed {!u8i, pad !u8i, !u16i, !u32i}>
+!rec_P1 = !cir.struct<"P1" packed {data !s32i, data !s32i}>
+!rec_P2 = !cir.struct<"P2" {data !u8i, pad !u8i, data !u16i, data !u32i}>
+!rec_P3 = !cir.struct<"P3" packed {data !u8i, pad !u8i, data !u16i, data !u32i}>
 
 // Members marked pad or empty
 !rec_P4 = !cir.struct<"P4" {pad !u8i}>
 !rec_P5 = !cir.struct<"P5" {empty !u8i}>
-!rec_P6 = !cir.struct<"P6" {!u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
-!rec_P7 = !cir.struct<"P7" packed {!u8i, pad !u8i}>
-!rec_P8 = !cir.struct<"P8" {!u16i, pad !u8i, pad !u8i}>
+!rec_P6 = !cir.struct<"P6" {data !u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
+!rec_P7 = !cir.struct<"P7" packed {data !u8i, pad !u8i}>
+!rec_P8 = !cir.struct<"P8" {data !u16i, pad !u8i, pad !u8i}>
 
-// CHECK-DAG: !rec_P1 = !cir.struct<"P1" packed {!s32i, !s32i}>
-// CHECK-DAG: !rec_P2 = !cir.struct<"P2" {!u8i, pad !u8i, !u16i, !u32i}>
-// CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed {!u8i, pad !u8i, !u16i, !u32i}>
+// CHECK-DAG: !rec_P1 = !cir.struct<"P1" packed {data !s32i, data !s32i}>
+// CHECK-DAG: !rec_P2 = !cir.struct<"P2" {data !u8i, pad !u8i, data !u16i, data !u32i}>
+// CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed {data !u8i, pad !u8i, data !u16i, data !u32i}>
 // CHECK-DAG: !rec_P4 = !cir.struct<"P4" {pad !u8i}>
 // CHECK-DAG: !rec_P5 = !cir.struct<"P5" {empty !u8i}>
-// CHECK-DAG: !rec_P6 = !cir.struct<"P6" {!u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
-// CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed {!u8i, pad !u8i}>
-// CHECK-DAG: !rec_P8 = !cir.struct<"P8" {!u16i, pad !u8i, pad !u8i}>
+// CHECK-DAG: !rec_P6 = !cir.struct<"P6" {data !u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
+// CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed {data !u8i, pad !u8i}>
+// CHECK-DAG: !rec_P8 = !cir.struct<"P8" {data !u16i, pad !u8i, pad !u8i}>
 
-// Records with identical member types, spelled apart by their marks.  The
-// anonymous pair must stay two distinct types, since an anonymous record keys
-// on its whole body.
-!rec_M1 = !cir.struct<"M1" {!u8i, pad !u8i}>
-!rec_M2 = !cir.struct<"M2" {!u8i, empty !u8i}>
-!rec_anon_pad = !cir.struct<{!u8i, pad !u8i}>
-!rec_anon_empty = !cir.struct<{!u8i, empty !u8i}>
+// Records with identical member types, spelled apart by their kinds.
+!rec_M1 = !cir.struct<"M1" {data !u8i, pad !u8i}>
+!rec_M2 = !cir.struct<"M2" {data !u8i, empty !u8i}>
+!rec_anon_pad = !cir.struct<{data !u8i, pad !u8i}>
+!rec_anon_empty = !cir.struct<{data !u8i, empty !u8i}>
 
-// CHECK-DAG: !rec_M1 = !cir.struct<"M1" {!u8i, pad !u8i}>
-// CHECK-DAG: !rec_M2 = !cir.struct<"M2" {!u8i, empty !u8i}>
-// CHECK-DAG: !cir.struct<{!u8i, pad !u8i}>
-// CHECK-DAG: !cir.struct<{!u8i, empty !u8i}>
+// CHECK-DAG: !rec_M1 = !cir.struct<"M1" {data !u8i, pad !u8i}>
+// CHECK-DAG: !rec_M2 = !cir.struct<"M2" {data !u8i, empty !u8i}>
+// CHECK-DAG: !cir.struct<{data !u8i, pad !u8i}>
+// CHECK-DAG: !cir.struct<{data !u8i, empty !u8i}>
 
-!rec_U1 = !cir.union<"U1" {!s32i, !u8i}, padding = {!u8i}>
-!rec_U2 = !cir.union<"U2" packed {!s32i}, padding = {!cir.array<!u8i x 4>}>
-!rec_anon_u_empty = !cir.union<{!s32i, empty !u8i}>
-!rec_anon_u_plain = !cir.union<{!s32i, !u8i}>
+!rec_U1 = !cir.union<"U1" {data !s32i, data !u8i}, padding = {!u8i}>
+!rec_U2 = !cir.union<"U2" packed {data !s32i}, padding = {!cir.array<!u8i x 4>}>
+!rec_anon_u_empty = !cir.union<{data !s32i, empty !u8i}>
+!rec_anon_u_plain = !cir.union<{data !s32i, data !u8i}>
 !rec_U3 = !cir.union<"U3" {empty !u8i}>
-!rec_U4 = !cir.union<"U4" {!s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
+!rec_U4 = !cir.union<"U4" {data !s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
 
-// CHECK-DAG: !rec_U1 = !cir.union<"U1" {!s32i, !u8i}, padding = {!u8i}>
-// CHECK-DAG: !rec_U2 = !cir.union<"U2" packed {!s32i}, padding = {!cir.array<!u8i x 4>}>
-// CHECK-DAG: !cir.union<{!s32i, empty !u8i}>
-// CHECK-DAG: !cir.union<{!s32i, !u8i}>
+// CHECK-DAG: !rec_U1 = !cir.union<"U1" {data !s32i, data !u8i}, padding = {!u8i}>
+// CHECK-DAG: !rec_U2 = !cir.union<"U2" packed {data !s32i}, padding = {!cir.array<!u8i x 4>}>
+// CHECK-DAG: !cir.union<{data !s32i, empty !u8i}>
+// CHECK-DAG: !cir.union<{data !s32i, data !u8i}>
 // CHECK-DAG: !rec_U3 = !cir.union<"U3" {empty !u8i}>
-// CHECK-DAG: !rec_U4 = !cir.union<"U4" {!s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
+// CHECK-DAG: !rec_U4 = !cir.union<"U4" {data !s32i, empty !u8i}, padding = {!cir.array<!u8i x 4>}>
 
 
 // Complete a previously incomplete record
 !rec_A = !cir.struct<class "A" incomplete>
-!rec_Ac = !cir.struct<class "A" {!u8i, !s32i}>
-// CHECK-DAG: !rec_A = !cir.struct<class "A" {!u8i, !s32i}>
+!rec_Ac = !cir.struct<class "A" {data !u8i, data !s32i}>
+// CHECK-DAG: !rec_A = !cir.struct<class "A" {data !u8i, data !s32i}>
 
 // Complete a previously incomplete record whose members carry marks.
 !rec_B = !cir.struct<class "B" incomplete>
-!rec_Bc = !cir.struct<class "B" {!u8i, pad !cir.array<!u8i x 3>, !s32i}>
-// CHECK-DAG: !rec_B = !cir.struct<class "B" {!u8i, pad !cir.array<!u8i x 3>, !s32i}>
+!rec_Bc = !cir.struct<class "B" {data !u8i, pad !cir.array<!u8i x 3>, data !s32i}>
+// CHECK-DAG: !rec_B = !cir.struct<class "B" {data !u8i, pad !cir.array<!u8i x 3>, data !s32i}>
 
 // Test recursive struct parsing/printing.
-!rec_Node = !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
-// CHECK-DAG: !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
+!rec_Node = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
+// CHECK-DAG: !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
 
 // A mark survives the cyclic-print guard on a self-referential record.
-!rec_PadNode = !cir.struct<"PadNode" {!cir.ptr<!cir.struct<"PadNode">>, pad !u8i}>
-// CHECK-DAG: !cir.struct<"PadNode" {!cir.ptr<!cir.struct<"PadNode">>, pad !u8i}>
+!rec_PadNode = !cir.struct<"PadNode" {data !cir.ptr<!cir.struct<"PadNode">>, pad !u8i}>
+// CHECK-DAG: !cir.struct<"PadNode" {data !cir.ptr<!cir.struct<"PadNode">>, pad !u8i}>
 
 
 
@@ -134,7 +132,7 @@ module  {
   }
 
   cir.func @structs() {
-    %0 = cir.alloca "sc" align(8) init : !cir.ptr<!cir.ptr<!cir.struct<"Sc" {!u8i, !u16i, !u32i}>>>
+    %0 = cir.alloca "sc" align(8) init : !cir.ptr<!cir.ptr<!cir.struct<"Sc" {data !u8i, data !u16i, data !u32i}>>>
     %1 = cir.alloca "u" align(8) init : !cir.ptr<!cir.ptr<!cir.union<"U" incomplete>>>
     cir.return
   }

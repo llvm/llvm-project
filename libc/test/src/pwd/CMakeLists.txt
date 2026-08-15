@@ -4,7 +4,7 @@ if(NOT TARGET libc.src.pwd.pwd_utils)
   return()
 endif()
 
-add_libc_unittest(
+add_libc_test(
   pwd_utils_test
   SUITE
     libc_pwd_unittests
@@ -16,7 +16,7 @@ add_libc_unittest(
     libc.src.pwd.pwd_utils
 )
 
-add_libc_unittest(
+add_libc_test(
   getpwent_test
   SUITE
     libc_pwd_unittests

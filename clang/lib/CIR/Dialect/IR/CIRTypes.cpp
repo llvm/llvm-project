@@ -152,58 +152,43 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
 
 // Shared helpers for StructType and UnionType parse/print.
 
-llvm::ArrayRef<RecordMemberKind>
-cir::normalizeRecordMemberKinds(llvm::ArrayRef<RecordMemberKind> memberKinds) {
-  if (llvm::all_of(memberKinds, [](RecordMemberKind kind) {
-        return kind == RecordMemberKind::Data;
-      }))
-    return {};
-  return memberKinds;
+llvm::SmallVector<RecordMemberKind>
+RecordType::getAllDataKinds(llvm::ArrayRef<mlir::Type> members) {
+  return llvm::SmallVector<RecordMemberKind>(members.size(),
+                                             RecordMemberKind::Data);
 }
 
-/// A mark list either is absent or names every member.  An incomplete record
-/// has no members, so a mark on one is caught by the same length check.
+/// An incomplete record has no members, so a kind for one is caught by the
+/// same check.
 static mlir::LogicalResult
 verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
                         size_t numMembers,
                         llvm::ArrayRef<RecordMemberKind> memberKinds) {
-  if (!memberKinds.empty() && memberKinds.size() != numMembers)
+  if (memberKinds.size() != numMembers)
     return emitError() << "expected " << numMembers << " member kinds, got "
                        << memberKinds.size();
   return mlir::success();
 }
 
-/// Parse the optional mark that precedes a member type.  Only a mark keyword is
-/// consumed, so a member spelled as a bare builtin type still reaches the type
-/// parser.  A data member is spelled without a mark, and accepting 'data' would
-/// give a record two spellings that print the same way, so it is named here
-/// only to reject it.
-static mlir::ParseResult parseMemberKind(mlir::AsmParser &parser,
-                                         RecordMemberKind &kind) {
-  static const llvm::StringRef marks[] = {"pad", "empty", "data"};
-  kind = RecordMemberKind::Data;
+/// The keywords that spell a member kind.  A union's tail-padding slot probes
+/// for one of these to reject it, since that slot is not a member.
+static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty"};
+
+static std::optional<RecordMemberKind>
+parseMemberKind(mlir::AsmParser &parser) {
   llvm::StringRef keyword;
   const llvm::SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseOptionalKeyword(&keyword, marks).failed())
-    return mlir::success();
-
-  if (keyword == "data") {
-    parser.emitError(loc, "a data member is spelled without a mark");
-    return mlir::failure();
-  }
-  kind = *symbolizeRecordMemberKind(keyword);
-
-  const llvm::SMLoc secondLoc = parser.getCurrentLocation();
-  if (parser.parseOptionalKeyword(&keyword, marks).succeeded()) {
-    parser.emitError(secondLoc, "a record member takes at most one kind mark");
-    return mlir::failure();
-  }
-  return mlir::success();
+  if (parser.parseKeyword(&keyword).failed())
+    return std::nullopt;
+  std::optional<RecordMemberKind> kind = symbolizeRecordMemberKind(keyword);
+  if (!kind)
+    parser.emitError(loc, "expected a record member kind");
+  return kind;
 }
 
-/// Parse "incomplete" or "{[mark] type, [mark] type, ...}", writing results
-/// into \p incomplete, \p members and \p memberKinds.  Returns failure if
-/// member parsing fails.
+/// Parse "incomplete" or "{mark type, mark type, ...}", writing results into
+/// \p incomplete, \p members and \p memberKinds.  Returns failure if member
+/// parsing fails.
 static mlir::ParseResult
 parseRecordBody(mlir::AsmParser &parser, bool &incomplete,
                 llvm::SmallVector<mlir::Type> &members,
@@ -215,10 +200,10 @@ parseRecordBody(mlir::AsmParser &parser, bool &incomplete,
   return parser.parseCommaSeparatedList(
       AsmParser::Delimiter::Braces,
       [&parser, &members, &memberKinds]() -> mlir::ParseResult {
-        RecordMemberKind kind;
-        if (parseMemberKind(parser, kind).failed())
+        std::optional<RecordMemberKind> kind = parseMemberKind(parser);
+        if (!kind)
           return mlir::failure();
-        memberKinds.push_back(kind);
+        memberKinds.push_back(*kind);
         return parser.parseType(members.emplace_back());
       });
 }
@@ -257,9 +242,7 @@ printRecordBody(mlir::AsmPrinter &printer, RecordTy self, mlir::StringAttr name,
     for (auto [idx, member] : llvm::enumerate(members)) {
       if (idx)
         printer << ", ";
-      if (idx < memberKinds.size() &&
-          memberKinds[idx] != RecordMemberKind::Data)
-        printer << stringifyRecordMemberKind(memberKinds[idx]) << ' ';
+      printer << stringifyRecordMemberKind(memberKinds[idx]) << ' ';
       printer.printType(member);
     }
     printer << "}";
@@ -322,7 +305,7 @@ Type StructType::parse(mlir::AsmParser &parser) {
     return {};
 
   ArrayRef<mlir::Type> membersRef(members);
-  ArrayRef<RecordMemberKind> kindsRef = normalizeRecordMemberKinds(memberKinds);
+  ArrayRef<RecordMemberKind> kindsRef(memberKinds);
   mlir::Type type = {};
   if (name && incomplete) {
     type = StructType::getChecked(eLoc, context, name, is_class);
@@ -402,7 +385,7 @@ void StructType::removeABIConversionNamePrefix() {
 void StructType::complete(ArrayRef<Type> members, bool packed,
                           ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, normalizeRecordMemberKinds(memberKinds)).failed())
+  if (mutate(members, packed, memberKinds).failed())
     llvm_unreachable("failed to complete struct");
 }
 
@@ -472,8 +455,8 @@ Type UnionType::parse(mlir::AsmParser &parser) {
       return {};
     const llvm::SMLoc paddingLoc = parser.getCurrentLocation();
     llvm::StringRef paddingKeyword;
-    static const llvm::StringRef marks[] = {"pad", "empty", "data"};
-    if (parser.parseOptionalKeyword(&paddingKeyword, marks).succeeded()) {
+    if (parser.parseOptionalKeyword(&paddingKeyword, memberKindMarks)
+            .succeeded()) {
       parser.emitError(paddingLoc, "a union's tail padding takes no kind mark");
       return {};
     }
@@ -487,7 +470,7 @@ Type UnionType::parse(mlir::AsmParser &parser) {
     return {};
 
   ArrayRef<mlir::Type> membersRef(members);
-  ArrayRef<RecordMemberKind> kindsRef = normalizeRecordMemberKinds(memberKinds);
+  ArrayRef<RecordMemberKind> kindsRef(memberKinds);
   mlir::Type type = {};
   if (name && incomplete) {
     type = UnionType::getChecked(eLoc, context, name);
@@ -570,8 +553,7 @@ void UnionType::complete(ArrayRef<Type> members, bool packed,
                          mlir::Type padding,
                          ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, padding, normalizeRecordMemberKinds(memberKinds))
-          .failed())
+  if (mutate(members, packed, padding, memberKinds).failed())
     llvm_unreachable("failed to complete union");
 }
 
@@ -698,17 +680,12 @@ void RecordType::removeABIConversionNamePrefix() {
   return mlir::cast<UnionType>(*this).removeABIConversionNamePrefix();
 }
 
-bool cir::allMembersNonData(RecordType recTy) {
+bool RecordType::isEmptyForABI() const {
   // An incomplete record has no members yet, which must not read as vacuously
   // holding no data.
-  if (recTy.isIncomplete())
+  if (isIncomplete())
     return false;
-  if (recTy.getMembers().empty())
-    return true;
-  // An absent list is the canonical spelling for all-data, so a record with
-  // members and no list holds data in all of them.
-  llvm::ArrayRef<RecordMemberKind> kinds = recTy.getMemberKinds();
-  return !kinds.empty() && llvm::none_of(kinds, [](RecordMemberKind kind) {
+  return llvm::none_of(getMemberKinds(), [](RecordMemberKind kind) {
     return kind == RecordMemberKind::Data;
   });
 }
@@ -891,13 +868,12 @@ unsigned
 StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
-  // Tail padding is the trailing run of pad members.  A record with no mark
-  // list has nothing marked pad, so nothing drops.  An empty member stays
+  // Tail padding is the trailing run of pad members.  An empty member stays
   // inside the data size: it is storage the source declared, which a derived
   // class may not reuse.
   llvm::ArrayRef<mlir::Type> members = getMembers();
   llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
-  assert((kinds.empty() || kinds.size() == members.size()) &&
+  assert(kinds.size() == members.size() &&
          "the two drop_back calls below must stay in step");
   while (!kinds.empty() && kinds.back() == RecordMemberKind::Pad) {
     kinds = kinds.drop_back();
@@ -1282,7 +1258,8 @@ static mlir::Type getMethodLayoutType(mlir::MLIRContext *ctx) {
   auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
   mlir::Type fields[2]{voidPtrTy, voidPtrTy};
   return cir::StructType::get(ctx, fields, /*packed=*/false,
-                              /*is_class=*/false);
+                              /*is_class=*/false,
+                              cir::RecordType::getAllDataKinds(fields));
 }
 
 llvm::TypeSize

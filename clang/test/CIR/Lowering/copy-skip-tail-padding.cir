@@ -6,26 +6,30 @@
 !u16i = !cir.int<u, 16>
 !s32i = !cir.int<s, 32>
 
-!rec_Plain = !cir.struct<"Plain" {!s32i, !s32i}>
-!rec_Trail = !cir.struct<"Trail" {!s32i, !u8i, pad !cir.array<!u8i x 3>}>
-!rec_MultiPad = !cir.struct<"MultiPad" {!u16i, pad !u8i, pad !u8i}>
-!rec_Interior = !cir.struct<"Interior" {!u8i, pad !cir.array<!u8i x 3>, !s32i}>
-!rec_TailEmpty = !cir.struct<"TailEmpty" {!u8i, empty !u8i}>
-!rec_Packed = !cir.struct<"Packed" packed {!u8i, !s32i, pad !u8i}>
+!rec_Plain = !cir.struct<"Plain" {data !s32i, data !s32i}>
+!rec_Trail =
+    !cir.struct<"Trail" {data !s32i, data !u8i, pad !cir.array<!u8i x 3>}>
+!rec_MultiPad = !cir.struct<"MultiPad" {data !u16i, pad !u8i, pad !u8i}>
+!rec_Interior =
+    !cir.struct<"Interior" {data !u8i, pad !cir.array<!u8i x 3>, data !s32i}>
+!rec_TailEmpty = !cir.struct<"TailEmpty" {data !u8i, empty !u8i}>
+!rec_Packed = !cir.struct<"Packed" packed {data !u8i, data !s32i, pad !u8i}>
 !rec_AllPad = !cir.struct<"AllPad" {pad !u8i}>
 !rec_InteriorPacked =
-    !cir.struct<"InteriorPacked" packed {!u8i, pad !cir.array<!u8i x 3>, !s32i}>
-!rec_Nest = !cir.struct<"Nest" {!rec_Trail, !u8i, pad !cir.array<!u8i x 3>}>
+    !cir.struct<"InteriorPacked" packed {data !u8i, pad !cir.array<!u8i x 3>,
+                                        data !s32i}>
+!rec_Nest =
+    !cir.struct<"Nest" {data !rec_Trail, data !u8i, pad !cir.array<!u8i x 3>}>
 !rec_AlignasTail =
-    !cir.struct<"AlignasTail" {!s8i, pad !cir.array<!u8i x 7>, !s32i,
+    !cir.struct<"AlignasTail" {data !s8i, pad !cir.array<!u8i x 7>, data !s32i,
                                pad !cir.array<!u8i x 4>}>
 !rec_SpanMixed =
-    !cir.struct<"SpanMixed" {!u8i, pad !cir.array<!u8i x 3>, empty !u8i,
+    !cir.struct<"SpanMixed" {data !u8i, pad !cir.array<!u8i x 3>, empty !u8i,
                              pad !cir.array<!u8i x 3>}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu",
                    dlti.dl_spec = #dlti.dl_spec<>} {
-  // An unmarked record has no tail padding to skip.
+  // A record with no pad member has no tail padding to skip.
   // CHECK-LABEL: llvm.func @plain
   // CHECK:         %[[N:.*]] = llvm.mlir.constant(8 : i64) : i64
   // CHECK:         "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %[[N]])

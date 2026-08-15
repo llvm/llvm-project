@@ -1,5 +1,4 @@
 ; RUN: llc < %s -mtriple=lanai | FileCheck %s
-; RUN: llc < %s -mtriple=lanai | FileCheck %s
 
 ; Test lowering of shifts.
 

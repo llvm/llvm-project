@@ -56,6 +56,14 @@
 ; HIP-NEXT:   ret void
 ; HIP-NEXT: }
 
+; RUN: llvm-offload-wrapper --triple=x86_64-pc-windows-msvc -kind=hip %s -o %t.coff.bc
+; RUN: llvm-dis %t.coff.bc -o - | FileCheck %s --check-prefix=HIP-COFF
+
+; HIP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+; HIP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
+; HIP-COFF: icmp ne ptr getelementptr inbounds ([1 x %struct.__tgt_offload_entry], ptr @__start_llvm_offload_entries, i32 0, i32 1), @__stop_llvm_offload_entries
+; HIP-COFF: phi ptr [ getelementptr inbounds ([1 x %struct.__tgt_offload_entry], ptr @__start_llvm_offload_entries, i32 0, i32 1), %entry ]
+
 ; RUN: llvm-offload-wrapper --triple=x86_64-apple-macosx10.15.0 -kind=hip %s -o %t.bc
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=HIP-MACHO
 

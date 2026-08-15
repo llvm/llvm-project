@@ -37,27 +37,16 @@ bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
 /// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
-/// isEmptyFieldForABI - Return true if the field is "empty" for argument
-/// passing.  An unnamed bit-field of any width qualifies, as does an empty
-/// record, though a C++ one only under [[no_unique_address]] and never through
-/// an array of them.  Neither this nor isEmptyFieldForLayout subsumes the
-/// other.  An unnamed bit-field of any width is empty here but only at width
-/// zero there, because a narrower one occupies no ABI class even though it
-/// takes up layout space.  Conversely a C++ record whose own members are empty
-/// C++ records is empty for layout but not here.
+/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is an
+/// unnamed bit-field or an (array of) empty record(s).  C++ record fields are
+/// never empty unless marked [[no_unique_address]], and that exception applies
+/// only to records, not arrays of records.
 bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
 
-/// isEmptyRecordForABI - Return true if a record contains only empty base
-/// classes and fields, and so contributes no data to argument passing.  Unlike
-/// clang's isEmptyRecord, a polymorphic class is never empty here: its vtable
-/// pointer is neither a base nor a field, and this answer is read without the
-/// precondition that a caller has already rejected a non-trivially-copyable
-/// type.  Clang's isEmptyRecord takes AllowArrays and AsIfNoUniqueAddr
-/// parameters and targets choose different values (RISC-V passes
-/// AsIfNoUniqueAddr=true, ARM passes AllowArrays=false for return types).
-/// This predicate fixes them at true and false, which is what x86-64 asks for.
-/// A consumer reading the member kinds cannot recover the other answers: a
-/// field that a different setting would call empty is already marked as data.
+/// isEmptyRecordForABI - Return true if a structure contains only empty base
+/// classes and fields.  Note that a structure with a flexible array member is
+/// not considered empty, and neither is a polymorphic class, whose vtable
+/// pointer is neither a base nor a field.
 bool isEmptyRecordForABI(const ASTContext &context, QualType t);
 
 class CIRGenFunction;
@@ -193,6 +182,9 @@ void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
                                        cir::FuncOp func, CIRGenModule &cgm);
 
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo>
+createAArch64TargetCIRGenInfo(CIRGenTypes &cgt);
 
 std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
 

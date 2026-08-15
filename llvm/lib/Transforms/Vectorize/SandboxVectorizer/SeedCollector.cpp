@@ -116,7 +116,7 @@ void SeedContainer::insert(LoadOrStoreT *LSI, bool AllowDiffTypes) {
   if (BundleVec.empty() || BundleVec.back()->size() == SeedBundleSizeLimit)
     BundleVec.emplace_back(std::make_unique<MemSeedBundle<LoadOrStoreT>>(LSI));
   else
-    BundleVec.back()->insert(LSI, SE);
+    BundleVec.back()->tryInsert(LSI, SE);
 
   SeedLookupMap[LSI] = BundleVec.back().get();
 }

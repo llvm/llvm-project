@@ -197,6 +197,7 @@ uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
 
 mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(
     mlir::ArrayAttr arrayAttr, cir::RecordType recordTy) {
+  // Return zero or anonymous constant record.
   const bool isZero = llvm::all_of(
       arrayAttr, [&](mlir::Attribute a) { return isNullValue(a); });
   if (isZero)

@@ -44,8 +44,6 @@ void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
       return;
     }
   }
-  llvm_unreachable(
-      "printTcgen05MMAKind called with invalid value for immediate argument");
 }
 
 void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
@@ -67,8 +65,6 @@ void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
       return;
     }
   }
-  llvm_unreachable("printTcgen05CollectorUsageOp called with invalid value for "
-                   "immediate argument");
 }
 
 void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {
