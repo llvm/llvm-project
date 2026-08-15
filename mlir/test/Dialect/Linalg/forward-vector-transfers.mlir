@@ -48,7 +48,7 @@ func.func @testViewRead(%in: memref<? x f32>) -> vector<32 x f32> {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<128 x i8>
-  %view = memref.view %alloc[%c0][] : memref<128 x i8> to memref<32 x f32>
+  %view = memref.view %alloc[%c0][32] : memref<128 x i8> to memref<32 x f32>
   %subview = memref.subview %view[0][16][1] : memref<32 x f32> to memref<16 x f32>
   memref.copy %in, %subview : memref<? x f32> to memref<16 x f32>
   %0 = vector.transfer_read %view[%c0], %f0 {in_bounds = [true]} : memref<32 x f32>, vector<32 x f32>
@@ -67,7 +67,7 @@ func.func @testViewFillRead(%in: memref<? x f32>) -> vector<32 x f32> {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<128 x i8>
-  %view = memref.view %alloc[%c0][] : memref<128 x i8> to memref<32 x f32>
+  %view = memref.view %alloc[%c0][32] : memref<128 x i8> to memref<32 x f32>
   %subview = memref.subview %view[0][16][1] : memref<32 x f32> to memref<16 x f32>
   linalg.fill ins(%f0 : f32) outs(%view : memref<32 x f32>)
   memref.copy %in, %subview : memref<? x f32> to memref<16 x f32>
@@ -105,7 +105,7 @@ func.func @testViewWrite(%vec: vector<32 x f32>, %out: memref<? x f32>) {
   %c0 = arith.constant 0: index
   %f0 = arith.constant 0.0: f32
   %alloc = memref.alloc() : memref<128 x i8>
-  %view = memref.view %alloc[%c0][] : memref<128 x i8> to memref<32 x f32>
+  %view = memref.view %alloc[%c0][32] : memref<128 x i8> to memref<32 x f32>
   %subview = memref.subview %view[0][16][1] : memref<32 x f32> to memref<16 x f32>
   vector.transfer_write %vec, %view[%c0] {in_bounds = [true]} : vector<32 x f32>, memref<32 x f32>
   memref.copy %subview, %out : memref<16 x f32> to memref<? x f32>

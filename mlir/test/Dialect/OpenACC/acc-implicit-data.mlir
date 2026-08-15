@@ -208,7 +208,7 @@ func.func @test_memref_view(%size: index) {
   %c0 = arith.constant 0 : index
   %buffer = memref.alloca(%size) : memref<?xi8>
   %copyin = acc.copyin varPtr(%buffer : memref<?xi8>) -> memref<?xi8> {name = "buffer"}
-  %view = memref.view %buffer[%c0][] : memref<?xi8> to memref<8x64xf32>
+  %view = memref.view %buffer[%c0][8, 64] : memref<?xi8> to memref<8x64xf32>
   acc.kernels dataOperands(%copyin : memref<?xi8>) {
     %c0_0 = arith.constant 0 : index
     %c0_1 = arith.constant 0 : index

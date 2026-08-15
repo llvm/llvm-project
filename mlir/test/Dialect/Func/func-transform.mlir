@@ -126,12 +126,12 @@ module {
   func.func private @func_with_reverse_order_no_result_no_calls(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
     // CHECK:             %[[C0:.*]] = arith.constant 0 : index
     %c0 = arith.constant 0 : index
-    // CHECK:             %[[VAL_4:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
-    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-    // CHECK:             %[[VAL_5:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
-    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
-    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    // CHECK:             %[[VAL_4:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]]{{\[}}1] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+    // CHECK:             %[[VAL_5:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]]{{\[}}2] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]]{{\[}}3] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
     return
   }
 }
@@ -152,12 +152,12 @@ module {
   func.func private @func_with_reverse_order_no_result(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
     // CHECK:             %[[C0:.*]] = arith.constant 0 : index
     %c0 = arith.constant 0 : index
-    // CHECK:             %[[VAL_4:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
-    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-    // CHECK:             %[[VAL_5:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
-    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
-    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    // CHECK:             %[[VAL_4:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]]{{\[}}1] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+    // CHECK:             %[[VAL_5:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]]{{\[}}2] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]]{{\[}}3] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
     return
   }
 
@@ -186,12 +186,12 @@ module {
   func.func private @func_with_reverse_order(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>) {
     // CHECK:             %[[C0:.*]] = arith.constant 0 : index
     %c0 = arith.constant 0 : index
-    // CHECK:             %[[RET_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
-    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-    // CHECK:             %[[RET_1:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
-    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
-    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    // CHECK:             %[[RET_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]]{{\[}}1] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+    // CHECK:             %[[RET_1:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]]{{\[}}2] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]]{{\[}}3] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
     // CHECK:             return %[[RET_1]], %[[RET_0]] : memref<2xi8, 1>, memref<1xi8, 1>
     return %view, %view0 : memref<1xi8, 1>, memref<2xi8, 1>
   }
@@ -222,12 +222,12 @@ module {
   func.func private @func_with_reverse_order_with_attr(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>{transform.readonly}, %arg2: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>) {
     // CHECK:             %[[C0:.*]] = arith.constant 0 : index
     %c0 = arith.constant 0 : index
-    // CHECK:             %[[RET_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
-    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-    // CHECK:             %[[RET_1:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
-    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
-    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    // CHECK:             %[[RET_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]]{{\[}}1] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+    // CHECK:             %[[RET_1:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]]{{\[}}2] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]]{{\[}}3] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
     // CHECK:             return %[[RET_1]], %[[RET_0]] : memref<2xi8, 1>, memref<1xi8, 1>
     return %view, %view0 : memref<1xi8, 1>, memref<2xi8, 1>
   }
@@ -256,12 +256,12 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           func.func private @func_with_duplicate_args(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<2xi8, 1>) {
 func.func private @func_with_duplicate_args(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<1xi8, 1>) {
   %c0 = arith.constant 0 : index
-  // CHECK:             %[[VAL_3:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0:.*]]][] : memref<1xi8, 1> to memref<1xi8, 1>
-  %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-  // CHECK:             %[[VAL_4:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
-  %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-  // CHECK:             %[[VAL_5:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
-  %view1 = memref.view %arg2[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
+  // CHECK:             %[[VAL_3:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0:.*]]]{{\[}}1] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+  // CHECK:             %[[VAL_4:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]]{{\[}}2] : memref<2xi8, 1> to memref<2xi8, 1>
+  %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+  // CHECK:             %[[VAL_5:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]]{{\[}}1] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view1 = memref.view %arg2[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
   return
 }
 
@@ -284,16 +284,16 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           func.func private @func_with_complex_duplicate_args(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<2xi8, 1>, %[[ARG2:.*]]: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>, memref<1xi8, 1>, memref<3xi8, 1>, memref<2xi8, 1>) {
 func.func private @func_with_complex_duplicate_args(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<1xi8, 1>, %arg3: memref<3xi8, 1>, %arg4: memref<2xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>, memref<1xi8, 1>, memref<3xi8, 1>, memref<2xi8, 1>) {
   %c0 = arith.constant 0 : index
-  // CHECK:             %[[RET_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0:.*]]][] : memref<1xi8, 1> to memref<1xi8, 1>
-  %view0 = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-  // CHECK:             %[[RET_1:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
-  %view1 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-  // CHECK:             %[[RET_2:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
-  %view2 = memref.view %arg2[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-  // CHECK:             %[[RET_3:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
-  %view3 = memref.view %arg3[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
-  // CHECK:             %[[RET_4:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
-  %view4 = memref.view %arg4[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
+  // CHECK:             %[[RET_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0:.*]]]{{\[}}1] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view0 = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+  // CHECK:             %[[RET_1:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]]{{\[}}2] : memref<2xi8, 1> to memref<2xi8, 1>
+  %view1 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+  // CHECK:             %[[RET_2:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]]{{\[}}1] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view2 = memref.view %arg2[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+  // CHECK:             %[[RET_3:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]]{{\[}}3] : memref<3xi8, 1> to memref<3xi8, 1>
+  %view3 = memref.view %arg3[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
+  // CHECK:             %[[RET_4:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]]{{\[}}2] : memref<2xi8, 1> to memref<2xi8, 1>
+  %view4 = memref.view %arg4[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
   // CHECK:             return %[[RET_0]], %[[RET_1]], %[[RET_2]], %[[RET_3]], %[[RET_4]] : memref<1xi8, 1>, memref<2xi8, 1>, memref<1xi8, 1>, memref<3xi8, 1>, memref<2xi8, 1>
   return %view0, %view1, %view2, %view3, %view4 : memref<1xi8, 1>, memref<2xi8, 1>, memref<1xi8, 1>, memref<3xi8, 1>, memref<2xi8, 1>
 }

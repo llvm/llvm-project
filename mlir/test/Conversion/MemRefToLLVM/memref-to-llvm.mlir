@@ -51,7 +51,7 @@ func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.mul %{{.*}}, %[[ARG1]]
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-  %3 = memref.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
+  %3 = memref.view %0[%arg2][4, %arg1] : memref<2048xi8> to memref<4x?xf32>
 
   // Test static sizes.
   // CHECK: llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
@@ -68,7 +68,7 @@ func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.mlir.constant(4 : index) : i64
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-  %5 = memref.view %0[%arg2][] : memref<2048xi8> to memref<64x4xf32>
+  %5 = memref.view %0[%arg2][64, 4] : memref<2048xi8> to memref<64x4xf32>
 
   // Test view memory space.
   // CHECK: llvm.mlir.constant(2048 : index) : i64
@@ -89,7 +89,7 @@ func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr<4>, ptr<4>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.mlir.constant(4 : index) : i64
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<4>, ptr<4>, i64, array<2 x i64>, array<2 x i64>)>
-  %7 = memref.view %6[%arg2][] : memref<2048xi8, 4> to memref<64x4xf32, 4>
+  %7 = memref.view %6[%arg2][64, 4] : memref<2048xi8, 4> to memref<64x4xf32, 4>
 
   return
 }
@@ -128,7 +128,7 @@ func.func @view_empty_memref(%offset: index, %mem: memref<0xi8>) {
   // CHECK-INTERFACE: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK-INTERFACE: llvm.mlir.constant(4 : index) : i64
   // CHECK-INTERFACE: = llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-  %0 = memref.view %mem[%offset][] : memref<0xi8> to memref<0x4xf32>
+  %0 = memref.view %mem[%offset][0, 4] : memref<0xi8> to memref<0x4xf32>
 
   return
 }
