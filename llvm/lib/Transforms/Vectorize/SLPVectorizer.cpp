@@ -8431,6 +8431,15 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
         continue;
       }
+      // Do not move the operand order to the root PHI node when the root
+      // order must be preserved: the root has no user to take over the order
+      // and it cannot be dropped at the end of the reordering.
+      if (!IgnoreReorder && Data.first == VectorizableTree.front().get() &&
+          !Data.first->UserTreeIndex &&
+          Data.first->State == TreeEntry::Vectorize &&
+          Data.first->getOpcode() == Instruction::PHI &&
+          Data.first->ReuseShuffleIndices.empty())
+        continue;
       // Check that operands are used only in the User node.
       SmallVector<TreeEntry *> GatherOps;
       buildReorderableOperands(Data.first, Data.second, NonVectorized,
