@@ -182,7 +182,7 @@ This is the main class that implements the `rcu` logic. It contains
 - `std::mutex retire_queue_mutex_` and  `rcu_singly_list_view __retired_callback_queue_` : This queue stores all the retired callbacks that are waiting for the grace period to end.
   TODO: `mutex` can throw, we need to consider how to replace it.
 
-- `rcu_singly_list_view callbacks_phase_1_` and `rcu_singly_list_view callbacks_phase_2_` : These two queues are used to let the queued retired callbacks to go through two grace periods before invocation. No additional synchronization is needed for these two queues as they are only processed when the writer thread is holding the `grace_period_mutex_` .
+- `rcu_singly_list_view callbacks_phase_1_` and `rcu_singly_list_view callbacks_phase_2_` : These two queues are used to let the retired callbacks go through two grace periods before being invoked. No additional synchronization is needed for these two queues as they are only processed when the collector (?) thread is holding the `grace_period_mutex_` .
 
 The domain has few operations:
 
