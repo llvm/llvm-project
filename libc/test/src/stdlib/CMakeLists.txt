@@ -585,7 +585,6 @@ if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
   NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
     malloc_test
-    HERMETIC_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS

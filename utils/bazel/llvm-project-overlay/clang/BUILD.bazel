@@ -49,6 +49,7 @@ gentbl_cc_library(
     tbl_outs = dict([out for c in [
         "AST",
         "Analysis",
+        "CodeGen",
         "Comment",
         "Common",
         "CrossTU",
@@ -742,6 +743,7 @@ cc_library(
         "include/clang/Basic/BuiltinTraits.inc",
         "include/clang/Basic/DiagnosticASTKinds.inc",
         "include/clang/Basic/DiagnosticAnalysisKinds.inc",
+        "include/clang/Basic/DiagnosticCodeGenKinds.inc",
         "include/clang/Basic/DiagnosticCommentKinds.inc",
         "include/clang/Basic/DiagnosticCommonKinds.inc",
         "include/clang/Basic/DiagnosticCrossTUKinds.inc",

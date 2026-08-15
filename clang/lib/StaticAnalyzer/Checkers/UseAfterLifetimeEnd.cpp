@@ -43,20 +43,30 @@ public:
 
 } // namespace
 
-static const Expr *getLifetimeBoundArg(const Expr *RetExpr) {
+static const Expr *getLifetimeBoundArg(const Expr *RetExpr,
+                                       const MemRegion *Region,
+                                       const ExplodedNode *N) {
   const CallExpr *Expr = dyn_cast_or_null<CallExpr>(RetExpr);
   if (!Expr)
     return nullptr;
+
   const FunctionDecl *FD = Expr->getDirectCallee();
   if (!FD)
     return nullptr;
 
+  const MemRegion *BaseReg = Region->getBaseRegion();
+
   for (const ParmVarDecl *PVD : FD->parameters()) {
-    if (PVD->hasAttr<LifetimeBoundAttr>()) {
-      unsigned Idx = PVD->getFunctionScopeIndex();
-      if (Idx < Expr->getNumArgs())
-        return Expr->getArg(Idx);
-    }
+    if (!PVD->hasAttr<LifetimeBoundAttr>())
+      continue;
+    unsigned Idx = PVD->getFunctionScopeIndex();
+
+    if (Idx >= Expr->getNumArgs())
+      continue;
+
+    const MemRegion *R = N->getSVal(Expr->getArg(Idx)).getAsRegion();
+    if (R && R->getBaseRegion() == BaseReg)
+      return Expr->getArg(Idx);
   }
   return nullptr;
 }
@@ -117,7 +127,7 @@ PathDiagnosticPieceRef UseAfterLifetimeEndBRVisitor::createSourcePiece(
     return nullptr;
 
   const Expr *RetExpr = dyn_cast_or_null<Expr>(S);
-  const Expr *Arg = getLifetimeBoundArg(RetExpr);
+  const Expr *Arg = getLifetimeBoundArg(RetExpr, SourceRegion, N);
 
   PathDiagnosticLocation Pos;
 

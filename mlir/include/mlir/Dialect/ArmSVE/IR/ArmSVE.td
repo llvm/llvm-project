@@ -22,6 +22,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 def ArmSVE_Dialect : Dialect {
   let name = "arm_sve";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::arm_sve";
   let summary = "Basic dialect to target Arm SVE architectures";
   let description = [{

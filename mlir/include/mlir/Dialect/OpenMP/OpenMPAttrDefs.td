@@ -101,4 +101,15 @@ def VersionAttr : OpenMP_Attr<"Version", "version"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// IntegerWrapAroundAttr
+//===----------------------------------------------------------------------===//
+
+def IntegerWrapAroundAttr
+    : OpenMP_Attr<"IntegerWrapAround", "integer_wrap_around"> {
+  let parameters = (ins "bool":$integer_wrap_around);
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 #endif // OPENMP_ATTR_DEFS
