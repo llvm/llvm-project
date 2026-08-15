@@ -8,7 +8,7 @@ void f() {
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"languageId":"cpp","text":"void bob();\nvoid f() {\n  bob();\n}\n","uri":"test:///foo.cpp","version":1}}}
 ---
-{"id":1,"jsonrpc":"2.0","method":"clangd/completeASTMatcher","params":{"query":"declRefE", "offset": 8}}
+{"id":1,"jsonrpc":"2.0","method":"clangd/completeASTMatcher","params":{"searchQuery":"declRefE", "offset": 8}}
 #      CHECK:  "id": 1,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [
