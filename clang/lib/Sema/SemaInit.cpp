@@ -3385,10 +3385,9 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
   ++NumInits;
 
   if (NumInits.ugt(SemaRef.getLangOpts().MaxInitListElements)) {
-    if (!VerifyOnly) {
+    if (!VerifyOnly)
       SemaRef.Diag(IndexExpr->getBeginLoc(), diag::err_array_too_large)
           << toString(NumInits, 10) << IndexExpr->getSourceRange();
-    }
     ++Index;
     return true;
   }

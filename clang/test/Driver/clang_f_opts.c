@@ -15,6 +15,10 @@
 // CHECK-OPTIONS2-NOT: -fcommon
 // CHECK-OPTIONS2: -fno-show-source-location
 
+// RUN: %clang -### -fsyntax-only -fmax-init-list-elements=4 %s 2>&1 | FileCheck -check-prefix=CHECK-MAX-INIT-LIST-ELEMENTS %s
+// CHECK-MAX-INIT-LIST-ELEMENTS: "-cc1"
+// CHECK-MAX-INIT-LIST-ELEMENTS-SAME: "-fmax-init-list-elements=4"
+
 // RUN: %clang -### -S -Wwrite-strings %s 2>&1 | FileCheck -check-prefix=WRITE-STRINGS1 %s
 // WRITE-STRINGS1: -fconst-strings
 // RUN: %clang -### -S -Wwrite-strings -Wno-write-strings %s 2>&1 | FileCheck -check-prefix=WRITE-STRINGS2 %s
