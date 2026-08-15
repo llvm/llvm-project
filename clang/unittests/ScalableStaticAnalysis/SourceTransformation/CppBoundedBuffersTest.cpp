@@ -25,6 +25,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -107,7 +108,8 @@ protected:
   // Parses \p Code, lets \p Mark populate the reachable result, runs the
   // transformation, and returns the rewritten source and report entries.
   Captured runMarked(StringRef Code, MarkFn Mark) {
-    std::unique_ptr<ASTUnit> AST = tooling::buildASTFromCode(Code);
+    std::unique_ptr<ASTUnit> AST =
+        tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
     ASTContext &Ctx = AST->getASTContext();
 
     WPASuite Suite = makeWPASuite();
@@ -142,7 +144,7 @@ protected:
 TEST_F(CppBoundedBuffersTest, PointerLocal) {
   Captured C = run("void f() { int *p; }",
                    [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "void f() { bounded_ptr<int> p; }");
+  ASSERT_TRUE(C.Rewritten == "void f() { bounded_ptr<int> p; }");
   EXPECT_TRUE(C.Reports.empty());
 }
 
@@ -150,28 +152,28 @@ TEST_F(CppBoundedBuffersTest, PointerParameter) {
   Captured C =
       run("void f(int *p);",
           [](ASTContext &Ctx) { return paramEntity("f", 0, Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "void f(bounded_ptr<int> p);");
+  ASSERT_TRUE(C.Rewritten == "void f(bounded_ptr<int> p);");
   EXPECT_TRUE(C.Reports.empty());
 }
 
 TEST_F(CppBoundedBuffersTest, ConstQualifiedPointee) {
   Captured C = run("const char *s;",
                    [](ASTContext &Ctx) { return varEntity("s", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "bounded_ptr<const char> s;");
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<const char> s;");
   EXPECT_TRUE(C.Reports.empty());
 }
 
 TEST_F(CppBoundedBuffersTest, VoidPointer) {
   Captured C =
       run("void *p;", [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "bounded_ptr<char> p;");
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<char> p;");
   EXPECT_TRUE(C.Reports.empty());
 }
 
 TEST_F(CppBoundedBuffersTest, ArrayField) {
   Captured C = run("struct S { int a[10]; };",
                    [](ASTContext &Ctx) { return fieldEntity("a", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "struct S { bounded_array<int, 10> a; };");
+  ASSERT_TRUE(C.Rewritten == "struct S { bounded_array<int, 10> a; };");
   EXPECT_TRUE(C.Reports.empty());
 }
 
@@ -179,28 +181,28 @@ TEST_F(CppBoundedBuffersTest, FunctionReturn) {
   Captured C =
       run("int *foo();",
           [](ASTContext &Ctx) { return returnEntity("foo", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "bounded_ptr<int> foo();");
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<int> foo();");
   EXPECT_TRUE(C.Reports.empty());
 }
 
 TEST_F(CppBoundedBuffersTest, GlobalPointer) {
   Captured C =
       run("int *g;", [](ASTContext &Ctx) { return varEntity("g", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "bounded_ptr<int> g;");
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<int> g;");
   EXPECT_TRUE(C.Reports.empty());
 }
 
 TEST_F(CppBoundedBuffersTest, PointerField) {
   Captured C = run("struct S { int *p; };",
                    [](ASTContext &Ctx) { return fieldEntity("p", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "struct S { bounded_ptr<int> p; };");
+  ASSERT_TRUE(C.Rewritten == "struct S { bounded_ptr<int> p; };");
   EXPECT_TRUE(C.Reports.empty());
 }
 
 TEST_F(CppBoundedBuffersTest, ArrayOfPointers) {
   Captured C = run("int *a[10];",
                    [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "bounded_array<int *, 10> a;");
+  ASSERT_TRUE(C.Rewritten == "bounded_array<int *, 10> a;");
   EXPECT_TRUE(C.Reports.empty());
 }
 
@@ -209,7 +211,144 @@ TEST_F(CppBoundedBuffersTest, ArrayOfFunctionPointers) {
   // pointer); the typedef keeps the declarator a clean prefix + [N] suffix.
   Captured C = run("typedef void (*FP)(); FP fps[4];",
                    [](ASTContext &Ctx) { return varEntity("fps", Ctx); }, {1});
-  EXPECT_EQ(C.Rewritten, "typedef void (*FP)(); bounded_array<FP, 4> fps;");
+  ASSERT_TRUE(C.Rewritten == "typedef void (*FP)(); bounded_array<FP, 4> fps;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, ConstQualifiedPointeeSpelledAfter) {
+  // `char const *` means the same as `const char *`; the qualifier belongs to
+  // the pointee either way and is reproduced inside the angle brackets.
+  Captured C = run("char const *s;",
+                   [](ASTContext &Ctx) { return varEntity("s", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<const char> s;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, ConstVolatileQualifiedPointee) {
+  Captured C = run("const volatile char *s;",
+                   [](ASTContext &Ctx) { return varEntity("s", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<const volatile char> s;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, ConstPointerKeepsItsOwnQualifier) {
+  // The `const` applies to the pointer, not the pointee, so it lies outside the
+  // rewrite range and stays where it was written.
+  Captured C = run("int *const p = nullptr;",
+                   [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<int> const p = nullptr;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, ConstPointerToConstPointee) {
+  Captured C = run("const int *const p = nullptr;",
+                   [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<const int> const p = nullptr;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, StorageClassBeforeQualifiedPointee) {
+  // `static` precedes the qualifier run and is left untouched.
+  Captured C = run("static const char *s;",
+                   [](ASTContext &Ctx) { return varEntity("s", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "static bounded_ptr<const char> s;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, ConstQualifiedArrayElement) {
+  Captured C = run("const int a[10] = {};",
+                   [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_array<const int, 10> a = {};");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, ConstQualifiedArrayElementSpelledAfter) {
+  Captured C = run("int const a[10] = {};",
+                   [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_array<const int, 10> a = {};");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, QualifiedPointerFunctionReturn) {
+  Captured C =
+      run("const char *foo();",
+          [](ASTContext &Ctx) { return returnEntity("foo", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<const char> foo();");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, MultipleTrailingPointerQualifiers) {
+  Captured C = run("int *volatile const p = nullptr;",
+                   [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<int> volatile const p = nullptr;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, LeadingAndMultipleTrailingPointerQualifiers) {
+  Captured C = run("const int *const volatile p = nullptr;",
+                   [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten ==
+              "bounded_ptr<const int> const volatile p = nullptr;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, MultipleTrailingArrayQualifiers) {
+  // Both qualify the element, so the range grows right over the whole run.
+  Captured C = run("int const volatile a[10] = {};",
+                   [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_array<const volatile int, 10> a = {};");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, MultipleTrailingArrayQualifiersReversed) {
+  Captured C = run("int volatile const a[10] = {};",
+                   [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_array<const volatile int, 10> a = {};");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CommentBetweenPointeeTypeAndStar) {
+  Captured C = run("int /* c */ *p;",
+                   [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<int> p;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, AttributeBetweenPointeeTypeAndStar) {
+  // A type attribute also sits inside the rewrite range. It is part of the
+  // pointee type, so the pretty-printed spelling reproduces it.
+  Captured C = run("int __attribute__((address_space(1))) *p;",
+                   [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten,
+            "bounded_ptr<__attribute__((address_space(1))) int> p;");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, DeclAttributeAfterArrayBrackets) {
+  // A declaration attribute is not part of the type-loc, so it lies beyond the
+  // deleted extent and survives untouched.
+  Captured C = run("int a[10] __attribute__((aligned(16)));",
+                   [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten,
+            "bounded_array<int, 10> a __attribute__((aligned(16)));");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, DeclAttributeAfterPointerDeclarator) {
+  Captured C = run("int *p __attribute__((aligned(16)));",
+                   [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  ASSERT_TRUE(C.Rewritten ==
+              "bounded_ptr<int> p __attribute__((aligned(16)));");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, AliasedLambdaPointee) {
+  // The closure type itself is unnamed, but the alias supplies a name that can
+  // be written as the template argument, and it denotes that same closure type.
+  Captured C = run("using L = decltype([](int x) { return x; });\nL *p;\n",
+                   [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, "using L = decltype([](int x) { return x; });\n"
+                         "bounded_ptr<L> p;\n");
   EXPECT_TRUE(C.Reports.empty());
 }
 
@@ -218,10 +357,10 @@ TEST_F(CppBoundedBuffersTest, ArrayOfFunctionPointers) {
 //===----------------------------------------------------------------------===//
 
 void expectSkip(const Captured &C, StringRef Original, ReportReason Reason) {
-  EXPECT_EQ(C.Rewritten, Original);
-  ASSERT_EQ(C.Reports.size(), 1u);
-  EXPECT_EQ(C.Reports[0].Level, SarifResultLevel::Note);
-  EXPECT_EQ(C.Reports[0].Message, messageFor(Reason).str());
+  ASSERT_TRUE(C.Rewritten == Original);
+  ASSERT_TRUE(C.Reports.size() == 1u);
+  ASSERT_TRUE(C.Reports[0].Level == SarifResultLevel::Note);
+  ASSERT_TRUE(C.Reports[0].Message == messageFor(Reason).str());
 }
 
 TEST_F(CppBoundedBuffersTest, MultiLevelPointer) {
@@ -259,11 +398,30 @@ TEST_F(CppBoundedBuffersTest, ReferenceToPointer) {
   expectSkip(C, Code, ReportReason::ReferenceToPointer);
 }
 
-TEST_F(CppBoundedBuffersTest, UnreproducibleType) {
+TEST_F(CppBoundedBuffersTest, UnnamableType) {
   StringRef Code = "struct { int x; } *p;";
   Captured C =
       run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
-  expectSkip(C, Code, ReportReason::UnreproducibleType);
+  expectSkip(C, Code, ReportReason::UnnamableType);
+}
+
+TEST_F(CppBoundedBuffersTest, InlineLambdaPointee) {
+  // Each lambda-expression yields a distinct closure type, so there is no name
+  // to write: re-spelling the expression would denote a different type.
+  StringRef Code = "decltype([](int x) { return x; }) *p;";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  expectSkip(C, Code, ReportReason::UnnamableType);
+}
+
+TEST_F(CppBoundedBuffersTest, UnaliasedLambdaPointee) {
+  // decltype of a variable names the closure type but is not a typedef-name, so
+  // the unnamed record is what the check sees.
+  StringRef Code =
+      "void f() { auto lam = [](int x) { return x; }; decltype(lam) *p; }";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  expectSkip(C, Code, ReportReason::UnnamableType);
 }
 
 TEST_F(CppBoundedBuffersTest, DeclarationGroup) {
@@ -275,11 +433,70 @@ TEST_F(CppBoundedBuffersTest, DeclarationGroup) {
         markReachable(Suite, Result, varEntity("p", Ctx), {1});
         markReachable(Suite, Result, varEntity("q", Ctx), {1});
       });
-  EXPECT_EQ(C.Rewritten, "int *p, *q;");
-  ASSERT_EQ(C.Reports.size(), 2u);
+  ASSERT_TRUE(C.Rewritten == "int *p, *q;");
+  ASSERT_TRUE(C.Reports.size() == 2u);
   for (const auto &R : C.Reports) {
-    EXPECT_EQ(R.Level, SarifResultLevel::Note);
-    EXPECT_EQ(R.Message, messageFor(ReportReason::DeclarationGroup).str());
+    ASSERT_TRUE(R.Level == SarifResultLevel::Note);
+    ASSERT_TRUE(R.Message == messageFor(ReportReason::DeclarationGroup).str());
+  }
+}
+
+TEST_F(CppBoundedBuffersTest, GlobalDeclarationGroupOfThree) {
+  // A three-way (not just two-way) comma group at namespace scope; every
+  // declarator, including the multi-level pointer, is reported.
+  StringRef Code = "extern int *const p, *const q, *volatile *pp;";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("p", Ctx), {1});
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+    markReachable(Suite, Result, varEntity("pp", Ctx), {1, 2});
+  });
+  ASSERT_TRUE(C.Rewritten == Code);
+  ASSERT_TRUE(C.Reports.size() == 3u);
+  for (const auto &R : C.Reports) {
+    ASSERT_TRUE(R.Level == SarifResultLevel::Note);
+    ASSERT_TRUE(R.Message == messageFor(ReportReason::DeclarationGroup).str());
+  }
+}
+
+TEST_F(CppBoundedBuffersTest, FieldDeclarationGroupOfThree) {
+  // Same comma group, but as FieldDecls inside a RecordDecl rather than
+  // VarDecls inside the TranslationUnitDecl.
+  StringRef Code = "struct Tup { int *const p, *const q, *volatile *pp; };";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, fieldEntity("p", Ctx), {1});
+    markReachable(Suite, Result, fieldEntity("q", Ctx), {1});
+    markReachable(Suite, Result, fieldEntity("pp", Ctx), {1, 2});
+  });
+  ASSERT_TRUE(C.Rewritten == Code);
+  ASSERT_TRUE(C.Reports.size() == 3u);
+  for (const auto &R : C.Reports) {
+    ASSERT_TRUE(R.Level == SarifResultLevel::Note);
+    ASSERT_TRUE(R.Message == messageFor(ReportReason::DeclarationGroup).str());
+  }
+}
+
+TEST_F(CppBoundedBuffersTest, ForInitDeclarationGroupOfThree) {
+  // Same comma group again, but as a DeclStmt in a for-loop init-statement;
+  // the lexical DeclContext is the enclosing function, not the loop itself.
+  StringRef Code = "void test() {\n"
+                   "  for (int *const p = {}, *const q = {}, "
+                   "*volatile *pp = {}; true;) {\n"
+                   "    return;\n"
+                   "  }\n"
+                   "}\n";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("p", Ctx), {1});
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+    markReachable(Suite, Result, varEntity("pp", Ctx), {1, 2});
+  });
+  ASSERT_TRUE(C.Rewritten == Code);
+  ASSERT_TRUE(C.Reports.size() == 3u);
+  for (const auto &R : C.Reports) {
+    ASSERT_TRUE(R.Level == SarifResultLevel::Note);
+    ASSERT_TRUE(R.Message == messageFor(ReportReason::DeclarationGroup).str());
   }
 }
 
@@ -297,13 +514,61 @@ TEST_F(CppBoundedBuffersTest, TrailingReturnType) {
   expectSkip(C, Code, ReportReason::TrailingReturnType);
 }
 
-TEST_F(CppBoundedBuffersTest, EmissionFailureOnRawFunctionPointerArray) {
-  // A raw array-of-function-pointers has no clean prefix + [N] suffix, so the
-  // edit cannot be formed and the entity is reported rather than mangled.
+TEST_F(CppBoundedBuffersTest, RawFunctionPointerArrayDoesNotEndInBracket) {
+  // A raw array-of-function-pointers has no clean prefix + [N] suffix: the
+  // element spelling wraps the name, so the array type ends at the trailing
+  // `()` rather than at its closing bracket.
   StringRef Code = "void (*fps[4])();";
   Captured C =
       run(Code, [](ASTContext &Ctx) { return varEntity("fps", Ctx); }, {1});
-  expectSkip(C, Code, ReportReason::EmissionFailed);
+  expectSkip(C, Code, ReportReason::ArrayNotEndInBracket);
+}
+
+TEST_F(CppBoundedBuffersTest, ParenthesizedPointerDeclarator) {
+  // The parens wrap the declarator, so the type ends at the ')' rather than at
+  // the '*'. A range anchored on the type would span the name and unbalance the
+  // parens, so the declarator is reported instead.
+  StringRef Code = "int (*par);";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("par", Ctx); }, {1});
+  expectSkip(C, Code, ReportReason::NotPointerTypeEndWithStar);
+}
+
+TEST_F(CppBoundedBuffersTest, TypedefSpelledPointer) {
+  // The declarator spells no pointer of its own, so there is no pointee
+  // type-loc to build a rewrite range from.
+  StringRef Code = "typedef int *IP;\nIP p;\n";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  expectSkip(C, Code, ReportReason::NoInnerTypeLoc);
+}
+
+TEST_F(CppBoundedBuffersTest, QualifierSeparatedFromPointeeType) {
+  // `const` is separated from the type by `static`, so absorbing it into the
+  // rewrite range would need a non-contiguous edit.
+  StringRef Code = "const static char *s;";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("s", Ctx); }, {1});
+  expectSkip(C, Code, ReportReason::UnexpectedLeadingQualifier);
+}
+
+TEST_F(CppBoundedBuffersTest, CommentBetweenQualifierAndPointeeType) {
+  // A comment interrupts the qualifier run; absorbing the `const` would delete
+  // the comment along with it.
+  StringRef Code = "const /* c */ char *s;";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("s", Ctx); }, {1});
+  expectSkip(C, Code, ReportReason::UnexpectedLeadingQualifier);
+}
+
+TEST_F(CppBoundedBuffersTest, CommentBetweenElementTypeAndTrailingQualifier) {
+  // The `const` qualifies the element, so its meaning moves inside the bounded
+  // type and it must be absorbed by the rewrite range. The comment separates it
+  // from the element type, which would need a non-contiguous edit.
+  StringRef Code = "int /* c */ const a[10] = {};";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
+  expectSkip(C, Code, ReportReason::UnexpectedTrailingQualifier);
 }
 
 //===----------------------------------------------------------------------===//
@@ -323,7 +588,7 @@ TEST_F(CppBoundedBuffersTest, NotReachable) {
   StringRef Code = "int *p;";
   Captured C =
       run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {});
-  EXPECT_EQ(C.Rewritten, Code);
+  ASSERT_TRUE(C.Rewritten == Code);
   EXPECT_TRUE(C.Reports.empty());
 }
 
@@ -336,8 +601,8 @@ TEST_F(CppBoundedBuffersTest, RewriteAndReportCoexist) {
         markReachable(Suite, Result, varEntity("good", Ctx), {1});
         markReachable(Suite, Result, varEntity("bad", Ctx), {1});
       });
-  EXPECT_EQ(C.Rewritten, "bounded_ptr<int> good; int **bad;");
-  ASSERT_EQ(C.Reports.size(), 1u);
+  ASSERT_TRUE(C.Rewritten == "bounded_ptr<int> good; int **bad;");
+  ASSERT_TRUE(C.Reports.size() == 1u);
   EXPECT_EQ(C.Reports[0].Message,
             messageFor(ReportReason::MultiLevelPointer).str());
 }
@@ -356,20 +621,21 @@ TEST_F(CppBoundedBuffersTest, ClassifyRewritesOutermostReachablePointer) {
   Levels.insert(1);
   ClassifyResult R = classifyDeclType(typeOf("p", AST->getASTContext()), Levels,
                                       AST->getASTContext());
-  ASSERT_TRUE(R.NewType.has_value());
-  EXPECT_EQ(*R.NewType, BoundedType::Ptr);
-  EXPECT_EQ(R.InnerSpelling, "int");
-  EXPECT_FALSE(R.Skip.has_value());
+  ASSERT_FALSE(R.Skip.has_value());
+  ASSERT_TRUE(R.NewType == BoundedType::Ptr);
+  ASSERT_TRUE(R.InnerSpelling == "int");
 }
 
 TEST_F(CppBoundedBuffersTest, ClassifyIgnoresInnerOnlyReachablePointer) {
+  // A single pointer has only level 1, so nothing is recognized and the
+  // catch-all reason is reported rather than leaving the entity undecided.
   auto AST = tooling::buildASTFromCode("int *p;");
   llvm::SmallSet<unsigned, 4> Levels;
   Levels.insert(2);
   ClassifyResult R = classifyDeclType(typeOf("p", AST->getASTContext()), Levels,
                                       AST->getASTContext());
-  EXPECT_FALSE(R.NewType.has_value());
-  EXPECT_FALSE(R.Skip.has_value());
+  ASSERT_TRUE(R.Skip.has_value());
+  ASSERT_TRUE(*R.Skip == ReportReason::NotTransformed);
 }
 
 TEST_F(CppBoundedBuffersTest, ClassifyMultiLevelPointerIsSkipped) {
@@ -378,20 +644,29 @@ TEST_F(CppBoundedBuffersTest, ClassifyMultiLevelPointerIsSkipped) {
   Levels.insert(1);
   ClassifyResult R = classifyDeclType(typeOf("pp", AST->getASTContext()),
                                       Levels, AST->getASTContext());
-  EXPECT_FALSE(R.NewType.has_value());
   ASSERT_TRUE(R.Skip.has_value());
-  EXPECT_EQ(*R.Skip, ReportReason::MultiLevelPointer);
+  ASSERT_TRUE(*R.Skip == ReportReason::MultiLevelPointer);
 }
 
 TEST_F(CppBoundedBuffersTest, MessageForIsNonEmpty) {
-  for (ReportReason Reason :
-       {ReportReason::MultiLevelPointer, ReportReason::PointerToArray,
-        ReportReason::ReferenceToPointer, ReportReason::MultiDimensionalArray,
-        ReportReason::IncompleteArray, ReportReason::UnreproducibleType,
-        ReportReason::DeclarationGroup, ReportReason::MacroExpansion,
-        ReportReason::TrailingReturnType, ReportReason::EmissionFailed,
-        ReportReason::NotTransformed})
+  // Walks the whole enum rather than a hand-kept list, so a reason added
+  // without a message is caught here and not silently left untested.
+  for (unsigned I = 0; I <= static_cast<unsigned>(ReportReason::UnnamableType);
+       ++I) {
+    auto Reason = static_cast<ReportReason>(I);
     EXPECT_FALSE(messageFor(Reason).empty());
+  }
+}
+
+TEST_F(CppBoundedBuffersTest, MessageForIsUnique) {
+  // Two reasons sharing a message would make reports ambiguous.
+  llvm::StringSet<> Seen;
+  for (unsigned I = 0; I <= static_cast<unsigned>(ReportReason::UnnamableType);
+       ++I) {
+    auto Reason = static_cast<ReportReason>(I);
+    EXPECT_TRUE(Seen.insert(messageFor(Reason)).second)
+        << "duplicate message: " << messageFor(Reason).str();
+  }
 }
 
 } // namespace

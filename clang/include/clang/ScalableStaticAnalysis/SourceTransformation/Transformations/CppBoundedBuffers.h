@@ -34,29 +34,35 @@ enum class BoundedType { Ptr, Array };
 
 /// Why a reachable declarator was reported instead of rewritten.
 enum class ReportReason {
+  ArrayNotEndInBracket,
+  DeclarationGroup,
+  EmissionFailed,
+  IncompleteArray,
+  MacroExpansion,
+  MultiDimensionalArray,
   MultiLevelPointer,
+  NoInnerTypeLoc,
+  NotPointerTypeEndWithStar,
+  NotTransformed,
   PointerToArray,
   ReferenceToPointer,
-  MultiDimensionalArray,
-  IncompleteArray,
-  UnreproducibleType,
-  DeclarationGroup,
-  MacroExpansion,
   TrailingReturnType,
-  EmissionFailed,
-  NotTransformed,
+  UnexpectedLeadingQualifier,
+  UnexpectedTrailingQualifier,
+  UnnamableType,
 };
 
 /// Returns the report message for \p Reason.
 llvm::StringRef messageFor(ReportReason Reason);
 
 /// The outcome of classifying a declared type against the reachable pointer
-/// levels of its entity: a bounded-type rewrite, a report reason, or neither.
+/// levels of its entity: a bounded-type rewrite, or a report reason.
 struct ClassifyResult {
-  std::optional<BoundedType> NewType;
-  // Pointee/element spelling; meaningful only when NewType is set.
+  // Meaningful only when Skip is nullopt.
+  BoundedType NewType = BoundedType::Ptr;
+  // Pointee/element spelling; meaningful only when Skip is nullopt.
   std::string InnerSpelling;
-  std::optional<ReportReason> Skip;
+  std::optional<ReportReason> Skip = ReportReason::NotTransformed;
 };
 
 /// Classifies the declared type \p T of a reachable entity. \p ReachableLevels
@@ -65,7 +71,7 @@ ClassifyResult
 classifyDeclType(QualType T, const llvm::SmallSet<unsigned, 4> &ReachableLevels,
                  const ASTContext &Ctx);
 
-class CppBoundedBuffers : public Transformation {
+class CppBoundedBuffers final : public Transformation {
 public:
   using Transformation::Transformation;
 
