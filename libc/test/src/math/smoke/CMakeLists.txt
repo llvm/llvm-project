@@ -3681,6 +3681,7 @@ add_fp_unittest(
     # The dependency on sqrtf128 is used to disable the test when float128
     # support is not available.
     libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
