@@ -14,8 +14,6 @@
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "Quality.h"
-#include "Query.h"
-#include "QuerySession.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "clang-include-cleaner/Analysis.h"
@@ -73,7 +71,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cmath>
 #include <optional>
 #include <string>
 #include <vector>

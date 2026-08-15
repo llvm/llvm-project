@@ -33,12 +33,6 @@ class TokenBuffer;
 namespace clangd {
 class ParsedAST;
 
-struct LocatedAST {
-  ast_matchers::BoundNodes &AST;
-};
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LocatedAST &);
-
 auto locateASTQuery(ParsedAST &AST, SearchASTArgs const &)
     -> llvm::Expected<std::vector<ast_matchers::BoundNodes>>;
 

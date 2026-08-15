@@ -868,7 +868,7 @@ void ClangdServer::findAST(SearchASTArgs const &Args,
     CB(std::move(Result));
   };
 
-  WorkScheduler->runWithAST("Definitions", Args.textDocument.uri.file(),
+  WorkScheduler->runWithAST("FindAST", Args.textDocument.uri.file(),
                             std::move(Action));
 }
 
