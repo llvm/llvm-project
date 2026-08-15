@@ -76,6 +76,11 @@
 
 // clang-format off
 
+// LLVM 24
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE __attribute__((unavailable))
+
 // LLVM 23
 // TODO: Fill this in
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23 0
