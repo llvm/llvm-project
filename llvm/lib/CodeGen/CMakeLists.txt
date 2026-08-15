@@ -7,6 +7,7 @@ if (LLVM_HAVE_MLIR_LOWERING)
     regalloc
     llvm/CodeGen
     RegAllocEvictModels
+    MLDeps
   )
 elseif (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)

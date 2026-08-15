@@ -7,6 +7,7 @@ if (LLVM_HAVE_MLIR_LOWERING)
     inliner
     llvm/Analysis
     InlinerModels
+    MLDeps
   )
 elseif (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
