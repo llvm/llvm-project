@@ -37,10 +37,10 @@ using ConstIterIncompatibleView =
 static_assert(!std::convertible_to<std::ranges::iterator_t<ConstIterIncompatibleView>,
                                    std::ranges::iterator_t<const ConstIterIncompatibleView>>);
 
-constexpr void sfinae_test() {
+constexpr void test_SFINAE() {
   int buffer[3] = {1, 2, 3};
   {
-    // underlying non-const to const not convertible
+    // Underlying non-const to const not convertible.
     std::ranges::enumerate_view v(ConstIterIncompatibleView{buffer});
     auto iter1 = v.begin();
     auto iter2 = std::as_const(v).begin();
@@ -51,7 +51,8 @@ constexpr void sfinae_test() {
   }
   {
     std::ranges::enumerate_view v(NonSimpleCommon{buffer});
-    auto iter1                                       = v.begin();
+    auto iter1 = v.begin();
+    
     std::ranges::iterator_t<const decltype(v)> iter2 = iter1;
     assert(iter1 == iter2);
 
@@ -86,15 +87,15 @@ constexpr void test() {
     std::same_as<const Iterator&> decltype(auto) itResult  = it.base();
     assert(base(base(itResult)) == std::to_address(base(array.begin())));
 
-    // verify ++it
+    // Verify ++it
     auto [index, value] = *(++it);
     assert(index == 1);
     assert(value == 84);
   }
 }
 
-constexpr bool tests() {
-  sfinae_test();
+constexpr bool test() {
+  test_SFINAE();
   test<cpp17_input_iterator<int*>>();
   test<cpp20_input_iterator<int*>>();
   test<forward_iterator<int*>>();
@@ -108,7 +109,8 @@ constexpr bool tests() {
 
 int main(int, char**) {
   tests();
-  static_assert(tests());
+test();
+static_assert(test());
 
   return 0;
 }
