@@ -112,7 +112,7 @@ separate. Representative current values are:
 - arithmetic: 10 plus execution-width scale;
 - accumulator arithmetic: 6 plus width scale;
 - ARF write: 16;
-- DPAS: 33;
+- DPAS: 22-33 cycles based on repeat count;
 - SLM load/store: 28 cycles at SIMD16, 45 at SIMD32;
 - untyped L1/L3: 45/200;
 - barrier: 30.

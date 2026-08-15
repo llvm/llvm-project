@@ -6,6 +6,9 @@ module {
     %r2 = xemachine.archreg 2 : !xemachine.reg<32, 2>
     %r4 = xemachine.archreg 4 : !xemachine.reg<64, 4>
     %r8 = xemachine.archreg 8 : !xemachine.reg<128, 8>
+    %r40 = xemachine.archreg 40 : !xemachine.reg<8, 40>
+    %r41 = xemachine.archreg 41 : !xemachine.reg<16, 41>
+    %r42 = xemachine.archreg 42 : !xemachine.reg<32, 42>
     %one = xemachine.imm 1 : i32
     %one64 = xemachine.imm 1 : i64
 
@@ -48,7 +51,18 @@ module {
         src0Region = #xemachine.region<0, 1, 0>}
         : (!xemachine.reg<16, 0>, !xemachine.imm, i32)
         -> !xemachine.arf<a0, 16, 0>
-    %dpas = xemachine.dpas %r4, %r8, %r8 {
+    %dpas1 = xemachine.dpas %r40, %r8, %r41 {
+        aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32,
+        execSize = 8 : i32,
+        repeatCount = 1 : i32}
+        : (!xemachine.reg<8, 40>, !xemachine.reg<128, 8>,
+           !xemachine.reg<16, 41>) -> !xemachine.reg<16, 41>
+    %dpas2 = xemachine.dpas %r41, %r8, %r42 {
+        aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32,
+        repeatCount = 2 : i32}
+        : (!xemachine.reg<16, 41>, !xemachine.reg<128, 8>,
+           !xemachine.reg<32, 42>) -> !xemachine.reg<32, 42>
+    %dpas8 = xemachine.dpas %r4, %r8, %r8 {
         aPrecision = 0 : i32, bPrecision = 0 : i32, elemType = f32}
         : (!xemachine.reg<64, 4>, !xemachine.reg<128, 8>,
            !xemachine.reg<128, 8>) -> !xemachine.reg<128, 8>
@@ -112,6 +126,9 @@ module {
 }
 
 // CHECK: xemachine.archreg class=none pipe=none latency=0 occupancy=0 raw-gap=0 war-gap=0 order-gap=0
+// CHECK: xemachine.archreg class=none pipe=none latency=0 occupancy=0 raw-gap=0 war-gap=0 order-gap=0
+// CHECK: xemachine.archreg class=none pipe=none latency=0 occupancy=0 raw-gap=0 war-gap=0 order-gap=0
+// CHECK: xemachine.archreg class=none pipe=none latency=0 occupancy=0 raw-gap=0 war-gap=0 order-gap=0
 // CHECK: xemachine.mov class=move-or-logic pipe=integer latency=10 occupancy=1 raw-gap=10 war-gap=2 order-gap=1
 // CHECK: xemachine.mov class=move-or-logic pipe=floating latency=10 occupancy=2 raw-gap=10 war-gap=2 order-gap=2
 // CHECK: xemachine.add class=arithmetic pipe=integer latency=11 occupancy=2 raw-gap=11 war-gap=2 order-gap=2
@@ -125,6 +142,8 @@ module {
 // CHECK: xemachine.mul class=arithmetic pipe=integer latency=10 occupancy=1 raw-gap=10 war-gap=2 order-gap=1
 // CHECK: xemachine.cmp class=arf-write pipe=integer latency=16 occupancy=2 raw-gap=16 war-gap=2 order-gap=2
 // CHECK: xemachine.and class=arf-write pipe=integer latency=16 occupancy=1 raw-gap=16 war-gap=2 order-gap=1
+// CHECK: xemachine.dpas class=systolic pipe=systolic latency=22 occupancy=2 raw-gap=22 war-gap=2 order-gap=2
+// CHECK: xemachine.dpas class=systolic pipe=systolic latency=23 occupancy=2 raw-gap=23 war-gap=2 order-gap=2
 // CHECK: xemachine.dpas class=systolic pipe=systolic latency=33 occupancy=2 raw-gap=33 war-gap=2 order-gap=2
 // CHECK: xemachine.load_a64 class=send pipe=send latency=200 occupancy=4 send-read=12 raw-gap=200 war-gap=12 order-gap=12
 // CHECK: xemachine.store_a64 class=send pipe=send latency=200 occupancy=4 send-read=14 raw-gap=200 war-gap=14 order-gap=14

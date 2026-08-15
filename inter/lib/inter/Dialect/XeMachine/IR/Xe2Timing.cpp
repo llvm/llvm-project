@@ -30,7 +30,17 @@ constexpr uint16_t kTypedFenceLatency = 60;
 constexpr uint16_t kBarrierLatency = 30;
 constexpr uint16_t kOtherSendLatency = 50;
 constexpr uint16_t kSendArbitration = 8;
-constexpr uint16_t kDpasRepeat8Latency = 33;
+
+static uint16_t getDpasLatency(unsigned repeatCount) {
+  switch (repeatCount) {
+  case 1:
+    return 22;
+  case 2:
+    return 23;
+  default:
+    return 33;
+  }
+}
 
 static uint16_t getWidthScale(unsigned executionSize) {
   if (executionSize <= 8)
@@ -49,6 +59,9 @@ static uint16_t getOccupancy(unsigned executionSize) {
 }
 
 static unsigned getExecutionSize(Operation *operation) {
+  if (isa<DpasOp>(operation))
+    // Repeat count controls accumulator rows; the execution mask is SIMD16.
+    return 16;
   if (IntegerAttr value = operation->getAttrOfType<IntegerAttr>("execSize"))
     return value.getInt();
   if (isa<FenceAwaitOp>(operation))
@@ -223,7 +236,8 @@ inter::xemachine::getXe2InstructionTiming(Operation *operation) {
     timing.completionLatency = kFpuLatency;
     break;
   case InstructionIssueClass::systolic:
-    timing.completionLatency = kDpasRepeat8Latency;
+    timing.completionLatency =
+        getDpasLatency(cast<DpasOp>(operation).getRepeatCount());
     break;
   }
   return timing;
