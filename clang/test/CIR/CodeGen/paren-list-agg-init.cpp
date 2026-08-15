@@ -44,7 +44,7 @@ struct C : public B, public A {
 };
 
 // LLVM-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [[STRUCT_A]] }
-// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], data !u8i, data ![[STRUCT_A]]}>
+// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], empty !u8i, data ![[STRUCT_A]]}>
 struct D {
   A a;
   A b = A{2, 2.0};
@@ -77,7 +77,7 @@ struct G {
 
 // LLVM-DAG: [[UNION_U:%.*]] = type { [[STRUCT_A]] }
 // LLVM-DAG: [[STR:@.*]] = private {{.*}}constant [6 x i8] {{.*}}foo18{{.*}}, align 1
-// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {data !u8i, data ![[STRUCT_A]], data !s8i}>
+// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {empty !u8i, data ![[STRUCT_A]], data !s8i}>
 union U {
   unsigned : 1;
   A a;

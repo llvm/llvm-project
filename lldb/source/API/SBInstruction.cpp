@@ -117,9 +117,11 @@ const char *SBInstruction::GetMnemonic(SBTarget target) {
 
   ExecutionContext exe_ctx;
   TargetSP target_sp(target.GetSP());
-  std::unique_lock<std::recursive_mutex> lock;
+  TargetAPIMutex api_lock;
+  std::unique_lock<TargetAPIMutex> guard;
   if (target_sp) {
-    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+    guard = std::unique_lock<TargetAPIMutex>(api_lock);
 
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
@@ -136,9 +138,11 @@ const char *SBInstruction::GetOperands(SBTarget target) {
 
   ExecutionContext exe_ctx;
   TargetSP target_sp(target.GetSP());
-  std::unique_lock<std::recursive_mutex> lock;
+  TargetAPIMutex api_lock;
+  std::unique_lock<TargetAPIMutex> guard;
   if (target_sp) {
-    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+    guard = std::unique_lock<TargetAPIMutex>(api_lock);
 
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
@@ -155,9 +159,11 @@ const char *SBInstruction::GetComment(SBTarget target) {
 
   ExecutionContext exe_ctx;
   TargetSP target_sp(target.GetSP());
-  std::unique_lock<std::recursive_mutex> lock;
+  TargetAPIMutex api_lock;
+  std::unique_lock<TargetAPIMutex> guard;
   if (target_sp) {
-    lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+    guard = std::unique_lock<TargetAPIMutex>(api_lock);
 
     target_sp->CalculateExecutionContext(exe_ctx);
     exe_ctx.SetProcessSP(target_sp->GetProcessSP());
@@ -173,9 +179,11 @@ SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
   if (inst_sp) {
     ExecutionContext exe_ctx;
     TargetSP target_sp(target.GetSP());
-    std::unique_lock<std::recursive_mutex> lock;
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
     if (target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
 
       target_sp->CalculateExecutionContext(exe_ctx);
       exe_ctx.SetProcessSP(target_sp->GetProcessSP());
