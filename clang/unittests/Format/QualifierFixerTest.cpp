@@ -1093,32 +1093,31 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_unsigned);
   ConfiguredTokens.push_back(tok::kw_long);
   ConfiguredTokens.push_back(tok::kw_explicit);
+  ConfiguredTokens.push_back(tok::kw_signed);
+  ConfiguredTokens.push_back(tok::kw_short);
 
   TestLexer lexer{Allocator, Buffers};
   const auto LangOpts = getFormattingLangOpts();
 
   auto Tokens = lexer.lex(
-      "const static inline restrict int double constexpr friend "
-      "typedef consteval constinit thread_local extern mutable signed unsigned "
-      "long short explicit");
-  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+      "const static inline restrict constexpr friend typedef consteval "
+      "constinit thread_local extern mutable unsigned long explicit signed "
+      "short");
+  ASSERT_EQ(Tokens.size(), ConfiguredTokens.size() + 1) << Tokens;
 
-  for (size_t i = 0; i < 19; ++i) {
+  for (size_t i = 0; i < ConfiguredTokens.size(); ++i) {
     EXPECT_TRUE(isQualifierOrType(Tokens[i], LangOpts))
         << "Token " << i << " should be recognized by isQualifierOrType";
-  }
-
-  // When unsigned is configured, signed is automatically added to
-  // ConfiguredTokens to handle them at the same position
-  ConfiguredTokens.push_back(tok::kw_signed);
-  // When long is configured, short is automatically added to
-  // ConfiguredTokens to handle them at the same position
-  ConfiguredTokens.push_back(tok::kw_short);
-
-  for (size_t i = 0; i < 19; ++i) {
     EXPECT_TRUE(
         isConfiguredQualifierOrType(Tokens[i], ConfiguredTokens, LangOpts))
         << "Token " << i << " should be recognized";
+  }
+
+  auto TypeTokens = lexer.lex("int double");
+  for (size_t i = 0; i < TypeTokens.size() - 1; ++i) {
+    EXPECT_TRUE(isQualifierOrType(TypeTokens[i], LangOpts));
+    EXPECT_TRUE(
+        isConfiguredQualifierOrType(TypeTokens[i], ConfiguredTokens, LangOpts));
   }
 
   auto NotTokens = lexer.lex("for while do Foo Bar ");
@@ -1549,6 +1548,7 @@ TEST_F(QualifierFixerTest, PairedQualifiersSamePosition) {
   Style.QualifierOrder = {"type", "long"};
   verifyFormat("int long x;", "long int x;", Style);
   verifyFormat("int short x;", "short int x;", Style);
+  verifyFormat("int long long x;", "long long int x;", Style);
 
   Style.QualifierOrder = {"static", "unsigned", "long", "type"};
   verifyFormat("static unsigned long int x;", "long unsigned static int x;",

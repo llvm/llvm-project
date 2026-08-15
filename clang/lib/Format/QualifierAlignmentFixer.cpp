@@ -30,24 +30,28 @@ void addQualifierAlignmentFixerPasses(const FormatStyle &Style,
   prepareLeftRightOrderingForQualifierAlignmentFixer(
       Style.QualifierOrder, LeftOrder, RightOrder, ConfiguredQualifierTokens);
 
+  const auto AddPass = [&](const std::string &Qualifier, bool RightAlign) {
+    Passes.emplace_back([&, Qualifier, ConfiguredQualifierTokens,
+                         RightAlign](const Environment &Env) {
+      return LeftRightQualifierAlignmentFixer(
+                 Env, Style, Qualifier, ConfiguredQualifierTokens, RightAlign)
+          .process();
+    });
+  };
+
   // Handle the left and right alignment separately.
   for (const auto &Qualifier : LeftOrder) {
-    Passes.emplace_back(
-        [&, Qualifier, ConfiguredQualifierTokens](const Environment &Env) {
-          return LeftRightQualifierAlignmentFixer(Env, Style, Qualifier,
-                                                  ConfiguredQualifierTokens,
-                                                  /*RightAlign=*/false)
-              .process();
-        });
+    AddPass(Qualifier, /*RightAlign=*/false);
+    // Unlike the other declaration specifiers, `long` can legally occur twice
+    // in the same sequence. A pass moves one occurrence across the type, so a
+    // second pass is needed for `long long` and is otherwise a no-op.
+    if (Qualifier == "long")
+      AddPass(Qualifier, /*RightAlign=*/false);
   }
   for (const auto &Qualifier : RightOrder) {
-    Passes.emplace_back(
-        [&, Qualifier, ConfiguredQualifierTokens](const Environment &Env) {
-          return LeftRightQualifierAlignmentFixer(Env, Style, Qualifier,
-                                                  ConfiguredQualifierTokens,
-                                                  /*RightAlign=*/true)
-              .process();
-        });
+    AddPass(Qualifier, /*RightAlign=*/true);
+    if (Qualifier == "long")
+      AddPass(Qualifier, /*RightAlign=*/true);
   }
 }
 
@@ -181,10 +185,6 @@ static bool isQualifier(const FormatToken *const Tok) {
   case tok::kw_thread_local:
   case tok::kw_extern:
   case tok::kw_mutable:
-  case tok::kw_signed:
-  case tok::kw_unsigned:
-  case tok::kw_long:
-  case tok::kw_short:
   case tok::kw_explicit:
     return true;
   default:
@@ -414,29 +414,11 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
       TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
       TypeToken->is(tok::r_square)) {
 
+    // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;
-    const FormatToken *Prev = FirstQual->getPreviousNonComment();
-    if (!TypeToken) {
-      // At start of line: include paired qualifiers (long/short with
-      // unsigned/signed) and configured qualifiers, but not unrelated ones.
-      while (Prev &&
-             (isConfiguredQualifier(Prev, ConfiguredQualifierTokens) ||
-              (isQualifier(Prev) &&
-               (((QualifierType == tok::kw_unsigned ||
-                  QualifierType == tok::kw_signed) &&
-                 (Prev->is(tok::kw_long) || Prev->is(tok::kw_short))) ||
-                ((QualifierType == tok::kw_long ||
-                  QualifierType == tok::kw_short) &&
-                 (Prev->is(tok::kw_unsigned) || Prev->is(tok::kw_signed))))))) {
-        FirstQual = Prev;
-        Prev = FirstQual->getPreviousNonComment();
-      }
-    } else {
-      // Not at start: only include configured qualifiers
-      while (Prev && isConfiguredQualifier(Prev, ConfiguredQualifierTokens)) {
-        FirstQual = Prev;
-        Prev = FirstQual->getPreviousNonComment();
-      }
+    while (isConfiguredQualifier(FirstQual->getPreviousNonComment(),
+                                 ConfiguredQualifierTokens)) {
+      FirstQual = FirstQual->getPreviousNonComment();
     }
 
     if (FirstQual != Tok)
@@ -464,8 +446,9 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
       TypeToken = Prev;
     }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
-    while (isQualifierOrType(LastSimpleTypeSpecifier->getPreviousNonComment(),
-                             LangOpts)) {
+    while (isConfiguredQualifierOrType(
+        LastSimpleTypeSpecifier->getPreviousNonComment(),
+        ConfiguredQualifierTokens, LangOpts)) {
       LastSimpleTypeSpecifier =
           LastSimpleTypeSpecifier->getPreviousNonComment();
     }
