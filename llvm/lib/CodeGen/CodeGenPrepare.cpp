@@ -1918,14 +1918,14 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
     // redundant TEST+SETCC sequence. The backend's CopyToExportRegsIfNeeded
     // mechanism handles this cross-block use of the condition without any
     // extra work.
+    Instruction *AndI;
     if (isa<ReturnInst>(User) &&
         match(Cmp,
-              m_ICmp(m_OneUse(m_And(m_Value(), m_Value())), m_ZeroInt()))) {
-      auto *AndI = cast<BinaryOperator>(Cmp->getOperand(0));
-      if (AndI->getParent() == Cmp->getParent() &&
-          TLI.isMaskAndCmp0FoldingBeneficial(*AndI))
-        continue;
-    }
+              m_ICmp(m_OneUse(m_Instruction(AndI, m_And(m_Value(), m_Value()))),
+                     m_ZeroInt())) &&
+        AndI->getParent() == Cmp->getParent() &&
+        TLI.isMaskAndCmp0FoldingBeneficial(*AndI))
+      continue;
 
     // Figure out which BB this cmp is used in.
     BasicBlock *UserBB = User->getParent();
