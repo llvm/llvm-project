@@ -843,7 +843,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   bool IsHIP = CGM.getLangOpts().HIP;
   bool IsCUDA = CGM.getLangOpts().CUDA;
   // No need to generate ctors/dtors if there is no GPU binary.
-  StringRef CudaGpuBinaryFileName = CGM.getCodeGenOpts().CudaGpuBinaryFileName;
+  StringRef CudaGpuBinaryFileName =
+      CGM.getCodeGenOpts().OffloadBinaryToEmbedFile;
   if (CudaGpuBinaryFileName.empty() && !IsHIP)
     return nullptr;
   if ((IsHIP || (IsCUDA && !RelocatableDeviceCode)) && EmittedKernels.empty() &&

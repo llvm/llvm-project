@@ -13,6 +13,7 @@ set(LLVM_OFFLOAD_KERNEL_INCLUDE_DIRS
 function(add_llvm_offload_kernel_language_runtime_objects target language)
   add_library(${target} OBJECT
     src/LanguageRuntime.cpp
+    src/LanguageErrors.cpp
   )
   add_dependencies(${target} OffloadAPI)
   target_include_directories(${target} PRIVATE ${LLVM_OFFLOAD_KERNEL_INCLUDE_DIRS})
@@ -76,6 +77,7 @@ install(TARGETS LLVMOffloadKernel
 
 install(FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/DefineLanguageNames.inc
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/LanguageErrors.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/LanguageRuntime.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/UndefineLanguageNames.inc
         ${CMAKE_CURRENT_SOURCE_DIR}/include/LanguageLaunch.h

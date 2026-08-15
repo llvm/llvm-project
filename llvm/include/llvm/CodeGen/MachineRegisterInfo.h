@@ -636,12 +636,12 @@ public:
   /// getVRegDef - Return the machine instr that defines the specified virtual
   /// register or null if none is found.  This assumes that the code is in SSA
   /// form, so there should only be one definition.
-  LLVM_ABI MachineInstr *getVRegDef(Register Reg) const;
+  LLVM_ABI LLVM_READONLY MachineInstr *getVRegDef(Register Reg) const;
 
   /// getUniqueVRegDef - Return the unique machine instr that defines the
   /// specified virtual register or null if none is found.  If there are
   /// multiple definitions or no definition, return null.
-  LLVM_ABI MachineInstr *getUniqueVRegDef(Register Reg) const;
+  LLVM_ABI LLVM_READONLY MachineInstr *getUniqueVRegDef(Register Reg) const;
 
   /// Return the machine basic block in which the specified virtual register is
   /// defined, or null if it has no definition. This assumes SSA form.
