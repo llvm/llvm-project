@@ -238,7 +238,7 @@ has pointed out that:
   I guess.  But you can get the same effect by properly restricting where
   the background threads run.
 
-And Thomas Rodgers (libstdc++'s RCU implementer) also said:
+And Thomas Rodgers (libstdc++ contributor) also said:
 
   We don't normally do this, no, and I don't think I'd ever directly pursue such an approach in isolation. If, 
   on the other hand I could derive a permission from the user of library to create threads, by explicit use 
