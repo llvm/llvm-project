@@ -159,12 +159,12 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
 
   // Allow space for a handful of paths
   wchar_t sym_path[MAX_PATH * 4];
-  if (!SymGetSearchPathW(proc, sym_path, sizeof(sym_path))) {
+  if (!SymGetSearchPathW(proc, sym_path, sizeof(sym_path) / sizeof(sym_path[0]))) {
     return;
   }
 
   wchar_t exe_dir[MAX_PATH];
-  if (!GetModuleFileNameW(nullptr, exe_dir, sizeof(exe_dir))) {
+  if (!GetModuleFileNameW(nullptr, exe_dir, sizeof(exe_dir) / sizeof(exe_dir[0]))) {
     return;
   }
   size_t exe_dir_len = wcslen(exe_dir);
