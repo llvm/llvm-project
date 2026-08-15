@@ -565,22 +565,23 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // once VPlan predication is on by default.
     auto *Br = dyn_cast<CondBrInst>(Term);
     if (Br && !TheLoop->isLoopLatch(BB)) {
-      bool isUniformCondBr = TheLoop->isLoopInvariant(Br->getCondition());
+      bool IsUniformCondBr = TheLoop->isLoopInvariant(Br->getCondition());
 
-      auto *Cmp = dyn_cast<CmpInst>(Br->getCondition());
+      Value *Lhs = nullptr;
+      Value *Rhs = nullptr;
       auto *SE = PSE.getSE();
-      if (!isUniformCondBr && Cmp &&
-          SE->isSCEVable(Cmp->getOperand(0)->getType())) {
-        const SCEV *LhsExpr = PSE.getSCEV(Cmp->getOperand(0));
-        const SCEV *RhsExpr = PSE.getSCEV(Cmp->getOperand(1));
-        isUniformCondBr |= (SE->isLoopUniform(LhsExpr, TheLoop) &&
+      if (match(Br->getCondition(), m_c_ICmp(m_Value(Lhs), m_Value(Rhs))) &&
+          !IsUniformCondBr && SE->isSCEVable(Lhs->getType())) {
+        const SCEV *LhsExpr = PSE.getSCEV(Lhs);
+        const SCEV *RhsExpr = PSE.getSCEV(Rhs);
+        IsUniformCondBr |= (SE->isLoopUniform(LhsExpr, TheLoop) &&
                             SE->isLoopUniform(RhsExpr, TheLoop));
       }
 
       // If the condition is not uniform, report a failure. We currently require
       // uniform conditions to avoid the complexity of vectorizing divergent
       // control flow in the outer loop.
-      if (!isUniformCondBr) {
+      if (!IsUniformCondBr) {
         reportVectorizationFailure(
             "Outer loop contains divergent conditional branch",
             "loop control flow is not understood by vectorizer",
@@ -591,10 +592,12 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
           return false;
       }
     }
+  }
+
   // Each nested loop must exit via its latch only, as a region with the latch
   // as its only exiting block is created for it. Note that the branch check
-  // above rejects divergent exits, but exits with an outer-loop invariant
-  // condition are allowed through.
+  // rejects divergent exits, but exits with an outer-loop uniform condition
+  // are allowed through.
   SmallVector<Loop *, 4> LoopNest = TheLoop->getLoopsInPreorder();
   for (Loop *Lp : drop_begin(LoopNest)) {
     if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
@@ -607,20 +610,6 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       else
         return false;
     }
-  }
-
-  // Check whether inner loops are uniform. At this point, we only support
-  // simple outer loops scenarios with uniform nested loops.
-  if (!isUniformLoopNest(TheLoop /*loop nest*/,
-                         TheLoop /*context outer loop*/)) {
-    reportVectorizationFailure(
-        "Outer loop contains divergent loops",
-        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
-        ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
   }
 
   // Check whether we are able to set up outer loop induction.
