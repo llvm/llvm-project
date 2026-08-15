@@ -417,7 +417,7 @@ static bool shouldPackFAMStruct(const mlir::DataLayout &dataLayout,
 // that needed adjustment, so it recurses to check those.  If no such type has
 // been found/no adjustment needed, this returns the type unchanged.
 //
-// Additionally, a union having an active member of the not-the-largest
+// Additionally, a union having an active member of not-the-largest
 // alignment can cause the need for a small padding array. We also capture the
 // original indices of the fields that had this padding prepended, so the
 // lowerConstRecordAttr can later put in a 'zero' init there.

@@ -76,4 +76,3 @@ extern "C" Trivial ret_trivial() { return {}; }
   // OGCG: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %union.Trivial, ptr %[[RET_ALLOCA]], i32 0, i32 0
   // OGCG: %[[RET:.*]] = load i32, ptr %[[COERCE_DIVE]]
   // LLVM: ret i32 %[[RET]]
-
