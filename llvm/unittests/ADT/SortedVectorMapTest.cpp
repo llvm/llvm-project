@@ -71,6 +71,45 @@ TEST(SortedVectorMapTest, EqualityOperator) {
   EXPECT_EQ(Map1, Map2);
 }
 
+TEST(SortedVectorMapTest, InsertAndTryEmplace) {
+  SortedVectorMap<int, std::string> Map;
+
+  // Test insert with lvalue and rvalue pairs
+  auto Pair1 = std::make_pair(3, "three");
+  auto [It1, Inserted1] = Map.insert(Pair1);
+  ASSERT_TRUE(Inserted1);
+  EXPECT_EQ(It1->first, 3);
+  EXPECT_EQ(It1->second, "three");
+
+  auto [It2, Inserted2] = Map.insert(std::make_pair(1, "one"));
+  ASSERT_TRUE(Inserted2);
+  EXPECT_EQ(It2->first, 1);
+  EXPECT_EQ(It2->second, "one");
+
+  // Duplicate insert should fail and preserve existing value
+  auto [ItDup, InsertedDup] = Map.insert(std::make_pair(3, "THREE"));
+  ASSERT_FALSE(InsertedDup);
+  EXPECT_EQ(ItDup->first, 3);
+  EXPECT_EQ(ItDup->second, "three");
+
+  // Test try_emplace in-place construction
+  auto [It3, Inserted3] = Map.try_emplace(2, 4, 'x');
+  ASSERT_TRUE(Inserted3);
+  EXPECT_EQ(It3->first, 2);
+  EXPECT_EQ(It3->second, "xxxx");
+
+  // Duplicate try_emplace should not construct or overwrite
+  auto [It4, Inserted4] = Map.try_emplace(2, "new_two");
+  ASSERT_FALSE(Inserted4);
+  EXPECT_EQ(It4->first, 2);
+  EXPECT_EQ(It4->second, "xxxx");
+
+  // Verify sorted order
+  EXPECT_THAT(Map, testing::ElementsAre(testing::Pair(1, "one"),
+                                        testing::Pair(2, "xxxx"),
+                                        testing::Pair(3, "three")));
+}
+
 TEST(SortedVectorMapTest, ReserveAndCapacity) {
   SortedVectorMap<int, int> Map;
   EXPECT_EQ(Map.size(), 0u);

@@ -2,10 +2,10 @@
 Test lldb-dap variables/stackTrace request for optimized code
 """
 
-from lldbsuite.test.decorators import skipIfAsan, skipIfWasm, skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 class TestDAP_optimized(DAPTestCaseBase):

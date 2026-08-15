@@ -1467,20 +1467,13 @@ libc_support_library(
     name = "__support_libc_assert",
     hdrs = ["src/__support/libc_assert.h"],
     deps = [
-        ":__support_integer_to_string",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_hardening",
         ":__support_macros_macro_utils",
         ":__support_macros_optimization",
         ":__support_macros_properties_os",
-        ":__support_osutil_exit_hdrs",
-    ] + select({
-        "@platforms//os:linux": [":__support_osutil_io"],
-        "@platforms//os:macos": [":__support_osutil_io"],
-        "@platforms//os:windows": [":__support_osutil_io"],
-        "//conditions:default": [],
-    }),
+    ],
 )
 
 libc_support_library(
