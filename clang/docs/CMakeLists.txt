@@ -106,7 +106,7 @@ if (LLVM_ENABLE_SPHINX)
       AttributeReference.md
       DiagnosticsReference.rst
       AMDGPUBuiltinReference.rst
-      ClangCommandLineReference.rst
+      ClangCommandLineReference.md
       analyzer/user-docs/Options.rst)
     add_sphinx_source_sync_target(copy-clang-rst-docs
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
@@ -148,7 +148,7 @@ if (LLVM_ENABLE_SPHINX)
     gen_rst_file_from_td(AttributeReference.md -gen-attr-docs ../include/clang/Basic/Attr.td "${docs_targets}")
     gen_rst_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
     gen_rst_file_from_td(AMDGPUBuiltinReference.rst -gen-builtin-docs ../include/clang/Basic/BuiltinsAMDGPU.td "${docs_targets}")
-    gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
+    gen_rst_file_from_td(ClangCommandLineReference.md -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
 
     # Another generated file from a different source
     set(docs_tools_dir ${CMAKE_CURRENT_SOURCE_DIR}/tools)
