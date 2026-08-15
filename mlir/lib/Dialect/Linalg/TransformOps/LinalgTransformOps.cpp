@@ -4464,6 +4464,14 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     return DiagnosedSilenceableFailure::success();
   }
 
+  // Only broadcasts with a 0-D input are handled; leave anything else
+  // unchanged.
+  if (auto broadcastOp = dyn_cast<linalg::BroadcastOp>(target.getOperation());
+      broadcastOp && broadcastOp.getInput().getType().getRank() != 0) {
+    results.push_back(target);
+    return DiagnosedSilenceableFailure::success();
+  }
+
   // Attempt to flatten all dims to one.
   ReassociationIndices reassociation(target.getNumLoops());
   std::iota(reassociation.begin(), reassociation.end(), 0);

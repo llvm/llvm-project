@@ -63,12 +63,6 @@ extern "C" void LANGUAGE_NAME(__, RegisterTexture)(
   __llvmRegisterTexture(Data, TexRef, DevPtr, Name, Dim, Norm, Ext);
 }
 
-extern "C" unsigned
-LANGUAGE_NAME(__, PopCallConfiguration)(dim3 *GridSize, dim3 *BlockSize,
-                                        size_t *SharedMemory, void **Stream) {
-  return __llvmPopCallConfiguration(GridSize, BlockSize, SharedMemory, Stream);
-}
-
 #undef LANGUAGE_NAME
 #undef LA_IMPL1
 #undef LA_IMPL2

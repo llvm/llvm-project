@@ -33,7 +33,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
             try:
                 process.stdin.close()
                 process.wait(timeout=5)
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 process.kill()
 
         self.addTearDownHook(cleanup)

@@ -4,32 +4,32 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG,LLVM-BOTH
 
 // Guard variables.
-// CIR-DAG: cir.global "private" internal tls_dyn dso_local @_ZGVZ13test_ctordtoriE4init = #cir.int<0> : !s8i
+// CIR-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local @_ZGVZ13test_ctordtoriE4init = #cir.int<0> : !s8i
 // LLVM-BOTH-DAG: @_ZGVZ13test_ctordtoriE4init = internal thread_local global i8 0
-// CIR-DAG: cir.global "private" internal tls_dyn dso_local @_ZGVZ13test_ctordtoriE10const_init = #cir.int<0> : !s8i
+// CIR-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local @_ZGVZ13test_ctordtoriE10const_init = #cir.int<0> : !s8i
 // LLVM-BOTH-DAG: @_ZGVZ13test_ctordtoriE10const_init = internal thread_local global i8 0
-// CIR-DAG: cir.global "private" internal tls_dyn dso_local @_ZGVZ9test_dtoriE10const_init = #cir.int<0> : !s8i
+// CIR-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local @_ZGVZ9test_dtoriE10const_init = #cir.int<0> : !s8i
 // LLVM-BOTH-DAG: @_ZGVZ9test_dtoriE10const_init = internal thread_local global i8 0
-// CIR-DAG: cir.global "private" internal tls_dyn dso_local @_ZGVZ9test_ctoriE4init = #cir.int<0> : !s8i
+// CIR-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local @_ZGVZ9test_ctoriE4init = #cir.int<0> : !s8i
 // LLVM-BOTH-DAG: @_ZGVZ9test_ctoriE4init = internal thread_local global i8 0
-// CIR-DAG: cir.global "private" internal tls_dyn dso_local @_ZGVZ9test_ctoriE10const_init = #cir.int<0> : !s8i
+// CIR-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local @_ZGVZ9test_ctoriE10const_init = #cir.int<0> : !s8i
 // LLVM-BOTH-DAG: @_ZGVZ9test_ctoriE10const_init = internal thread_local global i8 0
-// CIR-DAG: cir.global "private" internal tls_dyn dso_local @_ZGVZ8test_intiE4init = #cir.int<0> : !s8i
+// CIR-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local @_ZGVZ8test_intiE4init = #cir.int<0> : !s8i
 // LLVM-BOTH-DAG: @_ZGVZ8test_intiE4init = internal thread_local global i8 0
 
-// CIR-BOTH-DAG: cir.global "private" internal tls_dyn dso_local static_local_guard<"_ZGVZ13test_ctordtoriE4init"> @_ZZ13test_ctordtoriE4init = #cir.zero : !rec_CtorDtor
+// CIR-BOTH-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local static_local_guard<"_ZGVZ13test_ctordtoriE4init"> @_ZZ13test_ctordtoriE4init = #cir.zero : !rec_CtorDtor
 // LLVM-BOTH-DAG: @_ZZ13test_ctordtoriE4init = internal thread_local global %struct.CtorDtor zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal tls_dyn dso_local static_local_guard<"_ZGVZ13test_ctordtoriE10const_init"> @_ZZ13test_ctordtoriE10const_init = #cir.zero : !rec_CtorDtor
+// CIR-BOTH-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local static_local_guard<"_ZGVZ13test_ctordtoriE10const_init"> @_ZZ13test_ctordtoriE10const_init = #cir.zero : !rec_CtorDtor
 // LLVM-BOTH-DAG: @_ZZ13test_ctordtoriE10const_init = internal thread_local global %struct.CtorDtor zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal tls_dyn dso_local static_local_guard<"_ZGVZ9test_dtoriE10const_init"> @_ZZ9test_dtoriE10const_init = #cir.zero : !rec_Dtor
+// CIR-BOTH-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local static_local_guard<"_ZGVZ9test_dtoriE10const_init"> @_ZZ9test_dtoriE10const_init = #cir.zero : !rec_Dtor
 // LLVM-BOTH-DAG: @_ZZ9test_dtoriE10const_init = internal thread_local global %struct.Dtor zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal tls_dyn dso_local static_local_guard<"_ZGVZ9test_ctoriE4init"> @_ZZ9test_ctoriE4init = #cir.zero : !rec_Ctor
+// CIR-BOTH-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local static_local_guard<"_ZGVZ9test_ctoriE4init"> @_ZZ9test_ctoriE4init = #cir.zero : !rec_Ctor
 // LLVM-BOTH-DAG: @_ZZ9test_ctoriE4init = internal thread_local global %struct.Ctor zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal tls_dyn dso_local static_local_guard<"_ZGVZ9test_ctoriE10const_init"> @_ZZ9test_ctoriE10const_init = #cir.zero : !rec_Ctor
+// CIR-BOTH-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local static_local_guard<"_ZGVZ9test_ctoriE10const_init"> @_ZZ9test_ctoriE10const_init = #cir.zero : !rec_Ctor
 // LLVM-BOTH-DAG: @_ZZ9test_ctoriE10const_init = internal thread_local global %struct.Ctor zeroinitializer
-// CIR-BOTH-DAG: cir.global "private" internal tls_dyn dso_local static_local_guard<"_ZGVZ8test_intiE4init"> @_ZZ8test_intiE4init = #cir.int<0> : !s32i
+// CIR-BOTH-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local static_local_guard<"_ZGVZ8test_intiE4init"> @_ZZ8test_intiE4init = #cir.int<0> : !s32i
 // LLVM-BOTH-DAG: @_ZZ8test_intiE4init = internal thread_local global i32 0
-// CIR-BOTH-DAG: cir.global "private" internal tls_dyn dso_local @_ZZ8test_intiE10const_init = #cir.int<5> : !s32i
+// CIR-BOTH-DAG: cir.global "private" internal tls_model = <tls_dyn> dso_local @_ZZ8test_intiE10const_init = #cir.int<5> : !s32i
 // LLVM-BOTH-DAG: @_ZZ8test_intiE10const_init = internal thread_local global i32 5
 int get_i();
 

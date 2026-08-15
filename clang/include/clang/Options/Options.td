@@ -1819,6 +1819,10 @@ def fembed_offload_object_EQ : Joined<["-"], "fembed-offload-object=">,
   Visibility<[ClangOption, CC1Option, FC1Option]>,
   HelpText<"Embed Offloading device-side binary into host object file as a section.">,
   MarshallingInfoStringVector<CodeGenOpts<"OffloadObjects">>;
+def foffload_include_binary : Separate<["-"], "foffload-include-binary">,
+  Visibility<[CC1Option]>,
+  HelpText<"Incorporate offloading device-side binary into host object file.">,
+  MarshallingInfoString<CodeGenOpts<"OffloadBinaryToEmbedFile">>;
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     Group<f_Group>, Flags<[NoXarchOption]>,
     Visibility<[ClangOption, CC1Option, CC1AsOption]>, MetaVarName<"<option>">,
@@ -4791,6 +4795,14 @@ defm enable_new_pm_codegen
                           "Use the NewPM for the Codegen Pipeline">>,
       DocBrief<
           [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
+def enable_new_pm_codegen : Joined<["-"], "fenable-new-pm-codegen=">,
+    Group<f_Group>,
+    Visibility<[CC1Option]>,
+    HelpText<"When enabled, use the NewPM to drive the CodeGen pipeline.">,
+    Values<"auto,force-on,force-disable">,
+    NormalizedValuesScope<"CodeGenOptions::NewPMEnablementLevel">,
+    NormalizedValues<["Auto","ForceEnable","ForceDisable"]>,
+    MarshallingInfoEnum<CodeGenOpts<"EnableNewPMCodeGen">, "Auto">;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",
@@ -9118,8 +9130,7 @@ def fcuda_is_device : Flag<["-"], "fcuda-is-device">,
   HelpText<"Generate code for CUDA device">,
   MarshallingInfoFlag<LangOpts<"CUDAIsDevice">>;
 def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
-  HelpText<"Incorporate CUDA device-side binary into host object file.">,
-  MarshallingInfoString<CodeGenOpts<"CudaGpuBinaryFileName">>;
+  Alias<foffload_include_binary>;
 def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions">,
   HelpText<"Deprecated; Allow variadic functions in CUDA device code.">;
 def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr">,

@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <mutex>
 
@@ -27,19 +28,25 @@ using namespace offload;
 __attribute__((weak)) uint32_t PerThreadQueue = 0;
 
 // Process-wide singleton and thread-state registry.
-static std::mutex StateLock;
+static std::mutex &getStateLock() {
+  static std::mutex StateLock;
+  return StateLock;
+}
 static std::atomic<StateTy *> StatePtr = nullptr;
 
 static thread_local ThreadStateTy *ThreadState = nullptr;
 
-static std::mutex ThreadStatesLock;
+static std::mutex &getThreadStatesLock() {
+  static std::mutex ThreadStatesLock;
+  return ThreadStatesLock;
+}
 using ThreadStatesTy = SmallVector<ThreadStateTy *, 64>;
 static ThreadStatesTy *ThreadStatesPtr = nullptr;
 
 static void deleteThreadStates() {
   // Detach the registry before deletion because deleteThreadState may be called
   // more than once via atexit and StateTy teardown.
-  std::lock_guard<std::mutex> LG(ThreadStatesLock);
+  std::lock_guard<std::mutex> LG(getThreadStatesLock());
   ThreadStatesTy *ThreadStates = ThreadStatesPtr;
   ThreadStatesPtr = nullptr;
   if (!ThreadStates)
@@ -84,7 +91,7 @@ ThreadStateTy &ThreadStateTy::get() {
   auto *&TS = ThreadState;
   if (!TS) {
     TS = new ThreadStateTy();
-    std::lock_guard<std::mutex> LG(ThreadStatesLock);
+    std::lock_guard<std::mutex> LG(getThreadStatesLock());
     if (!ThreadStatesPtr)
       ThreadStatesPtr = new ThreadStatesTy;
     ThreadStatesPtr->push_back(TS);
@@ -122,10 +129,18 @@ ol_device_handle_t ThreadStateTy::getDevice(int *DeviceNo) {
   return ThreadStateTy::getDefaultDevice();
 }
 
+uint32_t ThreadStateTy::getLastError() {
+  return ThreadStateTy::get().LastError;
+}
+
+uint32_t ThreadStateTy::setLastError(uint32_t Error) {
+  return ThreadStateTy::get().LastError = Error;
+}
+
 void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {
   if (DefaultQueue)
     olDestroyQueue(DefaultQueue);
-  CHECK_FATAL(olCreateQueue(Device, &DefaultQueue),
+  CHECK_FATAL(olCreateQueue(StateTy::getContext(), Device, &DefaultQueue),
               "Failed to create per-thread default queue");
 }
 
@@ -134,7 +149,7 @@ void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {
 StateTy &StateTy::get() {
   StateTy *ST = StatePtr.load();
   if (!ST) [[unlikely]] {
-    std::lock_guard<std::mutex> LG(StateLock);
+    std::lock_guard<std::mutex> LG(getStateLock());
     ST = StatePtr.load();
     if (!ST) {
       ST = new StateTy();
@@ -147,6 +162,8 @@ StateTy &StateTy::get() {
 StateTy *StateTy::tryGet() { return StatePtr.load(); }
 
 ol_device_handle_t StateTy::getHostDevice() { return get().HostDevice; }
+
+ol_context_handle_t StateTy::getContext() { return get().Context; }
 
 int StateTy::getDeviceCount() {
   int DeviceCount = get().getDevices().size();
@@ -248,9 +265,13 @@ StateTy::StateTy() {
   CHECK_FATAL(olIterateDevices(StateTy::addDevices, this),
               "Failed to identify devices");
 
+  if (!Devices.empty())
+    CHECK_FATAL(olCreateContext(Devices.size(), Devices.data(), &Context),
+                "Failed to create default context");
+
   if (!PerThreadQueue) [[likely]]
     if (!Devices.empty()) [[likely]]
-      CHECK_FATAL(olCreateQueue(Devices.front(), &DefaultQueue),
+      CHECK_FATAL(olCreateQueue(Context, Devices.front(), &DefaultQueue),
                   "Failed to create default queue");
 
   atexit(deleteState);
@@ -260,6 +281,8 @@ StateTy::~StateTy() {
   deleteThreadStates();
   destroyQueue(DefaultQueue);
   destroyRegisteredPrograms();
+  if (Context)
+    olDestroyContext(Context);
   olShutDown();
 }
 

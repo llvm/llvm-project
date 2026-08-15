@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from lldbsuite.test.decorators import skipIf
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
 from lldbsuite.test.tools.lldb_dap.types import (
@@ -15,7 +15,6 @@ from lldbsuite.test.tools.lldb_dap.types import (
     LaunchArgs,
     StoppedReason,
 )
-
 
 session_completion = CompletionItem(
     label="session",

@@ -38,7 +38,7 @@ define void @foo_i32(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP1:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP5:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF5:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_ITER_CHECK]]:
@@ -46,7 +46,7 @@ define void @foo_i32(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP8:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF9:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_SCALAR_PH]]:
@@ -124,7 +124,7 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V1-IC1:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF9:![0-9]+]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[TMP5:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF9:![0-9]+]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-V1-IC1:  [[MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF9]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_ITER_CHECK]]:
@@ -132,7 +132,7 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V1-IC1:  [[VEC_EPILOG_PH]]:
 ; CHECK-V1-IC1:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[TMP8:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF14:![0-9]+]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_SCALAR_PH]]:
@@ -150,7 +150,7 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF12:![0-9]+]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP5:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF12:![0-9]+]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF12]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_ITER_CHECK]]:
@@ -158,7 +158,7 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP8:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF9]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_SCALAR_PH]]:
@@ -176,7 +176,7 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V2-IC1:  [[VECTOR_PH]]:
 ; CHECK-V2-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[VECTOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[TMP4:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK-V2-IC1:  [[MIDDLE_BLOCK]]:
 ; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF13:![0-9]+]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_ITER_CHECK]]:
@@ -184,7 +184,7 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V2-IC1:  [[VEC_EPILOG_PH]]:
 ; CHECK-V2-IC1:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-V2-IC1:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF6]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_SCALAR_PH]]:
@@ -262,7 +262,7 @@ define void @foo_i32_no_bw(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP5:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_ITER_CHECK]]:
@@ -270,7 +270,7 @@ define void @foo_i32_no_bw(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[TMP8:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1-FORCE-EPI2:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-V1-IC1-FORCE-EPI2:  [[VEC_EPILOG_SCALAR_PH]]:

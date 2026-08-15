@@ -45,7 +45,7 @@ and then use this to simplify the expression:
 .. code-block:: none
 
                                    ; %0 = 0x????????
-  %5:(s32) = G_CONSTANT i32 0x0F0  ; %5 = 0x00000FF0
+  %5:(s32) = G_CONSTANT i32 0x0F0  ; %5 = 0x000000F0
   %4:(s32) = G_AND %0, %5          ; %4 = 0x000000?0
 
 Note that ``%4`` still has the same known bits as before the transformation.
@@ -89,8 +89,8 @@ Then it's just a matter of fetching the analysis and using it:
     GISelValueTracking &VT = getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
     ...
     MachineInstr *MI = ...;
-    KnownBits Known = VT->getKnownBits(MI->getOperand(0).getReg());
-    if (Known.Zeros & 1) {
+    KnownBits Known = VT.getKnownBits(MI->getOperand(0).getReg());
+    if (Known.Zero[0]) {
       // Bit 0 is known to be zero
     }
     ...
