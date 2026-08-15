@@ -118,6 +118,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 
     ## Currently disabled for failing tests.
     # math.h entrypoints
+    #libc.src.math.atan2f128
     #libc.src.math.copysign
     #libc.src.math.copysignf
     #libc.src.math.copysignl
