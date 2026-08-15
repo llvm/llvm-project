@@ -40,9 +40,7 @@ void F(typename CannotDeduce<std::tuple<Args...>>::type const&) {}
 
 void f() {
   // Constructing a reference element that would bind to a temporary is rejected. Since C++23
-  // ([tuple.cnstr]) the offending constructors are deleted, so the error is reported at the call;
-  // before C++23 the bind is caught by a static_assert in the library (with Clang additionally
-  // diagnosing the dangling reference member).
+  // ([tuple.cnstr]) the offending constructors are deleted.
 #if TEST_STD_VER >= 23
   // expected-error@*:* 8 {{deleted}}
 #else
@@ -51,29 +49,53 @@ void f() {
 #endif
 
   {
+#if TEST_STD_VER < 23
+    // expected-note@+2 1 {{requested here}}
+#endif
     F<int, const std::string&>(std::make_tuple(1, "abc"));
   }
   {
+#if TEST_STD_VER < 23
+    // expected-note@+2 1 {{requested here}}
+#endif
     std::tuple<int, const std::string&> t(1, "a");
   }
   {
+#if TEST_STD_VER < 23
+    // expected-note@+2 1 {{requested here}}
+#endif
     F<int, const std::string&>(std::tuple<int, const std::string&>(1, "abc"));
   }
   {
     ConvertsTo<int&> ct;
+#if TEST_STD_VER < 23
+    // expected-note@+2 {{requested here}}
+#endif
     std::tuple<const long&, int> t(ct, 42);
   }
   {
     ConvertsTo<int> ct;
+#if TEST_STD_VER < 23
+    // expected-note@+2 {{requested here}}
+#endif
     std::tuple<int const&, void*> t(ct, nullptr);
   }
   {
     ConvertsTo<Derived> ct;
+#if TEST_STD_VER < 23
+    // expected-note@+2 {{requested here}}
+#endif
     std::tuple<Base const&, int> t(ct, 42);
   }
   {
     std::allocator<int> alloc;
+#if TEST_STD_VER < 23
+    // expected-note@+2 {{requested here}}
+#endif
     std::tuple<std::string&&> t2("hello");
+#if TEST_STD_VER < 23
+    // expected-note@+2 {{requested here}}
+#endif
     std::tuple<std::string&&> t3(std::allocator_arg, alloc, "hello");
   }
 }
