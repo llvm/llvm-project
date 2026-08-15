@@ -1,26 +1,7 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-smart-ptr-initialization %t -- -- -I %S/../modernize/Inputs/smart-ptr
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-smart-ptr-initialization %t -- -- -I %S/../Inputs/Headers/std
 
-#include "shared_ptr.h"
-#include "unique_ptr.h"
-
-namespace std {
-template<typename T>
-  struct remove_reference
-  { using type = T; };
-
-template<typename T>
-  struct remove_reference<T&>
-  { using type = T; };
-
-template<typename T>
-  struct remove_reference<T&&>
-  { using type = T; };
-
-template<typename T>
-  constexpr typename std::remove_reference<T>::type&&
-  move(T&& t) noexcept;
-}
-
+#include <memory>
+#include <utility>
 
 struct A {
   int x;

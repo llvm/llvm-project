@@ -1,7 +1,6 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t -- -- -I %S/../modernize/Inputs/smart-ptr
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t -- -- -I %S/../Inputs/Headers/std
 
-#include "shared_ptr.h"
-#include "unique_ptr.h"
+#include <memory>
 
 struct A {
   int x;
