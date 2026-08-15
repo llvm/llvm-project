@@ -15,7 +15,7 @@ void Normal() {
   int NODEREF i;        // expected-warning{{'noderef' can only be used on an array or pointer type}}
   int NODEREF *i_ptr;   // expected-note 2 {{i_ptr declared here}}
   int NODEREF **i_ptr2; // ok
-  int *NODEREF i_ptr3;  // expected-warning{{'noderef' can only be used on an array or pointer type}}
+  int *NODEREF i_ptr3;  // ok
   int *NODEREF *i_ptr4; // ok
 
   auto NODEREF *auto_i_ptr = i_ptr;
@@ -66,14 +66,14 @@ typedef int NODEREF *(*func5[10])(int);
 // Arguments
 void func6(int NODEREF x); // expected-warning{{'noderef' can only be used on an array or pointer type}}
 void func7(int NODEREF *x);
-void func8() NODEREF;
+void func8() NODEREF; // expected-warning{{'noderef' can only be used on an array or pointer type}}
 
 void References() {
   int x = 2;
   int NODEREF &y = x; // expected-warning{{'noderef' can only be used on an array or pointer type}}
   int *xp = &x;
   int NODEREF *&a = xp; // ok (reference to a NODEREF *)
-  int *NODEREF &b = xp; // expected-warning{{'noderef' can only be used on an array or pointer type}}
+  int *NODEREF &b = xp; // ok
 }
 
 void BlockPointers() {
@@ -186,5 +186,28 @@ const int *const_cast_check(NODEREF int *x) {
 
 namespace GH116124 {
 // This declaration would previously cause a failed assertion.
-int *_Atomic a __attribute__((noderef));
+int *_Atomic a __attribute__((noderef)); // expected-warning{{'noderef' can only be used on an array or pointer type}}
+}
+
+namespace GH55790 {
+  [[clang::noderef]] int i; // expected-error{{'clang::noderef' attribute cannot be applied to a declaration}} expected-warning{{'noderef' can only be used on an array or pointer type}}
+
+  [[clang::noderef]] int *p1; // expected-error{{'clang::noderef' attribute cannot be applied to a declaration}} expected-note{{p1 declared here}}
+  int i1 = *p1; // expected-warning{{dereferencing p1; was declared with a 'noderef' type}}
+
+  int *p2 [[clang::noderef]]; // expected-error{{'clang::noderef' attribute cannot be applied to a declaration}} expected-note{{p2 declared here}}
+  int i2 = *p2; // expected-warning{{dereferencing p2; was declared with a 'noderef' type}}
+
+  int [[clang::noderef]] *p3; // expected-warning{{'noderef' can only be used on an array or pointer type}}
+  int i3 = *p3;
+
+  int * [[clang::noderef]] p4; // expected-note{{p4 declared here}}
+  int i4 = *p4; // expected-warning{{dereferencing p4; was declared with a 'noderef' type}}
+
+  typedef int *IntPtr;
+  [[clang::noderef]] IntPtr p5; // expected-error{{'clang::noderef' attribute cannot be applied to a declaration}} expected-note{{p5 declared here}}
+  int i5 = *p5; // expected-warning{{dereferencing p5; was declared with a 'noderef' type}}
+
+  IntPtr [[clang::noderef]] p6; // expected-note{{p6 declared here}}
+  int i6 = *p6; // expected-warning{{dereferencing p6; was declared with a 'noderef' type}}
 }

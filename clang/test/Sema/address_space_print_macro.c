@@ -50,18 +50,18 @@ void override_macro_name(void) {
   ATTRS
   int *x;
 
-  int AS_ND *y = x; // expected-error{{initializing 'AS_ND int *' with an expression of type 'ATTRS int *' changes address space of pointer}}
+  int AS_ND *y = x; // expected-error{{initializing 'AS_ND int * __attribute__((noderef))' with an expression of type 'ATTRS int * __attribute__((noderef))' changes address space of pointer}}
 }
 
 void partial_macro_declaration(void) {
 #define ATTRS2 __attribute__((noderef))
   ATTRS2 __attribute__((address_space(1))) int *x;
 
-  int AS_ND *y = x; // expected-error{{initializing 'AS_ND int *' with an expression of type 'ATTRS2 int __attribute__((address_space(1))) *' changes address space of pointer}}
+  int AS_ND *y = x; // expected-error{{initializing 'AS_ND int * __attribute__((noderef))' with an expression of type '__attribute__((address_space(1))) int * __attribute__((noderef))' changes address space of pointer}}
 
   // The attribute not wrapped with a macro should be printed regularly.
 #define ATTRS3 __attribute__((address_space(1)))
   ATTRS3 __attribute__((noderef)) int *x2;
 
-  int AS_ND *y2 = x2; // expected-error{{initializing 'AS_ND int *' with an expression of type 'ATTRS3 int * __attribute__((noderef))' changes address space of pointer}}
+  int AS_ND *y2 = x2; // expected-error{{initializing 'AS_ND int * __attribute__((noderef))' with an expression of type 'ATTRS3 int * __attribute__((noderef))' changes address space of pointer}}
 }
