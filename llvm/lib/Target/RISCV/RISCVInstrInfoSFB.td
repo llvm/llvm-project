@@ -275,4 +275,4 @@ def ZibiCond : PatLeaf<(cond), [{
 // imm5_zibi is defined in RISCVInstrInfoZibi.td (included before this file).
 let Predicates = [HasStdExtZibi, HasShortForwardBranchImm] in
 def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
-           (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;
+          (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;
