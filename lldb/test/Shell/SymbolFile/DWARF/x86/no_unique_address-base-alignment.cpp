@@ -1,5 +1,3 @@
-// XFAIL: *
-
 // RUN: %clang --target=x86_64-apple-macosx -c -gdwarf -o %t %s
 // RUN: %lldb %t \
 // RUN:   -o "expr alignof(OverlappingDerived)" \
