@@ -8380,7 +8380,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");
+#ifdef EXPENSIVE_CHECKS
   assert(!verifyFunction(*F, &dbgs()));
+#endif
 
   return true;
 }
