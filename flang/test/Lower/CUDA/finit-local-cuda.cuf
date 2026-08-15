@@ -1,0 +1,40 @@
+! Tests that -finit-local= respects CUDA data attributes in shouldInitLocal.
+! Variables in device-only memory (device, managed, constant, shared) must NOT
+! be initialized via a plain host store. Host-accessible storage (pinned,
+! unified) MAY be initialized normally.
+!
+! RUN: bbc -emit-hlfir -fcuda -finit-local=zero -o - %s | FileCheck %s
+
+module finit_cuda_mod
+contains
+
+  ! device: storage lives in device memory -- must NOT be initialized.
+  subroutine test_device(res)
+    real, device :: x
+    real :: res
+    res = x
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMfinit_cuda_modPtest_device
+  ! CHECK-NOT: fir.zero_bits f32
+
+  ! unified: host-accessible -- MUST be initialized.
+  subroutine test_unified(res)
+    real, unified :: x
+    real :: res
+    res = x
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMfinit_cuda_modPtest_unified
+  ! CHECK: fir.zero_bits f32
+  ! CHECK: fir.store
+
+  ! pinned (non-allocatable): host-accessible -- MUST be initialized.
+  subroutine test_pinned(res)
+    real, pinned :: x
+    real :: res
+    res = x
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMfinit_cuda_modPtest_pinned
+  ! CHECK: fir.zero_bits f32
+  ! CHECK: fir.store
+
+end module

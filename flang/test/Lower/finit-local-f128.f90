@@ -44,21 +44,21 @@ subroutine test_complex16(res)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_complex16
-! ZERO: fir.zero_bits {{!fir\.complex<16>|complex<f128>}}
-! ZERO: fir.store {{.*}} : !fir.ref<{{!fir\.complex<16>|complex<f128>}}>
+! ZERO: fir.zero_bits complex<f128>
+! ZERO: fir.store {{.*}} : !fir.ref<complex<f128>>
 
 ! NAN-LABEL:  func.func @_QPtest_complex16
 ! NAN:  arith.constant {{.*}} : f128
-! NAN:  complex.create {{.*}}, {{.*}} : f128
-! NAN:  fir.store {{.*}} : !fir.ref<{{!fir\.complex<16>|complex<f128>}}>
+! NAN:  complex.create {{.*}}, {{.*}} : complex<f128>
+! NAN:  fir.store {{.*}} : !fir.ref<complex<f128>>
 
 ! SNAN-LABEL: func.func @_QPtest_complex16
 ! SNAN: arith.constant {{.*}} : f128
-! SNAN: complex.create {{.*}}, {{.*}} : f128
-! SNAN: fir.store {{.*}} : !fir.ref<{{!fir\.complex<16>|complex<f128>}}>
+! SNAN: complex.create {{.*}}, {{.*}} : complex<f128>
+! SNAN: fir.store {{.*}} : !fir.ref<complex<f128>>
 
 ! HEX-LABEL:  func.func @_QPtest_complex16
 ! HEX:  arith.constant -113427455640312821154458202477256070486 : i128
 ! HEX:  arith.bitcast {{.*}} : i128 to f128
-! HEX:  complex.create {{.*}}, {{.*}} : f128
-! HEX:  fir.store {{.*}} : !fir.ref<{{!fir\.complex<16>|complex<f128>}}>
+! HEX:  complex.create {{.*}}, {{.*}} : complex<f128>
+! HEX:  fir.store {{.*}} : !fir.ref<complex<f128>>

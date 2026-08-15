@@ -522,8 +522,12 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setInitGlobalZero(initGlobalZero);
   // -finit-local= and -finit-local-zero: last occurrence on the command
   // line wins. Use getPosition() to determine which came last.
-  if (!initLocalMode.empty()) {
+  if (initLocalMode.getNumOccurrences() > 0) {
     llvm::StringRef val = initLocalMode;
+    if (val.empty()) {
+      llvm::errs() << "bbc: invalid -finit-local= value: (empty)\n";
+      return mlir::failure();
+    }
     if (val == "zero") {
       loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
     } else if (val == "nan") {

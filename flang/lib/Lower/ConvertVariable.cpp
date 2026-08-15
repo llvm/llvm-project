@@ -1301,15 +1301,25 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
       return false;
   if (Fortran::semantics::FindEquivalenceSet(sym))
     return false;
-  // CUDA device/managed/unified/shared/pinned variables must not be
-  // initialized with a plain host store; their storage lives in device memory.
-  if (Fortran::semantics::GetCUDADataAttr(&sym))
-    return false;
+  // Skip CUDA variables whose storage is not host-accessible via a plain
+  // store: device, managed, constant, shared, and usedevice all live in
+  // device memory. Pinned and unified memory are host-accessible and may
+  // be initialized normally.
+  if (auto cudaAttr = Fortran::semantics::GetCUDADataAttr(&sym)) {
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Device ||
+        *cudaAttr == Fortran::common::CUDADataAttr::Managed ||
+        *cudaAttr == Fortran::common::CUDADataAttr::Constant ||
+        *cudaAttr == Fortran::common::CUDADataAttr::Shared ||
+        *cudaAttr == Fortran::common::CUDADataAttr::UseDevice) {
+      return false;
+    }
+  }
   return true;
 }
 
 /// Build a constant whose every byte equals \p bytePat.
 /// FP types: bitcast from an integer splat. Complex: apply to both parts.
+/// LOGICAL(k): returns a raw iN integer (caller stores via bitcasted address).
 /// Character: falls back to fir.zero_bits (see TODO). Derived types are
 /// handled by the caller before this function is reached.
 static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
@@ -1341,10 +1351,11 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
     return mlir::complex::CreateOp::create(builder, loc, cplxTy, partVal,
                                            partVal);
   }
-  // LOGICAL(k) has a fixed size of k bytes; treat it like an integer splat.
+  // LOGICAL(k) has a fixed size of k bytes. Return the raw integer splat;
+  // the caller stores it via a bitcasted address to preserve the bit pattern
+  // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
-    mlir::Value intCst = makeIntCst(logTy.getFKind() * 8);
-    return builder.createConvert(loc, logTy, intCst);
+    return makeIntCst(logTy.getFKind() * 8);
   }
   // TODO: CHARACTER falls back to zero; a future improvement should fill each
   // storage unit with the byte pattern.
@@ -1366,8 +1377,9 @@ static mlir::Value genFPNaNInit(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Emit a store of the -finit-local= pattern for a single scalar address.
-/// Complex types get NaN on both parts; other non-FP types use 0xAA byte-splat
-/// for nan/snan modes.
+/// Complex types get NaN on both parts; integer/logical non-FP types use a
+/// 0xAA byte-splat for nan/snan modes. LOGICAL stores via a bitcasted integer
+/// address to preserve the raw bit pattern past fir.convert normalization.
 static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type ty, mlir::Value addr,
                               Fortran::lower::InitLocalKind mode,
@@ -1411,12 +1423,24 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
   default:
     llvm_unreachable("unexpected InitLocalKind in genInitLocalStore");
   }
-  fir::StoreOp::create(builder, loc, val, addr);
+  // For LOGICAL types, genByteSplatInit returns a raw integer to preserve
+  // the bit pattern. Store it via a bitcasted address to avoid fir.convert
+  // normalization (which would reduce any nonzero value to logical true).
+  if (mode != Fortran::lower::InitLocalKind::Zero &&
+      mlir::isa<fir::LogicalType>(ty)) {
+    unsigned bits = mlir::cast<fir::LogicalType>(ty).getFKind() * 8;
+    mlir::Type intRefTy = builder.getRefType(builder.getIntegerType(bits));
+    mlir::Value intAddr = builder.createConvert(loc, intRefTy, addr);
+    fir::StoreOp::create(builder, loc, val, intAddr);
+  } else {
+    fir::StoreOp::create(builder, loc, val, addr);
+  }
 }
 
 /// Initialize all storage of the local variable \p var per -finit-local= mode.
-/// Arrays use insert_on_range. Derived types walk fields for nan/snan/hex.
-/// Scalars store directly.
+/// Arrays: zero mode uses insert_on_range; non-zero modes use a do_loop +
+/// coordinate_of to avoid llvm.mlir.constant rejecting non-zero ArrayAttrs.
+/// Derived types walk fields for nan/snan/hex. Scalars store directly.
 static void genInitLocal(Fortran::lower::AbstractConverter &converter,
                          const Fortran::lower::pft::Variable &var,
                          Fortran::lower::SymMap &symMap) {
@@ -1482,26 +1506,51 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
           default:
             llvm_unreachable("unexpected InitLocalKind");
           }
-          // Build flat [lb0,ub0, lb1,ub1, ...] bounds vector.
-          llvm::SmallVector<int64_t> rangeBounds;
-          // Skip CHARACTER arrays: fir.zero_bits is not a valid insert_on_range
-          // element for character types (runtime-length or fixed). CHARACTER
-          // initialization is a known TODO.
+          // Compute static extents; skip arrays with unknown or zero extents,
+          // and CHARACTER arrays (known TODO, pending PR #159788).
           bool hasUnknown = mlir::isa<fir::CharacterType>(eleTy);
+          int64_t totalElems = 1;
           for (auto dim : seqTy.getShape()) {
             if (dim == fir::SequenceType::getUnknownExtent() || dim == 0) {
               hasUnknown = true;
               break;
             }
-            rangeBounds.push_back(0);
-            rangeBounds.push_back(dim - 1);
+            totalElems *= dim;
           }
           if (!hasUnknown) {
-            mlir::Value arrVal = fir::UndefOp::create(builder, loc, seqTy);
-            arrVal = fir::InsertOnRangeOp::create(
-                builder, loc, seqTy, arrVal, elePat,
-                builder.getIndexVectorAttr(rangeBounds));
-            fir::StoreOp::create(builder, loc, arrVal, addr);
+            if (mode == Fortran::lower::InitLocalKind::Zero) {
+              // Zero mode: fir.insert_on_range + store works correctly through
+              // LLVM lowering (ZeroAttr is accepted by llvm.mlir.constant).
+              llvm::SmallVector<int64_t> rangeBounds;
+              for (auto dim : seqTy.getShape()) {
+                rangeBounds.push_back(0);
+                rangeBounds.push_back(dim - 1);
+              }
+              mlir::Value arrVal = fir::UndefOp::create(builder, loc, seqTy);
+              arrVal = fir::InsertOnRangeOp::create(
+                  builder, loc, seqTy, arrVal, elePat,
+                  builder.getIndexVectorAttr(rangeBounds));
+              fir::StoreOp::create(builder, loc, arrVal, addr);
+            } else {
+              // Non-zero modes: fir.insert_on_range fails at LLVM lowering
+              // because llvm.mlir.constant does not accept ArrayAttr of
+              // non-zero scalars. Use a flat do_loop + coordinate_of instead.
+              mlir::Type idxTy = builder.getIndexType();
+              mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+              mlir::Value last =
+                  builder.createIntegerConstant(loc, idxTy, totalElems - 1);
+              mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+              auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                                /*unordered=*/false,
+                                                /*finalCount=*/false);
+              mlir::OpBuilder::InsertionGuard guard(builder);
+              builder.setInsertionPointToStart(loop.getBody());
+              mlir::Value iv = loop.getInductionVar();
+              mlir::Value elemAddr = fir::CoordinateOp::create(
+                  builder, loc, builder.getRefType(eleTy), addr,
+                  mlir::ValueRange{iv});
+              genInitLocalStore(builder, loc, eleTy, elemAddr, mode, hexByte);
+            }
           }
         } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
           // Derived type: zero the whole struct, or walk fields for

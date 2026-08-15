@@ -17,6 +17,10 @@
 ! RUN: bbc -emit-hlfir -finit-local=0xAA  -o - %s | FileCheck --check-prefix=HEX   %s
 ! RUN: bbc -emit-hlfir                    -o - %s | FileCheck --check-prefix=OFF   %s
 ! RUN: bbc -emit-hlfir -finit-local-zero  -o - %s | FileCheck --check-prefix=ZERO  %s
+! --- Empty value should be rejected by bbc ---
+! RUN: not bbc -emit-hlfir -finit-local=   -o - %s 2>&1 | FileCheck --check-prefix=EMPTY %s
+
+! EMPTY: bbc: invalid -finit-local= value: (empty)
 
 ! ---------------------------------------------------------------------------
 ! INTEGER(1) -- 1-byte: pattern 0xAA = -86 (signed) = 170 (unsigned)
@@ -229,13 +233,13 @@ end subroutine
 
 ! NAN-LABEL:  func.func @_QPtest_logical1
 ! NAN:  arith.constant -86 : i8
-! NAN:  fir.convert {{.*}} : (i8) -> !fir.logical<1>
-! NAN:  fir.store {{.*}} : !fir.ref<!fir.logical<1>>
+! NAN:  fir.convert {{.*}} : (!fir.ref<!fir.logical<1>>) -> !fir.ref<i8>
+! NAN:  fir.store {{.*}} : !fir.ref<i8>
 
 ! HEX-LABEL:  func.func @_QPtest_logical1
 ! HEX:  arith.constant {{.*}} : i8
-! HEX:  fir.convert {{.*}} : (i8) -> !fir.logical<1>
-! HEX:  fir.store {{.*}} : !fir.ref<!fir.logical<1>>
+! HEX:  fir.convert {{.*}} : (!fir.ref<!fir.logical<1>>) -> !fir.ref<i8>
+! HEX:  fir.store {{.*}} : !fir.ref<i8>
 
 ! ---------------------------------------------------------------------------
 ! LOGICAL(4) -- stored as i32; pattern 0xAAAAAAAA = -1431655766
@@ -250,13 +254,13 @@ end subroutine
 
 ! NAN-LABEL:  func.func @_QPtest_logical4
 ! NAN:  arith.constant -1431655766 : i32
-! NAN:  fir.convert {{.*}} : (i32) -> !fir.logical<4>
-! NAN:  fir.store {{.*}} : !fir.ref<!fir.logical<4>>
+! NAN:  fir.convert {{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<i32>
+! NAN:  fir.store {{.*}} : !fir.ref<i32>
 
 ! HEX-LABEL:  func.func @_QPtest_logical4
 ! HEX:  arith.constant {{.*}} : i32
-! HEX:  fir.convert {{.*}} : (i32) -> !fir.logical<4>
-! HEX:  fir.store {{.*}} : !fir.ref<!fir.logical<4>>
+! HEX:  fir.convert {{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<i32>
+! HEX:  fir.store {{.*}} : !fir.ref<i32>
 
 ! ---------------------------------------------------------------------------
 ! CHARACTER(10) -- fir::CharacterType is not mlir::FloatType/IntegerType/ComplexType
@@ -330,12 +334,14 @@ end subroutine
 ! ZERO: fir.store {{.*}} : !fir.ref<!fir.array<4xi32>>
 
 ! NAN-LABEL:  func.func @_QPtest_int_array
-! NAN:  fir.insert_on_range {{.*}} from (0) to (3)
-! NAN:  fir.store {{.*}} : !fir.ref<!fir.array<4xi32>>
+! NAN:  fir.do_loop
+! NAN:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+! NAN:  fir.store {{.*}} : !fir.ref<i32>
 
 ! HEX-LABEL:  func.func @_QPtest_int_array
-! HEX:  fir.insert_on_range {{.*}} from (0) to (3)
-! HEX:  fir.store {{.*}} : !fir.ref<!fir.array<4xi32>>
+! HEX:  fir.do_loop
+! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+! HEX:  fir.store {{.*}} : !fir.ref<i32>
 
 ! OFF-LABEL: func.func @_QPtest_int_array
 ! OFF-NOT: fir.insert_on_range
@@ -353,19 +359,22 @@ end subroutine
 ! ZERO: fir.store {{.*}} : !fir.ref<!fir.array<4xf32>>
 
 ! NAN-LABEL:  func.func @_QPtest_real_array
-! NAN:  fir.insert_on_range {{.*}} from (0) to (3)
-! NAN:  fir.store {{.*}} : !fir.ref<!fir.array<4xf32>>
+! NAN:  fir.do_loop
+! NAN:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
+! NAN:  fir.store {{.*}} : !fir.ref<f32>
 
 ! SNAN-LABEL: func.func @_QPtest_real_array
-! SNAN: fir.insert_on_range {{.*}} from (0) to (3)
-! SNAN: fir.store {{.*}} : !fir.ref<!fir.array<4xf32>>
+! SNAN: fir.do_loop
+! SNAN: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
+! SNAN: fir.store {{.*}} : !fir.ref<f32>
 
 ! HEX-LABEL:  func.func @_QPtest_real_array
-! HEX:  fir.insert_on_range {{.*}} from (0) to (3)
-! HEX:  fir.store {{.*}} : !fir.ref<!fir.array<4xf32>>
+! HEX:  fir.do_loop
+! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
+! HEX:  fir.store {{.*}} : !fir.ref<f32>
 
 ! ---------------------------------------------------------------------------
-! Array INTEGER(4)(3,4) -- 2-D; insert_on_range with two-dimension bounds
+! Array INTEGER(4)(3,4) -- 2-D; zero uses insert_on_range, hex uses do_loop
 ! ---------------------------------------------------------------------------
 subroutine test_int_array_2d(res)
   integer(4) :: res(3,4)
@@ -377,8 +386,9 @@ end subroutine
 ! ZERO: fir.store {{.*}} : !fir.ref<!fir.array<3x4xi32>>
 
 ! HEX-LABEL: func.func @_QPtest_int_array_2d
-! HEX:  fir.insert_on_range {{.*}} from (0, 0) to (2, 3)
-! HEX:  fir.store {{.*}} : !fir.ref<!fir.array<3x4xi32>>
+! HEX:  fir.do_loop
+! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<3x4xi32>>, index) -> !fir.ref<i32>
+! HEX:  fir.store {{.*}} : !fir.ref<i32>
 
 ! ---------------------------------------------------------------------------
 ! Exclusion: explicit init (= 42) -- must NOT be touched
