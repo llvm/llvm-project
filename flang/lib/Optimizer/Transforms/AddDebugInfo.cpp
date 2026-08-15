@@ -31,6 +31,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/FileSystem.h"
@@ -95,23 +96,23 @@ private:
   void handleOnlyClause(
       fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
-      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules);
+      llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedModules);
   void handleRenamesWithoutOnly(
       fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIModuleAttr modAttr, mlir::LLVM::DIFileAttr fileAttr,
       mlir::SymbolTable *symbolTable,
-      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules);
+      llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedModules);
   void handleUseStatements(
       mlir::func::FuncOp funcOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
       mlir::SymbolTable *symbolTable,
-      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
+      llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
   void buildModuleDebugImportsMap(mlir::ModuleOp module);
   void expandUseStmtForDebug(
       fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
       mlir::SymbolTable *symbolTable,
-      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
+      llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
       llvm::StringSet<> &seenModuleNames);
   std::optional<mlir::LLVM::DIImportedEntityAttr> createImportedDeclForGlobal(
       llvm::StringRef symbolName, mlir::LLVM::DISubprogramAttr spAttr,
@@ -440,6 +441,13 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
   } else {
+    // A module defined in this compilation unit has a fir.module_debug_imports
+    // whose location is that of the MODULE statement. Prefer it over the
+    // caller's guess, which is derived from a member's declaration.
+    if (auto iter{moduleDebugImportsByName.find(name)};
+        iter != moduleDebugImportsByName.end())
+      line = getLineFromLoc(iter->second.getLoc());
+
     // When decl is true, it means that module is only being used in this
     // compilation unit and it is defined elsewhere. But if the file/line/scope
     // fields are valid, the module is not merged with its definition and is
@@ -478,9 +486,6 @@ AddDebugInfoPass::getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
   // one). The isInitialized() seems to provide the right information
   // but inverted. It is true where module is actually defined but false where
   // it is used.
-  // FIXME: Currently we don't have the line number on which a module was
-  // declared. We are using a best guess of line - 1 where line is the source
-  // line of the first member of the module that we encounter.
   unsigned line = getLineFromLoc(globalOp.getLoc());
 
   mlir::LLVM::DISubprogramAttr sp =
@@ -779,7 +784,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         subTypeAttr, /*retainedNodes=*/{}, /*annotations=*/{});
 
     // Process USE statements (module globals are already processed)
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedEntities;
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> importedEntities;
     handleUseStatements(funcOp, spAttr, fileAttr, cuAttr, symbolTable,
                         importedEntities);
 
@@ -853,7 +858,7 @@ AddDebugInfoPass::createImportedDeclForGlobal(
 void AddDebugInfoPass::handleOnlyClause(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
   // Process ONLY symbols (without renames)
   if (auto onlySymbols = useOp.getOnlySymbols()) {
     for (mlir::Attribute attr : *onlySymbols) {
@@ -882,7 +887,7 @@ void AddDebugInfoPass::handleRenamesWithoutOnly(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIModuleAttr modAttr, mlir::LLVM::DIFileAttr fileAttr,
     mlir::SymbolTable *symbolTable,
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
   mlir::MLIRContext *context = &getContext();
   llvm::SmallVector<mlir::LLVM::DINodeAttr> childDeclarations;
 
@@ -908,7 +913,7 @@ void AddDebugInfoPass::handleUseStatements(
     mlir::func::FuncOp funcOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
     mlir::SymbolTable *symbolTable,
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities) {
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities) {
   llvm::StringSet<> seenModuleNames;
   funcOp.walk([&](fir::UseStmtOp useOp) {
     expandUseStmtForDebug(useOp, spAttr, fileAttr, cuAttr, symbolTable,
@@ -927,7 +932,7 @@ void AddDebugInfoPass::expandUseStmtForDebug(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
     mlir::SymbolTable *symbolTable,
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
     llvm::StringSet<> &seenModuleNames) {
   std::string modName = useOp.getModuleName().str();
   if (seenModuleNames.contains(modName))
@@ -938,7 +943,7 @@ void AddDebugInfoPass::expandUseStmtForDebug(
       getOrCreateModuleAttr(modName, fileAttr, cuAttr, /*line=*/1,
                             /*decl=*/true);
 
-  llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedModules;
+  llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> importedModules;
   if (useOp.hasOnlyClause() || useOp.getHasOnlyWithRenames())
     handleOnlyClause(useOp, spAttr, fileAttr, symbolTable, importedModules);
   else if (useOp.hasRenames())

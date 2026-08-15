@@ -127,7 +127,7 @@ def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, 
     #### Example:
 
     ```mlir
-    %0 = spirv.ARM.GraphConstant { graph_constant_id = 42 : i32 } : !spirv.arm.tensor<2x3xi16>
+    %0 = spirv.ARM.GraphConstant id = 42 : !spirv.arm.tensor<2x3xi16>
     ```
 
     GraphConstantID is a unique identifier which is use to map the contants
@@ -151,7 +151,7 @@ def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, 
   let autogenSerialization = 0;
 
   let assemblyFormat = [{
-    attr-dict `:` type($output)
+    `id` `=` $graph_constant_id attr-dict `:` type($output)
   }];
 }
 

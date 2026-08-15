@@ -14,11 +14,8 @@
 // the insertion point remain valid but those at or after the insertion point,
 // including the past-the-end iterator, are invalidated.
 
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-fast
 // REQUIRES: libcpp-has-abi-bounded-iterators-in-vector
-// UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <vector>
 #include <cassert>

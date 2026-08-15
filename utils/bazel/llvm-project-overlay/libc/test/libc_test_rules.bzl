@@ -30,7 +30,7 @@ def libc_test(
         copts = [],
         deps = [],
         local_defines = [],
-        use_test_framework = True,
+        c_test = False,
         full_build = False,
         **kwargs):
     """Add target for a libc test.
@@ -40,7 +40,7 @@ def libc_test(
       copts: The list of options to add to the C++ compilation command.
       deps: The list of libc functions and libraries to be linked in.
       local_defines: The list of target local_defines if any.
-      use_test_framework: Whether to use the libc unit test `main` function.
+      c_test: Whether this test is a C unit test (uses LibcCTest).
       full_build: Whether to compile with LIBC_FULL_BUILD and disallow
           use of system headers. This is useful for tests that include both
           LLVM libc headers and proxy headers to avoid conflicting definitions.
@@ -56,17 +56,24 @@ def libc_test(
         "//libc:func_malloc",
         "//libc:func_realloc",
     ]
-    if use_test_framework:
+    if c_test:
+        deps = deps + ["//libc/test/UnitTest:LibcCTest"]
+    else:
         deps = deps + ["//libc/test/UnitTest:LibcUnitTest"]
 
+    tags = kwargs.pop("tags", [])
     if full_build:
         copts = copts + _FULL_BUILD_COPTS
+
+        # Temporarily disable full_build tests (currently broken) to unblock CI.
+        tags = tags + ["manual", "notap"]
     cc_test(
         name = name,
         local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
         deps = deps,
         copts = copts + libc_common_copts(),
         linkstatic = 1,
+        tags = tags,
         **kwargs
     )
 

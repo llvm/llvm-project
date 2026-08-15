@@ -79,6 +79,11 @@ dnovillo@google.com (email), [dnovillo](https://github.com/dnovillo) (GitHub)
 Arthur Eubanks \
 aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub)
 
+#### LoadStoreVectorizer 
+
+Drew Kersnar \
+dkersnar@nvidia.com (email), [dakersnar](https://github.com/dakersnar) (GitHub)
+
 #### LoopStrengthReduce
 
 Quentin Colombet \
