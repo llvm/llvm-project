@@ -1382,16 +1382,17 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     }
   }
 
-  // C << (cttz X, true) --> (-X & X) * C  (C must be a scalar constant, cttz
-  // must have one use)
+  // LHS << (cttz RHS) --> (RHS & -RHS) * LHS
   {
     Value *X;
-    const APInt *C;
-    if (match(Op0, m_APInt(C)) &&
-        match(Op1, m_OneUse(m_Cttz(m_Value(X), m_One())))) {
+    if (match(Op1, m_OneUse(m_Cttz(m_Value(X), m_Value())))) {
       Value *NegX = Builder.CreateNeg(X, "neg");
       Value *LowBit = Builder.CreateAnd(NegX, X);
-      return BinaryOperator::CreateMul(LowBit, Op0);
+      auto *Mul = BinaryOperator::CreateMul(LowBit, Op0);
+      // Propagate nuw from shl if present
+      if (I.hasNoUnsignedWrap())
+        Mul->setHasNoUnsignedWrap();
+      return Mul;
     }
   }
 
