@@ -646,6 +646,10 @@ def SchedWriteCvtPD2PS
  : X86SchedWriteWidths<WriteCvtSD2SS, WriteCvtPD2PS,
                        WriteCvtPD2PSY, WriteCvtPD2PSZ>;
 
+def SchedWriteCvtPS2BF
+ : X86SchedWriteWidths<WriteCvtSS2I, WriteCvtPS2I,
+                       WriteCvtPS2IY, WriteCvtPS2IZ>;
+
 def SchedWriteVecALU
  : X86SchedWriteWidths<WriteVecALU, WriteVecALUX, WriteVecALUY, WriteVecALUZ>;
 def SchedWritePHAdd
