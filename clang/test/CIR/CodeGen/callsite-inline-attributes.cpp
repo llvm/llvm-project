@@ -54,7 +54,7 @@ void caller() {
   {
     [[clang::always_inline]]
     callee();
-    // CIR: cir.call @_Z6calleev() {inline_kind = 2 : i32}
+    // CIR: cir.call @_Z6calleev() {inline_kind = #cir.inline_kind<always_inline>}
     // LLVM: call void @_Z6calleev() #[[ALWAYSINLINE]]
   }
 }
