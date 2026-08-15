@@ -16,6 +16,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/RegisterInfo.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "gtest/gtest.h"
 
@@ -158,6 +159,122 @@ TEST_F(RegisterTypeBuilderClangTest, CacheFollowsScratchTypeSystem) {
   ASSERT_TRUE(second_type_system);
   EXPECT_NE(first_type_system, second_type_system);
   EXPECT_NE(first, second);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsPowerOfTwoVector) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector vector_type("v4f", &element_type, 4);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_NE(type.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 4u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, PreservesThreeLaneVectorLayout) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector vector_type("v3f", &element_type, 3);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 12));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 12u);
+  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
+  EXPECT_EQ(type.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 3u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsNestedVectors) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector inner_type("v2f", &element_type, 2);
+  RegisterTypeVector outer_type("v2v2f", &inner_type, 2);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(outer_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 2u);
+
+  CompilerType inner = type.GetArrayElementType(nullptr);
+  ASSERT_TRUE(inner);
+  EXPECT_NE(inner.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_EQ(llvm::expectedToOptional(inner.GetNumChildren(true, nullptr)), 2u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsTargetSizedPointerVector) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, 0);
+  RegisterTypeVector vector_type("v2p", &pointer_type, 2);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 2u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsBoolVectorAsArray) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("bool", eEncodingUint, eFormatBoolean, 1);
+  RegisterTypeVector vector_type("v4b", &element_type, 4);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type = builder.GetRegisterType(MakeRegisterInfo(vector_type, 4));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 4u);
+  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
+  EXPECT_EQ(type.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 4u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, BuildsSingleUint128Vector) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin element_type("uint128", eEncodingUint, eFormatHex, 16);
+  RegisterTypeVector vector_type("v1u128", &element_type, 1);
+  RegisterTypeBuilderClang builder(target);
+
+  CompilerType type =
+      builder.GetRegisterType(MakeRegisterInfo(vector_type, 16));
+
+  ASSERT_TRUE(type);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
+  EXPECT_NE(type.GetTypeInfo() & eTypeIsVector, 0u);
+  EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 1u);
+}
+
+TEST_F(RegisterTypeBuilderClangTest, RejectsVectorSizeMismatch) {
+  Target &target = m_debugger_sp->GetDummyTarget();
+  RegisterTypeBuiltin float_type("ieee_single", eEncodingIEEE754, eFormatFloat,
+                                 4);
+  RegisterTypeVector float_vector("v4f", &float_type, 4);
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, 0);
+  RegisterTypeVector pointer_vector("v2p", &pointer_type, 2);
+  RegisterTypeBuilderClang builder(target);
+
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(float_vector, 12)));
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(float_vector, 20)));
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(pointer_vector, 0)));
+  EXPECT_FALSE(builder.GetRegisterType(MakeRegisterInfo(pointer_vector, 15)));
 }
 
 } // namespace

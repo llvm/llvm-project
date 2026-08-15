@@ -101,7 +101,7 @@ public:
         m_format_options(eFormatDefault, UINT64_MAX, UINT64_MAX,
                          {{CommandArgumentType::eArgTypeFormat,
                            "Specify a format to be used for display. If this "
-                           "is set, register fields will not be displayed."}}) {
+                           "is set, typed output will not be displayed."}}) {
     AddSimpleArgumentList(eArgTypeRegisterName, eArgRepeatStar);
 
     // Add the "--format"
@@ -127,7 +127,7 @@ public:
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
                     RegisterContext &reg_ctx, const RegisterInfo &reg_info,
-                    bool print_flags, size_t reg_name_right_align_at) {
+                    bool print_type, size_t reg_name_right_align_at) {
     RegisterValue reg_value;
     if (!reg_ctx.ReadRegister(&reg_info, reg_value))
       return false;
@@ -139,7 +139,7 @@ public:
     DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
                       prefix_with_altname, m_format_options.GetFormat(),
                       reg_name_right_align_at,
-                      exe_ctx.GetBestExecutionContextScope(), print_flags,
+                      exe_ctx.GetBestExecutionContextScope(), print_type,
                       exe_ctx.GetTargetSP());
     if ((reg_info.encoding == eEncodingUint) ||
         (reg_info.encoding == eEncodingSint)) {
@@ -187,7 +187,7 @@ public:
 
         if (reg_info &&
             DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
-                         /*print_flags=*/false, reg_name_right_align_at))
+                         /*print_type=*/false, reg_name_right_align_at))
           ++available_count;
         else
           ++unavailable_count;
@@ -267,10 +267,9 @@ protected:
           if (const RegisterInfo *reg_info =
                   reg_ctx->GetRegisterInfoByName(arg_str)) {
             // If they have asked for a specific format don't obscure that by
-            // printing flags afterwards.
-            bool print_flags =
-                !m_format_options.GetFormatValue().OptionWasSet();
-            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info, print_flags,
+            // printing a structured value afterwards.
+            bool print_type = !m_format_options.GetFormatValue().OptionWasSet();
+            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info, print_type,
                               reg_name_right_align_at))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {

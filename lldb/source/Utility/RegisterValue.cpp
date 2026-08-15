@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/RegisterValue.h"
 
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -19,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <tuple>
@@ -33,6 +35,36 @@ using namespace lldb_private;
 
 bool RegisterValue::GetData(DataExtractor &data) const {
   return data.SetData(GetBytes(), GetByteSize(), GetByteOrder()) > 0;
+}
+
+bool RegisterValue::GetData(DataExtractor &data, const RegisterInfo &reg_info,
+                            lldb::ByteOrder byte_order) const {
+  DataExtractor source;
+  if (!GetData(source) || source.GetByteSize() < reg_info.byte_size)
+    return false;
+
+  const lldb::ByteOrder source_byte_order = source.GetByteOrder();
+  if ((source_byte_order != lldb::eByteOrderBig &&
+       source_byte_order != lldb::eByteOrderLittle) ||
+      (byte_order != lldb::eByteOrderBig &&
+       byte_order != lldb::eByteOrderLittle))
+    return false;
+
+  auto buffer_sp = std::make_shared<DataBufferHeap>(reg_info.byte_size, 0);
+  size_t source_offset = source_byte_order == lldb::eByteOrderBig
+                             ? source.GetByteSize() - reg_info.byte_size
+                             : 0;
+  const uint8_t *source_bytes = source.GetDataStart() + source_offset;
+  uint8_t *destination_bytes = buffer_sp->GetBytes();
+  if (source_byte_order == byte_order)
+    std::copy_n(source_bytes, reg_info.byte_size, destination_bytes);
+  else
+    std::reverse_copy(source_bytes, source_bytes + reg_info.byte_size,
+                      destination_bytes);
+
+  data.Clear();
+  data.SetByteOrder(byte_order);
+  return data.SetData(buffer_sp) == reg_info.byte_size;
 }
 
 uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,

@@ -10,7 +10,9 @@
 
 #include "RegisterTypeBuilderClang.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/bit.h"
 
 using namespace lldb_private;
 
@@ -32,6 +34,38 @@ RegisterTypeBuilderClang::CreateInstance(Target &target) {
 
 RegisterTypeBuilderClang::RegisterTypeBuilderClang(Target &target)
     : m_target(target) {}
+
+CompilerType RegisterTypeBuilderClang::BuildBuiltinType(
+    const RegisterTypeBuiltin *builtin_type, uint32_t available_byte_size,
+    lldb::TypeSystemClangSP type_system) {
+  if (auto type = GetExistingCompilerType(builtin_type, available_byte_size))
+    return *type;
+
+  CompilerType compiler_type;
+  clang::ASTContext &ast = type_system->getASTContext();
+  if (builtin_type->GetID() == "data_ptr" ||
+      builtin_type->GetID() == "code_ptr")
+    compiler_type = type_system->GetType(ast.VoidPtrTy);
+  else if (builtin_type->GetID() == "bfloat16")
+    compiler_type = type_system->GetType(ast.BFloat16Ty);
+  else if (builtin_type->GetID() == "ieee_half")
+    compiler_type = type_system->GetType(ast.HalfTy);
+  else if (builtin_type->GetID() == "bool")
+    compiler_type = type_system->GetType(ast.BoolTy);
+  else if (std::optional<uint64_t> byte_size = builtin_type->GetByteSize())
+    compiler_type = type_system->GetBuiltinTypeForEncodingAndBitSize(
+        builtin_type->GetEncoding(), *byte_size * 8);
+
+  if (!compiler_type.IsValid() ||
+      llvm::expectedToOptional(compiler_type.GetByteSize(nullptr)) !=
+          available_byte_size)
+    return {};
+
+  m_type_cache.try_emplace(
+      std::make_pair(builtin_type->GetUID(), available_byte_size),
+      compiler_type);
+  return compiler_type;
+}
 
 CompilerType
 RegisterTypeBuilderClang::BuildEnumType(const RegisterTypeEnum *enum_type_info,
@@ -110,6 +144,75 @@ CompilerType RegisterTypeBuilderClang::BuildFlagsType(
 }
 
 CompilerType
+RegisterTypeBuilderClang::BuildVectorType(const RegisterTypeVector *vector_type,
+                                          uint32_t available_byte_size,
+                                          lldb::TypeSystemClangSP type_system) {
+  if (!available_byte_size)
+    return {};
+  if (auto type = GetExistingCompilerType(vector_type, available_byte_size))
+    return *type;
+
+  std::optional<uint64_t> element_size =
+      vector_type->GetElementType()->GetByteSize();
+  if (!element_size) {
+    if (available_byte_size % vector_type->GetCount())
+      return {};
+    element_size = available_byte_size / vector_type->GetCount();
+  }
+  if (*element_size > UINT32_MAX ||
+      available_byte_size % vector_type->GetCount() ||
+      *element_size != available_byte_size / vector_type->GetCount())
+    return {};
+
+  CompilerType element_type;
+  const RegisterType *element_register_type = vector_type->GetElementType();
+  switch (element_register_type->getKind()) {
+  case RegisterType::eRegisterTypeKindBuiltin:
+    element_type =
+        BuildBuiltinType(llvm::cast<RegisterTypeBuiltin>(element_register_type),
+                         *element_size, type_system);
+    break;
+  case RegisterType::eRegisterTypeKindVector:
+    element_type =
+        BuildVectorType(llvm::cast<RegisterTypeVector>(element_register_type),
+                        *element_size, type_system);
+    break;
+  case RegisterType::eRegisterTypeKindEnum:
+  case RegisterType::eRegisterTypeKindFlags:
+    return {};
+  }
+  if (!element_type.IsValid())
+    return {};
+
+  const auto *builtin_element =
+      llvm::dyn_cast<RegisterTypeBuiltin>(element_register_type);
+  bool pointer_element =
+      builtin_element && (builtin_element->GetID() == "data_ptr" ||
+                          builtin_element->GetID() == "code_ptr");
+  bool use_vector = builtin_element && !pointer_element &&
+                    builtin_element->GetID() != "bool" &&
+                    llvm::has_single_bit(vector_type->GetCount());
+  CompilerType compiler_type = type_system->CreateArrayType(
+      element_type, vector_type->GetCount(), use_vector);
+
+  auto compiler_size =
+      llvm::expectedToOptional(compiler_type.GetByteSize(nullptr));
+  if (compiler_size != available_byte_size) {
+    compiler_type = type_system->CreateArrayType(
+        element_type, vector_type->GetCount(), /*is_vector=*/false);
+    compiler_size =
+        llvm::expectedToOptional(compiler_type.GetByteSize(nullptr));
+  }
+  if (compiler_size != available_byte_size)
+    return {};
+
+  m_type_cache.try_emplace(
+      std::make_pair(vector_type->GetUID(), available_byte_size),
+      compiler_type);
+  return compiler_type;
+}
+
+CompilerType
 RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
   lldb::TypeSystemClangSP type_system =
       ScratchTypeSystemClang::GetForTarget(m_target);
@@ -128,6 +231,10 @@ RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
   // methods may call each other (Flags may use Enums for example).
 
   switch (reg_info.register_type->getKind()) {
+  case RegisterType::eRegisterTypeKindBuiltin:
+    return BuildBuiltinType(
+        llvm::cast<RegisterTypeBuiltin>(reg_info.register_type),
+        reg_info.byte_size, type_system);
   case RegisterType::eRegisterTypeKindFlags:
     return BuildFlagsType(
         llvm::dyn_cast<RegisterTypeFlags>(reg_info.register_type),
@@ -135,6 +242,10 @@ RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
   case RegisterType::eRegisterTypeKindEnum:
     return BuildEnumType(
         llvm::dyn_cast<RegisterTypeEnum>(reg_info.register_type),
+        reg_info.byte_size, type_system);
+  case RegisterType::eRegisterTypeKindVector:
+    return BuildVectorType(
+        llvm::cast<RegisterTypeVector>(reg_info.register_type),
         reg_info.byte_size, type_system);
   }
 }

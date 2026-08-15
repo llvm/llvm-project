@@ -11,6 +11,7 @@
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
@@ -60,13 +61,26 @@ static void dump_type_value(const lldb_private::RegisterTypeFlags &flags_type,
     strm << "error: " << toString(std::move(error));
 }
 
+static void dump_type_value(lldb_private::CompilerType &type,
+                            const lldb_private::DataExtractor &data_extractor,
+                            lldb_private::ExecutionContextScope *exe_scope,
+                            lldb_private::Stream &strm) {
+  lldb::ValueObjectSP vobj_sp = lldb_private::ValueObjectConstResult::Create(
+      exe_scope, type, lldb_private::ConstString(), data_extractor);
+  lldb_private::DumpValueObjectOptions dump_options;
+  dump_options.SetHideRootType(true).SetShowSummary(false);
+
+  if (llvm::Error error = vobj_sp->Dump(strm, dump_options))
+    strm << "error: " << toString(std::move(error));
+}
+
 void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                                      const RegisterInfo &reg_info,
                                      bool prefix_with_name,
                                      bool prefix_with_alt_name, Format format,
                                      uint32_t reg_name_right_align_at,
                                      ExecutionContextScope *exe_scope,
-                                     bool print_flags, TargetSP target_sp) {
+                                     bool print_type, TargetSP target_sp) {
   DataExtractor data;
   if (!reg_val.GetData(data))
     return;
@@ -123,10 +137,14 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                     0,                    // item_bit_offset
                     exe_scope);
 
+  if (!print_type || !exe_scope || !target_sp)
+    return;
+
   const RegisterTypeFlags *flags_type =
       llvm::dyn_cast_if_present<RegisterTypeFlags>(reg_info.register_type);
-  if (!print_flags || !flags_type || !exe_scope || !target_sp ||
-      (reg_info.byte_size != 4 && reg_info.byte_size != 8))
+  const RegisterTypeVector *vector_type =
+      llvm::dyn_cast_if_present<RegisterTypeVector>(reg_info.register_type);
+  if (!flags_type && !vector_type)
     return;
 
   CompilerType register_compiler_type = target_sp->GetRegisterType(reg_info);
@@ -136,12 +154,27 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
   // Use a new stream so we can remove a trailing newline later.
   StreamString register_type_stream;
 
-  if (reg_info.byte_size == 4) {
-    dump_type_value(*flags_type, register_compiler_type, reg_val.GetAsUInt32(),
-                    exe_scope, register_type_stream);
+  if (flags_type) {
+    if (reg_info.byte_size == 4) {
+      dump_type_value(*flags_type, register_compiler_type,
+                      reg_val.GetAsUInt32(), exe_scope, register_type_stream);
+    } else if (reg_info.byte_size == 8) {
+      dump_type_value(*flags_type, register_compiler_type,
+                      reg_val.GetAsUInt64(), exe_scope, register_type_stream);
+    } else {
+      return;
+    }
   } else {
-    dump_type_value(*flags_type, register_compiler_type, reg_val.GetAsUInt64(),
-                    exe_scope, register_type_stream);
+    lldb::ProcessSP process_sp = exe_scope->CalculateProcess();
+    if (!process_sp)
+      return;
+
+    DataExtractor structured_data;
+    if (!reg_val.GetData(structured_data, reg_info, process_sp->GetByteOrder()))
+      return;
+    structured_data.SetAddressByteSize(process_sp->GetAddressByteSize());
+    dump_type_value(register_compiler_type, structured_data, exe_scope,
+                    register_type_stream);
   }
 
   // Registers are indented like:
@@ -151,8 +184,11 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
 
   // First drop the extra newline that the value printer added. The register
   // command will add one itself.
-  llvm::StringRef register_type_str =
-      register_type_stream.GetString().drop_back();
+  llvm::StringRef register_type_str = register_type_stream.GetString();
+  if (register_type_str.ends_with('\n'))
+    register_type_str = register_type_str.drop_back();
+  if (register_type_str.empty())
+    return;
 
   // End the line that contains "    foo = 0x12345678".
   s.EOL();
