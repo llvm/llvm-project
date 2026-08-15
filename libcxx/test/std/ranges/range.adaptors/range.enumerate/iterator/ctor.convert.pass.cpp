@@ -54,7 +54,7 @@ constexpr void test_SFINAE() {
   {
     std::ranges::enumerate_view v(NonSimpleCommon{buffer});
     auto iter1 = v.begin();
-    
+
     std::ranges::iterator_t<const decltype(v)> iter2 = iter1;
     assert(iter1 == iter2);
 
