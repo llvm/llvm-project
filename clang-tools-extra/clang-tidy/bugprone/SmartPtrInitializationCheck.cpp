@@ -158,10 +158,10 @@ std::string SmartPtrInitializationCheck::getRawPointerDescription(
 
   std::string Result = ExprType.getAsString(Policy);
 
-  size_t pos = Result.find(" *");
-  while (pos != std::string::npos) {
-    Result.erase(pos, 1); // remove the space
-    pos = Result.find(" *", pos);
+  size_t Pos = Result.find(" *");
+  while (Pos != std::string::npos) {
+    Result.erase(Pos, 1); // remove the space
+    Pos = Result.find(" *", Pos);
   }
 
   return Result;
