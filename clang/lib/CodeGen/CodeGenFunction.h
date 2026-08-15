@@ -1554,28 +1554,10 @@ private:
   /// decls.
   DeclMapTy LocalDeclMap;
 
-  /// Local variables carrying an amdgpu_pin_{vgpr,agpr} attribute, keyed by the
-  /// variable's storage pointer. Maps to (isAGPR, startRegNo). Every value
-  /// stored to such a variable is wrapped with llvm.amdgcn.pin.* so it is
-  /// register-pinned. \sa emitAMDGPUPinnedValue
-  llvm::DenseMap<llvm::Value *, std::pair<bool, unsigned>> AMDGPUPinnedLocals;
-
-  /// If \p Addr is a pinned local's storage, return \p V wrapped with the
-  /// appropriate llvm.amdgcn.pin.* intrinsic(s) (chunked for wide values);
-  /// otherwise return \p V unchanged.
-  llvm::Value *emitAMDGPUPinnedValue(llvm::Value *V, llvm::Value *Addr);
-
   /// Return \p V wrapped with llvm.amdgcn.pin.{vgpr,agpr} asking for the tuple
   /// starting at \p Reg, chunked into the widths the intrinsic has patterns
-  /// for. Shared by the amdgpu_pin_* attribute and the pin builtins.
+  /// for. Used by the pin builtins.
   llvm::Value *emitAMDGPUPin(llvm::Value *V, bool IsAGPR, unsigned Reg);
-
-  /// Record \p LV's storage as pinned storage when \p VD carries an
-  /// amdgpu_pin_{vgpr,agpr} attribute. The variable's own declaration registers
-  /// its alloca (\sa EmitAutoVarAlloca), but a by-reference capture reaches it
-  /// through the capture field of a different function, so the store address
-  /// never matches the alloca and the pin would be silently dropped.
-  void tryTrackAMDGPUPinnedCapture(const VarDecl *VD, const LValue &LV);
 
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
