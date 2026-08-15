@@ -202,7 +202,7 @@ TEST_F(CppBoundedBuffersTest, PointerField) {
 TEST_F(CppBoundedBuffersTest, ArrayOfPointers) {
   Captured C = run("int *a[10];",
                    [](ASTContext &Ctx) { return varEntity("a", Ctx); }, {1});
-  ASSERT_TRUE(C.Rewritten == "bounded_array<int *, 10> a;");
+  ASSERT_TRUE(C.Rewritten == "bounded_array<int *, 10>a;");
   EXPECT_TRUE(C.Reports.empty());
 }
 
