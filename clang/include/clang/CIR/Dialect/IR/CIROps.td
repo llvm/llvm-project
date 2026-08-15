@@ -6724,9 +6724,7 @@ def CIR_BitParityOp : CIR_BitOpBase<"parity", CIR_UIntOfWidths<[32, 64]>> {
   }];
 }
 
-def CIR_BitPopcountOp : CIR_BitOpBase<"popcount",
-  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
-> {
+def CIR_BitPopcountOp : CIR_BitOpBase<"popcount", CIR_AnyUIntType > {
   let summary = "Get the number of 1-bits in input";
   let description = [{
     Compute the number of 1-bits in the input.
