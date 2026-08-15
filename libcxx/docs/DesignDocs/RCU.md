@@ -195,7 +195,7 @@ The domain has few operations:
 `unlock`
 ^^^^^^^^
 
-- We need to decrement the nested level. 
+- Decrement the nested level. 
 - If the nested level becomes 0, it means the thread is now in a quiescent state, we can notify the waiting writer thread if there is any.
 
 `retire`
