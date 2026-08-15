@@ -1,4 +1,4 @@
-//===- SPSProxiesTest.cpp - Test SPS proxy round-trips --------------------===//
+//===- SPSProxySpecTest.cpp - Test SPS proxy round-trips ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,13 +8,13 @@
 //
 // End-to-end tests for the SPS proxies: that each Call*ProxySpec's dispatch
 // serializes its arguments, invokes the executor-side wrapper, and
-// deserializes the result. Generic rt::Proxy behavior (independent of the
+// deserializes the result. Generic Proxy behavior (independent of the
 // serialization protocol) is covered by ProxyTest.cpp.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/CallProxySpecs.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpec.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
+#include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -31,11 +31,11 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-namespace sps = llvm::orc::rt::sps;
-using llvm::orc::rt::CallInt32Int32Proxy;
-using llvm::orc::rt::CallInt32VoidProxy;
-using llvm::orc::rt::CallMainProxy;
-using llvm::orc::rt::CallVoidVoidProxy;
+namespace sps = llvm::orc::sps;
+using llvm::orc::CallInt32Int32Proxy;
+using llvm::orc::CallInt32VoidProxy;
+using llvm::orc::CallMainProxy;
+using llvm::orc::CallVoidVoidProxy;
 
 // Test "main" function. Returns argc plus the length of the first element of
 // argv (if argv is non-empty). Does not inspect argv entries beyond the first.
@@ -67,7 +67,7 @@ static CWrapperFunctionBuffer callMainWrapper(const char *ArgData,
 
 // Exercises argv marshaling: an argument vector is serialized, decoded by the
 // wrapper, and the int64_t result is deserialized.
-TEST(SPSProxiesTest, CallMainSyncViaDirectConstruction) {
+TEST(SPSProxySpecTest, CallMainSyncViaDirectConstruction) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   CallMainProxy CallMain(sps::CallMainProxySpec::dispatch,
@@ -92,7 +92,7 @@ TEST(SPSProxiesTest, CallMainSyncViaDirectConstruction) {
   cantFail(ES.endSession());
 }
 
-TEST(SPSProxiesTest, CallMainAsyncViaCallOperator) {
+TEST(SPSProxySpecTest, CallMainAsyncViaCallOperator) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   CallMainProxy CallMain(sps::CallMainProxySpec::dispatch,
@@ -128,7 +128,7 @@ static CWrapperFunctionBuffer callVoidVoidWrapper(const char *ArgData,
 
 // Exercises the void-return path (ErrorRetT == Error) and the empty argument
 // pack, through both the synchronous and asynchronous call operators.
-TEST(SPSProxiesTest, VoidVoidSyncAndAsync) {
+TEST(SPSProxySpecTest, VoidVoidSyncAndAsync) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   CallVoidVoidProxy Call(sps::CallVoidVoidProxySpec::dispatch,
@@ -169,7 +169,7 @@ static CWrapperFunctionBuffer callInt32Int32Wrapper(const char *ArgData,
 
 // Exercises a non-void proxy with an argument (so argument forwarding through
 // the pack is covered).
-TEST(SPSProxiesTest, Int32Int32Sync) {
+TEST(SPSProxySpecTest, Int32Int32Sync) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   CallInt32Int32Proxy Call(sps::CallInt32Int32ProxySpec::dispatch,
@@ -197,7 +197,7 @@ static CWrapperFunctionBuffer callInt32VoidWrapper(const char *ArgData,
 }
 
 // Exercises a non-void, zero-argument proxy.
-TEST(SPSProxiesTest, Int32VoidSync) {
+TEST(SPSProxySpecTest, Int32VoidSync) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   CallInt32VoidProxy Call(sps::CallInt32VoidProxySpec::dispatch,
@@ -227,12 +227,12 @@ struct ErrorFnCI {
   static constexpr char Name[] = "test_sps_error_fn";
   using SPSSig = SPSError(bool);
 };
-using ErrorFnProxy = rt::Proxy<Error(bool)>;
+using ErrorFnProxy = Proxy<Error(bool)>;
 using ErrorFnProxySpec = sps::ProxySpec<ErrorFnProxy, ErrorFnCI>;
 
 // Exercises the Error -> Error mapping across the SPS boundary, including a
 // failure reported by the executor-side function itself.
-TEST(SPSProxiesTest, ErrorReturn) {
+TEST(SPSProxySpecTest, ErrorReturn) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   ErrorFnProxy Call(ErrorFnProxySpec::dispatch,
@@ -263,12 +263,12 @@ struct ExpectedFnCI {
   static constexpr char Name[] = "test_sps_expected_fn";
   using SPSSig = SPSExpected<int32_t>(int32_t);
 };
-using ExpectedFnProxy = rt::Proxy<Expected<int32_t>(int32_t)>;
+using ExpectedFnProxy = Proxy<Expected<int32_t>(int32_t)>;
 using ExpectedFnProxySpec = sps::ProxySpec<ExpectedFnProxy, ExpectedFnCI>;
 
 // Exercises the Expected<T> -> Expected<T> (flattening) mapping across the SPS
 // boundary, for both the value and the executor-reported-error cases.
-TEST(SPSProxiesTest, ExpectedReturn) {
+TEST(SPSProxySpecTest, ExpectedReturn) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   ExpectedFnProxy Call(ExpectedFnProxySpec::dispatch,

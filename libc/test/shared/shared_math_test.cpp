@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "shared/math.h"
+#include "src/__support/FPUtil/float128.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+
+using LIBC_NAMESPACE::fputil::Float128;
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
@@ -576,6 +579,11 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
+// Emulated float128 tests
+TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
+  EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
+}
+
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllFloat128) {
@@ -621,7 +629,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16divf128(
                                   float128(4.0), float128(2.0)));
-  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::ceilf128(float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::copysignf128(
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(float128(0.0),

@@ -109,11 +109,6 @@ APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal) : BitWidth(numBits) {
   initFromArray(bigVal);
 }
 
-APInt::APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[])
-    : BitWidth(numBits) {
-  initFromArray(ArrayRef(bigVal, numWords));
-}
-
 APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
     : BitWidth(numbits) {
   fromString(numbits, Str, radix);

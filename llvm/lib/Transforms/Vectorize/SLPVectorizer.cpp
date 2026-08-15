@@ -1027,6 +1027,10 @@ public:
   /// during analysis.
   void reorderBottomToTop(bool IgnoreReorder = false);
 
+  /// Marks the schedule data of the copyable-modeled operands of \p TE for
+  /// dependency recalculation at the next bundle scheduling.
+  void markCopyableDepsForRecalc(TreeEntry &TE);
+
   /// \return The vector element size in bits to use when vectorizing the
   /// expression tree ending at \p V. If V is a store, the size is the width of
   /// the stored value. Otherwise, the size is the width of the largest loaded
@@ -4748,6 +4752,20 @@ private:
       return Res;
     }
 
+    /// Reordering \p TE permutes its operand columns and may move an operand
+    /// between the edges covered and not covered by copyable scheduling
+    /// data, making the computed dependency counts stale. Mark the schedule
+    /// data of \p TE's copyable-modeled operands for recalculation at the
+    /// next bundle scheduling.
+    void markCopyableDepsForRecalc(const TreeEntry &TE) {
+      for (unsigned OpIdx : seq<unsigned>(TE.getNumOperands()))
+        for (Value *V : TE.getOperand(OpIdx))
+          if (auto *I = dyn_cast<Instruction>(V))
+            if (ScheduleData *SD = getScheduleData(I);
+                SD && !getScheduleCopyableData(I).empty())
+              RecalcCopyableOperandDeps.insert(SD);
+    }
+
     ScheduleCopyableData &addScheduleCopyableData(const EdgeInfo &EI,
                                                   Instruction *I,
                                                   int SchedulingRegionID,
@@ -7899,6 +7917,14 @@ void BoUpSLP::TreeEntry::reorderSplitNode(unsigned Idx, ArrayRef<int> Mask,
     ReorderIndices.clear();
 }
 
+void BoUpSLP::markCopyableDepsForRecalc(TreeEntry &TE) {
+  if (!TE.hasState())
+    return;
+  if (auto It = BlocksSchedules.find(TE.getMainOp()->getParent());
+      It != BlocksSchedules.end())
+    It->second->markCopyableDepsForRecalc(TE);
+}
+
 void BoUpSLP::reorderTopToBottom() {
   // Maps VF to the graph nodes.
   DenseMap<unsigned, SetVector<TreeEntry *>> VFToOrderedEntries;
@@ -8179,11 +8205,15 @@ void BoUpSLP::reorderTopToBottom() {
         // Build correct orders for extract{element,value}, loads,
         // stores and alternate (split) nodes.
         reorderOrder(TE->ReorderIndices, Mask);
-        if (isa<InsertElementInst, InsertValueInst, StoreInst>(TE->getMainOp()))
+        if (isa<InsertElementInst, InsertValueInst, StoreInst>(
+                TE->getMainOp())) {
           TE->reorderOperands(Mask);
+          markCopyableDepsForRecalc(*TE);
+        }
       } else {
         // Reorder the node and its operands.
         TE->reorderOperands(Mask);
+        markCopyableDepsForRecalc(*TE);
         assert(TE->ReorderIndices.empty() &&
                "Expected empty reorder sequence.");
         reorderScalars(TE->Scalars, Mask);
@@ -8401,6 +8431,15 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
         continue;
       }
+      // Do not move the operand order to the root PHI node when the root
+      // order must be preserved: the root has no user to take over the order
+      // and it cannot be dropped at the end of the reordering.
+      if (!IgnoreReorder && Data.first == VectorizableTree.front().get() &&
+          !Data.first->UserTreeIndex &&
+          Data.first->State == TreeEntry::Vectorize &&
+          Data.first->getOpcode() == Instruction::PHI &&
+          Data.first->ReuseShuffleIndices.empty())
+        continue;
       // Check that operands are used only in the User node.
       SmallVector<TreeEntry *> GatherOps;
       buildReorderableOperands(Data.first, Data.second, NonVectorized,
@@ -8683,8 +8722,10 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       if (Data.first->State != TreeEntry::Vectorize ||
           !isa<ExtractElementInst, ExtractValueInst, LoadInst>(
               Data.first->getMainOp()) ||
-          IsNotProfitableAltCodeNode(*Data.first))
+          IsNotProfitableAltCodeNode(*Data.first)) {
         Data.first->reorderOperands(Mask);
+        markCopyableDepsForRecalc(*Data.first);
+      }
       if (!isa<InsertElementInst, InsertValueInst, StoreInst>(
               Data.first->getMainOp()) ||
           IsNotProfitableAltCodeNode(*Data.first) ||
@@ -26499,8 +26540,14 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // previously scheduled bundle. The node that introduced the extra direct
     // use is now part of the tree, so clearing and recalculating the
     // dependencies here accounts for that use.
+    // If the schedule is not reset in this round, skip already scheduled
+    // operands: clearing their dependencies also resets the scheduled flag,
+    // so they would enter the ready list and be scheduled twice, decrementing
+    // the dependency counts of their operands once too many.
+    const bool WillReSchedule =
+        ReSchedule || (OldScheduleEnd && ScheduleEnd != OldScheduleEnd);
     for (ScheduleData *SD : RecalcCopyableOperandDeps) {
-      if (!isInSchedulingRegion(*SD))
+      if (!isInSchedulingRegion(*SD) || (!WillReSchedule && SD->isScheduled()))
         continue;
       if (SD->hasValidDependencies())
         SD->clearDirectDependencies();

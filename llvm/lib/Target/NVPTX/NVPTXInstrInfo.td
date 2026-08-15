@@ -174,9 +174,9 @@ def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
 
 def hasTcgen05MMAScaleInputDImm : PredOr<[SM100f]>;
 def hasTcgen05MMAI8Kind : PredOr<[SM100a, SM110a]>;
-def hasTcgen05MMASparseMxf4 : PredOr<[SM100a, SM103a, SM110a]>;
+def hasTcgen05MMASparseMxf4 : PredOr<[SM100a, SM103a, SM110a, SM107a]>;
 def hasTcgen05MMASparseMxf4nvf4
-  : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM110a]>]>;
+  : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM110a, SM107a]>]>;
 def hasTcgen05LdRedSupport : PredAnd<[PTX88, PredOr<[SM103f, SM110f]>]>;
 
 def hasReduxSyncF32 : PredOr<[SM100f]>;

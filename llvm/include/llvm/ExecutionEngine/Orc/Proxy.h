@@ -1,4 +1,4 @@
-//===------- Proxy.h - Runtime-agnostic executor call APIs ------*- C++ -*-===//
+//===------- Proxy.h - Protocol-agnostic executor call APIs -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Runtime-agnostic interfaces for invoking executor-side operations. These
+// Protocol-agnostic interfaces for invoking executor-side operations. These
 // abstract over how a call reaches the executor, so clients can be written
 // once and used whether the operation is provided by a full ORC runtime or by
-// LLVM's own ORC-runtime-lite. Concrete implementations live in subdirectories
-// (e.g. RTBridge/SPS).
+// LLVM's own ORC-runtime-lite.
 //
-// This header provides only the core Proxy machinery. Named proxies for
-// specific operation families live in sibling headers (e.g. CallProxies.h,
-// MemoryAccessProxies.h).
+// This header provides only the core Proxy machinery. A Proxy's dispatch
+// function is supplied by a spec for some concrete protocol -- see
+// SPSProxySpec.h for the Simple Packed Serialization implementation. Named
+// proxies for specific operation families live alongside the utilities that use
+// them (e.g. CallProxies.h, EPCGenericMemoryAccess.h).
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_PROXY_H
-#define LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_PROXY_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_PROXY_H
+#define LLVM_EXECUTIONENGINE_ORC_PROXY_H
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -30,7 +31,7 @@
 #include <future>
 #include <type_traits>
 
-namespace llvm::orc::rt {
+namespace llvm::orc {
 
 class ProxyBase {
 public:
@@ -83,7 +84,7 @@ template <typename T> struct ProxyRetPromise<Expected<T>> {
 
 } // namespace detail
 
-/// Runtime-agnostic interface for invoking an executor-side operation with the
+/// Protocol-agnostic interface for invoking an executor-side operation with the
 /// signature RetT(ArgTs...).
 ///
 /// Two call operators are provided: an asynchronous form that delivers the
@@ -91,7 +92,7 @@ template <typename T> struct ProxyRetPromise<Expected<T>> {
 /// until the result is available.
 ///
 /// A Proxy abstracts over how the operation is dispatched to the executor. Its
-/// dispatch function is supplied by a spec (e.g. rt::sps::ProxySpec).
+/// dispatch function is supplied by a spec (e.g. sps::ProxySpec).
 template <typename RetT, typename... ArgTs>
 class Proxy<RetT(ArgTs...)> : public ProxyBase {
 public:
@@ -204,6 +205,6 @@ Error buildProxies(JITDylib &JD, ProxyInit<FnT> PI, ProxyInit<FnTs>... PIs) {
   return buildProxies(JD, PIs...);
 }
 
-} // namespace llvm::orc::rt
+} // namespace llvm::orc
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_PROXY_H
+#endif // LLVM_EXECUTIONENGINE_ORC_PROXY_H

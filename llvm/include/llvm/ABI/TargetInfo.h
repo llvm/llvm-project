@@ -91,11 +91,22 @@ enum class X86AVXABILevel {
   None,
   AVX,
   AVX512,
+  Last = AVX512 // must be last
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo>
 createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
                        bool Has64BitPointers, const ABICompatInfo &Compat);
+
+enum class AArch64ABIKind {
+  AAPCS = 0,
+  DarwinPCS,
+  Win64,
+  AAPCSSoft,
+};
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createAArch64TargetInfo(TypeBuilder &TB, AArch64ABIKind Kind);
 
 } // namespace abi
 } // namespace llvm

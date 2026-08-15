@@ -3852,6 +3852,16 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
               Warn(common::UsageWarning::IgnoredNoReallocateLHS,
                   "-fno-realloc-lhs is ignored for assignment to polymorphic allocatable"_warn_en_US);
             }
+            const Expr<SomeType> &rhs{analyzer.GetExpr(1)};
+            if (auto rhsType{rhs.GetType()}) {
+              if (const auto *rhsDerived{GetDerivedTypeSpec(*rhsType)}) {
+                if (rhsDerived->IsVectorType()) {
+                  Say(rhsExpr.source,
+                      "Vector type '%s' may not be used as the right-hand side of a polymorphic intrinsic assignment"_err_en_US,
+                      rhsType->AsFortran());
+                }
+              }
+            }
           }
           if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
             if (auto iter{FindAllocatableUltimateComponent(*derived)}) {

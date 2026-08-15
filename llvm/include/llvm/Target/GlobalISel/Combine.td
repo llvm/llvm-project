@@ -947,6 +947,20 @@ def redundant_sext_inreg: GICombineRule <
      (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
+// Convert G_SEXT_INREG(G_ZEXT) -> G_SEXT
+class redundant_ext_sext_inreg<Instruction Ext>: GICombineRule <
+  (defs root:$root),
+  (match (Ext $tmp, $src),
+         (G_SEXT_INREG $dst, $tmp, $amt):$root,
+         [{ LLT SrcTy = MRI.getType(${src}.getReg());
+            return ${amt}.getImm() <= SrcTy.getScalarSizeInBits() &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                   (SrcTy.getScalarSizeInBits() - ${amt}.getImm() + 1); }]),
+  (apply (G_SEXT $dst, $src))
+>;
+def redundant_zext_sext_inreg : redundant_ext_sext_inreg<G_ZEXT>;
+def redundant_aext_sext_inreg : redundant_ext_sext_inreg<G_ANYEXT>;
+
 // Fold (anyext (trunc x)) -> x if the source type is same as
 // the destination type.
 def anyext_trunc_fold: GICombineRule <
@@ -2609,8 +2623,8 @@ def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      combine_minmax_nan, expand_const_fpowi]>;
 
 def known_bits_simplifications : GICombineGroup<[
-  redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
-  zext_trunc_fold,
+  redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
+  redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
   sext_inreg_to_zext_inreg]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend,

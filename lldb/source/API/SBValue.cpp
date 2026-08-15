@@ -999,9 +999,9 @@ lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
   // IsValid means that the SBValue has a value in it.  But that's not the
   // only time that ValueObjects are useful.  We also want to return the value
   // if there's an error state in it.
-  if (!m_opaque_sp || (!m_opaque_sp->IsValid()
-      && (m_opaque_sp->GetRootSP()
-          && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid() &&
+                       (m_opaque_sp->GetRootSP() &&
+                        !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError() = Status::FromErrorString("No value");
     return ValueObjectSP();
   }
@@ -1131,7 +1131,6 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
     return SBValue();
   }
 
-
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp) {
@@ -1143,7 +1142,8 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
     return SBValue();
   }
 
-  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+  TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
   ExecutionContext exe_ctx(target_sp.get());
 
   StackFrame *frame = exe_ctx.GetFramePtr();

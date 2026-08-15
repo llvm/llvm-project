@@ -931,7 +931,13 @@ function(add_libc_hermetic test_name)
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1
       ${link_libraries}
+      ${fq_target_name}.__libc__
       LibcHermeticTestSupport.hermetic
+      # Working around dependency issues caused by compiler introduced libcalls.
+      # We need to repeat the libc target so that we can resolve libcalls which
+      # pull in functions from LibcHermeticTestSupport (which then foward to
+      # internal implementations).
+      # TODO: clean this up
       ${fq_target_name}.__libc__
       ${compiler_runtime}
   )

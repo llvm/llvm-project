@@ -471,6 +471,30 @@ struct ImplicitDefMatch {
 
 inline ImplicitDefMatch m_GImplicitDef() { return ImplicitDefMatch(); }
 
+/// Matches a G_CONSTANT and binds the defining instruction. Unlike m_ICst, this
+/// returns the instruction (not the value) and does not look through vector
+/// splats.
+template <typename Class> struct GConstantMatch {
+  Class *&Inst;
+
+  GConstantMatch(Class *&Inst) : Inst(Inst) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (mi_match(Reg, MRI, m_MInstr(TmpMI))) {
+      if (auto *Cst = dyn_cast<Class>(TmpMI)) {
+        Inst = Cst;
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+inline GConstantMatch<GConstant> m_GConstant(GConstant *&Inst) { return Inst; }
+inline GConstantMatch<const GConstant> m_GConstant(const GConstant *&Inst) {
+  return Inst;
+}
+
 // Helper for matching G_FCONSTANT
 inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
 

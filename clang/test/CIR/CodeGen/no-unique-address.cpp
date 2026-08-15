@@ -236,6 +236,6 @@ OuterAllEmpty oae;
 // CIR-NUA-DAG: !rec_OuterAllEmpty = !cir.struct<"OuterAllEmpty" {data !cir.bool}>
 // CIR-NUA-DAG: cir.global external @oae = #cir.zero : !rec_OuterAllEmpty
 
-// CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {data !rec_EmptyForNUA, data !s32i}>
+// CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {empty !rec_EmptyForNUA, data !s32i}>
 // CIR-NUA-DAG: !rec_OuterZeroData = !cir.struct<"OuterZeroData" {data !rec_UnionZeroDataSize, data !cir.bool}>
 // CIR-NUA-DAG: cir.global external @ozd = #cir.zero : !rec_OuterZeroData

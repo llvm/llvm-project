@@ -1,4 +1,4 @@
-//===- ProxyTest.cpp - Test rt::Proxy -------------------------------------===//
+//===- ProxyTest.cpp - Test Proxy -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests for rt::Proxy that are independent of any serialization protocol.
+// Tests for Proxy that are independent of any serialization protocol.
 // A trivial in-process dispatch (interpreting the callee address as a local
 // function pointer, no serialization) is used throughout -- this exercises the
 // Proxy plumbing directly and demonstrates that Proxy is protocol-agnostic.
-// The SPS protocol itself is tested in SPSProxiesTest.cpp.
+// The SPS protocol itself is tested in SPSProxySpecTest.cpp.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/RTBridge/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -33,13 +33,12 @@ namespace {
 int32_t addOne(int32_t X) { return X + 1; }
 
 // A protocol-free dispatch: interpret the callee address as a local function
-// pointer and call it directly. This drives rt::Proxy without any
+// pointer and call it directly. This drives Proxy without any
 // serialization, so the tests exercise Proxy's own logic (result plumbing,
 // operator bool, lookup) rather than a particular protocol.
 template <typename RetT, typename... ArgTs>
 void inProcessDispatch(
-    unique_function<void(typename rt::Proxy<RetT(ArgTs...)>::ErrorRetT)>
-        OnComplete,
+    unique_function<void(typename Proxy<RetT(ArgTs...)>::ErrorRetT)> OnComplete,
     ExecutionSession &ES, ExecutorAddr Callee, const ArgTs &...Args) {
   auto *Fn = Callee.toPtr<RetT(ArgTs...)>();
   if constexpr (std::is_void_v<RetT>) {
@@ -49,7 +48,7 @@ void inProcessDispatch(
     OnComplete(Fn(Args...));
 }
 
-using AddOneProxy = rt::Proxy<int32_t(int32_t)>;
+using AddOneProxy = Proxy<int32_t(int32_t)>;
 constexpr AddOneProxy::DispatchFn AddOneDispatch =
     &inProcessDispatch<int32_t, int32_t>;
 
@@ -61,7 +60,7 @@ Error maybeFail(bool ShouldFail) {
                                    inconvertibleErrorCode());
   return Error::success();
 }
-using MaybeFailProxy = rt::Proxy<Error(bool)>;
+using MaybeFailProxy = Proxy<Error(bool)>;
 constexpr MaybeFailProxy::DispatchFn MaybeFailDispatch =
     &inProcessDispatch<Error, bool>;
 
@@ -73,7 +72,7 @@ Expected<int32_t> addOneOrFail(int32_t Arg) {
                                    inconvertibleErrorCode());
   return Arg + 1;
 }
-using AddOneOrFailProxy = rt::Proxy<Expected<int32_t>(int32_t)>;
+using AddOneOrFailProxy = Proxy<Expected<int32_t>(int32_t)>;
 constexpr AddOneOrFailProxy::DispatchFn AddOneOrFailDispatch =
     &inProcessDispatch<Expected<int32_t>, int32_t>;
 
@@ -82,11 +81,11 @@ constexpr AddOneOrFailProxy::DispatchFn AddOneOrFailDispatch =
 //         Error -> Error
 //             T -> Expected<T>
 //   Expected<T> -> Expected<T>
-static_assert(std::is_same_v<rt::Proxy<void(int)>::ErrorRetT, Error>);
-static_assert(std::is_same_v<rt::Proxy<Error(int)>::ErrorRetT, Error>);
-static_assert(std::is_same_v<rt::Proxy<int(int)>::ErrorRetT, Expected<int>>);
+static_assert(std::is_same_v<Proxy<void(int)>::ErrorRetT, Error>);
+static_assert(std::is_same_v<Proxy<Error(int)>::ErrorRetT, Error>);
+static_assert(std::is_same_v<Proxy<int(int)>::ErrorRetT, Expected<int>>);
 static_assert(
-    std::is_same_v<rt::Proxy<Expected<int>(int)>::ErrorRetT, Expected<int>>);
+    std::is_same_v<Proxy<Expected<int>(int)>::ErrorRetT, Expected<int>>);
 
 // A minimal ProxySpec-shaped type (static dispatch + Name) for exercising the
 // proxyInit / buildProxies client path without depending on a protocol.
@@ -220,7 +219,7 @@ TEST(ProxyTest, BuildProxies) {
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
-  cantFail(rt::buildProxies(ES, rt::proxyInit<AddOneSpec>(&Call)));
+  cantFail(buildProxies(ES, proxyInit<AddOneSpec>(&Call)));
   ASSERT_TRUE(static_cast<bool>(Call));
 
   Expected<int32_t> R = Call(ES, 41);
@@ -241,8 +240,8 @@ TEST(ProxyTest, BuildProxiesExplicitDispatch) {
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
-  cantFail(rt::buildProxies(
-      ES, rt::proxyInit(&Call, AddOneDispatch, AddOneSpec::Name)));
+  cantFail(
+      buildProxies(ES, proxyInit(&Call, AddOneDispatch, AddOneSpec::Name)));
   ASSERT_TRUE(static_cast<bool>(Call));
 
   Expected<int32_t> R = Call(ES, 41);
@@ -265,8 +264,7 @@ TEST(ProxyTest, BuildProxiesSpecNameOverride) {
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
-  cantFail(
-      rt::buildProxies(ES, rt::proxyInit<AddOneSpec>(&Call, "add_one_alias")));
+  cantFail(buildProxies(ES, proxyInit<AddOneSpec>(&Call, "add_one_alias")));
   ASSERT_TRUE(static_cast<bool>(Call));
 
   Expected<int32_t> R = Call(ES, 41);
@@ -282,9 +280,9 @@ TEST(ProxyTest, BuildProxiesWeaklyReferencedAbsent) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   AddOneProxy Call;
-  cantFail(rt::buildProxies(
-      ES, rt::proxyInit<AddOneSpec>(
-              &Call, SymbolLookupFlags::WeaklyReferencedSymbol)));
+  cantFail(buildProxies(
+      ES,
+      proxyInit<AddOneSpec>(&Call, SymbolLookupFlags::WeaklyReferencedSymbol)));
   EXPECT_FALSE(static_cast<bool>(Call));
 
   cantFail(ES.endSession());
