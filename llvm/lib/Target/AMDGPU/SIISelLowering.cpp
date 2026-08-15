@@ -18888,12 +18888,6 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return getCanonicalConstantFP(DCI.DAG, SDLoc(N), N->getValueType(0), F);
 }
 
-/// Check if a value is a positive or negative infinity constant.
-static bool isInfinityFPConstant(SDValue V) {
-  auto *CFP = dyn_cast<ConstantFPSDNode>(V);
-  return CFP && CFP->getValueAPF().isInfinity();
-}
-
 SDValue
 SITargetLowering::performFrexpSelectCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
@@ -18905,34 +18899,46 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
   SDValue TrueVal = N->getOperand(1);
   SDValue FalseVal = N->getOperand(2);
 
-  // Determine which value is 0 and which might be the frexp result.
+  // Identify which operand is the frexp result and which is the zero constant.
   // Pattern 1: select cond, 0, frexp_result (cond true -> return 0)
   // Pattern 2: select cond, frexp_result, 0 (cond false -> return 0)
-  // Only check FP zero - frexp returns FP or integer, handle separately.
   SDValue FrexpVal;
+  SDValue ZeroVal;
   bool CondSelectsZero; // If true, condition=true selects zero
 
-  bool TrueIsFPZero = isNullFPConstant(TrueVal);
-  bool FalseIsFPZero = isNullFPConstant(FalseVal);
-  bool TrueIsIntZero = isNullConstant(TrueVal);
-  bool FalseIsIntZero = isNullConstant(FalseVal);
+  // Check if FrexpVal comes from ISD::FFREXP or amdgcn_frexp_exp/mant intrinsics.
+  SDValue FrexpInput;
+  auto isFrexp = [&FrexpInput](SDValue V) {
+    if (V.getOpcode() == ISD::FFREXP) {
+      FrexpInput = V.getOperand(0);
+      return true;
+    }
+    if (sd_match(V, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_exp>(
+                        m_Value(FrexpInput))) ||
+        sd_match(V, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_mant>(
+                        m_Value(FrexpInput))))
+      return true;
+    return false;
+  };
 
-  if (TrueIsFPZero || TrueIsIntZero) {
+  if (isFrexp(FalseVal)) {
     FrexpVal = FalseVal;
+    ZeroVal = TrueVal;
     CondSelectsZero = true;
-  } else if (FalseIsFPZero || FalseIsIntZero) {
+  } else if (isFrexp(TrueVal)) {
     FrexpVal = TrueVal;
+    ZeroVal = FalseVal;
     CondSelectsZero = false;
   } else {
     return SDValue();
   }
 
-  // Check if FrexpVal comes from amdgcn_frexp_exp or amdgcn_frexp_mant.
-  SDValue FrexpInput;
-  if (!sd_match(FrexpVal, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_exp>(
-                              m_Value(FrexpInput))) &&
-      !sd_match(FrexpVal, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_mant>(
-                              m_Value(FrexpInput))))
+  // Check for the appropriate zero type based on frexp result type.
+  // frexp_mant returns FP, frexp_exp returns integer.
+  bool IsZero = FrexpVal.getValueType().isFloatingPoint()
+                    ? isNullFPConstant(ZeroVal)
+                    : isNullConstant(ZeroVal);
+  if (!IsZero)
     return SDValue();
 
   // The frexp intrinsics ignore sign, so we can strip sign ops when comparing.
@@ -18940,69 +18946,44 @@ SITargetLowering::performFrexpSelectCombine(SDNode *N,
 
   bool IsNonFiniteTest = false;
 
-  // Handle AMDGPUISD::FP_CLASS or ISD::IS_FPCLASS conditions.
-  // These test specific floating-point classes using a bitmask.
-  if (Cond.getOpcode() == AMDGPUISD::FP_CLASS ||
-      Cond.getOpcode() == ISD::IS_FPCLASS) {
-    SDValue ClassInput = Cond.getOperand(0);
-    SDValue ClassInputStripped = peekFPSignOps(ClassInput);
-
-    if (ClassInputStripped != FrexpInputStripped)
-      return SDValue();
-
-    auto *MaskNode = dyn_cast<ConstantSDNode>(Cond.getOperand(1));
-    if (!MaskNode)
-      return SDValue();
-
-    unsigned Mask = MaskNode->getZExtValue();
-
-    // fcFinite = all finite classes (not inf, not nan)
-    // If the mask tests for finite values and selects frexp when true,
-    // we can fold away the select since frexp returns 0 for non-finite.
-    constexpr unsigned fcFinite =
-        0x1F8; // fcPosNormal|fcNegNormal|fcPosSubnormal|fcNegSubnormal|fcPosZero|fcNegZero
-    constexpr unsigned fcInfNan = 0x207; // fcPosInf|fcNegInf|fcSNan|fcQNan
-
-    if (Mask == fcFinite) {
-      // is_fpclass(x, finite) selects frexp when x is finite
-      // frexp already returns 0 for non-finite, so select frexp, 0 -> frexp
-      IsNonFiniteTest = !CondSelectsZero;
-    } else if (Mask == fcInfNan || Mask == 0x3 || Mask == 0x204) {
-      // is_fpclass(x, inf|nan) or is_fpclass(x, nan) or is_fpclass(x, inf)
-      // selects 0 when x is non-finite
-      IsNonFiniteTest = CondSelectsZero;
-    }
-  } else if (Cond.getOpcode() == ISD::SETCC) {
-    // Handle SETCC conditions for inf/nan tests.
+  // Handle SETCC conditions for inf/nan tests.
+  // The canonical form of these checks is fcmp + fabs.
+  if (Cond.getOpcode() == ISD::SETCC) {
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
     SDValue CondLHS = Cond.getOperand(0);
     SDValue CondRHS = Cond.getOperand(1);
-    SDValue CondLHSStripped = peekFPSignOps(CondLHS);
+
+    // Check if LHS is fabs(FrexpInput) - required for infinity comparisons.
+    SDValue FAbsInput;
+    bool LHSIsFabs = sd_match(CondLHS, m_FAbs(m_Value(FAbsInput)));
+    bool LHSMatchesFrexp =
+        (CondLHS == FrexpInput) ||
+        (LHSIsFabs && peekFPSignOps(FAbsInput) == FrexpInputStripped) ||
+        (peekFPSignOps(CondLHS) == FrexpInputStripped);
+    bool RHSMatchesFrexp =
+        (CondRHS == FrexpInput) ||
+        (peekFPSignOps(CondRHS) == FrexpInputStripped);
 
     if (CC == ISD::SETUO) {
       // fcmp uno x, y - true if either x or y is NaN
-      SDValue CondRHSStripped = peekFPSignOps(CondRHS);
-      if (CondLHSStripped == FrexpInputStripped ||
-          CondRHSStripped == FrexpInputStripped) {
+      if (LHSMatchesFrexp || RHSMatchesFrexp)
         IsNonFiniteTest = CondSelectsZero;
-      }
     } else if ((CC == ISD::SETOEQ || CC == ISD::SETUEQ) &&
-               isInfinityFPConstant(CondRHS)) {
-      // fcmp oeq/ueq |x|, inf - true if x is inf (or inf/nan for ueq)
-      if (CondLHSStripped == FrexpInputStripped)
-        IsNonFiniteTest = CondSelectsZero;
+               LHSMatchesFrexp && LHSIsFabs &&
+               sd_match(CondRHS, m_SpecificFP(APFloat::getInf(
+                   CondRHS.getValueType().getFltSemantics())))) {
+      // fcmp oeq/ueq fabs(x), +inf - true if x is inf (or inf/nan for ueq)
+      IsNonFiniteTest = CondSelectsZero;
     } else if ((CC == ISD::SETONE || CC == ISD::SETUNE) &&
-               isInfinityFPConstant(CondRHS)) {
-      // fcmp one/une |x|, inf - true if x is NOT inf
-      if (CondLHSStripped == FrexpInputStripped)
-        IsNonFiniteTest = !CondSelectsZero;
+               LHSMatchesFrexp && LHSIsFabs &&
+               sd_match(CondRHS, m_SpecificFP(APFloat::getInf(
+                   CondRHS.getValueType().getFltSemantics())))) {
+      // fcmp one/une fabs(x), +inf - true if x is NOT inf
+      IsNonFiniteTest = !CondSelectsZero;
     } else if (CC == ISD::SETO) {
       // fcmp ord x, y - true if both are NOT NaN
-      SDValue CondRHSStripped = peekFPSignOps(CondRHS);
-      if (CondLHSStripped == FrexpInputStripped ||
-          CondRHSStripped == FrexpInputStripped) {
+      if (LHSMatchesFrexp || RHSMatchesFrexp)
         IsNonFiniteTest = !CondSelectsZero;
-      }
     }
   }
 
