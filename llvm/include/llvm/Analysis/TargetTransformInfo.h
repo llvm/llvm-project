@@ -1325,6 +1325,12 @@ public:
   /// \return the number of registers in the target-provided register class.
   LLVM_ABI unsigned getNumberOfRegisters(unsigned ClassID) const;
 
+  /// Return the number of registers in the target-provided register class at
+  /// which spill costs should be applied, or std::nullopt if the physical
+  /// spill threshold is unknown.
+  LLVM_ABI std::optional<unsigned>
+  getRegisterClassSpillThreshold(unsigned ClassID) const;
+
   /// \return true if the target supports load/store that enables fault
   /// suppression of memory operands when the source condition is false.
   LLVM_ABI bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const;

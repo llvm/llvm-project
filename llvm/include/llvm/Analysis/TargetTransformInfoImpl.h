@@ -612,6 +612,13 @@ public:
   }
 
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
+  virtual std::optional<unsigned>
+  getRegisterClassSpillThreshold(unsigned ClassID) const {
+    unsigned NumRegs = getNumberOfRegisters(ClassID);
+    if (NumRegs == 0)
+      return std::nullopt;
+    return NumRegs;
+  }
   virtual bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
     return false;
   }

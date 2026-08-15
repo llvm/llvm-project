@@ -83,13 +83,14 @@ VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
                            unsigned OverrideMaxNumRegs) const {
   InstructionCost Cost;
   for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
-    unsigned AvailableRegs = OverrideMaxNumRegs > 0
-                                 ? OverrideMaxNumRegs
-                                 : TTI.getNumberOfRegisters(RegClass);
-    if (MaxUsers > AvailableRegs) {
+    std::optional<unsigned> SpillThreshold =
+        OverrideMaxNumRegs > 0
+            ? std::optional<unsigned>(OverrideMaxNumRegs)
+            : TTI.getRegisterClassSpillThreshold(RegClass);
+    if (SpillThreshold && MaxUsers > *SpillThreshold) {
       // Assume that for each register used past what's available we get one
       // spill and reload.
-      unsigned Spills = MaxUsers - AvailableRegs;
+      unsigned Spills = MaxUsers - *SpillThreshold;
       InstructionCost SpillCost =
           TTI.getRegisterClassSpillCost(RegClass, CostKind) +
           TTI.getRegisterClassReloadCost(RegClass, CostKind);

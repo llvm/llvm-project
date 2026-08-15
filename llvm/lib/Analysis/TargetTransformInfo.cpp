@@ -806,6 +806,11 @@ unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
 }
 
+std::optional<unsigned>
+TargetTransformInfo::getRegisterClassSpillThreshold(unsigned ClassID) const {
+  return TTIImpl->getRegisterClassSpillThreshold(ClassID);
+}
+
 bool TargetTransformInfo::hasConditionalLoadStoreForType(Type *Ty,
                                                          bool IsStore) const {
   return TTIImpl->hasConditionalLoadStoreForType(Ty, IsStore);

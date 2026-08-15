@@ -41,8 +41,9 @@ struct VPRegisterUsage {
   SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
 
   /// Calculate the estimated cost of any spills due to using more registers
-  /// than the number available for the target. If non-zero, OverrideMaxNumRegs
-  /// is used in place of the target's number of registers.
+  /// than the target's known spill threshold. No cost is added if the target
+  /// does not provide a threshold. If non-zero, OverrideMaxNumRegs is used in
+  /// place of the target's threshold.
   InstructionCost spillCost(const TargetTransformInfo &TTI,
                             TargetTransformInfo::TargetCostKind CostKind,
                             unsigned OverrideMaxNumRegs = 0) const;

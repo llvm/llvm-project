@@ -16662,10 +16662,11 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
   }
 
   for (auto [RegClass, UsedRegs] : PressureByClass) {
-    const unsigned NumAvailRegs = TTI->getNumberOfRegisters(RegClass);
-    if (NumAvailRegs == 0 || UsedRegs <= NumAvailRegs)
+    std::optional<unsigned> SpillThreshold =
+        TTI->getRegisterClassSpillThreshold(RegClass);
+    if (!SpillThreshold || UsedRegs <= *SpillThreshold)
       continue;
-    const unsigned SpillCount = UsedRegs - NumAvailRegs;
+    const unsigned SpillCount = UsedRegs - *SpillThreshold;
     InstructionCost SingleRegSpillReload =
         TTI->getRegisterClassReloadCost(RegClass, CostKind);
     // No need to spill cost only for the root entry (Idx == 0), for reduction

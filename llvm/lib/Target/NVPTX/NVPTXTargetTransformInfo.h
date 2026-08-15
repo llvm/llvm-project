@@ -75,12 +75,17 @@ public:
     return isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment, AddrSpace);
   }
 
-  // NVPTX has infinite registers of all kinds, but the actual machine doesn't.
-  // We conservatively return 1 here which is just enough to enable the
-  // vectorizers but disables heuristics based on the number of registers.
-  // FIXME: Return a more reasonable number, while keeping an eye on
-  // LoopVectorizer's unrolling heuristics.
+  // NVPTX has infinite virtual registers, but the actual machine doesn't.
+  // Return 1 to enable vectorization while preventing aggressive heuristics
+  // based on the number of registers.
   unsigned getNumberOfRegisters(unsigned ClassID) const override { return 1; }
+
+  // Physical register allocation is deferred to ptxas and depends on launch
+  // configuration and occupancy constraints that are unavailable here.
+  std::optional<unsigned>
+  getRegisterClassSpillThreshold(unsigned ClassID) const override {
+    return std::nullopt;
+  }
 
   // Only <2 x half> should be vectorized, so always return 32 for the vector
   // register size.
