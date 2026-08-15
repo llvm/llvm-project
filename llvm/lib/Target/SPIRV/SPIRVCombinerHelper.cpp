@@ -363,3 +363,52 @@ void SPIRVCombinerHelper::applyMatrixMultiply(MachineInstr &MI) const {
     Builder.buildBuildVector(ResReg, ResultScalars);
   MI.eraseFromParent();
 }
+
+bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI) const {
+  if (MI.getOpcode() != TargetOpcode::G_FMUL)
+    return false;
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  MachineInstr *Op1Def = MRI.getVRegDef(Op1);
+  MachineInstr *Op2Def = MRI.getVRegDef(Op2);
+
+  if (!Op1Def || !Op2Def)
+    return false;
+
+  if (Op1Def->getOpcode() != TargetOpcode::G_FCONSTANT && Op2Def->getOpcode() != TargetOpcode::G_FCONSTANT)
+    return false;
+
+  MachineInstr *constantMachineInstruction = (Op1Def->getOpcode() == TargetOpcode::G_FCONSTANT) ? Op1Def : Op2Def;
+  MachineOperand &ConstantOperand = constantMachineInstruction->getOperand(1);
+
+  if (!ConstantOperand.isFPImm())
+    return false;
+
+  const ConstantFP *Constant = ConstantOperand.getFPImm();
+  const APFloat &Val = Constant->getValueAPF();
+  APFloat Expected(180.0 / std::acos(-1.0));
+  bool LostInfo = false;
+  Expected.convert(Val.getSemantics(),
+                            APFloat::rmNearestTiesToEven,
+                            &LostInfo);
+
+  if (Expected.compare(Val) != APFloat::cmpEqual)
+    return false;
+
+  return true;
+}
+
+void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI) const {
+  Register ResultReg = MI.getOperand(0).getReg();
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  MachineInstr *Op1Def = MRI.getVRegDef(Op1);
+  MachineInstr *Op2Def = MRI.getVRegDef(Op2);
+  Register nonConstantReg = (Op1Def->getOpcode() == TargetOpcode::G_FCONSTANT) ? Op2 : Op1;
+  
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildIntrinsic(Intrinsic::spv_degrees, ResultReg)
+      .addUse(nonConstantReg);
+
+  MI.eraseFromParent();
+}

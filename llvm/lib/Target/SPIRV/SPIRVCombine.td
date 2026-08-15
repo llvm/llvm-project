@@ -38,10 +38,16 @@ def matrix_multiply_lowering
                                  m_GIntrinsic<Intrinsic::matrix_multiply>()); }]),
           (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
 
+def degrees_lowering
+    : GICombineRule<(defs root:$root),
+                    (match (wip_match_opcode G_FMUL):$root,
+                        [{ return Helper.matchDegrees(*${root}); }]),
+                    (apply [{ Helper.applyDegrees(*${root}); }])>;
+
 def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",
                  [vector_length_sub_to_distance_lowering,
                   vector_select_to_faceforward_lowering,
-                  matrix_transpose_lowering, matrix_multiply_lowering]> {
+                  matrix_transpose_lowering, matrix_multiply_lowering, degrees_lowering]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
