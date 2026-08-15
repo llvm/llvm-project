@@ -256,7 +256,7 @@ When should we run the deleters
 -------------------------------
 
 If we were to use the background thread approach, the deleters can be evaluated at any time after the readers have exited
-their critical sections and objects are safe to reclaim. e.g. Drain the queue periodically. However, if we were to run the deleters
+their critical sections and objects are safe to reclaim. e.g. drain the queue periodically. However, if we were to run the deleters
 inline, we have to decide when to run them.
 
 There are few places we can run the deleters:
