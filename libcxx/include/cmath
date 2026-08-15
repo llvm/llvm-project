@@ -424,8 +424,8 @@ using ::atanhf _LIBCPP_USING_IF_EXISTS;
 using ::cbrt _LIBCPP_USING_IF_EXISTS;
 using ::cbrtf _LIBCPP_USING_IF_EXISTS;
 
-using std::__math::copysign _LIBCPP_USING_IF_EXISTS;
-using std::__math::copysignf _LIBCPP_USING_IF_EXISTS;
+using ::copysign _LIBCPP_USING_IF_EXISTS;
+using ::copysignf _LIBCPP_USING_IF_EXISTS;
 
 using ::erf _LIBCPP_USING_IF_EXISTS;
 using ::erff _LIBCPP_USING_IF_EXISTS;
@@ -518,7 +518,7 @@ using ::asinhl _LIBCPP_USING_IF_EXISTS;
 using ::atanhl _LIBCPP_USING_IF_EXISTS;
 using ::cbrtl _LIBCPP_USING_IF_EXISTS;
 
-using std::__math::copysignl _LIBCPP_USING_IF_EXISTS;
+using ::copysignl _LIBCPP_USING_IF_EXISTS;
 
 using ::erfl _LIBCPP_USING_IF_EXISTS;
 using ::erfcl _LIBCPP_USING_IF_EXISTS;

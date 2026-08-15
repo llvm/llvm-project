@@ -40,17 +40,6 @@ copysign(_A1 __x, _A2 __y) _NOEXCEPT {
   return ::__builtin_copysign(__x, __y);
 }
 
-#ifdef _LIBCPP_PREFERRED_OVERLOAD
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD float copysignf(float __x, float __y) _NOEXCEPT {
-  return __builtin_copysignf(__x, __y);
-}
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD long double
-copysignl(long double __x, long double __y) _NOEXCEPT {
-  return __builtin_copysignl(__x, __y);
-}
-#endif
-
 } // namespace __math
 
 _LIBCPP_END_NAMESPACE_STD
