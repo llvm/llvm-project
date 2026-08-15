@@ -5,8 +5,8 @@
 Detects dangerous initialization of smart pointers with raw pointers that are
 already owned elsewhere, which can lead to double deletion.
 
-This check implements CERT C++ rule [MEM56-CPP. Do not store an already-owned
-pointer value in an unrelated smart pointer](https://wiki.sei.cmu.edu/confluence/display/cplusplus/MEM56-CPP.+Do+not+store+an+already-owned+pointer+value+in+an+unrelated+smart+pointer).
+This check implements CERT C++ rule "MEM56-CPP. Do not store an already-owned
+pointer value in an unrelated smart pointer".
 
 ## Examples
 

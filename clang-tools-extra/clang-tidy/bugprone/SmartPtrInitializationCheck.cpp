@@ -86,9 +86,8 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
           cxxConstructorDecl(ofClass(IsSmartPtrRecord.bind("method-parent")))
               .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleter),
-      unless(hasArgument(0, cxxNewExpr())),
-      unless(hasArgument(0, ReleaseCallMatcher)),
-      unless(hasArgument(0, conditionalOperator())));
+      unless(hasArgument(
+          0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))));
 
   // Matcher for reset() calls
   // Exclude reset() calls with custom deleters:
@@ -110,9 +109,8 @@ void SmartPtrInitializationCheck::registerMatchers(MatchFinder *Finder) {
                            hasName("reset"))
                  .bind("method-decl")),
       hasArgument(0, PointerArg), unless(HasCustomDeleterInReset),
-      unless(hasArgument(0, cxxNewExpr())),
-      unless(hasArgument(0, ReleaseCallMatcher)),
-      unless(hasArgument(0, conditionalOperator())));
+      unless(hasArgument(
+          0, anyOf(cxxNewExpr(), ReleaseCallMatcher, conditionalOperator()))));
 
   Finder->addMatcher(SmartPtrConstructorMatcher, this);
   Finder->addMatcher(ResetCallMatcher, this);
@@ -130,13 +128,14 @@ void SmartPtrInitializationCheck::check(
   assert(PointerArg && Record);
 
   const SourceLocation Loc = PointerArg->getBeginLoc();
-  if (Loc.isValid()) {
-    diag(Loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
-        << getRawPointerDescription(PointerArg, *Result.Context)
-        << getSmartPointerDescription(Record, *Result.Context)
-        << (isa<CXXConstructorDecl>(MethodDecl) ? " constructor"
-                                                : "::reset(...)");
-  }
+  if (Loc.isInvalid())
+    return;
+
+  diag(Loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
+      << getRawPointerDescription(PointerArg, *Result.Context)
+      << getSmartPointerDescription(Record, *Result.Context)
+      << (isa<CXXConstructorDecl>(MethodDecl) ? " constructor"
+                                              : "::reset(...)");
 }
 
 std::string SmartPtrInitializationCheck::getSmartPointerDescription(
