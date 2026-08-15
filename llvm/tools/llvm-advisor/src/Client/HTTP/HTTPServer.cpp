@@ -985,7 +985,9 @@ static HTTPResult handleGetSource(CoreClient &Client, StringRef SnapID,
 
 static HTTPResult handleGetSourceRemarks(CoreClient &Client, StringRef SnapID,
                                          StringRef FilePath, StringRef FilterPass,
-                                         StringRef FilterName, int64_t FilterType) {
+                                         StringRef FilterName,
+                                         StringRef FilterFunction,
+                                         int64_t FilterType) {
   if (FilePath.empty())
     return makeJSONErrorStr(400, "path parameter is required");
 
@@ -1055,6 +1057,10 @@ static HTTPResult handleGetSourceRemarks(CoreClient &Client, StringRef SnapID,
             if (!FilterName.empty() && !NameStr.contains_insensitive(FilterName)) continue;
 
             int64_t FI = (*FuncCol)[I].getAsInteger().value_or(-1);
+            StringRef FuncStr = FI >= 0 && FI < (int64_t)FuncStrs->size()
+                ? (*FuncStrs)[FI].getAsString().value_or("") : "";
+            if (!FilterFunction.empty() &&
+                !FuncStr.contains_insensitive(FilterFunction)) continue;
             JOS.object([&] {
               JOS.attribute("line", (*LineCol)[I].getAsInteger().value_or(-1));
               JOS.attribute("column", (*ColumnCol)[I].getAsInteger().value_or(-1));
@@ -1064,7 +1070,7 @@ static HTTPResult handleGetSourceRemarks(CoreClient &Client, StringRef SnapID,
               int64_t H = (*HotnessCol)[I].getAsInteger().value_or(-1);
               if (H >= 0) JOS.attribute("hotness", H);
               if (FI >= 0 && FI < (int64_t)FuncStrs->size())
-                JOS.attribute("function", (*FuncStrs)[FI].getAsString().value_or(""));
+                JOS.attribute("function", FuncStr);
             });
             ++Count;
           }
@@ -1710,18 +1716,20 @@ Error llvm::advisor::HTTPServer::run() {
           if (PathIt == QueryParams.end() || SnapIt == QueryParams.end())
             Res = makeJSONErrorStr(400, "path and snapshot_id required");
           else {
-            StringRef FPass, FName;
+            StringRef FPass, FName, FFunc;
             int64_t FType = -1;
             auto PIt = QueryParams.find("pass");
             if (PIt != QueryParams.end()) FPass = PIt->second;
             auto NIt = QueryParams.find("name");
             if (NIt != QueryParams.end()) FName = NIt->second;
+            auto FIt = QueryParams.find("function");
+            if (FIt != QueryParams.end()) FFunc = FIt->second;
             auto TIt = QueryParams.find("type");
             if (TIt != QueryParams.end())
               StringRef(TIt->second).getAsInteger(10, FType);
             Res = handleGetSourceRemarks(
                 Client, resolveSnapshotHTTP(Client, SnapIt->second),
-                PathIt->second, FPass, FName, FType);
+                PathIt->second, FPass, FName, FFunc, FType);
           }
         } else if (Path == "/api/v1/source") {
           auto PathIt = QueryParams.find("path");

@@ -119,6 +119,7 @@ const API = {
     if (filters) {
       if (filters.pass) url += `&pass=${encodeURIComponent(filters.pass)}`;
       if (filters.name) url += `&name=${encodeURIComponent(filters.name)}`;
+      if (filters.function) url += `&function=${encodeURIComponent(filters.function)}`;
       if (filters.type != null && filters.type !== '') url += `&type=${filters.type}`;
     }
     return API.get(url);

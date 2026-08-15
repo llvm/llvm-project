@@ -859,6 +859,7 @@ const API = {
     if (filters) {
       if (filters.pass) url += `&pass=${encodeURIComponent(filters.pass)}`;
       if (filters.name) url += `&name=${encodeURIComponent(filters.name)}`;
+      if (filters.function) url += `&function=${encodeURIComponent(filters.function)}`;
       if (filters.type != null && filters.type !== '') url += `&type=${filters.type}`;
     }
     return API.get(url);
@@ -5443,7 +5444,20 @@ const HeatmapView = {
       const file = (hs.file || '').split('/').pop() || 'unknown';
       const loc = hs.line > 0 ? `${file}:${hs.line}` : file;
 
-      const row = h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid var(--border)' } });
+      const canOpen = !!hs.file;
+      const row = h('div', {
+        style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid var(--border)', cursor: canOpen ? 'pointer' : 'default' },
+        title: canOpen ? `Click to open ${hs.function || 'this function'} in Code Explorer` : 'No source location for this hotspot',
+        onClick: canOpen ? () => {
+          const qs = new URLSearchParams();
+          qs.set('path', hs.file);
+          if (hs.line > 0) qs.set('line', String(hs.line));
+          if (hs.function) qs.set('function', hs.function);
+          Router.navigate(`/explorer?${qs.toString()}`);
+        } : null,
+        onMouseEnter: (e) => { if (canOpen) e.currentTarget.style.background = 'var(--bg3)'; },
+        onMouseLeave: (e) => { if (canOpen) e.currentTarget.style.background = ''; },
+      });
 
       row.appendChild(h('div', { style: { width: '28px', textAlign: 'center' } },
         h('span', { style: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: st.color } })
@@ -5482,7 +5496,7 @@ const HeatmapView = {
 const CodeExplorerView = {
   _snap: null,
   _mainEl: null,
-  _filters: { pass: '', name: '', type: '' },
+  _filters: { pass: '', name: '', type: '', function: '' },
 
   async render() {
     const container = h('div', {});
@@ -5540,6 +5554,7 @@ const CodeExplorerView = {
     const filterBar = h('div', { style: { display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap', alignItems: 'center' } });
     const passInput = h('input', { class: 'triage-input', type: 'search', placeholder: 'filter pass...', style: { width: '120px' } });
     const nameInput = h('input', { class: 'triage-input', type: 'search', placeholder: 'filter remark...', style: { width: '120px' } });
+    const funcInput = h('input', { class: 'triage-input', type: 'search', placeholder: 'filter function...', style: { width: '140px' } });
     const typeChips = h('div', { style: { display: 'flex', gap: '4px' } });
     ['passed', 'missed', 'analysis', 'failure'].forEach((t, idx) => {
       const enumVal = [1, 2, 3, 6][idx];
@@ -5552,13 +5567,14 @@ const CodeExplorerView = {
       typeChips.appendChild(chip);
     });
     const remarkCount = h('span', { class: 'text-muted', style: { fontSize: '11px', marginLeft: 'auto' } }, '');
-    filterBar.appendChild(passInput); filterBar.appendChild(nameInput); filterBar.appendChild(typeChips); filterBar.appendChild(remarkCount);
+    filterBar.appendChild(passInput); filterBar.appendChild(nameInput); filterBar.appendChild(funcInput); filterBar.appendChild(typeChips); filterBar.appendChild(remarkCount);
     mainCol.appendChild(filterBar);
 
     let debounce = null;
-    const onFilter = () => { this._filters.pass = passInput.value; this._filters.name = nameInput.value; clearTimeout(debounce); debounce = setTimeout(() => this._reloadRemarks(), 300); };
+    const onFilter = () => { this._filters.pass = passInput.value; this._filters.name = nameInput.value; this._filters.function = funcInput.value; clearTimeout(debounce); debounce = setTimeout(() => this._reloadRemarks(), 300); };
     passInput.addEventListener('input', onFilter);
     nameInput.addEventListener('input', onFilter);
+    funcInput.addEventListener('input', onFilter);
 
     this._mainEl = h('div', { style: { flex: '1', overflow: 'auto', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)' } });
     this._remarkCount = remarkCount;
@@ -5577,6 +5593,10 @@ const CodeExplorerView = {
     if (params.name) {
       nameInput.value = params.name;
       this._filters.name = params.name;
+    }
+    if (params.function) {
+      funcInput.value = params.function;
+      this._filters.function = params.function;
     }
 
     if (initialPath) {
