@@ -1508,6 +1508,13 @@ struct RenameParams {
 bool fromJSON(const llvm::json::Value &, RenameParams &, llvm::json::Path);
 llvm::json::Value toJSON(const RenameParams &);
 
+struct CompleteASTMatcherArgs {
+  std::string searchQuery;
+  size_t offset;
+};
+bool fromJSON(const llvm::json::Value &, CompleteASTMatcherArgs &,
+              llvm::json::Path);
+
 struct SearchASTArgs {
   std::string searchQuery;
   TextDocumentIdentifier textDocument;
@@ -2114,6 +2121,18 @@ struct ASTNode {
 };
 llvm::json::Value toJSON(const ASTNode &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ASTNode &);
+
+/// The query completion tooltip.
+struct ASTMatcherCompletion {
+  /// Text to complete the matcher.
+  std::string typedText;
+  /// Full Matcher declaration including type and parameters
+  std::string matcherDecl;
+};
+
+llvm::json::Value toJSON(const ASTMatcherCompletion &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                              const ASTMatcherCompletion &);
 
 } // namespace clangd
 } // namespace clang

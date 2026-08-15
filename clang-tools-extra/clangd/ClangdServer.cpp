@@ -35,6 +35,8 @@
 #include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "clang/ASTMatchers/Dynamic/Parser.h"
+#include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Preprocessor.h"
@@ -813,6 +815,25 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
   };
 
   WorkScheduler->runWithAST("Definitions", File, std::move(Action));
+}
+
+void ClangdServer::completeASTMatcher(
+    const CompleteASTMatcherArgs &Args,
+    Callback<std::vector<ASTMatcherCompletion>> CB) {
+  auto Action = [Args, CB = std::move(CB)]() mutable -> void {
+    using ::clang::ast_matchers::dynamic::Parser;
+    using ::clang::ast_matchers::dynamic::MatcherCompletion;
+
+    std::vector<ASTMatcherCompletion> ToolTips;
+    auto QueryRef = StringRef(Args.searchQuery);
+    std::vector<MatcherCompletion> Comps =
+        Parser::completeExpression(QueryRef, Args.offset);
+    for (auto I = Comps.begin(), E = Comps.end(); I != E; ++I) {
+      ToolTips.push_back(ASTMatcherCompletion{I->TypedText, I->MatcherDecl});
+    }
+    return CB(std::move(ToolTips));
+  };
+  WorkScheduler->runQuick("ASTMatcherCompletion", "", std::move(Action));
 }
 
 void ClangdServer::findAST(SearchASTArgs const &Args,

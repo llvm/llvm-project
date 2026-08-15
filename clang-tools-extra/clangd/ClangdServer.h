@@ -270,6 +270,9 @@ public:
 
   void findAST(const SearchASTArgs &Args, Callback<BoundASTNodes> CB);
 
+  void completeASTMatcher(const CompleteASTMatcherArgs &Args,
+                          Callback<std::vector<ASTMatcherCompletion>> CB);
+
   /// Switch to a corresponding source file when given a header file, and vice
   /// versa.
   void switchSourceHeader(PathRef Path,

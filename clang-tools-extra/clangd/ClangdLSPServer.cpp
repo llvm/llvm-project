@@ -76,6 +76,8 @@ const llvm::StringLiteral ApplyFixCommand = "clangd.applyFix";
 const llvm::StringLiteral ApplyTweakCommand = "clangd.applyTweak";
 const llvm::StringLiteral ApplyRenameCommand = "clangd.applyRename";
 constexpr llvm::StringLiteral SearchASTMethod = "textDocument/searchAST";
+constexpr llvm::StringLiteral CompleteASTMatcherMethod =
+    "clangd/completeASTMatcher";
 
 CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
                         const URIForFile &File) {
@@ -853,6 +855,18 @@ void ClangdLSPServer::onCommandApplyRename(const RenameParams &R,
       Reply(Edit.takeError());
     applyEdit(std::move(*Edit), "Rename applied.", std::move(Reply));
   });
+}
+
+void ClangdLSPServer::onMethodCompleteASTMatcher(
+    const CompleteASTMatcherArgs &Args, Callback<llvm::json::Value> Reply) {
+  Server->completeASTMatcher(
+      Args,
+      [Reply = std::move(Reply)](
+          llvm::Expected<std::vector<ASTMatcherCompletion>> ToolTips) mutable {
+        if (!ToolTips)
+          return Reply(ToolTips.takeError());
+        return Reply(*ToolTips);
+      });
 }
 
 void ClangdLSPServer::onMethodSearchAST(const SearchASTArgs &Args,
@@ -1747,6 +1761,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.command(ApplyFixCommand, this, &ClangdLSPServer::onCommandApplyEdit);
   Bind.command(ApplyTweakCommand, this, &ClangdLSPServer::onCommandApplyTweak);
   Bind.command(ApplyRenameCommand, this, &ClangdLSPServer::onCommandApplyRename);
+  Bind.method(CompleteASTMatcherMethod, this, &ClangdLSPServer::onMethodCompleteASTMatcher);
   Bind.method(SearchASTMethod, this, &ClangdLSPServer::onMethodSearchAST);
 
   ApplyWorkspaceEdit = Bind.outgoingMethod("workspace/applyEdit");

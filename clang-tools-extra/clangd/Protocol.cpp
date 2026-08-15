@@ -1675,6 +1675,13 @@ bool fromJSON(const llvm::json::Value &Params, SelectionRangeParams &S,
          O.map("positions", S.positions);
 }
 
+bool fromJSON(const llvm::json::Value &Params, CompleteASTMatcherArgs &Args,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("searchQuery", Args.searchQuery) &&
+         O.map("offset", Args.offset);
+}
+
 bool fromJSON(const llvm::json::Value &Params, SearchASTArgs &Args,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
@@ -1779,6 +1786,18 @@ static void printASTNode(llvm::raw_ostream &OS, const ASTNode &N,
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ASTNode &Root) {
   printASTNode(OS, Root, 0);
+  return OS;
+}
+
+llvm::json::Value toJSON(const ASTMatcherCompletion &ASTTT) {
+  llvm::json::Object Result{{"typedText", ASTTT.typedText},
+                            {"matcherDecl", ASTTT.matcherDecl}};
+  return Result;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const ASTMatcherCompletion &ASTTT) {
+  OS << ASTTT.typedText << " - " << ASTTT.matcherDecl;
   return OS;
 }
 
