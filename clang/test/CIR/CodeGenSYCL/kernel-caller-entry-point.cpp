@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,LLVM-OGCG
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=OGCG,LLVM-OGCG
 
 // On an ELF target such as spir64, the kernel caller entry point definition is
 // dso_local. dso_local is only attached to a definition, so this also verifies
@@ -11,9 +11,9 @@
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -fclangir -emit-cir %s -o %t-elf.cir
 // RUN: FileCheck --input-file=%t-elf.cir %s -check-prefix=CIR-ELF
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -fclangir -emit-llvm %s -o %t-elf-cir.ll
-// RUN: FileCheck --input-file=%t-elf-cir.ll %s -check-prefix=LLVM-ELF
+// RUN: FileCheck --input-file=%t-elf-cir.ll %s -check-prefix=LLVM-OGCG-ELF
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -emit-llvm %s -o %t-elf.ll
-// RUN: FileCheck --input-file=%t-elf.ll %s -check-prefix=OGCG-ELF
+// RUN: FileCheck --input-file=%t-elf.ll %s -check-prefix=LLVM-OGCG-ELF
 
 // During device compilation, an offload kernel caller entry point is emitted
 // in place of each sycl_kernel_entry_point attributed function. The entry
@@ -66,18 +66,13 @@ void test() {
 // CIR:         cir.call @_ZNK1KclEv
 // CIR:         cir.return
 
-// LLVM-LABEL: define {{.*}}spir_kernel void @_ZTS2KN
-// LLVM:         call {{.*}}void @_ZNK1KclEv
-// LLVM:         ret void
-// LLVM-NOT:   define {{.*}}@_Z18kernel_single_task
-
-// OGCG-LABEL: define {{.*}}spir_kernel void @_ZTS2KN
-// OGCG:         call {{.*}}spir_func void @_ZNK1KclEv
-// OGCG:         ret void
-// OGCG-NOT:   define {{.*}}@_Z18kernel_single_task
+// LLVM-OGCG-LABEL: define {{.*}}spir_kernel void @_ZTS2KN
+// LLVM:              call {{.*}}void @_ZNK1KclEv
+// OGCG:              call {{.*}}spir_func void @_ZNK1KclEv
+// LLVM-OGCG:         ret void
+// LLVM-OGCG-NOT:   define {{.*}}@_Z18kernel_single_task
 
 // On ELF, the kernel caller entry point definition is dso_local in CIR,
 // CIR-lowered LLVM IR, and classic CodeGen alike.
-// CIR-ELF:      cir.func {{.*}}dso_local {{.*}}@_ZTS2KN
-// LLVM-ELF:     define {{.*}}dso_local {{.*}}void @_ZTS2KN
-// OGCG-ELF:     define {{.*}}dso_local {{.*}}void @_ZTS2KN
+// CIR-ELF:          cir.func {{.*}}dso_local {{.*}}@_ZTS2KN
+// LLVM-OGCG-ELF:    define {{.*}}dso_local {{.*}}void @_ZTS2KN
