@@ -150,7 +150,7 @@ std::string SmartPtrInitializationCheck::getSmartPointerDescription(
 
 std::string SmartPtrInitializationCheck::getRawPointerDescription(
     const Expr *PointerExpr, const ASTContext &Context) {
-  QualType ExprType = PointerExpr->getType();
+  const QualType ExprType = PointerExpr->getType();
 
   PrintingPolicy Policy(Context.getLangOpts());
   Policy.SuppressSpecifiers = false;
