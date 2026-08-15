@@ -131,11 +131,10 @@ void SmartPtrInitializationCheck::check(
   if (Loc.isInvalid())
     return;
 
-  diag(Loc, "passing a raw pointer '%0' to %1%2 may cause double deletion")
+  diag(Loc, "passing a raw pointer '%0' to '%1%2 may cause double deletion")
       << getRawPointerDescription(PointerArg, *Result.Context)
       << getSmartPointerDescription(Record, *Result.Context)
-      << (isa<CXXConstructorDecl>(MethodDecl) ? " constructor"
-                                              : "::reset(...)");
+      << (isa<CXXConstructorDecl>(MethodDecl) ? "' constructor" : "::reset'");
 }
 
 std::string SmartPtrInitializationCheck::getSmartPointerDescription(
@@ -151,14 +150,19 @@ std::string SmartPtrInitializationCheck::getSmartPointerDescription(
 
 std::string SmartPtrInitializationCheck::getRawPointerDescription(
     const Expr *PointerExpr, const ASTContext &Context) {
-  // Try to get a readable representation of the expression
+  QualType ExprType = PointerExpr->getType();
+
   PrintingPolicy Policy(Context.getLangOpts());
   Policy.SuppressSpecifiers = false;
   Policy.SuppressTagKeyword = true;
 
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  PointerExpr->printPretty(OS, /*Helper=*/nullptr, Policy);
+  std::string Result = ExprType.getAsString(Policy);
+
+  size_t pos = Result.find(" *");
+  while (pos != std::string::npos) {
+    Result.erase(pos, 1); // remove the space
+    pos = Result.find(" *", pos);
+  }
 
   return Result;
 }

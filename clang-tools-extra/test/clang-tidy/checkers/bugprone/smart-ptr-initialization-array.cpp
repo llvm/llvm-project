@@ -11,13 +11,13 @@ A arr[10];
 
 void test_unique_ptr_constructor() {
   std::unique_ptr<A[]> b(arr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: passing a raw pointer 'arr' to std::unique_ptr<A[]> constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: passing a raw pointer 'A[10]' to 'std::unique_ptr<A[]>' constructor may cause double deletion
 }
 
 void test_stack_variable() {
   int x[10] = {5};
   std::unique_ptr<int[]> ptr(x);
-  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: passing a raw pointer 'x' to std::unique_ptr<int[]> constructor may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: passing a raw pointer 'int[10]' to 'std::unique_ptr<int[]>' constructor may cause double deletion
 }
 
 // Should trigger for member variables
@@ -25,7 +25,7 @@ struct S {
   int member[10];
   void test() {
     std::unique_ptr<int[]> ptr(member);
-    // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: passing a raw pointer 'this->member' to std::unique_ptr<int[]> constructor may cause double deletion
+    // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: passing a raw pointer 'int[10]' to 'std::unique_ptr<int[]>' constructor may cause double deletion
   }
 };
 
@@ -63,14 +63,14 @@ void test_copy_move_constructor_ok(std::unique_ptr<A[]> up) {
 void test_unique_ptr_reset() {
   std::unique_ptr<A[]> b;
   b.reset(arr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: passing a raw pointer 'arr' to std::unique_ptr<A[]>::reset(...) may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: passing a raw pointer 'A[10]' to 'std::unique_ptr<A[]>::reset' may cause double deletion
 }
 
 void test_stack_variable_reset() {
   int x[10] = {5};
   std::unique_ptr<int[]> ptr;
   ptr.reset(x);
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: passing a raw pointer 'x' to std::unique_ptr<int[]>::reset(...) may cause double deletion
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: passing a raw pointer 'int[10]' to 'std::unique_ptr<int[]>::reset' may cause double deletion
 }
 
 void test_new_expression_reset_ok() {
