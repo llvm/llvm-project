@@ -91,8 +91,8 @@ private:
 
   constexpr explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
     if !consteval {
-      _LIBCPP_ASSERT_INTERNAL(
-          (__data_ & __CountMask) == 0, "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
+      _LIBCPP_ASSERT_INTERNAL((reinterpret_cast<uintptr_t>(__p) & __CountMask) == 0,
+                              "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
     }
   }
 
@@ -169,7 +169,7 @@ public:
     if !consteval {
       if (__n < 0) {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            __count() >= -__n,
+            __count() >= static_cast<size_t>(-__n),
             "__static_packed_bounded_iterator::operator+=: Attempt to rewind an iterator past the start");
       } else {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -187,7 +187,7 @@ public:
     if !consteval {
       if (__n > 0) {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            __count() >= __n,
+            __count() >= static_cast<size_t>(__n),
             "__static_packed_bounded_iterator::operator-=: Attempt to rewind an iterator past the start");
       } else {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -205,7 +205,7 @@ public:
     if !consteval {
       if (__n < 0) {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            __count() >= -__n,
+            __count() >= static_cast<size_t>(-__n),
             "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator past the start");
       } else {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
