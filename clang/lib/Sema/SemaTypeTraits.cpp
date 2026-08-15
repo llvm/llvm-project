@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/BuiltinTraits.h"
@@ -25,6 +27,9 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 
 using namespace clang;
 
@@ -1461,6 +1466,67 @@ bool Sema::CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N) {
     return false;
   }
   return true;
+}
+
+static ComparisonCategoryResult EvaluateTypeOrder(Sema &S, QualType LHS,
+                                                  QualType RHS) {
+  if (S.Context.hasSameType(LHS, RHS))
+    return ComparisonCategoryResult::Equal;
+
+  std::unique_ptr<MangleContext> MC(S.Context.createMangleContext());
+  SmallString<64> LhsName, RhsName;
+  {
+    llvm::raw_svector_ostream LhsOut(LhsName), RhsOut(RhsName);
+    MC->mangleCanonicalTypeName(LHS, LhsOut);
+    MC->mangleCanonicalTypeName(RHS, RhsOut);
+  }
+
+  int Result = LhsName.compare(RhsName);
+  return Result == 0  ? ComparisonCategoryResult::Equal
+         : Result > 0 ? ComparisonCategoryResult::Greater
+                      : ComparisonCategoryResult::Less;
+}
+
+ExprResult Sema::ActOnBuiltinTypeOrder(SourceLocation KWLoc, ParsedType LhsTy,
+                                       ParsedType RhsTy,
+                                       SourceLocation RParenLoc) {
+  SmallVector<TypeSourceInfo *, 2> Args;
+  for (auto ArgT : {LhsTy, RhsTy}) {
+    TypeSourceInfo *TInfo;
+    QualType T = GetTypeFromParser(ArgT, &TInfo);
+    if (!TInfo)
+      TInfo = Context.getTrivialTypeSourceInfo(T, KWLoc);
+
+    Args.push_back(TInfo);
+  }
+  return BuildBuiltinTypeOrderExpr(KWLoc, Args[0], Args[1], RParenLoc);
+}
+
+ExprResult Sema::BuildBuiltinTypeOrderExpr(SourceLocation KWLoc,
+                                           TypeSourceInfo *LhsT,
+                                           TypeSourceInfo *RhsT,
+                                           SourceLocation RParenLoc) {
+  QualType StrongOrdering =
+      CheckComparisonCategoryType(ComparisonCategoryType::StrongOrdering, KWLoc,
+                                  ComparisonCategoryUsage::BuiltinTypeOrder);
+  if (StrongOrdering.isNull())
+    return ExprError();
+
+  QualType LHS = LhsT->getType();
+  QualType RHS = RhsT->getType();
+  if (LHS->isDependentType() || RHS->isDependentType())
+    return new (Context)
+        BuiltinTypeOrderExpr(StrongOrdering, KWLoc, LhsT, RhsT, RParenLoc);
+
+  ComparisonCategoryResult Result = EvaluateTypeOrder(*this, LHS, RHS);
+  VarDecl *ResultVD = Context.CompCategories.getInfoForType(StrongOrdering)
+                          .getValueInfo(Result)
+                          ->VD;
+  Expr *ResultExpr =
+      BuildDeclRefExpr(ResultVD, ResultVD->getType(), VK_LValue, KWLoc);
+  return PerformCopyInitialization(
+      InitializedEntity::InitializeTemporary(StrongOrdering), KWLoc,
+      ResultExpr);
 }
 
 enum class TypeTraitReturnType {

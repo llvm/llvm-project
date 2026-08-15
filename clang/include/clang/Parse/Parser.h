@@ -5195,6 +5195,9 @@ private:
   ///
   ExprResult ParseTypeTrait();
 
+  /// Parse __builtin_type_order(T, U), used to implement C++26 std::type_order.
+  ExprResult ParseBuiltinTypeOrder();
+
   //===--------------------------------------------------------------------===//
   // Embarcadero: Arary and Expression Traits
 

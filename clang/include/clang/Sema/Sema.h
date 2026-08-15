@@ -5335,6 +5335,8 @@ public:
     /// typically only applies to 'std::strong_ordering', due to the implicit
     /// fallback return value.
     DefaultedOperator,
+    /// The '__builtin_type_order' builtin needed 'std::strong_ordering'.
+    BuiltinTypeOrder,
   };
 
   /// Lookup the specified comparison category types in the standard
@@ -8733,6 +8735,13 @@ public:
                                        CheckedConversionKind CCK);
 
   bool CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N);
+
+  ExprResult ActOnBuiltinTypeOrder(SourceLocation KWLoc, ParsedType LhsTy,
+                                   ParsedType RhsTy, SourceLocation RParenLoc);
+  ExprResult BuildBuiltinTypeOrderExpr(SourceLocation KWLoc,
+                                       TypeSourceInfo *LhsT,
+                                       TypeSourceInfo *RhsT,
+                                       SourceLocation RParenLoc);
 
   /// Parsed one of the type trait support pseudo-functions.
   ExprResult ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,

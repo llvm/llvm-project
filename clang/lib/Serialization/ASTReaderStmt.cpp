@@ -2236,6 +2236,15 @@ void ASTStmtReader::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   E->NamingClass = readDeclAs<CXXRecordDecl>();
 }
 
+void ASTStmtReader::VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
+  VisitExpr(E);
+  SourceRange Range = readSourceRange();
+  E->Loc = Range.getBegin();
+  E->RParenLoc = Range.getEnd();
+  E->Lhs = readTypeSourceInfo();
+  E->Rhs = readTypeSourceInfo();
+}
+
 void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
   E->TypeTraitExprBits.IsBooleanTypeTrait = Record.readInt();
@@ -4467,6 +4476,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           Context, NumResults, HasTemplateKWAndArgsInfo, NumTemplateArgs);
       break;
     }
+
+    case EXPR_BUILTIN_TYPE_ORDER:
+      S = new (Context) BuiltinTypeOrderExpr(Empty);
+      break;
 
     case EXPR_TYPE_TRAIT:
       S = TypeTraitExpr::CreateDeserialized(

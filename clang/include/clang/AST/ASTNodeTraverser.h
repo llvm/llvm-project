@@ -942,6 +942,11 @@ public:
       Visit(A->getType());
   }
 
+  void VisitBuiltinTypeOrderExpr(const BuiltinTypeOrderExpr *E) {
+    Visit(E->getLhsType());
+    Visit(E->getRhsType());
+  }
+
   void VisitLambdaExpr(const LambdaExpr *Node) {
     if (Traversal == TK_IgnoreUnlessSpelledInSource) {
       for (unsigned I = 0, N = Node->capture_size(); I != N; ++I) {

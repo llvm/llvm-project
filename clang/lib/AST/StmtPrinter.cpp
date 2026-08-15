@@ -2714,6 +2714,14 @@ void StmtPrinter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   OS << ")";
 }
 
+void StmtPrinter::VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
+  OS << "__builtin_type_order(";
+  E->getLhsType().print(OS, Policy);
+  OS << ", ";
+  E->getRhsType().print(OS, Policy);
+  OS << ')';
+}
+
 void StmtPrinter::VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
   OS << getTraitSpelling(E->getTrait()) << '(';
   E->getQueriedType().print(OS, Policy);

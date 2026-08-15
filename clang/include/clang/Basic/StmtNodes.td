@@ -150,6 +150,7 @@ def CXXStdInitializerListExpr : StmtNode<Expr>;
 def CXXNewExpr : StmtNode<Expr>;
 def CXXDeleteExpr : StmtNode<Expr>;
 def CXXPseudoDestructorExpr : StmtNode<Expr>;
+def BuiltinTypeOrderExpr : StmtNode<Expr>;
 def TypeTraitExpr : StmtNode<Expr>;
 def ArrayTypeTraitExpr : StmtNode<Expr>;
 def ExpressionTraitExpr : StmtNode<Expr>;

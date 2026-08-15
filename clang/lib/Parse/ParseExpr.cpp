@@ -1523,6 +1523,10 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     break;
   }
 
+  case tok::kw___builtin_type_order:
+    Res = ParseBuiltinTypeOrder();
+    break;
+
 #define TYPE_TRAIT(N,Spelling,K) \
   case tok::kw_##Spelling:
 #include "clang/Basic/TokenKinds.def"

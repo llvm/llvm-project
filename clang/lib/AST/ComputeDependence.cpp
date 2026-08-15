@@ -942,6 +942,14 @@ ExprDependence clang::computeDependence(TypeTraitExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(BuiltinTypeOrderExpr *E) {
+  ExprDependence D = ExprDependence::None;
+  for (TypeSourceInfo *Arg : {E->getLhsTypeInfo(), E->getRhsTypeInfo()})
+    D |= toExprDependenceAsWritten(Arg->getType()->getDependence()) &
+         ~ExprDependence::Type;
+  return D;
+}
+
 ExprDependence clang::computeDependence(ConceptSpecializationExpr *E,
                                         bool ValueDependent) {
   auto TA = TemplateArgumentDependence::None;

@@ -2873,6 +2873,11 @@ DEF_TRAVERSE_STMT(TypeTraitExpr, {
     TRY_TO(TraverseTypeLoc(S->getArg(I)->getTypeLoc()));
 })
 
+DEF_TRAVERSE_STMT(BuiltinTypeOrderExpr, {
+  TRY_TO(TraverseTypeLoc(S->getLhsTypeInfo()->getTypeLoc()));
+  TRY_TO(TraverseTypeLoc(S->getRhsTypeInfo()->getTypeLoc()));
+})
+
 DEF_TRAVERSE_STMT(ArrayTypeTraitExpr, {
   TRY_TO(TraverseTypeLoc(S->getQueriedTypeSourceInfo()->getTypeLoc()));
 })
