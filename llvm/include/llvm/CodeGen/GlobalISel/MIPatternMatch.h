@@ -430,6 +430,15 @@ inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
 inline bind_ty<FPClassTest> m_FPClassTest(FPClassTest &T) { return T; }
 
+/// Wraps a MIFlags output for use as an optional trailing operand of an
+/// instruction matcher (e.g. m_GPtrAdd(L, R, m_MIFlags(Flags))). On a
+/// successful match the matched instruction's flags are written to \p Flags.
+struct MIFlagsRef {
+  uint32_t &Flags;
+};
+
+inline MIFlagsRef m_MIFlags(uint32_t &Flags) { return {Flags}; }
+
 template <typename BindTy> struct deferred_helper {
   static bool match(const MachineRegisterInfo &MRI, BindTy &VR, BindTy &V) {
     return VR == V;
@@ -504,8 +513,12 @@ template <typename LHS_P, typename RHS_P, unsigned Opcode,
 struct BinaryOp_match {
   LHS_P L;
   RHS_P R;
+  // Optional output: when set, receives the matched instruction's flags.
+  uint32_t *FlagsOut = nullptr;
 
   BinaryOp_match(const LHS_P &LHS, const RHS_P &RHS) : L(LHS), R(RHS) {}
+  BinaryOp_match(const LHS_P &LHS, const RHS_P &RHS, MIFlagsRef FlagsOut)
+      : L(LHS), R(RHS), FlagsOut(&FlagsOut.Flags) {}
   template <typename OpTy>
   bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     const MachineInstr *TmpMI;
@@ -521,7 +534,11 @@ struct BinaryOp_match {
             (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(1).getReg())))
           return false;
-        return (TmpMI->getFlags() & Flags) == Flags;
+        if ((TmpMI->getFlags() & Flags) != Flags)
+          return false;
+        if (FlagsOut)
+          *FlagsOut = TmpMI->getFlags();
+        return true;
       }
     }
     return false;
@@ -593,6 +610,12 @@ template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>
 m_GPtrAdd(const LHS &L, const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>
+m_GPtrAdd(const LHS &L, const RHS &R, MIFlagsRef Flags) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>(L, R, Flags);
 }
 
 template <typename LHS, typename RHS>
