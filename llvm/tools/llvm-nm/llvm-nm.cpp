@@ -2076,8 +2076,7 @@ static void decodeZOSAttributes(raw_ostream &OS, uint32_t Attrs) {
 }
 
 static void printArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
-                            StringRef Filename,
-                            Archive::Kind Kind = Archive::K_GNU) {
+                            StringRef Filename, Archive::Kind Kind) {
   for (auto I : Map) {
     Expected<Archive::Child> C = I.getMember();
     if (!C) {
@@ -2115,7 +2114,7 @@ static void dumpArchiveMap(Archive *A, StringRef Filename) {
     warn(ECMap.takeError(), Filename);
   } else if (!ECMap->empty()) {
     outs() << "Archive EC map\n";
-    printArchiveMap(*ECMap, Filename);
+    printArchiveMap(*ECMap, Filename, A->kind());
   }
 }
 
