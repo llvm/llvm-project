@@ -80,16 +80,24 @@ define i32 @load_clobber_load_gep2(ptr %p) {
   ret i32 %add
 }
 
-; TODO: BasicAA return MayAlias for %gep1,%gep2, could improve as MustAlias.
+; MemoryDependence-backed GVN can use BasicAA's MustAlias result for %gep1 and
+; %gep2 to eliminate the redundant load. MSSA-backed GVN uses a coarser clobber
+; check and does not propagate the MustAlias result for this pattern.
 define i32 @load_clobber_load_gep3(ptr %p) {
-; CHECK-LABEL: @load_clobber_load_gep3(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 0
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 4 x float>, ptr [[P]], i64 1, i64 0
-; CHECK-NEXT:    [[LOAD2:%.*]] = load float, ptr [[GEP2]], align 4
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[LOAD2]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[CAST]]
-; CHECK-NEXT:    ret i32 [[ADD]]
+; MDEP-LABEL: @load_clobber_load_gep3(
+; MDEP-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 0
+; MDEP-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[GEP1]], align 4
+; MDEP-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[LOAD1]]
+; MDEP-NEXT:    ret i32 [[ADD]]
+;
+; MSSA-LABEL: @load_clobber_load_gep3(
+; MSSA-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 0
+; MSSA-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[GEP1]], align 4
+; MSSA-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 4 x float>, ptr [[P]], i64 1, i64 0
+; MSSA-NEXT:    [[LOAD2:%.*]] = load float, ptr [[GEP2]], align 4
+; MSSA-NEXT:    [[CAST:%.*]] = bitcast float [[LOAD2]] to i32
+; MSSA-NEXT:    [[ADD:%.*]] = add i32 [[LOAD1]], [[CAST]]
+; MSSA-NEXT:    ret i32 [[ADD]]
 ;
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 0
   %load1 = load i32, ptr %gep1
@@ -268,21 +276,34 @@ if.end:
   ret i32 %result
 }
 
-; TODO: BasicAA return MayAlias for %gep1,%gep2, could improve as NoAlias.
+; MemoryDependence-backed GVN can use BasicAA's NoAlias result here.
 define void @redundant_load_elimination_2(i1 %c, ptr %p, ptr %q) {
-; CHECK-LABEL: @redundant_load_elimination_2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 1
-; CHECK-NEXT:    store i32 0, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P]], i64 1, i64 0
-; CHECK-NEXT:    store i32 1, ptr [[GEP2]], align 4
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[GEP1]], align 4
-; CHECK-NEXT:    store i32 [[T]], ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    ret void
-; CHECK:       if.else:
-; CHECK-NEXT:    ret void
+; MDEP-LABEL: @redundant_load_elimination_2(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 1
+; MDEP-NEXT:    store i32 0, ptr [[GEP1]], align 4
+; MDEP-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P]], i64 1, i64 0
+; MDEP-NEXT:    store i32 1, ptr [[GEP2]], align 4
+; MDEP-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; MDEP:       if.then:
+; MDEP-NEXT:    store i32 0, ptr [[Q:%.*]], align 4
+; MDEP-NEXT:    ret void
+; MDEP:       if.else:
+; MDEP-NEXT:    ret void
+;
+; MSSA-LABEL: @redundant_load_elimination_2(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 1
+; MSSA-NEXT:    store i32 0, ptr [[GEP1]], align 4
+; MSSA-NEXT:    [[GEP2:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P]], i64 1, i64 0
+; MSSA-NEXT:    store i32 1, ptr [[GEP2]], align 4
+; MSSA-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; MSSA:       if.then:
+; MSSA-NEXT:    [[T:%.*]] = load i32, ptr [[GEP1]], align 4
+; MSSA-NEXT:    store i32 [[T]], ptr [[Q:%.*]], align 4
+; MSSA-NEXT:    ret void
+; MSSA:       if.else:
+; MSSA-NEXT:    ret void
 ;
 entry:
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 1
