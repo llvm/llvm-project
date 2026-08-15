@@ -1,17 +1,21 @@
 set(ORC_RT_HEADERS
     orc-rt-c/Compiler.h
-    orc-rt-c/CoreTyspe.h
+    orc-rt-c/CoreTypes.h
     orc-rt-c/Error.h
     orc-rt-c/Logging.h
+    orc-rt-c/Session.h
     orc-rt-c/WrapperFunction.h
-    orc-rt-c/orc-rt.h
+    orc-rt-utils/CommandLine.h
     orc-rt/AllocAction.h
     orc-rt/BitmaskEnum.h
     orc-rt/BootstrapInfo.h
     orc-rt/CCallback.h
+    orc-rt/CallableTraitsHelper.h
     orc-rt/Compiler.h
+    orc-rt/Endian.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
+    orc-rt/ExecutorProcessInfo.h
     orc-rt/InProcessControllerAccess.h
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
@@ -32,11 +36,13 @@ set(ORC_RT_HEADERS
     orc-rt/SimplePackedSerialization.h
     orc-rt/SimpleSymbolTable.h
     orc-rt/StandaloneMachOUnwindInfoRegistrar.h
+    orc-rt/StringExtras.h
     orc-rt/TaskGroup.h
     orc-rt/ThreadPoolRunner.h
     orc-rt/WrapperFunction.h
     orc-rt/bind.h
     orc-rt/bit.h
+    orc-rt/iterator_range.h
     orc-rt/move_only_function.h
     orc-rt/scope_exit.h
     orc-rt/span.h
@@ -46,6 +52,7 @@ set(ORC_RT_HEADERS
     orc-rt/sps-ci/MemoryAccessSPSCI.h
     orc-rt/sps-ci/NativeDylibManagerSPSCI.h
     orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h
+    orc-rt/sps-ci/StandaloneMachOUnwindInfoRegistrarSPSCI.h
 )
 
 # Add generated config header
@@ -53,23 +60,18 @@ set(ORC_RT_GENERATED_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/orc-rt-c/config.h
 )
 
-# TODO: Switch to filesets when we move to cmake-3.23.
 add_library(orc-rt-headers INTERFACE)
-target_include_directories(orc-rt-headers INTERFACE
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-set_property(TARGET orc-rt-headers
-    PROPERTY PUBLIC_HEADER ${ORC_RT_HEADERS} ${ORC_RT_GENERATED_HEADERS}
-)
-install(TARGETS orc-rt-headers
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/
-    COMPONENT OrcRT_Development
+target_sources(orc-rt-headers INTERFACE
+  FILE_SET HEADERS
+  BASE_DIRS
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_BINARY_DIR}/include
+  FILES
+    ${ORC_RT_HEADERS}
+    ${ORC_RT_GENERATED_HEADERS}
 )
 
-# Install generated config header
-install(FILES ${ORC_RT_GENERATED_HEADERS}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/orc-rt-c/
-    COMPONENT OrcRT_Development
+install(TARGETS orc-rt-headers
+  FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  COMPONENT OrcRT_Development
 )
