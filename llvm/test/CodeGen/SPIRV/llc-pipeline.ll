@@ -70,6 +70,7 @@
 ; SPIRV-O0-NEXT:      InstructionSelect
 ; SPIRV-O0-NEXT:      ResetMachineFunction
 ; SPIRV-O0-NEXT:      Finalize ISel and expand pseudo-instructions
+; SPIRV-O0-NEXT:      Remove unused oracle functions
 ; SPIRV-O0-NEXT:      Local Stack Slot Allocation
 ; SPIRV-O0-NEXT:      Remove Redundant DEBUG_VALUE analysis
 ; SPIRV-O0-NEXT:      Fixup Statepoint Caller Saved
@@ -189,6 +190,7 @@
 ; SPIRV-Opt-NEXT:      InstructionSelect
 ; SPIRV-Opt-NEXT:      ResetMachineFunction
 ; SPIRV-Opt-NEXT:      Finalize ISel and expand pseudo-instructions
+; SPIRV-Opt-NEXT:      Remove unused oracle functions
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Early Tail Duplication
 ; SPIRV-Opt-NEXT:      Optimize machine instruction PHIs

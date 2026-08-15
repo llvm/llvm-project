@@ -75,6 +75,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeLiveVariablesWrapperPassPass(Registry);
   initializeLocalStackSlotPassPass(Registry);
   initializeLowerEmuTLSPass(Registry);
+  initializeRemoveOracleFunctionsPass(Registry);
   initializeLowerGlobalDtorsLegacyPassPass(Registry);
   initializeLowerIntrinsicsPass(Registry);
   initializeMIRAddFSDiscriminatorsPass(Registry);

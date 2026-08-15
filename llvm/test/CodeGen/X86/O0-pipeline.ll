@@ -41,6 +41,7 @@
 ; CHECK-NEXT:       X86 PIC Global Base Reg Initialization
 ; CHECK-NEXT:       Argument Stack Rebase
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
+; CHECK-NEXT:       Remove unused oracle functions
 ; CHECK-NEXT:       Local Stack Slot Allocation
 ; CHECK-NEXT:       X86 Suppress APX features for relocation
 ; CHECK-NEXT:       X86 speculative load hardening

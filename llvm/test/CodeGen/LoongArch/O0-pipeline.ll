@@ -38,6 +38,7 @@
 ; CHECK-NEXT:       Assignment Tracking Analysis
 ; CHECK-NEXT:       LoongArch DAG->DAG Pattern Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
+; CHECK-NEXT:       Remove unused oracle functions
 ; CHECK-NEXT:       Local Stack Slot Allocation
 ; CHECK-NEXT:       LoongArch Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
