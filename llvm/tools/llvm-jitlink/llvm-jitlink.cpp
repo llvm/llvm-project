@@ -1277,13 +1277,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   }
 
   if (DebuggerSupport && TT.isOSBinFormatMachO()) {
-    if (!ProcessSymsJD) {
-      Err = make_error<StringError>("MachO debugging requires process symbols",
-                                    inconvertibleErrorCode());
-      return;
-    }
     ObjLayer->addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
-        this->ES, *ProcessSymsJD, TT)));
+        this->ES, this->ES.getBootstrapJITDylib())));
   }
 
   if (PerfSupport && TT.isOSBinFormatELF()) {

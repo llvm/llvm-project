@@ -118,7 +118,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXPeepholeLegacyPassPass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
   initializeNVPTXIRPeepholePass(PR);
-  initializeNVPTXPrologEpilogPassPass(PR);
+  initializeNVPTXPrologEpilogLegacyPassPass(PR);
 }
 
 NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
@@ -202,16 +202,6 @@ void NVPTXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-
-  // TODO: Move this into the base CodeGenPassBuilder once all targets that
-  // currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(NVPTXAsmPrinterBeginPass::name(),
-                            "nvptx-asm-printer-begin");
-    PIC->addClassToPassName(NVPTXAsmPrinterPass::name(), "nvptx-asm-printer");
-    PIC->addClassToPassName(NVPTXAsmPrinterEndPass::name(),
-                            "nvptx-asm-printer-end");
-  }
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
@@ -408,7 +398,7 @@ void NVPTXPassConfig::addPreRegAlloc() {
 }
 
 void NVPTXPassConfig::addPostRegAlloc() {
-  addPass(createNVPTXPrologEpilogPass());
+  addPass(createNVPTXPrologEpilogLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     // NVPTXPrologEpilogPass calculates frame object offset and replace frame
     // index with VRFrame register. NVPTXPeephole need to be run after that and

@@ -37,11 +37,6 @@ namespace dxil {
 // dx_resource_handlefromimplicitbinding call
 LLVM_ABI StringRef getResourceNameFromBindingCall(CallInst *CI);
 
-/// Converts a scalar or vector LLVM type to its DXIL element type. Integer
-/// signedness must be supplied separately because LLVM integer types are
-/// signless.
-LLVM_ABI ElementType toDXILElementType(Type *Ty, bool IsSigned);
-
 /// The dx.RawBuffer target extension type
 ///
 /// `target("dx.RawBuffer", Type, IsWriteable, IsROV)`
@@ -376,14 +371,14 @@ enum class ResourceCounterDirection {
 class ResourceInfo {
 public:
   struct ResourceBinding {
-    uint32_t RecordID;
+    uint32_t BindingID = 0;
     uint32_t Space;
     uint32_t LowerBound;
     uint32_t Size;
 
     bool operator==(const ResourceBinding &RHS) const {
-      return std::tie(RecordID, Space, LowerBound, Size) ==
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+      return std::tie(BindingID, Space, LowerBound, Size) ==
+             std::tie(RHS.BindingID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool operator!=(const ResourceBinding &RHS) const {
       return !(*this == RHS);
@@ -393,8 +388,8 @@ public:
       // guarantees a well ordered results.
       const bool LHSIsUnbounded = Size == 0;
       const bool RHSIsUnbounded = RHS.Size == 0;
-      return std::tie(RecordID, Space, LowerBound, LHSIsUnbounded, Size) <
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHSIsUnbounded,
+      return std::tie(BindingID, Space, LowerBound, LHSIsUnbounded, Size) <
+             std::tie(RHS.BindingID, RHS.Space, RHS.LowerBound, RHSIsUnbounded,
                       RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
@@ -417,13 +412,13 @@ public:
   ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
   bool HasAtomic64Use = false;
 
-  ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
-               uint32_t Size, TargetExtType *HandleTy, StringRef Name = "",
+  ResourceInfo(uint32_t Space, uint32_t LowerBound, uint32_t Size,
+               TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
-      : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
-        Name(Name), Symbol(Symbol) {}
+      : Binding{0, Space, LowerBound, Size}, HandleTy(HandleTy), Name(Name),
+        Symbol(Symbol) {}
 
-  void setBindingID(unsigned ID) { Binding.RecordID = ID; }
+  void setBindingID(unsigned ID) { Binding.BindingID = ID; }
 
   bool hasCounter() const {
     return CounterDirection != ResourceCounterDirection::Unknown;

@@ -179,19 +179,20 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
 }
 
 /// Return the fmul operand if V is a one-use fadd with a single one-use fmul
-/// operand, all with the flags needed for reassociation and contraction. Such
-/// pairs can be fused into a single fma, so they are kept together as leaves
-/// of the enclosing expression tree instead of being linearized into it.
+/// operand, both allowing contraction. Such pairs can be fused into a single
+/// fma, so they are kept together as leaves of the enclosing expression tree
+/// instead of being linearized into it.
 static BinaryOperator *isFMulAddCandidate(Value *V) {
   BinaryOperator *FAdd = isReassociableOp(V, Instruction::FAdd);
   if (!FAdd || !FAdd->hasAllowContract())
     return nullptr;
-  auto GetContractableFMul = [](Value *Op) {
-    BinaryOperator *FMul = isReassociableOp(Op, Instruction::FMul);
-    return FMul && FMul->hasAllowContract() ? FMul : nullptr;
+  auto ContractableFMul = [](BinaryOperator *&FMul) {
+    return m_CombineAnd(m_AllowContract(m_OneUse(m_FMul(m_Value(), m_Value()))),
+                        m_BinOp(FMul));
   };
-  BinaryOperator *Mul0 = GetContractableFMul(FAdd->getOperand(0));
-  BinaryOperator *Mul1 = GetContractableFMul(FAdd->getOperand(1));
+  BinaryOperator *Mul0 = nullptr, *Mul1 = nullptr;
+  match(FAdd->getOperand(0), ContractableFMul(Mul0));
+  match(FAdd->getOperand(1), ContractableFMul(Mul1));
   // Keep constants visible to the enclosing expression so they still can be
   // folded there.
   if (!Mul0 == !Mul1 || isa<Constant>(FAdd->getOperand(Mul0 ? 1 : 0)))
@@ -489,7 +490,7 @@ static bool LinearizeExprTree(Instruction *I,
       // If this is a binary operation of the right kind with only one use then
       // add its operands to the expression.
       if (BinaryOperator *BO = isReassociableOp(Op, Opcode);
-          BO && !(Opcode == Instruction::FAdd && isFMulAddCandidate(BO))) {
+          BO && (Opcode != Instruction::FAdd || !isFMulAddCandidate(BO))) {
         assert(Visited.insert(Op).second && "Not first visit!");
         LLVM_DEBUG(dbgs() << "DIRECT ADD: " << *Op << " (" << Weight << ")\n");
         Worklist.push_back(std::make_pair(BO, Weight));
@@ -1752,9 +1753,9 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     }
   };
 
-  // fmul/fadd pairs kept together for fma hide their muls; count their factors
-  // as well and break the pairs up if a repeated factor exists, so that
-  // factorization still applies.
+  // fmul/fadd pairs kept together for fma hide their muls; count the factors
+  // of the reassociable ones as well and break those pairs up if a repeated
+  // factor exists, so that factorization still applies.
   SmallVector<Value *> FMulAddCands;
   for (const ValueEntry &Entry : Ops) {
     if (BinaryOperator *BOp =
@@ -1763,6 +1764,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       continue;
     }
     if (BinaryOperator *BOp = isFMulAddCandidate(Entry.Op)) {
+      if (!hasFPAssociativeFlags(BOp))
+        continue;
       FMulAddCands.push_back(Entry.Op);
       CountFactors(BOp);
     }

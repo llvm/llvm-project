@@ -56,3 +56,31 @@ define double @fadd_fmul_2(ptr %x, ptr %y, ptr %z) {
   %r = fadd reassoc nsz contract double %a0, %a1
   ret double %r
 }
+
+define double @fadd_fmul_2_right(ptr %x, ptr %y, ptr %z) {
+; CHECK-LABEL: define double @fadd_fmul_2_right(
+; CHECK-SAME: ptr nofree readonly captures(none) [[X:%.*]], ptr nofree readonly captures(none) [[Y:%.*]], ptr nofree readonly captures(none) [[Z:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[Z]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz contract <2 x double> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = tail call reassoc nsz contract double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP5]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x0 = load double, ptr %x
+  %y0 = load double, ptr %y
+  %m0 = fmul reassoc nsz contract double %x0, %y0
+  %z0 = load double, ptr %z
+  %a0 = fadd reassoc nsz contract double %z0, %m0
+  %x1p = getelementptr inbounds double, ptr %x, i64 1
+  %x1 = load double, ptr %x1p
+  %y1p = getelementptr inbounds double, ptr %y, i64 1
+  %y1 = load double, ptr %y1p
+  %m1 = fmul reassoc nsz contract double %x1, %y1
+  %z1p = getelementptr inbounds double, ptr %z, i64 1
+  %z1 = load double, ptr %z1p
+  %a1 = fadd reassoc nsz contract double %z1, %m1
+  %r = fadd reassoc nsz contract double %a0, %a1
+  ret double %r
+}

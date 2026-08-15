@@ -2769,12 +2769,8 @@ define <4 x i16> @test_pmulhr_h(<4 x i16> %a, <4 x i16> %b) {
 define <2 x i32> @test_pmulhr_w(<2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_pmulhr_w:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wmul a4, a0, a2
-; RV32-NEXT:    wmul a0, a1, a3
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    waddau a0, a2, zero
-; RV32-NEXT:    waddau a4, a2, zero
-; RV32-NEXT:    mv a0, a5
+; RV32-NEXT:    mulhr a1, a1, a3
+; RV32-NEXT:    mulhr a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhr_w:
@@ -2814,12 +2810,8 @@ define <4 x i16> @test_pmulhru_h(<4 x i16> %a, <4 x i16> %b) {
 define <2 x i32> @test_pmulhru_w(<2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_pmulhru_w:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wmulu a4, a0, a2
-; RV32-NEXT:    wmulu a0, a1, a3
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    waddau a0, a2, zero
-; RV32-NEXT:    waddau a4, a2, zero
-; RV32-NEXT:    mv a0, a5
+; RV32-NEXT:    mulhru a1, a1, a3
+; RV32-NEXT:    mulhru a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhru_w:
@@ -2879,12 +2871,8 @@ define <4 x i16> @test_pmulhrsu_h_commuted(<4 x i16> %a, <4 x i16> %b) {
 define <2 x i32> @test_pmulhrsu_w(<2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_pmulhrsu_w:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wmulsu a4, a0, a2
-; RV32-NEXT:    wmulsu a0, a1, a3
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    waddau a0, a2, zero
-; RV32-NEXT:    waddau a4, a2, zero
-; RV32-NEXT:    mv a0, a5
+; RV32-NEXT:    mulhrsu a1, a1, a3
+; RV32-NEXT:    mulhrsu a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhrsu_w:
@@ -2903,12 +2891,8 @@ define <2 x i32> @test_pmulhrsu_w(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i32> @test_pmulhrsu_w_commuted(<2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_pmulhrsu_w_commuted:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    wmulsu a4, a2, a0
-; RV32-NEXT:    wmulsu a0, a3, a1
-; RV32-NEXT:    lui a2, 524288
-; RV32-NEXT:    waddau a0, a2, zero
-; RV32-NEXT:    waddau a4, a2, zero
-; RV32-NEXT:    mv a0, a5
+; RV32-NEXT:    mulhrsu a1, a3, a1
+; RV32-NEXT:    mulhrsu a0, a2, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhrsu_w_commuted:

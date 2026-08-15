@@ -75,6 +75,79 @@ define double @fadd_fmul_2(ptr %x, ptr %y, ptr %z) {
   ret double %r
 }
 
+define double @fadd_fmul_2_right(ptr %x, ptr %y, ptr %z) {
+; CHECK-LABEL: define double @fadd_fmul_2_right(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) {
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
+; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = fadd reassoc nsz contract double [[Z0]], [[M0]]
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X1P]], align 8
+; CHECK-NEXT:    [[Y1P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y1P]], align 8
+; CHECK-NEXT:    [[M1:%.*]] = fmul reassoc nsz contract double [[Y1]], [[X1]]
+; CHECK-NEXT:    [[Z1P:%.*]] = getelementptr inbounds double, ptr [[Z]], i64 1
+; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z1P]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = fadd reassoc nsz contract double [[Z1]], [[M1]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz contract double [[A1]], [[A0]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x0 = load double, ptr %x
+  %y0 = load double, ptr %y
+  %m0 = fmul reassoc nsz contract double %x0, %y0
+  %z0 = load double, ptr %z
+  %a0 = fadd reassoc nsz contract double %z0, %m0
+  %x1p = getelementptr inbounds double, ptr %x, i64 1
+  %x1 = load double, ptr %x1p
+  %y1p = getelementptr inbounds double, ptr %y, i64 1
+  %y1 = load double, ptr %y1p
+  %m1 = fmul reassoc nsz contract double %x1, %y1
+  %z1p = getelementptr inbounds double, ptr %z, i64 1
+  %z1 = load double, ptr %z1p
+  %a1 = fadd reassoc nsz contract double %z1, %m1
+  %r = fadd reassoc nsz contract double %a0, %a1
+  ret double %r
+}
+
+define double @fsub_fmul_2_right(ptr %x, ptr %y, ptr %z) {
+; CHECK-LABEL: define double @fsub_fmul_2_right(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) {
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
+; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
+; CHECK-NEXT:    [[M0_NEG:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X1P]], align 8
+; CHECK-NEXT:    [[Y1P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y1P]], align 8
+; CHECK-NEXT:    [[Z1P:%.*]] = getelementptr inbounds double, ptr [[Z]], i64 1
+; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z1P]], align 8
+; CHECK-NEXT:    [[M1_NEG:%.*]] = fmul reassoc nsz contract double [[Y1]], [[X1]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd reassoc nsz contract double [[M1_NEG]], [[M0_NEG]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul reassoc nsz contract double -1.000000e+00, [[REASS_ADD]]
+; CHECK-NEXT:    [[S0:%.*]] = fadd reassoc nsz contract double [[Z0]], [[Z1]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz contract double [[S0]], [[REASS_MUL]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x0 = load double, ptr %x
+  %y0 = load double, ptr %y
+  %m0 = fmul reassoc nsz contract double %x0, %y0
+  %z0 = load double, ptr %z
+  %s0 = fsub reassoc nsz contract double %z0, %m0
+  %x1p = getelementptr inbounds double, ptr %x, i64 1
+  %x1 = load double, ptr %x1p
+  %y1p = getelementptr inbounds double, ptr %y, i64 1
+  %y1 = load double, ptr %y1p
+  %m1 = fmul reassoc nsz contract double %x1, %y1
+  %z1p = getelementptr inbounds double, ptr %z, i64 1
+  %z1 = load double, ptr %z1p
+  %s1 = fsub reassoc nsz contract double %z1, %m1
+  %r = fadd reassoc nsz contract double %s0, %s1
+  ret double %r
+}
+
 define double @fsub_fmul_4(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fsub_fmul_4(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) {
@@ -181,6 +254,58 @@ define float @factorize_first(float %a, float %b, float %c, float %d) {
 ;
   %t0 = fmul reassoc nsz contract float %a, %b
   %t1 = fmul reassoc nsz contract float %a, %c
+  %t2 = fadd reassoc nsz contract float %t1, %d
+  %t3 = fadd reassoc nsz contract float %t0, %t2
+  ret float %t3
+}
+
+define double @fadd_fmul_2_contract_only_mul(ptr %x, ptr %y, ptr %z) {
+; CHECK-LABEL: define double @fadd_fmul_2_contract_only_mul(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) {
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract double [[X0]], [[Y0]]
+; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = fadd reassoc nsz contract double [[M0]], [[Z0]]
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X1P]], align 8
+; CHECK-NEXT:    [[Y1P:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y1P]], align 8
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract double [[X1]], [[Y1]]
+; CHECK-NEXT:    [[Z1P:%.*]] = getelementptr inbounds double, ptr [[Z]], i64 1
+; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z1P]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = fadd reassoc nsz contract double [[M1]], [[Z1]]
+; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz contract double [[A1]], [[A0]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %x0 = load double, ptr %x
+  %y0 = load double, ptr %y
+  %m0 = fmul contract double %x0, %y0
+  %z0 = load double, ptr %z
+  %a0 = fadd reassoc nsz contract double %m0, %z0
+  %x1p = getelementptr inbounds double, ptr %x, i64 1
+  %x1 = load double, ptr %x1p
+  %y1p = getelementptr inbounds double, ptr %y, i64 1
+  %y1 = load double, ptr %y1p
+  %m1 = fmul contract double %x1, %y1
+  %z1p = getelementptr inbounds double, ptr %z, i64 1
+  %z1 = load double, ptr %z1p
+  %a1 = fadd reassoc nsz contract double %m1, %z1
+  %r = fadd reassoc nsz contract double %a0, %a1
+  ret double %r
+}
+
+define float @factorize_contract_only_mul(float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: define float @factorize_contract_only_mul(
+; CHECK-SAME: float [[A:%.*]], float [[B:%.*]], float [[C:%.*]], float [[D:%.*]]) {
+; CHECK-NEXT:    [[T0:%.*]] = fmul reassoc nsz contract float [[B]], [[A]]
+; CHECK-NEXT:    [[T1:%.*]] = fmul contract float [[A]], [[C]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc nsz contract float [[T1]], [[D]]
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc nsz contract float [[T2]], [[T0]]
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t0 = fmul reassoc nsz contract float %a, %b
+  %t1 = fmul contract float %a, %c
   %t2 = fadd reassoc nsz contract float %t1, %d
   %t3 = fadd reassoc nsz contract float %t0, %t2
   ret float %t3
