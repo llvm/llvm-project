@@ -25,7 +25,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "type_iterators.h"
+#include "test_iterators.h"
 
 #include "../../range_adaptor_types.h"
 #include "../types.h"
@@ -35,8 +35,8 @@ using ConstIterIncompatibleView =
               forward_iterator<int*>,
               random_access_iterator<const int*>,
               random_access_iterator<const int*>>;
-static_assert(!std::convertible_to<std::ranges::iterator_t<ConstIterIncompatibleView>,
-                                   std::ranges::iterator_t<const ConstIterIncompatibleView>>);
+static_assert(!std::is_convertible_v<std::ranges::iterator_t<ConstIterIncompatibleView>,
+                                     std::ranges::iterator_t<const ConstIterIncompatibleView>>);
 
 constexpr void test_SFINAE() {
   int buffer[3] = {1, 2, 3};
@@ -47,6 +47,7 @@ constexpr void test_SFINAE() {
     auto iter2 = std::as_const(v).begin();
 
     static_assert(!std::same_as<decltype(iter1), decltype(iter2)>);
+
     static_assert(!std::is_constructible_v<decltype(iter1), decltype(iter2)>);
     static_assert(!std::is_constructible_v<decltype(iter2), decltype(iter1)>);
   }
@@ -60,7 +61,7 @@ constexpr void test_SFINAE() {
     static_assert(!std::same_as<decltype(iter1), decltype(iter2)>);
 
     // We cannot create a non-const iterator from a const iterator.
-    static_assert(!std::constructible_from<decltype(iter1), decltype(iter2)>);
+    static_assert(!std::is_constructible_v<decltype(iter1), decltype(iter2)>);
   }
 }
 
@@ -110,9 +111,8 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  tests();
-test();
-static_assert(test());
+  test();
+  static_assert(test());
 
   return 0;
 }
