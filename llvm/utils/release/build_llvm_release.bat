@@ -354,7 +354,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build_%arch%
 cd build_%arch%
-if "%disable-pgo%" == "true" (
+if "%disable-pgo%" != "true" (
   call :do_generate_profile || exit /b 1
 )
 cmake -GNinja %cmake_flags% ^
