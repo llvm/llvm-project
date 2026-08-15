@@ -196,7 +196,7 @@ The domain has few operations:
 ^^^^^^^^
 
 - Decrement the nested level. 
-- If the nested level becomes 0, it means the thread is now in a quiescent state, we can notify the waiting writer thread if there is any.
+- If the nested level becomes 0, the thread is now in a quiescent state, we can notify the waiting collector thread if there is any.
 
 `retire`
 ^^^^^^^^
