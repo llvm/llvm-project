@@ -209,6 +209,9 @@ class TestGdbRemoteThreadsInStopReply(gdbremote_testcase.GdbRemoteTestCaseBase):
         # walks depends on where the backchain terminates.
         self.assertLessEqual(len(entries), 2, "expected at most 2 backchain entries")
 
+    # Frame 0's stack memory is expedited only by a debugserver built from this
+    # tree; an older system debugserver sends the backchain alone.
+    @skipIfOutOfTreeDebugserver
     @add_test_categories(["debugserver"])
     def test_threads_info_expedites_stopped_frame_stack(self):
         """jThreadsInfo expedites every thread's frame pointer backchain, plus
