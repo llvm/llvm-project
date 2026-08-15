@@ -1757,9 +1757,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, Opt);
   }
 
-  if (Opts.EnableAIXExtendedAltivecABI)
-    GenerateArg(Consumer, OPT_mabi_EQ_vec_extabi);
-
   if (Opts.XCOFFReadOnlyPointers)
     GenerateArg(Consumer, OPT_mxcoff_roptr);
 

@@ -200,7 +200,11 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
   else if (Options.MCOptions.getABIName().starts_with("elfv2"))
     return PPCTargetMachine::PPC_ABI_ELFv2;
 
-  assert(Options.MCOptions.getABIName().empty() &&
+  // vec-extabi and vec-default are AIX-specific ABI options that don't
+  // affect the ELF ABI selection, so ignore them here.
+  assert((Options.MCOptions.getABIName().empty() ||
+          Options.MCOptions.getABIName() == "vec-extabi" ||
+          Options.MCOptions.getABIName() == "vec-default") &&
          "Unknown target-abi option!");
 
   switch (TT.getArch()) {
