@@ -1,4 +1,5 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict -Wno-openacc-default-none-scalars-strict
+! RUN: not %flang_fc1 -fopenacc -fno-openacc-default-none-scalars-strict -Wno-openacc-default-none-scalars-strict %s 2>&1 | FileCheck %s --check-prefix=CHECK-LOC
 
 ! Verify that array sections explicitly listed in OpenACC data clauses are
 ! correctly registered as having a DSA, so DEFAULT(NONE) uses path containment
@@ -208,6 +209,8 @@ subroutine test_cross_kind_sections(n)
   integer :: i
   !ERROR: 'a(1:n)' appears in more than one data-sharing clause on the same OpenACC directive
   !$acc parallel loop default(none) copy(a(1:n)) private(a(1:n))
+  ! CHECK-LOC: error: 'a(1:n)' appears in more than one data-sharing clause on the same OpenACC directive
+  ! CHECK-LOC: previous data-sharing object appears here
   do i = 1, n
     a(i) = 0.0
   end do

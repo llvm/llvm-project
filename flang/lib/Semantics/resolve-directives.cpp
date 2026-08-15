@@ -410,7 +410,8 @@ private:
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive);
   void PopAccContext();
   static DesignatorPath MakeBaseDesignatorPath(const Symbol &);
-  void AddAccObjectWithDSA(DesignatorPath, Symbol::Flag);
+  void AddAccObjectWithDSA(DesignatorPath, Symbol::Flag,
+      const parser::AccObject *occurrence = nullptr);
   bool IsObjectWithVisibleDSA(const DesignatorPath &) const;
   void AdjustAccSymbolReference(const parser::Name &);
   void enterExpressionLikeContext() { ++expressionLikeDepthCount_; }
@@ -1941,11 +1942,11 @@ DesignatorPath AccAttributeVisitor::MakeBaseDesignatorPath(
   return path;
 }
 
-void AccAttributeVisitor::AddAccObjectWithDSA(
-    DesignatorPath designator, Symbol::Flag flag) {
+void AccAttributeVisitor::AddAccObjectWithDSA(DesignatorPath designator,
+    Symbol::Flag flag, const parser::AccObject *occurrence) {
   if (!designator.empty()) {
     GetContext().objectsWithDSA.push_back(
-        std::move(designator), {flag, nullptr});
+        std::move(designator), {flag, occurrence});
   }
 }
 
@@ -2243,7 +2244,8 @@ void AccAttributeVisitor::ResolveAccObject(
                     CheckMultipleAppearances(baseName, accFlag,
                         std::move(designatorPath), &accObject);
                   } else {
-                    AddAccObjectWithDSA(std::move(designatorPath), accFlag);
+                    AddAccObjectWithDSA(
+                        std::move(designatorPath), accFlag, &accObject);
                   }
                 }
               }
@@ -2265,7 +2267,8 @@ void AccAttributeVisitor::ResolveAccObject(
                 CheckMultipleAppearances(
                     baseName, accFlag, std::move(designatorPath), &accObject);
               } else if (!designatorPath.empty()) {
-                AddAccObjectWithDSA(std::move(designatorPath), accFlag);
+                AddAccObjectWithDSA(
+                    std::move(designatorPath), accFlag, &accObject);
               }
             }
           },
@@ -2276,8 +2279,8 @@ void AccAttributeVisitor::ResolveAccObject(
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         DeclareOrMarkOtherAccessEntity(*object, accFlag)}) {
-                  AddAccObjectWithDSA(
-                      MakeBaseDesignatorPath(*resolvedObject), accFlag);
+                  AddAccObjectWithDSA(MakeBaseDesignatorPath(*resolvedObject),
+                      accFlag, &accObject);
                 }
               }
             } else {
