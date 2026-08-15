@@ -81,17 +81,14 @@ entry:
 define dso_local i32 @f3(i32 %F) local_unnamed_addr #0 {
 ; T2-LABEL: f3:
 ; T2:       @ %bb.0: @ %entry
-; T2-NEXT:    asrs r1, r0, #31
-; T2-NEXT:    add.w r0, r0, r1, lsr #24
-; T2-NEXT:    asrs r0, r0, #8
+; T2-NEXT:    mov.w r1, #256
+; T2-NEXT:    sdiv r0, r0, r1
 ; T2-NEXT:    bx lr
 ;
 ; T1-LABEL: f3:
 ; T1:       @ %bb.0: @ %entry
-; T1-NEXT:    asrs r1, r0, #31
-; T1-NEXT:    lsrs r1, r1, #24
-; T1-NEXT:    adds r0, r0, r1
-; T1-NEXT:    asrs r0, r0, #8
+; T1-NEXT:    movw r1, #256
+; T1-NEXT:    sdiv r0, r0, r1
 ; T1-NEXT:    bx lr
 ;
 ; V6M-LABEL: f3:
