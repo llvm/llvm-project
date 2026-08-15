@@ -62,21 +62,3 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) nounwi
   %result = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> %a)
   ret { <2 x double>, <2 x double> } %result
 }
-
-; CHECK-LABEL: test_sincos_f128:
-; CHECK: bl sinl
-; CHECK: bl cosl
-define { fp128, fp128 } @test_sincos_f128(fp128 %a) nounwind {
-  %result = call { fp128, fp128 } @llvm.sincos.f128(fp128 %a)
-  ret { fp128, fp128 } %result
-}
-
-; CHECK-LABEL: test_sincos_v2f128:
-; CHECK: bl sinl
-; CHECK: bl cosl
-; CHECK: bl cosl
-; CHECK: bl sinl
-define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) nounwind {
-  %result = call { <2 x fp128>, <2 x fp128> } @llvm.sincos.v2f128(<2 x fp128> %a)
-  ret { <2 x fp128>, <2 x fp128> } %result
-}

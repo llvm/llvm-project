@@ -15,31 +15,6 @@
 using RuntimeState = llvm::offload::StateTy;
 using ThreadState = llvm::offload::ThreadStateTy;
 
-extern "C" {
-
-/// Push call configuration for kernel launch
-unsigned __llvmPushCallConfiguration(dim3 GridSize, dim3 BlockSize,
-                                     size_t SharedMemory, void *Stream) {
-  CallConfigurationTy &CC = ThreadState::getCallConfiguration();
-
-  CC.GridSize = GridSize;
-  CC.BlockSize = BlockSize;
-  CC.SharedMemory = SharedMemory;
-  CC.Stream = Stream;
-  return 0;
-}
-
-/// Pop call configuration for kernel launch
-unsigned __llvmPopCallConfiguration(dim3 *GridSize, dim3 *BlockSize,
-                                    size_t *SharedMemory, void **Stream) {
-  CallConfigurationTy &CC = ThreadState::getCallConfiguration();
-  *GridSize = CC.GridSize;
-  *BlockSize = CC.BlockSize;
-  *SharedMemory = CC.SharedMemory;
-  *Stream = CC.Stream;
-  return 0;
-}
-
 /// Internal kernel launch implementation
 ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
                                    dim3 BlockDim, void *KernelArgsPtr,
@@ -73,9 +48,34 @@ ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
                         OKA->ArgSizes);
 }
 
-unsigned __llvmLaunchKernel(const char *KernelID, dim3 GridDim, dim3 BlockDim,
-                            void *KernelArgsPtr, size_t DynamicSharedMem,
-                            void *Stream) {
+extern "C" {
+
+/// Push call configuration for kernel launch
+unsigned __llvmPushCallConfiguration(dim3 GridSize, dim3 BlockSize,
+                                     size_t SharedMemory, void *Stream) {
+  CallConfigurationTy &CC = ThreadState::getCallConfiguration();
+
+  CC.GridSize = GridSize;
+  CC.BlockSize = BlockSize;
+  CC.SharedMemory = SharedMemory;
+  CC.Stream = Stream;
+  return 0;
+}
+
+/// Pop call configuration for kernel launch
+unsigned __llvmPopCallConfiguration(dim3 *GridSize, dim3 *BlockSize,
+                                    size_t *SharedMemory, void **Stream) {
+  CallConfigurationTy &CC = ThreadState::getCallConfiguration();
+  *GridSize = CC.GridSize;
+  *BlockSize = CC.BlockSize;
+  *SharedMemory = CC.SharedMemory;
+  *Stream = CC.Stream;
+  return 0;
+}
+
+unsigned llvmLaunchKernel(const char *KernelID, dim3 GridDim, dim3 BlockDim,
+                          void *KernelArgsPtr, size_t DynamicSharedMem,
+                          void *Stream) {
   ol_result_t Result = __llvmLaunchKernelImpl(
       KernelID, GridDim, BlockDim, KernelArgsPtr, DynamicSharedMem, Stream);
   return Result ? Result->Code : 0;

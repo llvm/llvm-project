@@ -602,6 +602,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceilf128
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
@@ -974,7 +975,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.atan2f128
     libc.src.math.atan2l
     libc.src.math.canonicalizef128
-    libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
@@ -1364,6 +1364,19 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sched.__sched_setcpuzero
     libc.src.sched.__sched_xorcpuset
 
+    # semaphore.h entrypoints
+    libc.src.semaphore.sem_clockwait
+    libc.src.semaphore.sem_close
+    libc.src.semaphore.sem_destroy
+    libc.src.semaphore.sem_getvalue
+    libc.src.semaphore.sem_init
+    libc.src.semaphore.sem_open
+    libc.src.semaphore.sem_post
+    libc.src.semaphore.sem_timedwait
+    libc.src.semaphore.sem_trywait
+    libc.src.semaphore.sem_unlink
+    libc.src.semaphore.sem_wait
+
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
     libc.src.setjmp.setjmp
@@ -1569,6 +1582,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.nl_types.catgets
 
     # link.h entrypoints
+    libc.src.link._r_debug
     libc.src.link.dl_iterate_phdr
   )
 endif()

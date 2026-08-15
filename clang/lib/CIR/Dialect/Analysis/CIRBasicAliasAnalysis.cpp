@@ -8,6 +8,7 @@
 
 #include "clang/CIR/Dialect/Analysis/CIRBasicAliasAnalysis.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/Support/DebugLog.h"
 
@@ -20,17 +21,117 @@ using namespace cir;
 // Helpers
 //===----------------------------------------------------------------------===//
 
+static constexpr unsigned MaxLookupDepth = 6;
+
 mlir::Value CIRBasicAliasAnalysis::getUnderlyingObject(mlir::Value val) {
   LDBG() << "Getting underlying object for: " << val;
 
-  // TODO: Walk through cir.ptr_stride, cir.cast, cir.get_member, etc.
-  // to find the root allocation (cir.alloca, cir.global_addr, function args).
-  LDBG() << "Not yet implemented";
+  for (unsigned depth = 0; depth < MaxLookupDepth; ++depth) {
+    mlir::Operation *defOp = val.getDefiningOp();
+    if (!defOp) {
+      LDBG() << "No defining operation, stopping";
+      break; // Block argument (e.g. function parameter) — stop here.
+    }
+
+    // Bitcast and address-space casts don't change the underlying object.
+    // array_to_ptrdecay produces an element pointer to the same storage as
+    // the array pointer, so strip through it too.
+    if (auto castOp = mlir::dyn_cast<cir::CastOp>(defOp)) {
+      if (castOp.isAllocaPreservingCast() ||
+          castOp.getKind() == cir::CastKind::array_to_ptrdecay) {
+        LDBG() << "Walking past cast operation";
+        val = castOp.getSrc();
+        continue;
+      }
+      LDBG() << "Opaque cast operation, stopping";
+      break;
+    }
+
+    // Pointer stride: only strip through when we can prove the access stays
+    // within the bounds of the underlying allocation.
+    if (auto strideOp = mlir::dyn_cast<cir::PtrStrideOp>(defOp)) {
+      auto constOp = strideOp.getStride().getDefiningOp<cir::ConstantOp>();
+      if (constOp) {
+        if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(constOp.getValue())) {
+          APInt stride = intAttr.getValue();
+
+          // Zero stride is trivially in-bounds.
+          if (stride.isZero()) {
+            LDBG() << "Walking past zero-strided PtrStrideOp";
+            val = strideOp.getBase();
+            continue;
+          }
+        }
+      }
+      // Dynamic stride or unverifiable bounds — stop here conservatively.
+      LDBG() << "Non-zero or dynamic PtrStrideOp, stopping";
+      break;
+    }
+
+    // Handle special cases for zero-offset sub-object accesses.
+    if (auto op = mlir::dyn_cast<cir::GetMemberOp>(defOp)) {
+      if (op.getIndex() == 0) {
+        LDBG() << "GetMemberOp[0], following to underlying object";
+        val = op.getAddr();
+        continue;
+      } else {
+        LDBG() << "GetMemberOp, non-zero index, stopping";
+        break;
+      }
+    }
+    if (auto op = mlir::dyn_cast<cir::GetElementOp>(defOp)) {
+      cir::IntAttr index;
+      if (auto constOp = op.getIndex().getDefiningOp<cir::ConstantOp>())
+        index = mlir::dyn_cast<cir::IntAttr>(constOp.getValue());
+      if (index && index.getValue().isZero()) {
+        LDBG() << "GetElementOp[0], following to underlying object";
+        val = op.getBase();
+        continue;
+      }
+      LDBG() << "GetElementOp, non-zero or dynamic index, stopping";
+      break;
+    }
+    if (auto op = mlir::dyn_cast<cir::BaseClassAddrOp>(defOp)) {
+      // A zero byte offset means the base subobject starts at the same address
+      // as the derived object.
+      if (op.getOffset().isZero()) {
+        LDBG() << "BaseClassAddrOp[0], following to underlying object";
+        val = op.getDerivedAddr();
+        continue;
+      }
+      LDBG() << "BaseClassAddrOp, non-zero offset, stopping";
+      break;
+    }
+    if (auto op = mlir::dyn_cast<cir::DerivedClassAddrOp>(defOp)) {
+      // The offset is stored unsigned but applied as a negative adjustment. A
+      // zero offset means the derived object starts at the same address as the
+      // base subobject.
+      if (op.getOffset().isZero()) {
+        LDBG() << "DerivedClassAddrOp[0], following to underlying object";
+        val = op.getBaseAddr();
+        continue;
+      }
+      LDBG() << "DerivedClassAddrOp, non-zero offset, stopping";
+      break;
+    }
+    if (auto op = mlir::dyn_cast<cir::ComplexRealPtrOp>(defOp)) {
+      LDBG() << "Getting input pointer for ComplexRealPtrOp";
+      val = op.getOperand();
+      continue;
+    }
+    if (auto op = mlir::dyn_cast<cir::ComplexImagPtrOp>(defOp)) {
+      LDBG() << "ComplexImagPtrOp, stopping";
+      break;
+    }
+
+    LDBG() << "Unhandled operation, stopping";
+    break; // Unknown op — stop here conservatively.
+  }
   return val;
 }
 
-bool CIRBasicAliasAnalysis::areDistinctObjects(mlir::Value lhs,
-                                               mlir::Value rhs) {
+CIRBasicAliasAnalysis::ObjectRelation
+CIRBasicAliasAnalysis::classifyObjects(mlir::Value lhs, mlir::Value rhs) {
   LDBG() << "Checking if " << lhs << " and " << rhs << " are distinct objects";
 
   // Two values are distinct allocations if they originate from different
@@ -42,18 +143,18 @@ bool CIRBasicAliasAnalysis::areDistinctObjects(mlir::Value lhs,
 
   if (lhsObj == rhsObj) {
     LDBG() << "Identical values, not distinct";
-    return false;
+    return ObjectRelation::Identical;
   }
 
   // Different cir.alloca ops in the same function cannot alias.
   if (mlir::isa_and_nonnull<cir::AllocaOp>(lhsObj.getDefiningOp()) &&
       mlir::isa_and_nonnull<cir::AllocaOp>(rhsObj.getDefiningOp())) {
     LDBG() << "Different cir.alloca ops in the same function, distinct";
-    return true;
+    return ObjectRelation::Distinct;
   }
 
   LDBG() << "Conservative fallback, not distinct";
-  return false;
+  return ObjectRelation::Unknown;
 }
 
 //===----------------------------------------------------------------------===//
@@ -69,14 +170,20 @@ mlir::AliasResult CIRBasicAliasAnalysis::alias(mlir::Value lhs,
     return mlir::AliasResult::MustAlias;
   }
 
-  if (areDistinctObjects(lhs, rhs)) {
+  ObjectRelation relation = classifyObjects(lhs, rhs);
+  switch (relation) {
+  case ObjectRelation::Distinct:
     LDBG() << "No alias between distinct objects";
     return mlir::AliasResult::NoAlias;
+  case ObjectRelation::Identical:
+    LDBG() << "Must alias between identical objects";
+    return mlir::AliasResult::MustAlias;
+  case ObjectRelation::Unknown:
+    // Conservative fallback — the aggregate will try other implementations.
+    LDBG() << "Conservative fallback, may alias";
+    return mlir::AliasResult::MayAlias;
   }
-
-  // Conservative fallback — the aggregate will try other implementations.
-  LDBG() << "Conservative fallback, may alias";
-  return mlir::AliasResult::MayAlias;
+  llvm_unreachable("Unhandled ObjectRelation");
 }
 
 mlir::ModRefResult CIRBasicAliasAnalysis::getModRef(mlir::Operation *op,

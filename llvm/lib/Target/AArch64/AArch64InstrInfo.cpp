@@ -12075,7 +12075,7 @@ static bool isDefinedOutside(Register Reg, const MachineBasicBlock *BB) {
   if (!Reg.isVirtual())
     return false;
   const MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-  return MRI.getVRegDef(Reg)->getParent() != BB;
+  return MRI.getDefBlock(Reg) != BB;
 }
 
 /// If Reg is an induction variable, return true and set some parameters

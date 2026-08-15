@@ -1538,6 +1538,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
       setOperationAction(ISD::FADD, VT, Custom);
 
+    // Two-way integer ``pure'' add reductions lower to a [SU]ADALP.
+    {
+      static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                        ISD::PARTIAL_REDUCE_UMLA};
+      setPartialReduceMLAAction(MLAOps, MVT::v4i16, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v2i32, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+    }
+
     if (Subtarget->hasDotProd()) {
       static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
                                         ISD::PARTIAL_REDUCE_UMLA};
@@ -6497,18 +6509,10 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   EVT Op1VT = Op1.getValueType();
   EVT Op2VT = Op2.getValueType();
   EVT ResVT = Op.getValueType();
-  unsigned SearchSize = Op2VT.getVectorNumElements();
 
   assert((Op1VT.getVectorElementType() == MVT::i8 ||
           Op1VT.getVectorElementType() == MVT::i16) &&
          "Expected 8-bit or 16-bit characters.");
-
-  if ((Op1VT == MVT::nxv8i16 || Op1VT == MVT::v8i16) && SearchSize != 8)
-    return SDValue();
-
-  if ((Op1VT == MVT::nxv16i8 || Op1VT == MVT::v16i8 || Op1VT == MVT::v8i8) &&
-      SearchSize != 8 && SearchSize != 16)
-    return SDValue();
 
   SDValue ID =
       DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
@@ -33059,7 +33063,7 @@ Value *AArch64TargetLowering::getSafeStackPointerLocation(
 /// If a physical register, this returns the register that receives the
 /// exception address on entry to an EH pad.
 Register AArch64TargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // FIXME: This is a guess. Has this been defined yet?
   return AArch64::X0;
 }
@@ -33067,7 +33071,7 @@ Register AArch64TargetLowering::getExceptionPointerRegister(
 /// If a physical register, this returns the register that receives the
 /// exception typeid on entry to a landing pad.
 Register AArch64TargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // FIXME: This is a guess. Has this been defined yet?
   return AArch64::X1;
 }
@@ -34872,6 +34876,29 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   EVT ResultVT = Op.getValueType();
   EVT OrigResultVT = ResultVT;
   EVT OpVT = LHS.getValueType();
+
+  // Two-way fixed-length integer add reductions.
+  if ((Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA ||
+       Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA) &&
+      Subtarget->isNeonAvailable() &&
+      (OpVT.is64BitVector() || OpVT.is128BitVector()) &&
+      ResultVT.getScalarSizeInBits() == OpVT.getScalarSizeInBits() * 2 &&
+      ResultVT.getVectorNumElements() * 2 == OpVT.getVectorNumElements()) {
+    // A pure partial reduction can lower to [SU]ADALP via patterns.
+    if (isOneVector(RHS))
+      return Op;
+    // Otherwise, expand operations without efficient SVE lowering.
+    if (OpVT.getScalarType() == MVT::i8 &&
+        !(Subtarget->isSVEorStreamingSVEAvailable() &&
+          (Subtarget->hasSVE2p3() || Subtarget->hasSME2p3())))
+      return SDValue();
+    if (OpVT.getScalarType() == MVT::i16 &&
+        !(Subtarget->isSVEorStreamingSVEAvailable() &&
+          (Subtarget->hasSVE2p1() || Subtarget->hasSME2())))
+      return SDValue();
+    if (OpVT.getScalarType() == MVT::i32)
+      return SDValue();
+  }
 
   // We can handle this case natively by accumulating into a wider
   // zero-padded vector.

@@ -102,11 +102,13 @@ template __global__ void template_a_b_c_max_num_work_groups<32, 4, 2>();
 __launch_bounds__(128)
 __global__ void launch_bounds_1arg() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z18launch_bounds_1argv() [[LAUNCH_BOUNDS_1ARG:#[0-9]+]]
+// CHECK-SPIRV: define{{.*}} spir_kernel void @_Z18launch_bounds_1argv(){{.*}} !max_work_group_size [[MAX_WORK_GROUP_SIZE_128:![0-9]+]]
 }
 
 __launch_bounds__(128, 2)
 __global__ void launch_bounds_2arg() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z18launch_bounds_2argv() [[LAUNCH_BOUNDS_2ARG:#[0-9]+]]
+// CHECK-SPIRV: define{{.*}} spir_kernel void @_Z18launch_bounds_2argv(){{.*}} !max_work_group_size [[MAX_WORK_GROUP_SIZE_128]]
 }
 
 // The third argument (maxclusterrank) is not yet handled on AMDGPU; it is
@@ -114,6 +116,7 @@ __global__ void launch_bounds_2arg() {
 __launch_bounds__(128, 2, 4)
 __global__ void launch_bounds_3arg() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z18launch_bounds_3argv() [[LAUNCH_BOUNDS_2ARG]]
+// CHECK-SPIRV: define{{.*}} spir_kernel void @_Z18launch_bounds_3argv(){{.*}} !max_work_group_size [[MAX_WORK_GROUP_SIZE_128]]
 }
 
 // An explicit amdgpu_flat_work_group_size / amdgpu_waves_per_eu takes precedence
@@ -122,6 +125,7 @@ __attribute__((amdgpu_flat_work_group_size(8, 32), amdgpu_waves_per_eu(4)))
 __launch_bounds__(128, 2)
 __global__ void launch_bounds_explicit_override() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z31launch_bounds_explicit_overridev() [[LAUNCH_BOUNDS_OVERRIDE:#[0-9]+]]
+// CHECK-SPIRV: define{{.*}} spir_kernel void @_Z31launch_bounds_explicit_overridev(){{.*}} !max_work_group_size [[MAX_WORK_GROUP_SIZE_32:![0-9]+]]
 }
 
 // The launch bounds from an earlier declaration are kept when the definition
@@ -181,5 +185,7 @@ __device__ void launch_bounds_device_fn() {
 // String attributes are sorted, so the amdgpu-* attributes would appear
 // immediately after "optnone"; check that "no-trapping-math" follows directly.
 // CHECK-DAG: attributes [[LAUNCH_BOUNDS_DEVICE]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"={{.*}}"uniform-work-group-size" }
+// CHECK-SPIRV-DAG: [[MAX_WORK_GROUP_SIZE_128]] = !{i32 128, i32 1, i32 1}
+// CHECK-SPIRV-DAG: [[MAX_WORK_GROUP_SIZE_32]] = !{i32 32, i32 1, i32 1}
 
 // NOUB-NOT: "uniform-work-group-size"
