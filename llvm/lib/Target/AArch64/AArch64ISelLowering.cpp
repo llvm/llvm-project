@@ -1548,6 +1548,15 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+
+      // Wider folds are a ladder of the two-way step above. +dotprod has no
+      // i16 form so that shape registers unconditionally.
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+      if (!Subtarget->hasDotProd()) {
+        setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
+        setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+        setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v16i8, Custom);
+      }
     }
 
     if (Subtarget->hasDotProd()) {
@@ -34866,12 +34875,13 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   return Scatter;
 }
 
-/// Lower a PARTIAL_REDUCE_MLA node. Three cases are handled:
+/// Lower a PARTIAL_REDUCE_MLA node. The following cases are handled:
 /// 1. (v2i32, v16i8): widen Acc to v4i32 and fold the high half with ADDP.
 /// 2. (nx)v2i64/(nx)v16i8: accumulate in two steps via (nx)v4i32, using
 ///    (U|S)ADALP when available, otherwise add(add(Acc, ext(lo), ext(hi))).
 /// 3. SUMLA on (v4i32, v16i8) or (v2i32, v8i8) without +i8mm: rewrite as two
 ///    UDOTs using the bias-128 identity sext(s) = zext(s ^ 128) - 128.
+/// 4. Wider fixed-length folds do one [SU]ADDLP rung and re-enter.
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -34928,6 +34938,47 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
     unsigned Opc = IsUnsigned ? AArch64ISD::UADDLP : AArch64ISD::SADDLP;
     return DAG.getNode(ISD::ADD, DL, ResultVT, Acc,
                        DAG.getNode(Opc, DL, ResultVT, Wide));
+  }
+
+  // Wider fixed-length integer add reductions fold with a ladder of [SU]ADDLP,
+  // one rung at a time, ending at the two-way reduction above.
+  bool IsAddMLA = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA ||
+                  Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
+  bool NeonOwnsVT = Subtarget->isNeonAvailable() &&
+                    !Subtarget->isSVEorStreamingSVEAvailable() &&
+                    (OpVT.is64BitVector() || OpVT.is128BitVector()) &&
+                    ResultVT.getSizeInBits() == OpVT.getSizeInBits();
+  unsigned LaneRatio =
+      ResultVT.getScalarSizeInBits() / OpVT.getScalarSizeInBits();
+
+  if (IsAddMLA && NeonOwnsVT && LaneRatio >= 4) {
+    bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
+    unsigned AddlpOpc = IsUnsigned ? AArch64ISD::UADDLP : AArch64ISD::SADDLP;
+    unsigned MullOpc = IsUnsigned ? AArch64ISD::UMULL : AArch64ISD::SMULL;
+    EVT NextVT = EVT::getVectorVT(
+        *DAG.getContext(),
+        EVT::getIntegerVT(*DAG.getContext(), OpVT.getScalarSizeInBits() * 2),
+        OpVT.getVectorNumElements() / 2);
+
+    // A pure reduction peels one rung with [SU]ADDLP and re-enters.
+    if (isOneVector(RHS))
+      return DAG.getNode(Op.getOpcode(), DL, ResultVT, Acc,
+                         DAG.getNode(AddlpOpc, DL, NextVT, LHS),
+                         DAG.getConstant(1, DL, NextVT));
+
+    // [us]mull widens the products by one rung and the rest of the ladder
+    // re-enters as a plain sum of them.
+    EVT HalfVT = OpVT.getHalfNumVectorElementsVT(*DAG.getContext());
+    unsigned Half = OpVT.getVectorNumElements() / 2;
+    SDValue Lo = DAG.getNode(MullOpc, DL, NextVT,
+                             DAG.getExtractSubvector(DL, HalfVT, LHS, 0),
+                             DAG.getExtractSubvector(DL, HalfVT, RHS, 0));
+    SDValue Hi = DAG.getNode(MullOpc, DL, NextVT,
+                             DAG.getExtractSubvector(DL, HalfVT, LHS, Half),
+                             DAG.getExtractSubvector(DL, HalfVT, RHS, Half));
+    SDValue One = DAG.getConstant(1, DL, NextVT);
+    SDValue Sum = DAG.getNode(Op.getOpcode(), DL, ResultVT, Acc, Lo, One);
+    return DAG.getNode(Op.getOpcode(), DL, ResultVT, Sum, Hi, One);
   }
 
   // Lower PARTIAL_REDUCE_SUMLA on targets without +i8mm using udot via
