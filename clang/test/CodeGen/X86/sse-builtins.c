@@ -377,6 +377,7 @@ long long test_mm_cvtss_si64(__m128 A) {
 }
 TEST_CONSTEXPR(_mm_cvtss_si64((__m128){+1.0f}) == 1LL);
 TEST_CONSTEXPR(_mm_cvtss_si64((__m128){-7.0f}) == -7LL);
+TEST_CONSTEXPR(_mm_cvtss_si64((__m128){0x1p45f}) == (1LL << 45));
 #endif
 
 int test_mm_cvtt_ss2si(__m128 A) {
@@ -401,6 +402,7 @@ long long test_mm_cvttss_si64(__m128 A) {
   return _mm_cvttss_si64(A);
 }
 TEST_CONSTEXPR(_mm_cvttss_si64((__m128){-12.0f}) == -12LL);
+TEST_CONSTEXPR(_mm_cvttss_si64((__m128){0x1p40f}) == (1LL << 40));
 #endif
 
 __m128 test_mm_div_ps(__m128 A, __m128 B) {

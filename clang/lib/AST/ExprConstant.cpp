@@ -15278,14 +15278,19 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateAsRValue(Info, E->getArg(0), SrcVec) || !SrcVec.isVector())
       return false;
 
-    unsigned NumSrcElts = SrcVec.getVectorLength();
-    unsigned NumDestElts = E->getType()->castAs<VectorType>()->getNumElements();
+    const auto *VT = E->getType()->castAs<VectorType>();
+    QualType EltTy = VT->getElementType();
+    bool isUnsigned = EltTy->isUnsignedIntegerType();
+    unsigned BitWidth = Info.Ctx.getIntWidth(EltTy);
+
+    unsigned NumSrcElems = SrcVec.getVectorLength();
+    unsigned NumDstElems = VT->getNumElements();
 
     SmallVector<APValue, 8> ResultElts;
-    for (unsigned i = 0; i < NumDestElts; ++i) {
-      if (i < NumSrcElts) {
+    for (unsigned i = 0; i != NumDstElems; ++i) {
+      if (i < NumSrcElems) {
         llvm::APFloat FloatElem = SrcVec.getVectorElt(i).getFloat();
-        llvm::APSInt IntResult(32, /*isUnsigned=*/false);
+        llvm::APSInt IntResult(BitWidth, isUnsigned);
         bool IsExact = false;
         // We only allow exact conversions so rounding mode does not matter for
         // cvt* and cvtt* builtins
@@ -15296,7 +15301,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         ResultElts.push_back(APValue(IntResult));
       } else
         // Pad remaining lanes with zero
-        ResultElts.push_back(APValue(llvm::APSInt(32, /*isUnsigned=*/false)));
+        ResultElts.push_back(APValue(llvm::APSInt(BitWidth, isUnsigned)));
     }
     return Success(ResultElts, E);
   }
@@ -18737,8 +18742,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     assert(ArgVal.isVector() && "Expected a vector argument");
     llvm::APFloat FloatElem = ArgVal.getVectorElt(0).getFloat();
     unsigned BitWidth = Info.Ctx.getIntWidth(E->getType());
+    bool isUnsigned = E->getType()->isUnsignedIntegerType();
 
-    llvm::APSInt IntResult(BitWidth, false);
+    llvm::APSInt IntResult(BitWidth, isUnsigned);
     bool IsExact = false;
     // We only allow exact conversions so rounding mode does not matter for cvt*
     // and cvtt* builtins

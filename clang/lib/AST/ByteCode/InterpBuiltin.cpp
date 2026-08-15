@@ -4671,11 +4671,12 @@ static bool interp__builtin_ia32_bmac(InterpState &S, CodePtr OpPC,
 static bool interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
                                                   const CallExpr *E) {
   Pointer SrcVecPtr = S.Stk.pop<Pointer>();
-  Pointer Lane0Ptr = SrcVecPtr.atIndex(0);
-  const Floating &FloatElem = Lane0Ptr.deref<Floating>();
-  unsigned BitWidth = S.getASTContext().getIntWidth(E->getType());
+  const Floating &FloatElem = SrcVecPtr.elem<Floating>(0);
 
-  llvm::APSInt IntResult(BitWidth, /*isUnsigned=*/false);
+  unsigned BitWidth = S.getASTContext().getIntWidth(E->getType());
+  bool IsUnsigned = E->getType()->isUnsignedIntegerType();
+
+  llvm::APSInt IntResult(BitWidth, IsUnsigned);
   bool IsExact = false;
   // We only allow exact conversions so rounding mode does not matter for cvt*
   // and cvtt* builtins
@@ -4693,27 +4694,40 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
   Pointer SrcVecPtr = S.Stk.pop<Pointer>();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  unsigned NumSrcElts = SrcVecPtr.getNumElems();
-  unsigned NumDstElts = Dst.getNumElems();
-  llvm::SmallVector<int32_t, 8> ConvertedElts;
-  for (unsigned I = 0; I < NumSrcElts; ++I) {
-    const Floating &FloatElem = SrcVecPtr.atIndex(I).deref<Floating>();
-    llvm::APSInt IntResult(32, /*isUnsigned=*/false);
-    bool IsExact = false;
-    // We only allow exact conversions so rounding mode does not matter for cvt*
-    // and cvtt* builtins
-    FloatElem.getAPFloat().convertToInteger(
-        IntResult, llvm::APFloat::rmTowardZero, &IsExact);
-    if (!IsExact)
-      return false;
+  unsigned NumSrcElems = SrcVecPtr.getNumElems();
+  unsigned NumDstElems = Dst.getNumElems();
 
-    ConvertedElts.push_back(IntResult.getSExtValue());
-  }
+  QualType ElemType = Dst.getFieldDesc()->getElemQualType();
+  unsigned BitWidth = S.getASTContext().getIntWidth(ElemType);
+  bool IsUnsigned = ElemType->isUnsignedIntegerType();
 
-  for (unsigned I = 0; I < NumDstElts; ++I)
-    Dst.atIndex(I).deref<Integral<32, true>>() =
-        I < NumSrcElts ? Integral<32, true>::from(ConvertedElts[I])
-                       : Integral<32, true>::zero();
+  bool Failed = false;
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+    llvm::SmallVector<T> ConvertedElts;
+    ConvertedElts.reserve(NumSrcElems);
+    for (unsigned I = 0; I != NumSrcElems; ++I) {
+      const Floating &FloatElem = SrcVecPtr.elem<Floating>(I);
+      llvm::APSInt IntResult(BitWidth, IsUnsigned);
+
+      bool IsExact = false;
+      FloatElem.getAPFloat().convertToInteger(
+          IntResult, llvm::APFloat::rmTowardZero, &IsExact);
+      if (!IsExact) {
+        Failed = true;
+        break;
+      }
+      ConvertedElts.push_back(T::from(IntResult.getSExtValue()));
+    }
+
+    if (!Failed) {
+      for (unsigned I = 0; I != NumDstElems; ++I)
+        Dst.elem<T>(I) = I < NumSrcElems ? ConvertedElts[I] : T::from(0);
+    }
+  });
+
+  if (Failed)
+    return false;
 
   Dst.initializeAllElements();
   return true;
