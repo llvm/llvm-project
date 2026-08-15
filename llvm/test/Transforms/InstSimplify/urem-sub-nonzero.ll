@@ -10,10 +10,7 @@ declare i8 @llvm.umax.i8(i8, i8)
 define i1 @nuw_add_ne(i8 %a, i8 %y) {
 ; CHECK-LABEL: define i1 @nuw_add_ne(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = add nuw i8 [[A]], [[Y]]
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], [[REM]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x = add nuw i8 %a, %y
   %rem = urem i8 %x, %y
@@ -26,10 +23,7 @@ define i1 @nuw_add_ne(i8 %a, i8 %y) {
 define i1 @nuw_add_ne_commuted(i8 %a, i8 %y) {
 ; CHECK-LABEL: define i1 @nuw_add_ne_commuted(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = add nuw i8 [[Y]], [[A]]
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[REM]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x = add nuw i8 %y, %a
   %rem = urem i8 %x, %y
@@ -46,8 +40,7 @@ define i8 @nuw_add_umax(i8 %a, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = add nuw i8 [[A]], [[Y]]
 ; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[X]], [[REM]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[SUB]], i8 1)
-; CHECK-NEXT:    ret i8 [[MAX]]
+; CHECK-NEXT:    ret i8 [[SUB]]
 ;
   %x = add nuw i8 %a, %y
   %rem = urem i8 %x, %y
@@ -61,10 +54,7 @@ define i8 @nuw_add_umax(i8 %a, i8 %y) {
 define <2 x i1> @nuw_add_ne_vector(<2 x i4> %a, <2 x i4> %y) {
 ; CHECK-LABEL: define <2 x i1> @nuw_add_ne_vector(
 ; CHECK-SAME: <2 x i4> [[A:%.*]], <2 x i4> [[Y:%.*]]) {
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i4> [[A]], [[Y]]
-; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i4> [[X]], [[REM]]
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %x = add nuw <2 x i4> %a, %y
   %rem = urem <2 x i4> %x, %y
@@ -83,9 +73,7 @@ define i1 @dom_ne(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], [[REM]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -111,9 +99,7 @@ define i1 @dom_eq_commuted(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[REM]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -141,10 +127,7 @@ define i1 @dom_uge_one(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[SUB]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -171,10 +154,7 @@ define i1 @dom_ult_one(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SUB]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -203,10 +183,7 @@ define i1 @dom_ugt_zero_false_edge(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SUB]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -233,10 +210,7 @@ define i1 @dom_ule_zero_commuted(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 0, [[SUB]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -265,10 +239,7 @@ define i1 @dom_ne_zero(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[SUB]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -295,10 +266,7 @@ define i1 @dom_eq_zero_commuted(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 0, [[SUB]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -329,8 +297,7 @@ define i8 @dom_umax_false_edge(i8 %x, i8 %y) {
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[REM]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[SUB]], i8 1)
-; CHECK-NEXT:    ret i8 [[MAX]]
+; CHECK-NEXT:    ret i8 [[SUB]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i8 0
 ;
