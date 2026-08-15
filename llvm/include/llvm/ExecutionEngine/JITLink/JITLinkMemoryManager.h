@@ -378,9 +378,26 @@ private:
 
 /// A JITLinkMemoryManager that allocates in-process memory.
 ///
-/// Memory is handed out from slabs: large reservations of address space that
-/// are striped between AllocGroups at chunk granularity. Each chunk of a slab
-/// is only ever used by a single AllocGroup, so that segments with matching
+/// All memory this manager ever hands out is carved from a single, fixed
+/// address-space reservation that it makes once, lazily, the first time it's
+/// needed. Slabs -- and the chunks and segments within them, see below -- are
+/// logical sub-ranges of that one reservation rather than separate OS
+/// mappings of their own. This matters beyond bookkeeping convenience: some
+/// platforms need every piece of code a process JITs, for the lifetime of the
+/// session, to stay within a fixed distance of a single early address (on
+/// Darwin, compact-unwind info can only encode addresses within 2^32 of a
+/// fixed base -- see CompactUnwindSupport.h and MachOPlatform's use of
+/// '__jitlink$libunwind_dso_base'). Carving everything out of one reservation
+/// guarantees that no matter how many slabs are created and released over a
+/// long-running session, nothing ever ends up further from the start of the
+/// reservation than the reservation is wide -- a guarantee that placement
+/// hints passed to individual OS mapping calls cannot provide, since such
+/// hints are advisory and may simply be ignored (as they typically are on
+/// Darwin for anonymous mappings).
+///
+/// Within the reservation, memory is handed out from slabs, which are in turn
+/// striped between AllocGroups at chunk granularity. Each chunk of a slab is
+/// only ever used by a single AllocGroup, so that segments with matching
 /// memory protections end up next to one another rather than interleaved with
 /// segments carrying other protections. This keeps the number of distinct
 /// memory mappings -- and hence the size of the OS page tables -- low: without
@@ -408,9 +425,9 @@ public:
 
   /// Slab allocation parameters.
   struct SlabOptions {
-    /// The size of each address space reservation. Since all segments for a
-    /// single LinkGraph are allocated from one slab this also bounds the
-    /// distance between any two blocks in a graph.
+    /// The size of each slab carved out of the reservation. Since all
+    /// segments for a single LinkGraph are allocated from one slab this also
+    /// bounds the distance between any two blocks in a graph.
     ///
     /// Slabs larger than this may still be created to hold graphs that don't
     /// fit in a slab of this size.
@@ -419,6 +436,14 @@ public:
     /// The granularity at which slabs are striped between AllocGroups. No
     /// chunk is ever shared by two different AllocGroups.
     uint64_t ChunkSize = 0;
+
+    /// The size of the single address-space reservation that all of this
+    /// manager's slabs are carved out of. This bounds the distance between
+    /// any two pieces of memory this manager ever hands out, for the whole
+    /// lifetime of the manager -- see the class comment for why that matters.
+    /// Allocations that would need more room than is left in the reservation
+    /// fail outright rather than falling back to a separate OS mapping.
+    uint64_t ReservationSize = 0;
 
     /// Returns default slab options for the given page size.
     static SlabOptions defaults(uint64_t PageSize);
@@ -454,6 +479,7 @@ public:
   using JITLinkMemoryManager::deallocate;
 
 private:
+  struct Reservation;
   struct Slab;
 
   /// A range of memory allocated from a slab.
@@ -475,8 +501,9 @@ private:
     std::vector<orc::shared::WrapperFunctionCall> DeallocActions;
   };
 
-  /// Reserve a new slab of at least MinSize bytes. Must be called with
-  /// SlabsMutex held.
+  /// Reserve a new slab of at least MinSize bytes from the reservation,
+  /// creating the reservation itself first if this is the first slab it's
+  /// ever been asked for. Must be called with SlabsMutex held.
   Expected<Slab *> createSlab(uint64_t MinSize);
 
   /// Allocate one range per segment in BL, all from the same slab.
@@ -494,6 +521,7 @@ private:
   uint64_t PageSize;
   SlabOptions SlabOpts;
   std::mutex SlabsMutex;
+  std::unique_ptr<Reservation> TheReservation;
   std::vector<std::unique_ptr<Slab>> Slabs;
   std::mutex FinalizedAllocsMutex;
   RecyclingAllocator<BumpPtrAllocator, FinalizedAllocInfo> FinalizedAllocInfos;

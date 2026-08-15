@@ -114,8 +114,10 @@ protected:
     PageSize = *PS;
     ChunkSize = 4 * PageSize;
     SlabSize = 64 * ChunkSize;
+    ReservationSize = 128 * SlabSize;
 
-    auto MM = InProcessMemoryManager::Create({SlabSize, ChunkSize});
+    auto MM =
+        InProcessMemoryManager::Create({SlabSize, ChunkSize, ReservationSize});
     ASSERT_THAT_EXPECTED(MM, Succeeded());
     MemMgr = std::move(*MM);
   }
@@ -155,6 +157,7 @@ protected:
   uint64_t PageSize = 0;
   uint64_t ChunkSize = 0;
   uint64_t SlabSize = 0;
+  uint64_t ReservationSize = 0;
   std::unique_ptr<InProcessMemoryManager> MemMgr;
   std::vector<std::unique_ptr<LinkGraph>> Graphs;
   std::vector<JITLinkMemoryManager::FinalizedAlloc> FinalizedAllocs;
@@ -343,6 +346,49 @@ TEST_F(InProcessMemoryManagerTest, OversizedGraphGetsItsOwnSlab) {
   EXPECT_GE(getSpan(*G).size(), 2 * SlabSize);
 }
 
+TEST_F(InProcessMemoryManagerTest, AllAllocationsStayWithinTheReservation) {
+  // Force lots of slab churn -- allocate an oversized graph (so it needs a
+  // fresh slab of its own) and free it immediately, many times over -- and
+  // check that every address ever handed out stays within ReservationSize of
+  // the very first one. All slabs are carved out of one fixed reservation
+  // (see the class comment on InProcessMemoryManager), so this is a
+  // deterministic guarantee of the allocator itself: unlike relying on the OS
+  // to honor a placement hint for separate mappings, it can't drift.
+  auto G0 = makeGraph("g0", {{orc::MemProt::Read | orc::MemProt::Write}});
+  allocateAndFinalize(*G0);
+  const orc::ExecutorAddr FirstAddr = getLowestBlockAddr(*G0);
+
+  orc::ExecutorAddr Lowest = FirstAddr, Highest = FirstAddr;
+  constexpr unsigned NumCycles = 64;
+  for (unsigned I = 0; I != NumCycles; ++I) {
+    auto G = makeGraph("churn" + Twine(I),
+                       {{orc::MemProt::Read | orc::MemProt::Write,
+                         orc::MemLifetime::Standard, SlabSize}});
+    auto Alloc = MemMgr->allocate(nullptr, *G);
+    ASSERT_THAT_EXPECTED(Alloc, Succeeded());
+    auto Span = getSpan(*G);
+    Lowest = std::min(Lowest, Span.Start);
+    Highest = std::max(Highest, Span.End);
+    auto FA = (*Alloc)->finalize();
+    ASSERT_THAT_EXPECTED(FA, Succeeded());
+    EXPECT_THAT_ERROR(MemMgr->deallocate(std::move(*FA)), Succeeded());
+  }
+
+  EXPECT_LE((Highest - Lowest), ReservationSize)
+      << "Allocations spread further than the reservation is wide";
+}
+
+TEST_F(InProcessMemoryManagerTest, ReservationExhaustionFails) {
+  // A single graph that needs more room than the whole reservation should
+  // fail cleanly rather than falling back to a separate, unbounded mapping
+  // (which would defeat the point of the reservation).
+  auto G = makeGraph(
+      "g", {{orc::MemProt::Read | orc::MemProt::Write,
+             orc::MemLifetime::Standard, ReservationSize + SlabSize}});
+  auto Alloc = MemMgr->allocate(nullptr, *G);
+  ASSERT_THAT_EXPECTED(Alloc, Failed());
+}
+
 TEST_F(InProcessMemoryManagerTest, RandomAllocateAndDeallocate) {
   // Exercise the slab free lists with a randomized allocate / deallocate
   // workload, checking that live segments never overlap one another and that
@@ -432,6 +478,12 @@ TEST_F(InProcessMemoryManagerTest, DefaultSlabOptionsAreConsistent) {
   EXPECT_EQ(SO.ChunkSize % *PS, 0U);
   EXPECT_EQ(SO.SlabSize % SO.ChunkSize, 0U);
   EXPECT_GE(SO.SlabSize, SO.ChunkSize);
+  EXPECT_EQ(SO.ReservationSize % SO.SlabSize, 0U);
+  EXPECT_GE(SO.ReservationSize, SO.SlabSize);
+  // Comfortably under the 2^32 budget some platforms need every piece of
+  // code a session ever JITs to stay within (see the class comment on
+  // InProcessMemoryManager).
+  EXPECT_LT(SO.ReservationSize, 1ULL << 32);
 }
 
 } // namespace

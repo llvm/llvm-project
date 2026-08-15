@@ -241,7 +241,74 @@ SimpleSegmentAlloc::SimpleSegmentAlloc(
     : G(std::move(G)), ContentBlocks(std::move(ContentBlocks)),
       Alloc(std::move(Alloc)) {}
 
-/// A reservation of address space that is striped between AllocGroups at
+/// A single, fixed reservation of address space that every slab a memory
+/// manager ever creates is carved out of -- see the class comment on
+/// InProcessMemoryManager for why that matters. Backed by one OS mapping,
+/// made lazily the first time a slab is needed.
+struct InProcessMemoryManager::Reservation {
+  explicit Reservation(const sys::MemoryBlock &Mem) : Mem(Mem) {
+    FreeRanges[0] = Mem.allocatedSize();
+  }
+
+  char *base() const { return static_cast<char *>(Mem.base()); }
+  uint64_t size() const { return Mem.allocatedSize(); }
+
+  /// Carve Size bytes out of the reservation, first-fit. Returns the offset
+  /// of the allocation within the reservation, or std::nullopt if there's no
+  /// room left.
+  std::optional<uint64_t> allocate(uint64_t Size);
+
+  /// Return a previously allocated range to the reservation.
+  void free(uint64_t Offset, uint64_t Size);
+
+  sys::MemoryBlock Mem;
+
+  /// Free ranges of the reservation, keyed by offset. Ranges are disjoint,
+  /// and never adjacent to one another (adjacent ranges are always
+  /// coalesced).
+  std::map<uint64_t, uint64_t> FreeRanges;
+};
+
+std::optional<uint64_t>
+InProcessMemoryManager::Reservation::allocate(uint64_t Size) {
+  assert(Size && "Cannot allocate zero bytes");
+
+  for (auto I = FreeRanges.begin(), E = FreeRanges.end(); I != E; ++I) {
+    if (I->second < Size)
+      continue;
+    const uint64_t Offset = I->first, RangeSize = I->second;
+    FreeRanges.erase(I);
+    if (RangeSize > Size)
+      FreeRanges[Offset + Size] = RangeSize - Size;
+    return Offset;
+  }
+  return std::nullopt;
+}
+
+void InProcessMemoryManager::Reservation::free(uint64_t Offset, uint64_t Size) {
+  assert(Size && "Cannot free zero bytes");
+  assert(Offset + Size <= size() && "Freed range out of reservation bounds");
+
+  // Add the range to the free list, coalescing with its neighbors.
+  uint64_t Start = Offset, End = Offset + Size;
+  const auto Next = FreeRanges.upper_bound(Offset);
+  if (Next != FreeRanges.begin()) {
+    const auto Prev = std::prev(Next);
+    assert(Prev->first + Prev->second <= Offset &&
+           "Freed range overlaps existing free range");
+    if (Prev->first + Prev->second == Offset) {
+      Start = Prev->first;
+      FreeRanges.erase(Prev);
+    }
+  }
+  if (Next != FreeRanges.end() && Next->first == End) {
+    End = Next->first + Next->second;
+    FreeRanges.erase(Next);
+  }
+  FreeRanges[Start] = End - Start;
+}
+
+/// A logical range of the reservation that is striped between AllocGroups at
 /// chunk granularity.
 ///
 /// Each chunk of the slab is owned by at most one AllocGroup at a time: a
@@ -253,14 +320,14 @@ struct InProcessMemoryManager::Slab {
   /// used for chunks that no group has claimed yet.
   static constexpr uint8_t NoOwner = ~static_cast<uint8_t>(0);
 
-  Slab(sys::MemoryBlock Mem, uint64_t ChunkSize)
-      : Mem(Mem), ChunkSize(ChunkSize),
-        ChunkOwners(divideCeil(Mem.allocatedSize(), ChunkSize), NoOwner) {
-    FreeRanges[0] = Mem.allocatedSize();
+  Slab(char *Base, uint64_t Size, uint64_t ChunkSize)
+      : Base(Base), Size(Size), ChunkSize(ChunkSize),
+        ChunkOwners(divideCeil(Size, ChunkSize), NoOwner) {
+    FreeRanges[0] = Size;
   }
 
-  char *base() const { return static_cast<char *>(Mem.base()); }
-  uint64_t size() const { return Mem.allocatedSize(); }
+  char *base() const { return Base; }
+  uint64_t size() const { return Size; }
 
   /// Allocate Size bytes for the group with index Owner.
   ///
@@ -273,7 +340,8 @@ struct InProcessMemoryManager::Slab {
   /// Return a previously allocated range to the slab.
   void free(uint64_t Offset, uint64_t Size);
 
-  sys::MemoryBlock Mem;
+  char *Base;
+  uint64_t Size;
   uint64_t ChunkSize;
   SmallVector<uint8_t, 64> ChunkOwners;
 
@@ -511,15 +579,22 @@ InProcessMemoryManager::SlabOptions::defaults(uint64_t PageSize) {
   if constexpr (sizeof(uintptr_t) >= 8) {
     SO.SlabSize = 16 * 1024 * 1024;
     SO.ChunkSize = 256 * 1024;
+    // Comfortably under the 2^32 budget that some platforms need every piece
+    // of code a session ever JITs to stay within, of a fixed base address
+    // (see the class comment).
+    SO.ReservationSize = 2ULL * 1024 * 1024 * 1024;
   } else {
     SO.SlabSize = 4 * 1024 * 1024;
     SO.ChunkSize = 64 * 1024;
+    SO.ReservationSize = 64 * 1024 * 1024;
   }
 
-  // Chunks must be a whole number of pages, and slabs a whole number of
-  // chunks.
+  // Chunks must be a whole number of pages, slabs a whole number of chunks,
+  // and the reservation a whole number of slabs.
   SO.ChunkSize = alignTo(std::max(SO.ChunkSize, PageSize), PageSize);
   SO.SlabSize = alignTo(std::max(SO.SlabSize, SO.ChunkSize), SO.ChunkSize);
+  SO.ReservationSize =
+      alignTo(std::max(SO.ReservationSize, SO.SlabSize), SO.SlabSize);
 
   return SO;
 }
@@ -532,11 +607,14 @@ InProcessMemoryManager::InProcessMemoryManager(uint64_t PageSize,
          "ChunkSize must be a non-zero multiple of PageSize");
   assert(SlabOpts.SlabSize && SlabOpts.SlabSize % SlabOpts.ChunkSize == 0 &&
          "SlabSize must be a non-zero multiple of ChunkSize");
+  assert(SlabOpts.ReservationSize &&
+         SlabOpts.ReservationSize % SlabOpts.SlabSize == 0 &&
+         "ReservationSize must be a non-zero multiple of SlabSize");
 }
 
 InProcessMemoryManager::~InProcessMemoryManager() {
-  for (const auto &S : Slabs)
-    (void)sys::Memory::releaseMappedMemory(S->Mem);
+  if (TheReservation)
+    (void)sys::Memory::releaseMappedMemory(TheReservation->Mem);
 }
 
 Expected<std::unique_ptr<InProcessMemoryManager>>
@@ -572,6 +650,13 @@ InProcessMemoryManager::Create(SlabOptions SO) {
               Twine(SO.ChunkSize),
           inconvertibleErrorCode());
 
+    if (!SO.ReservationSize || SO.ReservationSize % SO.SlabSize)
+      return make_error<StringError>(
+          "Could not create InProcessMemoryManager: Reservation size " +
+              Twine(SO.ReservationSize) +
+              " is not a non-zero multiple of slab size " + Twine(SO.SlabSize),
+          inconvertibleErrorCode());
+
     return std::make_unique<InProcessMemoryManager>(*PageSize, SO);
   } else
     return PageSize.takeError();
@@ -579,29 +664,51 @@ InProcessMemoryManager::Create(SlabOptions SO) {
 
 Expected<InProcessMemoryManager::Slab *>
 InProcessMemoryManager::createSlab(uint64_t MinSize) {
-  const uint64_t SlabSize =
+  if (!TheReservation) {
+    // Placement doesn't matter here -- unlike a hint passed to an individual
+    // mapping, the address the OS puts this reservation at doesn't affect
+    // whether later slabs stay within range of one another, since they're
+    // all carved out of this one mapping (see the class comment).
+    std::error_code EC;
+    auto MB = sys::Memory::allocateMappedMemory(SlabOpts.ReservationSize,
+                                                nullptr, ReadWrite, EC);
+    if (EC)
+      return errorCodeToError(EC);
+
+    LLVM_DEBUG({
+      dbgs() << "InProcessMemoryManager reserved "
+             << formatv("[ {0:x16} -- {1:x16} ]",
+                        orc::ExecutorAddr::fromPtr(MB.base()),
+                        orc::ExecutorAddr::fromPtr(MB.base()) +
+                            MB.allocatedSize())
+             << "\n";
+    });
+
+    TheReservation = std::make_unique<Reservation>(MB);
+  }
+
+  const uint64_t ThisSlabSize =
       alignTo(std::max(MinSize, SlabOpts.SlabSize), SlabOpts.ChunkSize);
 
-  // Hint that the new slab should be placed immediately after the previous
-  // one: keeping slabs close together improves locality, and gives the OS the
-  // chance to merge mappings with matching permissions across slab boundaries.
-  const sys::MemoryBlock *Near = Slabs.empty() ? nullptr : &Slabs.back()->Mem;
+  auto Offset = TheReservation->allocate(ThisSlabSize);
+  if (!Offset)
+    return make_error<StringError>(
+        "InProcessMemoryManager's " + Twine(SlabOpts.ReservationSize) +
+            "-byte address space reservation is exhausted; consider "
+            "increasing SlabOptions::ReservationSize",
+        inconvertibleErrorCode());
 
-  std::error_code EC;
-  auto MB = sys::Memory::allocateMappedMemory(SlabSize, Near, ReadWrite, EC);
-  if (EC)
-    return errorCodeToError(EC);
-
+  char *Base = TheReservation->base() + *Offset;
   LLVM_DEBUG({
-    dbgs() << "InProcessMemoryManager reserved slab "
+    dbgs() << "InProcessMemoryManager created slab "
            << formatv("[ {0:x16} -- {1:x16} ]",
-                      orc::ExecutorAddr::fromPtr(MB.base()),
-                      orc::ExecutorAddr::fromPtr(MB.base()) +
-                          MB.allocatedSize())
+                      orc::ExecutorAddr::fromPtr(Base),
+                      orc::ExecutorAddr::fromPtr(Base) + ThisSlabSize)
            << "\n";
   });
 
-  Slabs.push_back(std::make_unique<Slab>(MB, SlabOpts.ChunkSize));
+  Slabs.push_back(
+      std::make_unique<Slab>(Base, ThisSlabSize, SlabOpts.ChunkSize));
   return Slabs.back().get();
 }
 
@@ -710,12 +817,13 @@ Error InProcessMemoryManager::freeSegments(MutableArrayRef<SlabRange> Ranges,
   for (const auto *R : ToFree)
     R->S->free(R->Offset, R->Size);
 
-  // Return fully-freed slabs to the OS, keeping one around to absorb the
-  // common allocate / deallocate / allocate pattern without re-reserving.
-  for (auto I = Slabs.begin(); I != Slabs.end() && Slabs.size() > 1;) {
+  // Return fully-freed slabs to the reservation so their space can be reused
+  // by future slabs. This never touches the OS -- the reservation itself is
+  // held for the lifetime of this memory manager (see the class comment) --
+  // so unlike the old per-slab OS mappings this replaced, it can't fail.
+  for (auto I = Slabs.begin(); I != Slabs.end();) {
     if ((*I)->NumLiveRanges == 0) {
-      if (const auto EC = sys::Memory::releaseMappedMemory((*I)->Mem))
-        Err = joinErrors(std::move(Err), errorCodeToError(EC));
+      TheReservation->free((*I)->base() - TheReservation->base(), (*I)->size());
       I = Slabs.erase(I);
     } else {
       ++I;
