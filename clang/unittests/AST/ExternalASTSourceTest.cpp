@@ -25,21 +25,22 @@
 using namespace clang;
 using namespace llvm;
 
+struct TestExternalASTSource : public ExternalASTSource {
+  virtual void setupTestAST(ASTContext &Ctx) {
+    Ctx.getTranslationUnitDecl()->setHasExternalVisibleStorage();
+  }
+};
 
 class TestFrontendAction : public ASTFrontendAction {
 public:
-  TestFrontendAction(IntrusiveRefCntPtr<ExternalASTSource> Source,
-                     std::function<void(ASTContext &)> Inject = nullptr)
-      : Source(std::move(Source)), Inject(std::move(Inject)) {}
+  TestFrontendAction(IntrusiveRefCntPtr<TestExternalASTSource> Source)
+      : Source(std::move(Source)) {}
 
 private:
   void ExecuteAction() override {
     ASTContext &Ctx = getCompilerInstance().getASTContext();
     Ctx.setExternalSource(Source);
-    if (Inject)
-      Inject(Ctx);
-    else
-      Ctx.getTranslationUnitDecl()->setHasExternalVisibleStorage();
+    Source->setupTestAST(Ctx);
     return ASTFrontendAction::ExecuteAction();
   }
 
@@ -48,13 +49,12 @@ private:
     return std::make_unique<ASTConsumer>();
   }
 
-  IntrusiveRefCntPtr<ExternalASTSource> Source;
-  std::function<void(ASTContext &)> Inject;
+  IntrusiveRefCntPtr<TestExternalASTSource> Source;
 };
 
-bool testExternalASTSource(llvm::IntrusiveRefCntPtr<ExternalASTSource> Source,
-                           StringRef FileContents,
-                           std::function<void(ASTContext &)> Inject = nullptr) {
+bool testExternalASTSource(
+    llvm::IntrusiveRefCntPtr<TestExternalASTSource> Source,
+    StringRef FileContents) {
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
@@ -70,13 +70,13 @@ bool testExternalASTSource(llvm::IntrusiveRefCntPtr<ExternalASTSource> Source,
   Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
   Compiler.createDiagnostics();
 
-  TestFrontendAction Action(Source, std::move(Inject));
+  TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);
 }
 
 // Ensure that a failed name lookup into an external source only occurs once.
 TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {
-  struct TestSource : ExternalASTSource {
+  struct TestSource : TestExternalASTSource {
     TestSource(unsigned &Calls) : Calls(Calls) {}
 
     bool
@@ -104,13 +104,13 @@ namespace {
 ///   template <typename T> struct A<T *>; // partial specialization pattern
 ///
 /// and supplies the definition of whichever pattern it is asked to complete.
-struct LazyTemplatePatterns : ExternalASTSource {
+struct LazyTemplatePatterns : TestExternalASTSource {
   CXXRecordDecl *Primary = nullptr;
   ClassTemplatePartialSpecializationDecl *Partial = nullptr;
   unsigned PrimaryCompletions = 0;
   unsigned PartialCompletions = 0;
 
-  void inject(ASTContext &Ctx) {
+  void setupTestAST(ASTContext &Ctx) override {
     TranslationUnitDecl *TU = Ctx.getTranslationUnitDecl();
     IdentifierInfo &AName = Ctx.Idents.get("A");
 
@@ -177,9 +177,7 @@ struct LazyTemplatePatterns : ExternalASTSource {
 TEST(ExternalASTSourceTest, CompletesPatternInEitherOrder) {
   for (StringRef Code : {"A<int> a; A<int *> b;", "A<int *> b; A<int> a;"}) {
     auto Source = llvm::makeIntrusiveRefCnt<LazyTemplatePatterns>();
-    ASSERT_TRUE(testExternalASTSource(Source, Code, [&](ASTContext &Ctx) {
-      Source->inject(Ctx);
-    })) << Code;
+    ASSERT_TRUE(testExternalASTSource(Source, Code)) << Code;
     EXPECT_EQ(1u, Source->PrimaryCompletions) << Code;
     EXPECT_EQ(1u, Source->PartialCompletions) << Code;
   }
