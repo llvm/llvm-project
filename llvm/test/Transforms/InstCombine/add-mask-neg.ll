@@ -365,7 +365,7 @@ define i32 @align_up_via_or_multiuse_sub(i32 %x) {
   ret i32 %add
 }
 
-; nus and nsw on the source add are dropped
+; nuw and nsw on the source add are dropped
 
 define i32 @align_up_via_or_nsw_nuw(i32 %x){
 ; CHECK-LABEL: @align_up_via_or_nsw_nuw(
