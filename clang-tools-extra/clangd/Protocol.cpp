@@ -1678,8 +1678,11 @@ bool fromJSON(const llvm::json::Value &Params, SelectionRangeParams &S,
 bool fromJSON(const llvm::json::Value &Params, CompleteASTMatcherArgs &Args,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("searchQuery", Args.searchQuery) &&
-         O.map("offset", Args.offset);
+  unsigned Offset{};
+  auto Res =
+      O && O.map("searchQuery", Args.searchQuery) && O.map("offset", Offset);
+  Args.offset = Offset;
+  return Res;
 }
 
 bool fromJSON(const llvm::json::Value &Params, SearchASTArgs &Args,
