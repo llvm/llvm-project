@@ -20,13 +20,11 @@ namespace std {
 */
 
 #include <cassert>
-#include <iostream>
 #include <stacktrace>
 #include <string>
 
 int main(int, char**) {
   std::stacktrace_entry entry;
-  std::cout << std::to_string(entry) << '\n';
   auto src = entry.source_file();
   assert(src.empty());
 
