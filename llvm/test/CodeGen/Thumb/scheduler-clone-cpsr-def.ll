@@ -11,27 +11,20 @@
 define i64 @f(i64 %x2, i32 %z) {
 ; CHECK-LABEL: f:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    subs r3, r0, #1
-; CHECK-NEXT:    mov r3, r1
-; CHECK-NEXT:    sbcs r3, r2
-; CHECK-NEXT:    mov r3, r2
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    mov r2, r0
+; CHECK-NEXT:    orrs r2, r1
+; CHECK-NEXT:    rsbs r3, r2, #0
 ; CHECK-NEXT:    adcs r3, r2
-; CHECK-NEXT:    movs r4, #30
-; CHECK-NEXT:    subs r5, r0, #1
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    sbcs r5, r2
-; CHECK-NEXT:    adcs r4, r2
-; CHECK-NEXT:    lsls r2, r1, #1
-; CHECK-NEXT:    lsls r2, r4
-; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    eors r4, r3
-; CHECK-NEXT:    lsrs r0, r4
-; CHECK-NEXT:    orrs r0, r2
-; CHECK-NEXT:    lsrs r1, r4
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    lsrs r0, r3
+; CHECK-NEXT:    movs r2, #31
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    lsls r4, r1, #1
+; CHECK-NEXT:    lsls r4, r2
+; CHECK-NEXT:    orrs r0, r4
+; CHECK-NEXT:    lsrs r1, r3
+; CHECK-NEXT:    pop {r4, pc}
   %x3 = add nsw i64 %x2, -1
   %x8 = icmp ne i64 %x2, 0
   %x9 = xor i1 %x8, true
