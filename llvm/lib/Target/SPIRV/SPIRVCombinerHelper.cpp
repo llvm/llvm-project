@@ -375,11 +375,11 @@ bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI) const {
   if (!Op1Def || !Op2Def)
     return false;
 
-  if (Op1Def->getOpcode() != TargetOpcode::G_FCONSTANT && 
+  if (Op1Def->getOpcode() != TargetOpcode::G_FCONSTANT &&
       Op2Def->getOpcode() != TargetOpcode::G_FCONSTANT)
     return false;
 
-  MachineInstr *constantMachineInstruction = 
+  MachineInstr *constantMachineInstruction =
       (Op1Def->getOpcode() == TargetOpcode::G_FCONSTANT) ? Op1Def : Op2Def;
   MachineOperand &ConstantOperand = constantMachineInstruction->getOperand(1);
 
@@ -404,9 +404,9 @@ void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI) const {
   Register Op2 = MI.getOperand(2).getReg();
   MachineInstr *Op1Def = MRI.getVRegDef(Op1);
   MachineInstr *Op2Def = MRI.getVRegDef(Op2);
-  Register nonConstantReg = 
+  Register nonConstantReg =
       (Op1Def->getOpcode() == TargetOpcode::G_FCONSTANT) ? Op2 : Op1;
-  
+
   Builder.setInstrAndDebugLoc(MI);
   Builder.buildIntrinsic(Intrinsic::spv_degrees, ResultReg)
       .addUse(nonConstantReg);
