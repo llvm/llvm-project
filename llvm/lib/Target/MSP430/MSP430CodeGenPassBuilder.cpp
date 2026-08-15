@@ -70,18 +70,9 @@ void MSP430CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
 
 } // namespace
 
-void MSP430TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void MSP430TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "MSP430PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
-  // targets that currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(MSP430AsmPrinterBeginPass::name(),
-                            "msp430-asm-printer-begin");
-    PIC->addClassToPassName(MSP430AsmPrinterPass::name(), "msp430-asm-printer");
-    PIC->addClassToPassName(MSP430AsmPrinterEndPass::name(),
-                            "msp430-asm-printer-end");
-  }
 }
 
 Error MSP430TargetMachine::buildCodeGenPipeline(

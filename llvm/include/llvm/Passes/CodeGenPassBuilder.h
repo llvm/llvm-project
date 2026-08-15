@@ -194,10 +194,15 @@ public:
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
 
-    if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET)
-      Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None
-                                 ? cl::boolOrDefault::BOU_TRUE
-                                 : cl::boolOrDefault::BOU_FALSE;
+    // An explicit RegAlloc choice implies its pipeline: only the fast
+    // allocator uses the unoptimized one.
+    if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET) {
+      bool Optimized = Opt.RegAlloc > RegAllocType::Default
+                           ? Opt.RegAlloc != RegAllocType::Fast
+                           : getOptLevel() != CodeGenOptLevel::None;
+      Opt.OptimizeRegAlloc = Optimized ? cl::boolOrDefault::BOU_TRUE
+                                       : cl::boolOrDefault::BOU_FALSE;
+    }
   }
 
   Error buildPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,

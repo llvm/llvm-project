@@ -11,7 +11,7 @@ typedef union {
   int z : 8;
 } demo;
 
-// CIR:  !rec_demo = !cir.union<"demo" {!s32i, !u8i, !u8i}>
+// CIR:  !rec_demo = !cir.union<"demo" {data !s32i, data !u8i, data !u8i}>
 // LLVM: %union.demo = type { i32 }
 // OGCG: %union.demo = type { i32 }
 
@@ -22,7 +22,7 @@ typedef union {
   int z : 2;
 } zero_bit;
 
-// CIR:  !rec_zero_bit = !cir.union<"zero_bit" {!s32i, !u8i, !u8i}>
+// CIR:  !rec_zero_bit = !cir.union<"zero_bit" {data !s32i, data !u8i, data !u8i}>
 // LLVM: %union.zero_bit = type { i32 }
 // OGCG: %union.zero_bit = type { i32 }
 
