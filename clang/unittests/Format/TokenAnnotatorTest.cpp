@@ -1579,6 +1579,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
   EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_FunctionLBrace);
+
+  Tokens = annotate("template <typename T>\n"
+                    "  requires(is_convertible_v<const T&, Foo>)"
+                    "void foo(T) {}");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("template <typename T>\n"
+                    "  requires(is_convertible_v<(const T&), Foo>)"
+                    "void foo(T) {}");
+  ASSERT_EQ(Tokens.size(), 26u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
