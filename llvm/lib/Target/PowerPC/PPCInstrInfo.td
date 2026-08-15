@@ -4539,7 +4539,7 @@ def WRTEE: XForm_mtmsr<31, 131, (outs), (ins gprc:$RS),
   let L = 0;
 }
 
-def WRTEEI: I<31, (outs), (ins i1imm:$E), "wrteei $E", IIC_SprMTMSR>,
+def WRTEEI: I<31, (outs), (ins u1imm:$E), "wrteei $E", IIC_SprMTMSR>,
               Requires<[IsBookE]> {
   bits<1> E;
 
