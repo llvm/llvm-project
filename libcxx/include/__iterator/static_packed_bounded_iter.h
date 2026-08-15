@@ -209,7 +209,7 @@ public:
             "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator past the start");
       } else {
         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-            static_cast<size_t>(__count() + __n) <= _RangeCapacity,
+            static_cast<size_t>(__count() + __n) < _RangeCapacity,
             "__static_packed_bounded_iterator::operator[]: Attempt to index an iterator at or past the end");
       }
     }
