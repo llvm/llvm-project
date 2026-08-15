@@ -6,37 +6,37 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Named rt::Proxy types for running functions in the executor. Each takes the
+// Named Proxy types for running functions in the executor. Each takes the
 // target function's ExecutorAddr (plus any arguments) and runs it.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_CALLPROXIES_H
-#define LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_CALLPROXIES_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_CALLPROXIES_H
+#define LLVM_EXECUTIONENGINE_ORC_CALLPROXIES_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
 
 #include <cstdint>
 #include <string>
 
-namespace llvm::orc::rt {
+namespace llvm::orc {
 
-/// Runtime-agnostic interface for running a main-like function
+/// Protocol-agnostic interface for running a main-like function
 /// (int(int argc, char *argv[])) in the executor.
 ///
 /// The function to run is given by its ExecutorAddr, its arguments as an
 /// argument vector, and its int64_t result is returned.
 using CallMainProxy = Proxy<int64_t(ExecutorAddr, ArrayRef<std::string>)>;
 
-/// Runtime-agnostic interface for running a void() function in the executor.
+/// Protocol-agnostic interface for running a void() function in the executor.
 ///
 /// The function to run is given by its ExecutorAddr.
 ///
 /// WARNING: This Proxy is experimental and may be removed.
 using CallVoidVoidProxy = Proxy<void(ExecutorAddr)>;
 
-/// Runtime-agnostic interface for running an int32_t() function in the
+/// Protocol-agnostic interface for running an int32_t() function in the
 /// executor.
 ///
 /// The function to run is given by its ExecutorAddr.
@@ -44,7 +44,7 @@ using CallVoidVoidProxy = Proxy<void(ExecutorAddr)>;
 /// WARNING: This Proxy is experimental and may be removed.
 using CallInt32VoidProxy = Proxy<int32_t(ExecutorAddr)>;
 
-/// Runtime-agnostic interface for running an int32_t(int32_t) function in the
+/// Protocol-agnostic interface for running an int32_t(int32_t) function in the
 /// executor.
 ///
 /// The function to run is given by its ExecutorAddr.
@@ -52,6 +52,6 @@ using CallInt32VoidProxy = Proxy<int32_t(ExecutorAddr)>;
 /// WARNING: This Proxy is experimental and may be removed.
 using CallInt32Int32Proxy = Proxy<int32_t(ExecutorAddr, int32_t)>;
 
-} // namespace llvm::orc::rt
+} // namespace llvm::orc
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_CALLPROXIES_H
+#endif // LLVM_EXECUTIONENGINE_ORC_CALLPROXIES_H
