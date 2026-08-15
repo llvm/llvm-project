@@ -212,7 +212,7 @@ The domain has few operations:
   - in a quiescent state, or
   - in the critical section with the new phase.
 
-- After each phase ends, we can move the callbacks to the next phase's queue, and we can evaluate the callbacks that have gone through two phases.
+- After each phase ends, we can move the callbacks to the next stage's queue, and we can evaluate the callbacks that have gone through two stages.
 
 
 Design Questions
