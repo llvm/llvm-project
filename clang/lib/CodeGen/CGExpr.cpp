@@ -3959,18 +3959,27 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   uint16_t TypeInfo = 0;
   bool IsBitInt = false;
 
-  if (T->isIntegerType()) {
+  // isIntegerType() never holds for scoped enums, and getAs<BitIntType> can't
+  // see through the EnumType node to a __BitInt underlying type even for
+  // unscoped enums.
+  QualType ValueTy = T;
+  if (const EnumType *ET = T->getAs<EnumType>()) {
+    if (ET->getDecl()->isComplete())
+      ValueTy = ET->getDecl()->getIntegerType();
+  }
+
+  if (ValueTy->isIntegerType()) {
     TypeKind = TK_Integer;
-    TypeInfo = (llvm::Log2_32(getContext().getTypeSize(T)) << 1) |
-               (T->isSignedIntegerType() ? 1 : 0);
+    TypeInfo = (llvm::Log2_32(getContext().getTypeSize(ValueTy)) << 1) |
+               (ValueTy->isSignedIntegerType() ? 1 : 0);
     // Follow suggestion from discussion of issue 64100.
     // So we can write the exact amount of bits in TypeName after '\0'
     // making it <diagnostic-like type name>.'\0'.<32-bit width>.
-    if (T->isSignedIntegerType() && T->getAs<BitIntType>()) {
+    if (ValueTy->isSignedIntegerType() && ValueTy->getAs<BitIntType>()) {
       // Do a sanity checks as we are using 32-bit type to store bit length.
-      assert(getContext().getTypeSize(T) > 0 &&
+      assert(getContext().getTypeSize(ValueTy) > 0 &&
              " non positive amount of bits in __BitInt type");
-      assert(getContext().getTypeSize(T) <= 0xFFFFFFFF &&
+      assert(getContext().getTypeSize(ValueTy) <= 0xFFFFFFFF &&
              " too many bits in __BitInt type");
 
       // Redefine TypeKind with the actual __BitInt type if we have signed
@@ -3994,7 +4003,7 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
     // The Structure is: 0 to end the string, 32 bit unsigned integer in target
     // endianness, zero.
     char S[6] = {'\0', '\0', '\0', '\0', '\0', '\0'};
-    const auto *EIT = T->castAs<BitIntType>();
+    const auto *EIT = ValueTy->castAs<BitIntType>();
     uint32_t Bits = EIT->getNumBits();
     llvm::support::endian::write32(S + 1, Bits,
                                    getTarget().isBigEndian()
