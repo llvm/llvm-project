@@ -3611,6 +3611,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sqrtf128
     libc.src.__support.FPUtil.float128
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(

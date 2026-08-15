@@ -10,7 +10,6 @@
 
 #include "src/__support/FPUtil/float128.h"
 #include "src/__support/integer_literals.h"
-#include "src/__support/uint128.h"
 #include "src/math/sqrtf128.h"
 
 #ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
