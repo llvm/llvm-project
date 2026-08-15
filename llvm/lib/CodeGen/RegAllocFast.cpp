@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -42,6 +43,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <tuple>
 #include <vector>
@@ -704,8 +706,27 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
   if (LiveVirtRegs.empty())
     return;
 
+  // The exception pointer and selector live-ins of a landing pad are written by
+  // the unwinder at run time rather than by a predecessor, so the value a
+  // virtual register assigned to one of them is expected to hold does not
+  // actually arrive in that register. Such a register still needs its reload.
+  MCRegister ExceptionPointer, ExceptionSelector;
+  if (MBB.isEHPad()) {
+    const MachineFunction &MF = *MBB.getParent();
+    if (MF.getFunction().hasPersonalityFn()) {
+      auto PersonalityFn = MF.getFunction().getPersonalityFn();
+      const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
+      ExceptionPointer = TLI.getExceptionPointerRegister(
+          TLI.getTargetMachine().getExceptionModel(), PersonalityFn);
+      ExceptionSelector = TLI.getExceptionSelectorRegister(
+          TLI.getTargetMachine().getExceptionModel(), PersonalityFn);
+    }
+  }
+
   for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins()) {
     MCRegister Reg = P.PhysReg;
+    if (Reg == ExceptionPointer || Reg == ExceptionSelector)
+      continue;
     // Set state to live-in. This possibly overrides mappings to virtual
     // registers but we don't care anymore at this point.
     setPhysRegState(Reg, regLiveIn);

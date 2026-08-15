@@ -1,0 +1,87 @@
+# RUN: llc -mtriple=aarch64-unknown-linux-gnu -run-pass=regallocfast -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-linux-gnu -passes=regallocfast -o - %s | FileCheck %s
+
+# The exception pointer and selector live-ins of a landing pad are written by
+# the unwinder at run time, not by a predecessor, so a virtual register that the
+# fast allocator parked on one of them does not actually arrive there and still
+# needs to be reloaded at the start of the pad.
+#
+# Here 13 values are live into the pad, which is one more than the 11 registers
+# the allocator reaches before it gets to $x0 and $x1. Without the reloads, the
+# two values allocated to $x0/$x1 silently read the unwinder's exception pointer
+# and selector instead.
+
+--- |
+  declare void @may_throw()
+  declare i32 @__gxx_personality_v0(...)
+
+  define void @eh_pad_livein_needs_reload(i64 %x) personality ptr @__gxx_personality_v0 {
+  entry:
+    invoke void @may_throw()
+            to label %done unwind label %pad
+
+  done:
+    ret void
+
+  pad:
+    %lp = landingpad { ptr, i32 }
+            cleanup
+    ret void
+  }
+...
+---
+name:            eh_pad_livein_needs_reload
+alignment:       4
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body:             |
+  ; CHECK-LABEL: bb.2.pad
+  ; CHECK:       EH_LABEL
+  ; CHECK-DAG:   $x0 = LDRXui
+  ; CHECK-DAG:   $x1 = LDRXui
+  bb.0.entry:
+    successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
+    liveins: $x0
+
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x0
+    %2:gpr64 = COPY $x0
+    %3:gpr64 = COPY $x0
+    %4:gpr64 = COPY $x0
+    %5:gpr64 = COPY $x0
+    %6:gpr64 = COPY $x0
+    %7:gpr64 = COPY $x0
+    %8:gpr64 = COPY $x0
+    %9:gpr64 = COPY $x0
+    %10:gpr64 = COPY $x0
+    %11:gpr64 = COPY $x0
+    %12:gpr64 = COPY $x0
+    EH_LABEL <mcsymbol .Ltmp0>
+    BL @may_throw, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+    EH_LABEL <mcsymbol .Ltmp1>
+    B %bb.1
+
+  bb.1.done:
+    RET_ReallyLR
+
+  bb.2.pad (landing-pad):
+    liveins: $x0, $x1
+
+    EH_LABEL <mcsymbol .Ltmp2>
+    STRXui %0, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %1, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %2, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %3, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %4, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %5, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %6, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %7, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %8, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %9, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %10, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %11, %stack.0, 0 :: (store (s64) into %stack.0)
+    STRXui %12, %stack.0, 0 :: (store (s64) into %stack.0)
+    RET_ReallyLR
+
+...
