@@ -57,7 +57,7 @@ It can be used like this:
 ...
 ```
 
-```{note}
+:::{note}
 Prior to Clang 10, `__has_builtin` could not be used to detect most builtin
 pseudo-functions.
 
@@ -66,7 +66,7 @@ use `#ifdef` instead.
 
 When compiling with target offloading, `__has_builtin` only considers the
 currently active target.
-```
+:::
 
 ### `__has_constexpr_builtin`
 
@@ -2565,6 +2565,8 @@ Further examples of these attributes are available in the static analyzer's
 Query for these features with `__has_attribute(ns_consumed)`,
 `__has_attribute(ns_returns_retained)`, etc.
 
+(langext-objective-c-available)=
+
 ### Objective-C @available
 
 It is possible to use the newest SDK but still build a program that can run on
@@ -5016,10 +5018,10 @@ will be used.
 
 ### C++ Coroutines support builtins
 
-```{warning}
+:::{warning}
 This is a work in progress. Compatibility across Clang/LLVM releases is not
 guaranteed.
-```
+:::
 
 Clang provides experimental builtins to support C++ Coroutines as defined by
 <https://wg21.link/P0057>. The following four are intended to be used by the
@@ -5714,6 +5716,8 @@ commandline.
   - Enable frame pointers
 ```
 
+(langext-loop-hint-optimizations)=
+
 ## Extensions for loop hint optimizations
 
 The `#pragma clang loop` directive is used to specify hints for optimizing the
@@ -6086,6 +6090,8 @@ for(...) {
   a = b[i] * c[i] + e;
 }
 ```
+
+(langext-atomic-code-generation)=
 
 ## Extensions for controlling atomic code generation
 
@@ -6509,6 +6515,8 @@ Clang treats it as being at file scope when it appears within other scopes.
 When `#pragma comment(copyright, ...)` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
+
+(langext-evaluating-object-size)=
 
 ## Evaluating Object Size
 

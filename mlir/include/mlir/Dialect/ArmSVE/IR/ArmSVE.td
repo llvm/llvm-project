@@ -22,6 +22,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 def ArmSVE_Dialect : Dialect {
   let name = "arm_sve";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::arm_sve";
   let summary = "Basic dialect to target Arm SVE architectures";
   let description = [{
@@ -307,7 +308,7 @@ def BfmmlaOp : ArmSVE_IntrOp<"bfmmla", [Pure,
                                         /*enumName=*/"aarch64_sve_fmmla"> {
   let summary = "BFloat16 matrix multiply-accumulate";
   let description = [{
-    BFMMLA: BFloat16 matrix multiply-accumulate into 2×2 matrices";
+    BFMMLA: BFloat16 matrix multiply-accumulate into 2×2 matrices.
 
     This operation multiplies the 2x4 BFloat16 matrix held in each 128-bit
     segment of the first source vector by the 4x2 BFloat16 matrix in the

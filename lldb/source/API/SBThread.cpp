@@ -464,7 +464,8 @@ static Status ResumeNewPlan(StoppedExecutionContext exe_ctx,
   process->GetThreadList().SetSelectedThreadByID(thread->GetID());
 
   // Release the run lock but keep the API lock.
-  std::unique_lock<std::recursive_mutex> api_lock = exe_ctx.AllowResume();
+  TargetAPIMutex api_mutex = exe_ctx.AllowResume();
+  std::lock_guard<TargetAPIMutex> guard(api_mutex, std::adopt_lock);
   if (process->GetTarget().GetDebugger().GetAsyncExecution())
     return process->Resume();
   return process->ResumeSynchronous(nullptr);

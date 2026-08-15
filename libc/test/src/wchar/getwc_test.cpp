@@ -22,8 +22,7 @@
 using LlvmLibcGetwcTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcGetwcTest, ReadValidCharacters) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwc_valid.test"));
+  auto FILENAME = libc_make_test_file_path("getwc_valid.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -50,7 +49,7 @@ TEST_F(LlvmLibcGetwcTest, ReadValidCharacters) {
 }
 
 TEST_F(LlvmLibcGetwcTest, ReadUtf8) {
-  auto FILENAME = libc_make_test_file_path(APPEND_LIBC_TEST("getwc_utf8.test"));
+  auto FILENAME = libc_make_test_file_path("getwc_utf8.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -76,7 +75,7 @@ TEST_F(LlvmLibcGetwcTest, ReadUtf8) {
 }
 
 TEST_F(LlvmLibcGetwcTest, EndOfFile) {
-  auto FILENAME = libc_make_test_file_path(APPEND_LIBC_TEST("getwc_eof.test"));
+  auto FILENAME = libc_make_test_file_path("getwc_eof.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
@@ -93,8 +92,7 @@ TEST_F(LlvmLibcGetwcTest, EndOfFile) {
 }
 
 TEST_F(LlvmLibcGetwcTest, ReadError) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwc_readerr.test"));
+  auto FILENAME = libc_make_test_file_path("getwc_readerr.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -108,8 +106,7 @@ TEST_F(LlvmLibcGetwcTest, ReadError) {
 }
 
 TEST_F(LlvmLibcGetwcTest, ByteOrientedStreamFail) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("getwc_bytemode.test"));
+  auto FILENAME = libc_make_test_file_path("getwc_bytemode.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 
