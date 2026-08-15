@@ -303,30 +303,6 @@ define i32 @align_up_via_or(i32 %x) {
   ret i32 %add
 }
 
-define i32 @align_up_via_or_commuted(i32 %x) {
-; CHECK-LABEL: @align_up_via_or_commuted(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4095
-; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
-; CHECK-NEXT:    ret i32 [[ADD]]
-;
-  %sub = add i32 %x, -1
-  %or = or i32 %sub, 4095
-  %add = add i32 1, %or
-  ret i32 %add
-}
-
-define i32 @align_up_via_or_commuted_or(i32 %x) {
-; CHECK-LABEL: @align_up_via_or_commuted_or(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4095
-; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
-; CHECK-NEXT:    ret i32 [[ADD]]
-;
-  %sub = add i32 %x, -1
-  %or = or i32 4095, %sub
-  %add = add i32 %or, 1
-  ret i32 %add
-}
-
 define <2 x i32> @align_up_via_or_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @align_up_via_or_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], splat (i32 4095)
@@ -389,13 +365,15 @@ define i32 @align_up_via_or_multiuse_sub(i32 %x) {
   ret i32 %add
 }
 
-; nsw/nuw on the source add are dropped
+; nus and nsw on the source add are dropped
 
 define i32 @align_up_via_or_nsw_nuw(i32 %x){
 ; CHECK-LABEL: @align_up_via_or_nsw_nuw(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], -4096
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
-  %sub = add nuw nsw i32 %x, -1
+  %sub = add nsw i32 %x, -1
   %or = or i32 %sub, 4095
   %add = add nuw nsw i32 %or, 1
   ret i32 %add

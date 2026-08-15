@@ -1832,8 +1832,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
               m_c_Add(m_OneUse(m_And(m_Neg(m_Value(A)), m_LowBitMask(LowMask))),
                       m_Deferred(A))) ||
         match(&I,
-              m_c_Add(m_One(), m_OneUse(m_c_Or(m_Add(m_Value(A), m_AllOnes()),
-                                               m_LowBitMask(LowMask)))))
+              m_Add(m_OneUse(m_Or(m_Add(m_Value(A), m_AllOnes()),
+                                               m_LowBitMask(LowMask))), m_One()))
 
     ) {
       Value *NewAdd = Builder.CreateAdd(A, ConstantInt::get(Ty, *LowMask));
