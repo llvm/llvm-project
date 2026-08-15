@@ -14383,13 +14383,17 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL);
 
   // The fmul may sit on either side of the add/sub. Look past operand 0 only
-  // for chains that do not allow reassociation. A reassociative chain can be
-  // vectorized into a vector fmul feeding a reduction, which is usually
-  // better than the scalar fma chain this check protects.
+  // for chains that do not allow reassociation. The gate is profitability, not
+  // correctness. A reassociative chain can be vectorized into a vector fmul
+  // feeding a reduction, which is usually better than the scalar fma chain
+  // this check protects. An fsub can only fold an fmul on its left, so stop at
+  // operand 0 there as well.
   bool AllowReassoc = any_of(
       VL, [](Value *V) { return match(V, m_AllowReassoc(m_Value())); });
+  bool OnlyFirstOperand = AllowReassoc || S.getOpcode() == Instruction::FSub;
   auto GetFMulOperandIdx = [&]() -> std::optional<unsigned> {
-    for (unsigned Idx : seq<unsigned>(0, AllowReassoc ? 1 : Operands.size())) {
+    for (unsigned Idx :
+         seq<unsigned>(0, OnlyFirstOperand ? 1 : Operands.size())) {
       InstructionsState CandS = getSameOpcode(Operands[Idx], TLI);
       if (!CandS.valid() || CandS.isAltShuffle() ||
           CandS.getOpcode() != Instruction::FMul)
@@ -14428,7 +14432,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     if (!S.isCopyableElement(I))
       if (auto *FPCI = dyn_cast<FPMathOperator>(I))
         FMF &= FPCI->getFastMathFlags();
-    FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
+    FMulPlusFAddCost +=
+        TTI.getArithmeticInstrCost(S.getOpcode(), I->getType(), CostKind);
   }
   unsigned NumOps = 0;
   for (auto [V, Op] : zip(VL, Operands[*FMulIdx])) {

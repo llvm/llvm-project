@@ -2,12 +2,16 @@
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -slp-threshold=14 < %s | FileCheck %s
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -slp-threshold=14 < %s | FileCheck %s
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -slp-threshold=14 < %s | FileCheck %s
+; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -slp-threshold=12 < %s | FileCheck %s --check-prefix=THR12
+; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -slp-threshold=12 < %s | FileCheck %s --check-prefix=THR12
+; RUN: opt -passes=slp-vectorizer -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -slp-threshold=12 < %s | FileCheck %s --check-prefix=THR12
 
-; Elementwise d = c + a * b, where the fmul is operand 1 of the fadd. The
-; threshold puts the decision right at the cost boundary, so how the fmul and
-; fadd are priced against a fused fma is what decides it. These targets halve
-; the cost of a packed fmul, which is what tempts SLP into vectorizing and
-; breaking the scalar fma chain.
+; Elementwise d = c + a * b, where the fmul is operand 1 of the fadd. These
+; targets halve the cost of a packed fmul, so SLP is tempted to vectorize and
+; break the scalar fma chain. The 14 runs sit at the cost boundary. The 12 runs
+; vectorize either way and guard against the fmuladd marking landing on the load
+; at operand 0 after the fma detection picked the fmul at operand 1, which
+; asserts.
 
 define void @axpy4_contract(ptr noalias %d, ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: define void @axpy4_contract(
@@ -50,6 +54,17 @@ define void @axpy4_contract(ptr noalias %d, ptr noalias %a, ptr noalias %b, ptr 
 ; CHECK-NEXT:    [[DP3:%.*]] = getelementptr inbounds float, ptr [[D]], i64 3
 ; CHECK-NEXT:    store float [[R3]], ptr [[DP3]], align 4
 ; CHECK-NEXT:    ret void
+;
+; THR12-LABEL: define void @axpy4_contract(
+; THR12-SAME: ptr noalias [[D:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; THR12-NEXT:  [[ENTRY:.*:]]
+; THR12-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[C]], align 4
+; THR12-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 4
+; THR12-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 4
+; THR12-NEXT:    [[TMP3:%.*]] = fmul contract <4 x float> [[TMP1]], [[TMP2]]
+; THR12-NEXT:    [[TMP4:%.*]] = fadd contract <4 x float> [[TMP0]], [[TMP3]]
+; THR12-NEXT:    store <4 x float> [[TMP4]], ptr [[D]], align 4
+; THR12-NEXT:    ret void
 ;
 entry:
   %c0 = load float, ptr %c, align 4
@@ -102,6 +117,17 @@ define void @axpy4_reassoc(ptr noalias %d, ptr noalias %a, ptr noalias %b, ptr n
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc contract <4 x float> [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[D]], align 4
 ; CHECK-NEXT:    ret void
+;
+; THR12-LABEL: define void @axpy4_reassoc(
+; THR12-SAME: ptr noalias [[D:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; THR12-NEXT:  [[ENTRY:.*:]]
+; THR12-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[C]], align 4
+; THR12-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 4
+; THR12-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 4
+; THR12-NEXT:    [[TMP3:%.*]] = fmul reassoc contract <4 x float> [[TMP1]], [[TMP2]]
+; THR12-NEXT:    [[TMP4:%.*]] = fadd reassoc contract <4 x float> [[TMP0]], [[TMP3]]
+; THR12-NEXT:    store <4 x float> [[TMP4]], ptr [[D]], align 4
+; THR12-NEXT:    ret void
 ;
 entry:
   %c0 = load float, ptr %c, align 4
