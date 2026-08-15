@@ -5586,18 +5586,10 @@ const CodeExplorerView = {
     const initialPath = params.path || (files.length > 0 ? files[0].path : null);
     this._scrollToLine = params.line ? parseInt(params.line, 10) : 0;
 
-    if (params.pass) {
-      passInput.value = params.pass;
-      this._filters.pass = params.pass;
-    }
-    if (params.name) {
-      nameInput.value = params.name;
-      this._filters.name = params.name;
-    }
-    if (params.function) {
-      funcInput.value = params.function;
-      this._filters.function = params.function;
-    }
+    this._filters = { pass: params.pass || '', name: params.name || '', type: '', function: params.function || '' };
+    passInput.value = this._filters.pass;
+    nameInput.value = this._filters.name;
+    funcInput.value = this._filters.function;
 
     if (initialPath) {
       const match = list.querySelector(`.explorer-file[data-path="${CSS.escape(initialPath)}"]`);
