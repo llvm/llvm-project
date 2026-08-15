@@ -444,6 +444,10 @@ private:
   void CheckAssociatedLoop(const parser::DoConstruct &, bool forceCollapsed);
   void ResolveAccObjectList(const parser::AccObjectList &, Symbol::Flag);
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
+  // Called by ResolveAccObject() for a non-bare designator. Returns true only
+  // when a resolved unsupported designator was diagnosed; the caller must then
+  // stop processing that object.
+  bool DiagnoseUnsupportedAccClauseDesignator(const parser::Designator &);
   Symbol *ResolveName(const parser::Name &);
   Symbol *ResolveFctName(const parser::Name &);
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
@@ -451,8 +455,7 @@ private:
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(const parser::Name &, Symbol::Flag,
       DesignatorPath, const parser::AccObject *occurrence = nullptr,
-      bool warnSameKindDuplicate = true,
-      std::optional<std::string> objectName = {});
+      bool warnSameKindDuplicate = true);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -2182,33 +2185,49 @@ static bool ContainsStructureComponent(const parser::Designator &designator) {
       designator.u);
 }
 
+bool AccAttributeVisitor::DiagnoseUnsupportedAccClauseDesignator(
+    const parser::Designator &designator) {
+  // Do not diagnose a syntactically unsupported object until it has been
+  // semantically resolved; otherwise an unresolved name or component should
+  // receive its ordinary Fortran diagnostic instead.
+  if (!AnalyzeExpr(context_, designator)) {
+    return false;
+  }
+  if (std::holds_alternative<parser::Substring>(designator.u)) {
+    context_.Say(designator.source,
+        "Substrings are not allowed on OpenACC directives or clauses"_err_en_US);
+    return true;
+  }
+  if (const auto *dataRef{std::get_if<parser::DataRef>(&designator.u)};
+      dataRef &&
+      std::holds_alternative<common::Indirection<parser::CoindexedNamedObject>>(
+          dataRef->u)) {
+    context_.Say(designator.source,
+        "Coindexed objects are not allowed on OpenACC directives or clauses"_err_en_US);
+    return true;
+  }
+  return false;
+}
+
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
-            // First form an exact structural path.  If any part cannot be
-            // represented, later registration deliberately does nothing.
+            // First form an exact structural path. If it cannot be represented,
+            // the check below diagnoses resolved unsupported designators;
+            // unresolved or otherwise invalid designators are not registered.
             const bool isBareName{
                 parser::GetDesignatorNameIfDataRef(designator) != nullptr};
             DesignatorPath designatorPath;
-            std::optional<std::string> designatorName;
             bool canCheckMultipleAppearances{isBareName};
             if (!isBareName) {
-              designatorName = designator.source.ToString();
               if (std::optional<DesignatorPath> path{
                       GetDesignatorPath(context_, designator)}) {
                 designatorPath = std::move(*path);
                 canCheckMultipleAppearances = true;
               }
-              // Analyze first so a substring is recognized before emitting
-              // the OpenACC-specific restriction diagnostic.  A substring is
-              // intentionally never represented as a DesignatorPath.
-              if (AnalyzeExpr(context_, designator) &&
-                  std::holds_alternative<parser::Substring>(designator.u)) {
-                context_.Say(designator.source,
-                    "Substrings are not allowed on OpenACC directives or "
-                    "clauses"_err_en_US);
+              if (DiagnoseUnsupportedAccClauseDesignator(designator)) {
                 return;
               }
             }
@@ -2222,8 +2241,7 @@ void AccAttributeVisitor::ResolveAccObject(
                 if (baseName.symbol && !designatorPath.empty()) {
                   if (isDataSharing) {
                     CheckMultipleAppearances(baseName, accFlag,
-                        std::move(designatorPath), &accObject, true,
-                        designatorName);
+                        std::move(designatorPath), &accObject);
                   } else {
                     AddAccObjectWithDSA(std::move(designatorPath), accFlag);
                   }
@@ -2244,9 +2262,8 @@ void AccAttributeVisitor::ResolveAccObject(
                 designatorPath = MakeBaseDesignatorPath(*symbol);
               }
               if (isDataSharing && canCheckMultipleAppearances) {
-                CheckMultipleAppearances(baseName, accFlag,
-                    std::move(designatorPath), &accObject, true,
-                    designatorName);
+                CheckMultipleAppearances(
+                    baseName, accFlag, std::move(designatorPath), &accObject);
               } else if (!designatorPath.empty()) {
                 AddAccObjectWithDSA(std::move(designatorPath), accFlag);
               }
@@ -2297,12 +2314,13 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 
 void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     Symbol::Flag accFlag, DesignatorPath designator,
-    const parser::AccObject *occurrence, bool warnSameKindDuplicate,
-    std::optional<std::string> objectName) {
+    const parser::AccObject *occurrence, bool warnSameKindDuplicate) {
   if (designator.empty()) {
     return;
   }
-  const std::string displayName{objectName.value_or(name.ToString())};
+  const parser::CharBlock source{
+      occurrence ? parser::FindSourceLocation(*occurrence) : name.source};
+  const std::string displayName{source.ToString()};
   auto &objectsWithDSA{GetContext().objectsWithDSA};
   for (auto iter{objectsWithDSA.begin()}; iter != objectsWithDSA.end();) {
     AccDataSharingEntry &entry{iter->value};
@@ -2315,35 +2333,39 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     // TODO: Record the reduction operator in AccDataSharingEntry so compatible
     // reductions can use the ordinary same-kind duplicate handling.
     if (entry.flag != accFlag || accFlag == Symbol::Flag::AccReduction) {
-      context_.Say(name.source,
+      auto &message{context_.Say(source,
           "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
-          displayName);
+          displayName)};
+      if (entry.occurrence) {
+        message.Attach(parser::FindSourceLocation(*entry.occurrence),
+            "previous data-sharing object appears here"_en_US);
+      }
       return;
     }
 
     switch (relation) {
     case DesignatorRelation::Equal:
       if (warnSameKindDuplicate && occurrence) {
-        context_.Warn(common::UsageWarning::OpenAccUsage, name.source,
+        context_.Warn(common::UsageWarning::OpenAccUsage, source,
             "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
             displayName);
         context_.MarkAccObjectDuplicate(occurrence);
       }
       return;
     case DesignatorRelation::Contains:
-      if (occurrence) {
-        context_.MarkAccObjectDuplicate(occurrence);
+    case DesignatorRelation::ContainedBy:
+    case DesignatorRelation::Overlaps: {
+      // TODO: Support non-identical same-kind objects once their containment
+      // and overlap semantics are defined.
+      auto &message{context_.Say(source,
+          "'%s' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive"_err_en_US,
+          displayName)};
+      if (entry.occurrence) {
+        message.Attach(parser::FindSourceLocation(*entry.occurrence),
+            "previous data-sharing object appears here"_en_US);
       }
       return;
-    case DesignatorRelation::ContainedBy:
-      if (entry.occurrence) {
-        context_.MarkAccObjectDuplicate(entry.occurrence);
-      }
-      iter = objectsWithDSA.erase(iter);
-      continue;
-    case DesignatorRelation::Overlaps:
-      ++iter;
-      continue;
+    }
     case DesignatorRelation::Disjoint:
       llvm_unreachable("disjoint relation handled above");
     }

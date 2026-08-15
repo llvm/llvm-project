@@ -171,6 +171,35 @@ subroutine test_substring()
   !$acc end parallel
 end subroutine
 
+! 8a. A coindexed object is not an OpenACC data-clause var.
+subroutine test_coindexed_object()
+  implicit none
+  integer, save :: coarray[*]
+  !ERROR: Coindexed objects are not allowed on OpenACC directives or clauses
+  !$acc parallel default(none) copyin(coarray[1])
+  !$acc end parallel
+end subroutine
+
+! 8b. Invalid objects must retain their ordinary Fortran semantic errors;
+!     they must not be mistaken for a resolved OpenACC object that happens
+!     not to have a DesignatorPath.
+subroutine test_unresolved_clause_objects()
+  implicit none
+  type :: t
+    integer :: present
+  end type
+  type(t) :: x
+  !ERROR: Component 'missing' not found in derived type 't'
+  !$acc parallel copyin(x%missing)
+  !$acc end parallel
+  !ERROR: No explicit type declared for 'missing_substring'
+  !$acc parallel copyin(missing_substring(1:5))
+  !$acc end parallel
+  !ERROR: No explicit type declared for 'missing_coarray'
+  !$acc parallel copyin(missing_coarray[1])
+  !$acc end parallel
+end subroutine
+
 ! 9. Same array section in conflicting private and copy clauses.
 subroutine test_cross_kind_sections(n)
   implicit none

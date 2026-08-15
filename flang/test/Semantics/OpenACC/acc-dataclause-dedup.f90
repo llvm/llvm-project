@@ -162,7 +162,9 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! Overlapping literal sections in the same data-sharing kind are accepted.
+    ! Non-identical sections that overlap in the same data-sharing kind are
+    ! rejected until precise overlap support is implemented.
+    !ERROR: 'arr(5:10)' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(1:5), arr(5:10))
     do i = 1, 10
     end do
@@ -173,8 +175,14 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! An element contained in a section is accepted within the same
-    ! data-sharing kind.
+    ! A section and its contained element are likewise rejected in either
+    ! order until precise containment support is implemented.
+    !ERROR: 'arr(3)' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
+    !$acc parallel loop private(arr(1:5), arr(3))
+    do i = 1, 10
+    end do
+
+    !ERROR: 'arr(1:5)' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr(3), arr(1:5))
     do i = 1, 10
     end do
@@ -185,8 +193,8 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! Variable index/section overlap is accepted within the same
-    ! data-sharing kind.
+    ! Variable index/section containment cannot yet be proven, so it is treated
+    ! as disjoint.
     !$acc parallel loop private(arr(idx), arr(lo:hi))
     do i = 1, 10
     end do
@@ -203,7 +211,8 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! Variable section overlap is accepted within the same data-sharing kind.
+    ! Variable section overlap cannot yet be proven, so it is treated as
+    ! disjoint.
     !$acc parallel loop private(arr(lo:hi), arr(mid:hi))
     do i = 1, 10
     end do
@@ -225,8 +234,8 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! Mixing a bare-name designator and an array-element designator on the
-    ! same symbol is not an exact duplicate.
+    ! A whole array and an element are not distinct data-sharing objects.
+    !ERROR: 'arr(1)' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
     !$acc parallel loop private(arr, arr(1))
     do i = 1, 10
     end do

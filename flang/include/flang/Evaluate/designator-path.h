@@ -12,6 +12,7 @@
 #include "flang/Evaluate/expression.h"
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -52,6 +53,8 @@ struct DesignatorPath {
       const std::optional<Expr<SomeType>> &);
   DesignatorRelation Compare(const DesignatorPath &) const;
   bool MayContain(const DesignatorPath &) const;
+  std::string AsFortran() const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   void SetBase(NamedEntity);
   void AddComponent(const Symbol &);
   void AddSubscripts(std::vector<Subscript>);

@@ -10,6 +10,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::evaluate {
 
@@ -107,10 +108,9 @@ DesignatorRelation DesignatorPath::CompareSubscripts(
   auto xRange{GetConstantSubscriptRange(x)};
   auto yRange{GetConstantSubscriptRange(y)};
   if (!xRange || !yRange) {
-    // Constant triplets with strides other than one cannot be represented as a
-    // single range here, so they are treated as disjoint for now. This could be
-    // made more precise by expanding constant triplets into index sets and
-    // comparing those sets.
+    // Nonconstant selectors and constant triplets with non-unit strides cannot
+    // be compared precisely, so treat them as disjoint for now. Constant
+    // triplets could be made more precise by expanding them into index sets.
     return DesignatorRelation::Disjoint;
   }
   if (xRange->upper < yRange->lower || yRange->upper < xRange->lower) {
@@ -349,6 +349,34 @@ bool DesignatorPath::MayContain(const DesignatorPath &that) const {
     }
   }
   return true;
+}
+
+std::string DesignatorPath::AsFortran() const {
+  std::string result;
+  llvm::raw_string_ostream stream{result};
+  AsFortran(stream);
+  return result;
+}
+
+llvm::raw_ostream &DesignatorPath::AsFortran(llvm::raw_ostream &o) const {
+  if (!base) {
+    return o;
+  }
+  base->AsFortran(o);
+  for (const Part &part : parts) {
+    if (!part.subscripts.empty()) {
+      char separator{'('};
+      for (const Subscript &subscript : part.subscripts) {
+        subscript.AsFortran(o << separator);
+        separator = ',';
+      }
+      o << ')';
+    }
+    if (part.symbol) {
+      o << '%' << part.symbol->name();
+    }
+  }
+  return o;
 }
 
 void DesignatorPath::SetBase(NamedEntity entity) { base = std::move(entity); }

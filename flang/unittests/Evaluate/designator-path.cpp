@@ -356,6 +356,23 @@ void TestSubscriptsPrecedeComponentWithinPart() {
   TEST(xSectionYFullZ.Parts()[1].symbol == &z);
 }
 
+void TestAsFortran() {
+  SymbolFixture symbols;
+  const semantics::Symbol &a{symbols.MakeSymbol("a")};
+  const semantics::Symbol &x{symbols.MakeSymbol("x")};
+  const semantics::Symbol &y{symbols.MakeSymbol("y")};
+  DesignatorPath path;
+  path.SetBase(NamedEntity{a});
+  TEST(path.AsFortran() == "a");
+  path.AddSubscripts({Scalar(1), Section(2, 4)});
+  TEST(path.AsFortran() == "a(1_8,2_8:4_8:1_8)");
+  path.AddComponent(x);
+  TEST(path.AsFortran() == "a(1_8,2_8:4_8:1_8)%x");
+  path.AddSubscripts({FullSection()});
+  path.AddComponent(y);
+  TEST(path.AsFortran() == "a(1_8,2_8:4_8:1_8)%x(::1_8)%y");
+}
+
 } // namespace
 
 int main() {
@@ -370,5 +387,6 @@ int main() {
   TestMayContainPartsAndPaths();
   TestAddFunctionsAndMap();
   TestSubscriptsPrecedeComponentWithinPart();
+  TestAsFortran();
   return testing::Complete();
 }
