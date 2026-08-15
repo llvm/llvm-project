@@ -189,7 +189,7 @@ The domain has few operations:
 `lock`
 ^^^^^^
 
-- If current was in quiescent state, we need to record the current global phase and set the nested level to 1. 
+- If the current thread was in quiescent state, record the current global phase and set the nested level to 1. 
 - If the current thread was already in a critical section, just increment the nested level.
 
 `unlock`
