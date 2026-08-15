@@ -54,6 +54,30 @@ set(ORC_RT_HEADERS
     orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h
     orc-rt/sps-ci/StandaloneMachOUnwindInfoRegistrarSPSCI.h
 )
+#LLVM prefers not to use globs, so we just use it to assert that the list is up to date.
+file(GLOB_RECURSE ORC_RT_DISK_INCLUDES
+  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+  CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+
+set(ORC_RT_NOT_INCLUDED ${ORC_RT_DISK_INCLUDES})
+if(ORC_RT_HEADERS)
+  list(REMOVE_ITEM ORC_RT_NOT_INCLUDED ${ORC_RT_HEADERS})
+endif()
+
+set(ORC_RT_STALE ${ORC_RT_HEADERS})
+if(ORC_RT_DISK_INCLUDES)
+  list(REMOVE_ITEM ORC_RT_STALE ${ORC_RT_DISK_INCLUDES})
+endif()
+
+if(ORC_RT_NOT_INCLUDED OR ORC_RT_STALE)
+string(JOIN "\n  " _msg_unlisted ${ORC_RT_NOT_INCLUDED})
+string(JOIN "\n  " _msg_stale ${ORC_RT_STALE})
+  message(FATAL_ERROR
+    "ORC_RT_HEADERS is out of sync with disk/.\n"
+    "On disk but not listed:\n  ${_msg_unlisted}\n"
+    "Listed but not on disk:\n  ${_msg_stale}")
+endif()
 
 # Add generated config header
 set(ORC_RT_GENERATED_HEADERS
