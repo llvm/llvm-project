@@ -89,15 +89,11 @@ define <vscale x 4 x i32> @gldnt1sh_s_uxtw(<vscale x 4 x i1> %pg, ptr %base, <vs
 
 ; LDNT1B/LDNT1SB
 declare <vscale x 4 x i8> @llvm.aarch64.sve.ldnt1.gather.uxtw.nxv4i8(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
-declare <vscale x 4 x i8> @llvm.aarch64.sve.ldnt1.gather.sxtw.nxv4i8(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 
 ; LDNT1H/LDNT1SH
-declare <vscale x 4 x i16> @llvm.aarch64.sve.ldnt1.gather.sxtw.nxv4i16(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 declare <vscale x 4 x i16> @llvm.aarch64.sve.ldnt1.gather.uxtw.nxv4i16(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 
 ; LDNT1W/LDNT1SW
-declare <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.gather.sxtw.nxv4i32(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.gather.uxtw.nxv4i32(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 
-declare <vscale x 4 x float> @llvm.aarch64.sve.ldnt1.gather.sxtw.nxv4f32(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.ldnt1.gather.uxtw.nxv4f32(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>)

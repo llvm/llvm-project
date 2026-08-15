@@ -171,13 +171,6 @@ TEST(PreamblePatchTest, ContainsNewIncludes) {
                                           Field(&Inclusion::HashLine, 4))));
 }
 
-TEST(PreamblePatchTest, MainFileIsEscaped) {
-  auto Includes = collectPatchedIncludes("#include <a.h>", "", "file\"name.cpp")
-                      .MainFileIncludes;
-  EXPECT_THAT(Includes, ElementsAre(AllOf(Field(&Inclusion::Written, "<a.h>"),
-                                          Field(&Inclusion::HashLine, 0))));
-}
-
 TEST(PreamblePatchTest, PatchesPreambleIncludes) {
   MockFS FS;
   IgnoreDiagnostics Diags;

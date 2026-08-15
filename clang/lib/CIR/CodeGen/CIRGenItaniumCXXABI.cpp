@@ -738,6 +738,8 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 #include "clang/Basic/RISCVVTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
   case BuiltinType::LongAccum:
@@ -1960,16 +1962,17 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
                                             cgf.getPointerAlign());
     }
 
-    // Add !invariant.load md to virtual function load to indicate that
-    // function didn't change inside vtable.
+    // Set invariant on the cir.load of virtual function pointer to indicate
+    // that function didn't change inside vtable.
     // It's safe to add it without -fstrict-vtable-pointers, but it would not
     // help in devirtualization because it will only matter if we will have 2
     // the same virtual function loads from the same vtable load, which won't
     // happen without enabled devirtualization with -fstrict-vtable-pointers.
     if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        cgm.getCodeGenOpts().StrictVTablePointers) {
-      cgm.errorNYI(loc, "getVirtualFunctionPointer: strictVTablePointers");
-    }
+        cgm.getCodeGenOpts().StrictVTablePointers)
+      if (auto loadOp = vfuncLoad.getDefiningOp<cir::LoadOp>())
+        loadOp.setInvariant(true);
+
     vfunc = vfuncLoad;
   }
 

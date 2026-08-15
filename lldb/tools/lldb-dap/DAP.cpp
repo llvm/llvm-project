@@ -225,7 +225,8 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 }
 
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
-  in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
+  in =
+      lldb::SBFile(std::fopen(DEV_NULL, "r"), "r", /*transfer_ownership=*/true);
 
   if (auto error = out.RedirectTo(
           m_loop, overrideOut,
@@ -786,24 +787,7 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   return target;
 }
 
-void DAP::SetTarget(const lldb::SBTarget target) {
-  this->target = target;
-
-  if (target.IsValid()) {
-    // Configure breakpoint event listeners for the target.
-    lldb::SBListener listener = this->debugger.GetListener();
-    listener.StartListeningForEvents(
-        this->target.GetBroadcaster(),
-        lldb::SBTarget::eBroadcastBitBreakpointChanged |
-            lldb::SBTarget::eBroadcastBitModulesLoaded |
-            lldb::SBTarget::eBroadcastBitModulesUnloaded |
-            lldb::SBTarget::eBroadcastBitSymbolsLoaded |
-            lldb::SBTarget::eBroadcastBitSymbolsChanged |
-            lldb::SBTarget::eBroadcastBitNewTargetCreated);
-    listener.StartListeningForEvents(this->broadcaster,
-                                     eBroadcastBitStopEventThread);
-  }
-}
+void DAP::SetTarget(const lldb::SBTarget target) { this->target = target; }
 
 bool DAP::HandleObject(const Message &M) {
   TelemetryDispatcher dispatcher(&debugger);

@@ -17,7 +17,7 @@
 ;;   esc(local2);
 ;; }
 
-;; The variables and intrinsics have been adjusted with by hand to test
+;; The variables and intrinsics have been adjusted by hand to test
 ;; what happens when the variable doesn't fill the whole alloca, and
 ;; when offsets are encoded with both the address component of the dbg.assign
 ;; and the address modifying DIExpression.

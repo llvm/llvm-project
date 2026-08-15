@@ -495,27 +495,6 @@ void NetBSD::AddClangSystemIncludeArgs(
                           concat(D.SysRoot, "/usr/include"));
 }
 
-void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args) const {
-  const std::string Candidates[] = {
-    // directory relative to build tree
-    concat(getDriver().Dir, "/../include/c++/v1"),
-    // system install with full upstream path
-    concat(getDriver().SysRoot, "/usr/include/c++/v1"),
-    // system install from src
-    concat(getDriver().SysRoot, "/usr/include/c++"),
-  };
-
-  for (const auto &IncludePath : Candidates) {
-    if (!getVFS().exists(IncludePath + "/__config"))
-      continue;
-
-    // Use the first candidate that looks valid.
-    addSystemInclude(DriverArgs, CC1Args, IncludePath);
-    return;
-  }
-}
-
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const {
   addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/g++"), "", "",
@@ -532,12 +511,11 @@ llvm::ExceptionHandling NetBSD::GetExceptionModel(const ArgList &Args) const {
 }
 
 SanitizerMask
-NetBSD::getSupportedSanitizers(StringRef BoundArch,
+NetBSD::getSupportedSanitizers(BoundArch BA,
                                Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Address;
     Res |= SanitizerKind::PointerCompare;
@@ -562,7 +540,7 @@ NetBSD::getSupportedSanitizers(StringRef BoundArch,
 }
 
 void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
-                                   ArgStringList &CC1Args,
+                                   ArgStringList &CC1Args, BoundArch BA,
                                    Action::OffloadKind) const {
   const SanitizerArgs &SanArgs = getSanitizerArgs(DriverArgs);
   if (SanArgs.hasAnySanitizer())

@@ -132,11 +132,6 @@ extern volatile int ReadabilityModuleAnchorSource;
 [[maybe_unused]] static int ReadabilityModuleAnchorDestination =
     ReadabilityModuleAnchorSource;
 
-// This anchor is used to force the linker to link the ZirconModule.
-extern volatile int ZirconModuleAnchorSource;
-[[maybe_unused]] static int ZirconModuleAnchorDestination =
-    ZirconModuleAnchorSource;
-
 } // namespace clang::tidy
 
 #endif

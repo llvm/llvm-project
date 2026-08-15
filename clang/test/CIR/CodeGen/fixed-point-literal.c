@@ -128,12 +128,12 @@ void test_sat_short_accum() {
   // LLVM: void @test_sat_short_accum
   // OGCG: void @test_sat_short_accum
   _Sat short _Accum ssa;
-  // CIR:  cir.alloca !s16i, !cir.ptr<!s16i>, ["ssa"]
-  // LLVM: alloca i16, i64 1, align 2
+  // CIR:  cir.alloca "ssa" {{.*}} : !cir.ptr<!s16i>
+  // LLVM: alloca i16, align 2
   // OGCG: alloca i16, align 2
   _Sat unsigned short _Accum susa;
-  // CIR:  cir.alloca !u16i, !cir.ptr<!u16i>, ["susa"]
-  // LLVM: alloca i16, i64 1, align 2
+  // CIR:  cir.alloca "susa" {{.*}} : !cir.ptr<!u16i>
+  // LLVM: alloca i16, align 2
   // OGCG: alloca i16, align 2
 }
 
@@ -142,12 +142,12 @@ void test_sat_accum() {
   // LLVM: void @test_sat_accum
   // OGCG: void @test_sat_accum
   _Sat _Accum sa;
-  // CIR:  cir.alloca !s32i, !cir.ptr<!s32i>, ["sa"]
-  // LLVM: alloca i32, i64 1, align 4
+  // CIR:  cir.alloca "sa" {{.*}} : !cir.ptr<!s32i>
+  // LLVM: alloca i32, align 4
   // OGCG: alloca i32, align 4
   _Sat unsigned _Accum sua;
-  // CIR:  cir.alloca !u32i, !cir.ptr<!u32i>, ["sua"]
-  // LLVM: alloca i32, i64 1, align 4
+  // CIR:  cir.alloca "sua" {{.*}} : !cir.ptr<!u32i>
+  // LLVM: alloca i32, align 4
   // OGCG: alloca i32, align 4
 }
 
@@ -156,12 +156,12 @@ void test_sat_long_accum() {
   // LLVM: void @test_sat_long_accum
   // OGCG: void @test_sat_long_accum
   _Sat long _Accum sla;
-  // CIR:  cir.alloca !s64i, !cir.ptr<!s64i>, ["sla"]
-  // LLVM: alloca i64, i64 1, align 8
+  // CIR:  cir.alloca "sla" {{.*}} : !cir.ptr<!s64i>
+  // LLVM: alloca i64, align 8
   // OGCG: alloca i64, align 8
   _Sat unsigned long _Accum sula;
-  // CIR:  cir.alloca !u64i, !cir.ptr<!u64i>, ["sula"]
-  // LLVM: alloca i64, i64 1, align 8
+  // CIR:  cir.alloca "sula" {{.*}} : !cir.ptr<!u64i>
+  // LLVM: alloca i64, align 8
   // OGCG: alloca i64, align 8
 }
 
@@ -170,12 +170,12 @@ void test_sat_short_fract() {
   // LLVM: void @test_sat_short_fract
   // OGCG: void @test_sat_short_fract
   _Sat short _Fract ssf;
-  // CIR:  cir.alloca !s8i, !cir.ptr<!s8i>, ["ssf"]
-  // LLVM: alloca i8, i64 1, align 1
+  // CIR:  cir.alloca "ssf" {{.*}} : !cir.ptr<!s8i>
+  // LLVM: alloca i8, align 1
   // OGCG: alloca i8, align 1
   _Sat unsigned short _Fract susf;
-  // CIR:  cir.alloca !u8i, !cir.ptr<!u8i>, ["susf"]
-  // LLVM: alloca i8, i64 1, align 1
+  // CIR:  cir.alloca "susf" {{.*}} : !cir.ptr<!u8i>
+  // LLVM: alloca i8, align 1
   // OGCG: alloca i8, align 1
 }
 
@@ -184,12 +184,12 @@ void test_sat_fract() {
   // LLVM: void @test_sat_fract
   // OGCG: void @test_sat_fract
   _Sat _Fract sf;
-  // CIR:  cir.alloca !s16i, !cir.ptr<!s16i>, ["sf"]
-  // LLVM: alloca i16, i64 1, align 2
+  // CIR:  cir.alloca "sf" {{.*}} : !cir.ptr<!s16i>
+  // LLVM: alloca i16, align 2
   // OGCG: alloca i16, align 2
   _Sat unsigned _Fract suf;
-  // CIR:  cir.alloca !u16i, !cir.ptr<!u16i>, ["suf"]
-  // LLVM: alloca i16, i64 1, align 2
+  // CIR:  cir.alloca "suf" {{.*}} : !cir.ptr<!u16i>
+  // LLVM: alloca i16, align 2
   // OGCG: alloca i16, align 2
 }
 
@@ -198,11 +198,11 @@ void test_sat_long_fract() {
   // LLVM: void @test_sat_long_fract
   // OGCG: void @test_sat_long_fract
   _Sat long _Fract slf;
-  // CIR:  cir.alloca !s32i, !cir.ptr<!s32i>, ["slf"]
-  // LLVM: alloca i32, i64 1, align 4
+  // CIR:  cir.alloca "slf" {{.*}} : !cir.ptr<!s32i>
+  // LLVM: alloca i32, align 4
   // OGCG: alloca i32, align 4
   _Sat unsigned long _Fract sulf;
-  // CIR:  cir.alloca !u32i, !cir.ptr<!u32i>, ["sulf"]
-  // LLVM: alloca i32, i64 1, align 4
+  // CIR:  cir.alloca "sulf" {{.*}} : !cir.ptr<!u32i>
+  // LLVM: alloca i32, align 4
   // OGCG: alloca i32, align 4
 }

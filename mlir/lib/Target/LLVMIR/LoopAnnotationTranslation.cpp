@@ -31,6 +31,8 @@ struct LoopAnnotationConversion {
   void addUnitNode(StringRef name, BoolAttr attr);
   void addI32NodeWithVal(StringRef name, uint32_t val);
   void convertBoolNode(StringRef name, BoolAttr attr, bool negated = false);
+  void convertBooleanUnitNode(StringRef enableName, StringRef disableName,
+                              BoolAttr attr, bool negated = false);
   void convertI32Node(StringRef name, IntegerAttr attr);
   void convertFollowupNode(StringRef name, LoopAnnotationAttr attr);
   void convertLocation(FusedLoc attr);
@@ -83,6 +85,19 @@ void LoopAnnotationConversion::convertBoolNode(StringRef name, BoolAttr attr,
                               llvm::ConstantAsMetadata::get(cstValue)}));
 }
 
+/// Emits the single-operand node of an enable/disable pair. As in
+/// convertBoolNode, the attribute is tri-state: a null \p attr emits no node
+/// at all, otherwise \p negated ^ the attribute value is the enable bit and
+/// selects which of the two names is emitted.
+void LoopAnnotationConversion::convertBooleanUnitNode(StringRef enableName,
+                                                      StringRef disableName,
+                                                      BoolAttr attr,
+                                                      bool negated) {
+  if (!attr)
+    return;
+  addUnitNode((negated ^ attr.getValue()) ? enableName : disableName);
+}
+
 void LoopAnnotationConversion::convertI32Node(StringRef name,
                                               IntegerAttr attr) {
   if (!attr)
@@ -103,11 +118,15 @@ void LoopAnnotationConversion::convertFollowupNode(StringRef name,
 }
 
 void LoopAnnotationConversion::convertLoopOptions(LoopVectorizeAttr options) {
-  convertBoolNode("llvm.loop.vectorize.enable", options.getDisable(), true);
-  convertBoolNode("llvm.loop.vectorize.predicate.enable",
-                  options.getPredicateEnable());
-  convertBoolNode("llvm.loop.vectorize.scalable.enable",
-                  options.getScalableEnable());
+  convertBooleanUnitNode("llvm.loop.vectorize.enable",
+                         "llvm.loop.vectorize.disable", options.getDisable(),
+                         /*negated=*/true);
+  convertBooleanUnitNode("llvm.loop.vectorize.predicate.enable",
+                         "llvm.loop.vectorize.predicate.disable",
+                         options.getPredicateEnable());
+  convertBooleanUnitNode("llvm.loop.vectorize.scalable.enable",
+                         "llvm.loop.vectorize.scalable.disable",
+                         options.getScalableEnable());
   convertI32Node("llvm.loop.vectorize.width", options.getWidth());
   convertFollowupNode("llvm.loop.vectorize.followup_vectorized",
                       options.getFollowupVectorized());
@@ -162,7 +181,9 @@ void LoopAnnotationConversion::convertLoopOptions(LoopLICMAttr options) {
 }
 
 void LoopAnnotationConversion::convertLoopOptions(LoopDistributeAttr options) {
-  convertBoolNode("llvm.loop.distribute.enable", options.getDisable(), true);
+  convertBooleanUnitNode("llvm.loop.distribute.enable",
+                         "llvm.loop.distribute.disable", options.getDisable(),
+                         /*negated=*/true);
   convertFollowupNode("llvm.loop.distribute.followup_coincident",
                       options.getFollowupCoincident());
   convertFollowupNode("llvm.loop.distribute.followup_sequential",

@@ -569,7 +569,10 @@ TYPE_CONTEXT_PARSER("type bound procedure binding"_en_US,
     recovery(
         first(construct<TypeBoundProcBinding>(Parser<TypeBoundProcedureStmt>{}),
             construct<TypeBoundProcBinding>(Parser<TypeBoundGenericStmt>{}),
-            construct<TypeBoundProcBinding>(Parser<FinalProcedureStmt>{})),
+            construct<TypeBoundProcBinding>(Parser<FinalProcedureStmt>{}),
+            Parser<DataComponentDefStmt>{} >>
+                fail<TypeBoundProcBinding>(
+                    "component definition must precede CONTAINS in a derived type"_err_en_US)),
         construct<TypeBoundProcBinding>(
             !"END"_tok >> SkipTo<'\n'>{} >> construct<ErrorRecovery>())))
 
@@ -675,6 +678,35 @@ TYPE_PARSER(
 // R763 end-enum-stmt -> END ENUM
 TYPE_PARSER(recovery("END ENUM"_tok, constructEndStmtErrorRecovery) >>
     construct<EndEnumStmt>())
+
+// F2023 R766 enumeration-type-def ->
+//        enumeration-type-stmt
+//        enumeration-enumerator-stmt [ enumeration-enumerator-stmt ]...
+//        end-enumeration-type-stmt
+TYPE_CONTEXT_PARSER("enumeration type definition"_en_US,
+    construct<EnumerationTypeDef>(statement(Parser<EnumerationTypeStmt>{}),
+        some(unambiguousStatement(Parser<EnumerationEnumeratorStmt>{})),
+        statement(Parser<EndEnumerationTypeStmt>{})))
+
+// F2023 R767 enumeration-type-stmt ->
+//        ENUMERATION TYPE [ [ , access-spec ] :: ] enumeration-type-name
+TYPE_CONTEXT_PARSER("ENUMERATION TYPE statement"_en_US,
+    construct<EnumerationTypeStmt>(
+        "ENUMERATION TYPE" >> maybe("," >> accessSpec) / "::", name) ||
+        construct<EnumerationTypeStmt>(
+            "ENUMERATION TYPE" >> construct<std::optional<AccessSpec>>(), name))
+
+// F2023 R768 enumeration-enumerator-stmt -> ENUMERATOR [ :: ]
+// enumerator-name-list
+//   (Note: distinct from R761 enumerator-def-stmt — no "= expr" allowed here)
+TYPE_CONTEXT_PARSER("ENUMERATOR statement in ENUMERATION TYPE"_en_US,
+    construct<EnumerationEnumeratorStmt>(
+        "ENUMERATOR" >> maybe("::"_tok) >> nonemptyList(name)))
+
+// F2023 R769 end-enumeration-type-stmt ->
+//        END ENUMERATION TYPE [ enumeration-type-name ]
+TYPE_PARSER(construct<EndEnumerationTypeStmt>(recovery(
+    "END ENUMERATION TYPE" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R801 type-declaration-stmt ->
 //        declaration-type-spec [[, attr-spec]... ::] entity-decl-list

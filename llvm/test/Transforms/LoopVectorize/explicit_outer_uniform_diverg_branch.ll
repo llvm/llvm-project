@@ -185,4 +185,4 @@ exit:
 
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.width", i32 8}
-!8 = !{!"llvm.loop.vectorize.enable", i1 true}
+!8 = !{!"llvm.loop.vectorize.enable"}

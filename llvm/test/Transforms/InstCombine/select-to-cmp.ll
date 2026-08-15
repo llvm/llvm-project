@@ -48,8 +48,7 @@ define i8 @scmp_x_0_inverted_i8(i8 %x) {
 define i32 @scmp_x_0_inverted_i64_neq(i32 %x) {
 ; CHECK-LABEL: define i32 @scmp_x_0_inverted_i64_neq(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[X]], i32 0)
-; CHECK-NEXT:    [[RET:%.*]] = trunc i64 [[SEL]] to i32
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %x64 = sext i32 %x to i64
@@ -65,8 +64,7 @@ define i32 @scmp_x_0_inverted_i64_neq(i32 %x) {
 define i32 @scmp_x_0_inverted_i64_sgt(i32 %x) {
 ; CHECK-LABEL: define i32 @scmp_x_0_inverted_i64_sgt(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = call i64 @llvm.scmp.i64.i32(i32 [[X]], i32 0)
-; CHECK-NEXT:    [[RET:%.*]] = trunc i64 [[SEL]] to i32
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[X]], i32 0)
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %x64 = sext i32 %x to i64
@@ -168,8 +166,7 @@ define <4 x i32> @scmp_x_0_inverted_splat_vec(<4 x i32> %x) {
 define <4 x i32> @non_splat_vec_scmp_diff_bitwidth(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @non_splat_vec_scmp_diff_bitwidth(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i64> @llvm.scmp.v4i64.v4i32(<4 x i32> [[X]], <4 x i32> <i32 0, i32 1, i32 -1, i32 5>)
-; CHECK-NEXT:    [[RET:%.*]] = trunc <4 x i64> [[SEL]] to <4 x i32>
+; CHECK-NEXT:    [[RET:%.*]] = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> [[X]], <4 x i32> <i32 0, i32 1, i32 -1, i32 5>)
 ; CHECK-NEXT:    ret <4 x i32> [[RET]]
 ;
   %x64 = sext <4 x i32> %x to <4 x i64>

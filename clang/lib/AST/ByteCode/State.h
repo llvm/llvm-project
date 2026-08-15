@@ -85,13 +85,14 @@ public:
   virtual ~State();
 
   virtual const Frame *getCurrentFrame() = 0;
-  virtual const Frame *getBottomFrame() const = 0;
   virtual unsigned getCallStackDepth() = 0;
   virtual bool stepsLeft() const = 0;
 
   Expr::EvalStatus &getEvalStatus() const { return EvalStatus; }
   ASTContext &getASTContext() const { return Ctx; }
   const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
+
+  bool shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId);
 
   /// Note that we have had a side-effect, and determine whether we should
   /// keep evaluating.
@@ -163,6 +164,7 @@ public:
 
   /// Add a note to a prior diagnostic.
   OptionalDiagnostic Note(SourceLocation Loc, diag::kind DiagId);
+  OptionalDiagnostic Note(SourceInfo Loc, diag::kind DiagId);
 
   /// Add a stack of notes to a prior diagnostic.
   void addNotes(ArrayRef<PartialDiagnosticAt> Diags);
@@ -203,6 +205,8 @@ private:
   void addCallStack(unsigned Limit);
 
   PartialDiagnostic &addDiag(SourceLocation Loc, diag::kind DiagId);
+
+  void addExtendedDiag(SourceLocation Loc, diag::kind DiagId);
 
   OptionalDiagnostic diag(SourceLocation Loc, diag::kind DiagId,
                           unsigned ExtraNotes, bool IsCCEDiag);

@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUCoExecSchedStrategy.h"
+#include "AMDGPUIGroupLP.h"
+#include "GCNHazardRecognizer.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -64,13 +66,16 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
   if (SII.isTRANS(MI))
     return InstructionFlavor::TRANS;
 
-  if (SII.isVALU(MI))
+  if (SII.isVALU(MI, /*AllowLDSDMA=*/true))
     return InstructionFlavor::SingleCycleVALU;
+
+  if (SII.isSMRD(MI))
+    return InstructionFlavor::SMEM;
 
   if (SII.isDS(MI))
     return InstructionFlavor::DS;
 
-  if (SII.isFLAT(MI) || SII.isFLATGlobal(MI) || SII.isFLATScratch(MI))
+  if (SII.isVMEM(MI))
     return InstructionFlavor::VMEM;
 
   if (SII.isSALU(MI))
@@ -433,6 +438,14 @@ void AMDGPUCoExecSchedStrategy::initialize(ScheduleDAGMI *DAG) {
 
   GCNSchedStrategy::initialize(DAG);
   Heurs.initialize(DAG, SchedModel, TRI);
+
+  // Replace the default hazard recognizer with our PreRA one so that pre-RA
+  // scheduling accounts for WMMA co-execution slot constraints. This must
+  // happen after GCNSchedStrategy::initialize() because
+  // GenericScheduler::initialize() calls SchedBoundary::reset(), which deletes
+  // and recreates the hazard recognizer each region.
+  Top.HazardRec = std::make_unique<GCNHazardRecognizer>(
+      DAG->MF, GCNHazardRecognizer::OperatingMode::PreRA);
 }
 
 void AMDGPUCoExecSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
@@ -708,8 +721,10 @@ ScheduleDAGInstrs *
 llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
   LLVM_DEBUG(dbgs() << "AMDGPU coexec preRA scheduler selected for "
                     << C->MF->getName() << '\n');
-  return new GCNScheduleDAGMILive(
+  ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
+  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
+  return DAG;
 }
 
 ScheduleDAGInstrs *

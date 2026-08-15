@@ -418,9 +418,11 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::NoContraction:
   case spirv::Decoration::Constant:
   case spirv::Decoration::Block:
+  case spirv::Decoration::BufferBlock:
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
+  case spirv::Decoration::Volatile:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))
@@ -771,7 +773,8 @@ LogicalResult Serializer::prepareBasicType(
     // Ideally, Block decorations should be inserted when converting to SPIR-V.
     if (isInterfaceStructPtrType(ptrType)) {
       auto structType = cast<spirv::StructType>(ptrType.getPointeeType());
-      if (!structType.hasDecoration(spirv::Decoration::Block))
+      if (!structType.hasDecoration(spirv::Decoration::Block) &&
+          !structType.hasDecoration(spirv::Decoration::BufferBlock))
         if (failed(emitDecoration(getTypeID(pointeeStruct),
                                   spirv::Decoration::Block)))
           return emitError(loc, "cannot decorate ")

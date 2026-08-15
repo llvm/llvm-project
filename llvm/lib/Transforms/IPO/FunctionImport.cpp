@@ -25,6 +25,7 @@
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -46,6 +47,7 @@
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <memory>
@@ -1669,20 +1671,20 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
                     << "\n");
   MDNode *UniqueID = nullptr;
   if (auto *GO = dyn_cast<GlobalObject>(&GV))
-    UniqueID = GO->getMetadata(LLVMContext::MD_unique_id);
+    UniqueID = GO->getMetadata(LLVMContext::MD_guid);
 
   if (Function *F = dyn_cast<Function>(&GV)) {
     F->deleteBody();
     F->clearMetadata();
     if (UniqueID)
-      F->setMetadata(LLVMContext::MD_unique_id, UniqueID);
+      F->setMetadata(LLVMContext::MD_guid, UniqueID);
     F->setComdat(nullptr);
   } else if (GlobalVariable *V = dyn_cast<GlobalVariable>(&GV)) {
     V->setInitializer(nullptr);
     V->setLinkage(GlobalValue::ExternalLinkage);
     V->clearMetadata();
     if (UniqueID)
-      V->setMetadata(LLVMContext::MD_unique_id, UniqueID);
+      V->setMetadata(LLVMContext::MD_guid, UniqueID);
     V->setComdat(nullptr);
   } else {
     GlobalValue *NewGV;
@@ -1912,6 +1914,33 @@ static void internalizeGVsAfterImport(Module &M) {
     }
 }
 
+/// When a function carrying !implicit.ref is imported via ThinLTO, the
+/// referenced global arrives as available_externally. This string can be dead
+/// code eliminated since it has no IR uses -- only metadata references. Adding
+/// it to llvm.compiler.used prevents elimination.
+static void protectImplicitRefGlobals(Module &M) {
+  SmallPtrSet<GlobalValue *, 4> Seen;
+  SmallVector<GlobalValue *, 4> ToProtect;
+  for (Function &F : M) {
+    if (!F.hasAvailableExternallyLinkage() ||
+        !F.hasMetadata(LLVMContext::MD_implicit_ref))
+      continue;
+    SmallVector<MDNode *> MDs;
+    F.getMetadata(LLVMContext::MD_implicit_ref, MDs);
+    for (MDNode *MD : MDs) {
+      auto *Op = MD->getOperand(0).get();
+      if (!Op)
+        continue;
+      if (auto *VAM = dyn_cast<ValueAsMetadata>(Op))
+        if (auto *GV = dyn_cast<GlobalVariable>(VAM->getValue()))
+          if (GV->hasAvailableExternallyLinkage() && Seen.insert(GV).second)
+            ToProtect.push_back(GV);
+    }
+  }
+  if (!ToProtect.empty())
+    appendToCompilerUsed(M, ToProtect);
+}
+
 // Automatically import functions in Module \p DestModule based on the summaries
 // index.
 Expected<bool> FunctionImporter::importFunctions(
@@ -2095,6 +2124,11 @@ Expected<bool> FunctionImporter::importFunctions(
   }
 
   internalizeGVsAfterImport(DestModule);
+
+  // Protect !implicit.ref-referenced globals imported as available_externally
+  // from DCE'd. Only needed when globals were actually imported.
+  if (ImportedGVCount > 0)
+    protectImplicitRefGlobals(DestModule);
 
   NumImportedFunctions += (ImportedCount - ImportedGVCount);
   NumImportedGlobalVars += ImportedGVCount;
