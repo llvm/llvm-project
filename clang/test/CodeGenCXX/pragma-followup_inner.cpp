@@ -25,7 +25,7 @@ extern "C" void followup_inner(int n, int *x) {
 // CHECK-DAG: ![[DISTRIBUTE_5]] = !{!"llvm.loop.distribute.enable"}
 
 // CHECK-DAG: ![[DISTRIBUTE_FOLLOWUP_6]] = !{!"llvm.loop.distribute.followup_all", ![[PARALLEL_ACCESSES_4]], ![[VECTORIZE_8:[0-9]+]]}
-// CHECK-DAG: ![[VECTORIZE_8]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK-DAG: ![[VECTORIZE_8]] = !{!"llvm.loop.vectorize.enable"}
 
 // CHECK-DAG: ![[OUTERLOOP_9]] = distinct !{![[OUTERLOOP_9]], [[MP:![0-9]+]], ![[UNROLLANDJAM_COUNT_10:[0-9]+]], ![[UNROLLANDJAM_FOLLOWUPINNER_11:[0-9]+]]}
 // CHECK-DAG: ![[UNROLLANDJAM_COUNT_10]] = !{!"llvm.loop.unroll_and_jam.count", i32 4}

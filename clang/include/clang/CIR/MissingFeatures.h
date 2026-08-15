@@ -91,7 +91,7 @@ struct MissingFeatures {
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
-  static bool opCallMustTail() { return false; }
+  static bool opCallThunkTailHint() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
@@ -194,6 +194,7 @@ struct MissingFeatures {
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeNoBuiltin() { return false; }
+  static bool branchProtection() { return false; }
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
   static bool builtinBitCountExpr() { return false; }

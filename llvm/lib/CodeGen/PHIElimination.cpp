@@ -424,7 +424,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
         MBB, AfterPHIsIt, MPhi->getDebugLoc(), IncomingReg, DestReg);
   }
 
-  if (MPhi->peekDebugInstrNum()) {
+  if (MPhi->peekDebugInstrNum() && IncomingReg) {
     // If referred to by debug-info, store where this PHI was.
     MachineFunction *MF = MBB.getParent();
     unsigned ID = MPhi->peekDebugInstrNum();

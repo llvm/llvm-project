@@ -22,6 +22,8 @@
 // Symbolizer needs to allocated memory when reporting.
 // UNSUPPORTED: internal_symbolizer
 
+// UNSUPPORTED: rtsan
+
 // FIXME: The test fails flakily, see e.g. PRs #170911, #171469, #188441.
 // Flaky on llvm-clang-x86_64-gcc-ubuntu, llvm-clang-x86_64-gcc-ubuntu-no-asserts and https://crbug.com/481656455.
 // UNSUPPORTED: true

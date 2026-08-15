@@ -8,9 +8,6 @@ you can either use the [Forum] or, for a more interactive chat, go to our
 
 If you want to contribute code, please familiarize yourself with the {doc}`DeveloperPolicy`.
 
-```{contents}
-:local:
-```
 
 
 ## Ways to Contribute
@@ -66,7 +63,7 @@ recent commit:
 % git clang-format HEAD~1
 ```
 
-```{note}
+:::{note}
 For some patches, formatting them may add changes that obscure the intent of
 the patch. For example, adding to an enum that was not previously formatted
 may result in the entire enum being reformatted. This happens because not all
@@ -82,7 +79,7 @@ Request that will be merged before your actual changes.
 This means that if the formatting changes are the first commit, you will have
 an easier time doing this. If they are not, that is ok too, but you will have
 to do a bit more work to separate it out.
-```
+:::
 
 Note that `git clang-format` modifies the files, but does not commit them --
 you will likely want to run one of the following to add the changes to a commit:
@@ -94,12 +91,12 @@ you will likely want to run one of the following to add the changes to a commit:
 % git commit --amend -a
 ```
 
-```{note}
+:::{note}
 If you don't already have `clang-format` or `git clang-format` installed
 on your system, the `clang-format` binary will be built alongside clang, and
 the git integration can be run from
 `clang/tools/clang-format/git-clang-format`.
-```
+:::
 
 The LLVM project has migrated to GitHub Pull Requests as its review process.
 For more information about the workflow of using GitHub Pull Requests see our
@@ -136,10 +133,10 @@ For more information on LLVM's code-review process, please see
 
 ### For developers to commit changes from Git
 
-```{note}
+:::{note}
 See also {ref}`GitHub <github-reviews>` for more details on merging your changes
 into LLVM project monorepo.
-```
+:::
 
 Once a pull request is approved, you can select the "Squash and merge" button in the
 GitHub web interface.

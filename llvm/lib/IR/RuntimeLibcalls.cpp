@@ -9,8 +9,10 @@
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
@@ -24,6 +26,7 @@ using namespace RTLIB;
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
+#define GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL
 #include "llvm/IR/RuntimeLibcalls.inc"
 
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
@@ -138,23 +141,6 @@ RuntimeLibcallsInfo::libcallImplNameHit(uint16_t NameOffsetEntry,
 bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   const ARM::ARMABI TargetABI = ARM::computeTargetABI(TT, ABIName);
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
-}
-
-bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
-  switch (TT.getOS()) {
-  case Triple::MacOSX:
-    return !TT.isMacOSXVersionLT(10, 9);
-  case Triple::IOS:
-    return !TT.isOSVersionLT(7, 0);
-  case Triple::DriverKit:
-  case Triple::TvOS:
-  case Triple::WatchOS:
-  case Triple::XROS:
-  case Triple::BridgeOS:
-    return true;
-  default:
-    return false;
-  }
 }
 
 /// TODO: There is really no guarantee that sizeof(size_t) is equal to the index

@@ -318,7 +318,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : LSXVTs) {
       setOperationAction({ISD::LOAD, ISD::STORE}, VT, Legal);
       setOperationAction(ISD::BITCAST, VT, Legal);
-      setOperationAction(ISD::UNDEF, VT, Legal);
+      setOperationAction({ISD::UNDEF, ISD::POISON}, VT, Legal);
 
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
@@ -419,7 +419,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : LASXVTs) {
       setOperationAction({ISD::LOAD, ISD::STORE}, VT, Legal);
       setOperationAction(ISD::BITCAST, VT, Legal);
-      setOperationAction(ISD::UNDEF, VT, Legal);
+      setOperationAction({ISD::UNDEF, ISD::POISON}, VT, Legal);
 
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
@@ -7297,6 +7297,23 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
     return true;
   }
 
+  // Fold ((shl (extract_vector_elt X, I), GRLen - EleBits)), 0, eq/ne) ->
+  //      ((extract_vector_elt X, I), 0, eq/ne)
+  if (isNullConstant(RHS) && (CCVal == ISD::SETEQ || CCVal == ISD::SETNE) &&
+      LHS.getOpcode() == ISD::SHL && LHS.hasOneUse() &&
+      isa<ConstantSDNode>(LHS.getOperand(1))) {
+    SDValue Ext = LHS.getOperand(0);
+    unsigned Sht = LHS.getConstantOperandVal(1);
+    if (Ext.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      SDValue Vec = Ext.getOperand(0);
+      unsigned EleBits = Vec.getScalarValueSizeInBits();
+      if ((EleBits + Sht) == Subtarget.getGRLen()) {
+        LHS = Ext;
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -11137,12 +11154,12 @@ bool LoongArchTargetLowering::isFMAFasterThanFMulAndFAdd(
 }
 
 Register LoongArchTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return LoongArch::R4;
 }
 
 Register LoongArchTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return LoongArch::R5;
 }
 
@@ -11787,13 +11804,16 @@ bool LoongArchTargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
 
-bool LoongArchTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                      unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+LoongArchTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                 unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   // Extract a 128-bit subvector from index 0 of a 256-bit vector is free.
-  return Index == 0;
+  if (Index == 0)
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool LoongArchTargetLowering::isExtractVecEltCheap(EVT VT,

@@ -413,7 +413,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   }
 
   // parse the input Fortran
-  parsing.Parse(llvm::outs());
+  parsing.Parse(llvm::outs(), semanticsContext.langOptions());
   if (!parsing.consumedWholeFile()) {
     parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
@@ -536,10 +536,13 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
         setOpenMPTargetDebug, setOpenMPTeamSubscription,
         setOpenMPThreadSubscription, setOpenMPNoThreadState,
         setOpenMPNoNestedParallelism, enableOpenMPDevice, enableOpenMPGPU,
-        enableOpenMPForceUSM, setOpenMPVersion, "", targetTriples, setNoGPULib);
+        enableOpenMPForceUSM, setOpenMPVersion, /*hostIRFile=*/"",
+        targetTriples, setNoGPULib);
     mlir::omp::setOffloadModuleInterfaceAttributes(mlirModule,
                                                    offloadModuleOpts);
     mlir::omp::setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
+    if (!integerWrapAround)
+      setOpenMPIntegerWrapAround(mlirModule, false);
   }
   burnside.lower(parseTree, semanticsContext);
   std::error_code ec;

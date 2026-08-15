@@ -3516,8 +3516,8 @@ define <8 x i32> @ugt_2_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_2_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -3618,8 +3618,8 @@ define <8 x i32> @ult_3_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_3_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -3721,8 +3721,8 @@ define <8 x i32> @ugt_3_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_3_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -3823,8 +3823,8 @@ define <8 x i32> @ult_4_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_4_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -3926,8 +3926,8 @@ define <8 x i32> @ugt_4_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_4_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4028,8 +4028,8 @@ define <8 x i32> @ult_5_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_5_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4131,8 +4131,8 @@ define <8 x i32> @ugt_5_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_5_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4233,8 +4233,8 @@ define <8 x i32> @ult_6_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_6_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4336,8 +4336,8 @@ define <8 x i32> @ugt_6_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_6_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4438,8 +4438,8 @@ define <8 x i32> @ult_7_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_7_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4541,8 +4541,8 @@ define <8 x i32> @ugt_7_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_7_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4643,8 +4643,8 @@ define <8 x i32> @ult_8_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_8_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4746,8 +4746,8 @@ define <8 x i32> @ugt_8_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_8_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4848,8 +4848,8 @@ define <8 x i32> @ult_9_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_9_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -4951,8 +4951,8 @@ define <8 x i32> @ugt_9_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_9_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5053,8 +5053,8 @@ define <8 x i32> @ult_10_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_10_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5156,8 +5156,8 @@ define <8 x i32> @ugt_10_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_10_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5258,8 +5258,8 @@ define <8 x i32> @ult_11_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_11_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5361,8 +5361,8 @@ define <8 x i32> @ugt_11_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_11_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5463,8 +5463,8 @@ define <8 x i32> @ult_12_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_12_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5566,8 +5566,8 @@ define <8 x i32> @ugt_12_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_12_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5668,8 +5668,8 @@ define <8 x i32> @ult_13_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_13_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5771,8 +5771,8 @@ define <8 x i32> @ugt_13_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_13_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5873,8 +5873,8 @@ define <8 x i32> @ult_14_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_14_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -5976,8 +5976,8 @@ define <8 x i32> @ugt_14_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_14_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6078,8 +6078,8 @@ define <8 x i32> @ult_15_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_15_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6181,8 +6181,8 @@ define <8 x i32> @ugt_15_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_15_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6283,8 +6283,8 @@ define <8 x i32> @ult_16_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_16_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6386,8 +6386,8 @@ define <8 x i32> @ugt_16_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_16_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6488,8 +6488,8 @@ define <8 x i32> @ult_17_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_17_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6591,8 +6591,8 @@ define <8 x i32> @ugt_17_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_17_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6693,8 +6693,8 @@ define <8 x i32> @ult_18_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_18_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6796,8 +6796,8 @@ define <8 x i32> @ugt_18_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_18_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -6898,8 +6898,8 @@ define <8 x i32> @ult_19_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_19_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7001,8 +7001,8 @@ define <8 x i32> @ugt_19_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_19_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7103,8 +7103,8 @@ define <8 x i32> @ult_20_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_20_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7206,8 +7206,8 @@ define <8 x i32> @ugt_20_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_20_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7308,8 +7308,8 @@ define <8 x i32> @ult_21_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_21_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7411,8 +7411,8 @@ define <8 x i32> @ugt_21_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_21_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7513,8 +7513,8 @@ define <8 x i32> @ult_22_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_22_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7616,8 +7616,8 @@ define <8 x i32> @ugt_22_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_22_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7718,8 +7718,8 @@ define <8 x i32> @ult_23_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_23_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7821,8 +7821,8 @@ define <8 x i32> @ugt_23_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_23_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -7923,8 +7923,8 @@ define <8 x i32> @ult_24_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_24_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8026,8 +8026,8 @@ define <8 x i32> @ugt_24_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_24_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8128,8 +8128,8 @@ define <8 x i32> @ult_25_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_25_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8231,8 +8231,8 @@ define <8 x i32> @ugt_25_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_25_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8333,8 +8333,8 @@ define <8 x i32> @ult_26_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_26_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8436,8 +8436,8 @@ define <8 x i32> @ugt_26_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_26_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8538,8 +8538,8 @@ define <8 x i32> @ult_27_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_27_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8641,8 +8641,8 @@ define <8 x i32> @ugt_27_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_27_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8743,8 +8743,8 @@ define <8 x i32> @ult_28_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_28_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8846,8 +8846,8 @@ define <8 x i32> @ugt_28_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_28_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -8948,8 +8948,8 @@ define <8 x i32> @ult_29_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_29_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -9051,8 +9051,8 @@ define <8 x i32> @ugt_29_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_29_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -9153,8 +9153,8 @@ define <8 x i32> @ult_30_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_30_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -9256,8 +9256,8 @@ define <8 x i32> @ugt_30_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ugt_30_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -9358,8 +9358,8 @@ define <8 x i32> @ult_31_v8i32(<8 x i32> %0) {
 ;
 ; BITALG-LABEL: ult_31_v8i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} ymm2 = ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[6],ymm1[6],ymm0[7],ymm1[7]
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm2, %ymm2
 ; BITALG-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
@@ -9575,8 +9575,8 @@ define <4 x i64> @ugt_2_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_2_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [2,2,2,2]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -9658,8 +9658,8 @@ define <4 x i64> @ult_3_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_3_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [3,3,3,3]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -9741,8 +9741,8 @@ define <4 x i64> @ugt_3_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_3_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [3,3,3,3]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -9824,8 +9824,8 @@ define <4 x i64> @ult_4_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_4_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4,4,4,4]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -9907,8 +9907,8 @@ define <4 x i64> @ugt_4_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_4_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4,4,4,4]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -9990,8 +9990,8 @@ define <4 x i64> @ult_5_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_5_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [5,5,5,5]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -10073,8 +10073,8 @@ define <4 x i64> @ugt_5_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_5_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [5,5,5,5]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -10156,8 +10156,8 @@ define <4 x i64> @ult_6_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_6_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [6,6,6,6]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -10239,8 +10239,8 @@ define <4 x i64> @ugt_6_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_6_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [6,6,6,6]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -10322,8 +10322,8 @@ define <4 x i64> @ult_7_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_7_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [7,7,7,7]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -10405,8 +10405,8 @@ define <4 x i64> @ugt_7_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_7_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [7,7,7,7]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -10488,8 +10488,8 @@ define <4 x i64> @ult_8_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_8_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [8,8,8,8]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -10571,8 +10571,8 @@ define <4 x i64> @ugt_8_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_8_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [8,8,8,8]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -10654,8 +10654,8 @@ define <4 x i64> @ult_9_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_9_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9,9,9,9]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -10737,8 +10737,8 @@ define <4 x i64> @ugt_9_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_9_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9,9,9,9]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -10820,8 +10820,8 @@ define <4 x i64> @ult_10_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_10_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [10,10,10,10]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -10903,8 +10903,8 @@ define <4 x i64> @ugt_10_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_10_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [10,10,10,10]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -10986,8 +10986,8 @@ define <4 x i64> @ult_11_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_11_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [11,11,11,11]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -11069,8 +11069,8 @@ define <4 x i64> @ugt_11_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_11_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [11,11,11,11]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -11152,8 +11152,8 @@ define <4 x i64> @ult_12_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_12_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [12,12,12,12]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -11235,8 +11235,8 @@ define <4 x i64> @ugt_12_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_12_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [12,12,12,12]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -11318,8 +11318,8 @@ define <4 x i64> @ult_13_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_13_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [13,13,13,13]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -11401,8 +11401,8 @@ define <4 x i64> @ugt_13_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_13_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [13,13,13,13]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -11484,8 +11484,8 @@ define <4 x i64> @ult_14_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_14_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [14,14,14,14]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -11567,8 +11567,8 @@ define <4 x i64> @ugt_14_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_14_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [14,14,14,14]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -11650,8 +11650,8 @@ define <4 x i64> @ult_15_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_15_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [15,15,15,15]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -11733,8 +11733,8 @@ define <4 x i64> @ugt_15_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_15_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [15,15,15,15]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -11816,8 +11816,8 @@ define <4 x i64> @ult_16_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_16_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [16,16,16,16]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -11899,8 +11899,8 @@ define <4 x i64> @ugt_16_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_16_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [16,16,16,16]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -11982,8 +11982,8 @@ define <4 x i64> @ult_17_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_17_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [17,17,17,17]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -12065,8 +12065,8 @@ define <4 x i64> @ugt_17_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_17_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [17,17,17,17]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -12148,8 +12148,8 @@ define <4 x i64> @ult_18_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_18_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [18,18,18,18]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -12231,8 +12231,8 @@ define <4 x i64> @ugt_18_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_18_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [18,18,18,18]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -12314,8 +12314,8 @@ define <4 x i64> @ult_19_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_19_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [19,19,19,19]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -12397,8 +12397,8 @@ define <4 x i64> @ugt_19_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_19_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [19,19,19,19]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -12480,8 +12480,8 @@ define <4 x i64> @ult_20_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_20_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [20,20,20,20]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -12563,8 +12563,8 @@ define <4 x i64> @ugt_20_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_20_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [20,20,20,20]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -12646,8 +12646,8 @@ define <4 x i64> @ult_21_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_21_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [21,21,21,21]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -12729,8 +12729,8 @@ define <4 x i64> @ugt_21_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_21_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [21,21,21,21]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -12812,8 +12812,8 @@ define <4 x i64> @ult_22_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_22_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [22,22,22,22]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -12895,8 +12895,8 @@ define <4 x i64> @ugt_22_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_22_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [22,22,22,22]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -12978,8 +12978,8 @@ define <4 x i64> @ult_23_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_23_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [23,23,23,23]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -13061,8 +13061,8 @@ define <4 x i64> @ugt_23_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_23_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [23,23,23,23]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -13144,8 +13144,8 @@ define <4 x i64> @ult_24_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_24_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [24,24,24,24]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -13227,8 +13227,8 @@ define <4 x i64> @ugt_24_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_24_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [24,24,24,24]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -13310,8 +13310,8 @@ define <4 x i64> @ult_25_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_25_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [25,25,25,25]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -13393,8 +13393,8 @@ define <4 x i64> @ugt_25_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_25_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [25,25,25,25]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -13476,8 +13476,8 @@ define <4 x i64> @ult_26_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_26_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [26,26,26,26]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -13559,8 +13559,8 @@ define <4 x i64> @ugt_26_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_26_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [26,26,26,26]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -13642,8 +13642,8 @@ define <4 x i64> @ult_27_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_27_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [27,27,27,27]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -13725,8 +13725,8 @@ define <4 x i64> @ugt_27_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_27_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [27,27,27,27]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -13808,8 +13808,8 @@ define <4 x i64> @ult_28_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_28_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [28,28,28,28]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -13891,8 +13891,8 @@ define <4 x i64> @ugt_28_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_28_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [28,28,28,28]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -13974,8 +13974,8 @@ define <4 x i64> @ult_29_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_29_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [29,29,29,29]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -14057,8 +14057,8 @@ define <4 x i64> @ugt_29_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_29_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [29,29,29,29]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -14140,8 +14140,8 @@ define <4 x i64> @ult_30_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_30_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [30,30,30,30]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -14223,8 +14223,8 @@ define <4 x i64> @ugt_30_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_30_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [30,30,30,30]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -14306,8 +14306,8 @@ define <4 x i64> @ult_31_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_31_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [31,31,31,31]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -14389,8 +14389,8 @@ define <4 x i64> @ugt_31_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_31_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [31,31,31,31]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -14472,8 +14472,8 @@ define <4 x i64> @ult_32_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_32_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [32,32,32,32]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -14555,8 +14555,8 @@ define <4 x i64> @ugt_32_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_32_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [32,32,32,32]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -14638,8 +14638,8 @@ define <4 x i64> @ult_33_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_33_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [33,33,33,33]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -14721,8 +14721,8 @@ define <4 x i64> @ugt_33_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_33_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [33,33,33,33]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -14804,8 +14804,8 @@ define <4 x i64> @ult_34_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_34_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [34,34,34,34]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -14887,8 +14887,8 @@ define <4 x i64> @ugt_34_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_34_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [34,34,34,34]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -14970,8 +14970,8 @@ define <4 x i64> @ult_35_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_35_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [35,35,35,35]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -15053,8 +15053,8 @@ define <4 x i64> @ugt_35_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_35_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [35,35,35,35]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -15136,8 +15136,8 @@ define <4 x i64> @ult_36_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_36_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [36,36,36,36]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -15219,8 +15219,8 @@ define <4 x i64> @ugt_36_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_36_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [36,36,36,36]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -15302,8 +15302,8 @@ define <4 x i64> @ult_37_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_37_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [37,37,37,37]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -15385,8 +15385,8 @@ define <4 x i64> @ugt_37_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_37_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [37,37,37,37]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -15468,8 +15468,8 @@ define <4 x i64> @ult_38_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_38_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [38,38,38,38]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -15551,8 +15551,8 @@ define <4 x i64> @ugt_38_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_38_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [38,38,38,38]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -15634,8 +15634,8 @@ define <4 x i64> @ult_39_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_39_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [39,39,39,39]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -15717,8 +15717,8 @@ define <4 x i64> @ugt_39_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_39_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [39,39,39,39]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -15800,8 +15800,8 @@ define <4 x i64> @ult_40_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_40_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [40,40,40,40]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -15883,8 +15883,8 @@ define <4 x i64> @ugt_40_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_40_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [40,40,40,40]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -15966,8 +15966,8 @@ define <4 x i64> @ult_41_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_41_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [41,41,41,41]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -16049,8 +16049,8 @@ define <4 x i64> @ugt_41_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_41_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [41,41,41,41]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -16132,8 +16132,8 @@ define <4 x i64> @ult_42_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_42_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [42,42,42,42]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -16215,8 +16215,8 @@ define <4 x i64> @ugt_42_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_42_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [42,42,42,42]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -16298,8 +16298,8 @@ define <4 x i64> @ult_43_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_43_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [43,43,43,43]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -16381,8 +16381,8 @@ define <4 x i64> @ugt_43_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_43_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [43,43,43,43]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -16464,8 +16464,8 @@ define <4 x i64> @ult_44_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_44_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [44,44,44,44]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -16547,8 +16547,8 @@ define <4 x i64> @ugt_44_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_44_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [44,44,44,44]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -16630,8 +16630,8 @@ define <4 x i64> @ult_45_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_45_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [45,45,45,45]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -16713,8 +16713,8 @@ define <4 x i64> @ugt_45_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_45_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [45,45,45,45]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -16796,8 +16796,8 @@ define <4 x i64> @ult_46_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_46_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [46,46,46,46]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -16879,8 +16879,8 @@ define <4 x i64> @ugt_46_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_46_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [46,46,46,46]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -16962,8 +16962,8 @@ define <4 x i64> @ult_47_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_47_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [47,47,47,47]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -17045,8 +17045,8 @@ define <4 x i64> @ugt_47_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_47_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [47,47,47,47]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -17128,8 +17128,8 @@ define <4 x i64> @ult_48_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_48_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [48,48,48,48]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -17211,8 +17211,8 @@ define <4 x i64> @ugt_48_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_48_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [48,48,48,48]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -17294,8 +17294,8 @@ define <4 x i64> @ult_49_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_49_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [49,49,49,49]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -17377,8 +17377,8 @@ define <4 x i64> @ugt_49_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_49_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [49,49,49,49]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -17460,8 +17460,8 @@ define <4 x i64> @ult_50_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_50_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [50,50,50,50]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -17543,8 +17543,8 @@ define <4 x i64> @ugt_50_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_50_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [50,50,50,50]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -17626,8 +17626,8 @@ define <4 x i64> @ult_51_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_51_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [51,51,51,51]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -17709,8 +17709,8 @@ define <4 x i64> @ugt_51_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_51_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [51,51,51,51]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -17792,8 +17792,8 @@ define <4 x i64> @ult_52_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_52_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [52,52,52,52]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -17875,8 +17875,8 @@ define <4 x i64> @ugt_52_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_52_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [52,52,52,52]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -17958,8 +17958,8 @@ define <4 x i64> @ult_53_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_53_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [53,53,53,53]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -18041,8 +18041,8 @@ define <4 x i64> @ugt_53_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_53_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [53,53,53,53]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -18124,8 +18124,8 @@ define <4 x i64> @ult_54_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_54_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [54,54,54,54]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -18207,8 +18207,8 @@ define <4 x i64> @ugt_54_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_54_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [54,54,54,54]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -18290,8 +18290,8 @@ define <4 x i64> @ult_55_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_55_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [55,55,55,55]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -18373,8 +18373,8 @@ define <4 x i64> @ugt_55_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_55_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [55,55,55,55]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -18456,8 +18456,8 @@ define <4 x i64> @ult_56_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_56_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [56,56,56,56]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -18539,8 +18539,8 @@ define <4 x i64> @ugt_56_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_56_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [56,56,56,56]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -18622,8 +18622,8 @@ define <4 x i64> @ult_57_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_57_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [57,57,57,57]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -18705,8 +18705,8 @@ define <4 x i64> @ugt_57_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_57_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [57,57,57,57]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -18788,8 +18788,8 @@ define <4 x i64> @ult_58_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_58_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [58,58,58,58]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -18871,8 +18871,8 @@ define <4 x i64> @ugt_58_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_58_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [58,58,58,58]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -18954,8 +18954,8 @@ define <4 x i64> @ult_59_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_59_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [59,59,59,59]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -19037,8 +19037,8 @@ define <4 x i64> @ugt_59_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_59_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [59,59,59,59]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -19120,8 +19120,8 @@ define <4 x i64> @ult_60_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_60_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [60,60,60,60]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -19203,8 +19203,8 @@ define <4 x i64> @ugt_60_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_60_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [60,60,60,60]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -19286,8 +19286,8 @@ define <4 x i64> @ult_61_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_61_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [61,61,61,61]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -19369,8 +19369,8 @@ define <4 x i64> @ugt_61_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_61_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [61,61,61,61]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -19452,8 +19452,8 @@ define <4 x i64> @ult_62_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_62_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [62,62,62,62]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
@@ -19535,8 +19535,8 @@ define <4 x i64> @ugt_62_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ugt_62_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [62,62,62,62]
 ; BITALG-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
@@ -19618,8 +19618,8 @@ define <4 x i64> @ult_63_v4i64(<4 x i64> %0) {
 ;
 ; BITALG-LABEL: ult_63_v4i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
 ; BITALG-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [63,63,63,63]
 ; BITALG-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0

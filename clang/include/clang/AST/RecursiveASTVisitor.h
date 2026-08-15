@@ -3319,7 +3319,10 @@ DEF_TRAVERSE_STMT(OMPDepobjDirective,
 DEF_TRAVERSE_STMT(OMPScanDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
-DEF_TRAVERSE_STMT(OMPOrderedDirective,
+DEF_TRAVERSE_STMT(OMPOrderedStandaloneDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPOrderedBlockAssocDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPAtomicDirective,
@@ -3707,6 +3710,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPWriteClause(OMPWriteClause *) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPUpdateClause(OMPUpdateClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *) {
   return true;
 }
 

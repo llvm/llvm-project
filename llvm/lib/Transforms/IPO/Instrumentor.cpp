@@ -30,6 +30,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -43,12 +44,16 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/IPO/InstrumentorUtils.h"
+#include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
 #include <cassert>
 #include <cstdint>
@@ -189,6 +194,8 @@ public:
   }
 
 private:
+  void linkRuntime();
+
   /// Indicate if the module should be instrumented based on the target.
   bool shouldInstrumentTarget();
 
@@ -237,6 +244,68 @@ static Regex createRegex(StringRef Str, StringRef Name, LLVMContext &Ctx) {
     return RX;
   }
   return Regex();
+}
+
+void InstrumentorImpl::linkRuntime() {
+  const auto RuntimeBitcode = IConf.RuntimeBitcode->getString();
+  if (RuntimeBitcode.empty())
+    return;
+
+  SMDiagnostic Err;
+  auto RTM = parseIRFile(RuntimeBitcode, Err, M.getContext());
+  if (!RTM) {
+    IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+        Twine("Failed to parse runtime bitcode file '") + RuntimeBitcode +
+            Twine("':\n") + M.getName(),
+        DS_Error));
+    return;
+  }
+
+  auto InternalizeCallback = [&](Module &M, const StringSet<> &GVS) {
+    internalizeModule(M, [&GVS](const GlobalValue &GV) {
+      return !GV.hasName() || !GVS.count(GV.getName());
+    });
+  };
+
+  if (Linker::linkModules(M, std::move(RTM), 0, InternalizeCallback)) {
+    IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+        "Failed to link in runtime bitcode", DS_Error));
+    return;
+  }
+
+  if (!IConf.InlineRuntimeEagerly->getBool())
+    return;
+
+  for (auto [I, _] : IIRB.NewInsts) {
+    auto *CI = dyn_cast<CallInst>(I);
+    if (!CI || isa<IntrinsicInst>(CI))
+      continue;
+
+    InlineFunctionInfo IFI;
+    auto InlineResult = InlineFunction(*CI, IFI);
+    if (!InlineResult.isSuccess()) {
+      std::string WarnMsg;
+      raw_string_ostream SS(WarnMsg);
+      SS << "Inlining of runtime call failed: "
+         << CI->getCalledFunction()->getName() << "\n";
+      SS << "Reason: " << InlineResult.getFailureReason() << "\n";
+      SS << "Signatures: " << *CI->getFunctionType() << " vs "
+         << *CI->getCalledFunction()->getFunctionType() << "\n";
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(WarnMsg, DS_Warning));
+    }
+  }
+
+  // Promote any eligible instrumentor-associated allocas to registers.
+  for (auto It : IIRB.AllocaMap) {
+    auto *Fn = It.first.first;
+    DominatorTree DT(*Fn);
+    auto &Allocas = *It.second;
+    erase_if(Allocas,
+             [](const AllocaInst *AI) { return !isAllocaPromotable(AI); });
+    PromoteMemToReg(Allocas, DT);
+    delete It.second;
+  }
+  IIRB.AllocaMap.clear();
 }
 
 bool InstrumentorImpl::shouldInstrumentTarget() {
@@ -466,6 +535,8 @@ bool InstrumentorImpl::instrument() {
 
   for (Function &Fn : M)
     Changed |= instrumentFunction(Fn);
+
+  linkRuntime();
 
   return Changed;
 }
@@ -1830,6 +1901,15 @@ Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
   return getCI(&Ty, Flag);
 }
 
+void NumericIO::addFlagNames() {
+  FlagNames["nsw"] = NUMERIC_FLAG_NO_SIGNED_WRAP;
+  FlagNames["nuw"] = NUMERIC_FLAG_NO_UNSIGNED_WRAP;
+  FlagNames["nnan"] = NUMERIC_FLAG_HAS_NO_NANS;
+  FlagNames["ninf"] = NUMERIC_FLAG_HAS_NO_INFS;
+  FlagNames["nsz"] = NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS;
+  FlagNames["exact"] = NUMERIC_FLAG_IS_EXACT;
+}
+
 void NumericIO::init(InstrumentationConfig &IConf,
                      InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
   if (UserConfig)
@@ -1873,6 +1953,7 @@ void NumericIO::init(InstrumentationConfig &IConf,
                "A bitmask value signaling which instruction flags are present.",
                IRTArg::NONE, getFlags));
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  addFlagNames();
   IConf.addChoice(*this, IIRB.Ctx);
 }
 
@@ -1895,6 +1976,13 @@ Value *CompareIO::getPredicate(Value &V, Type &Ty, InstrumentationConfig &IConf,
                                InstrumentorIRBuilderTy &IIRB) {
   auto *CI = dyn_cast<CmpInst>(&V);
   return getCI(&Ty, CI->getPredicate());
+}
+
+void CompareIO::addFlagNames() {
+  FlagNames["samesign"] = COMPARE_FLAG_SAMESIGN;
+  FlagNames["nnan"] = COMPARE_FLAG_HAS_NO_NANS;
+  FlagNames["ninf"] = COMPARE_FLAG_HAS_NO_INFS;
+  FlagNames["nsz"] = COMPARE_FLAG_HAS_NO_SIGNED_ZEROS;
 }
 
 Value *CompareIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
@@ -1971,6 +2059,7 @@ void CompareIO::init(InstrumentationConfig &IConf,
         IRTArg(IIRB.Int64Ty, "flags",
                "A bitmask value signaling which instruction flags are present.",
                IRTArg::NONE, getFlags));
+  addFlagNames();
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
   IConf.addChoice(*this, IIRB.Ctx);
 }

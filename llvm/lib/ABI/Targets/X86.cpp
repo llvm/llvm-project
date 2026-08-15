@@ -948,36 +948,9 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
     return true;
   }
 
-  // Handle structs - check all fields and base classes
+  // Handle records - check all fields and base classes.  getUnionType places a
+  // union's members at offset zero, so the field loop covers a union too.
   if (const RecordType *RT = dyn_cast<RecordType>(Ty)) {
-    if (RT->isUnion()) {
-      for (const auto &Field : RT->getFields()) {
-        if (Field.IsUnnamedBitfield)
-          continue;
-
-        unsigned FieldStart =
-            (Field.OffsetInBits < StartBit) ? StartBit - Field.OffsetInBits : 0;
-        unsigned FieldEnd =
-            FieldStart + Field.FieldType->getSizeInBits().getFixedValue();
-
-        // Check if field overlaps with the queried range
-        if (FieldStart < EndBit && FieldEnd > StartBit) {
-          // There's an overlap, so there is user data
-          unsigned RelativeStart =
-              (StartBit > FieldStart) ? StartBit - FieldStart : 0;
-          unsigned RelativeEnd =
-              (EndBit < FieldEnd)
-                  ? EndBit - FieldStart
-                  : Field.FieldType->getSizeInBits().getFixedValue();
-
-          if (!bitsContainNoUserData(Field.FieldType, RelativeStart,
-                                     RelativeEnd)) {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
     // Check base classes first (for C++ records)
     if (RT->isCXXRecord()) {
       for (unsigned I = 0; I < RT->getNumBaseClasses(); ++I) {
@@ -1007,7 +980,7 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
     return true;
   }
 
-  // For unions, vectors, and primitives - assume all bits are user data
+  // For any other type - assume all bits are user data
   return false;
 }
 

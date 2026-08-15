@@ -80,8 +80,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = G_CONSTANT i64 143
-    G_MEMCPY_INLINE %0(p0), %1(p0), %2(s64) :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
+    %2:_(i64) = G_CONSTANT i64 143
+    G_MEMCPY_INLINE %0(p0), %1(p0), %2(i64) :: (store (i8) into %ir.0, align 4), (load (i8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...

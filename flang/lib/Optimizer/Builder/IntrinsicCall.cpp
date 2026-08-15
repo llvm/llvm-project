@@ -643,7 +643,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
     {"num_images",
      &I::genNumImages,
-     {{{"team_number", asValue}, {"team", asBox}}},
+     {{{"team_number", asValue}, {"team", asAddr}}},
      /*isElemental*/ false},
     {"pack",
      &I::genPack,
@@ -830,13 +830,13 @@ static constexpr IntrinsicHandler handlers[]{
     {"tanpi", &I::genTanpi},
     {"team_number",
      &I::genTeamNumber,
-     {{{"team", asBox, handleDynamicOptional}}},
+     {{{"team", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"this_image",
      &I::genThisImage,
      {{{"coarray", asBox},
        {"dim", asValue},
-       {"team", asBox, handleDynamicOptional}}},
+       {"team", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
     {"timef", &I::genTimef, {}, /*isElemental=*/false},
@@ -4275,7 +4275,7 @@ mlir::Value IntrinsicLibrary::genGetTeam(mlir::Type resultType,
                                          llvm::ArrayRef<mlir::Value> args) {
   checkCoarrayEnabled(loc, options);
   assert(args.size() == 1);
-  return mif::GetTeamOp::create(builder, loc, fir::BoxType::get(resultType),
+  return mif::GetTeamOp::create(builder, loc, builder.getRefType(resultType),
                                 /*level*/ args[0]);
 }
 
@@ -8354,6 +8354,9 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   const bool coarrayIsAbsent = args.size() == 1;
   const bool dimIsAbsent = args.size() < 3;
   mlir::Value team = fir::getBase(args[args.size() - 1]);
+
+  if (team)
+    team = fir::BoxAddrOp::create(builder, loc, team);
 
   if (!coarrayIsAbsent && dimIsAbsent) {
     mlir::Type eleTy = hlfir::getFortranElementType(resultType);
