@@ -113,9 +113,9 @@ Register RegScavenger::FindUnusedReg(const TargetRegisterClass *RC) const {
 
 BitVector RegScavenger::getRegsAvailable(const TargetRegisterClass *RC) {
   BitVector Mask(TRI->getNumRegs());
-  for (MCPhysReg Reg : RCI.getOrder(RC))
+  for (Register Reg : *RC)
     if (!isRegUsed(Reg))
-      Mask.set(Reg);
+      Mask.set(Reg.id());
   return Mask;
 }
 
