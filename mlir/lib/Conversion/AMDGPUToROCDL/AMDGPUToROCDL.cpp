@@ -3046,6 +3046,9 @@ LogicalResult PackedTrunc2xFp8OpLowering::matchAndRewrite(
   else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
     result = ROCDL::CvtPkFp8F32Op::create(rewriter, loc, i32, sourceA, sourceB,
                                           existing, op.getWordIndex());
+  else
+    return op.emitOpError(
+        "no truncation to result type available on given chipset");
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);
@@ -3080,6 +3083,9 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
   else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
     result = ROCDL::CvtSrFp8F32Op::create(rewriter, loc, i32, source, stoch,
                                           existing, op.getStoreIndex());
+  else
+    return op.emitOpError(
+        "no stochastic rounding to result type available on given chipset");
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);

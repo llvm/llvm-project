@@ -9,6 +9,17 @@ typedef bool v4b __attribute__((ext_vector_type(4)));
 typedef bool v5b __attribute__((ext_vector_type(5)));
 typedef bool v8b __attribute__((ext_vector_type(8)));
 
+void constant_vec_bool() {
+    v8b a = {true, false, true, false, true, false, true, false};
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[CONST_VEC:.*]] = cir.const #cir.const_vector<[#true, #false, #true, #false, #true, #false, #true, #false]> : !cir.vector<8 x !cir.bool>
+// CIR: cir.store {{.*}} %[[CONST_VEC]], %[[A_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+
+// SHARED: %[[A_ADDR:.*]] = alloca i8, align 1
+// SHARED: store i8 85, ptr %[[A_ADDR]], align 1
+
 void vec_bool_without_padding_needed() {
   v8b a;
   v8b b;

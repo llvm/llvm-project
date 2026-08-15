@@ -269,7 +269,7 @@ class SelectZibiSFB<CondCode Cond>
           (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoZibiBCC $cc), GPR:$lhs,
                           imm5_zibi:$cimm)>;
 
-let Predicates = [HasStdExtZibi, HasShortForwardBranchImm] in {
+let Predicates = [HasStdExtZibi, HasShortForwardBranchIALU] in {
   def : SelectZibiSFB<SETEQ>;
   def : SelectZibiSFB<SETNE>;
-} // Predicates = [HasStdExtZibi, HasShortForwardBranchImm]
+} // Predicates = [HasStdExtZibi, HasShortForwardBranchIALU]

@@ -1114,7 +1114,7 @@ private:
     if (!DepResult)
       return true;
     // If two stores write the same SSA value, fusion is safe regardless of
-    // aliasing — writing the same value twice is idempotent.
+    // aliasing - writing the same value twice is idempotent.
     if (isa<StoreInst>(I0) && isa<StoreInst>(I1)) {
       auto *S0 = cast<StoreInst>(&I0);
       auto *S1 = cast<StoreInst>(&I1);
