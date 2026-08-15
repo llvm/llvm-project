@@ -2296,5 +2296,29 @@ define <4 x i8> @maskedload_factor5_one_active(ptr %ptr) {
 ; CHECK-NEXT:    ret
  %interleaved.vec = tail call <20 x i8> @llvm.masked.load.v20i8.p0(ptr %ptr, <20 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <20 x i8> poison)
   %v0 = shufflevector <20 x i8> %interleaved.vec, <20 x i8> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+ ret <4 x i8> %v0
+}
+
+define <4 x i8> @maskedload_v16i8_factor5_one_active(ptr %ptr) {
+; CHECK-LABEL: maskedload_v16i8_factor5_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
+; CHECK-NEXT:    ret
+ %interleaved.vec = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %ptr, <16 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <16 x i8> poison)
+  %v0 = shufflevector <16 x i8> %interleaved.vec, <16 x i8> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+ ret <4 x i8> %v0
+}
+
+define <4 x i8> @vp_load_v16i8_factor5_one_active(ptr %ptr) {
+; CHECK-LABEL: vp_load_v16i8_factor5_one_active:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
+; CHECK-NEXT:    ret
+ %interleaved.vec = tail call <16 x i8> @llvm.vp.load.v16i8.p0(ptr %ptr, <16 x i1>  splat (i1 true), i32 20)
+  %v0 = shufflevector <16 x i8> %interleaved.vec, <16 x i8> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
   ret <4 x i8> %v0
 }
