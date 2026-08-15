@@ -109,3 +109,10 @@ contains
     character(*), intent(inout) :: iomsg
   end subroutine
 end module
+
+! CLASSOF with a vector type data-ref must be rejected (vector types are not extensible)
+subroutine test_classof_vector(c, vi)
+  vector(integer(4)), intent(in) :: vi(2)
+  !ERROR: CLASSOF requires a data-ref of extensible type
+  classof(vi) :: c
+end subroutine
