@@ -1853,24 +1853,24 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
       return nullptr;
   }
 
-  BinaryOperator *NewBinop;
+  Value *NewBinop; // dont decide BinaryOperator now
   if (A == C &&
       leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
-    NewBinop =
-        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic));
+    NewBinop = Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic);
   } else if (B == D && rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW,
                                                 TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
-    NewBinop =
-        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B));
+    NewBinop = Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B);
   } else {
     return nullptr;
   }
 
-  NewBinop->setHasNoUnsignedWrap(HasNUW);
-  NewBinop->setHasNoSignedWrap(HasNSW);
-
+  // check if NewBinop is actually a BinaryOperator
+  if (BinaryOperator *NBO = dyn_cast<BinaryOperator>(NewBinop)) {
+    NBO->setHasNoUnsignedWrap(HasNUW);
+    NBO->setHasNoSignedWrap(HasNSW);
+  }
   return NewBinop;
 }
 
