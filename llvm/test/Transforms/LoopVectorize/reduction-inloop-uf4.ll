@@ -374,7 +374,7 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], 15
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N_RND_UP]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[COND]], 7
@@ -611,5 +611,5 @@ for.end:
 }
 
 !6 = distinct !{!6, !7, !8}
-!7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
-!8 = !{!"llvm.loop.vectorize.enable", i1 true}
+!7 = !{!"llvm.loop.vectorize.predicate.enable"}
+!8 = !{!"llvm.loop.vectorize.enable"}

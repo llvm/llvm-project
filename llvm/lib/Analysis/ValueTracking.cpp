@@ -5566,12 +5566,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
         break;
 
+      // The exponent is always a scalar, even when raising a vector to a power.
       const Value *Exp = II->getArgOperand(1);
-      Type *ExpTy = Exp->getType();
-      unsigned BitWidth = ExpTy->getScalarType()->getIntegerBitWidth();
+      unsigned BitWidth = Exp->getType()->getIntegerBitWidth();
       KnownBits ExponentKnownBits(BitWidth);
-      computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
-                       ExponentKnownBits, Q, Depth + 1);
+      computeKnownBits(Exp, APInt(1, 1), ExponentKnownBits, Q, Depth + 1);
 
       FPClassTest InterestedSrcs = fcNone;
       if (InterestedClasses & fcNan)
@@ -8964,8 +8963,17 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
 
   // Check if the constant operand can be safely incremented/decremented
   // without overflowing/underflowing.
-  auto ConstantIsOk = [WillIncrement, IsSigned](ConstantInt *C) {
-    return WillIncrement ? !C->isMaxValue(IsSigned) : !C->isMinValue(IsSigned);
+  auto ConstantIsOk = [Pred, WillIncrement, IsSigned](ConstantInt *C) {
+    if (WillIncrement ? C->isMaxValue(IsSigned) : C->isMinValue(IsSigned))
+      return false;
+
+    if (!Pred.hasSameSign())
+      return true;
+
+    // Crossing the corresponding boundary in the other ordering changes the
+    // sign bit, and therefore changes the poison domain.
+    return WillIncrement ? !C->isMaxValue(!IsSigned)
+                         : !C->isMinValue(!IsSigned);
   };
 
   Constant *SafeReplacementConstant = nullptr;
@@ -9013,7 +9021,8 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
     C = Constant::replaceUndefsWith(C, SafeReplacementConstant);
   }
 
-  CmpInst::Predicate NewPred = CmpInst::getFlippedStrictnessPredicate(Pred);
+  CmpPredicate NewPred(CmpInst::getFlippedStrictnessPredicate(Pred),
+                       Pred.hasSameSign());
 
   // Increment or decrement the constant.
   Constant *OneOrNegOne = ConstantInt::get(Type, WillIncrement ? 1 : -1, true);

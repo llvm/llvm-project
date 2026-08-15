@@ -6,6 +6,10 @@
 // Array variant of mapper_map_ptee_only_2_ptr_indirections.c.
 // The mapper maps s2.z, s2.s1p->x, s2.s1p->y, and s2.s1p->p[0:10].
 // s2.s1p->dummy and s2.s1p->p itself are not mapped.
+// This exercises the nested-pointer-chain case: the inner MEMBER_OF bits for
+// s2.s1p->x/y/p[0:10] must be shifted correctly, and outer MEMBER_OF must not
+// be applied to the pointee entry (s2.s1p->p[0:10]) or the ATTACH entry
+// (s2.s1p).
 
 int x[2][10];
 
@@ -45,11 +49,8 @@ int main() {
   print_status(&s2arr[0].z, "s2arr[0].z");      // CHECK: s2arr[0].z is present
   print_status(&s2arr[0].s1p->dummy,
                "s2arr[0].dummy"); // CHECK: s2arr[0].dummy is not present
-  // FIXME: mapper should not map s1p->p; will be fixed when mapper emits
-  // attach-style maps for pointer members.
   print_status(&s2arr[0].s1p->p,
-               "s2arr[0].p"); // CHECK: s2arr[0].p is present
-  //                             EXPECTED: s2arr[0].p is not present
+               "s2arr[0].p"); // CHECK: s2arr[0].p is not present
   print_status(&s2arr[0].s1p->p[0],
                "s2arr[0].p[0]"); // CHECK: s2arr[0].p[0] is present
   print_status(&s2arr[1].s1p->x, "s2arr[1].x"); // CHECK: s2arr[1].x is present
@@ -57,11 +58,8 @@ int main() {
   print_status(&s2arr[1].z, "s2arr[1].z");      // CHECK: s2arr[1].z is present
   print_status(&s2arr[1].s1p->dummy,
                "s2arr[1].dummy"); // CHECK: s2arr[1].dummy is not present
-  // FIXME: mapper should not map s1p->p; will be fixed when mapper emits
-  // attach-style maps for pointer members.
   print_status(&s2arr[1].s1p->p,
-               "s2arr[1].p"); // CHECK: s2arr[1].p is present
-  //                             EXPECTED: s2arr[1].p is not present
+               "s2arr[1].p"); // CHECK: s2arr[1].p is not present
   print_status(&s2arr[1].s1p->p[0],
                "s2arr[1].p[0]"); // CHECK: s2arr[1].p[0] is present
   printf("\n");

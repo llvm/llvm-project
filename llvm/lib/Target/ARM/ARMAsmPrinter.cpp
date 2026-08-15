@@ -698,8 +698,13 @@ void ARMAsmPrinter::emitAttributes() {
   }
   const ARMBaseTargetMachine &ATM =
       static_cast<const ARMBaseTargetMachine &>(TM);
+  // The float ABI comes from the "float-abi" module flag if present, otherwise
+  // from the legacy -float-abi target option.
+  FloatABI::ABIType FloatABI = MMI->getModule()->getFloatABI();
+  if (FloatABI == FloatABI::Default)
+    FloatABI = ATM.Options.FloatABIType;
   const ARMSubtarget STI(TT, std::string(CPU), ArchFS, ATM,
-                         ATM.isLittleEndian(), ATM.Options.FloatABIType);
+                         ATM.isLittleEndian(), FloatABI);
 
   // Emit build attributes for the available hardware.
   ATS.emitTargetAttributes(STI);

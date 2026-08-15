@@ -1398,7 +1398,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFSinhPos) {
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFCosh) {
-  // cosh(x) >= 1 for all real x; never negative.
+  // cosh(x) >= 1 for all real x; never negative, zero, or subnormal.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1413,12 +1413,12 @@ TEST_F(AArch64GISelMITest, TestFPClassFCosh) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPositive | fcNan, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosNormal | fcPosInf | fcNan, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFCoshNNaN) {
-  // cosh of a non-NaN source is non-NaN (and non-negative).
+  // cosh of a non-NaN value is either positive normal or positive infinity.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1434,7 +1434,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFCoshNNaN) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPositive, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosNormal | fcPosInf, Known.KnownFPClasses);
   EXPECT_EQ(false, Known.SignBit);
 }
 
@@ -1500,7 +1500,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAsin) {
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAsinPos) {
-  // asin is sign-preserving and bounded: non-negative finite output.
+  // For 0 <= x <= 1, asin is sign-preserving and returns a non-negative
+  // finite value. For x > 1, it returns NaN.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1516,8 +1517,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAsinPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite | fcQNan, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAcos) {
@@ -1537,6 +1538,28 @@ TEST_F(AArch64GISelMITest, TestFPClassFAcos) {
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
   EXPECT_EQ(fcPosFinite | fcNan, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassFAcosPos) {
+  // For 0 <= x <= 1, acos returns a non-negative finite value.
+  // For x > 1, acos returns NaN.
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %fabs:_(s32) = nnan ninf G_FABS %val
+    %facos:_(s32) = G_FACOS %fabs
+    %copy:_(s32) = COPY %facos
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+  EXPECT_EQ(fcPosFinite | fcQNan, Known.KnownFPClasses);
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 

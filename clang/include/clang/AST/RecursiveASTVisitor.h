@@ -2573,6 +2573,11 @@ DEF_TRAVERSE_STMT(CXXCatchStmt, {
   // children() iterates over the handler block.
 })
 
+DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {
+  TRY_TO(TraverseDecl(S->getCatchParamDecl()));
+  // children() iterates over the handler block.
+})
+
 DEF_TRAVERSE_STMT(DeclStmt, {
   for (auto *I : S->decls()) {
     TRY_TO(TraverseDecl(I));
@@ -2602,7 +2607,6 @@ DEF_TRAVERSE_STMT(IndirectGotoStmt, {})
 DEF_TRAVERSE_STMT(LabelStmt, {})
 DEF_TRAVERSE_STMT(AttributedStmt, {})
 DEF_TRAVERSE_STMT(NullStmt, {})
-DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtFinallyStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtSynchronizedStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtThrowStmt, {})
@@ -3317,7 +3321,10 @@ DEF_TRAVERSE_STMT(OMPDepobjDirective,
 DEF_TRAVERSE_STMT(OMPScanDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
-DEF_TRAVERSE_STMT(OMPOrderedDirective,
+DEF_TRAVERSE_STMT(OMPOrderedStandaloneDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPOrderedBlockAssocDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPAtomicDirective,

@@ -3034,6 +3034,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM_LSB_ZEROS(2, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(5, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(6, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(6, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 00)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(8, 00)
@@ -5394,8 +5395,7 @@ public:
 } // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-RISCVInstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+RISCVInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
   if (analyzeBranch(*LoopBB, TBB, FBB, Cond, /*AllowModify=*/false))

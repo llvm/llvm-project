@@ -329,7 +329,6 @@ group("test") {
     "//llvm/tools/llvm-reduce",
     "//llvm/tools/llvm-remarkutil",
     "//llvm/tools/llvm-rtdyld",
-    "//llvm/tools/llvm-sim",
     "//llvm/tools/llvm-size",
     "//llvm/tools/llvm-split",
     "//llvm/tools/llvm-stress",
