@@ -441,9 +441,6 @@ public:
 
   ~InProcessMemoryManager() override;
 
-  /// Returns the slab options that this memory manager was created with.
-  const SlabOptions &getSlabOptions() const { return SlabOpts; }
-
   void allocate(const JITLinkDylib *JD, LinkGraph &G,
                 OnAllocatedFunction OnAllocated) override;
 

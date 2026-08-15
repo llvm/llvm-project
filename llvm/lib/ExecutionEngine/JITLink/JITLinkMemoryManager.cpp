@@ -541,16 +541,9 @@ InProcessMemoryManager::~InProcessMemoryManager() {
 
 Expected<std::unique_ptr<InProcessMemoryManager>>
 InProcessMemoryManager::Create() {
-  if (auto PageSize = sys::Process::getPageSize()) {
-    // FIXME: Just check this once on startup.
-    if (!isPowerOf2_64(*PageSize))
-      return make_error<StringError>(
-          "Could not create InProcessMemoryManager: Page size " +
-              Twine(*PageSize) + " is not a power of 2",
-          inconvertibleErrorCode());
-
-    return std::make_unique<InProcessMemoryManager>(*PageSize);
-  } else
+  if (auto PageSize = sys::Process::getPageSize())
+    return Create(SlabOptions::defaults(*PageSize));
+  else
     return PageSize.takeError();
 }
 
