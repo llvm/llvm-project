@@ -38,7 +38,7 @@ public:
   /// If \p PreserveCFG is set, then the pass is not allowed to modify CFG
   /// in any way, even if it would update CFG analyses.
   /// If \p AggregateToVector is set, then the pass will try to convert
-  /// allocas of homogeneous structs into vector allocas.
+  /// allocas of homogeneous structs and arrays into vector allocas.
   LLVM_ABI SROAPass(SROAOptions Options);
 
   /// Run the pass over the function.

@@ -418,3 +418,32 @@ entry:
   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %e, ptr align 4 %c, i32 12, i1 true)
   ret void
 }
+
+define void @array_f32x2_memcpy_through_alloca(ptr %dst, ptr %src) {
+; CHECK-LABEL: define void @array_f32x2_memcpy_through_alloca(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[SRC]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP0]], ptr [[DST]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca [2 x float], align 4
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %src, i64 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %a, i64 8, i1 false)
+  ret void
+}
+
+define void @array_i5x2_memcpy_into_alloca(ptr %c) {
+; CHECK-LABEL: define void @array_i5x2_memcpy_into_alloca(
+; CHECK-SAME: ptr [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[E:%.*]] = alloca [2 x i5], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[E]], ptr align 1 [[C]], i32 2, i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %e = alloca [2 x i5], align 1
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %e, ptr align 1 %c, i32 2, i1 true)
+  ret void
+}

@@ -1375,13 +1375,14 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
 
-    // We also turn on struct to vector canonicalization here, which allows
-    // converting allocas of homogeneous structs into vector allocas when the
-    // allocas' users are all memory intrinsics. This allows promotion in some
-    // cases because structs cannot promote to SSA values, but vectors can. We
-    // only turn this on after memcpyopt runs because this might hinder
-    // memcpyopt's optimizations if done before. Look at the documentation for
-    // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
+    // We also turn on aggregate to vector canonicalization here, which allows
+    // converting allocas of homogeneous structs and arrays into vector allocas
+    // when the allocas' users are all memory intrinsics. This allows promotion
+    // in some cases because aggregates cannot promote to SSA values, but
+    // vectors can. We only turn this on after memcpyopt runs because this might
+    // hinder memcpyopt's optimizations if done before. Look at the
+    // documentation for `tryCanonicalizeAggregateToVector` in SROA.cpp to see
+    // why.
     FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
                                      /*AggregateToVector=*/true)));
   }
@@ -1476,13 +1477,14 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
 
-    // We also turn on struct to vector canonicalization here, which allows
-    // converting allocas of homogeneous structs into vector allocas when the
-    // allocas' users are all memory intrinsics. This allows promotion in some
-    // cases because structs cannot promote to SSA values, but vectors can. We
-    // only turn this on after memcpyopt runs because this might hinder
-    // memcpyopt's optimizations if done before. Look at the documentation for
-    // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
+    // We also turn on aggregate to vector canonicalization here, which allows
+    // converting allocas of homogeneous structs and arrays into vector allocas
+    // when the allocas' users are all memory intrinsics. This allows promotion
+    // in some cases because aggregates cannot promote to SSA values, but
+    // vectors can. We only turn this on after memcpyopt runs because this might
+    // hinder memcpyopt's optimizations if done before. Look at the
+    // documentation for `tryCanonicalizeAggregateToVector` in SROA.cpp to see
+    // why.
     FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
                                      /*AggregateToVector=*/true)));
   }

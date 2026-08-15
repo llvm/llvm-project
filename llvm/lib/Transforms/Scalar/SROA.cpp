@@ -5301,12 +5301,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
-/// Try to canonicalize a homogeneous struct partition to a vector type.
+/// Try to canonicalize a homogeneous aggregate partition to a vector type.
 ///
-/// We can do this if all the elements of the struct are the same and the
-/// corresponding vector has the same byte-level layout. This can sometimes
-/// eliminate allocas because structs cannot get promoted to LLVM values, but
-/// vectors can.
+/// We can do this if all the elements of the struct or array are the same and
+/// the corresponding vector has the same byte-level layout. This can sometimes
+/// eliminate allocas because aggregates cannot get promoted to LLVM values,
+/// but vectors can.
 ///
 /// We only apply this transformation when all users of the partition are memory
 /// intrinsics. Otherwise, if there is a load or store of some other type to the
@@ -5324,13 +5324,24 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 ///
 /// As such, we only apply this transformation after memcpyopt has run. We gate
 /// this transformation by the "AggregateToVector" pass option.
-static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
-                                                      Partition &P,
-                                                      const DataLayout &DL) {
-  unsigned NumElts = STy->getNumElements();
+static FixedVectorType *tryCanonicalizeAggregateToVector(Type *AggregateTy,
+                                                         Partition &P,
+                                                         const DataLayout &DL) {
+  Type *EltTy;
+  uint64_t NumElts;
+  if (auto *STy = dyn_cast<StructType>(AggregateTy)) {
+    NumElts = STy->getNumElements();
+    if (!llvm::all_equal(STy->elements()))
+      return nullptr;
+    EltTy = STy->getElementType(0);
+  } else if (auto *ATy = dyn_cast<ArrayType>(AggregateTy)) {
+    NumElts = ATy->getNumElements();
+    EltTy = ATy->getElementType();
+  } else {
+    return nullptr;
+  }
 
-  Type *EltTy = STy->getElementType(0);
-  if (!llvm::all_equal(STy->elements()))
+  if (NumElts > std::numeric_limits<unsigned>::max())
     return nullptr;
 
   bool IsIntegralPointerTy =
@@ -5339,19 +5350,19 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
       !IsIntegralPointerTy)
     return nullptr;
 
-  // Ensure the struct is tightly packed so that the bit-layout is the same as
-  // the corresponding vector. For example, this prevents a miscompile for
-  // { i5, i5 }, which has padding after each i5 field, whereas <i5, i5> has
-  // tightly packed elements and trailing padding.
+  // Ensure the aggregate is tightly packed so that the bit-layout is the same
+  // as the corresponding vector. For example, this prevents a miscompile for
+  // { i5, i5 } or [2 x i5], which have padding after each i5 element, whereas
+  // <2 x i5> has tightly packed elements and trailing padding.
   if (DL.getTypeSizeInBits(EltTy) != DL.getTypeAllocSizeInBits(EltTy))
     return nullptr;
 
-  auto *VTy = FixedVectorType::get(EltTy, NumElts);
-  TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
+  auto *VTy = FixedVectorType::get(EltTy, static_cast<unsigned>(NumElts));
+  TypeSize AggregateSize = DL.getTypeStoreSize(AggregateTy);
   TypeSize VectorSize = DL.getTypeStoreSize(VTy);
   // After ruling out per-element padding, make sure a vector load/store
-  // covers the same number of bytes as the struct layout.
-  if (StructSize != VectorSize)
+  // covers the same number of bytes as the aggregate layout.
+  if (AggregateSize != VectorSize)
     return nullptr;
 
   auto IsIgnorableOrMemIntrinsicSlice = [](const Slice &S) {
@@ -5483,14 +5494,13 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       return {LargestIntTy, true, nullptr};
     }
 
-    // Try homogeneous struct to vector canonicalization when requested. Running
-    // this too early can hide memcpy chains from MemCpyOpt.
+    // Try homogeneous aggregate to vector canonicalization when requested.
+    // Running this too early can hide memcpy chains from MemCpyOpt.
     if (AggregateToVector) {
-      if (auto *STy = dyn_cast<StructType>(TypePartitionTy)) {
-        if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL)) {
-          LogSelection("struct-fallback-vecty", VTy, nullptr, false);
-          return {VTy, false, nullptr};
-        }
+      if (auto *VTy =
+              tryCanonicalizeAggregateToVector(TypePartitionTy, P, DL)) {
+        LogSelection("aggregate-fallback-vecty", VTy, nullptr, false);
+        return {VTy, false, nullptr};
       }
     }
 
