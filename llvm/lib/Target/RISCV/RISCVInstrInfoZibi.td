@@ -26,6 +26,17 @@ def imm5_zibi : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
   let OperandType = "OPERAND_IMM5_ZIBI";
 }
 
+// The condition codes supported by BEQI/BNEI.
+def ZibiCond : PatLeaf<(cond), [{
+  switch (N->get()) {
+  default:
+    return false;
+  case ISD::SETEQ:
+  case ISD::SETNE:
+    return true;
+  }
+}]>;
+
 class Branch_imm<bits<3> funct3, string opcodestr>
     : RVInstBIMM<funct3, OPC_BRANCH, (outs),
                  (ins GPR:$rs1, imm5_zibi:$cimm, bare_simm13_lsb0:$imm12),
@@ -55,15 +66,11 @@ multiclass BccImmPat<CondCode Cond, Branch_imm Inst> {
 
 defm CC_Imm5_Zibi : SelectCC_GPR_riirr<GPR, imm5_zibi>;
 
-class SelectZibi<CondCode Cond>
-    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, Cond:$cc,
-                          (XLenVT GPR:$truev), GPR:$falsev),
-          (Select_GPR_Using_CC_Imm5_Zibi GPR:$lhs, imm5_zibi:$cimm,
-              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
-
 let Predicates = [HasStdExtZibi] in {
-  def : SelectZibi<SETEQ>;
-  def : SelectZibi<SETNE>;
+  def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc,
+                            (XLenVT GPR:$truev), GPR:$falsev),
+            (Select_GPR_Using_CC_Imm5_Zibi GPR:$lhs, imm5_zibi:$cimm,
+                (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
   defm : BccImmPat<SETEQ, BEQI>;
   defm : BccImmPat<SETNE, BNEI>;
