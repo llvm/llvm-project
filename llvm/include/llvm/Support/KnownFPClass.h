@@ -395,13 +395,28 @@ struct KnownFPClass {
   // Propagate knowledge for operations whose result sign is the xor of the
   // operand signs, such as multiply and divide. This only rules out possible
   // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS) {
-    if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcPositive)))
+  //
+  // A negative subnormal may be read as +0.0 under a positive-zero input mode,
+  // so it can act on the positive side and cannot count as known negative.
+  // Flushing is a per-operation choice, never a guarantee.
+  //
+  // TODO: With a positive-zero output mode a -sub result may be flushed to
+  // +0.0, so the result can be positive after all. Fix it in fmul and fdiv by
+  // adding fcPosZero back and dropping SignBit before they rule out
+  // fcSubnormal.
+  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
+                        DenormalMode Mode) {
+    FPClassTest NegMask = fcNegative;
+    FPClassTest PosMask = Mode.inputsMayBePositiveZero()
+                              ? fcPositive | fcNegSubnormal
+                              : fcPositive;
+
+    if ((LHS.isKnownNever(NegMask) && RHS.isKnownNever(NegMask)) ||
+        (LHS.isKnownNever(PosMask) && RHS.isKnownNever(PosMask)))
       knownNot(fcNegative);
 
-    if ((LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcPositive)))
+    if ((LHS.isKnownNever(PosMask) && RHS.isKnownNever(NegMask)) ||
+        (LHS.isKnownNever(NegMask) && RHS.isKnownNever(PosMask)))
       knownNot(fcPositive);
   }
 

@@ -362,7 +362,7 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
 
   // +X * +Y or -X * -Y => +Q
   // +X * -Y or -X * +Y => -Q
-  Known.propagateXorSign(KnownLHS, KnownRHS);
+  Known.propagateXorSign(KnownLHS, KnownRHS, Mode);
 
   // Inf * Y => Inf or NaN
   if (KnownLHS.isKnownAlways(fcInf | fcNan) ||
@@ -432,31 +432,69 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   //  X / -0.0 => -Inf (or NaN)
   // +X / +Y or -X / -Y => +Q
   // +X / -Y or -X / +Y => -Q
-  Known.propagateXorSign(KnownLHS, KnownRHS);
+  Known.propagateXorSign(KnownLHS, KnownRHS, Mode);
 
-  // 0 / X => 0 or NaN
-  if (KnownLHS.isKnownAlways(fcZero))
-    Known.knownNot(fcSubnormal | fcNormal | fcInf);
+  // {0, Inf, NaN} / Y => {0, Inf, NaN}
+  if (KnownLHS.isKnownNever(fcNormal | fcSubnormal)) {
+    Known.knownNot(fcNormal | fcSubnormal);
 
-  // X / 0 => NaN or Inf
-  if (KnownRHS.isKnownAlways(fcZero))
-    Known.knownNot(fcFinite);
+    // {0, NaN} / Y => 0 or NaN
+    if (KnownLHS.isKnownNever(fcInf))
+      Known.knownNot(fcInf);
+
+    // {Inf, NaN} / Y => Inf or NaN
+    if (KnownLHS.isKnownNeverLogicalZero(Mode))
+      Known.knownNot(fcZero);
+  }
+
+  // X / {0, Inf, NaN} => {0, Inf, NaN}
+  if (KnownRHS.isKnownNever(fcNormal | fcSubnormal)) {
+    Known.knownNot(fcNormal | fcSubnormal);
+
+    // X / {0, NaN} => Inf or NaN
+    if (KnownRHS.isKnownNever(fcInf))
+      Known.knownNot(fcZero);
+
+    // X / {Inf, NaN} => 0 or NaN
+    if (KnownRHS.isKnownNeverLogicalZero(Mode))
+      Known.knownNot(fcInf);
+  }
+
+  // X / 0   => Inf
+  // X / Sub => Normal or Inf
+  // X / Inf => 0
+  if (KnownRHS.isKnownNever(fcNormal))
+    Known.knownNot(fcSubnormal);
+
+  // 0 / Y      => 0
+  // X / Normal => 0 on underflow
+  // X / Inf    => 0
+  if (KnownLHS.isKnownNeverLogicalZero(Mode) &&
+      KnownRHS.isKnownNever(fcNormal | fcInf))
+    Known.knownNot(fcZero);
 
   return Known;
 }
 
 KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,
                                      DenormalMode Mode) {
-  // X / X is always exactly 1.0 or a NaN.
+  // X / X is always exactly +1.0 or NaN.
   KnownFPClass Known(fcNan | fcPosNormal);
 
+  // X / X => +1.0 only for finite nonzero X
+  if (KnownSrc.isKnownNever(fcNormal | fcSubnormal))
+    Known.knownNot(fcPosNormal);
+
+  // X / X => NaN only for 0, Inf and NaN
   if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
     Known.knownNot(fcNan);
-  else if (KnownSrc.isKnownNever(fcSNan))
+
+  if (KnownSrc.isKnownNever(fcSNan))
     Known.knownNot(fcSNan);
 
   return Known;
 }
+
 KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc,
                                      DenormalMode Mode) {
   // X % X is always exactly [+-]0.0 or a NaN.
