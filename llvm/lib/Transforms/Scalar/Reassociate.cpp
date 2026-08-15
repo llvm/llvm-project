@@ -1763,9 +1763,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       CountFactors(BOp);
       continue;
     }
-    if (BinaryOperator *BOp = isFMulAddCandidate(Entry.Op)) {
-      if (!hasFPAssociativeFlags(BOp))
-        continue;
+    if (BinaryOperator *BOp = isFMulAddCandidate(Entry.Op);
+        BOp && hasFPAssociativeFlags(BOp)) {
       FMulAddCands.push_back(Entry.Op);
       CountFactors(BOp);
     }
