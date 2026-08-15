@@ -58,9 +58,7 @@ public:
   /// Subscribe an analysis to updates of the lattice. When the lattice changes,
   /// subscribed analyses are re-invoked on all users of the value. This is
   /// more efficient than relying on the dependency map.
-  void useDefSubscribe(DataFlowAnalysis *analysis) {
-    useDefSubscribers.insert(analysis);
-  }
+  void useDefSubscribe(DataFlowAnalysis *analysis);
 
 private:
   /// A set of analyses that should be updated when this lattice changes.
