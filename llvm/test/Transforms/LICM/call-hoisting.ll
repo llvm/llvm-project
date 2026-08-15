@@ -505,14 +505,14 @@ declare void @not_nounwind(i32 %v, ptr %p) writeonly argmemonly
 declare void @not_argmemonly(i32 %v, ptr %p) writeonly nounwind
 declare void @not_writeonly(i32 %v, ptr %p) argmemonly nounwind
 
-define void @neg_not_nounwind(ptr %loc) {
-; CHECK-LABEL: define void @neg_not_nounwind(
+define void @hoist_not_nounwind(ptr %loc) {
+; CHECK-LABEL: define void @hoist_not_nounwind(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @not_nounwind(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @not_nounwind(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -622,4 +622,115 @@ exit:
   ret void
 }
 
+declare i32 @readnone_maythrow(i32) memory(none)
 
+; A readnone call that may throw but is guaranteed to execute can be hoisted.
+define void @hoist_readnone_maythrow(i32 %n, ptr noalias %sink) {
+; CHECK-LABEL: define void @hoist_readnone_maythrow(
+; CHECK-SAME: i32 [[N:%.*]], ptr noalias [[SINK:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @readnone_maythrow(i32 [[N]])
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store volatile i32 [[RET]], ptr [[SINK]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %ret = call i32 @readnone_maythrow(i32 %n)
+  store volatile i32 %ret, ptr %sink
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+declare i32 @readonly_maythrow(ptr %p) memory(argmem: read)
+
+; A readonly call that may throw cannot be hoisted if not guaranteed to execute
+; (here it's conditionally executed).
+define void @no_hoist_readonly_maythrow_conditional(ptr noalias %loc, ptr noalias %sink, i1 %cond) {
+; CHECK-LABEL: define void @no_hoist_readonly_maythrow_conditional(
+; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[SINK:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[LATCH]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @readonly_maythrow(ptr [[LOC]])
+; CHECK-NEXT:    store volatile i32 [[RET]], ptr [[SINK]], align 4
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %latch]
+  br i1 %cond, label %then, label %latch
+
+then:
+  %ret = call i32 @readonly_maythrow(ptr %loc)
+  store volatile i32 %ret, ptr %sink
+  br label %latch
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+declare void @maythrow_sideeffect()
+
+; A readonly call that may throw cannot be hoisted if preceded by another
+; may-throw instruction in the same block (not guaranteed to execute).
+define void @no_hoist_readonly_maythrow_after_icf(ptr noalias %loc, ptr noalias %sink) {
+; CHECK-LABEL: define void @no_hoist_readonly_maythrow_after_icf(
+; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[SINK:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @maythrow_sideeffect()
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @readonly_maythrow(ptr [[LOC]])
+; CHECK-NEXT:    store volatile i32 [[RET]], ptr [[SINK]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  call void @maythrow_sideeffect()
+  %ret = call i32 @readonly_maythrow(ptr %loc)
+  store volatile i32 %ret, ptr %sink
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}

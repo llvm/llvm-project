@@ -48,10 +48,10 @@ define void @test2(ptr %ptr) {
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    call void @foo(i64 4, ptr [[PTR]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[X_INC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @foo(i64 4, ptr [[PTR]])
 ; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
@@ -66,7 +66,10 @@ loop:
   br label %loop
 }
 
-; cannot hoist load since not guaranteed to execute
+; cannot hoist load since not guaranteed to execute due to may-throw call before
+; it that is not hoistable (readwrite, so it stays in the loop as ICF).
+declare void @bar(i64, ptr)
+
 define void @test3(ptr %ptr) {
 ; CHECK-LABEL: define void @test3(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
@@ -74,7 +77,7 @@ define void @test3(ptr %ptr) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[X_INC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @foo(i64 4, ptr [[PTR]])
+; CHECK-NEXT:    call void @bar(i64 4, ptr [[PTR]])
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
 ; CHECK-NEXT:    br label %[[LOOP]]
@@ -84,7 +87,7 @@ entry:
 
 loop:
   %x = phi i32 [ 0, %entry ], [ %x.inc, %loop ]
-  call void @foo(i64 4, ptr %ptr)
+  call void @bar(i64 4, ptr %ptr)
   %val = load i32, ptr %ptr
   %x.inc = add i32 %x, %val
   br label %loop
