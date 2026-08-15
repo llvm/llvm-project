@@ -23,11 +23,11 @@ using namespace mlir::abi;
 //
 // For byval (ArgClassification::byVal == true) the callee gets
 // llvm.byval + llvm.noalias + llvm.noundef; for byref (byVal == false)
-// the callee gets llvm.byref without the ownership attrs.  Both pass
-// through an alloca+store at the call site.  At the callee, byval loads
-// the incoming pointer (a local copy), while byref rewires the CIRGen
-// param-slot alloca to the incoming pointer so the body mutates the
-// caller's storage in place.
+// the callee gets llvm.byref without the ownership attrs.  At the call site
+// byval copies into a fresh alloca while byref forwards the caller's storage.
+// At the callee, byval loads the incoming pointer (a local copy), while
+// byref rewires the CIRGen param-slot alloca to the incoming pointer so
+// the body mutates the caller's storage in place.
 //
 // For Expand, the single struct argument is replaced by N scalar arguments
 // (one per field).  At the callee, the N field block arguments are stored
@@ -119,11 +119,8 @@ buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
       newArgTypes.push_back(origTy);
       break;
     case ArgKind::Indirect:
-      // byval and byref both use a pointer wire type.  The attribute
-      // distinction (llvm.byval vs llvm.byref) is applied in updateArgAttrs;
-      // the call-site rewrite guards against byref separately because passing
-      // a byref pointer from a CIR value requires the original alloca address,
-      // which the rewriter does not yet track.
+      // byval and byref both use a pointer wire type.  The llvm.byval vs
+      // llvm.byref distinction is applied in updateArgAttrs.
       newArgTypes.push_back(cir::PointerType::get(origTy));
       break;
     }
@@ -225,8 +222,8 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       //   llvm.noalias -- the copy is a fresh caller-allocated alloca that
       //     no other pointer in the function can alias.  Classic CodeGen
       //     emits this when -fpass-by-value-is-noalias is set; here we
-      //     emit it unconditionally because our call-site rewrite always
-      //     produces a fresh alloca+store.
+      //     emit it unconditionally because the byval call-site rewrite
+      //     always produces a fresh alloca+store.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       StringRef ownershipAttr =
           ac.byVal ? mlir::LLVM::LLVMDialect::getByValAttrName()
@@ -410,6 +407,27 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
   }
 }
 
+/// A whole-record value's backing storage: the plain load that produced it and
+/// the alloca that load read.  Both fields are set or both are null.
+struct WholeRecordSource {
+  cir::LoadOp load;
+  cir::AllocaOp alloca;
+};
+
+/// Look through \p recordVal to its backing alloca, or return a null
+/// WholeRecordSource when it has none: a call result, a compound literal, a
+/// load of a member of an enclosing record, or a load whose volatile or
+/// memory-order semantics make the look-through observable.
+static WholeRecordSource getWholeRecordSource(mlir::Value recordVal) {
+  cir::LoadOp load = recordVal.getDefiningOp<cir::LoadOp>();
+  if (!load || load.getIsVolatile() || load.getMemOrder())
+    return {};
+  auto alloca = load.getAddr().getDefiningOp<cir::AllocaOp>();
+  if (!alloca)
+    return {};
+  return {load, alloca};
+}
+
 /// Decompose a struct value into one scalar call argument per field of \p
 /// recTy, appending the field values to \p newArgs.  When \p structVal is a
 /// plain (non-volatile, non-atomic) load straight from an alloca, read each
@@ -426,26 +444,34 @@ emitStructFieldArgs(mlir::OpBuilder &builder, mlir::Location loc,
                     mlir::Value structVal, cir::RecordType recTy,
                     SmallVectorImpl<mlir::Value> &newArgs,
                     SmallVectorImpl<cir::LoadOp> &replacedWholeLoads) {
-  cir::LoadOp wholeLoad = structVal.getDefiningOp<cir::LoadOp>();
-  cir::AllocaOp srcAlloca;
-  if (wholeLoad && !wholeLoad.getIsVolatile() && !wholeLoad.getMemOrder())
-    srcAlloca = wholeLoad.getAddr().getDefiningOp<cir::AllocaOp>();
+  WholeRecordSource src = getWholeRecordSource(structVal);
 
-  if (srcAlloca) {
+  if (src.alloca) {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPoint(wholeLoad);
+    builder.setInsertionPoint(src.load);
     for (auto [f, fieldTy] : llvm::enumerate(recTy.getMembers())) {
       mlir::Type fieldPtrTy = cir::PointerType::get(fieldTy);
       mlir::Value fieldPtr = cir::GetMemberOp::create(
-          builder, loc, fieldPtrTy, srcAlloca, /*name=*/"", /*index=*/f);
+          builder, loc, fieldPtrTy, src.alloca, /*name=*/"", /*index=*/f);
       newArgs.push_back(cir::LoadOp::create(builder, loc, fieldPtr));
     }
-    replacedWholeLoads.push_back(wholeLoad);
+    replacedWholeLoads.push_back(src.load);
   } else {
     for (unsigned f = 0; f < recTy.getNumElements(); ++f)
       newArgs.push_back(
           cir::ExtractMemberOp::create(builder, loc, structVal, f));
   }
+}
+
+/// Erase the whole-record loads a call-site rewrite read around, once the
+/// original call (their remaining user) is gone.  A single load can feed
+/// several operands (e.g. after CSE merges identical loads), so dedupe before
+/// erasing to avoid touching a freed op twice.
+static void eraseDeadWholeRecordLoads(ArrayRef<cir::LoadOp> loads) {
+  SmallPtrSet<mlir::Operation *, 4> erased;
+  for (cir::LoadOp wholeLoad : loads)
+    if (erased.insert(wholeLoad).second && wholeLoad.use_empty())
+      wholeLoad->erase();
 }
 
 /// For each Direct arg with a coerced type, change the block argument's type
@@ -1153,9 +1179,9 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   mlir::ValueRange argOperands = call.getArgOperands();
   newArgs.reserve(argOperands.size());
 
-  // Whole-struct loads replaced by direct member loads for Expand operands.
-  // They can only be erased once the original call (their remaining user) is
-  // gone, so collect them and erase the dead ones at the end.
+  // Whole-record loads the rewrite reads around: replaced by direct member
+  // loads for Expand and Direct+canFlatten operands, or by the alloca itself
+  // for byref operands.
   SmallVector<cir::LoadOp> replacedWholeLoads;
 
   // Capture original arg types before building newArgs (byval slots change
@@ -1204,21 +1230,30 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                          dl);
       newArgs.push_back(arg);
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval and byref: allocate a stack slot, copy the value in, and pass
-      // the pointer.  The alloca+store pattern is identical for both; the
-      // attribute distinction (llvm.byval vs llvm.byref) is applied by
-      // updateArgAttrs.  byref does not receive llvm.noalias or llvm.noundef
-      // because it does not assert exclusive ownership of the storage.
-      mlir::Type argTy = arg.getType();
-      auto ptrTy = cir::PointerType::get(argTy);
-      uint64_t align = ac.indirectAlign.value();
-      StringRef slotName = ac.byVal ? "byval" : "byref";
-      auto slot = cir::AllocaOp::create(builder, call.getLoc(), ptrTy,
-                                        builder.getStringAttr(slotName),
-                                        builder.getI64IntegerAttr(align));
+      // byval hands the callee its own copy.  byref must name the caller's
+      // storage instead: CIRGen materializes the argument into a temporary it
+      // destroys after the call and emits the operand's load immediately
+      // before that call, so forwarding the alloca hands the callee the object
+      // the caller destroys, with nothing able to write it in between.
+      if (!ac.byVal) {
+        WholeRecordSource src = getWholeRecordSource(arg);
+        if (!src.alloca)
+          return call->emitOpError()
+                 << "byref argument that is not a load of an alloca is not yet "
+                    "implemented in CallConvLowering";
+        assert(src.alloca.getAlignment() >= ac.indirectAlign.value() &&
+               "llvm.align on a byref argument must not overstate the "
+               "forwarded slot");
+        newArgs.push_back(src.alloca);
+        replacedWholeLoads.push_back(src.load);
+        continue;
+      }
+      auto ptrTy = cir::PointerType::get(arg.getType());
+      auto slot = cir::AllocaOp::create(
+          builder, call.getLoc(), ptrTy, builder.getStringAttr("byval"),
+          builder.getI64IntegerAttr(ac.indirectAlign.value()));
       cir::StoreOp::create(builder, call.getLoc(), arg, slot);
-      arg = slot;
-      newArgs.push_back(arg);
+      newArgs.push_back(slot);
     } else {
       newArgs.push_back(arg);
     }
@@ -1235,6 +1270,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   if (fc.returnInfo.kind == ArgKind::Indirect && hasResult) {
     rewriteIndirectReturnCall(call, fc, newArgs, origRetTy, origCallArgTypes,
                               builder);
+    eraseDeadWholeRecordLoads(replacedWholeLoads);
     return mlir::success();
   }
 
@@ -1301,16 +1337,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   }
 
   call->erase();
-
-  // Now that the original call is gone, drop any whole-struct loads whose
-  // members we read directly from the source alloca, if nothing else uses
-  // them.  A single load can feed several Expand operands (e.g. after CSE
-  // merges identical loads), so dedupe before erasing to avoid touching a
-  // freed op twice.
-  SmallPtrSet<mlir::Operation *, 4> erased;
-  for (cir::LoadOp wholeLoad : replacedWholeLoads)
-    if (erased.insert(wholeLoad).second && wholeLoad.use_empty())
-      wholeLoad->erase();
+  eraseDeadWholeRecordLoads(replacedWholeLoads);
 
   return mlir::success();
 }
