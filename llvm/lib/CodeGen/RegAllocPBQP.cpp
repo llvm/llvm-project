@@ -740,8 +740,7 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
   return !AnotherRoundNeeded;
 }
 
-void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
-                                 LiveIntervals &LIS,
+void RegAllocPBQP::finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS,
                                  VirtRegMap &VRM) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -752,8 +751,7 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
     Register PReg = MRI.getSimpleHint(LI.reg());
 
     if (PReg == 0) {
-      ArrayRef<MCPhysReg> Order =
-          RCI.getOrder(MRI.getRegClass(LI.reg()));
+      ArrayRef<MCPhysReg> Order = RCI.getOrder(MRI.getRegClass(LI.reg()));
       assert(!Order.empty() &&
              "No un-reserved physical registers in this register class");
       PReg = Order.front();

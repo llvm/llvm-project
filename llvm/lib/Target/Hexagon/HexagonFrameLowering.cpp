@@ -2416,11 +2416,11 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 }
 
-Register HexagonFrameLowering::findPhysReg(MachineFunction &MF,
-      HexagonBlockRanges::IndexRange &FIR,
-      HexagonBlockRanges::InstrIndexMap &IndexMap,
-      HexagonBlockRanges::RegToRangeMap &DeadMap,
-      const TargetRegisterClass *RC, const RegisterClassInfo &RCI) const {
+Register HexagonFrameLowering::findPhysReg(
+    MachineFunction &MF, HexagonBlockRanges::IndexRange &FIR,
+    HexagonBlockRanges::InstrIndexMap &IndexMap,
+    HexagonBlockRanges::RegToRangeMap &DeadMap, const TargetRegisterClass *RC,
+    const RegisterClassInfo &RCI) const {
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   auto &MRI = MF.getRegInfo();
 

@@ -2106,8 +2106,8 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
   llvm_unreachable("tMOVr doesn't kill a reg before tBX_RET?");
 }
 
-bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn,
-                                           const RegisterClassInfo &RegClassInfo) {
+bool ARMLoadStoreOpt::runOnMachineFunction(
+    MachineFunction &Fn, const RegisterClassInfo &RegClassInfo) {
   MF = &Fn;
   STI = &Fn.getSubtarget<ARMSubtarget>();
   TL = STI->getTargetLowering();

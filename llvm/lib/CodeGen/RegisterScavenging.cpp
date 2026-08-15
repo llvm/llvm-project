@@ -59,7 +59,7 @@ void RegScavenger::init(MachineBasicBlock &MBB) {
   MRI = &MF.getRegInfo();
   LiveUnits.init(*TRI);
   RCI.runOnMachineFunction(MF);
-  
+
   this->MBB = &MBB;
 
   for (ScavengedInfo &SI : Scavenged) {

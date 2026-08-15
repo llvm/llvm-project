@@ -683,8 +683,7 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
   LiveRegMatrix &LRM = MFAM.getResult<LiveRegMatrixAnalysis>(MF);
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   LiveStacks &LSS = MFAM.getResult<LiveStacksAnalysis>(MF);
-  RegisterClassInfo &RCI =
-      MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  RegisterClassInfo &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
 
   AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI);
   if (!Impl.run(MF))
