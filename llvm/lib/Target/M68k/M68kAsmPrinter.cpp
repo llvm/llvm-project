@@ -209,6 +209,7 @@ char M68kAsmPrinter::ID = 0;
 INITIALIZE_PASS(M68kAsmPrinter, "m68k-asm-printer", "M68k Assembly Printer",
                 false, false)
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeM68kAsmPrinter() {
   RegisterAsmPrinter<M68kAsmPrinter> X(getTheM68kTarget());
 }

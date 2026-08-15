@@ -57,7 +57,8 @@ static MCDisassembler *createCSKYDisassembler(const Target &T,
   return new CSKYDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeCSKYDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheCSKYTarget(),
                                          createCSKYDisassembler);
 }
