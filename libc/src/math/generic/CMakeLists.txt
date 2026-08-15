@@ -2699,6 +2699,7 @@ add_entrypoint_object(
     ../sqrtf128.h
   DEPENDS
     libc.src.__support.math.sqrtf128
+    libc.src.__support.CPP.bit
 )
 
 add_entrypoint_object(
