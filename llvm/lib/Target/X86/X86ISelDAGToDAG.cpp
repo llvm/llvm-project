@@ -2036,8 +2036,10 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
   }
 
   // Post-processing: Convert lea(,%reg,2) to lea(%reg,%reg), which has
-  // a smaller encoding and avoids a scaled-index.
-  if (AM.Scale == 2 &&
+  // a smaller encoding and avoids a scaled-index. Not valid when the index is
+  // negated: only the index is negated when the address is emitted, so this
+  // would compute base + (-index) rather than (-index) * 2.
+  if (AM.Scale == 2 && !AM.NegateIndex &&
       AM.BaseType == X86ISelAddressMode::RegBase &&
       AM.Base_Reg.getNode() == nullptr) {
     AM.Base_Reg = AM.IndexReg;
