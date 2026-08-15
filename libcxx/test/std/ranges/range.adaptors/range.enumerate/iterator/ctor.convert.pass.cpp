@@ -22,9 +22,10 @@
 #include <concepts>
 #include <memory>
 #include <ranges>
+#include <type_traits>
 #include <utility>
 
-#include "type_algorithms.h"
+#include "type_iterators.h"
 
 #include "../../range_adaptor_types.h"
 #include "../types.h"
@@ -46,8 +47,8 @@ constexpr void test_SFINAE() {
     auto iter2 = std::as_const(v).begin();
 
     static_assert(!std::same_as<decltype(iter1), decltype(iter2)>);
-    static_assert(!std::constructible_from<decltype(iter1), decltype(iter2)>);
-    static_assert(!std::constructible_from<decltype(iter2), decltype(iter1)>);
+    static_assert(!std::is_constructible_v<decltype(iter1), decltype(iter2)>);
+    static_assert(!std::is_constructible_v<decltype(iter2), decltype(iter1)>);
   }
   {
     std::ranges::enumerate_view v(NonSimpleCommon{buffer});
@@ -96,6 +97,7 @@ constexpr void test() {
 
 constexpr bool test() {
   test_SFINAE();
+
   test<cpp17_input_iterator<int*>>();
   test<cpp20_input_iterator<int*>>();
   test<forward_iterator<int*>>();
