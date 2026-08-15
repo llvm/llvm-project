@@ -3379,6 +3379,23 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     DesignatedEndIndex.setIsUnsigned(true);
   }
 
+  // The semantic form of an initializer list stores one pointer for every
+  // array element, including the elements omitted before a designator. Compute
+  // the required number of elements in a wider type so adding one cannot
+  // overflow.
+  llvm::APSInt NumInits = DesignatedEndIndex;
+  NumInits.setIsUnsigned(true);
+  NumInits = NumInits.extend(NumInits.getBitWidth() + 1);
+  ++NumInits;
+
+  if (NumInits.ugt(SemaRef.getLangOpts().MaxInitListElements)) {
+    if (!VerifyOnly)
+      SemaRef.Diag(IndexExpr->getBeginLoc(), diag::err_array_too_large)
+          << toString(NumInits, 10) << IndexExpr->getSourceRange();
+    ++Index;
+    return true;
+  }
+
   bool IsStringLiteralInitUpdate =
       StructuredList && StructuredList->isStringLiteralInit();
   if (IsStringLiteralInitUpdate && VerifyOnly) {
