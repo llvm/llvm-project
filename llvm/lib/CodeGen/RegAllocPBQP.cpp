@@ -143,7 +143,7 @@ private:
 
   char *customPassID;
 
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo RCI;
   RegSet VRegsToAlloc, EmptyIntervalVRegs;
 
   /// Inst which is a def of an original reg and whose defs are already all
@@ -613,7 +613,7 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
 
     // Compute an initial allowed set for the current vreg.
     std::vector<MCRegister> VRegAllowed;
-    for (MCPhysReg R : RegClassInfo.getOrder(TRC)) {
+    for (MCPhysReg R : RCI.getOrder(TRC)) {
       MCRegister PReg(R);
 
       // vregLI crosses a regmask operand that clobbers preg.
@@ -753,7 +753,7 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
 
     if (PReg == 0) {
       ArrayRef<MCPhysReg> Order =
-          RegClassInfo.getOrder(MRI.getRegClass(LI.reg()));
+          RCI.getOrder(MRI.getRegClass(LI.reg()));
       assert(!Order.empty() &&
              "No un-reserved physical registers in this register class");
       PReg = Order.front();
@@ -797,7 +797,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
       createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs();
-  RegClassInfo.runOnMachineFunction(MF);
+  RCI.runOnMachineFunction(MF);
 
   LLVM_DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
 

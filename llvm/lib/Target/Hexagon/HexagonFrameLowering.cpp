@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Attributes.h"
@@ -2419,7 +2420,7 @@ Register HexagonFrameLowering::findPhysReg(MachineFunction &MF,
       HexagonBlockRanges::IndexRange &FIR,
       HexagonBlockRanges::InstrIndexMap &IndexMap,
       HexagonBlockRanges::RegToRangeMap &DeadMap,
-      const TargetRegisterClass *RC) const {
+      const TargetRegisterClass *RC, const RegisterClassInfo &RCI) const {
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   auto &MRI = MF.getRegInfo();
 
@@ -2433,7 +2434,7 @@ Register HexagonFrameLowering::findPhysReg(MachineFunction &MF,
     return false;
   };
 
-  for (Register Reg : HRI.getRawAllocationOrder(*RC, MF)) {
+  for (Register Reg : RCI.getOrder(RC)) {
     bool Dead = true;
     for (auto R : HexagonBlockRanges::expandToSubRegs({Reg,0}, MRI, HRI)) {
       if (isDead(R.Reg))
@@ -2453,6 +2454,8 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   auto &HII = *HST.getInstrInfo();
   auto &HRI = *HST.getRegisterInfo();
   auto &MRI = MF.getRegInfo();
+  RegisterClassInfo RCI;
+  RCI.runOnMachineFunction(MF);
   HexagonBlockRanges HBR(MF);
 
   using BlockIndexMap =
@@ -2700,7 +2703,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
                                                   SrcOp.getSubReg() };
         auto *RC = HII.getRegClass(SI.getDesc(), 2);
         // The this-> is needed to unconfuse MSVC.
-        Register FoundR = this->findPhysReg(MF, Range, IM, DM, RC);
+        Register FoundR = this->findPhysReg(MF, Range, IM, DM, RC, RCI);
         LLVM_DEBUG(dbgs() << "Replacement reg:" << printReg(FoundR, &HRI)
                           << '\n');
         if (FoundR == 0)

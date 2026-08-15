@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -57,7 +58,8 @@ void RegScavenger::init(MachineBasicBlock &MBB) {
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
   LiveUnits.init(*TRI);
-
+  RCI.runOnMachineFunction(MF);
+  
   this->MBB = &MBB;
 
   for (ScavengedInfo &SI : Scavenged) {
@@ -99,7 +101,7 @@ bool RegScavenger::isRegUsed(Register Reg, bool includeReserved) const {
 }
 
 Register RegScavenger::FindUnusedReg(const TargetRegisterClass *RC) const {
-  for (Register Reg : *RC) {
+  for (MCPhysReg Reg : RCI.getOrder(RC)) {
     if (!isRegUsed(Reg)) {
       LLVM_DEBUG(dbgs() << "Scavenger found unused reg: " << printReg(Reg, TRI)
                         << "\n");
@@ -111,9 +113,9 @@ Register RegScavenger::FindUnusedReg(const TargetRegisterClass *RC) const {
 
 BitVector RegScavenger::getRegsAvailable(const TargetRegisterClass *RC) {
   BitVector Mask(TRI->getNumRegs());
-  for (Register Reg : *RC)
+  for (MCPhysReg Reg : RCI.getOrder(RC))
     if (!isRegUsed(Reg))
-      Mask.set(Reg.id());
+      Mask.set(Reg);
   return Mask;
 }
 
@@ -308,10 +310,9 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
                                                  bool RestoreAfter, int SPAdj,
                                                  bool AllowSpill) {
   const MachineBasicBlock &MBB = *To->getParent();
-  const MachineFunction &MF = *MBB.getParent();
 
   // Find the register whose use is furthest away.
-  ArrayRef<MCPhysReg> AllocationOrder = TRI->getRawAllocationOrder(RC, MF);
+  ArrayRef<MCPhysReg> AllocationOrder = RCI.getOrder(&RC);
   std::pair<MCPhysReg, MachineBasicBlock::iterator> P = findSurvivorBackwards(
       *MRI, std::prev(MBBI), To, LiveUnits, AllocationOrder, RestoreAfter);
   MCPhysReg Reg = P.first;

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 
 namespace llvm {
@@ -38,6 +39,7 @@ class RegScavenger {
   MachineRegisterInfo *MRI = nullptr;
   MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator MBBI;
+  RegisterClassInfo RCI;
 
   /// Information on scavenged registers (held in a spill slot).
   struct ScavengedInfo {
