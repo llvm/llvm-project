@@ -212,6 +212,20 @@ inline namespace string_view_literals {
   string_view operator""sv(const char *, size_t);
 }
 }
+
+int stoi(const string &Str, size_t *Pos = nullptr, int Base = 10);
+long stol(const string &Str, size_t *Pos = nullptr, int Base = 10);
+long long stoll(const string &Str, size_t *Pos = nullptr, int Base = 10);
+unsigned long stoul(const string &Str, size_t *Pos = nullptr, int Base = 10);
+unsigned long long stoull(const string &Str, size_t *Pos = nullptr,
+                          int Base = 10);
+
+float stof(const string &Str, size_t *Pos = nullptr);
+double stod(const string &Str, size_t *Pos = nullptr);
+long double stold(const string &Str, size_t *Pos = nullptr);
+
+int stoi(const wstring &Str, size_t *Pos = nullptr, int Base = 10);
+long stol(const wstring &Str, size_t *Pos = nullptr, int Base = 10);
 }
 
 #endif // _STRING_

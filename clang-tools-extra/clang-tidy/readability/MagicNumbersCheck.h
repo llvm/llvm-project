@@ -52,6 +52,10 @@ private:
   isUserDefinedLiteral(const ast_matchers::MatchFinder::MatchResult &Result,
                        const Expr &Literal) const;
 
+  bool
+  isWellKnownFunctionArg(const ast_matchers::MatchFinder::MatchResult &Result,
+                         const Expr &Literal) const;
+
   template <typename L>
   void checkBoundMatch(const ast_matchers::MatchFinder::MatchResult &Result,
                        const char *BoundName) {
@@ -79,6 +83,9 @@ private:
         isUserDefinedLiteral(Result, *MatchedLiteral))
       return;
 
+    if (isWellKnownFunctionArg(Result, *MatchedLiteral))
+      return;
+
     const StringRef LiteralSourceText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(MatchedLiteral->getSourceRange()),
         *Result.SourceManager, getLangOpts());
@@ -93,6 +100,7 @@ private:
   const bool IgnorePowersOf2IntegerValues;
   const bool IgnoreTypeAliases;
   const bool IgnoreUserDefinedLiterals;
+  const bool IgnoreWellKnownFunctionArgs;
   const StringRef RawIgnoredIntegerValues;
   const StringRef RawIgnoredFloatingPointValues;
 

@@ -148,3 +148,10 @@ Options
 
    Boolean value indicating whether to accept magic numbers in user-defined
    literals. Default value is `false`.
+
+.. option:: IgnoreWellKnownFunctionArgs
+
+   Boolean value indicating whether to accept common conversion bases (``8``,
+   ``10``, ``16``) passed to well-known conversion functions such as
+   ``strtol``, ``std::stoi``, ``std::from_chars`` and ``std::setbase``.
+   Default value is `true`.

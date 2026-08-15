@@ -1,0 +1,51 @@
+//===--- charconv - Stub header for tests -----------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _CHARCONV_
+#define _CHARCONV_
+
+namespace std {
+
+enum class chars_format {
+  scientific = 1,
+  fixed = 2,
+  hex = 4,
+  general = fixed | scientific
+};
+
+enum class errc { };
+
+struct from_chars_result {
+  const char *ptr;
+  errc ec;
+};
+
+from_chars_result from_chars(const char *First, const char *Last, int &Value,
+                             int Base = 10);
+from_chars_result from_chars(const char *First, const char *Last, long &Value,
+                             int Base = 10);
+from_chars_result from_chars(const char *First, const char *Last,
+                             unsigned &Value, int Base = 10);
+from_chars_result from_chars(const char *First, const char *Last, double &Value,
+                             chars_format Fmt = chars_format::general);
+
+struct to_chars_result {
+  char *ptr;
+  errc ec;
+};
+
+to_chars_result to_chars(char *First, char *Last, int Value, int Base = 10);
+to_chars_result to_chars(char *First, char *Last, long Value, int Base = 10);
+to_chars_result to_chars(char *First, char *Last, unsigned Value,
+                         int Base = 10);
+to_chars_result to_chars(char *First, char *Last, double Value,
+                         chars_format Fmt);
+
+} // namespace std
+
+#endif
