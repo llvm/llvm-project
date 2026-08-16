@@ -21,3 +21,20 @@ func.func @disjoint_stores(%0: memref<8xf32>) {
   // CHECK-NOT: affine.for
   return
 }
+
+// CHECK-LABEL: func @sibling_with_used_loop_result
+func.func @sibling_with_used_loop_result(%m: memref<4xi32>, %n: memref<4xi32>,
+                                         %init: i32) -> i32 {
+  // CHECK: %[[RESULT:.*]] = affine.for {{.*}} iter_args
+  %a = affine.for %i = 0 to 4 iter_args(%x = %init) -> (i32) {
+    %v = affine.load %m[%i] : memref<4xi32>
+    %t = arith.addi %x, %v : i32
+    affine.yield %t : i32
+  }
+  affine.for %i = 0 to 4 {
+    %v = affine.load %m[%i] : memref<4xi32>
+    affine.store %v, %n[%i] : memref<4xi32>
+  }
+  // CHECK: return %[[RESULT]]
+  return %a : i32
+}

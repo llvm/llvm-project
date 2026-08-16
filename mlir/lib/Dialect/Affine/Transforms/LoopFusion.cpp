@@ -1369,6 +1369,12 @@ public:
       // TODO: Remove restrict to single load op restriction.
       if (sibNode->getLoadOpCount(memref) != 1)
         return false;
+
+      // Sibling fusion removes the sibling node after cloning it into the
+      // destination. Do not fuse siblings whose results still have uses.
+      if (!sibNode->op->use_empty())
+        return false;
+
       // Skip if there exists a path of dependent edges between
       // 'sibNode' and 'dstNode'.
       if (mdg->hasDependencePath(sibNode->id, dstNode->id) ||
