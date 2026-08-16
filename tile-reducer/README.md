@@ -19,3 +19,10 @@ cmake --build tile-reducer/build --target tr-opt check-tr
 Linalg over MemRefs. Row, column, and full reductions use `linalg.generic`
 with `arith.addf` and iterator types `parallel,reduction`,
 `reduction,parallel`, and `reduction,reduction`. No Tensor dialect.
+
+## Milestone 9
+
+The same pass realizes `tr.load` as `memref.subview` of the input
+(offset = tile coordinate × tile size). A 128×128 tile is not allocated.
+A 128-element alloca is used only for the accumulator / reduce destination.
+`tr.store` is a subview of the output plus `memref.copy`.
