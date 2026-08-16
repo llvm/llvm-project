@@ -1710,9 +1710,7 @@ bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     if (!VTy)
       return false;
 
-    assert(Param[1]->getType()->isVectorTy() &&
-           VTy->getElementCount() ==
-               cast<VectorType>(Param[1]->getType())->getElementCount() &&
+    assert(Param[0]->getType() == Param[1]->getType() &&
            "invalid vector pointer pair instrumentation operands");
     for (unsigned Index = 0, NumElements = VTy->getNumElements();
          Index != NumElements; ++Index) {
