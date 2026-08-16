@@ -686,6 +686,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpl
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
+    libc.src.math.fromfpxf128
     libc.src.math.fromfpxl
     libc.src.math.fsqrt
     libc.src.math.fsqrtl
@@ -997,7 +998,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fmodf128
     libc.src.math.fmulf128
     libc.src.math.frexpf128
-    libc.src.math.fromfpxf128
     libc.src.math.fsqrtf128
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
