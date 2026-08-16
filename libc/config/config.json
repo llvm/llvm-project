@@ -198,5 +198,15 @@
       "value": "LIBC_HARDENING_MODE_NONE",
       "doc": "Hardening mode for the library."
     }
+  },
+  "locale": {
+    "LIBC_CONF_DEFAULT_LOCALE": {
+      "value": "C",
+      "doc": "The default locale for the C library. Options: 'C', 'C.UTF-8', 'en_US.UTF-8'."
+    },
+    "LIBC_CONF_DISABLE_RUNTIME_LOCALE": {
+      "value": false,
+      "doc": "Bypass runtime locale objects and use hardcoded lookups for embedded builds."
+    }
   }
 }
