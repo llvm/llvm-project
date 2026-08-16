@@ -33,3 +33,10 @@ A 128-element alloca is used only for the accumulator / reduce destination.
 `scf::tileUsingSCF`. Representative sizes: 128×128, 64×128, 32×128. Outer
 `scf.for` is the parallel (row) dimension; inner is the reduction (K)
 dimension. No GPU thread mapping.
+
+## Milestone 11
+
+Transform dialect schedules in `transform/row_sum_schedule.mlir` and
+`transform/column_sum_schedule.mlir`. Payload IR is the computation;
+transform IR is the schedule. `transform.structured.match` +
+`transform.structured.tile_using_for` tile the Linalg reduction.

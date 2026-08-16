@@ -2,10 +2,14 @@ set(LIBS
     MLIRAffineDialect
     MLIRArithDialect
     MLIRFuncDialect
+    MLIRFuncInlinerExtension
     MLIRLinalgDialect
+    MLIRLinalgTransformOps
     MLIRLinalgTransforms
     MLIRMemRefDialect
     MLIRSCFDialect
+    MLIRTransformDialect
+    MLIRTransformDialectTransforms
     MLIROptLib
     MLIRTileReducer
   )
