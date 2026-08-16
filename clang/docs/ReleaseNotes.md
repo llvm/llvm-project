@@ -548,6 +548,13 @@ features cannot lower the translation-unit ABI level;
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
+#### musl-libc Support
+
+- The GCC installation detector now finds vendor-prefixed musl toolchains, such
+  as Alpine Linux's ``<arch>-alpine-linux-musl[abi]``, when given a neutral
+  ``--target=<arch>-linux-musl[abi]``. Previously this only worked when the
+  exact distribution triple was passed. (#GH89146)
+
 #### LoongArch Support
 
 #### RISC-V Support
