@@ -1645,7 +1645,9 @@ void Preprocessor::HandleLineDirective() {
   } else {
     SmallString<128> FilenameBuffer;
     StringRef Filename = getSpelling(StrTok, FilenameBuffer);
-    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
+    SmallString<128> UnescapedFilenameBuffer;
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename,
+                                     UnescapedFilenameBuffer);
     FilenameID = SourceMgr.getLineTableFilenameID(Filename);
 
     // Verify that there is nothing after the string, other than EOD.  Because
@@ -1783,7 +1785,9 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
   } else {
     SmallString<128> FilenameBuffer;
     StringRef Filename = getSpelling(StrTok, FilenameBuffer);
-    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename);
+    SmallString<128> UnescapedFilenameBuffer;
+    GetLineDirectiveFilenameSpelling(StrTok.getLocation(), Filename,
+                                     UnescapedFilenameBuffer);
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
@@ -1983,8 +1987,9 @@ bool Preprocessor::GetIncludeFilenameSpelling(SourceLocation Loc,
   return isAngled;
 }
 
-void Preprocessor::GetLineDirectiveFilenameSpelling(SourceLocation Loc,
-                                                    StringRef &Buffer) {
+void Preprocessor::GetLineDirectiveFilenameSpelling(
+    SourceLocation Loc, StringRef &Buffer,
+    SmallVectorImpl<char> &UnescapedBuffer) {
   // Get the text form of the filename.
   assert(!Buffer.empty() && "Can't have tokens with empty spellings!");
   if (Buffer.size() < 2 || Buffer.front() != '"' || Buffer.back() != '"') {
@@ -1993,6 +1998,21 @@ void Preprocessor::GetLineDirectiveFilenameSpelling(SourceLocation Loc,
     return;
   }
   Buffer = Buffer.substr(1, Buffer.size() - 2);
+
+  // A line directive filename is lexed as a header-name so that backslashes
+  // in paths are not interpreted as escape sequences. However, a doubled
+  // backslash represents a single backslash in the resulting filename.
+  if (!Buffer.contains("\\\\"))
+    return;
+
+  UnescapedBuffer.clear();
+  UnescapedBuffer.reserve(Buffer.size());
+  for (size_t I = 0; I < Buffer.size(); ++I) {
+    if (Buffer[I] == '\\' && I + 1 < Buffer.size() && Buffer[I + 1] == '\\')
+      ++I;
+    UnescapedBuffer.push_back(Buffer[I]);
+  }
+  Buffer = StringRef(UnescapedBuffer.data(), UnescapedBuffer.size());
 }
 
 /// Push a token onto the token stream containing an annotation.

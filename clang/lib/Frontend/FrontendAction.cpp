@@ -529,7 +529,9 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
   Preprocessor &PP = CI.getPreprocessor();
   SmallString<128> HeaderNameBuffer;
   StringRef HeaderName = PP.getSpelling(T, HeaderNameBuffer);
-  PP.GetLineDirectiveFilenameSpelling(T.getLocation(), HeaderName);
+  SmallString<128> UnescapedHeaderNameBuffer;
+  PP.GetLineDirectiveFilenameSpelling(T.getLocation(), HeaderName,
+                                      UnescapedHeaderNameBuffer);
 
   RawLexer->LexFromRawLexer(T);
   if (T.isNot(tok::eof) && !T.isAtStartOfLine())

@@ -2556,7 +2556,10 @@ public:
   /// the spelling of the filename, but is also expected to handle the case
   /// when this method decides to use a different buffer.
   ///
-  void GetLineDirectiveFilenameSpelling(SourceLocation Loc, StringRef &Buffer);
+  /// \p UnescapedBuffer provides storage when the filename needs unescaping.
+  ///
+  void GetLineDirectiveFilenameSpelling(SourceLocation Loc, StringRef &Buffer,
+                                        SmallVectorImpl<char> &UnescapedBuffer);
 
   /// Given a "foo" or \<foo> reference, look up the indicated file.
   ///
