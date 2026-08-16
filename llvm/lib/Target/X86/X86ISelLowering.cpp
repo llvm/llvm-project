@@ -50720,8 +50720,8 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  // Vector division never survives op legalization to reach later rounds.
-  if (!VT.isVector() || !Subtarget.hasSSE2())
+  
+  if (!Subtarget.hasSSE2())
     return SDValue();
 
   SDValue Dividend = N->getOperand(0);
@@ -50734,6 +50734,13 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
     Opc = ISD::getUnmaskedBinOpOpcode(Opc);
   bool IsRem = Opc == ISD::UREM || Opc == ISD::SREM;
   bool IsSigned = Opc == ISD::SDIV || Opc == ISD::SREM;
+
+  // Scalar functions that do not use XMM registers must not get this combine.
+  if (!VT.isVector() &&
+      (Subtarget.useSoftFloat() ||
+       DAG.getMachineFunction().getFunction().hasFnAttribute(
+           Attribute::NoImplicitFloat)))
+    return SDValue();
 
   // If the result is only read back as scalar extracts, scalarization computes
   // just the demanded lanes. Keep the vector operation when every lane is
@@ -50778,16 +50785,21 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   MVT FPSclVT = MVT::f64;
   if (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle()))
     FPSclVT = MVT::f32;
-  EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
+  EVT FPVT = VT.isVector()
+                 ? VT.changeVectorElementType(*DAG.getContext(), FPSclVT)
+                 : EVT(FPSclVT);
 
   bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
       Attribute::StrictFP);
   if (IsStrict) {
+    // Scalar strictfp support is not implemented yet.
+    if (!VT.isVector())
+      return SDValue();
     // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
     // requires 512-bit types to be legal and a power of 2 lane count.
     if (!Subtarget.useAVX512Regs() || !isPowerOf2_32(VT.getVectorNumElements()))
       return SDValue();
-  } else if (!IsSigned && VT.getScalarSizeInBits() == 32 &&
+  } else if (VT.isVector() && !IsSigned && VT.getScalarSizeInBits() == 32 &&
              !Subtarget.hasAVX2()) {
     // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
     // for latency and code size before AVX2.
@@ -50795,11 +50807,12 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   }
 
   // Nothing will split an illegal FP type after type legalization and the
-  // strict SAE divide is 512-bit only.
-  bool FPVTUsable = IsStrict
-                        ? FPVT.getSizeInBits() <= 512
-                        : DCI.isBeforeLegalize() ||
-                              DAG.getTargetLoweringInfo().isTypeLegal(FPVT);
+  // strict SAE divide is 512-bit only. Scalar f32/f64 are always legal.
+  bool FPVTUsable = !VT.isVector() ||
+                     (IsStrict
+                          ? FPVT.getSizeInBits() <= 512
+                          : DCI.isBeforeLegalize() ||
+                                DAG.getTargetLoweringInfo().isTypeLegal(FPVT));
 
   // Halve the divide while the integer halves stay legal.
   if (!FPVTUsable) {
