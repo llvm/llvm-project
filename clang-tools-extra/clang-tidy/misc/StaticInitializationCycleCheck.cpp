@@ -125,7 +125,6 @@ public:
   bool empty() const { return Uses.empty(); }
   unsigned size() const { return Uses.size(); }
 
-  friend class VarUseCollector;
   friend class VarUseGraphBuilder;
   friend class VarUseGraph;
 };
@@ -171,34 +170,54 @@ public:
   friend class VarUseGraphBuilder;
 };
 
-// Collect static variable references and static function calls.
-// This is used with initializer expressions and function body statements.
-// At initializer expressions only statements (and expressions) should be
-// traversed. But for functions declarations are needed too (to reach
-// initializations of variables) (only inside the given function).
-class VarUseCollector : public DynamicRecursiveASTVisitor {
-  VarUseNode *Node;
+// Build the complete graph by visiting all static variables and functions and
+// add all "usages" (children in the graph) to it.
+// Every variable and function is visited once (at canonical declaration or the
+// definition). When visiting an object, a node for it may already exist
+// (without added children) if a reference to it was found already.
+class VarUseGraphBuilder : public DynamicRecursiveASTVisitor {
   VarUseGraph &G;
-  const DeclContext *DC;
+  VarUseNode *Node = nullptr;
+  const DeclContext *DC = nullptr;
+
+  // Collect static variable references and static function calls from an
+  // initializer expression or function body.
+  void collectUses(VarUseNode *N, Stmt *S) {
+    assert(!Node);
+    Node = N;
+    DC = N->isFunction() ? N->getFunction() : nullptr;
+    TraverseStmt(S);
+    Node = nullptr;
+    DC = nullptr;
+  }
 
 public:
-  VarUseCollector(VarUseNode *N, VarUseGraph &G)
-      : Node(N), G(G), DC(N->isFunction() ? N->getFunction() : nullptr) {}
+  VarUseGraphBuilder(VarUseGraph &G) : G(G) {}
 
   bool TraverseType(QualType T, bool TraverseQualifier) override {
-    return true;
+    if (Node)
+      return true;
+    return DynamicRecursiveASTVisitor::TraverseType(T, TraverseQualifier);
   }
   bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier) override {
-    return true;
+    if (Node)
+      return true;
+    return DynamicRecursiveASTVisitor::TraverseTypeLoc(TL, TraverseQualifier);
   }
-  bool TraverseAttr(Attr *At) override { return true; }
+  bool TraverseAttr(Attr *At) override {
+    if (Node)
+      return true;
+    return DynamicRecursiveASTVisitor::TraverseAttr(At);
+  }
   bool TraverseDecl(Decl *D) override {
-    if (D && DC && DC->containsDecl(D))
+    if (!Node || (D && DC && DC->containsDecl(D)))
       return DynamicRecursiveASTVisitor::TraverseDecl(D);
     return true;
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+    if (!Node)
+      return true;
     if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl())) {
       if (!shouldIgnoreRef(DRE, Node->getDecl()) &&
           (VarD->hasGlobalStorage() || VarD->isStaticLocal()))
@@ -208,6 +227,8 @@ public:
   }
 
   bool VisitCallExpr(CallExpr *CE) override {
+    if (!Node)
+      return true;
     if (const FunctionDecl *F = CE->getDirectCallee()) {
       if (F->isGlobal() || F->isStatic()) {
         const FunctionDecl *Def = F->getDefinition();
@@ -217,42 +238,33 @@ public:
     }
     return true;
   }
-};
-
-// Build the complete graph by visiting all static variables and functions and
-// add all "usages" (children in the graph) to it.
-// Every variable and function is visited once (at canonical declaration or the
-// definition). When visiting an object, a node for it may already exist
-// (without added children) if a reference to it was found already.
-class VarUseGraphBuilder : public DynamicRecursiveASTVisitor {
-  VarUseGraph &G;
-
-public:
-  VarUseGraphBuilder(VarUseGraph &G) : G(G) {}
 
   bool VisitVarDecl(VarDecl *VD) override {
+    if (Node)
+      return true;
     if ((VD->hasGlobalStorage() || VD->isStaticLocal()) &&
         VD->isCanonicalDecl()) {
       if (VarDecl *InitD = VD->getInitializingDeclaration()) {
         VarUseNode *N = G.addNode(VD);
-        VarUseCollector Collector(N, G);
-        Collector.TraverseStmt(InitD->getInit());
+        collectUses(N, InitD->getInit());
       }
     }
     return true;
   }
 
   bool VisitFunctionDecl(FunctionDecl *FD) override {
+    if (Node)
+      return true;
     if (FD->isGlobal() || FD->isStatic()) {
       if (Stmt *Body = FD->getBody()) {
         VarUseNode *N = G.addNode(FD);
-        VarUseCollector Collector(N, G);
-        Collector.TraverseStmt(Body);
+        collectUses(N, Body);
       }
     }
     return true;
   }
 };
+static_assert(sizeof(VarUseGraphBuilder) == 5 * sizeof(void *));
 
 } // namespace
 
