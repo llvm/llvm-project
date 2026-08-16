@@ -13,6 +13,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -33,19 +34,20 @@ public:
 
   /// Output a block of data to the stream performing GDB-remote escaping.
   ///
-  /// \param[in] s
+  /// \param[in] bytes
   ///     A block of data.
-  ///
-  /// \param[in] src_len
-  ///     The amount of data to write.
   ///
   /// \return
   ///     Number of bytes written.
-  // TODO: Convert this function to take ArrayRef<uint8_t>
-  int PutEscapedBytes(const void *s, size_t src_len);
+  int PutEscapedBytes(llvm::ArrayRef<uint8_t> bytes);
 
-  /// Equivalent to PutEscapedBytes(str.data(), str.size());
-  int PutEscapedBytes(llvm::StringRef str);
+  /// \overload
+  /// This overload is provided for backward compatibility with the existing
+  /// code. The newer interface is to use the ArrayRef<uint8_t> overload.
+  int PutEscapedBytes(const void *src, size_t len) {
+    return PutEscapedBytes(
+        llvm::ArrayRef<uint8_t>(static_cast<const uint8_t *>(src), len));
+  }
 
   template <class T> int PutAsJSON(const T &obj, bool hex_ascii) {
     std::string json_string;
@@ -53,11 +55,11 @@ public:
     os << llvm::json::Value(toJSON(obj));
     if (hex_ascii)
       return PutStringAsRawHex8(json_string);
-    return PutEscapedBytes(json_string.c_str(), json_string.size());
+    return PutEscapedBytes(llvm::arrayRefFromStringRef(json_string));
   }
 
   template <class T>
-  int PutAsJSONArray(const std::vector<T> &array, bool hex_ascii) {
+  int PutAsJSONArray(llvm::ArrayRef<T> array, bool hex_ascii) {
     llvm::json::Array json_array;
     for (const auto &obj : array)
       json_array.push_back(toJSON(obj));
@@ -66,7 +68,7 @@ public:
     os << llvm::json::Value(std::move(json_array));
     if (hex_ascii)
       return PutStringAsRawHex8(json_string);
-    return PutEscapedBytes(json_string.data(), json_string.size());
+    return PutEscapedBytes(llvm::arrayRefFromStringRef(json_string));
   }
 };
 
