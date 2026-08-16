@@ -1715,10 +1715,8 @@ bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     for (unsigned Index = 0, NumElements = VTy->getNumElements();
          Index != NumElements; ++Index) {
       Value *ScalarParam[2] = {
-          IRB.CreateExtractElement(Param[0], IRB.getInt32(Index)),
-          IRB.CreateExtractElement(Param[1], IRB.getInt32(Index))};
-      for (Value *&P : ScalarParam)
-        P = IRB.CreatePointerCast(P, IntptrTy);
+          IRB.CreatePointerCast(IRB.CreateExtractElement(Param[0], IRB.getInt32(Index)), IntptrTy),
+          IRB.CreatePointerCast(IRB.CreateExtractElement(Param[1], IRB.getInt32(Index)), IntptrTy)};
       RTCI.createRuntimeCall(IRB, F, ScalarParam);
     }
     return true;
