@@ -12,6 +12,8 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -19,6 +21,16 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
+
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/MathExtras.h"
+
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -183,11 +195,11 @@ bool GNUstepObjCTaggedPointerClassDescriptor::GetTaggedPointerInfoSigned(
   if (value_bits) {
     // Sign-extend from the target's pointer width before shifting, so that a
     // negative payload in a 32-bit pointer is not read as a large positive.
+    // Done through SignExtend64 rather than by hand: shifting a signed value
+    // into its own sign bit is undefined.
     const uint32_t pointer_bits = m_pointer_size * 8;
-    int64_t signed_value = static_cast<int64_t>(m_pointer_value)
-                           << (64 - pointer_bits);
-    signed_value >>= (64 - pointer_bits);
-    *value_bits = signed_value >> m_payload_shift;
+    *value_bits =
+        llvm::SignExtend64(m_pointer_value, pointer_bits) >> m_payload_shift;
   }
   if (payload)
     *payload = m_pointer_value;
@@ -232,10 +244,28 @@ GNUstepTaggedPointerVendor::GetClassDescriptor(lldb::addr_t ptr) {
         break;
       }
     }
+    // The table has hidden visibility, so a linked image carries no symbol
+    // for it unless a PDB or an unstripped symtab is around; the debug info
+    // still describes it as a global, which is enough to find its address.
+    if (*m_table_addr == LLDB_INVALID_ADDRESS) {
+      VariableList variables;
+      target.GetImages().FindGlobalVariables(ConstString("SmallObjectClasses"),
+                                             1, variables);
+      if (VariableSP variable_sp = variables.GetVariableAtIndex(0)) {
+        ValueObjectSP valobj_sp =
+            ValueObjectVariable::Create(&target, variable_sp);
+        if (valobj_sp) {
+          const addr_t table = valobj_sp->GetAddressOf(false).address;
+          if (table != 0 && table != LLDB_INVALID_ADDRESS)
+            m_table_addr = table;
+        }
+      }
+    }
     if (*m_table_addr == LLDB_INVALID_ADDRESS)
       LLDB_LOG(GetLog(LLDBLog::Language),
-               "GNUstepTaggedPointerVendor: SmallObjectClasses symbol not "
-               "found (stripped libobjc?); tagged pointer classes unknown");
+               "GNUstepTaggedPointerVendor: SmallObjectClasses not found in "
+               "any symbol table or debug info (stripped libobjc?); tagged "
+               "pointer classes unknown");
   }
   if (*m_table_addr == LLDB_INVALID_ADDRESS)
     return nullptr;
