@@ -84,6 +84,7 @@ void test() {
   iter_move(iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   // [range.cartesian.overview]
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::cartesian_product();
 }
