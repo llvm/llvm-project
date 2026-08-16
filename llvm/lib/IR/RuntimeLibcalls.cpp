@@ -41,7 +41,8 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   if (ExceptionModel == ExceptionHandling::None)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
-  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
+  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName,
+               TT.getDefaultLongDoubleFormat());
 
   // TODO: Tablegen should generate these sets
   switch (VecLib) {
@@ -104,9 +105,11 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   }
 }
 
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
-    : RuntimeLibcallsInfo(M.getTargetTriple()) {
-  // TODO: Consider module flags
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M) {
+  // TODO: Consider the remaining module flags.
+  const Triple &TT = M.getTargetTriple();
+  initLibcalls(TT, TT.getDefaultExceptionHandling(), FloatABI::Default,
+               EABI::Default, /*ABIName=*/"", M.getLongDoubleFormat());
 }
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
@@ -114,9 +117,10 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M)
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
-                                       EABI EABIVersion, StringRef ABIName) {
+                                       EABI EABIVersion, StringRef ABIName,
+                                       LongDoubleFormat LongDoubleFormat) {
   setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
-                              ABIName);
+                              ABIName, LongDoubleFormat);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE

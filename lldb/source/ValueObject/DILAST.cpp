@@ -39,6 +39,10 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::Shl;
   case Token::greatergreater:
     return BinaryOpKind::Shr;
+  case Token::ampamp:
+    return BinaryOpKind::LAnd;
+  case Token::pipepipe:
+    return BinaryOpKind::LOr;
   default:
     break;
   }
