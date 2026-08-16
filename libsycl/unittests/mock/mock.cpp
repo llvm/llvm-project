@@ -167,7 +167,3 @@ ol_result_t olMemAllocAlignedHost(ol_device_handle_t Device, size_t Size,
   return mock::getMockLiboffload().olMemAllocAlignedHost(Device, Size,
                                                          Alignment, OutPtr);
 }
-
-ol_result_t olMemFree(void *Address) {
-  return mock::getMockLiboffload().olMemFree(Address);
-}
