@@ -8,26 +8,20 @@ declare { i8, i1 } @llvm.sadd.with.overflow.i8(i8, i8)
 define i32 @adox_test_flags(i32 %a, i32 %b, i8 %c, i8 %d) {
 ; NDD-LABEL: adox_test_flags:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax
-; NDD-NEXT:    addb %dl, %cl
-; NDD-NEXT:    seto %al
-; NDD-NEXT:    addl %edi, %esi
-; NDD-NEXT:    addl %esi, %eax
+; NDD-NEXT:    addb %cl, %dl, %al
+; NDD-NEXT:    adoxl %esi, %edi, %eax
+; NDD-NEXT:    testl %eax, %eax
 ; NDD-NEXT:    movl $10, %ecx
 ; NDD-NEXT:    cmovel %ecx, %eax
 ; NDD-NEXT:    retq
 ;
 ; ADX-LABEL: adox_test_flags:
 ; ADX:       # %bb.0:
-; ADX-NEXT:    # kill: def $esi killed $esi def $rsi
-; ADX-NEXT:    # kill: def $edi killed $edi def $rdi
-; ADX-NEXT:    xorl %r8d, %r8d
 ; ADX-NEXT:    addb %cl, %dl
-; ADX-NEXT:    seto %r8b
-; ADX-NEXT:    leal (%rdi,%rsi), %eax
-; ADX-NEXT:    addl %eax, %r8d
+; ADX-NEXT:    adoxl %esi, %edi
+; ADX-NEXT:    testl %edi, %edi
 ; ADX-NEXT:    movl $10, %eax
-; ADX-NEXT:    cmovnel %r8d, %eax
+; ADX-NEXT:    cmovnel %edi, %eax
 ; ADX-NEXT:    retq
 ;
 ; NOADX-LABEL: adox_test_flags:
@@ -56,10 +50,8 @@ define i8 @adox_test_flags_i8(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; NDD-LABEL: adox_test_flags_i8:
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    addb %cl, %dl, %al
-; NDD-NEXT:    seto %al
-; NDD-NEXT:    addb %sil, %dil, %cl
-; NDD-NEXT:    addb %cl, %al
-; NDD-NEXT:    movzbl %al, %eax
+; NDD-NEXT:    adoxl %esi, %edi, %eax
+; NDD-NEXT:    testb %al, %al
 ; NDD-NEXT:    movl $10, %ecx
 ; NDD-NEXT:    cmovel %ecx, %eax
 ; NDD-NEXT:    # kill: def $al killed $al killed $eax
@@ -68,12 +60,10 @@ define i8 @adox_test_flags_i8(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; ADX-LABEL: adox_test_flags_i8:
 ; ADX:       # %bb.0:
 ; ADX-NEXT:    addb %cl, %dl
-; ADX-NEXT:    seto %al
-; ADX-NEXT:    addb %sil, %dil
-; ADX-NEXT:    addb %al, %dil
-; ADX-NEXT:    movzbl %dil, %ecx
+; ADX-NEXT:    adoxl %esi, %edi
+; ADX-NEXT:    testb %dil, %dil
 ; ADX-NEXT:    movl $10, %eax
-; ADX-NEXT:    cmovnel %ecx, %eax
+; ADX-NEXT:    cmovnel %edi, %eax
 ; ADX-NEXT:    # kill: def $al killed $al killed $eax
 ; ADX-NEXT:    retq
 ;
@@ -101,11 +91,9 @@ define i8 @adox_test_flags_i8(i8 %a, i8 %b, i8 %c, i8 %d) {
 define i16 @adox_test_flags_i16(i16 %a, i16 %b, i8 %c, i8 %d) {
 ; NDD-LABEL: adox_test_flags_i16:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax
-; NDD-NEXT:    addb %dl, %cl
-; NDD-NEXT:    seto %al
-; NDD-NEXT:    addw %si, %di, %cx
-; NDD-NEXT:    addw %cx, %ax
+; NDD-NEXT:    addb %cl, %dl, %al
+; NDD-NEXT:    adoxl %esi, %edi, %eax
+; NDD-NEXT:    testw %ax, %ax
 ; NDD-NEXT:    movl $10, %ecx
 ; NDD-NEXT:    cmovel %ecx, %eax
 ; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -113,16 +101,11 @@ define i16 @adox_test_flags_i16(i16 %a, i16 %b, i8 %c, i8 %d) {
 ;
 ; ADX-LABEL: adox_test_flags_i16:
 ; ADX:       # %bb.0:
-; ADX-NEXT:    # kill: def $esi killed $esi def $rsi
-; ADX-NEXT:    # kill: def $edi killed $edi def $rdi
-; ADX-NEXT:    xorl %r8d, %r8d
 ; ADX-NEXT:    addb %cl, %dl
-; ADX-NEXT:    seto %r8b
-; ADX-NEXT:    addl %edi, %r8d
-; ADX-NEXT:    addl %esi, %r8d
-; ADX-NEXT:    testw %r8w, %r8w
+; ADX-NEXT:    adoxl %esi, %edi
+; ADX-NEXT:    testw %di, %di
 ; ADX-NEXT:    movl $10, %eax
-; ADX-NEXT:    cmovnel %r8d, %eax
+; ADX-NEXT:    cmovnel %edi, %eax
 ; ADX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ADX-NEXT:    retq
 ;
