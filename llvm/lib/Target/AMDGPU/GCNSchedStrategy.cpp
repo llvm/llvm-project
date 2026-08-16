@@ -2419,10 +2419,16 @@ bool RewriteMFMAFormStage::initHeuristics(
       int ReplacementOp = AMDGPU::getAGPRFormOp(MI.getOpcode());
       assert(ReplacementOp != -1);
 
+      MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+      MachineOperand &Dst = MI.getOperand(0);
+      // Pre-validate: both dst and src2 (if a register) must be virtual.
+      if (!Dst.getReg().isVirtual() ||
+          (Src2->isReg() && !Src2->getReg().isVirtual()))
+        continue;
+
       RewriteCands.push_back({&MI, MI.getOpcode()});
       MI.setDesc(TII->get(ReplacementOp));
 
-      MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
       if (Src2->isReg()) {
         SmallVector<SlotIndex, 8> Src2ReachingDefs;
         findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
@@ -2441,7 +2447,6 @@ bool RewriteMFMAFormStage::initHeuristics(
         }
       }
 
-      MachineOperand &Dst = MI.getOperand(0);
       SmallVector<MachineOperand *, 8> DstReachingUses;
 
       findReachingUses(&MI, DAG.LIS, DstReachingUses);
