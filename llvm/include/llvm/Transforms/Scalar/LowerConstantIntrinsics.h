@@ -21,10 +21,12 @@ namespace llvm {
 
 class DominatorTree;
 class Function;
+class HeapProvenanceAnalysisResult;
 class TargetLibraryInfo;
 
 LLVM_ABI bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
-                                      DominatorTree *DT);
+                                      DominatorTree *DT,
+                                      const HeapProvenanceAnalysisResult *HPA = nullptr);
 
 struct LowerConstantIntrinsicsPass
     : OptionalPassInfoMixin<LowerConstantIntrinsicsPass> {

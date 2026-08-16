@@ -145,6 +145,7 @@ add_llvm_component_library(LLVMAnalysis
   ScalarEvolutionDivision.cpp
   ScalarEvolutionNormalization.cpp
   StaticDataProfileInfo.cpp
+  HeapProvenanceAnalysis.cpp
   StackLifetime.cpp
   StackSafetyAnalysis.cpp
   StructuralHash.cpp

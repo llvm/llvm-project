@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/HeapProvenanceAnalysis.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/Utils/Local.h"
@@ -635,15 +636,17 @@ std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
 Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                                  const DataLayout &DL,
                                  const TargetLibraryInfo *TLI,
-                                 bool MustSucceed) {
+                                 bool MustSucceed,
+                                 const HeapProvenanceAnalysisResult *HPA) {
   return lowerObjectSizeCall(ObjectSize, DL, TLI, /*AAResults=*/nullptr,
-                             MustSucceed);
+                             MustSucceed, /*InsertedInstructions=*/nullptr, HPA);
 }
 
 Value *llvm::lowerObjectSizeCall(
     IntrinsicInst *ObjectSize, const DataLayout &DL,
     const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
-    SmallVectorImpl<Instruction *> *InsertedInstructions) {
+    SmallVectorImpl<Instruction *> *InsertedInstructions,
+    const HeapProvenanceAnalysisResult *HPA) {
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
@@ -674,7 +677,9 @@ Value *llvm::lowerObjectSizeCall(
       return ConstantInt::get(ResultType, Size);
   } else {
     LLVMContext &Ctx = ObjectSize->getFunction()->getContext();
-    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions);
+    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions,
+                                   HPA ? &HPA->getForwardResult() : nullptr,
+                                   HPA ? &HPA->getBackwardResult() : nullptr);
     SizeOffsetValue SizeOffsetPair = Eval.compute(ObjectSize->getArgOperand(0));
 
     if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
@@ -1230,14 +1235,239 @@ SizeOffsetValue::SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT)
 
 ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
     const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
-    ObjectSizeOpts EvalOpts)
+    ObjectSizeOpts EvalOpts, const ForwardHeapProvenanceAnalysisResult *FwdHPA,
+    const BackwardHeapProvenanceAnalysisResult *BwdHPA)
     : DL(DL), TLI(TLI), Context(Context),
       Builder(Context, TargetFolder(DL),
               IRBuilderCallbackInserter(
                   [&](Instruction *I) { InsertedInstructions.insert(I); })),
-      EvalOpts(EvalOpts) {
+      EvalOpts(EvalOpts), FwdHPA(FwdHPA), BwdHPA(BwdHPA) {
   // IntTy and Zero must be set for each compute() since the address space may
   // be different for later objects.
+}
+
+bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffsetValue &Result) {
+  CacheMapTy FallbackCacheMap;
+  return computeFallbackHeapMetadata_(V, Result, FallbackCacheMap);
+}
+
+bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata_(
+    Value *V, SizeOffsetValue &Result, CacheMapTy &FallbackCacheMap) {
+  auto CacheIt = FallbackCacheMap.find(V);
+  if (CacheIt != FallbackCacheMap.end()) {
+    Result = CacheIt->second;
+    return Result.bothKnown();
+  }
+
+  if (auto *PHI = dyn_cast<PHINode>(V)) {
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(PHI->getParent(), PHI->getParent()->getFirstInsertionPt());
+    PHINode *SizePHI = Builder.CreatePHI(IntTy, PHI->getNumIncomingValues(), "fallback.size");
+    PHINode *OffsetPHI = Builder.CreatePHI(IntTy, PHI->getNumIncomingValues(), "fallback.offset");
+    InsertedInstructions.insert(SizePHI);
+    InsertedInstructions.insert(OffsetPHI);
+    FallbackCacheMap[PHI] = SizeOffsetWeakTrackingVH(SizePHI, OffsetPHI);
+
+    for (unsigned i = 0, e = PHI->getNumIncomingValues(); i != e; ++i) {
+      BasicBlock *IncomingBlock = PHI->getIncomingBlock(i);
+      Builder.SetInsertPoint(IncomingBlock->getTerminator());
+      SizeOffsetValue EdgeResult;
+      if (!computeFallbackHeapMetadata_(PHI->getIncomingValue(i), EdgeResult, FallbackCacheMap)) {
+        SizePHI->replaceAllUsesWith(PoisonValue::get(IntTy));
+        SizePHI->eraseFromParent();
+        InsertedInstructions.erase(SizePHI);
+        OffsetPHI->replaceAllUsesWith(PoisonValue::get(IntTy));
+        OffsetPHI->eraseFromParent();
+        InsertedInstructions.erase(OffsetPHI);
+        FallbackCacheMap.erase(PHI);
+        return false;
+      }
+      SizePHI->addIncoming(EdgeResult.Size, IncomingBlock);
+      OffsetPHI->addIncoming(EdgeResult.Offset, IncomingBlock);
+    }
+
+    Value *Size = SizePHI, *Offset = OffsetPHI;
+    if (Value *Tmp = SizePHI->hasConstantValue()) {
+      Size = Tmp;
+      SizePHI->replaceAllUsesWith(Size);
+      SizePHI->eraseFromParent();
+      InsertedInstructions.erase(SizePHI);
+    }
+    if (Value *Tmp = OffsetPHI->hasConstantValue()) {
+      Offset = Tmp;
+      OffsetPHI->replaceAllUsesWith(Offset);
+      OffsetPHI->eraseFromParent();
+      InsertedInstructions.erase(OffsetPHI);
+    }
+    Result = SizeOffsetValue(Size, Offset);
+    FallbackCacheMap[PHI] = SizeOffsetWeakTrackingVH(Result);
+    return true;
+  }
+
+  if (auto *SI = dyn_cast<SelectInst>(V)) {
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    if (auto OptIP = SI->getInsertionPointAfterDef())
+      Builder.SetInsertPoint(*OptIP);
+    else
+      return false;
+
+    SizeOffsetValue TrueResult, FalseResult;
+    if (!computeFallbackHeapMetadata_(SI->getTrueValue(), TrueResult, FallbackCacheMap) ||
+        !computeFallbackHeapMetadata_(SI->getFalseValue(), FalseResult, FallbackCacheMap))
+      return false;
+
+    Value *Size = Builder.CreateSelect(SI->getCondition(), TrueResult.Size, FalseResult.Size, "fallback.select.size");
+    Value *Offset = Builder.CreateSelect(SI->getCondition(), TrueResult.Offset, FalseResult.Offset, "fallback.select.offset");
+    if (auto *I = dyn_cast<Instruction>(Size))
+      InsertedInstructions.insert(I);
+    if (auto *I = dyn_cast<Instruction>(Offset))
+      InsertedInstructions.insert(I);
+
+    Result = SizeOffsetValue(Size, Offset);
+    FallbackCacheMap[SI] = SizeOffsetWeakTrackingVH(Result);
+    return true;
+  }
+
+  Module *M = nullptr;
+  if (auto *I = dyn_cast<Instruction>(V))
+    M = I->getModule();
+  else if (auto *A = dyn_cast<Argument>(V))
+    M = A->getParent()->getParent();
+  if (!M || (!FwdHPA && !BwdHPA))
+    return false;
+
+  HeapProvenanceLattice Info;
+  if (FwdHPA) Info = FwdHPA->getInfo(V);
+  if (!Info.isValid() && BwdHPA) Info = BwdHPA->getInfo(V);
+  if (!Info.isValid())
+    return false;
+
+  if (Info.State != HeapProvenanceLattice::StateKind::HeapChunkHead)
+    return false;
+
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    if (auto *PHI = dyn_cast<PHINode>(I))
+      Builder.SetInsertPoint(PHI->getParent(), PHI->getParent()->getFirstInsertionPt());
+    else if (I->isTerminator())
+      Builder.SetInsertPoint(I);
+    else if (I->getNextNode())
+      Builder.SetInsertPoint(I->getNextNode());
+    else
+      Builder.SetInsertPoint(I->getParent());
+  } else if (auto *A = dyn_cast<Argument>(V)) {
+    Builder.SetInsertPoint(&A->getParent()->getEntryBlock(),
+                           A->getParent()->getEntryBlock().getFirstInsertionPt());
+  }
+
+  Value *HeadVal = const_cast<Value *>(Info.getHead());
+  if (!HeadVal || !HeadVal->getType()->isPointerTy() || !V->getType()->isPointerTy())
+    return false;
+
+  auto getFn = [](const Value *X) -> const Function * {
+    if (auto *I = dyn_cast<Instruction>(X))
+      return I->getFunction();
+    if (auto *A = dyn_cast<Argument>(X))
+      return A->getParent();
+    return nullptr;
+  };
+  const Function *VF = getFn(V);
+  const Function *HF = getFn(HeadVal);
+  if (VF && HF && VF != HF)
+    return false;
+
+  BasicBlock *CallBlock = Builder.GetInsertBlock();
+  if (CallBlock) {
+    if (auto *HI = dyn_cast<Instruction>(HeadVal)) {
+      if (HI->getParent() == CallBlock) {
+        if (HI != &*Builder.GetInsertPoint() && !HI->comesBefore(&*Builder.GetInsertPoint()))
+          return false;
+      } else if (HI->getParent() != &VF->getEntryBlock()) {
+        return false;
+      }
+    }
+    if (auto *VI = dyn_cast<Instruction>(V)) {
+      if (VI->getParent() == CallBlock) {
+        if (VI != &*Builder.GetInsertPoint() && !VI->comesBefore(&*Builder.GetInsertPoint()))
+          return false;
+      } else if (VI->getParent() != &VF->getEntryBlock()) {
+        return false;
+      }
+    }
+  }
+
+  Instruction *InsertAfter = nullptr;
+  if (auto *VI = dyn_cast<Instruction>(V)) {
+    if (auto *HI = dyn_cast<Instruction>(HeadVal)) {
+      if (VI->getParent() == HI->getParent()) {
+        InsertAfter = VI->comesBefore(HI) ? HI : VI;
+      } else if (HI->getParent() == &VF->getEntryBlock()) {
+        InsertAfter = VI;
+      } else if (VI->getParent() == &VF->getEntryBlock()) {
+        InsertAfter = HI;
+      } else {
+        return false;
+      }
+    } else {
+      InsertAfter = VI;
+    }
+  } else if (auto *HI = dyn_cast<Instruction>(HeadVal)) {
+    InsertAfter = HI;
+  }
+
+  IRBuilder<>::InsertPointGuard Guard(Builder);
+  if (InsertAfter) {
+    if (auto OptIP = InsertAfter->getInsertionPointAfterDef())
+      Builder.SetInsertPoint(*OptIP);
+    else
+      return false;
+  } else {
+    Builder.SetInsertPoint(const_cast<Function *>(VF)->getEntryBlock().getFirstInsertionPt());
+  }
+
+  Value *OffsetVal = nullptr;
+  Value *VInt = nullptr;
+  Value *HeadInt = nullptr;
+  if (HeadVal == V) {
+    OffsetVal = Zero;
+  } else {
+    VInt = Builder.CreatePtrToInt(V, IntTy, "v.int");
+    if (auto *I = dyn_cast<Instruction>(VInt)) InsertedInstructions.insert(I);
+    HeadInt = Builder.CreatePtrToInt(HeadVal, IntTy, "head.int");
+    if (auto *I = dyn_cast<Instruction>(HeadInt)) InsertedInstructions.insert(I);
+    OffsetVal = Builder.CreateSub(VInt, HeadInt, "meta.offset");
+    if (auto *I = dyn_cast<Instruction>(OffsetVal)) InsertedInstructions.insert(I);
+  }
+
+  FunctionCallee GetSizeFC = M->getOrInsertFunction(
+      "malloc_usable_size", IntTy, Builder.getPtrTy());
+  if (Function *Fn = dyn_cast<Function>(GetSizeFC.getCallee()->stripPointerCasts())) {
+    Fn->setDoesNotThrow();
+    Fn->setOnlyReadsMemory();
+    Fn->setWillReturn();
+    Fn->setDoesNotFreeMemory();
+    Fn->addFnAttr(Attribute::NoCallback);
+    Fn->addFnAttr(Attribute::NoSync);
+  }
+  Value *ChunkPayloadSize = Builder.CreateCall(GetSizeFC, {HeadVal}, "meta.size");
+  if (auto *I = dyn_cast<Instruction>(ChunkPayloadSize)) InsertedInstructions.insert(I);
+  Value *IsHeap = Builder.CreateICmpNE(ChunkPayloadSize, Zero, "is.heap");
+  if (auto *I = dyn_cast<Instruction>(IsHeap)) InsertedInstructions.insert(I);
+  if (HeadVal != V) {
+    Value *Cond = Builder.CreateICmpUGE(VInt, HeadInt, "ptr.ge.head");
+    if (auto *I = dyn_cast<Instruction>(Cond)) InsertedInstructions.insert(I);
+    ChunkPayloadSize = Builder.CreateSelect(Cond, ChunkPayloadSize, Zero, "chunk.size");
+    if (auto *I = dyn_cast<Instruction>(ChunkPayloadSize)) InsertedInstructions.insert(I);
+  }
+  ChunkPayloadSize = Builder.CreateSelect(IsHeap, ChunkPayloadSize, ConstantInt::getAllOnesValue(IntTy), "meta.size.checked");
+  if (auto *I = dyn_cast<Instruction>(ChunkPayloadSize)) InsertedInstructions.insert(I);
+  if (OffsetVal->getType() != IntTy) {
+    OffsetVal = Builder.CreateZExtOrTrunc(OffsetVal, IntTy);
+    if (auto *I = dyn_cast<Instruction>(OffsetVal)) InsertedInstructions.insert(I);
+  }
+
+  Result = SizeOffsetValue(ChunkPayloadSize, OffsetVal);
+  FallbackCacheMap[V] = SizeOffsetWeakTrackingVH(Result);
+  return true;
 }
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::compute(Value *V) {
@@ -1246,6 +1476,9 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::compute(Value *V) {
   Zero = ConstantInt::get(IntTy, 0);
 
   SizeOffsetValue Result = compute_(V);
+
+  if (!Result.bothKnown())
+    computeFallbackHeapMetadata(V, Result);
 
   if (!Result.bothKnown()) {
     // Erase everything that was computed in this iteration from the cache, so
