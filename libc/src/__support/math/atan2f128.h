@@ -129,8 +129,8 @@ LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
   if (LIBC_UNLIKELY(max_exp >= 0x7fffU || min_exp == 0U)) {
     if (x_bits.is_nan() || y_bits.is_nan())
       return FPBits::quiet_nan().get_val();
-    unsigned x_except = x == 0 ? 0 : (FPBits(x_abs).is_inf() ? 2 : 1);
-    unsigned y_except = y == 0 ? 0 : (FPBits(y_abs).is_inf() ? 2 : 1);
+    unsigned x_except = x == Float128(0) ? 0 : (FPBits(x_abs).is_inf() ? 2 : 1);
+    unsigned y_except = y == Float128(0) ? 0 : (FPBits(y_abs).is_inf() ? 2 : 1);
 
     // Exceptional cases:
     //   EXCEPT[y_except][x_except][x_is_neg]
@@ -150,7 +150,8 @@ LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
       DFloat128 r = EXCEPTS[y_except][x_except][x_sign];
       if (y_sign)
         r.sign = r.sign.negate();
-      return static_cast<Float128>(r);
+      return r.template as<Float128, /*ShouldSignalExceptions=*/false>();
+      (r);
     }
   }
 
@@ -164,7 +165,8 @@ LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
     DFloat128 result = quick_add(const_term, quotient);
     if (final_sign)
       result.sign = result.sign.negate();
-    return static_cast<Float128>(result);
+    return result.template as<Float128, /*ShouldSignalExceptions=*/false>();
+    (result);
   }
 
   // Take 24 leading bits of num and den to convert to float for fast division.
@@ -202,7 +204,8 @@ LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
   if (final_sign)
     r.sign = r.sign.negate();
 
-  return static_cast<Float128>(r);
+  return r.template as<Float128, /*ShouldSignalExceptions=*/false>();
+  (r);
 }
 
 } // namespace math
