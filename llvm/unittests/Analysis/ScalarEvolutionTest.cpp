@@ -2064,4 +2064,86 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
   });
 }
 
+// Counterexample for isKnownPredicateViaMaxValue. Multi-exit loop with an
+// uncomputable early exit: IR `add nuw` gives {0,+,100}<nuw>, but the symbolic
+// max BTC (7, from the constant latch) overshoots where nuw actually holds
+// (i<=2). evaluateAtIteration(7) = 100*7 mod 256 = 188 wraps and
+// under-estimates the true max (k = 200 at reachable i=2), so k u<= 190 must
+// NOT be true.
+TEST_F(ScalarEvolutionsTest, MaxValueMultiExitMustNotWrap) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @cex(ptr %flag) {\n"
+                          "entry:\n"
+                          "  br label %loop\n"
+                          "loop:\n"
+                          "  %j = phi i64 [ 0, %entry ], [ %jinc, %latch ]\n"
+                          "  %k = phi i8  [ 0, %entry ], [ %kinc, %latch ]\n"
+                          "  %f = load i8, ptr %flag\n"
+                          "  %fz = icmp eq i8 %f, 0\n"
+                          "  br i1 %fz, label %latch, label %exit\n"
+                          "latch:\n"
+                          "  %jinc = add nuw i64 %j, 1\n"
+                          "  %kinc = add nuw i8 %k, 100\n"
+                          "  %c = icmp ult i64 %jinc, 8\n"
+                          "  br i1 %c, label %loop, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n",
+                          Err, C);
+  ASSERT_TRUE(M) << "parse failed";
+  runWithSE(*M, "cex", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *K = SE.getSCEV(getInstructionByName(F, "k"));
+    const SCEV *RHS = SE.getConstant(APInt(8, 190));
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_ULE, K, RHS));
+  });
+}
+
+// isKnownPredicateViaMaxValue proves end u<= limit via the nuw AddRec's
+// value at the max iteration (requires bounded trip count and trusted nuw).
+TEST_F(ScalarEvolutionsTest, MaxValueSingleExitAffineFold) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @pos(ptr %p, i64 %n) {\n"
+                          "entry:\n"
+                          "  %nz = icmp ugt i64 %n, 0\n"
+                          "  br i1 %nz, label %check, label %exit\n"
+                          "check:\n"
+                          "  %small = icmp ult i64 %n, 1000000000\n"
+                          "  br i1 %small, label %loop, label %exit\n"
+                          "loop:\n"
+                          "  %i = phi i64 [ 0, %check ], [ %inc, %latch ]\n"
+                          "  %mul = mul nuw i64 %i, 4\n"
+                          "  %end = add nuw i64 %mul, 4\n"
+                          "  %limit = mul nuw i64 %n, 4\n"
+                          "  %ovf = icmp ugt i64 %end, %limit\n"
+                          "  br i1 %ovf, label %pathA, label %pathB\n"
+                          "pathA:\n"
+                          "  br label %latch\n"
+                          "pathB:\n"
+                          "  br label %latch\n"
+                          "latch:\n"
+                          "  %ptr = getelementptr i32, ptr %p, i64 %i\n"
+                          "  store i32 0, ptr %ptr\n"
+                          "  %inc = add nuw nsw i64 %i, 1\n"
+                          "  %c = icmp ult i64 %inc, %n\n"
+                          "  br i1 %c, label %loop, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n",
+                          Err, C);
+  ASSERT_TRUE(M) << "parse failed";
+  runWithSE(*M, "pos", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *End = SE.getSCEV(getInstructionByName(F, "end"));
+    const auto *EndAR = cast<SCEVAddRecExpr>(End);
+    ASSERT_TRUE(EndAR->hasNoUnsignedWrap());
+    Argument *N = &*std::next(F.arg_begin());
+    const SCEV *Limit =
+        SE.getMulExpr(SE.getSCEV(N), SE.getConstant(APInt(64, 4)));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULE, End, Limit));
+  });
+}
+
 }  // end namespace llvm

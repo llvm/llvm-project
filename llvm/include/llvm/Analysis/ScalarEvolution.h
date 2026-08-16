@@ -2264,6 +2264,10 @@ private:
   bool isKnownViaNonRecursiveReasoning(CmpPredicate Pred, SCEVUse LHS,
                                        SCEVUse RHS);
 
+  /// Prove LHS Pred RHS by bounding an unsigned-nowrap affine AddRec LHS by its
+  /// value at the maximum iteration count.
+  bool isKnownPredicateViaMaxValue(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS);
+
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
   /// true.
