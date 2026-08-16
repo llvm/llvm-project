@@ -4717,7 +4717,7 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
         Failed = true;
         break;
       }
-      ConvertedElts.push_back(T::from(IntResult.getExtValue()));
+      ConvertedElts.push_back(T::from(IntResult.getSExtValue()));
     }
 
     if (!Failed) {
