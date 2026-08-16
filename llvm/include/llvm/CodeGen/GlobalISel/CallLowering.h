@@ -316,7 +316,10 @@ public:
 
     /// Do a memory copy of \p MemSize bytes from \p SrcPtr to \p DstPtr. This
     /// is necessary for outgoing stack-passed byval arguments.
-    void
+    ///
+    /// Targets may override this, e.g. to pass tail call arguments through  a
+    /// temporary.
+    virtual void
     copyArgumentMemory(const ArgInfo &Arg, Register DstPtr, Register SrcPtr,
                        const MachinePointerInfo &DstPtrInfo, Align DstAlign,
                        const MachinePointerInfo &SrcPtrInfo, Align SrcAlign,

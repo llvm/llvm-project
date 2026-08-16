@@ -354,25 +354,18 @@ define void @test_bad_call_conv() {
   ret void
 }
 
-; Shouldn't tail call when the caller has byval arguments.
 define void @test_byval(ptr byval(i8) %ptr) {
   ; DARWIN-LABEL: name: test_byval
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[FRAME_INDEX]](p0)
-  ; DARWIN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   BL @simple_fn, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
-  ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   RET_ReallyLR
+  ; DARWIN-NEXT:   TCRETURNdi @simple_fn, 0, csr_darwin_aarch64_aapcs, implicit $sp
   ;
   ; WINDOWS-LABEL: name: test_byval
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[FRAME_INDEX]](p0)
-  ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; WINDOWS-NEXT:   BL @simple_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
-  ; WINDOWS-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; WINDOWS-NEXT:   RET_ReallyLR
+  ; WINDOWS-NEXT:   TCRETURNdi @simple_fn, 0, csr_aarch64_aapcs, implicit $sp
   tail call void @simple_fn()
   ret void
 }
