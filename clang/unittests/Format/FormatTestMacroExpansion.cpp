@@ -301,6 +301,43 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
                Style);
 }
 
+// Short function merging works when the macro expansion is a simple expression.
+TEST_F(FormatTestMacroExpansion, ShortFunctionMergingSimpleMacro) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("EXPR(x)=x");
+  verifyFormat("void f() { EXPR(x); }", Style);
+}
+
+// Short function merging works when the macro expansion contains control flow.
+TEST_F(FormatTestMacroExpansion, ShortFunctionMergingControlFlowMacro) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("IF_ERROR_RETURN(x)=if (x) return x");
+  verifyFormat("void f() { IF_ERROR_RETURN(x); }", Style);
+}
+
+// Short function merging works with multi-statement macros containing
+// control flow.
+TEST_F(FormatTestMacroExpansion, ShortFunctionMergingMultiStmtMacro) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  Style.Macros.push_back("ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+  // 2-arg version has no control flow.
+  verifyFormat("void f() { ASSIGN_OR_RETURN(v, F()); }", Style);
+  // 3-arg version has control flow.
+  verifyFormat("void f() { ASSIGN_OR_RETURN(v, F(), R()); }", Style);
+}
+
+// When the function body is too long to fit on one line, the macro should
+// expand to a properly indented multi-line body (not the `{ code\n}` layout).
+TEST_F(FormatTestMacroExpansion, LongBodyWithMacroDoesNotMerge) {
+  FormatStyle Style = getLLVMStyleWithColumns(40);
+  Style.Macros.push_back("IF_ERROR_RETURN(x)=if (x) return x");
+  verifyFormat("void f() {\n"
+               "  IF_ERROR_RETURN(long_function());\n"
+               "}",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
