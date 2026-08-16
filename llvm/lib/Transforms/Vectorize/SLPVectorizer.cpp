@@ -14429,8 +14429,12 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   // feeding a reduction, which is usually better than the scalar fma chain
   // this check protects. An fsub can only fold an fmul on its left, so stop at
   // operand 0 there as well.
-  bool AllowReassoc =
-      all_of(VL, [](Value *V) { return match(V, m_AllowReassoc(m_Value())); });
+  bool AllowReassoc = all_of(VL, [&](Value *V) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || S.isCopyableElement(I))
+      return true;
+    return match(I, m_AllowReassoc(m_Value()));
+  });
   bool OnlyFirstOperand = AllowReassoc || S.getOpcode() == Instruction::FSub;
   unsigned NumCandidateOps =
       OnlyFirstOperand ? 1
