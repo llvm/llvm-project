@@ -14389,11 +14389,13 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   // this check protects. An fsub can only fold an fmul on its left, so stop at
   // operand 0 there as well.
   bool AllowReassoc =
-      any_of(VL, [](Value *V) { return match(V, m_AllowReassoc(m_Value())); });
+      all_of(VL, [](Value *V) { return match(V, m_AllowReassoc(m_Value())); });
   bool OnlyFirstOperand = AllowReassoc || S.getOpcode() == Instruction::FSub;
+  unsigned NumCandidateOps =
+      OnlyFirstOperand ? 1
+                       : getNumberOfPotentiallyCommutativeOps(S.getMainOp());
   auto GetFMulOperandIdx = [&]() -> std::optional<unsigned> {
-    for (unsigned Idx :
-         seq<unsigned>(0, OnlyFirstOperand ? 1 : Operands.size())) {
+    for (unsigned Idx : seq<unsigned>(0, NumCandidateOps)) {
       InstructionsState CandS = getSameOpcode(Operands[Idx], TLI);
       if (!CandS.valid() || CandS.isAltShuffle() ||
           CandS.getOpcode() != Instruction::FMul)
