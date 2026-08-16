@@ -146,6 +146,30 @@ LogicalResult StoreOp::verify() {
   auto tile = dyn_cast<TileType>(getValue().getType());
   if (!tile)
     return emitOpError("store value must be a !tr.tile");
+  // Rank-0 tiles are scalars. They store into a rank-1 buffer at one
+  // index (one slot per program instance, or the single full-sum slot).
+  if (tile.getRank() == 0) {
+    int64_t rank = -1;
+    Type elem;
+    if (auto buffer = dyn_cast<BufferType>(getBuffer().getType())) {
+      rank = buffer.getRank();
+      elem = buffer.getElementType();
+    } else if (auto memref = dyn_cast<MemRefType>(getBuffer().getType())) {
+      rank = memref.getRank();
+      elem = memref.getElementType();
+    } else {
+      return emitOpError("expected !tr.buffer or memref, got ")
+             << getBuffer().getType();
+    }
+    if (rank != 1 || getIndices().size() != 1)
+      return emitOpError("scalar tile store expects one index into a rank-1 "
+                         "buffer");
+    if (tile.getElementType() != elem)
+      return emitOpError("tile element type ")
+             << tile.getElementType() << " does not match buffer element type "
+             << elem;
+    return success();
+  }
   return verifyTileCoords(*this, getBuffer().getType(), getIndices(), tile,
                           "store");
 }
