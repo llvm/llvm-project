@@ -521,8 +521,14 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   // -finit-local= and -finit-local-zero: last occurrence on the command
-  // line wins. Use getPosition() to determine which came last.
-  if (initLocalMode.getNumOccurrences() > 0) {
+  // line wins. Determine the winner by position before validating so that
+  // sequences like "-finit-local=bogus -finit-local-zero" accept zero
+  // rather than failing on the overridden invalid value.
+  bool zeroWins = initLocalZero &&
+                  initLocalZero.getPosition() > initLocalMode.getPosition();
+  if (zeroWins) {
+    loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+  } else if (initLocalMode.getNumOccurrences() > 0) {
     llvm::StringRef val = initLocalMode;
     if (val.empty()) {
       llvm::errs() << "bbc: invalid -finit-local= value: (empty)\n";
@@ -548,11 +554,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
       return mlir::failure();
     }
   }
-  // If -finit-local-zero appears after -finit-local= on the command line,
-  // it overrides; otherwise -finit-local= already set the mode above.
-  if (initLocalZero &&
-      initLocalZero.getPosition() > initLocalMode.getPosition())
-    loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
   loweringOptions.setReallocateLHS(reallocateLHS);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);
