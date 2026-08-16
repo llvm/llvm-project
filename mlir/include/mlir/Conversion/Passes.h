@@ -62,6 +62,7 @@
 #include "mlir/Conversion/OpenACCToSCF/ConvertOpenACCToSCF.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
+#include "mlir/Conversion/PtrToSPIRV/PtrToSPIRV.h"
 #include "mlir/Conversion/RaiseWasm/RaiseWasmMLIR.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToAffine/SCFToAffine.h"
