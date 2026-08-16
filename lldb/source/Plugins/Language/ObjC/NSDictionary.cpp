@@ -11,6 +11,7 @@
 #include "clang/AST/DeclCXX.h"
 
 #include "CFBasicHash.h"
+#include "GNUstepFormatters.h"
 #include "NSDictionary.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
@@ -65,7 +66,7 @@ NSDictionary_Additionals::GetAdditionalSynthetics() {
   return g_map;
 }
 
-static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
+CompilerType lldb_private::formatters::GetLLDBNSPairType(TargetSP target_sp) {
   CompilerType compiler_type;
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*target_sp);
@@ -397,6 +398,10 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
 
   if (!runtime)
     return false;
+  // gnustep-base lays its classes out differently and names them
+  // differently; hand those over.
+  if (llvm::isa<GNUstepObjCRuntime>(runtime))
+    return GNUstepNSDictionarySummaryProvider(valobj, stream, options);
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
       runtime->GetNonKVOClassDescriptor(valobj));
@@ -506,8 +511,11 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
     return nullptr;
-  AppleObjCRuntime *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
-      ObjCLanguageRuntime::Get(*process_sp));
+  ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process_sp);
+  if (llvm::isa_and_nonnull<GNUstepObjCRuntime>(objc_runtime))
+    return GNUstepNSDictionarySyntheticFrontEndCreator(synth, valobj_sp);
+  AppleObjCRuntime *runtime =
+      llvm::dyn_cast_or_null<AppleObjCRuntime>(objc_runtime);
   if (!runtime)
     return nullptr;
 

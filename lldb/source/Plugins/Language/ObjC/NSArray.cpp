@@ -10,6 +10,7 @@
 #include "clang/Basic/TargetInfo.h"
 
 #include "Cocoa.h"
+#include "GNUstepFormatters.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -334,6 +335,10 @@ bool lldb_private::formatters::NSArraySummaryProvider(
 
   if (!runtime)
     return false;
+  // gnustep-base lays its classes out differently and names them
+  // differently; hand those over.
+  if (llvm::isa<GNUstepObjCRuntime>(runtime))
+    return GNUstepNSArraySummaryProvider(valobj, stream, options);
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
       runtime->GetClassDescriptor(valobj));
@@ -752,8 +757,11 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
     return nullptr;
-  AppleObjCRuntime *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
-      ObjCLanguageRuntime::Get(*process_sp));
+  ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process_sp);
+  if (llvm::isa_and_nonnull<GNUstepObjCRuntime>(objc_runtime))
+    return GNUstepNSArraySyntheticFrontEndCreator(synth, valobj_sp);
+  AppleObjCRuntime *runtime =
+      llvm::dyn_cast_or_null<AppleObjCRuntime>(objc_runtime);
   if (!runtime)
     return nullptr;
 

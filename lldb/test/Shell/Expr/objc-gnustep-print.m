@@ -114,6 +114,26 @@ const char *_NSPrintForDebugger(id object) {
   return object_getClassName(object);
 }
 
+// A selector's name cannot be read from memory: __objc_load overwrites the
+// name field with a dispatch index, so the only source is the symbol clang
+// emits for it. Without a GNUstep-aware summary, Apple's SEL provider prints
+// that index as a few garbage bytes in every Objective-C frame line.
+//
+// RUN: %lldb -b -o "b objc-gnustep-print.m:42" -o "run" -o "frame variable _cmd" \
+// RUN:     -o "p _cmd" -o "expr -- (SEL *)&_cmd" -- %t | FileCheck %s --check-prefix=SEL
+//
+// SEL: (lldb) run
+// SEL: -[TestObj check_ivars_zeroed](self={{.*}}, _cmd="check_ivars_zeroed") at objc-gnustep-print.m
+//
+// SEL: (lldb) frame variable _cmd
+// SEL: (SEL) _cmd = 0x{{[0-9a-f]+}} "check_ivars_zeroed"
+//
+// SEL: (lldb) p _cmd
+// SEL: (SEL) 0x{{[0-9a-f]+}} "check_ivars_zeroed"
+//
+// SEL: (lldb) expr -- (SEL *)&_cmd
+// SEL: (SEL *) $0 = 0x{{[0-9a-f]+}} "check_ivars_zeroed"
+
 // RUN: %lldb -b -o "b objc-gnustep-print.m:105" -o "run" -o "po t" \
 // RUN:     -- %t | FileCheck %s --check-prefix=PO
 //

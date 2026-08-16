@@ -11,6 +11,7 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -35,6 +36,11 @@ NSDictionarySummaryProvider<false>(ValueObject &, Stream &,
 SyntheticChildrenFrontEnd *
 NSDictionarySyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP);
+
+/// The `struct { id key; id value; }` type used to present dictionary
+/// entries as children. Shared with the GNUstep dictionary frontend so both
+/// runtimes present entries identically.
+CompilerType GetLLDBNSPairType(lldb::TargetSP target_sp);
 
 class NSDictionary_Additionals {
 public:

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Cocoa.h"
+#include "GNUstepFormatters.h"
 #include "NSString.h"
 #include "ObjCConstants.h"
 
@@ -445,6 +446,10 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
 
   if (!runtime)
     return false;
+  // gnustep-base lays its classes out differently and names them
+  // differently; hand those over.
+  if (llvm::isa<GNUstepObjCRuntime>(runtime))
+    return GNUstepNSNumberSummaryProvider(valobj, stream, options);
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
       runtime->GetClassDescriptor(valobj));
@@ -910,6 +915,10 @@ bool lldb_private::formatters::NSDateSummaryProvider(
 
   if (!runtime)
     return false;
+  // gnustep-base lays its classes out differently and names them
+  // differently; hand those over.
+  if (llvm::isa<GNUstepObjCRuntime>(runtime))
+    return GNUstepNSDateSummaryProvider(valobj, stream, options);
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
       runtime->GetClassDescriptor(valobj));
@@ -1072,6 +1081,10 @@ bool lldb_private::formatters::NSDataSummaryProvider(
 
   if (!runtime)
     return false;
+  // gnustep-base lays its classes out differently and names them
+  // differently; hand those over.
+  if (llvm::isa<GNUstepObjCRuntime>(runtime))
+    return GNUstepNSDataSummaryProvider(valobj, stream, options);
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
       runtime->GetClassDescriptor(valobj));
