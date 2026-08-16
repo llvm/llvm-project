@@ -62,3 +62,9 @@ payload ops produce a silenceable diagnostic.
 `programId * 128`, `programId * 128 + localRow`, and
 `kt * 128 + lane + j * 32`. A product of two SSA values stays `arith.muli`.
 `affine.for` is used for constant-bound local-row walks, not for Linalg.
+
+## Milestone 15
+
+`--tr-lower-affine` applies upstream `populateAffineToStdConversionPatterns`:
+`affine.for` becomes `scf.for`, `affine.apply` becomes `arith.muli` /
+`arith.addi` on `index`.
