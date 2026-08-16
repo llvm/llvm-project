@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 namespace mlir {
 namespace affine {
@@ -109,25 +110,37 @@ static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
 
   // Check operands.
   ValueRange iterArgs = loop.getRegionIterArgs();
-  for (unsigned int i = 0; i < op.getNumOperands(); ++i) {
-    auto *operandSrc = op.getOperand(i).getDefiningOp();
-
+  auto isLoopVariantValue = [&](Value value) {
     // If the loop IV is the operand, this op isn't loop invariant.
-    if (iv == op.getOperand(i))
-      return false;
+    if (iv == value)
+      return true;
 
     // If the one of the iter_args is the operand, this op isn't loop invariant.
-    if (llvm::is_contained(iterArgs, op.getOperand(i)))
-      return false;
+    if (llvm::is_contained(iterArgs, value))
+      return true;
 
-    if (operandSrc) {
-      // If the value was defined in the loop (outside of the if/else region),
-      // and that operation itself wasn't meant to be hoisted, then mark this
-      // operation loop dependent.
-      if (opsWithUsers.count(operandSrc) && opsToHoist.count(operandSrc) == 0)
-        return false;
-    }
-  }
+    // If the value was defined in the loop (outside of the if/else region),
+    // and that operation itself wasn't meant to be hoisted, then mark this
+    // operation loop dependent.
+    Operation *operandSrc = value.getDefiningOp();
+    return operandSrc && opsWithUsers.count(operandSrc) &&
+           opsToHoist.count(operandSrc) == 0;
+  };
+
+  if (llvm::any_of(op.getOperands(), isLoopVariantValue))
+    return false;
+
+  // Check the values the op's regions read from around them. The regions travel
+  // with the op, so a value they capture from inside the loop pins the op in
+  // place just as an operand does. Only the region-carrying ops handled above
+  // have their bodies walked, and even there the walk inspects the nested ops
+  // rather than what they capture.
+  bool capturesLoopVariantValue = false;
+  visitUsedValuesDefinedAbove(op.getRegions(), [&](OpOperand *operand) {
+    capturesLoopVariantValue |= isLoopVariantValue(operand->get());
+  });
+  if (capturesLoopVariantValue)
+    return false;
 
   // If no operand was loop variant, mark this op for motion.
   opsToHoist.insert(&op);
