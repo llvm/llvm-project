@@ -6049,6 +6049,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     }
   }
 
+  if (auto *RD = dyn_cast<CXXRecordDecl>(Function->getDeclContext())) {
+    for (auto *COMI : RD->specific_attrs<CompleteOnMemberInstAttr>()) {
+      if (RequireCompleteType(PointOfInstantiation, COMI->getCompleteType(),
+                              diag::err_incomplete_type_on_member_inst))
+        return;
+    }
+  }
+
   NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Function);
   if (Inst.isInvalid())

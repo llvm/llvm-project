@@ -5532,3 +5532,12 @@ def Personality : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [PersonalityDocs];
 }
+
+def CompleteOnMemberInst : InheritableAttr {
+  let Spellings = [Clang<"complete_on_member_instantiation">];
+  let Args = [TypeArgument<"CompleteType">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [CompleteOnMemberInstDocs];
+  let InheritEvenIfAlreadyPresent = 1;
+  let TemplateDependent = 1;
+}

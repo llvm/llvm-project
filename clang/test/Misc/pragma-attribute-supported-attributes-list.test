@@ -57,6 +57,7 @@
 // CHECK-NEXT: CmseNSEntry (SubjectMatchRule_function)
 // CHECK-NEXT: Cold (SubjectMatchRule_function)
 // CHECK-NEXT: Common (SubjectMatchRule_variable)
+// CHECK-NEXT: CompleteOnMemberInst (SubjectMatchRule_record)
 // CHECK-NEXT: Const (SubjectMatchRule_function)
 // CHECK-NEXT: ConstInit (SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: Constructor (SubjectMatchRule_function)

@@ -2195,6 +2195,9 @@ def ext_out_of_line_qualified_id_type_names_constructor : ExtWarn<
   "%select{'typename'|'template'}2 keyword">, SFINAEFailure,
   InGroup<DiagGroup<"injected-class-name">>;
 
+def err_incomplete_type_on_member_inst : Error<
+  "%0 has to be complete when calling a member function">;
+
 // C++ class members
 def err_storageclass_invalid_for_member : Error<
   "storage class specified for a member declaration">;

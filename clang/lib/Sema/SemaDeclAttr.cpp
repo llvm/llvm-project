@@ -2073,6 +2073,18 @@ static void handleCommonAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) CommonAttr(S.Context, AL));
 }
 
+static void handleCompleteOnMemberInstAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!AL.hasParsedType()) {
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  TypeSourceInfo *ParmTSI = nullptr;
+  S.GetTypeFromParser(AL.getTypeArg(), &ParmTSI);
+  assert(ParmTSI && "no type source info for attribute argument");
+  D->addAttr(CompleteOnMemberInstAttr::Create(S.Context, ParmTSI, AL));
+}
+
 static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.isDeclspecAttribute()) {
     const auto &Triple = S.getASTContext().getTargetInfo().getTriple();
@@ -7802,6 +7814,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Common:
     handleCommonAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CompleteOnMemberInst:
+    handleCompleteOnMemberInstAttr(S, D, AL);
     break;
   case ParsedAttr::AT_CUDAConstant:
     handleConstantAttr(S, D, AL);

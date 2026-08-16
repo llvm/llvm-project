@@ -10670,3 +10670,25 @@ void example2() {
 ```
   }];
 }
+
+def CompleteOnMemberInstDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``complete_on_member_instantiation`` attribute can be applied to classes
+which require a type to be complete whenever a member function is called.
+Incomplete types are diagnosed at the point of the member function call.
+
+.. code-block:: c++
+
+  template <class T>
+  class [[clang::complete_on_member_instantiation(T)]] vector {
+    T* begin();
+  };
+
+  struct incomplete;
+
+  void example(vector<incomplete>& v) {
+    v.begin(); // this is guaranteed to produce an error
+  }
+  }];
+}
