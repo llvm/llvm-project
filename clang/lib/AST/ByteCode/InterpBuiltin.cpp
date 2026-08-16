@@ -4701,7 +4701,6 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
   unsigned BitWidth = S.getASTContext().getIntWidth(ElemType);
   bool IsUnsigned = ElemType->isUnsignedIntegerType();
 
-  bool Failed = false;
   PrimType ElemT = *S.getContext().classify(ElemType);
   INT_TYPE_SWITCH_NO_BOOL(ElemT, {
     llvm::SmallVector<T> ConvertedElts;
@@ -4713,21 +4712,14 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
       bool IsExact = false;
       FloatElem.getAPFloat().convertToInteger(
           IntResult, llvm::APFloat::rmTowardZero, &IsExact);
-      if (!IsExact) {
-        Failed = true;
-        break;
-      }
+      if (!IsExact)
+        return false;
       ConvertedElts.push_back(T::from(IntResult.getZExtValue()));
     }
 
-    if (!Failed) {
-      for (unsigned I = 0; I != NumDstElems; ++I)
-        Dst.elem<T>(I) = I < NumSrcElems ? ConvertedElts[I] : T::from(0);
-    }
+    for (unsigned I = 0; I != NumDstElems; ++I)
+      Dst.elem<T>(I) = I < NumSrcElems ? ConvertedElts[I] : T::from(0);
   });
-
-  if (Failed)
-    return false;
 
   Dst.initializeAllElements();
   return true;
