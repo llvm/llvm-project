@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file \
 // RUN:   -test-xegpu-coalesce-gather-scatter="analyze-only=true" %s | FileCheck %s
 
-// Contiguity analysis: stamps the `contiguity` attribute on gather/scatter ops
+// Contiguity analysis: stamps the `chunk_size` attribute on gather/scatter ops
 // whose offsets are contiguous (runs of >= 2) along the innermost dimension.
 // The stamped value is the inner-dim contiguity, rounded down to a divisor of
 // the inner extent. The analysis is target-independent and mask-independent;
@@ -11,7 +11,7 @@
 // 1-D vector.step -> stride-1, fully contiguous over the 32-element inner dim.
 // CHECK-LABEL: func.func @load_step_offsets(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 32 : i64}>
+// CHECK-SAME: <{chunk_size = 32 : i64}>
 // CHECK-SAME: : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
 func.func @load_step_offsets(%ptr: i64) -> vector<32xf32> {
   %offsets = vector.step : vector<32xindex>
@@ -25,7 +25,7 @@ func.func @load_step_offsets(%ptr: i64) -> vector<32xf32> {
 // Dense stride-1 constant offsets -> contiguity 32.
 // CHECK-LABEL: func.func @load_dense_ap_offsets(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 32 : i64}>
+// CHECK-SAME: <{chunk_size = 32 : i64}>
 func.func @load_dense_ap_offsets(%ptr: i64) -> vector<32xi32> {
   %offsets = arith.constant dense<[
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
@@ -41,7 +41,7 @@ func.func @load_dense_ap_offsets(%ptr: i64) -> vector<32xi32> {
 // Stride-4 offsets: not contiguous, no attribute stamped.
 // CHECK-LABEL: func.func @load_stride4_no_attr(
 // CHECK: xegpu.load
-// CHECK-NOT: contiguity
+// CHECK-NOT: chunk_size
 // CHECK-SAME: : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
 func.func @load_stride4_no_attr(%ptr: i64) -> vector<32xf32> {
   %c4 = arith.constant 4 : index
@@ -58,7 +58,7 @@ func.func @load_stride4_no_attr(%ptr: i64) -> vector<32xf32> {
 // All-equal offsets: inner dim is constant, not contiguous -> no attribute.
 // CHECK-LABEL: func.func @load_broadcast_offsets_no_attr(
 // CHECK: xegpu.load
-// CHECK-NOT: contiguity
+// CHECK-NOT: chunk_size
 func.func @load_broadcast_offsets_no_attr(%ptr: i64) -> vector<32xf32> {
   %offsets = arith.constant dense<0> : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
@@ -72,7 +72,7 @@ func.func @load_broadcast_offsets_no_attr(%ptr: i64) -> vector<32xf32> {
 // (the mask check is a consumer concern).
 // CHECK-LABEL: func.func @load_partial_mask(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 32 : i64}>
+// CHECK-SAME: <{chunk_size = 32 : i64}>
 func.func @load_partial_mask(%ptr: i64, %mask: vector<32xi1>) -> vector<32xf32> {
   %offsets = vector.step : vector<32xindex>
   %v = xegpu.load %ptr[%offsets], %mask
@@ -84,7 +84,7 @@ func.func @load_partial_mask(%ptr: i64, %mask: vector<32xi1>) -> vector<32xf32> 
 // Store with vector.step offsets -> contiguity 32 on the store.
 // CHECK-LABEL: func.func @store_step_offsets(
 // CHECK: xegpu.store
-// CHECK-SAME: <{contiguity = 32 : i64}>
+// CHECK-SAME: <{chunk_size = 32 : i64}>
 func.func @store_step_offsets(%ptr: i64, %v: vector<32xf32>) {
   %offsets = vector.step : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
@@ -97,7 +97,7 @@ func.func @store_step_offsets(%ptr: i64, %v: vector<32xf32>) {
 // 2-D leading-unit dim: contiguity measured on the inner dim -> 32.
 // CHECK-LABEL: func.func @load_2d_leading_unit(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 32 : i64}>
+// CHECK-SAME: <{chunk_size = 32 : i64}>
 func.func @load_2d_leading_unit(%ptr: i64) -> vector<1x32xf32> {
   %step = vector.step : vector<32xindex>
   %offsets = vector.shape_cast %step : vector<32xindex> to vector<1x32xindex>
@@ -111,7 +111,7 @@ func.func @load_2d_leading_unit(%ptr: i64) -> vector<1x32xf32> {
 // True 2-D dense AP: each row stride-1 over 16 -> contiguity 16.
 // CHECK-LABEL: func.func @load_2d_dense_ap(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 16 : i64}>
+// CHECK-SAME: <{chunk_size = 16 : i64}>
 func.func @load_2d_dense_ap(%ptr: i64) -> vector<2x16xf32> {
   %offsets = arith.constant dense<[
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
@@ -127,7 +127,7 @@ func.func @load_2d_dense_ap(%ptr: i64) -> vector<2x16xf32> {
 // 2-D dense values whose inner row is not a stride-1 AP: no attribute.
 // CHECK-LABEL: func.func @load_2d_non_ap(
 // CHECK: xegpu.load
-// CHECK-NOT: contiguity
+// CHECK-NOT: chunk_size
 func.func @load_2d_non_ap(%ptr: i64) -> vector<2x16xf32> {
   %offsets = arith.constant dense<[
     [0, 1, 2, 3, 4, 5, 6, 7, 100, 9, 10, 11, 12, 13, 14, 15],
@@ -146,7 +146,7 @@ func.func @load_2d_non_ap(%ptr: i64) -> vector<2x16xf32> {
 // exercised even if the solver later folds all-constant arith ops.
 // CHECK-LABEL: func.func @load_divui_recovers(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 32 : i64}>
+// CHECK-SAME: <{chunk_size = 32 : i64}>
 func.func @load_divui_recovers(%ptr: i64) -> vector<32xf32> {
   %step = vector.step : vector<32xindex>
   %c2 = arith.constant dense<2> : vector<32xindex>
@@ -162,7 +162,7 @@ func.func @load_divui_recovers(%ptr: i64) -> vector<32xf32> {
 // `divui` by a constant that does not divide the inner stride: not recovered.
 // CHECK-LABEL: func.func @load_divui_non_divisor(
 // CHECK: xegpu.load
-// CHECK-NOT: contiguity
+// CHECK-NOT: chunk_size
 func.func @load_divui_non_divisor(%ptr: i64) -> vector<16xf32> {
   %step = vector.step : vector<16xindex>
   %c2 = arith.constant dense<2> : vector<16xindex>
@@ -180,7 +180,7 @@ func.func @load_divui_non_divisor(%ptr: i64) -> vector<16xf32> {
 // not contiguous -> no attribute.
 // CHECK-LABEL: func.func @load_remui_inner_uniform(
 // CHECK: xegpu.load
-// CHECK-NOT: contiguity
+// CHECK-NOT: chunk_size
 func.func @load_remui_inner_uniform(%ptr: i64) -> vector<16xf32> {
   %step = vector.step : vector<16xindex>
   %c2 = arith.constant dense<2> : vector<16xindex>
@@ -196,7 +196,7 @@ func.func @load_remui_inner_uniform(%ptr: i64) -> vector<16xf32> {
 // `shli` then `shrui` cancel: (step << 1) >> 1 -> stride 1 -> contiguity 32.
 // CHECK-LABEL: func.func @load_shli_then_shrui(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 32 : i64}>
+// CHECK-SAME: <{chunk_size = 32 : i64}>
 func.func @load_shli_then_shrui(%ptr: i64) -> vector<32xf32> {
   %step = vector.step : vector<32xindex>
   %k = arith.constant dense<1> : vector<32xindex>
@@ -212,7 +212,7 @@ func.func @load_shli_then_shrui(%ptr: i64) -> vector<32xf32> {
 // `shli` alone scales the stride to 2: not contiguous -> no attribute.
 // CHECK-LABEL: func.func @load_shli_unchanged(
 // CHECK: xegpu.load
-// CHECK-NOT: contiguity
+// CHECK-NOT: chunk_size
 func.func @load_shli_unchanged(%ptr: i64) -> vector<32xf32> {
   %step = vector.step : vector<32xindex>
   %k = arith.constant dense<1> : vector<32xindex>
@@ -228,7 +228,7 @@ func.func @load_shli_unchanged(%ptr: i64) -> vector<32xf32> {
 // contiguity 32.
 // CHECK-LABEL: func.func @load_select_two_aps(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 32 : i64}>
+// CHECK-SAME: <{chunk_size = 32 : i64}>
 func.func @load_select_two_aps(%ptr: i64, %cond: i1) -> vector<32xf32> {
   %step = vector.step : vector<32xindex>
   %a = arith.constant dense<0>  : vector<32xindex>
@@ -243,14 +243,14 @@ func.func @load_select_two_aps(%ptr: i64, %cond: i1) -> vector<32xf32> {
 }
 
 // -----
-// A pre-existing `contiguity` takes precedence: the analysis leaves it alone.
+// A pre-existing `chunk_size` takes precedence: the analysis leaves it alone.
 // CHECK-LABEL: func.func @user_attr_preserved(
 // CHECK: xegpu.load
-// CHECK-SAME: <{contiguity = 2 : i64}>
+// CHECK-SAME: <{chunk_size = 2 : i64}>
 func.func @user_attr_preserved(%ptr: i64) -> vector<32xf32> {
   %offsets = vector.step : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{contiguity = 2 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 2 : i64}>
       : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
   return %v : vector<32xf32>
 }

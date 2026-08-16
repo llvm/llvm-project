@@ -99,7 +99,7 @@ gpu.module @kernel_chunk4 [#xevm.target<chip = "pvc">] {
 // CHECK-LABEL: func.func @load_no_target_unchanged(
 // CHECK: xegpu.load
 // CHECK-NOT: lane_data
-// CHECK-NOT: contiguity
+// CHECK-NOT: chunk_size
 // CHECK-SAME: : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
 func.func @load_no_target_unchanged(%ptr: i64) -> vector<32xf32> {
   %offsets = vector.step : vector<32xindex>

@@ -62,6 +62,35 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
 }
 
+// Returns the payload chunk size: the number of contiguous elements a single
+// lane (work item) loads/stores. It is not stored as an attribute; it is
+// derived from the value and mask types. The mask has one element per lane, so
+// the chunk size is simply the number of value elements per mask element:
+//
+//     chunkSize = valueElements / maskElements   (scalar value/mask == 1)
+//
+// Examples (value type, mask type -> chunk):
+//   - f32,             i1             -> 1  (one lane, one element)
+//   - vector<16xf32>,  vector<16xi1>  -> 1  (16 lanes, 1 element each)
+//   - vector<8xf32>,   i1             -> 8  (one lane, 8-element chunk)
+//   - vector<16x8xf32>, vector<16xi1> -> 8  (16 lanes, 8-element chunk)
+//
+// Keep this in sync with xegpu::getGatherScatterPayloadChunk in XeGPUUtils;
+// this is a file-local copy because the IR library cannot depend on Utils.
+static int64_t inferGatherScatterChunkSize(VectorType valueTy, Type maskTy) {
+  if (!valueTy)
+    return 1;
+  auto maskVecTy = dyn_cast<VectorType>(maskTy);
+  int64_t maskSize = maskVecTy ? maskVecTy.getNumElements() : 1;
+  int64_t valueSize = valueTy.getNumElements();
+  if (valueTy.getRank() >= 2)
+    return maskSize == valueSize ? 1 : valueTy.getShape().back();
+  // 1D value: a size-1 (or scalar) mask denotes a single work item performing a
+  // chunked load/store, so the whole vector is the chunk; a wider mask denotes
+  // one element per lane (chunk size 1).
+  return maskSize == 1 ? valueSize : 1;
+}
+
 static LogicalResult
 isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
                                  VectorType valueTy, int64_t chunkSize,
@@ -114,23 +143,23 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
   return success();
 }
 
-// Validates the `contiguity` attribute against the op's offsets type: the
+// Validates the `chunk_size` attribute against the op's offsets type: the
 // innermost offsets dimension is contiguous in runs of `size`, so `size` must
 // be >= 2 and must divide that dimension.
 static LogicalResult
-isValidContiguity(std::optional<uint64_t> contiguity, Type offsetsTy,
-                  function_ref<InFlightDiagnostic()> emitError) {
-  if (!contiguity)
+isValidChunkSize(std::optional<uint64_t> chunkSize, Type offsetsTy,
+                 function_ref<InFlightDiagnostic()> emitError) {
+  if (!chunkSize)
     return success();
   auto offsetsVecTy = dyn_cast<VectorType>(offsetsTy);
   if (!offsetsVecTy)
-    return emitError() << "contiguity requires vector offsets (one per lane).";
-  int64_t size = static_cast<int64_t>(*contiguity);
+    return emitError() << "chunk_size requires vector offsets (one per lane).";
+  int64_t size = static_cast<int64_t>(*chunkSize);
   int64_t inner = offsetsVecTy.getShape().back();
   if (size < 2)
-    return emitError() << "contiguity = " << size << " (must be >= 2)";
+    return emitError() << "chunk_size = " << size << " (must be >= 2)";
   if (inner % size != 0)
-    return emitError() << "contiguity = " << size
+    return emitError() << "chunk_size = " << size
                        << " (must divide the innermost offsets dim " << inner
                        << ")";
   return success();
@@ -603,7 +632,7 @@ LogicalResult LoadGatherOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto srcTy = getSourceType();
-  uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
+  int64_t chunkSize = inferGatherScatterChunkSize(valueTy, maskTy);
   auto memTy = dyn_cast<MemRefType>(srcTy);
 
   if (memTy && (getElementType() != memTy.getElementType()))
@@ -615,8 +644,8 @@ LogicalResult LoadGatherOp::verify() {
   }
 
   auto offsetsTy = getOffsets().getType();
-  if (failed(isValidContiguity(getContiguity(), offsetsTy,
-                               [&]() { return emitOpError(); })))
+  if (failed(isValidChunkSize(getChunkSize(), offsetsTy,
+                              [&]() { return emitOpError(); })))
     return failure();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
@@ -625,7 +654,7 @@ LogicalResult LoadGatherOp::verify() {
 void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
                          Type valueType, Value source,
                          ArrayRef<OpFoldResult> offsets, Value mask,
-                         IntegerAttr chunk_size, xegpu::CachePolicyAttr l1_hint,
+                         xegpu::CachePolicyAttr l1_hint,
                          xegpu::CachePolicyAttr l2_hint,
                          xegpu::CachePolicyAttr l3_hint) {
   auto loc = source.getLoc();
@@ -634,15 +663,14 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
   auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
   auto offset = vector::FromElementsOp::create(builder, loc, type, values);
 
-  build(builder, state, valueType, source, offset, mask, chunk_size, l1_hint,
-        l2_hint, l3_hint, /*anchor_layout=*/nullptr,
-        /*contiguity=*/nullptr);
+  build(builder, state, valueType, source, offset, mask, l1_hint, l2_hint,
+        l3_hint, /*anchor_layout=*/nullptr, /*chunk_size=*/nullptr);
 }
 
 void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
                          Type valueType, Value source,
                          ArrayRef<OpFoldResult> offsets, Value mask,
-                         IntegerAttr chunk_size, xegpu::CachePolicyAttr l1_hint,
+                         xegpu::CachePolicyAttr l1_hint,
                          xegpu::CachePolicyAttr l2_hint,
                          xegpu::CachePolicyAttr l3_hint,
                          DistributeLayoutAttr layout) {
@@ -652,8 +680,8 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
   auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
   auto offset = vector::FromElementsOp::create(builder, loc, type, values);
 
-  build(builder, state, valueType, source, offset, mask, chunk_size, l1_hint,
-        l2_hint, l3_hint, layout, /*contiguity=*/nullptr);
+  build(builder, state, valueType, source, offset, mask, l1_hint, l2_hint,
+        l3_hint, layout, /*chunk_size=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -673,7 +701,7 @@ LogicalResult StoreScatterOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto destTy = getDestType();
-  uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
+  int64_t chunkSize = inferGatherScatterChunkSize(valueTy, maskTy);
   auto memTy = dyn_cast<MemRefType>(destTy);
 
   if (memTy && (getElementType() != memTy.getElementType()))
@@ -685,8 +713,8 @@ LogicalResult StoreScatterOp::verify() {
   }
 
   auto offsetsTy = getOffsets().getType();
-  if (failed(isValidContiguity(getContiguity(), offsetsTy,
-                               [&]() { return emitOpError(); })))
+  if (failed(isValidChunkSize(getChunkSize(), offsetsTy,
+                              [&]() { return emitOpError(); })))
     return failure();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
@@ -695,7 +723,6 @@ LogicalResult StoreScatterOp::verify() {
 void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
                            Value value, Value dest,
                            ArrayRef<OpFoldResult> offsets, Value mask,
-                           IntegerAttr chunk_size,
                            xegpu::CachePolicyAttr l1_hint,
                            xegpu::CachePolicyAttr l2_hint,
                            xegpu::CachePolicyAttr l3_hint) {
@@ -706,15 +733,17 @@ void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
   auto offset = vector::FromElementsOp::create(builder, loc, type, values);
 
   // Call the correct builder overload that does not expect result types.
-  build(builder, state, value, dest, offset, mask, chunk_size, l1_hint, l2_hint,
-        l3_hint, /*anchor_layout=*/nullptr, /*contiguity=*/nullptr);
+  build(builder, state, value, dest, offset, mask, l1_hint, l2_hint, l3_hint,
+        /*anchor_layout=*/nullptr, /*chunk_size=*/nullptr);
 }
 
-void StoreScatterOp::build(
-    OpBuilder &builder, OperationState &state, Value value, Value dest,
-    ArrayRef<OpFoldResult> offsets, Value mask, IntegerAttr chunk_size,
-    xegpu::CachePolicyAttr l1_hint, xegpu::CachePolicyAttr l2_hint,
-    xegpu::CachePolicyAttr l3_hint, DistributeLayoutAttr layout) {
+void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
+                           Value value, Value dest,
+                           ArrayRef<OpFoldResult> offsets, Value mask,
+                           xegpu::CachePolicyAttr l1_hint,
+                           xegpu::CachePolicyAttr l2_hint,
+                           xegpu::CachePolicyAttr l3_hint,
+                           DistributeLayoutAttr layout) {
   auto loc = dest.getLoc();
   int64_t size = static_cast<int64_t>(offsets.size());
   auto type = VectorType::get(size, builder.getIndexType());
@@ -722,8 +751,8 @@ void StoreScatterOp::build(
   auto offset = vector::FromElementsOp::create(builder, loc, type, values);
 
   // Call the correct builder overload that does not expect result types.
-  build(builder, state, value, dest, offset, mask, chunk_size, l1_hint, l2_hint,
-        l3_hint, layout, /*contiguity=*/nullptr);
+  build(builder, state, value, dest, offset, mask, l1_hint, l2_hint, l3_hint,
+        layout, /*chunk_size=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//

@@ -128,7 +128,7 @@ gpu.module @test {
 //-----
   // CHECK-LABEL: load_with_offsets
   // CHECK-SAME: [[arg0:%.+]]: ui64
-  // CHECK-COUNT-2: xegpu.load  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  // CHECK-COUNT-2: xegpu.load  {{.*}}[{{.*}}], {{.*}} <{l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   gpu.func @load_with_offsets(%src: ui64) -> vector<32xf32> {
       %cst = arith.constant dense<[
       0,   8,  16,  24,  32,  40,  48,  56,
@@ -139,7 +139,7 @@ gpu.module @test {
 
       %c17 = arith.constant 17: index
       %mask = vector.create_mask %c17: vector<32xi1>
-      %ld = xegpu.load %src[%cst], %mask {chunk_size = 1, layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+      %ld = xegpu.load %src[%cst], %mask {layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
 
       gpu.return %ld : vector<32xf32>
   }
@@ -147,7 +147,7 @@ gpu.module @test {
 //-----
   // CHECK-LABEL: store_with_offsets
   // CHECK-SAME: [[arg0:%.+]]: ui64
-  // CHECK-COUNT-2: xegpu.store  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : vector<16xf32>, ui64, vector<16xindex>, vector<16xi1>
+  // CHECK-COUNT-2: xegpu.store  {{.*}}[{{.*}}], {{.*}} <{l1_hint = #xegpu.cache_hint<cached>}> : vector<16xf32>, ui64, vector<16xindex>, vector<16xi1>
   gpu.func @store_with_offsets(%src: ui64) {
       %cst = arith.constant dense<[
       0,   8,  16,  24,  32,  40,  48,  56,
@@ -160,7 +160,7 @@ gpu.module @test {
       %mask = vector.create_mask %c17: vector<32xi1>
 
       %st_vec = arith.constant dense<1023.0>: vector<32xf32>
-      xegpu.store %st_vec, %src[%cst], %mask {chunk_size = 1, layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>} : vector<32xf32>, ui64, vector<32xindex>, vector<32xi1>
+      xegpu.store %st_vec, %src[%cst], %mask {layout = #xegpu.layout<inst_data = [16]>, l1_hint = #xegpu.cache_hint<cached>} : vector<32xf32>, ui64, vector<32xindex>, vector<32xi1>
 
       gpu.return
   }
@@ -173,7 +173,7 @@ gpu.module @test {
   // CHECK: [[cst1:%.+]] = arith.constant dense<[2, 10, 18, 26, 34, 42, 50, 58, 66, 74, 82, 90, 98, 106, 114, 122]> : vector<16xindex>
   // CHECK: [[cst2:%.+]] = arith.constant dense<[128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248]> : vector<16xindex>
   // CHECK: [[cst3:%.+]] = arith.constant dense<[0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120]> : vector<16xindex>
-  // CHECK-COUNT-4: xegpu.load  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 2 : i64, l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<16xindex>, vector<16xi1> -> vector<16x2xf32>
+  // CHECK-COUNT-4: xegpu.load  {{.*}}[{{.*}}], {{.*}} <{l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<16xindex>, vector<16xi1> -> vector<16x2xf32>
    gpu.func @load_with_offsets_chunk(%src: ui64) -> vector<32x4xf32> {
     %cst = arith.constant dense<[
         0,   8,  16,  24,  32,  40,  48,  56,
@@ -184,7 +184,7 @@ gpu.module @test {
 
     %c17 = arith.constant 17: index
     %mask = vector.create_mask %c17: vector<32xi1>
-    %ld = xegpu.load %src[%cst], %mask {chunk_size = 4, layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32x4xf32>
+    %ld = xegpu.load %src[%cst], %mask {layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>} : ui64, vector<32xindex>, vector<32xi1> -> vector<32x4xf32>
     gpu.return %ld : vector<32x4xf32>
    }
 
@@ -196,7 +196,7 @@ gpu.module @test {
   // CHECK: [[cst1:%.+]] = arith.constant dense<[2, 10, 18, 26, 34, 42, 50, 58, 66, 74, 82, 90, 98, 106, 114, 122]> : vector<16xindex>
   // CHECK: [[cst2:%.+]] = arith.constant dense<[128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248]> : vector<16xindex>
   // CHECK: [[cst3:%.+]] = arith.constant dense<[0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120]> : vector<16xindex>
-  // CHECK-COUNT-4: xegpu.store  {{.*}}[{{.*}}], {{.*}} <{chunk_size = 2 : i64, l1_hint = #xegpu.cache_hint<cached>}> : vector<16x2xf32>, ui64, vector<16xindex>, vector<16xi1>
+  // CHECK-COUNT-4: xegpu.store  {{.*}}[{{.*}}], {{.*}} <{l1_hint = #xegpu.cache_hint<cached>}> : vector<16x2xf32>, ui64, vector<16xindex>, vector<16xi1>
   gpu.func @store_with_offsets_chunk(%src: ui64) {
     %cst = arith.constant dense<[
       0,   8,  16,  24,  32,  40,  48,  56,
@@ -209,7 +209,7 @@ gpu.module @test {
     %mask = vector.create_mask %c17: vector<32xi1>
 
     %st_vec = arith.constant dense<1023.>: vector<32x4xf32>
-    xegpu.store %st_vec, %src[%cst], %mask {chunk_size = 4, layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>} : vector<32x4xf32>, ui64, vector<32xindex>, vector<32xi1>
+    xegpu.store %st_vec, %src[%cst], %mask {layout = #xegpu.layout<inst_data = [16, 2]>, l1_hint = #xegpu.cache_hint<cached>} : vector<32x4xf32>, ui64, vector<32xindex>, vector<32xi1>
     gpu.return
   }
 
