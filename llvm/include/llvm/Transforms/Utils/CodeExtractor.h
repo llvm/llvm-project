@@ -167,8 +167,8 @@ public:
   /// or the end of the replacement block. If ArgsInZeroAddressSpace param is
   /// set to true, then the aggregate param pointer of the outlined function is
   /// declared in zero address space. If VoidReturnWithSingleOutput is set to
-  /// true, then the return type of the outlined function is set void even if
-  /// there is only one output.
+  /// true, then the return type of the outlined function is set void when
+  /// there is only one exit block.
   CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                 bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                 BranchProbabilityInfo *BPI = nullptr,
