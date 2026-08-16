@@ -411,6 +411,18 @@ bool GNUstepObjCRuntime::GetDynamicTypeAndAddress(
   if (!objc_class_sp)
     return false;
 
+  // The descriptor was built from the first word of the pointed-to memory.
+  // For an instance that word is its class; for a class object it is the
+  // metaclass, which libobjc2 gives the same name as the class. Reporting
+  // that name here would present the class object as an instance of itself
+  // (and, since a root class may declare `id isa`, recurse through it), so
+  // values that turn out to be Class have no dynamic type. Every descriptor
+  // this runtime creates derives from GNUstepObjCClassDescriptor, so the
+  // cast is safe.
+  if (static_cast<GNUstepObjCClassDescriptor *>(objc_class_sp.get())
+          ->IsMetaclass())
+    return false;
+
   ConstString class_name(objc_class_sp->GetClassName());
   if (!class_name)
     return false;

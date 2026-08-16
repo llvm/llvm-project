@@ -183,6 +183,28 @@ TEST_P(GNUstepClassDescriptorTest, ParsesWellFormedClass) {
   EXPECT_EQ(descriptor.GetISA(), g_class_addr);
 }
 
+/// A descriptor built from a class object's own ISA (its metaclass) must say
+/// so. GetDynamicTypeAndAddress relies on this to refuse a dynamic type for
+/// values that are Class rather than instances: libobjc2 gives a metaclass the
+/// same name as its class, so nothing else distinguishes the two.
+TEST_P(GNUstepClassDescriptorTest, IdentifiesMetaclass) {
+  FakeProcess &process = GetProcess();
+  process.WriteCString(g_name_addr, "Derived");
+  WriteClass(g_class_addr, g_metaclass_addr, g_superclass_addr, g_name_addr,
+             g_flag_resolved, 42);
+  WriteClass(g_metaclass_addr, g_metaclass_addr, 0, g_name_addr,
+             g_flag_meta | g_flag_resolved, 0);
+
+  GNUstepObjCClassDescriptor instance_class(m_process_sp, g_class_addr);
+  ASSERT_TRUE(instance_class.IsValid());
+  EXPECT_FALSE(instance_class.IsMetaclass());
+
+  GNUstepObjCClassDescriptor metaclass(m_process_sp, g_metaclass_addr);
+  ASSERT_TRUE(metaclass.IsValid());
+  EXPECT_TRUE(metaclass.IsMetaclass());
+  EXPECT_EQ(metaclass.GetClassName(), ConstString("Derived"));
+}
+
 TEST_P(GNUstepClassDescriptorTest, WalksSuperclassChain) {
   FakeProcess &process = GetProcess();
   process.WriteCString(g_name_addr, "Derived");

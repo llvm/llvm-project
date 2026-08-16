@@ -74,6 +74,12 @@ public:
 
   ObjCLanguageRuntime::ObjCISA GetISA() override { return m_isa; }
 
+  /// True if this descriptor describes a metaclass, i.e. the ISA it was
+  /// built from is itself the class pointer of a class object rather than of
+  /// an instance. Instances never have a metaclass as their ISA, so a value
+  /// that resolves to one is a Class, not an object.
+  bool IsMetaclass() const { return m_is_meta; }
+
 protected:
   /// Parse `struct objc_class` at m_isa. Called from the constructor; sets
   /// m_valid only if the structure passes the consistency checks that keep a
@@ -86,6 +92,7 @@ protected:
   ObjCLanguageRuntime::ObjCISA m_superclass_isa = 0;
   ObjCLanguageRuntime::ObjCISA m_metaclass_isa = 0;
   uint64_t m_instance_size = 0;
+  bool m_is_meta = false;
   bool m_valid = false;
 };
 

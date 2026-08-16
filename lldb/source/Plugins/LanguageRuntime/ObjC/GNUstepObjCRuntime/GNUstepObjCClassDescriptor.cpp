@@ -132,6 +132,7 @@ void GNUstepObjCClassDescriptor::Read() {
   }
 
   m_metaclass_isa = metaclass;
+  m_is_meta = is_meta;
   m_name = ConstString(name_buffer);
   m_valid = true;
 }
