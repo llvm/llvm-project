@@ -2175,10 +2175,9 @@ void SubstituteParameterMappings::buildParameterMapping(
       assert(Arg && "expected a default argument");
       DefaultArgs.emplace_back(std::move(*Arg));
     }
-    SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*OnlyDeduced=*/false,
-                                       /*Depth=*/0, OccurringIndices);
-    SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*OnlyDeduced=*/false,
-                                       /*Depth=*/0,
+    SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*Depth=*/0,
+                                       OccurringIndices);
+    SemaRef.MarkUsedTemplateParameters(DefaultArgs, /*Depth=*/0,
                                        OccurringIndicesForSubsumption);
   }
 

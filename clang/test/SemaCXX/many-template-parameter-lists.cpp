@@ -5,7 +5,7 @@
 template <class T>
 struct X {
   template <class U>
-  struct A {
+  struct A { // expected-note {{not-yet-instantiated member is declared here}}
     template <class V>
     struct B {
       template <class W>
@@ -22,16 +22,15 @@ struct X {
     };
   };
 
-  template <class U> // expected-note {{non-deducible template parameter 'U'}}
-  template <class V> // expected-note {{non-deducible template parameter 'V'}}
-  template <class W> // expected-note {{non-deducible template parameter 'W'}}
-  template <class X> // expected-note {{non-deducible template parameter 'X'}}
+  template <class U>
+  template <class V>
+  template <class W>
+  template <class X>
   template <class Y>
   template <class Z>
-  friend void A<U>::template B<V>::template C<W>::template D<X>::template E<Y>::operator+=(Z);
-  // expected-error@-1 {{template parameters of friend declaration cannot be deduced from 'A<U>::template B<V>::template C<W>::template D<X>::template E<Y>'}}
+  friend void A<U>::template B<V>::template C<W>::template D<X>::template E<Y>::operator+=(Z); // expected-warning {{not supported}} expected-error {{no member 'A' in 'X<int>'; it has not yet been instantiated}}
 };
 
 void test() {
-  X<int>::A<int>::B<int>::C<int>::D<int>::E<int>() += 1.0;
+  X<int>::A<int>::B<int>::C<int>::D<int>::E<int>() += 1.0; // expected-note {{in instantiation of template class 'X<int>' requested here}}
 }

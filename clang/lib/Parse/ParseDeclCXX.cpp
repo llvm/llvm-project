@@ -1986,10 +1986,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   bool Owned = false;
   SkipBodyInfo SkipBody;
-  if (TemplateId &&
-      (TUK != TagUseKind::Friend ||
-       TemplateInfo.Kind != ParsedTemplateKind::Template ||
-       TemplateId->isInvalid() || !TemplateId->Template.get().isDependent())) {
+  if (TemplateId) {
     // Explicit specialization, class template partial specialization,
     // or explicit instantiation.
     ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
@@ -2009,6 +2006,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           TemplateId->TemplateNameLoc, TemplateId->LAngleLoc, TemplateArgsPtr,
           TemplateId->RAngleLoc, attrs);
 
+      // Friend template-ids are treated as references unless
+      // they have template headers, in which case they're ill-formed
+      // (FIXME: "template <class T> friend class A<T>::B<int>;").
+      // We diagnose this error in ActOnClassTemplateSpecialization.
     } else if (TUK == TagUseKind::Reference ||
                (TUK == TagUseKind::Friend &&
                 TemplateInfo.Kind == ParsedTemplateKind::NonTemplate)) {
@@ -2105,17 +2106,11 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       SkipUntil(tok::semi, StopBeforeMatch);
     }
 
-    if (TemplateId) {
-      Name = nullptr;
-      NameLoc = TemplateId->TemplateNameLoc;
-    }
-
     TagOrTempResult = Actions.ActOnTemplatedFriendTag(
         getCurScope(), DS.getFriendSpecLoc(), TagType, StartLoc, SS, Name,
         NameLoc, EllipsisLoc, attrs,
         MultiTemplateParamsArg(TemplateParams ? &(*TemplateParams)[0] : nullptr,
-                               TemplateParams ? TemplateParams->size() : 0),
-        TemplateId);
+                               TemplateParams ? TemplateParams->size() : 0));
   } else {
     if (TUK != TagUseKind::Declaration && TUK != TagUseKind::Definition)
       ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
