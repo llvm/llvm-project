@@ -21,6 +21,7 @@
 
 #include "TileReducer/TileReducerDialect.h"
 #include "TileReducer/TileReducerPasses.h"
+#include "TileReducer/TileReducerTransformOps.h"
 
 int main(int argc, char **argv) {
   mlir::tr::registerPasses();
@@ -34,6 +35,7 @@ int main(int argc, char **argv) {
   mlir::func::registerInlinerExtension(registry);
   mlir::linalg::registerTilingInterfaceExternalModels(registry);
   mlir::linalg::registerTransformDialectExtension(registry);
+  mlir::tr::registerTransformDialectExtension(registry);
 
   return mlir::asMainReturnCode(
       mlir::MlirOptMain(argc, argv, "TileReducer optimizer driver\n", registry));

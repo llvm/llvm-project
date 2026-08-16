@@ -48,3 +48,10 @@ Named schedule `@row_sum_schedule` is a public symbol. It includes private
 `SymbolTable` with `transform.with_named_sequence`). Entry point selection
 uses `--transform-interpreter=entry-point=row_sum_schedule`. A missing
 symbol is a hard lookup failure.
+
+## Milestone 13
+
+`transform.tr.map_row_reduction` is a custom Transform extension. It takes a
+handle, checks the payload is a row-reduction `linalg.generic`, and annotates
+`tr.warps_per_block=8`, `tr.warp_size=32`, `tr.elements_per_lane=4`. Wrong
+payload ops produce a silenceable diagnostic.
