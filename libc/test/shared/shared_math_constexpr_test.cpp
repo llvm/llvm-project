@@ -381,6 +381,7 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 //===----------------------------------------------------------------------===//
 
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
+              LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
@@ -509,7 +510,6 @@ static_assert(1 == [] {
       .is_nan();
 }());
 static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::roundevenf128(float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 
