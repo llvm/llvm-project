@@ -293,6 +293,62 @@ struct test_signed : to_chars_test_base<T>
     }
 };
 
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 4096
+// _BitInt wider than 128 bits has no native promotion target, so the native
+// harness above (fixed buffer, strtoll reference) does not apply. Check it with
+// hand-verified literals plus exact-fit / one-too-short buffer handling.
+template <class T, std::size_t N>
+TEST_CONSTEXPR_CXX23 void test_wide_one(T v, const char (&expect)[N], int base = 10) {
+  const std::size_t len = N - 1;
+  char buf[4200];
+
+  std::to_chars_result r = std::to_chars(buf, buf + sizeof(buf), v, base);
+  assert(r.ec == std::errc{});
+  assert(static_cast<std::size_t>(r.ptr - buf) == len);
+  for (std::size_t i = 0; i < len; ++i)
+    assert(buf[i] == expect[i]);
+
+  // Exact-fit buffer succeeds; one byte short fails with ptr == last and no
+  // assertion on the (unspecified) buffer contents.
+  r = std::to_chars(buf, buf + len, v, base);
+  assert(r.ec == std::errc{} && r.ptr == buf + len);
+  r = std::to_chars(buf, buf + len - 1, v, base);
+  assert(r.ec == std::errc::value_too_large && r.ptr == buf + len - 1);
+}
+
+TEST_CONSTEXPR_CXX23 bool test_wide() {
+  using S   = signed _BitInt(256);
+  using U   = unsigned _BitInt(256);
+  using SLn = std::numeric_limits<S>;
+  using ULn = std::numeric_limits<U>;
+
+  test_wide_one(U(0), "0");
+  test_wide_one(S(0), "0", 16);
+  test_wide_one(U(255), "255");
+  test_wide_one(U(255), "ff", 16); // lowercase, no 0x prefix
+  test_wide_one(U(0xabcu), "abc", 16);
+  test_wide_one(U(10), "1010", 2);
+  test_wide_one(S(-12), "-12");
+  test_wide_one(S(-255), "-ff", 16);
+  test_wide_one(S(-10), "-1010", 2);
+
+  // Trailing/interior zeros must survive (no stray digit dropping).
+  test_wide_one(U(1000000000u), "1000000000");
+
+  // Signed min = -2^255: magnitude 2^255 is not representable in S, so it must
+  // be formed in the unsigned counterpart. (Base 2 is covered by the round-trip
+  // test to avoid a 257-character literal.)
+  test_wide_one(SLn::min(), "-57896044618658097711785492504343953926634992332820282019728792003956564819968");
+  test_wide_one(SLn::min(), "-8000000000000000000000000000000000000000000000000000000000000000", 16);
+
+  // Signed max = 2^255-1, unsigned max = 2^256-1.
+  test_wide_one(SLn::max(), "57896044618658097711785492504343953926634992332820282019728792003956564819967");
+  test_wide_one(ULn::max(), "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
+
+  return true;
+}
+#endif
+
 TEST_CONSTEXPR_CXX23 bool test()
 {
     run<test_basics>(integrals);
@@ -308,5 +364,12 @@ int main(int, char**)
     static_assert(test());
 #endif
 
-  return 0;
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 4096
+    test_wide();
+#  if TEST_STD_VER > 20
+    static_assert(test_wide());
+#  endif
+#endif
+
+    return 0;
 }

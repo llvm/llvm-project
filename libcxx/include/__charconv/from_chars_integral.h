@@ -19,6 +19,7 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_unsigned.h>
+#include <__type_traits/make_32_64_or_128_bit.h>
 #include <__type_traits/make_unsigned.h>
 #include <limits>
 
@@ -171,8 +172,11 @@ inline constexpr float __from_chars_log2f_lut[35] = {
 template <typename _Tp, __enable_if_t<is_unsigned<_Tp>::value, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 __from_chars_integral(const char* __first, const char* __last, _Tp& __value, int __base) {
-  if (__base == 10)
-    return std::__from_chars_atoi(__first, __last, __value);
+  if (__base == 10) {
+    if constexpr (!__is_wide_bitint_v<_Tp>)
+      return std::__from_chars_atoi(__first, __last, __value);
+    // A wide _BitInt has no base-10 fast path; use the generic accumulator below.
+  }
 
   return std::__subject_seq_combinator(
       __first,
@@ -219,7 +223,11 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value, int
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value) {
-  return std::__from_chars_atoi(__first, __last, __value);
+  if constexpr (__is_wide_bitint_v<_Tp>)
+    // A wide _BitInt routes through the base-aware generic accumulator.
+    return std::__from_chars_integral(__first, __last, __value, 10);
+  else
+    return std::__from_chars_atoi(__first, __last, __value);
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
