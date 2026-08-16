@@ -134,6 +134,12 @@ private:
   // memory map.
   bool IntersectsAllocation(lldb::addr_t addr, size_t size) const;
 
+  // Returns true if the given range intersects a host-only allocation.
+  // Host-only allocations have no backing memory in the process, so the
+  // process may hand out addresses inside them for real allocations; such
+  // collisions must be detected and avoided.
+  bool IntersectsHostOnlyAllocation(lldb::addr_t addr, size_t size) const;
+
   // Returns true if the two given allocations intersect each other.
   static bool AllocationsIntersect(lldb::addr_t addr1, size_t size1,
                                    lldb::addr_t addr2, size_t size2);
