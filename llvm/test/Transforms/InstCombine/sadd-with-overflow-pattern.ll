@@ -3,12 +3,8 @@
 
 define i1 @sadd_overflow_i8(i8 %a, i8 %b) {
 ; CHECK-LABEL: @sadd_overflow_i8(
-; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR0:%.*]] = xor i8 [[B]], [[A]]
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i8 [[XOR0]], -1
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[SUM]], [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[XOR1]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[B:%.*]], i8 [[A:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %sum = add i8 %b, %a
@@ -22,12 +18,8 @@ define i1 @sadd_overflow_i8(i8 %a, i8 %b) {
 
 define i1 @sadd_overflow_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: @sadd_overflow_i16(
-; CHECK-NEXT:    [[SUM:%.*]] = add i16 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR0:%.*]] = xor i16 [[B]], [[A]]
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i16 [[XOR0]], -1
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i16 [[SUM]], [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i16 [[XOR1]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 [[B:%.*]], i16 [[A:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %sum = add i16 %b, %a
@@ -41,12 +33,8 @@ define i1 @sadd_overflow_i16(i16 %a, i16 %b) {
 
 define i1 @sadd_overflow_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @sadd_overflow_i32(
-; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR0:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i32 [[XOR0]], -1
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[SUM]], [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[XOR1]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[B:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %sum = add i32 %b, %a
@@ -60,12 +48,8 @@ define i1 @sadd_overflow_i32(i32 %a, i32 %b) {
 
 define i1 @sadd_overflow_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: @sadd_overflow_i64(
-; CHECK-NEXT:    [[SUM:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR0:%.*]] = xor i64 [[B]], [[A]]
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i64 [[XOR0]], -1
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[SUM]], [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[XOR1]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %sum = add i64 %b, %a
@@ -79,12 +63,8 @@ define i1 @sadd_overflow_i64(i64 %a, i64 %b) {
 
 define i1 @sadd_overflow_commute1(i8 %a, i8 %b) {
 ; CHECK-LABEL: @sadd_overflow_commute1(
-; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[XOR0:%.*]] = xor i8 [[A]], [[B]]
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i8 [[XOR0]], -1
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[SUM]], [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[XOR1]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %sum = add i8 %a, %b
@@ -174,12 +154,8 @@ define i1 @sadd_overflow_wrong_pred2(i8 %a, i8 %b) {
 
 define <4 x i1> @sadd_overflow_vec(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @sadd_overflow_vec(
-; CHECK-NEXT:    [[SUM:%.*]] = add <4 x i32> [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR0:%.*]] = xor <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt <4 x i32> [[XOR0]], splat (i32 -1)
-; CHECK-NEXT:    [[XOR1:%.*]] = xor <4 x i32> [[SUM]], [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <4 x i32> [[XOR1]], zeroinitializer
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i1> [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> [[B:%.*]], <4 x i32> [[A:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = extractvalue { <4 x i32>, <4 x i1> } [[TMP1]], 1
 ; CHECK-NEXT:    ret <4 x i1> [[AND]]
 ;
   %sum = add <4 x i32> %b, %a
@@ -194,11 +170,8 @@ define <4 x i1> @sadd_overflow_vec(<4 x i32> %a, <4 x i32> %b) {
 define i1 @sadd_overflow_multi_use(i8 %a, i8 %b, ptr %p) {
 ; CHECK-LABEL: @sadd_overflow_multi_use(
 ; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[XOR0:%.*]] = xor i8 [[B]], [[A]]
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i8 [[XOR0]], -1
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[SUM]], [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[XOR1]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[B]], i8 [[A]])
+; CHECK-NEXT:    [[AND:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    store i8 [[SUM]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
