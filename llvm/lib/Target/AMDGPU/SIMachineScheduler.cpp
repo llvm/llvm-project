@@ -949,7 +949,7 @@ void SIScheduleBlockCreator::colorForceConsecutiveOrderInGroup() {
     if (CurrentColoring[SU->NodeNum] <= (int)DAGSize)
       continue;
 
-    if (SeenColors.find(CurrentColor) == SeenColors.end())
+    if (!SeenColors.count(CurrentColor))
       continue;
 
     if (PreviousColorSave != CurrentColor)
@@ -1461,7 +1461,7 @@ SIScheduleBlockScheduler::SIScheduleBlockScheduler(SIScheduleDAGMI *DAG,
       const std::set<Register> &OutRegs = Block->getOutRegs();
 
       if (!VRegOrUnit.isVirtualReg() ||
-          OutRegs.find(VRegOrUnit.asVirtualReg()) == OutRegs.end())
+          !OutRegs.count(VRegOrUnit.asVirtualReg()))
         continue;
 
       ++LiveOutRegsNumUsages[ID][VRegOrUnit.asVirtualReg()];
@@ -1645,9 +1645,8 @@ void SIScheduleBlockScheduler::decreaseLiveRegs(SIScheduleBlock *Block,
   for (Register Reg : Regs) {
     // For now only track virtual registers.
     std::set<Register>::iterator Pos = LiveRegs.find(Reg);
-    assert (Pos != LiveRegs.end() && // Reg must be live.
-               LiveRegsConsumers.find(Reg) != LiveRegsConsumers.end() &&
-               LiveRegsConsumers[Reg] >= 1);
+    assert(Pos != LiveRegs.end() && // Reg must be live.
+           LiveRegsConsumers.count(Reg) && LiveRegsConsumers[Reg] >= 1);
     --LiveRegsConsumers[Reg];
     if (LiveRegsConsumers[Reg] == 0)
       LiveRegs.erase(Pos);
@@ -1671,7 +1670,7 @@ void SIScheduleBlockScheduler::blockScheduled(SIScheduleBlock *Block) {
   releaseBlockSuccs(Block);
   for (const auto &RegP : LiveOutRegsNumUsages[Block->getID()]) {
     // We produce this register, thus it must not be previously alive.
-    assert(LiveRegsConsumers.find(RegP.first) == LiveRegsConsumers.end() ||
+    assert(!LiveRegsConsumers.count(RegP.first) ||
            LiveRegsConsumers[RegP.first] == 0);
     LiveRegsConsumers[RegP.first] += RegP.second;
   }
