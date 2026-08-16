@@ -1,4 +1,4 @@
-//===------- ProxySpec.h - SPS dispatch for rt::Proxy -----------*- C++ -*-===//
+//===------- SPSProxySpec.h - SPS dispatch for orc::Proxy -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,23 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// ProxySpec implements an rt::Proxy's dispatch by invoking an executor-side
+// ProxySpec implements an orc::Proxy's dispatch by invoking an executor-side
 // wrapper function in the runtime's controller interface, using Simple Packed
 // Serialization to encode arguments and decode results.
 //
-// Specs for specific operation families live in sibling headers whose specs
-// only need Shared/SPS vocabulary types (e.g. CallProxySpecs.h,
-// MemoryAccessProxySpecs.h).
+// A ProxySpec pairs a Proxy with a controller-interface descriptor from
+// Shared/SPSCI, which supplies the wrapper name and wire signature. Specs for
+// specific operation families live alongside the utilities that use them (e.g.
+// CallProxiesSPS.h, EPCGenericMemoryAccessSPS.h).
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_PROXYSPEC_H
-#define LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_PROXYSPEC_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_SPSPROXYSPEC_H
+#define LLVM_EXECUTIONENGINE_ORC_SPSPROXYSPEC_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
 
-namespace llvm::orc::rt::sps {
+namespace llvm::orc::sps {
 
 template <typename ProxyT, typename CI,
           typename FnType = typename ProxyT::FnType>
@@ -72,6 +73,6 @@ public:
   }
 };
 
-} // namespace llvm::orc::rt::sps
+} // namespace llvm::orc::sps
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_SPS_PROXYSPEC_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SPSPROXYSPEC_H
