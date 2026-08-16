@@ -28,8 +28,11 @@ int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE((void)std::as_const(c).back(), "inplace_vector<T,0>::back() const: access with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE(c.pop_back(), "inplace_vector<T,0>::pop_back(): use with N == 0");
   TEST_LIBCPP_ASSERT_FAILURE(c.erase(c.begin()), "inplace_vector<T,0>::erase(): use with N == 0");
+
+  // __capacity_aware_iterator's check is triggered first, so it might be impossible to reach the check inside erase()
   TEST_LIBCPP_ASSERT_FAILURE(
-      c.erase(c.begin(), c.begin() + 1), "inplace_vector<T,0>::erase(const_iterator, const_iterator): use with N == 0");
+      c.erase(c.begin(), c.begin() + 1),
+      "__capacity_aware_iterator::operator+=: Attempting to move iterator past its container's possible range");
 
   return 0;
 }
