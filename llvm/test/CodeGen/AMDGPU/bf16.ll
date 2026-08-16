@@ -5781,7 +5781,7 @@ define <5 x float> @global_extload_v5bf16_to_v5f32(ptr addrspace(1) %ptr) #0 {
 ; GFX8-LABEL: global_extload_v5bf16_to_v5f32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    flat_load_dwordx4 v[2:5], v[0:1]
+; GFX8-NEXT:    flat_load_dwordx3 v[2:4], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
@@ -5793,7 +5793,7 @@ define <5 x float> @global_extload_v5bf16_to_v5f32(ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: global_extload_v5bf16_to_v5f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx3 v[2:4], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
@@ -5805,7 +5805,7 @@ define <5 x float> @global_extload_v5bf16_to_v5f32(ptr addrspace(1) %ptr) #0 {
 ; GFX10-LABEL: global_extload_v5bf16_to_v5f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx3 v[2:4], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
@@ -5817,7 +5817,7 @@ define <5 x float> @global_extload_v5bf16_to_v5f32(ptr addrspace(1) %ptr) #0 {
 ; GFX11-LABEL: global_extload_v5bf16_to_v5f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off
+; GFX11-NEXT:    global_load_b96 v[2:4], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
@@ -5830,7 +5830,7 @@ define <5 x float> @global_extload_v5bf16_to_v5f32(ptr addrspace(1) %ptr) #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b128 v[2:5], v[0:1], off
+; GFX1250-NEXT:    global_load_b96 v[2:4], v[0:1], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
@@ -7009,7 +7009,7 @@ define <5 x double> @global_extload_v5bf16_to_v5f64(ptr addrspace(1) %ptr) #0 {
 ; GFX8-LABEL: global_extload_v5bf16_to_v5f64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX8-NEXT:    flat_load_dwordx3 v[0:2], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
 ; GFX8-NEXT:    v_and_b32_e32 v4, 0xffff0000, v0
@@ -7026,7 +7026,7 @@ define <5 x double> @global_extload_v5bf16_to_v5f64(ptr addrspace(1) %ptr) #0 {
 ; GFX9-LABEL: global_extload_v5bf16_to_v5f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx3 v[0:2], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v0
 ; GFX9-NEXT:    v_and_b32_e32 v4, 0xffff0000, v0
@@ -7043,7 +7043,7 @@ define <5 x double> @global_extload_v5bf16_to_v5f64(ptr addrspace(1) %ptr) #0 {
 ; GFX10-LABEL: global_extload_v5bf16_to_v5f64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx4 v[2:5], v[0:1], off
+; GFX10-NEXT:    global_load_dwordx3 v[2:4], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2
@@ -7060,7 +7060,7 @@ define <5 x double> @global_extload_v5bf16_to_v5f64(ptr addrspace(1) %ptr) #0 {
 ; GFX11-LABEL: global_extload_v5bf16_to_v5f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off
+; GFX11-NEXT:    global_load_b96 v[2:4], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2
@@ -7078,7 +7078,7 @@ define <5 x double> @global_extload_v5bf16_to_v5f64(ptr addrspace(1) %ptr) #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b128 v[2:5], v[0:1], off
+; GFX1250-NEXT:    global_load_b96 v[2:4], v[0:1], off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v2 :: v_dual_lshlrev_b32 v5, 16, v3
