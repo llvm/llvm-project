@@ -111,7 +111,12 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
     string(APPEND def_content "MLGO_MODEL(${class_name}, \"${cli_flag}\")\n")
 
     # Append to the master header content
-    string(APPEND headers_content "namespace ${class_name}_ns {\n#include \"${include_subdir}/${class_name}.h\"\n} // namespace ${class_name}_ns\nusing ${class_name}_ns::${class_name};\n")
+    string(APPEND headers_content
+      "namespace ${class_name}_ns {\n"
+      "#include \"${include_subdir}/${class_name}.h\"\n"
+      "} // namespace ${class_name}_ns\n"
+      "using ${class_name}_ns::${class_name};\n"
+    )
   endforeach()
 
   string(APPEND def_content "\n#undef MLGO_MODEL\n")
