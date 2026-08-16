@@ -10090,6 +10090,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return false;
 
   MachineInstr *DefMI = MRI->getVRegDef(VReg);
+  if (!DefMI)
+    return false;
 
   // Look through COPY instructions to find definition.
   while (DefMI->isCopy()) {
