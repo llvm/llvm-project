@@ -6,7 +6,7 @@ define void @clmul_fixed() {
 ; NOAES-LABEL: 'clmul_fixed'
 ; NOAES-NEXT:  Cost Model: Found costs of 1 for: %c8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> poison, <16 x i8> poison)
 ; NOAES-NEXT:  Cost Model: Found costs of 1 for: %c8_64 = call <8 x i8> @llvm.clmul.v8i8(<8 x i8> poison, <8 x i8> poison)
-; NOAES-NEXT:  Cost Model: Found costs of RThru:251 CodeSize:43 Lat:43 SizeLat:43 for: %c64 = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> poison, <2 x i64> poison)
+; NOAES-NEXT:  Cost Model: Found costs of RThru:251 CodeSize:155 Lat:251 SizeLat:251 for: %c64 = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> poison, <2 x i64> poison)
 ; NOAES-NEXT:  Cost Model: Found costs of 43 for: %c1 = call <1 x i64> @llvm.clmul.v1i64(<1 x i64> poison, <1 x i64> poison)
 ; NOAES-NEXT:  Cost Model: Found costs of 43 for: %c32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> poison, <4 x i32> poison)
 ; NOAES-NEXT:  Cost Model: Found costs of 43 for: %c2 = call <2 x i32> @llvm.clmul.v2i32(<2 x i32> poison, <2 x i32> poison)

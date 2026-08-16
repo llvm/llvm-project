@@ -127,8 +127,9 @@ std::string Managarm::getDynamicLinker(const ArgList &Args) const {
   case llvm::Triple::x86_64:
     return "/lib/x86_64-managarm/ld.so";
   default:
-    llvm_unreachable("unsupported architecture");
+    break;
   }
+  return "";
 }
 
 void Managarm::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

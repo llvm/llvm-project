@@ -12,7 +12,7 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-struct FixIrreduciblePass : OptionalPassInfoMixin<FixIrreduciblePass> {
+struct FixIrreduciblePass : RequiredPassInfoMixin<FixIrreduciblePass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm

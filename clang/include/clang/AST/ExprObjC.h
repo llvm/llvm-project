@@ -485,13 +485,13 @@ public:
 /// ObjCSelectorExpr used for \@selector in Objective-C.
 class ObjCSelectorExpr : public Expr {
   Selector SelName;
-  SourceLocation AtLoc, RParenLoc;
+  SourceLocation AtLoc, SelNameLoc, RParenLoc;
 
 public:
   ObjCSelectorExpr(QualType T, Selector selInfo, SourceLocation at,
-                   SourceLocation rp)
+                   SourceLocation selNameLoc, SourceLocation rp)
       : Expr(ObjCSelectorExprClass, T, VK_PRValue, OK_Ordinary),
-        SelName(selInfo), AtLoc(at), RParenLoc(rp) {
+        SelName(selInfo), AtLoc(at), SelNameLoc(selNameLoc), RParenLoc(rp) {
     setDependence(ExprDependence::None);
   }
   explicit ObjCSelectorExpr(EmptyShell Empty)
@@ -501,8 +501,10 @@ public:
   void setSelector(Selector S) { SelName = S; }
 
   SourceLocation getAtLoc() const { return AtLoc; }
+  SourceLocation getSelectorNameLoc() const { return SelNameLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setAtLoc(SourceLocation L) { AtLoc = L; }
+  void setSelectorNameLoc(SourceLocation L) { SelNameLoc = L; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return AtLoc; }

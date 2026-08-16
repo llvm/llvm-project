@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMCAS
   OnDiskGraphDB.cpp
   OnDiskKeyValueDB.cpp
   OnDiskTrieRawHashMap.cpp
+  PluginCAS.cpp
   UnifiedOnDiskCache.cpp
 
   ADDITIONAL_HEADER_DIRS

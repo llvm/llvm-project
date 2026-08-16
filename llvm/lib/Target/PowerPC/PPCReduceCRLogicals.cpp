@@ -434,7 +434,6 @@ public:
   CRLogicalOpInfo createCRLogicalOpInfo(MachineInstr &MI);
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }

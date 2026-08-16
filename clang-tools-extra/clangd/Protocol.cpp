@@ -878,6 +878,8 @@ llvm::json::Value toJSON(const SymbolInformation &P) {
   };
   if (P.score)
     O["score"] = *P.score;
+  if (!P.tags.empty())
+    O["tags"] = P.tags;
   return std::move(O);
 }
 
@@ -1457,6 +1459,8 @@ llvm::json::Value toJSON(const TypeHierarchyItem &I) {
 
   if (I.detail)
     Result["detail"] = I.detail;
+  if (!I.tags.empty())
+    Result["tags"] = I.tags;
   return std::move(Result);
 }
 

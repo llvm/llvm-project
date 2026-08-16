@@ -1176,13 +1176,13 @@ TEST(DWARFExpression, DW_OP_deref_size_too_large) {
 TEST(DWARFExpression, DW_OP_xderef_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef}),
-      llvm::FailedWithMessage("unimplemented opcode: DW_OP_xderef"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_xderef"));
 }
 
 TEST(DWARFExpression, DW_OP_xderef_size_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_size, 4}),
-      llvm::FailedWithMessage("unimplemented opcode: DW_OP_xderef_size"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_xderef_size"));
 }
 
 TEST(DWARFExpression, DW_OP_call2_unimplemented) {
@@ -1197,12 +1197,11 @@ TEST(DWARFExpression, DW_OP_call4_unimplemented) {
       llvm::FailedWithMessage("unimplemented opcode DW_OP_call4"));
 }
 
-TEST(DWARFExpression, DW_OP_call_ref_unhandled) {
+TEST(DWARFExpression, DW_OP_call_ref_unimplemented) {
   // call_ref has stack arity 1 in LLVM's table, so push a value first.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_call_ref, 0x00, 0x00, 0x00, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_call_ref in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_call_ref"));
 }
 
 TEST(DWARFExpression, DW_OP_implicit_pointer_unimplemented) {
@@ -1211,53 +1210,48 @@ TEST(DWARFExpression, DW_OP_implicit_pointer_unimplemented) {
       llvm::Failed());
 }
 
-TEST(DWARFExpression, DW_OP_GNU_implicit_pointer_unhandled) {
+TEST(DWARFExpression, DW_OP_GNU_implicit_pointer_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_GNU_implicit_pointer, 0x00, 0x00, 0x00, 0x00, 0x00}),
       llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_GNU_implicit_pointer in DWARFExpression"));
+          "unimplemented opcode DW_OP_GNU_implicit_pointer"));
 }
 
-TEST(DWARFExpression, DW_OP_const_type_unhandled) {
+TEST(DWARFExpression, DW_OP_const_type_unimplemented) {
   // const_type: ULEB128 type DIE offset, 1-byte size, N-byte value block.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_const_type, 0x00, 0x04, 0x01, 0x00, 0x00, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_const_type in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_const_type"));
 }
 
-TEST(DWARFExpression, DW_OP_regval_type_unhandled) {
+TEST(DWARFExpression, DW_OP_regval_type_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_regval_type, 0x00, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_regval_type in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_regval_type"));
 }
 
-TEST(DWARFExpression, DW_OP_deref_type_unhandled) {
+TEST(DWARFExpression, DW_OP_deref_type_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_deref_type, 0x04, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_deref_type in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_deref_type"));
 }
 
-TEST(DWARFExpression, DW_OP_xderef_type_unhandled) {
+TEST(DWARFExpression, DW_OP_xderef_type_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_lit0, DW_OP_xderef_type, 0x04, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_xderef_type in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_xderef_type"));
 }
 
-TEST(DWARFExpression, DW_OP_constx_unhandled) {
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_constx, 0x00}),
-                       llvm::FailedWithMessage(
-                           "unhandled opcode DW_OP_constx in DWARFExpression"));
+TEST(DWARFExpression, DW_OP_constx_unimplemented) {
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_constx, 0x00}),
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_constx"));
 }
 
-TEST(DWARFExpression, DW_OP_reinterpret_unhandled) {
+TEST(DWARFExpression, DW_OP_reinterpret_unimplemented) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_lit0, DW_OP_reinterpret, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_reinterpret in DWARFExpression"));
+      llvm::FailedWithMessage("unimplemented opcode DW_OP_reinterpret"));
 }
 
 // Register-based tests need a register context. MockRegisterContext returns the
@@ -1348,6 +1342,37 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_bregx) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_bregx, 0x40, 0x10}, {}, {}, &exe_ctx,
                                 ctx.reg_ctx_sp.get()),
                        ExpectLoadAddress(0x2010));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg_address_size) {
+  TestContext ctx;
+  ASSERT_TRUE(
+      CreateTestContext(&ctx, "i386-pc-linux", RegisterValue(uint32_t{0x2a})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+
+  // Address arithmetic wraps at the target address size. In particular,
+  // 0xffffffff + 1 is zero on this 32-bit target.
+  auto result =
+      Evaluate({DW_OP_breg0, 0x7f, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, {}, &exe_ctx, ctx.reg_ctx_sp.get());
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x29, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_bregx_address_size) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
+                                RegisterValue(uint64_t{0x10000002a})));
+  ExecutionContext exe_ctx(ctx.process_sp);
+
+  // The register backend may expose a value wider than the target address.
+  auto result =
+      Evaluate({DW_OP_bregx, 0x40, 0x7f, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, {}, &exe_ctx, ctx.reg_ctx_sp.get());
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x29, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
 }
 
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {

@@ -3100,7 +3100,7 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       }
     }
     if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
-      if (symbol->IsFuncResult()) {
+      if (IsFunctionResultWithSameNameAsFunction(*symbol)) {
         if (Symbol * func{currScope().symbol()}) {
           CHECK(func->IsSubprogram());
           func->set(ompFlag);

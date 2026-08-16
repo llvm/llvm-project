@@ -91,23 +91,23 @@ func.func @omp_terminator() -> () {
 }
 
 func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %idx : index) -> () {
-  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>) if(%{{.*}}) num_threads(%{{.*}} : i32)
-  "omp.parallel" (%data_var, %data_var, %if_cond, %num_threads) ({
+  // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32)
+  "omp.parallel" (%if_cond, %num_threads) ({
 
   // test without if condition
-  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>) num_threads(%{{.*}} : i32)
-    "omp.parallel"(%data_var, %data_var, %num_threads) ({
+  // CHECK: omp.parallel num_threads(%{{.*}} : i32)
+    "omp.parallel"(%num_threads) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,1,0,1,0,0>} : (memref<i32>, memref<i32>, i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0>} : (i32) -> ()
 
   // CHECK: omp.barrier
     omp.barrier
 
   // test without num_threads
-  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>) if(%{{.*}})
-    "omp.parallel"(%data_var, %data_var, %if_cond) ({
+  // CHECK: omp.parallel if(%{{.*}})
+    "omp.parallel"(%if_cond) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0>} : (memref<i32>, memref<i32>, i1) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,1,0,0,0>} : (i1) -> ()
 
   // test without allocate
   // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32)
@@ -116,13 +116,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>} : (i1, i32) -> ()
 
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (memref<i32>, memref<i32>, i1, i32) -> ()
-
-  // test with multiple parameters for single variadic argument
-  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
-  "omp.parallel" (%data_var, %data_var) ({
-    omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,0,0,0,0>} : (memref<i32>, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (i1, i32) -> ()
 
   // CHECK: omp.parallel
   omp.parallel {
@@ -162,6 +156,8 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
   return
 }
 
+omp.private {type = private} @parallel_allocate_private : memref<i32>
+
 func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %allocator : si32) -> () {
  // CHECK: omp.parallel
  omp.parallel {
@@ -197,10 +193,13 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
    omp.terminator
  }
 
- // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
- omp.parallel allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+ // CHECK: omp.parallel allocate(
+ // CHECK-SAME: private(
+ // CHECK: } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
+ omp.parallel allocate(%allocator : si32 -> %data_var : memref<i32>)
+     private(@parallel_allocate_private %data_var -> %private : memref<i32>) {
    omp.terminator
- }
+ } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
 
  // CHECK: omp.parallel
  // CHECK-NEXT: omp.parallel if(%{{.*}})
@@ -2132,6 +2131,168 @@ func.func @omp_atomic_compare(%x: memref<i32>, %e: i32, %d: i32) {
     %sel = arith.select %cmp, %d, %xval : i32
     omp.yield(%sel : i32)
   } {weak}
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_fail
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_fail(%x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.compare memory_order(seq_cst) %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: } {fail_memory_order = #omp<memoryorderkind acquire>}
+  omp.atomic.compare memory_order(seq_cst) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %cmp = arith.cmpi eq, %xval, %e : i32
+    %sel = arith.select %cmp, %d, %xval : i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind acquire>}
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_capture
+// CHECK-SAME: (%[[V:.*]]: memref<i32>, %[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_capture(%v: memref<i32>, %x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.capture {
+  // CHECK-NEXT: omp.atomic.read %[[V]] = %[[X]] : memref<i32>, memref<i32>, i32
+  // CHECK-NEXT: omp.atomic.compare %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: }
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    omp.atomic.compare %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %cmp = arith.cmpi eq, %xval, %e : i32
+      %sel = arith.select %cmp, %d, %xval : i32
+      omp.yield(%sel : i32)
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_capture_weak
+// CHECK-SAME: (%[[V:.*]]: memref<i32>, %[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_capture_weak(%v: memref<i32>, %x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.capture {
+  // CHECK-NEXT: omp.atomic.read %[[V]] = %[[X]] : memref<i32>, memref<i32>, i32
+  // CHECK-NEXT: omp.atomic.compare %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi sgt, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: } {weak}
+  // CHECK-NEXT: }
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    omp.atomic.compare %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %cmp = arith.cmpi sgt, %xval, %e : i32
+      %sel = arith.select %cmp, %d, %xval : i32
+      omp.yield(%sel : i32)
+    } {weak}
+  }
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_capture_postfix
+// CHECK-SAME: (%[[V:.*]]: memref<i32>, %[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_capture_postfix(%v: memref<i32>, %x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.capture {
+  // CHECK-NEXT: omp.atomic.compare %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[V]] = %[[X]] : memref<i32>, memref<i32>, i32
+  // CHECK-NEXT: }
+  omp.atomic.capture {
+    omp.atomic.compare %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %cmp = arith.cmpi eq, %xval, %e : i32
+      %sel = arith.select %cmp, %d, %xval : i32
+      omp.yield(%sel : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+  }
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_capture_fail_only
+// CHECK-SAME: (%[[V:.*]]: memref<i32>, %[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_capture_fail_only(%v: memref<i32>, %x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.capture {
+  // CHECK-NEXT: omp.atomic.compare %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[V]] = %[[X]] : memref<i32>, memref<i32>, i32
+  // CHECK-NEXT: } {fail_only}
+  omp.atomic.capture {
+    omp.atomic.compare %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %cmp = arith.cmpi eq, %xval, %e : i32
+      %sel = arith.select %cmp, %d, %xval : i32
+      omp.yield(%sel : i32)
+    }
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+  } {fail_only}
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_capture_fail_only_fail
+// CHECK-SAME: (%[[V:.*]]: memref<i32>, %[[X:.*]]: memref<i32>, %[[E:.*]]: i32, %[[D:.*]]: i32)
+func.func @omp_atomic_compare_capture_fail_only_fail(%v: memref<i32>, %x: memref<i32>, %e: i32, %d: i32) {
+  // CHECK: omp.atomic.capture memory_order(seq_cst) {
+  // CHECK-NEXT: omp.atomic.compare %[[X]] : memref<i32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpi eq, %[[XVAL]], %[[E]] : i32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : i32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : i32)
+  // CHECK-NEXT: } {fail_memory_order = #omp<memoryorderkind acquire>}
+  // CHECK-NEXT: omp.atomic.read %[[V]] = %[[X]] : memref<i32>, memref<i32>, i32
+  // CHECK-NEXT: } {fail_only}
+  omp.atomic.capture memory_order(seq_cst) {
+    omp.atomic.compare %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %cmp = arith.cmpi eq, %xval, %e : i32
+      %sel = arith.select %cmp, %d, %xval : i32
+      omp.yield(%sel : i32)
+    } {fail_memory_order = #omp<memoryorderkind acquire>}
+    omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+  } {fail_only}
+  return
+}
+
+// CHECK-LABEL: omp_atomic_compare_capture_real
+// CHECK-SAME: (%[[V:.*]]: memref<f32>, %[[X:.*]]: memref<f32>, %[[E:.*]]: f32, %[[D:.*]]: f32)
+func.func @omp_atomic_compare_capture_real(%v: memref<f32>, %x: memref<f32>, %e: f32, %d: f32) {
+  // CHECK: omp.atomic.capture {
+  // CHECK-NEXT: omp.atomic.compare %[[X]] : memref<f32> {
+  // CHECK-NEXT: ^bb0(%[[XVAL:.*]]: f32):
+  // CHECK-NEXT:   %[[CMP:.*]] = arith.cmpf oeq, %[[XVAL]], %[[E]] : f32
+  // CHECK-NEXT:   %[[SEL:.*]] = arith.select %[[CMP]], %[[D]], %[[XVAL]] : f32
+  // CHECK-NEXT:   omp.yield(%[[SEL]] : f32)
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.atomic.read %[[V]] = %[[X]] : memref<f32>, memref<f32>, f32
+  // CHECK-NEXT: }
+  omp.atomic.capture {
+    omp.atomic.compare %x : memref<f32> {
+    ^bb0(%xval: f32):
+      %cmp = arith.cmpf oeq, %xval, %e : f32
+      %sel = arith.select %cmp, %d, %xval : f32
+      omp.yield(%sel : f32)
+    }
+    omp.atomic.read %v = %x : memref<f32>, memref<f32>, f32
+  }
   return
 }
 

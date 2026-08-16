@@ -3568,7 +3568,7 @@ HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
   auto MaskN = cast<MaskedLoadStoreSDNode>(Op);
   assert(MaskN->isUnindexed());
   VectorPair Masks = opSplit(MaskN->getMask(), dl, DAG);
-  SDValue Offset = DAG.getUNDEF(MVT::i32);
+  SDValue Offset = DAG.getPOISON(MVT::i32);
 
   if (MemOpc == ISD::MLOAD) {
     VectorPair Thru =
@@ -3619,7 +3619,7 @@ HexagonTargetLowering::WidenHvxLoad(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue Chain = LoadN->getChain();
   SDValue Base = LoadN->getBasePtr();
-  SDValue Offset = DAG.getUNDEF(MVT::i32);
+  SDValue Offset = DAG.getPOISON(MVT::i32);
 
   MVT ResTy = ty(Op);
   unsigned HwLen = Subtarget.getVectorLength();
@@ -3651,7 +3651,7 @@ HexagonTargetLowering::WidenHvxStore(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue Chain = StoreN->getChain();
   SDValue Base = StoreN->getBasePtr();
-  SDValue Offset = DAG.getUNDEF(MVT::i32);
+  SDValue Offset = DAG.getPOISON(MVT::i32);
 
   SDValue Value = opCastElem(StoreN->getValue(), MVT::i8, DAG);
   MVT ValueTy = ty(Value);

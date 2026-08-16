@@ -15,7 +15,7 @@ class TestExtendedBacktraceAPI(TestBase):
         TestBase.setUp(self)
         self.main_source = "main.m"
 
-    @skipUnlessDarwin
+    @requireDarwin
     @add_test_categories(["objc", "pyapi"])
     def test_extended_backtrace_thread_api(self):
         """Test GetExtendedBacktraceThread with queue debugging."""

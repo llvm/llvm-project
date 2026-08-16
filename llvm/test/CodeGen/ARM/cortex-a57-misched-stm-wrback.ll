@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -mattr=use-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ; N=3 STMIA_UPD should have latency 2cyc and writeback latency 1cyc
 
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; We need second, post-ra scheduling to have STM instruction combined from single-stores
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       schedule starting
 ; CHECK:       STMIA_UPD
 ; CHECK:       rdefs left

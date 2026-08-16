@@ -132,8 +132,8 @@ const char *SelectInst::areInvalidOperands(Value *Op0, Value *Op1, Value *Op2) {
 PHINode::PHINode(const PHINode &PN)
     : Instruction(PN.getType(), Instruction::PHI, AllocMarker),
       ReservedSpace(PN.getNumOperands()) {
-  NumUserOperands = PN.getNumOperands();
   allocHungoffUses(PN.getNumOperands());
+  setNumHungOffUseOperands(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
   copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
   FMF = PN.FMF;
@@ -252,8 +252,8 @@ LandingPadInst::LandingPadInst(Type *RetTy, unsigned NumReservedValues,
 LandingPadInst::LandingPadInst(const LandingPadInst &LP)
     : Instruction(LP.getType(), Instruction::LandingPad, AllocMarker),
       ReservedSpace(LP.getNumOperands()) {
-  NumUserOperands = LP.getNumOperands();
   allocHungoffUses(LP.getNumOperands());
+  setNumHungOffUseOperands(LP.getNumOperands());
   Use *OL = getOperandList();
   const Use *InOL = LP.getOperandList();
   for (unsigned I = 0, E = ReservedSpace; I != E; ++I)
@@ -270,8 +270,8 @@ LandingPadInst *LandingPadInst::Create(Type *RetTy, unsigned NumReservedClauses,
 
 void LandingPadInst::init(unsigned NumReservedValues, const Twine &NameStr) {
   ReservedSpace = NumReservedValues;
-  setNumHungOffUseOperands(0);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(0);
   setName(NameStr);
   setCleanup(false);
 }
@@ -1128,8 +1128,8 @@ void CatchSwitchInst::init(Value *ParentPad, BasicBlock *UnwindDest,
   assert(ParentPad && NumReservedValues);
 
   ReservedSpace = NumReservedValues;
-  setNumHungOffUseOperands(UnwindDest ? 2 : 1);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(UnwindDest ? 2 : 1);
 
   Op<0>() = ParentPad;
   if (UnwindDest) {
@@ -4115,8 +4115,8 @@ CmpPredicate CmpPredicate::getSwapped(const CmpInst *Cmp) {
 void SwitchInst::init(Value *Value, BasicBlock *Default, unsigned NumReserved) {
   assert(Value && Default && NumReserved);
   ReservedSpace = NumReserved;
-  setNumHungOffUseOperands(2);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(2);
 
   Op<0>() = Value;
   Op<1>() = Default;
@@ -4310,9 +4310,9 @@ SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
 void IndirectBrInst::init(Value *Address, unsigned NumDests) {
   assert(Address && Address->getType()->isPointerTy() &&
          "Address of indirectbr must be a pointer");
-  ReservedSpace = 1+NumDests;
-  setNumHungOffUseOperands(1);
+  ReservedSpace = 1 + NumDests;
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(1);
 
   Op<0>() = Address;
 }
@@ -4339,8 +4339,8 @@ IndirectBrInst::IndirectBrInst(Value *Address, unsigned NumCases,
 IndirectBrInst::IndirectBrInst(const IndirectBrInst &IBI)
     : Instruction(Type::getVoidTy(IBI.getContext()), Instruction::IndirectBr,
                   AllocMarker) {
-  NumUserOperands = IBI.NumUserOperands;
   allocHungoffUses(IBI.getNumOperands());
+  setNumHungOffUseOperands(IBI.NumUserOperands);
   Use *OL = getOperandList();
   const Use *InOL = IBI.getOperandList();
   for (unsigned i = 0, E = IBI.getNumOperands(); i != E; ++i)

@@ -124,33 +124,6 @@ static bool isMergeInstruction(Instruction *I) {
   return getDesignatedMergeBlock(I) != nullptr;
 }
 
-// Returns all blocks in F having at least one OpLoopMerge or OpSelectionMerge
-// instruction.
-static SmallPtrSet<BasicBlock *, 2> getHeaderBlocks(Function &F) {
-  SmallPtrSet<BasicBlock *, 2> Output;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      if (getDesignatedMergeBlock(&I) != nullptr)
-        Output.insert(&BB);
-    }
-  }
-  return Output;
-}
-
-// Returns all basic blocks in |F| referenced by at least 1
-// OpSelectionMerge/OpLoopMerge instruction.
-static SmallPtrSet<BasicBlock *, 2> getMergeBlocks(Function &F) {
-  SmallPtrSet<BasicBlock *, 2> Output;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      BasicBlock *MB = getDesignatedMergeBlock(&I);
-      if (MB != nullptr)
-        Output.insert(MB);
-    }
-  }
-  return Output;
-}
-
 // Return all the merge instructions contained in BB.
 // Note: the SPIR-V spec doesn't allow a single BB to contain more than 1 merge
 // instruction, but this can happen while we structurize the CFG.
@@ -162,19 +135,33 @@ static std::vector<Instruction *> getMergeInstructions(BasicBlock &BB) {
   return Output;
 }
 
-// Returns all basic blocks in |F| referenced as continue target by at least 1
-// OpLoopMerge instruction.
-static SmallPtrSet<BasicBlock *, 2> getContinueBlocks(Function &F) {
-  SmallPtrSet<BasicBlock *, 2> Output;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      BasicBlock *MB = getDesignatedContinueBlock(&I);
-      if (MB != nullptr)
-        Output.insert(MB);
+// Bundles the header/merge/continue block sets for a function, computed in a
+// single scan since they all classify the same instructions. Callers only
+// needing a subset of them still share the single underlying scan.
+struct HeaderMergeContinueBlocks {
+  // Blocks in F having at least one OpLoopMerge or OpSelectionMerge
+  // instruction.
+  SmallPtrSet<BasicBlock *, 2> Header;
+  // Blocks in F referenced by at least 1 OpSelectionMerge/OpLoopMerge
+  // instruction.
+  SmallPtrSet<BasicBlock *, 2> Merge;
+  // Blocks in F referenced as continue target by at least 1 OpLoopMerge
+  // instruction.
+  SmallPtrSet<BasicBlock *, 2> Continue;
+
+  HeaderMergeContinueBlocks(Function &F) {
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (BasicBlock *MB = getDesignatedMergeBlock(&I)) {
+          Header.insert(&BB);
+          Merge.insert(MB);
+        }
+        if (BasicBlock *CB = getDesignatedContinueBlock(&I))
+          Continue.insert(CB);
+      }
     }
   }
-  return Output;
-}
+};
 
 // Do a preorder traversal of the CFG starting from the BB |Start|.
 // point. Calls |op| on each basic block encountered during the traversal.
@@ -356,49 +343,6 @@ class SPIRVStructurizerImpl {
         if (OutsideBlocks.count(BB) != 0)
           return false;
         if (DT.dominates(Node->Merge, BB) || !DT.dominates(Node->Header, BB))
-          return false;
-        Output.push_back(BB);
-        return true;
-      });
-      return Output;
-    }
-
-    // Returns the list of blocks that belong to a SPIR-V switch construct.
-    std::vector<BasicBlock *> getSwitchConstructBlocks(BasicBlock *Header,
-                                                       BasicBlock *Merge) {
-      const DomTreeBuilder::BBDomTree &DT = getDT();
-      assert(DT.dominates(Header, Merge));
-
-      std::vector<BasicBlock *> Output;
-      POV->partialOrderVisit(*Header, [&](BasicBlock *BB) {
-        // the blocks structurally dominated by a switch header,
-        if (!DT.dominates(Header, BB))
-          return false;
-        // excluding blocks structurally dominated by the switch header’s merge
-        // block.
-        if (DT.dominates(Merge, BB) || BB == Merge)
-          return false;
-        Output.push_back(BB);
-        return true;
-      });
-      return Output;
-    }
-
-    // Returns the list of blocks that belong to a SPIR-V case construct.
-    std::vector<BasicBlock *> getCaseConstructBlocks(BasicBlock *Target,
-                                                     BasicBlock *Merge) {
-      const DomTreeBuilder::BBDomTree &DT = getDT();
-      assert(DT.dominates(Target, Merge));
-
-      std::vector<BasicBlock *> Output;
-      POV->partialOrderVisit(*Target, [&](BasicBlock *BB) {
-        // the blocks structurally dominated by an OpSwitch Target or Default
-        // block
-        if (!DT.dominates(Target, BB))
-          return false;
-        // excluding the blocks structurally dominated by the OpSwitch
-        // construct’s corresponding merge block.
-        if (DT.dominates(Merge, BB) || BB == Merge)
           return false;
         Output.push_back(BB);
         return true;
@@ -690,8 +634,9 @@ class SPIRVStructurizerImpl {
     PDT.recalculate(F);
     bool Modified = false;
 
-    auto MergeBlocks = getMergeBlocks(F);
-    auto ContinueBlocks = getContinueBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
+    auto &MergeBlocks = Blocks.Merge;
+    auto &ContinueBlocks = Blocks.Continue;
 
     for (auto &BB : F) {
       if (getMergeInstructions(BB).size() != 0)
@@ -967,8 +912,9 @@ class SPIRVStructurizerImpl {
   bool removeUselessBlocks(Function &F) {
     std::vector<BasicBlock *> ToRemove;
 
-    auto MergeBlocks = getMergeBlocks(F);
-    auto ContinueBlocks = getContinueBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
+    auto &MergeBlocks = Blocks.Merge;
+    auto &ContinueBlocks = Blocks.Continue;
 
     for (BasicBlock &BB : F) {
       if (BB.size() != 1)
@@ -1000,9 +946,10 @@ class SPIRVStructurizerImpl {
   bool addHeaderToRemainingDivergentDAG(Function &F) {
     bool Modified = false;
 
-    auto MergeBlocks = getMergeBlocks(F);
-    auto ContinueBlocks = getContinueBlocks(F);
-    auto HeaderBlocks = getHeaderBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
+    auto &MergeBlocks = Blocks.Merge;
+    auto &ContinueBlocks = Blocks.Continue;
+    auto &HeaderBlocks = Blocks.Header;
 
     DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;
@@ -1182,7 +1129,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
 
@@ -1197,7 +1143,6 @@ char SPIRVStructurizer::ID = 0;
 INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "spirv-structurizer",
                       "structurize SPIRV", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 

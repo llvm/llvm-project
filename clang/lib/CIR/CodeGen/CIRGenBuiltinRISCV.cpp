@@ -299,13 +299,25 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
   // XAndesPerf
   case RISCV::BI__builtin_riscv_nds_ffb_32:
-  case RISCV::BI__builtin_riscv_nds_ffb_64:
+  case RISCV::BI__builtin_riscv_nds_ffb_64: {
+    intrinsicName = "riscv.nds.ffb";
+    break;
+  }
   case RISCV::BI__builtin_riscv_nds_ffzmism_32:
-  case RISCV::BI__builtin_riscv_nds_ffzmism_64:
+  case RISCV::BI__builtin_riscv_nds_ffzmism_64: {
+    intrinsicName = "riscv.nds.ffzmism";
+    break;
+  }
   case RISCV::BI__builtin_riscv_nds_ffmism_32:
-  case RISCV::BI__builtin_riscv_nds_ffmism_64:
+  case RISCV::BI__builtin_riscv_nds_ffmism_64: {
+    intrinsicName = "riscv.nds.ffmism";
+    break;
+  }
   case RISCV::BI__builtin_riscv_nds_flmism_32:
-  case RISCV::BI__builtin_riscv_nds_flmism_64:
+  case RISCV::BI__builtin_riscv_nds_flmism_64: {
+    intrinsicName = "riscv.nds.flmism";
+    break;
+  }
   // XAndesBFHCvt
   case RISCV::BI__builtin_riscv_nds_fcvt_s_bf16:
   case RISCV::BI__builtin_riscv_nds_fcvt_bf16_s: {

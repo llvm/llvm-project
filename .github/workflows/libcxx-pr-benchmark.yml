@@ -48,6 +48,14 @@ jobs:
     permissions:
       pull-requests: write
     steps:
+      - name: Checkout the LNT configurations
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          # Disabling cone mode allows checking out exactly the single file we need.
+          sparse-checkout: libcxx/utils/ci/lnt/machines.json
+          sparse-checkout-cone-mode: false
+
       - name: Extract information from the PR
         id: vars
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -62,6 +70,10 @@ jobs:
             core.setOutput('pr_head', pr.data.head.sha);
             const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
             core.setOutput('benchmarks', match ? match[1] : '');
+
+            // Benchmark on the same configurations that we track performance on.
+            const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
+            core.setOutput('matrix', JSON.stringify(config.map(({coverage, ...machine}) => machine)));
 
       - name: Update comment with link to the run
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -84,20 +96,12 @@ jobs:
       pr_base: ${{ steps.vars.outputs.pr_base }}
       pr_head: ${{ steps.vars.outputs.pr_head }}
       benchmarks: ${{ steps.vars.outputs.benchmarks }}
+      matrix: ${{ steps.vars.outputs.matrix }}
 
   run-benchmarks:
     strategy:
       matrix:
-        include:
-          - platform: macOS 26.5 arm64
-            runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
-            cxx: clang++
-            running-on: macos
-            xcode-version: '26.5'
-          - platform: Linux x86_64
-            runner: llvm-premerge-libcxx-runners
-            cxx: clang++-22
-            running-on: linux
+        include: ${{ fromJSON(needs.extract-info.outputs.matrix) }}
       fail-fast: false
     permissions:
       pull-requests: write
@@ -107,7 +111,7 @@ jobs:
     env:
       BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
       COMPILER: ${{ matrix.cxx }}
-      PLATFORM: ${{ matrix.platform }}
+      LNT_MACHINE: ${{ matrix.lnt-machine }}
       PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
       PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
     steps:
@@ -146,7 +150,7 @@ jobs:
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
-          python -m pip install -r libcxx/utils/requirements.txt
+          pip install -r libcxx/utils/requirements.txt
 
       - name: Build the baseline and the candidate
         run: |
@@ -158,21 +162,14 @@ jobs:
       - name: Run baseline and candidate interleaved
         run: |
           source .venv/bin/activate
-          # Run 3 times so we can pick the median, and interleave to mitigate the impact of environmental noise
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee candidate.lnt
-
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
-
-          ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-          ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
-          ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
+          # Run 5 times so we can pick the median, and interleave baseline and candidate to mitigate the impact of
+          # environmental noise
+          for _ in $(seq 1 5); do
+            ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+            ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
+            ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+            ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
+          done
 
       - name: Compare baseline and candidate runs
         run: |
@@ -193,7 +190,7 @@ jobs:
             const details = [
               '<details>',
               '<summary>',
-              `Benchmark results for ${process.env.PLATFORM}:`,
+              `Benchmark results for ${process.env.LNT_MACHINE}:`,
               '</summary>',
               '',
               '```',
@@ -220,7 +217,7 @@ jobs:
               comment_id: context.payload.comment.id,
             });
             const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const note = `> _:x: Benchmarks for ${process.env.PLATFORM} failed. See ${run_url} for details._`;
+            const note = `> _:x: Benchmarks for ${process.env.LNT_MACHINE} failed. See ${run_url} for details._`;
             await github.rest.issues.updateComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

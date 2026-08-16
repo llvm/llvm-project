@@ -24,8 +24,8 @@ namespace llvm::omp::target::plugin {
 
 /// common methods
 
-Error L0QueueTy::init() {
-  auto CmdListOrErr = Device.getCmdListManager(CreateQueueInOrder);
+Error L0QueueTy::init(ze_context_handle_t UserZeCtx) {
+  auto CmdListOrErr = Device.getCmdListManager(UserZeCtx, CreateQueueInOrder);
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   CmdList = *CmdListOrErr;
@@ -52,14 +52,9 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
                                       ze_event_handle_t *WaitEvents) {
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
-  if (KEnv.IsPtrArg)
-    return CmdList->appendLaunchKernelWithArgs(
-        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
-        NumWaitEvents, WaitEvents, KEnv.IsCooperative);
-
-  return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
-                                     NumWaitEvents, WaitEvents,
-                                     KEnv.IsCooperative);
+  return CmdList->appendLaunchKernelWithArgs(
+      Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
+      NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 }
 
 Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
@@ -463,17 +458,18 @@ Error L0SyncQueueTy::hostCallImpl(void (*Callback)(void *), void *UserData) {
 }
 
 // L0QueueCache implementation.
-Expected<L0QueueTy *> L0QueueCacheTy::getQueue() {
+Expected<L0QueueTy *> L0QueueCacheTy::getQueue(L0DeviceTy &Device) {
   {
     std::lock_guard<std::mutex> Lock(Mtx);
-    if (!Queues.empty()) {
-      L0QueueTy *Queue = Queues.back();
-      Queues.pop_back();
+    auto Itr = Queues.find(&Device);
+    if (Itr != Queues.end() && !Itr->second.empty()) {
+      L0QueueTy *Queue = Itr->second.back();
+      Itr->second.pop_back();
       return Queue;
     }
   }
   L0QueueTy *Queue = nullptr;
-  switch (CachedCmdMode) {
+  switch (Device.getPlugin().getOptions().CommandMode) {
   case CommandModeTy::Async:
     Queue = new L0AsyncQueueTy(Device);
     break;
@@ -487,7 +483,8 @@ Expected<L0QueueTy *> L0QueueCacheTy::getQueue() {
     Queue = new L0InorderQueueTy(Device);
     break;
   }
-  if (auto Err = Queue->init()) {
+  Queue->setUserCtx(&UserCtx);
+  if (auto Err = Queue->init(UserCtx.getZeContext())) {
     delete Queue;
     return std::move(Err);
   }
@@ -497,18 +494,21 @@ Expected<L0QueueTy *> L0QueueCacheTy::getQueue() {
 void L0QueueCacheTy::releaseQueue(L0QueueTy *Queue) {
   if (!Queue)
     return;
+  L0DeviceTy &Device = Queue->getDevice();
   Queue->reset();
   std::lock_guard<std::mutex> Lock(Mtx);
-  Queues.push_back(Queue);
+  Queues[&Device].push_back(Queue);
 }
 
 Error L0QueueCacheTy::deinit() {
   Error AllErrors = Error::success();
   std::lock_guard<std::mutex> Lock(Mtx);
-  for (auto *Queue : Queues) {
-    if (auto Err = Queue->deinit())
-      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
-    delete Queue;
+  for (auto &Bucket : Queues) {
+    for (auto *Queue : Bucket.second) {
+      if (auto Err = Queue->deinit())
+        AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
+      delete Queue;
+    }
   }
   Queues.clear();
   return AllErrors;
