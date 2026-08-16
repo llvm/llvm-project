@@ -461,7 +461,7 @@ bool PPCInstrInfo::getFMAPatterns(MachineInstr &Root,
 
       MULInstrL = MRI->getVRegDef(MULRegL);
       MULInstrR = MRI->getVRegDef(MULRegR);
-      return true;
+      return MULInstrL && MULInstrR;
     }
     return false;
   };
