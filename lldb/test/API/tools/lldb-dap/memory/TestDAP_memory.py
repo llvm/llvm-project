@@ -5,9 +5,9 @@ Test lldb-dap memory support
 from base64 import b64decode
 
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
-from lldbsuite.test.tools.lldb_dap.types import *
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
 class TestDAP_memory(DAPTestCaseBase):
