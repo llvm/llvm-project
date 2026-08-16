@@ -140,7 +140,7 @@ void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
   s.Format("{0}", m_environment);
 
   if (m_arch.IsValid()) {
-    s.Printf("   arch = ");
+    s.PutCString("   arch = ");
     m_arch.DumpTriple(s.AsRawOstream());
     s.EOL();
   }

@@ -10,6 +10,7 @@
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile %t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=STARTUP
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile=%t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --bp-compression-sort=none 2>&1 | FileCheck %s --check-prefix=STARTUP-ICF
 # STARTUP: Ordered 5 sections ([[#]] bytes) using balanced partitioning
+# STARTUP: Temporal profile function references: 6 / 7 resolved (5 / 6 unique)
 # STARTUP-ICF: Ordered 4 sections ([[#]] bytes) using balanced partitioning
 
 # Check that orderfiles take precedence over BP
@@ -126,7 +127,7 @@ bss0:
 1
 # Weight
 1
-A, B, C.__uniq.555555555555555555555555555555555555555.llvm.6666666666666666666, merged1, merged2
+A, B, A, C.__uniq.555555555555555555555555555555555555555.llvm.6666666666666666666, merged1, merged2, Missing
 
 A
 # Func Hash:
@@ -171,6 +172,14 @@ merged1
 merged2
 # Func Hash:
 6666
+# Num Counters:
+1
+# Counter Values:
+1
+
+Missing
+# Func Hash:
+7777
 # Num Counters:
 1
 # Counter Values:

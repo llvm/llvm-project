@@ -201,6 +201,7 @@ private:
   bool parseDirectiveUnreq(SMLoc L);
   bool parseDirectiveCFINegateRAState();
   bool parseDirectiveCFINegateRAStateWithPC();
+  bool parseDirectiveCFILLVMSetRAState();
   bool parseDirectiveCFIBKeyFrame();
   bool parseDirectiveCFIMTETaggedFrame();
 
@@ -1441,13 +1442,15 @@ public:
   }
 
   template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
-            unsigned ElementWidth, unsigned RegClass>
-  DiagnosticPredicate isTypedVectorListInRegClass() const {
+            unsigned ElementWidth, unsigned FirstReg, unsigned LastReg,
+            unsigned Multiple>
+  DiagnosticPredicate isTypedVectorListInRange() const {
     bool Res =
         isTypedVectorList<VectorKind, NumRegs, NumElements, ElementWidth>();
     if (!Res)
       return DiagnosticPredicate::NoMatch;
-    if (!getAArch64MCRegisterClass(RegClass).contains(VectorList.Reg))
+    if (VectorList.Reg < FirstReg || VectorList.Reg > LastReg ||
+        (VectorList.Reg - FirstReg) % Multiple != 0)
       return DiagnosticPredicate::NearMatch;
     return DiagnosticPredicate::Match;
   }
@@ -7082,6 +7085,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveCFINegateRAState();
   else if (IDVal == ".cfi_negate_ra_state_with_pc")
     parseDirectiveCFINegateRAStateWithPC();
+  else if (IDVal == ".cfi_set_ra_state")
+    parseDirectiveCFILLVMSetRAState();
   else if (IDVal == ".cfi_b_key_frame")
     parseDirectiveCFIBKeyFrame();
   else if (IDVal == ".cfi_mte_tagged_frame")
@@ -7554,6 +7559,34 @@ bool AArch64AsmParser::parseDirectiveCFINegateRAStateWithPC() {
   if (parseEOL())
     return true;
   getStreamer().emitCFINegateRAStateWithPC();
+  return false;
+}
+
+/// parseDirectiveCFILLVMSetRAState
+/// ::= .cfi_set_ra_state ra_state, offset
+/// ::= .cfi_set_ra_state ra_state, pac_sym
+bool AArch64AsmParser::parseDirectiveCFILLVMSetRAState() {
+  int64_t State;
+  if (getParser().parseAbsoluteExpression(State))
+    return true;
+  if (parseToken(AsmToken::Comma, "expected ','"))
+    return true;
+  const MCExpr *Expr;
+  SMLoc ExprLoc = getLoc();
+  if (getParser().parseExpression(Expr))
+    return true;
+  if (parseEOL())
+    return true;
+  if (auto *SymRef = dyn_cast<MCSymbolRefExpr>(Expr)) {
+    getStreamer().emitCFILLVMSetRAState(
+        (unsigned)State, const_cast<MCSymbol *>(&SymRef->getSymbol()));
+  } else if (auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
+    getStreamer().emitCFILLVMSetRAState((unsigned)State, CE->getValue());
+  } else {
+    return Error(
+        ExprLoc,
+        "expected an integer offset or a symbol for .cfi_set_ra_state");
+  }
   return false;
 }
 

@@ -196,6 +196,14 @@ void kernelTest() {
 // CHECK: delete.end:
 // CHECK-NEXT:   ret void
 
+// The __empty_global_delete fallback is emitted at the first ::delete site,
+// which here lands before the deleting-destructor helpers. Verify it traps
+// (the fallback path is unreachable at runtime once a real forwarding body is
+// linked in).
+// X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64-NEXT: call void @llvm.trap()
+// X64-NEXT: unreachable
+
 // Vector dtor definition for Parrot.
 // X64-LABEL: define weak dso_local noundef ptr @"??_EParrot@@UEAAPEAXI@Z"(
 // X64-SAME: ptr {{.*}} %[[THIS:.*]], i32 {{.*}} %[[IMPLICIT_PARAM:.*]]) unnamed_addr
@@ -287,16 +295,6 @@ void kernelTest() {
 // destructor calls __global_delete instead of directly
 // referencing ::operator delete. This is critical for environments like
 // kernel mode where no global ::operator delete exists.
-// Verify __empty_global_delete traps (the code path is unreachable at runtime).
-// X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
-// X64-NEXT: call void @llvm.trap()
-// X64-NEXT: unreachable
-
-// Verify that when ::delete is used in the TU, a real __global_array_delete
-// forwarding body is emitted that calls through to the actual ::operator delete[].
-// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
-// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
-// X64-NEXT: ret void
 
 // X64-LABEL: define weak dso_local noundef ptr @"??_EKernelDerived@@UEAAPEAXI@Z"
 // Verify the array delete path in the VDD uses __global_array_delete.
@@ -394,7 +392,14 @@ void foobartest() {
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EAllocatedAsArray@@UAEPAXI@Z"
 // CLANG21: define linkonce_odr dso_local noundef ptr @"??_GAllocatedAsArray@@UEAAPEAXI@Z"
 
-// Verify the /ALTERNATENAME linker directive.
-// X64: !{!"/alternatename:?__global_delete@@YAXPEAX_K@Z=?__empty_global_delete@@YAXPEAX_K@Z"}
+// The forwarding bodies for the global-delete wrappers are emitted at
+// end-of-module (after all the deleting-destructor helpers). Because ::delete[]
+// is used in the TU, both wrappers get real forwarding bodies: the array
+// __global_array_delete forwards to ::operator delete[] (??_V@) and the scalar
+// __global_delete forwards to ::operator delete (??3@).
+// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
+// X64: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr %0, i64 %1)
 
 // CLANG21-NOT: __global_delete

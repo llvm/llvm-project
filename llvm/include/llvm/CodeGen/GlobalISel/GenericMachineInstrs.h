@@ -194,6 +194,9 @@ public:
     return getMMO().getRanges();
   }
 
+  /// Returns the cache hint metadata for this load.
+  const MDNode *getMemCacheHint() const { return getMMO().getMemCacheHint(); }
+
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_LOAD:
@@ -972,6 +975,17 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_STEP_VECTOR;
+  };
+};
+
+/// Represents a G_CONSTANT.
+class GConstant : public GenericMachineInstr {
+public:
+  const ConstantInt *getConstantInt() const { return getOperand(1).getCImm(); }
+  const APInt &getValue() const { return getConstantInt()->getValue(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_CONSTANT;
   };
 };
 

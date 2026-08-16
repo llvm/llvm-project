@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -250,6 +251,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonQFPOptimizerPass(PR);
   initializeHexagonXQFloatGeneratorPass(PR);
   initializeHexagonPostRAHandleQFPPass(PR);
+  initializeMachineKCFILegacyPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -293,12 +295,12 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        if (Level.getSpeedupLevel() > 0)
+        if (Level != OptimizationLevel::O0)
           LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }

@@ -1,6 +1,6 @@
 add_custom_target(libc_arpa_inet_unittests)
 
-add_libc_unittest(
+add_libc_test(
   htonl
   SUITE
     libc_arpa_inet_unittests
@@ -11,7 +11,7 @@ add_libc_unittest(
     libc.src.arpa.inet.ntohl
 )
 
-add_libc_unittest(
+add_libc_test(
   htons
   SUITE
     libc_arpa_inet_unittests
@@ -22,7 +22,7 @@ add_libc_unittest(
     libc.src.arpa.inet.ntohs
 )
 
-add_libc_unittest(
+add_libc_test(
   inet_addr
   SUITE
     libc_arpa_inet_unittests
@@ -33,7 +33,7 @@ add_libc_unittest(
     libc.src.arpa.inet.inet_addr
 )
 
-add_libc_unittest(
+add_libc_test(
   inet_aton
   SUITE
     libc_arpa_inet_unittests
@@ -44,7 +44,19 @@ add_libc_unittest(
     libc.src.arpa.inet.inet_aton
 )
 
-add_libc_unittest(
+add_libc_test(
+  inet_ntoa
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    inet_ntoa_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.inet_ntoa
+    libc.hdr.types.struct_in_addr
+    libc.src.__support.endian_internal
+)
+
+add_libc_test(
   inet_ntop
   SUITE
     libc_arpa_inet_unittests
@@ -60,8 +72,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-
-add_libc_unittest(
+add_libc_test(
   ntohl
   SUITE
     libc_arpa_inet_unittests
@@ -72,7 +83,7 @@ add_libc_unittest(
     libc.src.arpa.inet.ntohl
 )
 
-add_libc_unittest(
+add_libc_test(
   ntohs
   SUITE
     libc_arpa_inet_unittests

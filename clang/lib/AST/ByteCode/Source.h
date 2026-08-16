@@ -17,6 +17,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Endian.h"
 
 namespace clang {
@@ -88,7 +89,7 @@ public:
   const Decl *asDecl() const {
     return dyn_cast_if_present<const Decl *>(Source);
   }
-  const Expr *asExpr() const;
+  const Expr *asExpr() const { return dyn_cast_if_present<Expr>(asStmt()); }
 
   operator bool() const { return !Source.isNull(); }
 
@@ -97,7 +98,30 @@ private:
 };
 static_assert(sizeof(SourceInfo) == sizeof(void *));
 
-using SourceMap = std::vector<std::pair<unsigned, SourceInfo>>;
+// A map from byte code offset to source information.
+// This is used to get the location in the input source file for diagnostics.
+class SourceMap final {
+private:
+  llvm::SmallVector<uint32_t> Offsets;
+  llvm::SmallVector<SourceInfo> Infos;
+
+public:
+  SourceMap() = default;
+  void push(uint32_t Offset, SourceInfo Info) {
+    Offsets.push_back(Offset);
+    Infos.push_back(Info);
+  }
+
+  SourceInfo findSourceForOffset(uint32_t Offset) const {
+    assert(!Offsets.empty());
+    assert(Offsets.size() == Infos.size());
+#ifndef NDEBUG
+    assert(llvm::is_sorted(Offsets));
+#endif
+    const auto *It = llvm::lower_bound(Offsets, Offset);
+    return Infos[It - Offsets.begin()];
+  }
+};
 
 /// Interface for classes which map locations to sources.
 class SourceMapper {
@@ -105,13 +129,13 @@ public:
   virtual ~SourceMapper() {}
 
   /// Returns source information for a given PC in a function.
-  virtual SourceInfo getSource(const Function *F, CodePtr PC) const = 0;
+  virtual SourceInfo getSource(CodePtr PC) const = 0;
 
   /// Returns the expression if an opcode belongs to one, null otherwise.
-  const Expr *getExpr(const Function *F, CodePtr PC) const;
+  const Expr *getExpr(CodePtr PC) const;
   /// Returns the location from which an opcode originates.
-  SourceLocation getLocation(const Function *F, CodePtr PC) const;
-  SourceRange getRange(const Function *F, CodePtr PC) const;
+  SourceLocation getLocation(CodePtr PC) const;
+  SourceRange getRange(CodePtr PC) const;
 };
 
 } // namespace interp

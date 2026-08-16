@@ -650,6 +650,6 @@ EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
     return;
 
   for (auto &Plugin : PM->plugins())
-    if (Plugin.is_initialized())
+    if (Plugin.is_initialized() && Plugin.getNumDevices() > 0)
       Plugin.getRPCServer().registerCallback(Callback);
 }

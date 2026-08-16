@@ -9,63 +9,90 @@
 // <algorithm>
 
 // template <class InputIterator, class Predicate>
-//     constexpr bool       // constexpr after C++17
-//   any_of(InputIterator first, InputIterator last, Predicate pred);
+// constexpr bool any_of(InputIterator first, InputIterator last, Predicate pred); // constexpr since C++20
 
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
-struct test1
-{
-    TEST_CONSTEXPR bool operator()(const int& i) const
-    {
-        return i % 2 == 0;
-    }
+struct is_odd {
+  TEST_CONSTEXPR bool operator()(const int& i) const { return i % 2 != 0; }
 };
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {2, 4, 6, 8};
-    int ib[] = {1, 3, 5, 7};
-    return  std::any_of(std::begin(ia), std::end(ia), test1())
-        && !std::any_of(std::begin(ib), std::end(ib), test1())
-        ;
-    }
-#endif
+struct counting_predicate {
+  int* times_applied;
+  bool result;
+  TEST_CONSTEXPR counting_predicate(int* counter, bool r) : times_applied(counter), result(r) {}
+  TEST_CONSTEXPR_CXX14 bool operator()(int) const {
+    ++*times_applied;
+    return result;
+  }
+};
 
-int main(int, char**)
-{
-    {
-        int ia[] = {2, 4, 6, 8};
-        const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-        assert(std::any_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia + sa), test1()) == true);
-        assert(std::any_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia), test1()) == false);
-    }
-    {
-        const int ia[] = {2, 4, 5, 8};
-        const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-        assert(std::any_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia + sa), test1()) == true);
-        assert(std::any_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia), test1()) == false);
-    }
-    {
-        const int ia[] = {1, 3, 5, 7};
-        const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-        assert(std::any_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia + sa), test1()) == false);
-        assert(std::any_of(cpp17_input_iterator<const int*>(ia),
-                           cpp17_input_iterator<const int*>(ia), test1()) == false);
+struct Test {
+  template <class Iter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    { // an empty range never contains a matching element
+      int a[] = {1, 2, 3, 4};
+      // The return type is always `bool`, regardless of the iterator category.
+      ASSERT_SAME_TYPE(bool, decltype(std::any_of(Iter(a), Iter(a), is_odd())));
+      assert(!std::any_of(Iter(a), Iter(a), is_odd()));
     }
 
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+    { // no element matches the predicate
+      int a[] = {2, 4, 6, 8};
+      assert(!std::any_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // every element matches the predicate
+      int a[] = {1, 3, 5, 7};
+      assert(std::any_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // the only matching element is the first one
+      int a[] = {1, 2, 4, 6};
+      assert(std::any_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // the only matching element is in the middle
+      int a[] = {2, 4, 5, 8};
+      assert(std::any_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // the only matching element is the last one
+      int a[] = {2, 4, 6, 7};
+      assert(std::any_of(Iter(a), Iter(a + 4), is_odd()));
+    }
+
+    { // a single-element range, with and without a match
+      int match    = 1;
+      int no_match = 2;
+      assert(std::any_of(Iter(&match), Iter(&match + 1), is_odd()));
+      assert(!std::any_of(Iter(&no_match), Iter(&no_match + 1), is_odd()));
+    }
+  }
+};
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::cpp17_input_iterator_list<int*>(), Test());
+
+  { // the predicate is applied at most `last - first` times (complexity requirement)
+    int a[]     = {1, 2, 3, 4, 5};
+    int applied = 0;
+    assert(!std::any_of(a, a + 5, counting_predicate(&applied, false)));
+    assert(applied == 5);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
 #endif
 
   return 0;

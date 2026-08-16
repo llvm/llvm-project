@@ -8,7 +8,7 @@ body: |
   ; CHECK-LABEL: name: @Cst
   ; CHECK-NEXT: %0:_ KnownBits:01100100 SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %2:_ KnownBits:000????? SignBits:3
+  ; CHECK-NEXT: %2:_ KnownBits:00011001 SignBits:3
     %0:_(i8) = G_CONSTANT i8 100
     %1:_(i8) = G_CONSTANT i8 4
     %2:_(i8) = G_SDIV %0, %1
@@ -36,7 +36,7 @@ body: |
   ; CHECK-LABEL: name: @Exact
   ; CHECK-NEXT: %0:_ KnownBits:00001100 SignBits:4
   ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %2:_ KnownBits:000000?1 SignBits:6
+  ; CHECK-NEXT: %2:_ KnownBits:00000011 SignBits:6
     %0:_(i8) = G_CONSTANT i8 12
     %1:_(i8) = G_CONSTANT i8 4
     %2:_(i8) = exact G_SDIV %0, %1

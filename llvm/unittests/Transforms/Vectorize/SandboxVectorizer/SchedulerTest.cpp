@@ -23,6 +23,8 @@
 
 using namespace llvm;
 
+static constexpr auto BottomUp = sandboxir::SchedDirection::BottomUp;
+
 struct SchedulerTest : public testing::Test {
   LLVMContext C;
   std::unique_ptr<Module> M;
@@ -83,7 +85,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto *SN0 = DAG.getNode(S0);
   auto *SN1 = DAG.getNode(S1);
@@ -171,7 +173,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
   auto *S2 = cast<sandboxir::StoreInst>(&*It++);
   auto *S3 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto *SN0 = DAG.getNode(S0);
   auto *SN1 = DAG.getNode(S1);
@@ -211,7 +213,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1, i8 %v2) {
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
   auto *S2 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto *SN0 = DAG.getNode(S0);
   auto *SN1 = DAG.getNode(S1);
@@ -261,6 +263,32 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_FALSE(Sched.trySchedule({S0, S1}));
   }
+}
+
+TEST_F(SchedulerTest, FalseNegatives) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
+  %ld0 = load i8, ptr %ptr0
+  %ld1 = load i8, ptr %ptr1
+  store i8 %ld0, ptr %ptr0
+  store i8 %ld1, ptr %ptr1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
+  EXPECT_FALSE(Sched.trySchedule({S0, S1, L0, L1}));
+  EXPECT_TRUE(Sched.trySchedule({S0, S1}));
 }
 
 TEST_F(SchedulerTest, Basic_TopDown) {
@@ -425,6 +453,34 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %arg) {
   EXPECT_FALSE(Sched.trySchedule({L1, Z}));
   // This should succeed because it matches the original vec bundle.
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+}
+
+// Top-down mirror of the TrimSchedule test. This exercises the top-down path of
+// Scheduler::trimSchedule(), where the ready list must be refilled by visiting
+// the nodes from the top of schedule down to the bottom of the DAG.
+TEST_F(SchedulerTest, TrimSchedule_TopDown) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %arg) {
+  %ld = load i8, ptr %ptr0
+  %add = add i8 %ld, 0
+  store i8 %add, ptr %ptr0
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Load = cast<sandboxir::LoadInst>(&*It++);
+  auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::TopDown);
+  EXPECT_TRUE(Sched.trySchedule({Load}));
+  EXPECT_TRUE(Sched.trySchedule({Store}));
+  EXPECT_TRUE(Sched.trySchedule({Add}));
 }
 
 // Make sure that instructions in  SchedBundles are always scheduled
@@ -836,8 +892,7 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
   DAG.extend({L0});
   auto *L0N = DAG.getNode(L0);
-  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
-  EXPECT_EQ(L0N->getNumUnscheduledPreds(), 0u);
+  EXPECT_EQ(L0N->getNumUnscheduledDeps(), 0u);
   // We should have DAG nodes for all instructions at this point
 
   // Now create a new instruction below S0.
@@ -848,12 +903,11 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *NewS1N = DAG.getNode(NewS1);
   EXPECT_TRUE(NewS1N->scheduled());
 #ifndef NDEBUG
-  // NewS1N is scheduled so unscheduled preds/succs are irrelevant.
-  EXPECT_FALSE(NewS1N->validUnscheduledPreds());
-  EXPECT_FALSE(NewS1N->validUnscheduledSuccs());
+  // NewS1N is scheduled so unscheduled deps are irrelevant.
+  EXPECT_FALSE(NewS1N->validUnscheduledDeps());
 #endif
-  // Check that L0's UnscheduledSuccs are still == 0 since NewS1 is "scheduled".
-  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
+  // Check that L0's UnscheduledDeps are still == 0 since NewS1 is "scheduled".
+  EXPECT_EQ(L0N->getNumUnscheduledDeps(), 0u);
 
   // Now create a new instruction above S0.
   sandboxir::StoreInst *NewS2 =
@@ -863,8 +917,7 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *NewS2N = DAG.getNode(NewS2);
   EXPECT_FALSE(NewS2N->scheduled());
   // Check that L0's UnscheduledSuccs got updated because of NewS2.
-  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 1u);
-  EXPECT_EQ(NewS2N->getNumUnscheduledPreds(), 0u);
+  EXPECT_EQ(L0N->getNumUnscheduledDeps(), 1u);
 
   sandboxir::ReadyListContainer ReadyList;
   // Check empty().
@@ -888,7 +941,7 @@ define void @foo(ptr %ptr) {
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
   DAG.extend({&*BB->begin(), BB->getTerminator()});
   auto *L0N = DAG.getNode(L0);
   auto *S0N = DAG.getNode(S0);
@@ -897,10 +950,13 @@ define void @foo(ptr %ptr) {
   sandboxir::ReadyListContainer ReadyList;
   // Check empty().
   EXPECT_TRUE(ReadyList.empty());
-  // Check insert(), pop().
+  EXPECT_FALSE(ReadyList.contains(L0N));
+  // Check insert(), pop(), contains().
   ReadyList.insert(L0N);
   EXPECT_FALSE(ReadyList.empty());
+  EXPECT_TRUE(ReadyList.contains(L0N));
   EXPECT_EQ(ReadyList.pop(), L0N);
+  EXPECT_FALSE(ReadyList.contains(L0N));
   // Check clear().
   ReadyList.insert(L0N);
   EXPECT_FALSE(ReadyList.empty());
@@ -912,7 +968,11 @@ define void @foo(ptr %ptr) {
   ReadyList.insert(L0N);
   ReadyList.insert(S0N);
   ReadyList.insert(RetN);
+  EXPECT_TRUE(ReadyList.contains(L0N));
+  EXPECT_TRUE(ReadyList.contains(S0N));
+  EXPECT_TRUE(ReadyList.contains(RetN));
   ReadyList.remove(S0N);
+  EXPECT_FALSE(ReadyList.contains(S0N));
   DenseSet<sandboxir::DGNode *> Nodes;
   Nodes.insert(ReadyList.pop());
   Nodes.insert(ReadyList.pop());
@@ -945,7 +1005,7 @@ bb1:
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  sandboxir::DependencyGraph DAG(BottomUp, getAA(*LLVMF), Ctx);
   DAG.extend({&*BB1->begin(), BB1->getTerminator()});
   auto *Phi0N = DAG.getNode(Phi0);
   auto *Phi1N = DAG.getNode(Phi1);
@@ -992,4 +1052,92 @@ bb1:
   EXPECT_EQ(ReadyList.pop(), L0N);
   EXPECT_EQ(ReadyList.pop(), S0N);
   EXPECT_EQ(ReadyList.pop(), RetN);
+}
+
+TEST_F(SchedulerTest, SchedulingPoint) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0) {
+  store i8 %v0, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  // Check at each instruction.
+  for (auto &I : *BB) {
+    sandboxir::SchedulingPoint SP(I.getIterator());
+    // Check atBeforeBeginOrNull(), I can't be before begin.
+    EXPECT_EQ(SP.atBeforeBeginOrNull(), nullptr);
+    // Check atEndOrNull(), I can't be at end.
+    EXPECT_EQ(SP.atEndOrNull(), nullptr);
+
+    // Check atInstrOrNull().
+    EXPECT_EQ(SP.atInstrOrNull(), &I);
+    // Check cast to Instruction *.
+    EXPECT_EQ((sandboxir::Instruction *)SP, &I);
+    // Check getIterator().
+    EXPECT_EQ(SP.getIterator(), I.getIterator());
+    // Check getIterator() const.
+    EXPECT_EQ(((const sandboxir::SchedulingPoint &)SP).getIterator(),
+              I.getIterator());
+    // Check getNext().
+    EXPECT_EQ(SP.getNext().getIterator(), std::next(I.getIterator()));
+    // Check getPrev().
+    EXPECT_EQ(SP.getNext().getPrev().getIterator(), I.getIterator());
+    // Check operator==() and createAt().
+    EXPECT_EQ(sandboxir::SchedulingPoint::createAt(I.getIterator()), SP);
+  }
+  // Check createBefore().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(Ret->getIterator()),
+            sandboxir::SchedulingPoint::createAt(S0->getIterator()));
+  // Check createAfter().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAfter(S0->getIterator()),
+            sandboxir::SchedulingPoint::createAt(Ret->getIterator()));
+  // Check atBeforeBeginOrNull().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->begin())
+                .atBeforeBeginOrNull(),
+            BB);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(S0->getIterator())
+                .atBeforeBeginOrNull(),
+            nullptr);
+  EXPECT_EQ(
+      sandboxir::SchedulingPoint::createAt(BB->end()).atBeforeBeginOrNull(),
+      nullptr);
+  // Check atEndOrNull().
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->end()).atEndOrNull(), BB);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->end()).atEndOrNull(),
+            nullptr);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createBefore(BB->begin()).atEndOrNull(),
+            nullptr);
+  // Check atInstrOrNull().
+  EXPECT_EQ(
+      sandboxir::SchedulingPoint::createBefore(BB->begin()).atInstrOrNull(),
+      nullptr);
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->begin()).atInstrOrNull(),
+            &BB->front());
+  EXPECT_EQ(sandboxir::SchedulingPoint::createAt(BB->end()).atInstrOrNull(),
+            nullptr);
+
+#ifndef NDEBUG
+  // Check assertion when trying to createAfter() at BB.end().
+  EXPECT_DEATH(sandboxir::SchedulingPoint::createAfter(BB->end()),
+               ".*at end.*");
+  // Check assertion when trying to get out of bounds getPrev().
+  sandboxir::SchedulingPoint BeforeBegin =
+      sandboxir::SchedulingPoint::createBefore(BB->begin());
+  EXPECT_DEATH(BeforeBegin.getPrev(), ".*Expected.*");
+  // Check assertion when trying to get out of bounds getNext().
+  sandboxir::SchedulingPoint AtEnd =
+      sandboxir::SchedulingPoint::createAt(BB->end());
+  EXPECT_DEATH(AtEnd.getNext(), ".*Expected.*");
+
+  // Check assertion before begin.
+  EXPECT_DEATH(BeforeBegin.getIterator(), ".*Expected.*");
+#endif
 }

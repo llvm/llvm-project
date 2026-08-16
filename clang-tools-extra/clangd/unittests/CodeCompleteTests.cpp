@@ -841,7 +841,7 @@ TEST(CompletionTest, Kinds) {
   EXPECT_THAT(
       Results.Completions,
       UnorderedElementsAre(
-          AllOf(named("complete_class"), kind(CompletionItemKind::Class)),
+          AllOf(named("complete_class"), kind(CompletionItemKind::Struct)),
           AllOf(named("complete_function"), kind(CompletionItemKind::Function)),
           AllOf(named("complete_type_alias"),
                 kind(CompletionItemKind::Interface)),
@@ -2996,6 +2996,8 @@ TEST(CompletionTest, ArgumentListsPolicy) {
       template <class T>
       class foo_class{};
       template <class T>
+      struct foo_struct{};
+      template <class T>
       using foo_alias = T**;
       template <class T>
       T foo_var = T{};
@@ -3004,8 +3006,34 @@ TEST(CompletionTest, ArgumentListsPolicy) {
     EXPECT_THAT(
         Results.Completions,
         UnorderedElementsAre(AllOf(named("foo_class"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_struct"), snippetSuffix("<$0>")),
                              AllOf(named("foo_alias"), snippetSuffix("<$0>")),
                              AllOf(named("foo_var"), snippetSuffix("<$0>"))));
+  }
+  {
+    const char *Header = R"cpp(
+      template <class T>
+      class foo_class{};
+      template <class T>
+      struct foo_struct{};
+      template <class T>
+      using foo_alias = T**;
+      template <class T>
+      T foo_var = T{};
+    )cpp";
+    auto Index = TestTU::withHeaderCode(Header).index();
+    Opts.Index = Index.get();
+    auto Results = completions(
+        R"cpp(
+      void f() { foo_^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(named("foo_class"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_struct"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_alias"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_var"), snippetSuffix("<$0>"))));
+    Opts.Index = nullptr;
   }
   {
     auto Results = completions(

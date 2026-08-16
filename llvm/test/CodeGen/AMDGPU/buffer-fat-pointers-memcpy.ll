@@ -12,8 +12,6 @@
 ; for buffer-related memcpy() calls turns into something reasonable in
 ; the backend, despite the wide intermediate vectors
 
-target triple = "amdgcn--"
-
 ;; memcpy
 
 declare void @llvm.memcpy.p7.p7.i32(ptr addrspace(7), ptr addrspace(7), i32, i1)

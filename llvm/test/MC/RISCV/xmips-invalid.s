@@ -20,7 +20,7 @@ mips.pref	8, 511(a0)
 # CHECK-FEATURE: error: instruction requires the following: 'Xmipscbop' (MIPS hardware prefetch)
 
 mips.ccmov x0, x1, 0x10
-# CHECK: error: invalid operand for instruction
+# CHECK: error: register must be a GPR
 
 mips.ccmov x10
 # CHECK: error: too few operands for instruction
@@ -32,7 +32,7 @@ mips.lwp x10, x11
 # CHECK: error: too few operands for instruction
 
 mips.ldp x9, 0x20
-# CHECK: error: invalid operand for instruction
+# CHECK: error: register must be a GPR
 
 mips.lwp x11, x12, 0(x13)
 # CHECK-FEATURE: error: instruction requires the following: 'Xmipslsp' (load and store pair instructions)
@@ -41,4 +41,4 @@ mips.swp x18, x19, 8(x2)
 # CHECK-FEATURE: error: instruction requires the following: 'Xmipslsp' (load and store pair instructions)
 
 mips.sdp 0x10, x3, 12(x4)
-# CHECK: error: invalid operand for instruction
+# CHECK: error: register must be a GPR

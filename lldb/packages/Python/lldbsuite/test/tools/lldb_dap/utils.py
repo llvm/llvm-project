@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass, field, replace
 from pprint import pformat
 from typing import IO, Callable, Optional, Protocol, Tuple, Type, runtime_checkable
 
-from .dap_types import (
+from .types import (
     AnyEvent,
     DAPError,
     Event,

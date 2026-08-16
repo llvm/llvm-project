@@ -2,8 +2,8 @@ import io
 import json
 from typing import List
 
-from lldbsuite.test.tools.lldb_dap.dap_types import RawMessage
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import RawMessage
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.utils import DAPConnection, MessageHandler, Transport
 
 

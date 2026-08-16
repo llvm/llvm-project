@@ -448,6 +448,7 @@ static bool dieNeedsChildrenToBeMeaningful(uint32_t Tag) {
     return false;
   case dwarf::DW_TAG_class_type:
   case dwarf::DW_TAG_common_block:
+  case dwarf::DW_TAG_enumeration_type:
   case dwarf::DW_TAG_lexical_block:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subprogram:
@@ -671,7 +672,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
     // function ranges when available, falling back to labels otherwise.
     if (Unit.getLanguage() == dwarf::DW_LANG_Mips_Assembler ||
         Unit.getLanguage() == dwarf::DW_LANG_Assembly) {
-      if (auto Range = RelocMgr.getAssemblyRangeForAddress(*LowPc)) {
+      if (auto Range = RelocMgr.getSymbolRangeForAddress(*LowPc)) {
         Unit.addFunctionRange(Range->LowPC, Range->HighPC, MyInfo.AddrAdjust);
       } else {
         Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
@@ -697,7 +698,10 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
   }
 
   // Replace the debug map range with a more accurate one.
-  Unit.addFunctionRange(*LowPc, *HighPc, MyInfo.AddrAdjust);
+  Unit.addFunctionRange(
+      *LowPc,
+      RelocMgr.constrainCodeRangeHighPC(*LowPc, *HighPc, MyInfo.AddrAdjust),
+      MyInfo.AddrAdjust);
   return Flags;
 }
 
@@ -1422,6 +1426,25 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   return Die.addValue(DIEAlloc, Value)->sizeOf(OrigUnit.getFormParams());
 }
 
+/// Returns \p InputDIE's DW_AT_high_pc value \p HighPC, constrained so the code
+/// range it ends stays clear of the symbol the linker places next. \p IsLength
+/// tells whether high_pc is encoded as a length rather than an address, and
+/// \p PCOffset is the amount the range shifts by in the output.
+///
+/// A scope nested in a function inherits the overrun of the function, so it is
+/// constrained as well.
+static uint64_t constrainHighPC(const DWARFDie &InputDIE, uint64_t HighPC,
+                                bool IsLength, int64_t PCOffset,
+                                AddressesMap &Addresses) {
+  std::optional<uint64_t> LowPC =
+      dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc));
+  if (!LowPC)
+    return HighPC;
+  uint64_t Constrained = Addresses.constrainCodeRangeHighPC(
+      *LowPC, IsLength ? *LowPC + HighPC : HighPC, PCOffset);
+  return IsLength ? Constrained - *LowPC : Constrained;
+}
+
 unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     DIE &Die, const DWARFDie &InputDIE, AttributeSpec AttrSpec,
     unsigned AttrSize, const DWARFFormValue &Val, const CompileUnit &Unit,
@@ -1470,6 +1493,9 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     else
       return 0;
   } else {
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc)
+      Addr = constrainHighPC(InputDIE, *Addr, /*IsLength=*/false, Info.PCOffset,
+                             *ObjFile.Addresses);
     *Addr += Info.PCOffset;
   }
 
@@ -1627,6 +1653,13 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
         &InputDIE);
     return 0;
   }
+
+  // A compile unit's high_pc comes from the unit's own linked range and spans
+  // every symbol in it.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
+      Die.getTag() != dwarf::DW_TAG_compile_unit)
+    Value = constrainHighPC(InputDIE, Value, /*IsLength=*/true, Info.PCOffset,
+                            *File.Addresses);
 
   DIE::value_iterator Patch =
       Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),

@@ -29,6 +29,7 @@ with worker.run(
                 "-GNinja",
                 f"-DLLVM_LIT_ARGS=-vv --show-unsupported --show-xfail -j {w.jobs} --time-tests --timeout 100",
                 f"-DCMAKE_INSTALL_PREFIX={w.in_workdir(llvminstalldir)}",
+                f"-DRUNTIMES_amdgpu-amd-amdhsa_CMAKE_CROSSCOMPILING_EMULATOR={w.in_workdir(llvmbuilddir)}/bin/llvm-gpu-loader",
             ]
         )
 

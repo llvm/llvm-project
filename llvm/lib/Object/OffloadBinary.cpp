@@ -447,32 +447,42 @@ StringRef object::getImageKindName(ImageKind Kind) {
   }
 }
 
-bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
+bool object::areTargetsEquivalent(const OffloadFile::TargetID &LHS,
                                   const OffloadFile::TargetID &RHS) {
-  // Exact matches are not considered compatible because they are the same
-  // target. We are interested in different targets that are compatible.
-  if (LHS == RHS)
-    return false;
-
   llvm::Triple LHSTT(LHS.first);
   llvm::Triple RHSTT(RHS.first);
 
-  // The AMDGPU target requires target-id aware checks (base processor plus
-  // xnack/sramecc features), which also handle the generic wildcard and the
-  // legacy "amdgcn"/"amdgpu" triple spellings.
+  // Check for logical AMDGPU target-id equivalence.
   if (LHSTT.isAMDGPU()) {
-    AMDGPU::TargetID LTID(LHSTT, LHS.second);
-    AMDGPU::TargetID RTID(RHSTT, RHS.second);
-    return LTID.isCompatibleWith(RTID);
+    AMDGPU::TargetID LHSID(LHSTT, LHS.second);
+    AMDGPU::TargetID RHSID(RHSTT, RHS.second);
+    return LHSID.isEquivalent(RHSID);
+  }
+
+  // For other targets the triples must be compatible and the arch must match.
+  return LHSTT.isCompatibleWith(RHSTT) && LHS.second == RHS.second;
+}
+
+bool object::areTargetsCompatible(const OffloadFile::TargetID &Provided,
+                                  const OffloadFile::TargetID &Requested) {
+  llvm::Triple ProvidedTT(Provided.first);
+  llvm::Triple RequestedTT(Requested.first);
+
+  // The AMDGPU target requires target-id aware checks (base processor plus
+  // xnack/sramecc features).
+  if (ProvidedTT.isAMDGPU()) {
+    AMDGPU::TargetID ProvidedID(ProvidedTT, Provided.second);
+    AMDGPU::TargetID RequestedID(RequestedTT, Requested.second);
+    return ProvidedID.providesFor(RequestedID);
   }
 
   // For other targets the triples must be compatible.
-  if (!LHSTT.isCompatibleWith(RHSTT))
+  if (!ProvidedTT.isCompatibleWith(RequestedTT))
     return false;
 
   // If the architecture is "generic" we assume it is always compatible.
-  if (LHS.second == "generic" || RHS.second == "generic")
+  if (Provided.second == "generic" || Requested.second == "generic")
     return true;
 
-  return LHS.second == RHS.second;
+  return Provided.second == Requested.second;
 }

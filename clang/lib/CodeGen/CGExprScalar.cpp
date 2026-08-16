@@ -682,6 +682,8 @@ public:
     if (E->getCallReturnType(CGF.getContext())->isReferenceType())
       return EmitLoadOfLValue(E);
 
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+
     Value *V = CGF.EmitCallExpr(E).getScalarVal();
 
     EmitLValueAlignmentAssumption(E, V);
@@ -3707,8 +3709,10 @@ Value *ScalarExprEmitter::VisitMinus(const UnaryOperator *E,
     Op = Visit(E->getSubExpr());
 
   // Generate a unary FNeg for FP ops.
-  if (Op->getType()->isFPOrFPVectorTy())
+  if (Op->getType()->isFPOrFPVectorTy()) {
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
     return Builder.CreateFNeg(Op, "fneg");
+  }
 
   // Emit unary minus with EmitSub so we handle overflow cases etc.
   BinOpInfo BinOp;
@@ -4091,12 +4095,24 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
 
   llvm::PHINode *atomicPHI = nullptr;
   if (const AtomicType *atomicTy = LHSTy->getAs<AtomicType>()) {
-    QualType type = atomicTy->getValueType();
-    if (!type->isBooleanType() && type->isIntegerType() &&
-        !(type->isUnsignedIntegerType() &&
+    // Type wrapped by _Atomic.
+    QualType AtomicValueTy = atomicTy->getValueType();
+    // Type resulting from FP conversion / integer promotion of the compound
+    // assignment operands.
+    QualType ResultTy = E->getComputationResultType();
+    // Do not try the atomicrmw op fast-path when the compound assignment may
+    // involve FP conversions, as the correct semantics would require promoting
+    // the loaded integer to double, performing FP arithmetics, and truncation
+    // back as a single atomic operation. Integer promotion is still
+    // semantically safe.
+    bool CanEmitAtomicRMW =
+        !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
+        ResultTy->isIntegerType() &&
+        !(AtomicValueTy->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
-            LangOptions::SOB_Trapping) {
+            LangOptions::SOB_Trapping;
+    if (CanEmitAtomicRMW) {
       llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
       llvm::Instruction::BinaryOps Op;
       switch (OpInfo.Opcode) {
@@ -4149,7 +4165,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     llvm::BasicBlock *startBB = Builder.GetInsertBlock();
     llvm::BasicBlock *opBB = CGF.createBasicBlock("atomic_op", CGF.CurFn);
     OpInfo.LHS = EmitLoadOfLValue(LHSLV, E->getExprLoc());
-    OpInfo.LHS = CGF.EmitToMemory(OpInfo.LHS, type);
+    OpInfo.LHS = CGF.EmitToMemory(OpInfo.LHS, AtomicValueTy);
     Builder.CreateBr(opBB);
     Builder.SetInsertPoint(opBB);
     atomicPHI = Builder.CreatePHI(OpInfo.LHS->getType(), 2);
@@ -5009,6 +5025,8 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     divisor = CGF.CGM.getSize(elementSize);
   }
 
+  if (CGF.getLangOpts().StablePointerSubtraction)
+    return Builder.CreateSDiv(diffInChars, divisor, "sub.ptr.div");
   // Otherwise, do a full sdiv. This uses the "exact" form of sdiv, since
   // pointer difference in C is only defined in the case where both operands
   // are pointing to elements of an array.
@@ -6440,15 +6458,12 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   GEPOffsetAndOverflow EvaluatedGEP =
       EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
 
-  assert((!isa<llvm::Constant>(EvaluatedGEP.TotalOffset) ||
-          EvaluatedGEP.OffsetOverflows == Builder.getFalse()) &&
-         "If the offset got constant-folded, we don't expect that there was an "
-         "overflow.");
-
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
-  // Common case: if the total offset is zero, don't emit a check.
-  if (EvaluatedGEP.TotalOffset == Zero)
+  // Common case: if the total offset is zero and has not overflowed, don't emit
+  // a check.
+  if (EvaluatedGEP.TotalOffset == Zero &&
+      EvaluatedGEP.OffsetOverflows == Builder.getFalse())
     return GEPVal;
 
   // Now that we've computed the total offset, add it to the base pointer (with

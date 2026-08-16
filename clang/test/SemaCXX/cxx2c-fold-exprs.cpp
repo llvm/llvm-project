@@ -509,6 +509,37 @@ static_assert(!__callable<__mdispatch<int>>);
 
 }
 
+namespace GH199569 {
+
+template<typename F, typename... A>
+concept callable = requires(F f, A... a) {
+	f(a...);
+};
+
+struct S {
+	void operator()(auto);
+};
+
+template<int> struct B {};
+
+template<int... N> requires(... and callable<S, B<N>>)
+struct X {};
+
+template<int... N> requires(... or !callable<S, B<N>>)
+// expected-note@-1 {{because '!callable<S, B<0>>' evaluated to false}} \
+// expected-note@-1 {{and '!callable<S, B<1>>' evaluated to false}} \
+// expected-note@-1 {{and '!callable<S, B<2>>' evaluated to false}}
+struct Y {};
+
+static_assert(callable<S, B<0>>);
+static_assert(callable<S, B<1>>);
+
+X<0, 1> x;
+Y<0, 1, 2> y;
+// expected-error@-1 {{constraints not satisfied for class template 'Y'}}
+
+}
+
 namespace GH190169 {
 
 namespace _1 {

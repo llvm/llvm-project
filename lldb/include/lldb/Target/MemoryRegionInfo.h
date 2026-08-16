@@ -142,7 +142,10 @@ public:
 
   LazyBool IsStackMemory() const { return m_is_stack_memory; }
 
-  void SetIsStackMemory(LazyBool val) { m_is_stack_memory = val; }
+  MemoryRegionInfo &SetIsStackMemory(LazyBool val) {
+    m_is_stack_memory = val;
+    return *this;
+  }
 
   void SetPageSize(int pagesize) { m_pagesize = pagesize; }
 

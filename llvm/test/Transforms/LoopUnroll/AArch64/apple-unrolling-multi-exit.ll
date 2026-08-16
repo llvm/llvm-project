@@ -13,10 +13,10 @@ define i1 @multi_2_exit_find_i8_loop(ptr %vec, i8 %tgt) {
 ; APPLE-SAME: ptr [[VEC:%.*]], i8 [[TGT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; APPLE-NEXT:  [[ENTRY:.*]]:
 ; APPLE-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; APPLE-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; APPLE-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; APPLE-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 1
 ; APPLE-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; APPLE-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; APPLE-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; APPLE-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[START2]]
 ; APPLE-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; APPLE-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -1
@@ -136,11 +136,11 @@ define i1 @multi_2_exit_find_ptr_loop(ptr %vec, ptr %tgt) {
 ; APPLE-SAME: ptr [[VEC:%.*]], ptr [[TGT:%.*]]) #[[ATTR0]] {
 ; APPLE-NEXT:  [[ENTRY:.*]]:
 ; APPLE-NEXT:    [[START:%.*]] = load ptr, ptr [[VEC]], align 8
-; APPLE-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
+; APPLE-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; APPLE-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[START]], i64 8) ]
 ; APPLE-NEXT:    [[GEP_END:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; APPLE-NEXT:    [[END:%.*]] = load ptr, ptr [[GEP_END]], align 8
-; APPLE-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; APPLE-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; APPLE-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[END]], i64 8) ]
 ; APPLE-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
 ; APPLE-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]

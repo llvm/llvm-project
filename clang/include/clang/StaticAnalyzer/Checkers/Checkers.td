@@ -601,6 +601,13 @@ let ParentPackage = UnixAlpha in {
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "WarnOnLockOrderReversal",
+                  "Warn when locks are not released in LIFO order.",
+                  "false",
+                  Released>
+  ]>,
   Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 
@@ -803,6 +810,11 @@ def LifetimeModeling : Checker<"LifetimeModeling">,
 def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   HelpText<"Check for uses of references or pointers that "
            "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<NotDocumented>;
+
+def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
+  HelpText<"Check for dereferences of a dangling pointer">,
   Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 

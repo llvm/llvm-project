@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -hlsl-entry ok -ast-dump -o - %s | FileCheck %s
 
 typedef float float4x2 __attribute__((matrix_type(4,2)));
 typedef float float2x2 __attribute__((matrix_type(2,2)));
 typedef int int4x4 __attribute__((matrix_type(4,4)));
 
-
+[shader("compute")]
 [numthreads(1,1,1)]
 void ok() {
 
