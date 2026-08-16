@@ -396,7 +396,7 @@ namespace cwg637 { // cwg637: 3.0
   }
 } // namespace cwg637
 
-namespace cwg638 { // cwg638: 24
+namespace cwg638 { // cwg638: no
   template<typename T> struct A {
     struct B;
     void f();
@@ -407,29 +407,26 @@ namespace cwg638 { // cwg638: 24
   };
 
   class X {
-    typedef int type; // #cwg638-X-type
+    typedef int type;
     template<class T> friend struct A<T>::B;
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::f();
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::g();
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::C::h();
-    // expected-error@-1 {{'A<T>::C' does not name a class template}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C' for friend class declaration is not supported; turning off access control for 'X'}}
   };
 
   template<> struct A<int> {
-    X::type a;
-    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-    //   expected-note@#cwg638-X-type {{implicitly declared private here}}
+    X::type a; // FIXME: private
     struct B {
       X::type b; // ok
     };
-    int f() { X::type c; }
-    // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-    //   expected-note@#cwg638-X-type {{implicitly declared private here}}
+    int f() { X::type c; } // FIXME: private
     void g() { X::type d; } // ok
     struct D {
-      void h() { X::type e; }
-      // expected-error@-1 {{'type' is a private member of 'cwg638::X'}}
-      //   expected-note@#cwg638-X-type {{implicitly declared private here}}
+      void h() { X::type e; } // FIXME: private
     };
   };
 } // namespace cwg638

@@ -311,11 +311,6 @@ struct DeductionFailureInfo {
   }
 };
 
-enum class TemplateSpecCandidateSetKind {
-  Normal,
-  FriendTemplate,
-};
-
 /// TemplateSpecCandidate - This is a generalization of OverloadCandidate
 /// which keeps track of template argument deduction failure info, when
 /// handling explicit specializations (and instantiations) of templates
@@ -342,8 +337,7 @@ struct TemplateSpecCandidate {
   }
 
   /// Diagnose a template argument deduction failure.
-  void NoteDeductionFailure(Sema &S, bool ForTakingAddress,
-                            TemplateSpecCandidateSetKind CandidateSetKind);
+  void NoteDeductionFailure(Sema &S, bool ForTakingAddress);
 };
 
 /// TemplateSpecCandidateSet - A set of generalized overload candidates,
@@ -359,16 +353,11 @@ class TemplateSpecCandidateSet {
   // attribute on parameters.
   bool ForTakingAddress;
 
-  TemplateSpecCandidateSetKind CandidateSetKind;
-
   void destroyCandidates();
 
 public:
-  TemplateSpecCandidateSet(SourceLocation Loc, bool ForTakingAddress = false,
-                           TemplateSpecCandidateSetKind CandidateSetKind =
-                               TemplateSpecCandidateSetKind::Normal)
-      : Loc(Loc), ForTakingAddress(ForTakingAddress),
-        CandidateSetKind(CandidateSetKind) {}
+  TemplateSpecCandidateSet(SourceLocation Loc, bool ForTakingAddress = false)
+      : Loc(Loc), ForTakingAddress(ForTakingAddress) {}
   TemplateSpecCandidateSet(const TemplateSpecCandidateSet &) = delete;
   TemplateSpecCandidateSet &
   operator=(const TemplateSpecCandidateSet &) = delete;
