@@ -235,19 +235,19 @@
 
 
 // ASMMATCHER-LABEL: static const MatchEntry MatchTable0[] = {
-// ASMMATCHER-NEXT:    /* mode_count */, MyTarget::TEST_XREG, Convert__regModeCountReg__Reg1_0, AMFBS_None, { MCK_XRegs }, },
-// ASMMATCHER-NEXT:    /* t_ptr */, MyTarget::TEST_PTRREG, Convert__regNullReg__RegByHwMode_PtrRC1_0, AMFBS_None, { MCK_RegByHwMode_PtrRC }, },
-// ASMMATCHER-NEXT:    /* t_ptr.even */, MyTarget::TEST_PTRREG, Convert__regNullReg__RegByHwMode_EvenPtrRC1_0, AMFBS_None, { MCK_RegByHwMode_EvenPtrRC }, },
-// ASMMATCHER-NEXT:    /* t_x */, MyTarget::TEST_XREG, Convert__regX0__Reg1_0, AMFBS_None, { MCK_XRegs }, },
-// ASMMATCHER-NEXT:    /* t_x.even */, MyTarget::TEST_XREG, Convert__regX0__Reg1_0, AMFBS_None, { MCK_EvenXRegs }, },
-// ASMMATCHER-NEXT:    /* t_y */, MyTarget::TEST_YREG, Convert__regY0__Reg1_0, AMFBS_None, { MCK_YRegs }, },
-// ASMMATCHER-NEXT:    /* t_y.even */, MyTarget::TEST_YREG, Convert__regY0__Reg1_0, AMFBS_None, { MCK_EvenYRegs }, },
-// ASMMATCHER-NEXT:    /* test_64_only */, MyTarget::TEST_PTRREG, Convert__regPtrRegFor64BitModesOnly__RegByHwMode_PtrRC1_0, AMFBS_None, { MCK_RegByHwMode_PtrRC }, },
-// ASMMATCHER-NEXT:    /* test_alias */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_PtrRC1_0__RegByHwMode_PtrRC1_1, AMFBS_None, { MCK_RegByHwMode_PtrRC, MCK_RegByHwMode_PtrRC }, },
-// ASMMATCHER-NEXT:    /* test_alias.even */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_EvenPtrRC1_0__RegByHwMode_EvenPtrRC1_1, AMFBS_None, { MCK_RegByHwMode_EvenPtrRC, MCK_RegByHwMode_EvenPtrRC }, },
-// ASMMATCHER-NEXT:    /* test_ptr */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_PtrRC1_0__RegByHwMode_PtrRC1_1, AMFBS_None, { MCK_RegByHwMode_PtrRC, MCK_RegByHwMode_PtrRC }, },
-// ASMMATCHER-NEXT:    /* test_x */, MyTarget::TEST_XREG, Convert__Reg1_0__Reg1_1, AMFBS_None, { MCK_XRegs, MCK_XRegs }, },
-// ASMMATCHER-NEXT:    /* test_y */, MyTarget::TEST_YREG, Convert__Reg1_0__Reg1_1, AMFBS_None, { MCK_YRegs, MCK_YRegs }, },
+// ASMMATCHER-NEXT:    /* mode_count */, MyTarget::TEST_XREG, Convert__regModeCountReg__Reg1_0, AMFBS_None, [[XREG_CLASSES:[0-9]+]] /* { MCK_XRegs } */, },
+// ASMMATCHER-NEXT:    /* t_ptr */, MyTarget::TEST_PTRREG, Convert__regNullReg__RegByHwMode_PtrRC1_0, AMFBS_None, {{[0-9]+}} /* { MCK_RegByHwMode_PtrRC } */, },
+// ASMMATCHER-NEXT:    /* t_ptr.even */, MyTarget::TEST_PTRREG, Convert__regNullReg__RegByHwMode_EvenPtrRC1_0, AMFBS_None, {{[0-9]+}} /* { MCK_RegByHwMode_EvenPtrRC } */, },
+// ASMMATCHER-NEXT:    /* t_x */, MyTarget::TEST_XREG, Convert__regX0__Reg1_0, AMFBS_None, [[XREG_CLASSES]] /* { MCK_XRegs } */, },
+// ASMMATCHER-NEXT:    /* t_x.even */, MyTarget::TEST_XREG, Convert__regX0__Reg1_0, AMFBS_None, {{[0-9]+}} /* { MCK_EvenXRegs } */, },
+// ASMMATCHER-NEXT:    /* t_y */, MyTarget::TEST_YREG, Convert__regY0__Reg1_0, AMFBS_None, {{[0-9]+}} /* { MCK_YRegs } */, },
+// ASMMATCHER-NEXT:    /* t_y.even */, MyTarget::TEST_YREG, Convert__regY0__Reg1_0, AMFBS_None, {{[0-9]+}} /* { MCK_EvenYRegs } */, },
+// ASMMATCHER-NEXT:    /* test_64_only */, MyTarget::TEST_PTRREG, Convert__regPtrRegFor64BitModesOnly__RegByHwMode_PtrRC1_0, AMFBS_None, {{[0-9]+}} /* { MCK_RegByHwMode_PtrRC } */, },
+// ASMMATCHER-NEXT:    /* test_alias */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_PtrRC1_0__RegByHwMode_PtrRC1_1, AMFBS_None, [[PTR_CLASSES:[0-9]+]] /* { MCK_RegByHwMode_PtrRC, MCK_RegByHwMode_PtrRC } */, },
+// ASMMATCHER-NEXT:    /* test_alias.even */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_EvenPtrRC1_0__RegByHwMode_EvenPtrRC1_1, AMFBS_None, {{[0-9]+}} /* { MCK_RegByHwMode_EvenPtrRC, MCK_RegByHwMode_EvenPtrRC } */, },
+// ASMMATCHER-NEXT:    /* test_ptr */, MyTarget::TEST_PTRREG, Convert__RegByHwMode_PtrRC1_0__RegByHwMode_PtrRC1_1, AMFBS_None, [[PTR_CLASSES]] /* { MCK_RegByHwMode_PtrRC, MCK_RegByHwMode_PtrRC } */, },
+// ASMMATCHER-NEXT:    /* test_x */, MyTarget::TEST_XREG, Convert__Reg1_0__Reg1_1, AMFBS_None, {{[0-9]+}} /* { MCK_XRegs, MCK_XRegs } */, },
+// ASMMATCHER-NEXT:    /* test_y */, MyTarget::TEST_YREG, Convert__Reg1_0__Reg1_1, AMFBS_None, {{[0-9]+}} /* { MCK_YRegs, MCK_YRegs } */, },
 // ASMMATCHER-NEXT: };
 
 include "Common/RegisterByHwModeCommon.td"
