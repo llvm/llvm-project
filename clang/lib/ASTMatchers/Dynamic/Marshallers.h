@@ -584,37 +584,30 @@ private:
   const ArgKind ArgsKind;
 };
 
-/// Return CK_Trivial when appropriate for VariadicDynCastAllOfMatchers.
-class DynCastAllOfMatcherDescriptor : public VariadicFuncMatcherDescriptor {
+/// Matcher descriptor for VariadicDynCastAllOfMatchers.
+class DynCastAllOfMatcherDescriptor : public MatcherDescriptor {
 public:
-  template <typename BaseT, typename DerivedT>
-  DynCastAllOfMatcherDescriptor(
-      ast_matchers::internal::VariadicDynCastAllOfMatcher<BaseT, DerivedT> Func,
-      StringRef MatcherName)
-      : VariadicFuncMatcherDescriptor(Func, MatcherName),
-        DerivedKind(ASTNodeKind::getFromNodeKind<DerivedT>()) {}
+  DynCastAllOfMatcherDescriptor(ASTNodeKind BaseKind, ASTNodeKind DerivedKind)
+      : BaseKind(BaseKind), DerivedKind(DerivedKind) {}
+
+  VariantMatcher create(SourceRange NameRange, ArrayRef<ParserValue> Args,
+                        Diagnostics *Error) const override;
+
+  bool isVariadic() const override { return true; }
+  unsigned getNumArgs() const override { return 0; }
+
+  void getArgKinds(ASTNodeKind, unsigned,
+                   std::vector<ArgKind> &Kinds) const override {
+    Kinds.push_back(ArgKind::MakeMatcherArg(DerivedKind));
+  }
 
   bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
-                       ASTNodeKind *LeastDerivedKind) const override {
-    // If Kind is not a base of DerivedKind, either DerivedKind is a base of
-    // Kind (in which case the match will always succeed) or Kind and
-    // DerivedKind are unrelated (in which case it will always fail), so set
-    // Specificity to 0.
-    if (VariadicFuncMatcherDescriptor::isConvertibleTo(Kind, Specificity,
-                                                 LeastDerivedKind)) {
-      if (Kind.isSame(DerivedKind) || !Kind.isBaseOf(DerivedKind)) {
-        if (Specificity)
-          *Specificity = 0;
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
+                       ASTNodeKind *LeastDerivedKind) const override;
 
   ASTNodeKind nodeMatcherType() const override { return DerivedKind; }
 
 private:
+  const ASTNodeKind BaseKind;
   const ASTNodeKind DerivedKind;
 };
 
@@ -1110,10 +1103,11 @@ std::unique_ptr<MatcherDescriptor> makeMatcherAutoMarshall(
 /// completion results for that type of matcher.
 template <typename BaseT, typename DerivedT>
 std::unique_ptr<MatcherDescriptor> makeMatcherAutoMarshall(
-    ast_matchers::internal::VariadicDynCastAllOfMatcher<BaseT, DerivedT>
-        VarFunc,
-    StringRef MatcherName) {
-  return std::make_unique<DynCastAllOfMatcherDescriptor>(VarFunc, MatcherName);
+    ast_matchers::internal::VariadicDynCastAllOfMatcher<BaseT, DerivedT>,
+    StringRef) {
+  return std::make_unique<DynCastAllOfMatcherDescriptor>(
+      ASTNodeKind::getFromNodeKind<BaseT>(),
+      ASTNodeKind::getFromNodeKind<DerivedT>());
 }
 
 /// Argument adaptative overload.
