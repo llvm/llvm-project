@@ -25,7 +25,8 @@ static std::optional<Block2DBuiltin> classifyBuiltin(StringRef symbol) {
             Block2DBuiltin::Prefetch)
       .Case("_Z41intel_sub_group_2d_block_read_16b_8r16x1cPU3AS1viiiDv2_iPt",
             Block2DBuiltin::Read)
-      .Case("_Z52intel_sub_group_2d_block_read_transform_16b_16r16x1cPU3AS1viiiDv2_iPj",
+      .Case("_Z52intel_sub_group_2d_block_read_transform_16b_"
+            "16r16x1cPU3AS1viiiDv2_iPj",
             Block2DBuiltin::ReadTransform)
       .Case("_Z42intel_sub_group_2d_block_write_32b_8r16x1cPU3AS1viiiDv2_iPj",
             Block2DBuiltin::Write)
@@ -47,9 +48,8 @@ static void collectDescriptorPointers(Value value,
     return;
   }
   Operation *operation = value.getDefiningOp();
-  if (!operation ||
-      !isa<LLVM::IntToPtrOp, LLVM::ExtractElementOp, LLVM::InsertElementOp,
-           LLVM::BitcastOp>(operation))
+  if (!operation || !isa<LLVM::IntToPtrOp, LLVM::ExtractElementOp,
+                         LLVM::InsertElementOp, LLVM::BitcastOp>(operation))
     return;
   for (Value operand : operation->getOperands())
     collectDescriptorPointers(operand, pointers);
@@ -60,8 +60,7 @@ static Value getBlock2DBase(Value value) {
     return value;
   SmallVector<Value> pointers;
   collectDescriptorPointers(value, pointers);
-  if (pointers.empty() ||
-      !llvm::all_of(pointers, [&](Value pointer) {
+  if (pointers.empty() || !llvm::all_of(pointers, [&](Value pointer) {
         return pointer == pointers.front();
       }))
     return value;
@@ -81,7 +80,7 @@ static void eraseDeadDescriptorChain(Value value) {
 }
 
 static FailureOr<std::array<Value, 2>> getCoordinates(LLVM::CallOp call,
-                                                       OpBuilder &builder) {
+                                                      OpBuilder &builder) {
   LLVM::InsertElementOp yInsert =
       call.getArgOperands()[4].getDefiningOp<LLVM::InsertElementOp>();
   LLVM::InsertElementOp xInsert =
@@ -126,8 +125,8 @@ static void eraseCoordinates(LLVM::CallOp call) {
     yInsert.erase();
   if (xInsert && xInsert->use_empty())
     xInsert.erase();
-  if (LLVM::UndefOp undef = seed ? seed.getDefiningOp<LLVM::UndefOp>()
-                                 : LLVM::UndefOp();
+  if (LLVM::UndefOp undef =
+          seed ? seed.getDefiningOp<LLVM::UndefOp>() : LLVM::UndefOp();
       undef && undef->use_empty())
     undef.erase();
 }
@@ -157,9 +156,9 @@ static LogicalResult canonicalizeCall(LLVM::CallOp call,
       builder, call.getLoc(),
       xw::PtrType::get(context, xw::GlobalAddressSpaceAttr::get(context)),
       getBlock2DBase(originalBase));
-  std::array<Value, 3> surface = {
-      call.getArgOperands()[1], call.getArgOperands()[2],
-      call.getArgOperands()[3]};
+  std::array<Value, 3> surface = {call.getArgOperands()[1],
+                                  call.getArgOperands()[2],
+                                  call.getArgOperands()[3]};
   Type tokenType = xw::MemTokenType::get(context);
   constexpr int64_t blockWidth = 16;
   int64_t elementBits = builtin == Block2DBuiltin::Write ? 32 : 16;
@@ -195,8 +194,8 @@ static LogicalResult canonicalizeCall(LLVM::CallOp call,
         surface[1], surface[2], (*coordinates)[0], (*coordinates)[1],
         elementBits, blockWidth, blockHeight, 1, false, transform, Value());
     operation->setDiscardableAttrs(call->getDiscardableAttrDictionary());
-    Value replacement = castValue(builder, load.getLoc(), load.getType(),
-                                  operation.getValue());
+    Value replacement =
+        castValue(builder, load.getLoc(), load.getType(), operation.getValue());
     load.replaceAllUsesWith(replacement);
     load.erase();
   } else {
@@ -208,11 +207,11 @@ static LogicalResult canonicalizeCall(LLVM::CallOp call,
       return call.emitOpError("write shim requires exactly one store");
     if (call->getBlock() != store->getBlock() || !store->isBeforeInBlock(call))
       return call.emitOpError("write shim store must precede the builtin call");
-    Value data = castValue(
-        builder, call.getLoc(),
-        xw::SimdType::get(context, store.getValue().getType(),
-                          simdWidth.getInt()),
-        store.getValue());
+    Value data =
+        castValue(builder, call.getLoc(),
+                  xw::SimdType::get(context, store.getValue().getType(),
+                                    simdWidth.getInt()),
+                  store.getValue());
     xw::Block2DWriteOp operation = xw::Block2DWriteOp::create(
         builder, call.getLoc(), tokenType, data, base, surface[0], surface[1],
         surface[2], (*coordinates)[0], (*coordinates)[1], elementBits,
@@ -235,7 +234,8 @@ struct CanonicalizeBlock2DABI final
         calls.push_back(call);
     });
     for (LLVM::CallOp call : calls) {
-      std::optional<Block2DBuiltin> builtin = classifyBuiltin(*call.getCallee());
+      std::optional<Block2DBuiltin> builtin =
+          classifyBuiltin(*call.getCallee());
       if (failed(canonicalizeCall(call, *builtin)))
         return signalPassFailure();
     }
@@ -332,7 +332,8 @@ struct CanonicalizeDpasBuiltin final
         return signalPassFailure();
       }
       DpasBuiltin builtin = *classifyDpasBuiltin(*call.getCallee());
-      FunctionOpInterface function = call->getParentOfType<FunctionOpInterface>();
+      FunctionOpInterface function =
+          call->getParentOfType<FunctionOpInterface>();
       IntegerAttr width = function ? function->getAttrOfType<IntegerAttr>(
                                          xw::XWDialect::getSimdWidthAttrName())
                                    : IntegerAttr();
@@ -356,8 +357,8 @@ struct CanonicalizeDpasBuiltin final
       Type aType = packetType(a);
       Type bType = packetType(b);
       Type accType = packetType(acc);
-      Type resultType = xw::SimdType::get(call.getContext(), call.getType(0),
-                                          width.getInt());
+      Type resultType =
+          xw::SimdType::get(call.getContext(), call.getType(0), width.getInt());
       a = castValue(builder, call.getLoc(), aType, a);
       b = castValue(builder, call.getLoc(), bType, b);
       acc = castValue(builder, call.getLoc(), accType, acc);
@@ -379,8 +380,8 @@ struct CanonicalizeDpasBuiltin final
           builder.getI64IntegerAttr(builtin.k),
           builder.getI64IntegerAttr(builtin.k / operandsPerDword),
           builder.getI64IntegerAttr(resultPacket.getNumElements()));
-      Value replacement = castValue(builder, call.getLoc(), call.getType(0),
-                                    dpas.getResult());
+      Value replacement =
+          castValue(builder, call.getLoc(), call.getType(0), dpas.getResult());
       call.getResult().replaceAllUsesWith(replacement);
       call.erase();
       for (Value value : original)

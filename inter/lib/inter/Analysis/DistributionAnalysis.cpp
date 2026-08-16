@@ -50,16 +50,15 @@ static Distribution getTypeDistribution(Type type, unsigned simdWidth) {
 
 static bool isUniformSource(Operation *op) {
   return isa<arith::ConstantOp, xw::ConstantOp, xw::NullOp,
-              xw::LocalMemoryBaseOp, xw::AllocOp, xw::SubgroupIdOp,
-              xw::GroupIdOp,
-             xw::GlobalSizeOp, xw::LocalSizeOp, xw::NumGroupsOp,
+             xw::LocalMemoryBaseOp, xw::AllocOp, xw::SubgroupIdOp,
+             xw::GroupIdOp, xw::GlobalSizeOp, xw::LocalSizeOp, xw::NumGroupsOp,
              xw::LaunchGridSizeOp, xw::LaunchBlockSizeOp>(op);
 }
 
 static bool isTokenOperation(Operation *op) {
   return isa<xw::TokenOp, xw::IssueTokenOp, xw::AfterOp, xw::JoinOp,
-              xw::StoreOp, xw::Block2DPrefetchOp, xw::Block2DWriteOp,
-              xw::BarrierOp, xw::AllocReleaseOp>(op);
+             xw::StoreOp, xw::Block2DPrefetchOp, xw::Block2DWriteOp,
+             xw::BarrierOp, xw::AllocReleaseOp>(op);
 }
 
 LogicalResult DistributionAnalysis::visitOperation(

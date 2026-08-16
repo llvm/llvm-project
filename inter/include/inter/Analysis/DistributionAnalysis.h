@@ -13,8 +13,7 @@ struct Distribution {
   static Distribution uninitialized() { return {}; }
   static Distribution bare() { return {1}; }
   static Distribution full(unsigned width) { return {width}; }
-  static Distribution join(const Distribution &lhs,
-                           const Distribution &rhs);
+  static Distribution join(const Distribution &lhs, const Distribution &rhs);
 
   bool operator==(const Distribution &rhs) const {
     return cardinality == rhs.cardinality;
@@ -33,14 +32,12 @@ public:
   DistributionAnalysis(mlir::DataFlowSolver &solver, unsigned simdWidth)
       : SparseForwardDataFlowAnalysis(solver), simdWidth(simdWidth) {}
 
-  llvm::ArrayRef<std::string> getUnknownCauses() const {
-    return unknownCauses;
-  }
+  llvm::ArrayRef<std::string> getUnknownCauses() const { return unknownCauses; }
 
-  mlir::LogicalResult visitOperation(
-      mlir::Operation *op,
-      llvm::ArrayRef<const DistributionLattice *> operands,
-      llvm::ArrayRef<DistributionLattice *> results) override;
+  mlir::LogicalResult
+  visitOperation(mlir::Operation *op,
+                 llvm::ArrayRef<const DistributionLattice *> operands,
+                 llvm::ArrayRef<DistributionLattice *> results) override;
 
   void visitNonControlFlowArguments(
       mlir::Operation *op, const mlir::RegionSuccessor &successor,

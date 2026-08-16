@@ -170,8 +170,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "FAIL: group size must be nonzero\n");
         return 1;
       }
-    }
-    else
+    } else
       break;
     ++firstArg;
   }

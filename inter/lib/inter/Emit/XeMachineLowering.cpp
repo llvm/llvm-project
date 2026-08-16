@@ -539,11 +539,11 @@ private:
           getSourceOperand(operand, alu.getSourceSubregister(index), sourceType,
                            getSourceRegion(alu.getSourceRegion(index)));
       if (operand.getDefiningOp<ImmOp>() && !explicitType)
-        source.type = index == 1 &&
-                              (instructionKind == MachineInstructionKind::shl ||
-                               instructionKind == MachineInstructionKind::shr)
-                          ? DataType::ud
-                          : instruction.destinationType;
+        source.type =
+            index == 1 && (instructionKind == MachineInstructionKind::shl ||
+                           instructionKind == MachineInstructionKind::shr)
+                ? DataType::ud
+                : instruction.destinationType;
       source.negate = negateFirstSource && index == 0;
       source.isSigned = instructionKind == MachineInstructionKind::csel
                             ? cast<CselOp>(operation).getSignedInt()

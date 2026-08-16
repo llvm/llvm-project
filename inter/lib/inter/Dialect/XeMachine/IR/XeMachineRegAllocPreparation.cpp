@@ -46,9 +46,9 @@ static void legalizeWideImmediates(func::FuncOp function) {
     OpBuilder builder(owner);
     MovOp move = MovOp::create(
         builder, owner->getLoc(), RegType::get(function.getContext(), 2, -1),
-        builder.getI64Type(), /*execSize=*/1, DstRegionAttr::get(
-            function.getContext(), 1),
-        RegionAttr(), IntegerAttr(), IntegerAttr(), TypeAttr(), /*noMask=*/true,
+        builder.getI64Type(), /*execSize=*/1,
+        DstRegionAttr::get(function.getContext(), 1), RegionAttr(),
+        IntegerAttr(), IntegerAttr(), TypeAttr(), /*noMask=*/true,
         /*maskOffset=*/0, operand->get());
     move->setAttr(kImmediateLegalizationAttr, builder.getUnitAttr());
     operand->set(move.getDst());
@@ -592,16 +592,15 @@ static LogicalResult repairUpdateTuples(func::FuncOp function) {
         representableOffset = offsetBits % elementBits == 0;
         destinationSub = offsetBits / elementBits;
       }
-      if (uniqueStorage && unconstrainedStorage &&
-          representableOffset && (offset % 16 == 0 || alu) &&
-          definition &&
+      if (uniqueStorage && unconstrainedStorage && representableOffset &&
+          (offset % 16 == 0 || alu) && definition &&
           !storageIsDefinedAfter(summary, update.getBase(), replacement,
                                  dominance) &&
           !storageIsLiveAfter(summary, update.getBase(), definition, dominance,
                               update) &&
           !storageIsLiveAfter(summary, replacement, update, dominance)) {
-        if (offset % 16 == 0 || succeeded(alu.setDestinationSubregister(
-                                    destinationSub)))
+        if (offset % 16 == 0 ||
+            succeeded(alu.setDestinationSubregister(destinationSub)))
           continue;
       }
 
@@ -671,11 +670,12 @@ isUniqueJoinIncoming(const RegionFlow::Branch &branch,
                        });
 }
 
-static bool alternativesCanOverwrite(
-    const RegionFlow &flow, const RegionFlow::Branch &branch,
-    const RegionFlow::Transfer &current, Value value,
-    const DenseMap<OpOperand *, Value> &incomingValues,
-    const WeightedOverlapSummary &summary) {
+static bool
+alternativesCanOverwrite(const RegionFlow &flow,
+                         const RegionFlow::Branch &branch,
+                         const RegionFlow::Transfer &current, Value value,
+                         const DenseMap<OpOperand *, Value> &incomingValues,
+                         const WeightedOverlapSummary &summary) {
   bool sawAlternative = false;
   for (const RegionFlow::Transfer &other : branch.transfers) {
     if (other.target || other.input != current.input || &other == &current)

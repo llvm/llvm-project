@@ -179,14 +179,11 @@ int main(int argc, char **argv) {
   void *bStorage = nullptr;
   void *cStorage = nullptr;
   CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED,
-                   operandElements * sizeof(_Float16),
-                   &aStorage));
+                   operandElements * sizeof(_Float16), &aStorage));
   CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED,
-                   operandElements * sizeof(_Float16),
-                   &bStorage));
+                   operandElements * sizeof(_Float16), &bStorage));
   CHECK(olMemAlloc(device, OL_ALLOC_TYPE_MANAGED,
-                   matrixElements * sizeof(float),
-                   &cStorage));
+                   matrixElements * sizeof(float), &cStorage));
   auto *a = static_cast<_Float16 *>(aStorage);
   auto *b = static_cast<_Float16 *>(bStorage);
   auto *c = static_cast<float *>(cStorage);

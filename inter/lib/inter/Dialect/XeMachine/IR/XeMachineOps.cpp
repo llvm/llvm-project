@@ -15,81 +15,80 @@ using namespace inter::xemachine;
 #define GET_OP_INTERFACE_CLASSES
 #include "inter/Dialect/XeMachine/IR/XeMachineInterfaces.cpp.inc"
 
-#define DEFINE_ALU_COMMON(Op)                                              \
-  Type Op::getInstructionElementType() { return getElemType(); }           \
+#define DEFINE_ALU_COMMON(Op)                                                  \
+  Type Op::getInstructionElementType() { return getElemType(); }               \
   unsigned Op::getExecutionSize() { return getExecSize(); }
 
-#define DEFINE_ALU_DESTINATION(Op)                                         \
-  DstRegionAttr Op::getDestinationRegion() { return getDstRegionAttr(); }   \
-  int64_t Op::getDestinationSubregister() {                                \
-    return getDstSubAttr() ? getDstSubAttr().getInt() : 0;                 \
-  }                                                                        \
-  LogicalResult Op::setDestinationSubregister(int64_t subregister) {       \
-    setDstSubAttr(IntegerAttr::get(                                        \
-        IntegerType::get(getContext(), 32), subregister));                 \
-    return success();                                                      \
+#define DEFINE_ALU_DESTINATION(Op)                                             \
+  DstRegionAttr Op::getDestinationRegion() { return getDstRegionAttr(); }      \
+  int64_t Op::getDestinationSubregister() {                                    \
+    return getDstSubAttr() ? getDstSubAttr().getInt() : 0;                     \
+  }                                                                            \
+  LogicalResult Op::setDestinationSubregister(int64_t subregister) {           \
+    setDstSubAttr(                                                             \
+        IntegerAttr::get(IntegerType::get(getContext(), 32), subregister));    \
+    return success();                                                          \
   }
 
-#define DEFINE_SOURCE_SUBREGISTER(Op)                                      \
-  int64_t Op::getSourceSubregister(unsigned index) {                       \
-    if (index == 0)                                                        \
-      return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;             \
-    return 0;                                                              \
+#define DEFINE_SOURCE_SUBREGISTER(Op)                                          \
+  int64_t Op::getSourceSubregister(unsigned index) {                           \
+    if (index == 0)                                                            \
+      return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;                 \
+    return 0;                                                                  \
   }
 
-#define DEFINE_SWSB_INTERFACE(Op)                                          \
-  FinalSWSB Op::getFinalSWSB() {                                           \
-    return {getSwsbPipe(), static_cast<int32_t>(getSwsbDistance()),         \
-            static_cast<int32_t>(getSwsbToken()),                          \
-            getSwsbTokenMode()};                                           \
-  }                                                                        \
-  void Op::setFinalSWSB(const FinalSWSB &swsb) {                           \
-    setSwsbPipe(swsb.pipe);                                                \
-    setSwsbDistance(swsb.distance);                                        \
-    setSwsbToken(swsb.token);                                              \
-    setSwsbTokenMode(swsb.tokenMode);                                      \
+#define DEFINE_SWSB_INTERFACE(Op)                                              \
+  FinalSWSB Op::getFinalSWSB() {                                               \
+    return {getSwsbPipe(), static_cast<int32_t>(getSwsbDistance()),            \
+            static_cast<int32_t>(getSwsbToken()), getSwsbTokenMode()};         \
+  }                                                                            \
+  void Op::setFinalSWSB(const FinalSWSB &swsb) {                               \
+    setSwsbPipe(swsb.pipe);                                                    \
+    setSwsbDistance(swsb.distance);                                            \
+    setSwsbToken(swsb.token);                                                  \
+    setSwsbTokenMode(swsb.tokenMode);                                          \
   }
 
-#define DEFINE_UNARY_ALU_INTERFACE(Op)                                     \
-  DEFINE_ALU_COMMON(Op)                                                    \
-  DEFINE_ALU_DESTINATION(Op)                                               \
-  DEFINE_SOURCE_SUBREGISTER(Op)                                            \
-  RegionAttr Op::getSourceRegion(unsigned index) {                         \
-    return index == 0 ? getSrc0RegionAttr() : RegionAttr();                 \
-  }                                                                        \
-  void Op::setSourceRegion(unsigned index, RegionAttr region) {            \
-    if (index == 0)                                                        \
-      setSrc0RegionAttr(region);                                           \
-  }                                                                        \
-  std::optional<Type> Op::getExplicitSourceElementType(unsigned index) {   \
-    return index == 0 ? getSrc0Type() : std::nullopt;                       \
+#define DEFINE_UNARY_ALU_INTERFACE(Op)                                         \
+  DEFINE_ALU_COMMON(Op)                                                        \
+  DEFINE_ALU_DESTINATION(Op)                                                   \
+  DEFINE_SOURCE_SUBREGISTER(Op)                                                \
+  RegionAttr Op::getSourceRegion(unsigned index) {                             \
+    return index == 0 ? getSrc0RegionAttr() : RegionAttr();                    \
+  }                                                                            \
+  void Op::setSourceRegion(unsigned index, RegionAttr region) {                \
+    if (index == 0)                                                            \
+      setSrc0RegionAttr(region);                                               \
+  }                                                                            \
+  std::optional<Type> Op::getExplicitSourceElementType(unsigned index) {       \
+    return index == 0 ? getSrc0Type() : std::nullopt;                          \
   }
 
-#define DEFINE_BINARY_ALU_INTERFACE(Op)                                    \
-  DEFINE_ALU_COMMON(Op)                                                    \
-  DEFINE_ALU_DESTINATION(Op)                                               \
-  RegionAttr Op::getSourceRegion(unsigned index) {                         \
-    if (index == 0)                                                        \
-      return getSrc0RegionAttr();                                          \
-    return index == 1 ? getSrc1RegionAttr() : RegionAttr();                 \
-  }                                                                        \
-  void Op::setSourceRegion(unsigned index, RegionAttr region) {            \
-    if (index == 0)                                                        \
-      setSrc0RegionAttr(region);                                           \
-    else if (index == 1)                                                   \
-      setSrc1RegionAttr(region);                                           \
-  }                                                                        \
-  std::optional<Type> Op::getExplicitSourceElementType(unsigned index) {   \
-    if (index == 0)                                                        \
-      return getSrc0Type();                                                \
-    return index == 1 ? getSrc1Type() : std::nullopt;                       \
-  }                                                                        \
-  int64_t Op::getSourceSubregister(unsigned index) {                       \
-    if (index == 0)                                                        \
-      return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;             \
-    if (index == 1)                                                        \
-      return getSrc1SubAttr() ? getSrc1SubAttr().getInt() : 0;             \
-    return 0;                                                              \
+#define DEFINE_BINARY_ALU_INTERFACE(Op)                                        \
+  DEFINE_ALU_COMMON(Op)                                                        \
+  DEFINE_ALU_DESTINATION(Op)                                                   \
+  RegionAttr Op::getSourceRegion(unsigned index) {                             \
+    if (index == 0)                                                            \
+      return getSrc0RegionAttr();                                              \
+    return index == 1 ? getSrc1RegionAttr() : RegionAttr();                    \
+  }                                                                            \
+  void Op::setSourceRegion(unsigned index, RegionAttr region) {                \
+    if (index == 0)                                                            \
+      setSrc0RegionAttr(region);                                               \
+    else if (index == 1)                                                       \
+      setSrc1RegionAttr(region);                                               \
+  }                                                                            \
+  std::optional<Type> Op::getExplicitSourceElementType(unsigned index) {       \
+    if (index == 0)                                                            \
+      return getSrc0Type();                                                    \
+    return index == 1 ? getSrc1Type() : std::nullopt;                          \
+  }                                                                            \
+  int64_t Op::getSourceSubregister(unsigned index) {                           \
+    if (index == 0)                                                            \
+      return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;                 \
+    if (index == 1)                                                            \
+      return getSrc1SubAttr() ? getSrc1SubAttr().getInt() : 0;                 \
+    return 0;                                                                  \
   }
 
 DEFINE_UNARY_ALU_INTERFACE(MovOp)
@@ -132,10 +131,9 @@ LogicalResult SyncOp::verify() {
   if (getSbidMask() != 0 && getKind() != SyncKind::allwr)
     return emitOpError("selective SBID mask requires allwr");
   FinalSWSB swsb = getFinalSWSB();
-  if (swsb.token >= 0 &&
-      (getKind() != SyncKind::nop ||
-       (swsb.tokenMode != SWSBTokenMode::source &&
-        swsb.tokenMode != SWSBTokenMode::destination)))
+  if (swsb.token >= 0 && (getKind() != SyncKind::nop ||
+                          (swsb.tokenMode != SWSBTokenMode::source &&
+                           swsb.tokenMode != SWSBTokenMode::destination)))
     return emitOpError(
         "token wait requires sync.nop with source or destination mode");
   if (swsb.token < 0 && swsb.tokenMode != SWSBTokenMode::none)
@@ -143,15 +141,15 @@ LogicalResult SyncOp::verify() {
   return success();
 }
 
-#define DEFINE_SEND_SCOREBOARD_INTERFACE(Op)                               \
-  AsyncScoreboardKind Op::getAsyncScoreboardKind() {                       \
-    return AsyncScoreboardKind::send;                                      \
-  }                                                                        \
-  bool Op::hasAsyncDestination() {                                         \
-    return llvm::any_of((*this)->getResultTypes(), [](Type type) {         \
-      RegType reg = dyn_cast<RegType>(type);                               \
-      return reg && reg.getWidthDwords() != 0;                             \
-    });                                                                    \
+#define DEFINE_SEND_SCOREBOARD_INTERFACE(Op)                                   \
+  AsyncScoreboardKind Op::getAsyncScoreboardKind() {                           \
+    return AsyncScoreboardKind::send;                                          \
+  }                                                                            \
+  bool Op::hasAsyncDestination() {                                             \
+    return llvm::any_of((*this)->getResultTypes(), [](Type type) {             \
+      RegType reg = dyn_cast<RegType>(type);                                   \
+      return reg && reg.getWidthDwords() != 0;                                 \
+    });                                                                        \
   }
 
 DEFINE_SEND_SCOREBOARD_INTERFACE(SendOp)
@@ -334,7 +332,8 @@ LogicalResult DpasOp::verify() {
   RegType dst = cast<RegType>(getDst().getType());
   if (a.getWidthDwords() == 0 || b.getWidthDwords() == 0 ||
       acc.getWidthDwords() == 0 || dst.getWidthDwords() != acc.getWidthDwords())
-    return emitOpError("requires non-empty A/B packets and matching C/D widths");
+    return emitOpError(
+        "requires non-empty A/B packets and matching C/D widths");
   if (!getElemType().isF32())
     return emitOpError("requires an f32 accumulator and result");
   if (getSystolicDepth() != 8)
@@ -498,7 +497,7 @@ LogicalResult UpdateTupleOp::verify() {
     if (resultType.getBaseGRF() >= 0 && updateType.getBaseGRF() >= 0 &&
         updateType.getBaseGRF() != resultType.getBaseGRF() + offset / 16)
       return emitOpError(
-           "physical update placement must match its tuple offset");
+          "physical update placement must match its tuple offset");
     lastEnd = end;
   }
   return success();
@@ -508,7 +507,8 @@ static LogicalResult verifyA64AddressPayload(Operation *operation,
                                              Value address,
                                              int64_t executionSize) {
   if (executionSize != 8 && executionSize != 16 && executionSize != 32)
-    return operation->emitOpError("requires SIMD8, SIMD16, or SIMD32 execution");
+    return operation->emitOpError(
+        "requires SIMD8, SIMD16, or SIMD32 execution");
   if (cast<RegType>(address.getType()).getWidthDwords() != executionSize * 2)
     return operation->emitOpError(
         "requires two address dwords per execution lane");
@@ -625,9 +625,7 @@ ValueRange ExecIfOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 
-ValueRange PayloadPrologueOp::getSuccessorInputs(RegionSuccessor) {
-  return {};
-}
+ValueRange PayloadPrologueOp::getSuccessorInputs(RegionSuccessor) { return {}; }
 
 ValueRange UniformIfOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
@@ -657,7 +655,7 @@ ContinueIfOp::getMutableSuccessorOperands(RegionSuccessor point) {
   return MutableOperandRange(getOperation(), /*start=*/1, getNumOperands() - 1);
 }
 
-MutableOperandRange PayloadPrologueEndOp::getMutableSuccessorOperands(
-    RegionSuccessor) {
+MutableOperandRange
+PayloadPrologueEndOp::getMutableSuccessorOperands(RegionSuccessor) {
   return MutableOperandRange(getOperation(), 0, 0);
 }

@@ -331,10 +331,10 @@ int main(int argc, char **argv) {
                                           "SystolicDepth");
       uint32_t repeat =
           getField<uint32_t>(GED_GetRepeatCount, instruction, "RepeatCount");
-      GED_PRECISION b = getField<GED_PRECISION>(
-          GED_GetSrc1Precision, instruction, "Src1Precision");
-      GED_PRECISION a = getField<GED_PRECISION>(
-          GED_GetSrc2Precision, instruction, "Src2Precision");
+      GED_PRECISION b = getField<GED_PRECISION>(GED_GetSrc1Precision,
+                                                instruction, "Src1Precision");
+      GED_PRECISION a = getField<GED_PRECISION>(GED_GetSrc2Precision,
+                                                instruction, "Src2Precision");
       std::cout << std::dec << " depth=" << depth << " repeat=" << repeat
                 << " bPrecision=" << getPrecisionName(b)
                 << " aPrecision=" << getPrecisionName(a);
@@ -387,9 +387,9 @@ int main(int argc, char **argv) {
           getField<uint32_t>(GED_GetSrc1Length, instruction, "Src1Length");
       GED_EOT eot = getField<GED_EOT>(GED_GetEOT, instruction, "EOT");
       std::cout << " dst=" << getRegFileName(destinationFile) << destination
-                 << " src0=grf" << source0
-                 << " src1=" << getRegFileName(source1File) << source1
-                 << " len=" << sourceLength << " eot=" << (eot == GED_EOT_EOT);
+                << " src0=grf" << source0
+                << " src1=" << getRegFileName(source1File) << source1
+                << " len=" << sourceLength << " eot=" << (eot == GED_EOT_EOT);
     } else if (opcode == GED_OPCODE_dpas) {
       uint32_t destination =
           getField<uint32_t>(GED_GetDstRegNum, instruction, "DstRegNum");
@@ -399,8 +399,8 @@ int main(int argc, char **argv) {
           getField<uint32_t>(GED_GetSrc1RegNum, instruction, "Src1RegNum");
       uint32_t a =
           getField<uint32_t>(GED_GetSrc2RegNum, instruction, "Src2RegNum");
-      std::cout << " dst=grf" << destination << " acc=grf" << acc
-                << " b=grf" << b << " a=grf" << a;
+      std::cout << " dst=grf" << destination << " acc=grf" << acc << " b=grf"
+                << b << " a=grf" << a;
     } else if (opcode == GED_OPCODE_mov || opcode == GED_OPCODE_add ||
                opcode == GED_OPCODE_shl || opcode == GED_OPCODE_shr ||
                opcode == GED_OPCODE_and || opcode == GED_OPCODE_or ||

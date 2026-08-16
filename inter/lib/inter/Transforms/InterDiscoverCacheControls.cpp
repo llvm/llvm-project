@@ -29,7 +29,9 @@ struct CacheProfile {
   static CacheProfile unspecified() {
     return {CacheStateKind::Unspecified, {}};
   }
-  static CacheProfile conflict() { return {CacheStateKind::Conflict, {}}; }
+  static CacheProfile conflict() {
+    return {CacheStateKind::Conflict, {}};
+  }
 
   static CacheProfile join(const CacheProfile &lhs, const CacheProfile &rhs) {
     if (lhs.kind == CacheStateKind::Uninitialized)

@@ -61,7 +61,7 @@ public:
     function->setAttr(kHasGlobalAtomicsAttrName,
                       builder.getBoolAttr(usage->hasGlobalAtomics));
     function->setAttr(kHasNoStatelessWriteAttrName,
-                       builder.getBoolAttr(!usage->hasStatelessWrite));
+                      builder.getBoolAttr(!usage->hasStatelessWrite));
     function->setAttr(kHasDpasAttrName, builder.getBoolAttr(usage->hasDpas));
   }
 };
