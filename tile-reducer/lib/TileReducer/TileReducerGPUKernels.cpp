@@ -38,6 +38,8 @@ namespace {
 
 constexpr StringRef kKernelModuleName = "tr_kernels";
 constexpr StringRef kRowSumKernel = "row_sum_kernel";
+constexpr StringRef kRowSumSplitK1 = "row_sum_splitk_stage1";
+constexpr StringRef kRowSumSplitK2 = "row_sum_splitk_stage2";
 constexpr StringRef kFullSumStage1 = "full_sum_stage1";
 constexpr StringRef kFullSumStage2 = "full_sum_stage2";
 constexpr StringRef kColumnSumKernel = "column_sum_kernel";
@@ -169,10 +171,14 @@ static ReductionMatch matchReduction(func::FuncOp func) {
   return found;
 }
 
-/// Emit the fused row-sum body. `pid` is the physical block id.
+/// Emit the fused row-sum body. `pid` is the logical program / block_id x.
+/// Optional `ktLb`/`ktUb` restrict the K-tile loop (large-K split).
+/// Optional `kPart` stores a rank-2 partial `out[row, kPart]`.
 static void emitRowSumBody(OpBuilder &b, Location loc, Value in, Value out,
                            Value pid, const GPUTargetInfo &target,
-                           int64_t tileRows, int64_t tileCols, Type elemTy) {
+                           int64_t tileRows, int64_t tileCols, Type elemTy,
+                           Value ktLb = Value(), Value ktUb = Value(),
+                           Value kPart = Value()) {
   const int warpSize = target.warpSize;
   const int warps = target.warpsPerBlock();
   const int rowsPerWarp = target.rowsPerWarp(static_cast<int>(tileRows));
@@ -198,6 +204,10 @@ static void emitRowSumBody(OpBuilder &b, Location loc, Value in, Value out,
   Value m = memref::DimOp::create(b, loc, in, c0);
   Value k = memref::DimOp::create(b, loc, in, c1);
   Value numTiles = arith::CeilDivUIOp::create(b, loc, k, cTileCols);
+  if (!ktLb)
+    ktLb = c0;
+  if (!ktUb)
+    ktUb = numTiles;
   Value rowBase = arith::MulIOp::create(b, loc, pid, cTileRows);
 
   scf::ForOp::create(
@@ -210,7 +220,7 @@ static void emitRowSumBody(OpBuilder &b, Location loc, Value in, Value out,
                                             globalRow, m);
         scf::IfOp::create(rb, rloc, rowOK, [&](OpBuilder &ib, Location iloc) {
           auto kLoop = scf::ForOp::create(
-              ib, iloc, c0, numTiles, c1, ValueRange{zero},
+              ib, iloc, ktLb, ktUb, c1, ValueRange{zero},
               [&](OpBuilder &kb, Location kloc, Value kt, ValueRange kargs) {
                 Value acc = kargs[0];
                 Value kBase = arith::MulIOp::create(kb, kloc, kt, cTileCols);
@@ -249,8 +259,12 @@ static void emitRowSumBody(OpBuilder &b, Location loc, Value in, Value out,
           Value isLane0 = arith::CmpIOp::create(
               ib, iloc, arith::CmpIPredicate::eq, lane, c0);
           scf::IfOp::create(ib, iloc, isLane0, [&](OpBuilder &sb, Location sloc) {
-            memref::StoreOp::create(sb, sloc, reduced, out,
-                                    ValueRange{globalRow});
+            if (kPart)
+              memref::StoreOp::create(sb, sloc, reduced, out,
+                                      ValueRange{globalRow, kPart});
+            else
+              memref::StoreOp::create(sb, sloc, reduced, out,
+                                      ValueRange{globalRow});
             scf::YieldOp::create(sb, sloc);
           });
           scf::YieldOp::create(ib, iloc);
@@ -542,11 +556,13 @@ static gpu::GPUFuncOp createKernel(OpBuilder &b, Location loc, StringRef name,
 
 static void emitHostLaunch(OpBuilder &b, Location loc, gpu::GPUFuncOp kernel,
                            ValueRange args, Value gridX,
-                           const GPUTargetInfo &target) {
+                           const GPUTargetInfo &target, Value gridY = Value()) {
   Value c1 = arith::ConstantIndexOp::create(b, loc, 1);
   Value cBlock =
       arith::ConstantIndexOp::create(b, loc, target.threadsPerBlock());
-  gpu::KernelDim3 grid{gridX, c1, c1};
+  if (!gridY)
+    gridY = c1;
+  gpu::KernelDim3 grid{gridX, gridY, c1};
   gpu::KernelDim3 block{cBlock, c1, c1};
   gpu::LaunchFuncOp::create(b, loc, kernel, grid, block, /*dynSmem=*/Value(),
                             args);
@@ -599,6 +615,133 @@ static LogicalResult emitRowSumKernel(func::FuncOp func, ReductionMatch match,
   emitHostLaunch(hb, loc, lookedUp, ValueRange{in, out}, gridX, target);
   func::ReturnOp::create(hb, loc);
   (void)nestedKernelRef(gpuMod, lookedUp.getName());
+  return success();
+}
+
+/// One logical program (block_id x) is refined into many physical blocks
+/// (block_id y) that each own a K-slice and write a partial. Stage 2 reduces
+/// those partials. This is the M=1, K=1e8 case: one row is not one block.
+static LogicalResult emitRowSumSplitK(func::FuncOp func, ReductionMatch match,
+                                      gpu::GPUModuleOp gpuMod,
+                                      SymbolTable &gpuSymbols,
+                                      const GPUTargetInfo &target,
+                                      int kSplits) {
+  convertBufferSignature(func);
+  Value in = match.load.getBuffer();
+  Value out = match.store.getBuffer();
+  if (!isa<MemRefType>(in.getType()) || !isa<MemRefType>(out.getType()))
+    return func.emitError("row-sum split-K expects memref buffers");
+
+  Location loc = func.getLoc();
+  Type elemTy = match.tileTy.getElementType();
+  int64_t tileRows = match.tileTy.getDimSize(0);
+  int64_t tileCols = match.tileTy.getDimSize(1);
+  auto partialsTy =
+      MemRefType::get({ShapedType::kDynamic, ShapedType::kDynamic}, elemTy);
+
+  OpBuilder kb(gpuMod.getBody(), gpuMod.getBody()->end());
+  auto stage1 = createKernel(kb, loc, kRowSumSplitK1,
+                             TypeRange{in.getType(), partialsTy}, {}, target);
+  insertUniqueKernel(gpuSymbols, stage1);
+  auto stage2 = createKernel(kb, loc, kRowSumSplitK2,
+                             TypeRange{partialsTy, out.getType()}, {}, target);
+  insertUniqueKernel(gpuSymbols, stage2);
+  if (!gpuSymbols.lookup<gpu::GPUFuncOp>(stage1.getName()) ||
+      !gpuSymbols.lookup<gpu::GPUFuncOp>(stage2.getName()))
+    return func.emitError("split-K symbol lookup failed");
+
+  {
+    Block &e = stage1.getBody().front();
+    OpBuilder body(&e, e.begin());
+    Value pid = gpu::BlockIdOp::create(body, loc, gpu::Dimension::x);
+    Value kPart = gpu::BlockIdOp::create(body, loc, gpu::Dimension::y);
+    Value nSplits = gpu::GridDimOp::create(body, loc, gpu::Dimension::y);
+    Value c1 = arith::ConstantIndexOp::create(body, loc, 1);
+    Value cTile = arith::ConstantIndexOp::create(body, loc, tileCols);
+    Value k = memref::DimOp::create(body, loc, e.getArgument(0), c1);
+    Value nTiles = arith::CeilDivUIOp::create(body, loc, k, cTile);
+    Value chunk = arith::CeilDivUIOp::create(body, loc, nTiles, nSplits);
+    Value ktLb = arith::MulIOp::create(body, loc, kPart, chunk);
+    Value ktUb = arith::AddIOp::create(body, loc, ktLb, chunk);
+    Value over =
+        arith::CmpIOp::create(body, loc, arith::CmpIPredicate::ugt, ktUb, nTiles);
+    auto clamped = scf::IfOp::create(body, loc, TypeRange{body.getIndexType()},
+                                     over, /*withElseRegion=*/true);
+    {
+      OpBuilder::InsertionGuard g(body);
+      body.setInsertionPointToStart(clamped.thenBlock());
+      scf::YieldOp::create(body, loc, nTiles);
+      body.setInsertionPointToStart(clamped.elseBlock());
+      scf::YieldOp::create(body, loc, ktUb);
+    }
+    emitRowSumBody(body, loc, e.getArgument(0), e.getArgument(1), pid, target,
+                   tileRows, tileCols, elemTy, ktLb, clamped.getResult(0),
+                   kPart);
+    gpu::ReturnOp::create(body, loc);
+  }
+  {
+    Block &e = stage2.getBody().front();
+    OpBuilder body(&e, e.begin());
+    Value pid = gpu::BlockIdOp::create(body, loc, gpu::Dimension::x);
+    Value lane = gpu::LaneIdOp::create(body, loc, IntegerAttr());
+    Value warp =
+        gpu::SubgroupIdOp::create(body, loc, body.getIndexType(), IntegerAttr());
+    Value c0 = arith::ConstantIndexOp::create(body, loc, 0);
+    Value c1 = arith::ConstantIndexOp::create(body, loc, 1);
+    Value c8 = arith::ConstantIndexOp::create(body, loc, target.warpsPerBlock());
+    Value c16 = arith::ConstantIndexOp::create(
+        body, loc, target.rowsPerWarp(static_cast<int>(tileRows)));
+    Value c128 = arith::ConstantIndexOp::create(body, loc, tileRows);
+    Value zero = scalarZero(body, loc, elemTy);
+    Value nSplits = memref::DimOp::create(body, loc, e.getArgument(0), c1);
+    Value m = memref::DimOp::create(body, loc, e.getArgument(1), c0);
+    Value rowBase = arith::MulIOp::create(body, loc, pid, c128);
+    scf::ForOp::create(
+        body, loc, c0, c16, c1, ValueRange{},
+        [&](OpBuilder &rb, Location rloc, Value s, ValueRange) {
+          Value local =
+              arith::AddIOp::create(rb, rloc, warp,
+                                    arith::MulIOp::create(rb, rloc, s, c8));
+          Value row = arith::AddIOp::create(rb, rloc, rowBase, local);
+          Value rowOK = arith::CmpIOp::create(rb, rloc, arith::CmpIPredicate::ult,
+                                              row, m);
+          scf::IfOp::create(rb, rloc, rowOK, [&](OpBuilder &ib, Location iloc) {
+            auto red = scf::ForOp::create(
+                ib, iloc, c0, nSplits, c1, ValueRange{zero},
+                [&](OpBuilder &kb, Location kloc, Value p, ValueRange args) {
+                  Value v = memref::LoadOp::create(
+                      kb, kloc, e.getArgument(0), ValueRange{row, p});
+                  scf::YieldOp::create(kb, kloc,
+                                       scalarAdd(kb, kloc, args[0], v));
+                });
+            Value isLane0 = arith::CmpIOp::create(
+                ib, iloc, arith::CmpIPredicate::eq, lane, c0);
+            scf::IfOp::create(ib, iloc, isLane0, [&](OpBuilder &sb, Location sloc) {
+              memref::StoreOp::create(sb, sloc, red.getResult(0),
+                                      e.getArgument(1), ValueRange{row});
+              scf::YieldOp::create(sb, sloc);
+            });
+            scf::YieldOp::create(ib, iloc);
+          });
+          scf::YieldOp::create(rb, rloc);
+        });
+    gpu::ReturnOp::create(body, loc);
+  }
+
+  clearBody(func);
+  OpBuilder hb(&func.getBody().front(), func.getBody().front().end());
+  Value c0 = arith::ConstantIndexOp::create(hb, loc, 0);
+  Value cTile = arith::ConstantIndexOp::create(hb, loc, tileRows);
+  Value cSplits = arith::ConstantIndexOp::create(hb, loc, kSplits);
+  Value m = memref::DimOp::create(hb, loc, in, c0);
+  Value nRowTiles = arith::CeilDivUIOp::create(hb, loc, m, cTile);
+  Value partials =
+      memref::AllocOp::create(hb, loc, partialsTy, ValueRange{m, cSplits});
+  emitHostLaunch(hb, loc, stage1, ValueRange{in, partials}, nRowTiles, target,
+                 cSplits);
+  emitHostLaunch(hb, loc, stage2, ValueRange{partials, out}, nRowTiles, target);
+  memref::DeallocOp::create(hb, loc, partials);
+  func::ReturnOp::create(hb, loc);
   return success();
 }
 
@@ -711,6 +854,7 @@ static LogicalResult emitColumnSumKernel(func::FuncOp func, ReductionMatch match
 }
 
 struct EmitTRGPUKernels : impl::EmitTRGPUKernelsBase<EmitTRGPUKernels> {
+  using impl::EmitTRGPUKernelsBase<EmitTRGPUKernels>::EmitTRGPUKernelsBase;
   void runOnOperation() override {
     ModuleOp module = getOperation();
     SmallVector<std::pair<func::FuncOp, ReductionMatch>> work;
@@ -728,11 +872,20 @@ struct EmitTRGPUKernels : impl::EmitTRGPUKernelsBase<EmitTRGPUKernels> {
     SymbolTable gpuSymbols(gpuMod);
     GPUTargetInfo target = GPUTargetInfo::fromOp(module);
 
+    int splits = kSplits;
+    if (splits <= 1) {
+      if (auto attr = module->getAttrOfType<IntegerAttr>("tr.tune.k_splits"))
+        splits = static_cast<int>(attr.getInt());
+    }
+
     for (auto [func, match] : work) {
       LogicalResult ok = success();
       switch (match.kind) {
       case KernelKind::Row:
-        ok = emitRowSumKernel(func, match, gpuMod, gpuSymbols, target);
+        ok = splits > 1 ? emitRowSumSplitK(func, match, gpuMod, gpuSymbols,
+                                           target, splits)
+                        : emitRowSumKernel(func, match, gpuMod, gpuSymbols,
+                                           target);
         break;
       case KernelKind::Full:
         ok = emitFullSumKernels(func, match, gpuMod, gpuSymbols, target);
