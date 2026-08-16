@@ -765,6 +765,27 @@ m_GFPTrunc(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>(Src);
 }
 
+/// Matches a G_SEXT_INREG, binding its source operand. G_SEXT_INREG has an
+/// extra immediate operand, so it does not fit the plain UnaryOp_match shape.
+template <typename SrcTy> struct SExtInRegMatch {
+  SrcTy L;
+
+  SExtInRegMatch(const SrcTy &LHS) : L(LHS) {}
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (mi_match(Op, MRI, m_MInstr(TmpMI)) &&
+        TmpMI->getOpcode() == TargetOpcode::G_SEXT_INREG)
+      return L.match(MRI, TmpMI->getOperand(1).getReg());
+    return false;
+  }
+};
+
+template <typename SrcTy>
+inline SExtInRegMatch<SrcTy> m_GSExtInReg(const SrcTy &Src) {
+  return SExtInRegMatch<SrcTy>(Src);
+}
+
 template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::G_FABS> m_GFabs(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FABS>(Src);

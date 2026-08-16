@@ -642,6 +642,9 @@ def as_i16imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;
 
+// M68k divs/divu outputs the quotient in the lower 16 bits and the remainder
+// in the upper 16 bits of the register.
+
 // RR i8
 def : Pat<(sdiv i8:$dst, i8:$opd),
           (EXTRACT_SUBREG
@@ -655,12 +658,12 @@ def : Pat<(udiv i8:$dst, i8:$opd),
 
 def : Pat<(srem i8:$dst, i8:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32d16 (MOVSXd32d8 $dst), (MOVSXd16d8 $opd)), 8), 8),
+            (SWAP (SDIVd32d16 (MOVSXd32d8 $dst), (MOVSXd16d8 $opd))),
              MxSubRegIndex8Lo)>;
 
 def : Pat<(urem i8:$dst, i8:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32d16 (MOVZXd32d8 $dst), (MOVZXd16d8 $opd)), 8), 8),
+            (SWAP (UDIVd32d16 (MOVZXd32d8 $dst), (MOVZXd16d8 $opd))),
              MxSubRegIndex8Lo)>;
 
 // RR i16
@@ -676,12 +679,12 @@ def : Pat<(udiv i16:$dst, i16:$opd),
 
 def : Pat<(srem i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32d16 (MOVSXd32d16 $dst), $opd), 8), 8),
+            (SWAP (SDIVd32d16 (MOVSXd32d16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(urem i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32d16 (MOVZXd32d16 $dst), $opd), 8), 8),
+            (SWAP (UDIVd32d16 (MOVZXd32d16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 // RI i8
@@ -697,12 +700,12 @@ def : Pat<(udiv i8:$dst, Mxi8immSExt8:$opd),
 
 def : Pat<(srem i8:$dst, Mxi8immSExt8:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32i16 (MOVSXd32d8 $dst), (as_i16imm $opd)), 8), 8),
+            (SWAP (SDIVd32i16 (MOVSXd32d8 $dst), (as_i16imm $opd))),
              MxSubRegIndex8Lo)>;
 
 def : Pat<(urem i8:$dst, Mxi8immSExt8:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32i16 (MOVZXd32d8 $dst), (as_i16imm $opd)), 8), 8),
+            (SWAP (UDIVd32i16 (MOVZXd32d8 $dst), (as_i16imm $opd))),
              MxSubRegIndex8Lo)>;
 
 // RI i16
@@ -718,12 +721,12 @@ def : Pat<(udiv i16:$dst, Mxi16immSExt16:$opd),
 
 def : Pat<(srem i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32i16 (MOVSXd32d16 $dst), imm:$opd), 8), 8),
+            (SWAP (SDIVd32i16 (MOVSXd32d16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(urem i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32i16 (MOVZXd32d16 $dst), imm:$opd), 8), 8),
+            (SWAP (UDIVd32i16 (MOVZXd32d16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 
@@ -740,12 +743,12 @@ def : Pat<(mul i16:$dst, i16:$opd),
 
 def : Pat<(mulhs i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SMULd32d16 (MOVXd32d16 $dst), $opd), 8), 8),
+            (SWAP (SMULd32d16 (MOVXd32d16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhu i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UMULd32d16 (MOVXd32d16 $dst), $opd), 8), 8),
+            (SWAP (UMULd32d16 (MOVXd32d16 $dst), $opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mul i32:$dst, i32:$opd), (SMULd32d32 $dst, $opd)>;
@@ -759,12 +762,12 @@ def : Pat<(mul i16:$dst, Mxi16immSExt16:$opd),
 
 def : Pat<(mulhs i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SMULd32i16 (MOVXd32d16 $dst), imm:$opd), 8), 8),
+            (SWAP (SMULd32i16 (MOVXd32d16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 def : Pat<(mulhu i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UMULd32i16 (MOVXd32d16 $dst), imm:$opd), 8), 8),
+            (SWAP (UMULd32i16 (MOVXd32d16 $dst), imm:$opd)),
              MxSubRegIndex16Lo)>;
 
 

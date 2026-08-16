@@ -1814,12 +1814,50 @@ def LLVM_MDGlobalValueAttr : LLVM_Attr<"MDGlobalValue", "md_global_value"> {
   let assemblyFormat = "`<` $name `>`";
 }
 
+def LLVM_MDNullAttr : LLVM_Attr<"MDNull", "md_null"> {
+  let summary = "LLVM null pointer as metadata";
+  let description = [{
+    Wraps a null pointer constant as an LLVM metadata node, corresponding to
+    `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantPointerNull` in LLVM
+    IR. `addressSpace` is the address space of the null pointer, so that
+    `ptr null` and `ptr addrspace(1) null` remain distinguishable.
+
+    Example:
+    ```mlir
+    #llvm.md_null<0>
+    ```
+  }];
+  let parameters = (ins "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $addressSpace `>`";
+}
+
+def LLVM_MDAddrSpaceCastAttr
+    : LLVM_Attr<"MDAddrSpaceCast", "md_addrspacecast"> {
+  let summary = "LLVM addrspacecast constant expression as metadata";
+  let description = [{
+    Wraps an `addrspacecast` constant expression as an LLVM metadata node,
+    corresponding to `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantExpr`
+    with an `addrspacecast` opcode in LLVM IR. `arg` is the metadata attribute
+    for the pointer being cast and `addressSpace` is the address space of the
+    resulting pointer.
+
+    Example:
+    ```mlir
+    #llvm.md_addrspacecast<#llvm.md_global_value<@my_global>, 0>
+    ```
+  }];
+  let parameters = (ins "Attribute":$arg, "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $arg `,` $addressSpace `>`";
+  let genVerifyDecl = 1;
+}
+
 def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let summary = "LLVM metadata node";
   let description = [{
     Represents an LLVM metadata node. The operands
     can be any combination of metadata attributes: `#llvm.md_string`,
-    `#llvm.md_const`, `#llvm.md_global_value`, or nested `#llvm.md_node`.
+    `#llvm.md_const`, `#llvm.md_global_value`, `#llvm.md_null`,
+    `#llvm.md_addrspacecast`, or nested `#llvm.md_node`.
 
     Example:
     ```mlir
@@ -1837,7 +1875,8 @@ def LLVM_MDNodeArrayAttr
 
 def LLVM_AnyMDAttr : AnyAttrOf<[
     LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDGlobalValueAttr,
-    LLVM_MDNodeAttr],
-    "LLVM metadata attribute (md_string, md_const, md_global_value, or md_node)">;
+    LLVM_MDNullAttr, LLVM_MDAddrSpaceCastAttr, LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_global_value, md_null, "
+    "md_addrspacecast, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

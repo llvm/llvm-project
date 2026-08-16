@@ -1331,7 +1331,7 @@ std::optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
 
     // If AllowUndef, treat undef as value that will result in a constant splat.
     if (!ElementValAndReg) {
-      if (AllowUndef && isa<GImplicitDef>(MRI.getVRegDef(Element)))
+      if (AllowUndef && mi_match(Element, MRI, m_GImplicitDef()))
         continue;
       return std::nullopt;
     }

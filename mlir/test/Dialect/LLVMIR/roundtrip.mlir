@@ -1165,6 +1165,14 @@ llvm.func @metadata_as_value_shapes() {
   %2 = llvm.mlir.metadata_as_value #llvm.md_global_value<@md_kernel>
   // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
   %3 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_null<0>
+  %4 = llvm.mlir.metadata_as_value #llvm.md_null<0>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_null<1>
+  %5 = llvm.mlir.metadata_as_value #llvm.md_null<1>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_global_value<@md_kernel>, 0>
+  %6 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_global_value<@md_kernel>, 0>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_null<1>, 0>
+  %7 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_null<1>, 0>
   llvm.return
 }
 

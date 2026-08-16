@@ -1615,6 +1615,23 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
         return emitError() << "could not resolve metadata reference '"
                            << a.getName() << "'";
       })
+      .Case([&](MDNullAttr a) -> FailureOr<llvm::Metadata *> {
+        return llvm::ConstantAsMetadata::get(llvm::ConstantPointerNull::get(
+            llvm::PointerType::get(llvmContext, a.getAddressSpace())));
+      })
+      .Case([&](MDAddrSpaceCastAttr a) -> FailureOr<llvm::Metadata *> {
+        FailureOr<llvm::Metadata *> arg =
+            convertMetadataAttr(a.getArg(), emitError);
+        if (failed(arg))
+          return failure();
+        // The verifier restricts the operand to pointer-valued metadata
+        // attributes, all of which translate to a ConstantAsMetadata.
+        auto *argAsMD = cast<llvm::ConstantAsMetadata>(*arg);
+        return llvm::ConstantAsMetadata::get(
+            llvm::ConstantExpr::getAddrSpaceCast(
+                argAsMD->getValue(),
+                llvm::PointerType::get(llvmContext, a.getAddressSpace())));
+      })
       .Case([&](MDNodeAttr a) -> FailureOr<llvm::Metadata *> {
         SmallVector<llvm::Metadata *> operands;
         for (Attribute operand : a.getOperands()) {

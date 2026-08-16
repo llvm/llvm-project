@@ -402,8 +402,7 @@ protected:
 
 // Convenience type to hide the implementation of the folding set.
 using FoldingSetNode = FoldingSetBase::Node;
-template<class T> class FoldingSetIterator;
-template<class T> class FoldingSetBucketIterator;
+template <class T> class FoldingSetIterator;
 
 // Definitions of FoldingSetTrait and ContextualFoldingSetTrait functions, which
 // require the definition of FoldingSetNodeID.
@@ -462,16 +461,6 @@ public:
 
   const_iterator begin() const { return const_iterator(Buckets); }
   const_iterator end() const { return const_iterator(Buckets+NumBuckets); }
-
-  using bucket_iterator = FoldingSetBucketIterator<T>;
-
-  bucket_iterator bucket_begin(unsigned hash) {
-    return bucket_iterator(Buckets + (hash & (NumBuckets-1)));
-  }
-
-  bucket_iterator bucket_end(unsigned hash) {
-    return bucket_iterator(Buckets + (hash & (NumBuckets-1)), true);
-  }
 
   /// Increase the number of buckets such that adding the \p EltCount th node
   /// won't cause a rebucket operation. reserve is permitted to allocate more
@@ -730,53 +719,6 @@ public:
   }
   FoldingSetIterator operator++(int) {        // Postincrement
     FoldingSetIterator tmp = *this; ++*this; return tmp;
-  }
-};
-
-//===----------------------------------------------------------------------===//
-/// This is the common bucket iterator support shared by all folding sets, which
-/// knows how to walk a particular bucket of a folding set hash table.
-class FoldingSetBucketIteratorImpl {
-protected:
-  void *Ptr;
-
-  LLVM_ABI explicit FoldingSetBucketIteratorImpl(void **Bucket);
-
-  FoldingSetBucketIteratorImpl(void **Bucket, bool) : Ptr(Bucket) {}
-
-  void advance() {
-    void *Probe = static_cast<FoldingSetNode*>(Ptr)->getNextInBucket();
-    uintptr_t x = reinterpret_cast<uintptr_t>(Probe) & ~0x1;
-    Ptr = reinterpret_cast<void*>(x);
-  }
-
-public:
-  bool operator==(const FoldingSetBucketIteratorImpl &RHS) const {
-    return Ptr == RHS.Ptr;
-  }
-  bool operator!=(const FoldingSetBucketIteratorImpl &RHS) const {
-    return Ptr != RHS.Ptr;
-  }
-};
-
-template <class T>
-class FoldingSetBucketIterator : public FoldingSetBucketIteratorImpl {
-public:
-  explicit FoldingSetBucketIterator(void **Bucket) :
-    FoldingSetBucketIteratorImpl(Bucket) {}
-
-  FoldingSetBucketIterator(void **Bucket, bool) :
-    FoldingSetBucketIteratorImpl(Bucket, true) {}
-
-  T &operator*() const { return *static_cast<T*>(Ptr); }
-  T *operator->() const { return static_cast<T*>(Ptr); }
-
-  inline FoldingSetBucketIterator &operator++() { // Preincrement
-    advance();
-    return *this;
-  }
-  FoldingSetBucketIterator operator++(int) {      // Postincrement
-    FoldingSetBucketIterator tmp = *this; ++*this; return tmp;
   }
 };
 

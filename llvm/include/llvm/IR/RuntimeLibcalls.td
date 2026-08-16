@@ -2201,12 +2201,20 @@ defvar AArch64LongDoubleF128Body =
     !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
                 [frexpl_f128, ldexpl_f128, exp10l_f128]);
 
+// fp128 long double, excluding the Windows math runtime (which lacks frexpl/
+// ldexpl) and Darwin (which lacks exp10l).
+def isLongDoubleF128NotWinMath : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (any_of (not IsOSWindows), IsOSCygMing))>;
+def isLongDoubleF128NotDarwin : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (not IsOSDarwin))>;
+
 def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
   (add WinDefaultLibcallImpls,
        LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
        LibmHasFrexpF32, LibmHasLdexpF32,
-       LibmHasFrexpF128, LibmHasLdexpF128,
+       // The l-suffixed libm functions are fp128 only when long double is.
+       LibcallImpls<(add frexpl_f128, ldexpl_f128), isLongDoubleF128NotWinMath>,
        LibcallImpls<(add AArch64LongDoubleF128Body), isLongDoubleF128>,
        AArch64LibcallImpls,
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
@@ -2214,7 +2222,9 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
        MacOSUnlockedIO,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       DefaultLibmExp10,
+       LibmHasExp10F32, LibmHasExp10F64,
+       // exp10l is fp128 only when long double is.
+       LibcallImpls<(add exp10l_f128), isLongDoubleF128NotDarwin>,
        DefaultStackProtector,
        SecurityCheckCookieIfWinMSVC,
        LibcallImpls<(add __chkstk), isOSWindows>,

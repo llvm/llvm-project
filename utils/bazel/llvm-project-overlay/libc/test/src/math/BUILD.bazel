@@ -54,6 +54,11 @@ math_mpfr_test(
     hdrs = ["CeilTest.h"],
 )
 
+math_mpfr_test(
+    name = "ceilf128",
+    hdrs = ["CeilTest.h"],
+)
+
 math_mpfr_test(name = "cos")
 
 math_mpfr_test(

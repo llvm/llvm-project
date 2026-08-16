@@ -48,6 +48,10 @@ public:
       func.setCallingConv(cir::CallingConv::SpirKernel);
     }
   }
+
+  cir::CallingConv getDeviceKernelCallingConv() const override {
+    return cir::CallingConv::SpirKernel;
+  }
 };
 
 } // namespace

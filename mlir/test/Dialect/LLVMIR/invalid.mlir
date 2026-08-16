@@ -2198,3 +2198,19 @@ llvm.mlir.global internal thread_local(invalid) constant @thread_local(42 : i32)
 // expected-error@+1{{expected ')'}}
 llvm.mlir.global internal thread_local(generaldynamic, localexec) constant @thread_local(42 : i32) : i32
 
+
+// -----
+
+llvm.func @md_addrspacecast_bad_operand() {
+  // expected-error@+1{{expected #llvm.md_global_value, #llvm.md_null, or #llvm.md_addrspacecast operand, but got #llvm.md_string<"not a pointer">}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_string<"not a pointer">, 0>
+  llvm.return
+}
+
+// -----
+
+llvm.func @md_addrspacecast_int_operand() {
+  // expected-error@+1{{expected #llvm.md_global_value, #llvm.md_null, or #llvm.md_addrspacecast operand, but got #llvm.md_const<42 : i32>}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_const<42 : i32>, 0>
+  llvm.return
+}

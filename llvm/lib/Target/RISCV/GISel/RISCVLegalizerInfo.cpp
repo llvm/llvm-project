@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -33,6 +34,7 @@
 using namespace llvm;
 using namespace LegalityPredicates;
 using namespace LegalizeMutations;
+using namespace MIPatternMatch;
 
 static LegalityPredicate
 typeIsLegalIntOrFPVec(unsigned TypeIdx,
@@ -1311,8 +1313,7 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   LLT BigTy = MRI.getType(BigVec);
   LLT LitTy = MRI.getType(LitVec);
 
-  if (Idx == 0 &&
-      MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+  if (Idx == 0 && mi_match(BigVec, MRI, m_GImplicitDef()))
     return true;
 
   // We don't have the ability to slide mask vectors up indexed by their i1

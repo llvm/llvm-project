@@ -77,3 +77,14 @@ define i32 @rolil(i32 %a) nounwind {
   %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 7)
   ret i32 %1
 }
+
+; Rotating 16 bits should lower to SWAP
+define i32 @rolswap(i32 %a) nounwind {
+; CHECK-LABEL: rolswap:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    move.l (4,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    rts
+  %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 16)
+  ret i32 %1
+}

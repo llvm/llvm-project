@@ -2461,7 +2461,7 @@ bool CombinerHelper::matchCombineUnmergeUndef(
       B.buildUndef(DstReg);
     }
   };
-  return isa<GImplicitDef>(MRI.getVRegDef(SrcReg));
+  return mi_match(SrcReg, MRI, m_GImplicitDef());
 }
 
 bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(
@@ -6629,8 +6629,8 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
   Register Z;
   // fold (fadd (fma x, y, (fmul u, v)), z) -> (fma x, y, (fma u, v, z))
   if (LHS.MI->getOpcode() == PreferredFusedOpcode &&
-      (MRI.getVRegDef(LHS.MI->getOperand(3).getReg())->getOpcode() ==
-       TargetOpcode::G_FMUL) &&
+      mi_match(LHS.MI->getOperand(3).getReg(), MRI,
+               m_GFMul(m_Reg(), m_Reg())) &&
       MRI.hasOneNonDBGUse(LHS.MI->getOperand(0).getReg()) &&
       MRI.hasOneNonDBGUse(LHS.MI->getOperand(3).getReg())) {
     FMA = LHS.MI;
@@ -6638,8 +6638,8 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
   }
   // fold (fadd z, (fma x, y, (fmul u, v))) -> (fma x, y, (fma u, v, z))
   else if (RHS.MI->getOpcode() == PreferredFusedOpcode &&
-           (MRI.getVRegDef(RHS.MI->getOperand(3).getReg())->getOpcode() ==
-            TargetOpcode::G_FMUL) &&
+           mi_match(RHS.MI->getOperand(3).getReg(), MRI,
+                    m_GFMul(m_Reg(), m_Reg())) &&
            MRI.hasOneNonDBGUse(RHS.MI->getOperand(0).getReg()) &&
            MRI.hasOneNonDBGUse(RHS.MI->getOperand(3).getReg())) {
     Z = LHS.Reg;
