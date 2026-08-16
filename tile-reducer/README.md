@@ -68,3 +68,10 @@ payload ops produce a silenceable diagnostic.
 `--tr-lower-affine` applies upstream `populateAffineToStdConversionPatterns`:
 `affine.for` becomes `scf.for`, `affine.apply` becomes `arith.muli` /
 `arith.addi` on `index`.
+
+## Milestone 16
+
+`GPUTargetInfo` records warp size, SM / register / shared-memory
+capacities, and the baseline launch (256 threads, 8 warps).
+`--tr-annotate-gpu-target` writes those fields as `tr.target.*` module
+attributes. They are target properties, not source semantics.

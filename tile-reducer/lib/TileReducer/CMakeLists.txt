@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRTileReducer
         TileReducerLinalgConversion.cpp
         TileReducerLinalgTiling.cpp
         TileReducerTransformOps.cpp
+        TileReducerGPUTarget.cpp
         TileReducerPasses.cpp
 
         ADDITIONAL_HEADER_DIRS

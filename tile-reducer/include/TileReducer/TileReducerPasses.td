@@ -109,6 +109,15 @@ def LowerTRAffine : Pass<"tr-lower-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
+def AnnotateGPUTarget : Pass<"tr-annotate-gpu-target", "::mlir::ModuleOp"> {
+  let summary = "Attach GPUTargetInfo fields as module attributes.";
+  let description = [{
+    Records warp size, the baseline 256-thread / 8-warp launch, and A100-like
+    SM / register / shared-memory capacities. These are target properties,
+    not TileReducer source semantics.
+  }];
+}
+
 def ConvertTRToLinalg : Pass<"convert-tr-to-linalg", "::mlir::func::FuncOp"> {
   let summary = "Lower tile compute to Linalg over MemRefs. Load becomes a subview.";
   let description = [{
