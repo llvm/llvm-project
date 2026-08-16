@@ -47,11 +47,7 @@ void StopForDebugger(void*) {}
 
 void test() {
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
-#if defined(TEST_HAS_NO_FILESYSTEM) || defined(_PICOLIB_)
-  MarkAsLive(!isDebuggerPresent);
-#else
   MarkAsLive(isDebuggerPresent);
-#endif
   StopForDebugger(&isDebuggerPresent);
 
   static_assert(noexcept(std::is_debugger_present()));
