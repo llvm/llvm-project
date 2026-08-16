@@ -26,7 +26,6 @@ class HexagonRegisterInfo;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
-class RegisterClassInfo;
 class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 
@@ -172,10 +171,9 @@ private:
       SmallVectorImpl<Register> &NewRegs) const;
 
   Register findPhysReg(MachineFunction &MF, HexagonBlockRanges::IndexRange &FIR,
-                       HexagonBlockRanges::InstrIndexMap &IndexMap,
-                       HexagonBlockRanges::RegToRangeMap &DeadMap,
-                       const TargetRegisterClass *RC,
-                       const RegisterClassInfo &RCI) const;
+      HexagonBlockRanges::InstrIndexMap &IndexMap,
+      HexagonBlockRanges::RegToRangeMap &DeadMap,
+      const TargetRegisterClass *RC) const;
   void optimizeSpillSlots(MachineFunction &MF,
       SmallVectorImpl<Register> &VRegs) const;
 
