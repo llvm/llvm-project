@@ -9,5 +9,6 @@
 #define TILE_REDUCER_OPS
 
 include "TileReducer/TileReducerDialect.td"
+include "TileReducer/TileReducerTypes.td"
 
 #endif // TILE_REDUCER_OPS

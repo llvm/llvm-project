@@ -23,6 +23,10 @@ def TileReducer_Dialect : Dialect {
     `!tr.buffer` is addressable external storage and later lowers to MemRef.
   }];
   let cppNamespace = "::mlir::tr";
+  let useDefaultTypePrinterParser = 1;
+  let extraClassDeclaration = [{
+    void registerTypes();
+  }];
 }
 
 class TileReducer_Op<string mnemonic, list<Trait> traits = []> :

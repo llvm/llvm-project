@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRTileReducer
         TileReducerDialect.cpp
         TileReducerOps.cpp
+        TileReducerTypes.cpp
 
         ADDITIONAL_HEADER_DIRS
         ${PROJECT_SOURCE_DIR}/include/TileReducer
@@ -11,4 +12,5 @@ add_mlir_dialect_library(MLIRTileReducer
         LINK_LIBS PUBLIC
         MLIRIR
         MLIRSupport
+        MLIRAsmParser
         )
