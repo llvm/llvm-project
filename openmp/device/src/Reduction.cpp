@@ -266,8 +266,9 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
     lgcpyFct(GlobalBuffer, TeamId, reduce_data);
     // We let the atomic inc wrap around if the value gets larger than
     // NumTeams-1, which makes the counter self-reset.
-    TeamsDoneResult = atomic::inc(&TeamsDone, NumTeams - 1u, atomic::acq_rel,
-                                  atomic::MemScopeTy::device);
+    uint32_t Done = atomic::inc(&TeamsDone, NumTeams - 1u, atomic::acq_rel,
+                                atomic::MemScopeTy::device);
+    atomic::store(&TeamsDoneResult, Done, atomic::relaxed);
   }
 
   // This sync is needed so that all threads from last team see the shared teams
@@ -276,7 +277,7 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
     synchronize::threadsAligned(atomic::acq_rel);
 
   // If teams done counter reaches NumTeams-1, this is the last team.
-  if (TeamsDoneResult != NumTeams - 1u)
+  if (atomic::load(&TeamsDoneResult, atomic::relaxed) != NumTeams - 1u)
     return 0;
 
   // The last team performs final reduction across all team values.
