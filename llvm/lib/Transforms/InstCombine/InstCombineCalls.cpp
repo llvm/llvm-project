@@ -4960,6 +4960,39 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   return Changed;
 }
 
+Instruction *InstCombinerImpl::visitReallocSite(CallBase &Call) {
+  assert(isReallocLikeFn(&Call));
+
+  CallBase *Realloced =
+      dyn_cast_or_null<CallBase>(getReallocatedOperand(&Call));
+
+  if (!Realloced || Realloced->getParent() != Call.getParent() ||
+      !isAllocLikeFn(Realloced, &TLI))
+    return nullptr;
+
+  if (getAllocationFamily(&Call, &TLI) != getAllocationFamily(Realloced, &TLI))
+    return nullptr;
+
+  if (getAllocAlignment(&Call, &TLI) != getAllocAlignment(Realloced, &TLI))
+    return nullptr;
+
+  for (Instruction &Inst :
+       make_range(++Realloced->getIterator(), Call.getIterator())) {
+    if (Inst.mayReadOrWriteMemory())
+      return nullptr;
+  }
+
+  Realloced->moveBefore(Call.getIterator());
+  Use *AllocSizeArg = getAllocSizeArg(Realloced, &TLI);
+  Use *ReallocSizeArg = getAllocSizeArg(&Call, &TLI);
+  if (!AllocSizeArg || !ReallocSizeArg)
+    return nullptr;
+
+  replaceUse(*AllocSizeArg, *ReallocSizeArg);
+  replaceInstUsesWith(Call, Realloced);
+  return eraseInstFromFunction(Call);
+}
+
 /// Improvements for call, callbr and invoke instructions.
 Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   bool Changed = annotateAnyAllocSite(Call, &TLI);
@@ -5143,6 +5176,9 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 
   if (isRemovableAlloc(&Call, &TLI))
     return visitAllocSite(Call);
+
+  if (isReallocLikeFn(&Call))
+    return visitReallocSite(Call);
 
   // Handle intrinsics which can be used in both call and invoke context.
   switch (Call.getIntrinsicID()) {

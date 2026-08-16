@@ -69,7 +69,7 @@ LLVM_ABI bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Tests if a function is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
-LLVM_ABI bool isReallocLikeFn(const Function *F);
+LLVM_ABI bool isReallocLikeFn(const Value *F);
 
 /// If this is a call to a realloc function, return the reallocated operand.
 LLVM_ABI Value *getReallocatedOperand(const CallBase *CB);
@@ -117,6 +117,9 @@ LLVM_ABI std::optional<APInt> getAllocSize(
     function_ref<const Value *(const Value *)> Mapper = [](const Value *V) {
       return V;
     });
+
+/// Return the Use of the allocation size argument if there exists one.
+LLVM_ABI Use *getAllocSizeArg(CallBase *CB, const TargetLibraryInfo *TLI);
 
 /// If this is a call to an allocation function that initializes memory to a
 /// fixed value, return said value in the requested type.  Otherwise, return

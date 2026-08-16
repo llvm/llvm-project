@@ -171,6 +171,7 @@ public:
   Instruction *visitGEPOfGEP(GetElementPtrInst &GEP, GEPOperator *Src);
   Instruction *visitAllocaInst(AllocaInst &AI);
   Instruction *visitAllocSite(Instruction &FI);
+  Instruction *visitReallocSite(CallBase &);
   Instruction *visitFree(CallInst &FI, Value *FreedOp);
   Instruction *visitLoadInst(LoadInst &LI);
   Instruction *visitStoreInst(StoreInst &SI);
