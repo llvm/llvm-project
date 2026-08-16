@@ -404,7 +404,6 @@ void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI) const {
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
   MachineInstr *Op1Def = MRI.getVRegDef(Op1);
-  MachineInstr *Op2Def = MRI.getVRegDef(Op2);
   Register nonConstantReg =
       (Op1Def->getOpcode() == TargetOpcode::G_FCONSTANT) ? Op2 : Op1;
 
