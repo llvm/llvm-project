@@ -40,3 +40,11 @@ Transform dialect schedules in `transform/row_sum_schedule.mlir` and
 `transform/column_sum_schedule.mlir`. Payload IR is the computation;
 transform IR is the schedule. `transform.structured.match` +
 `transform.structured.tile_using_for` tile the Linalg reduction.
+
+## Milestone 12
+
+Named schedule `@row_sum_schedule` is a public symbol. It includes private
+`@tile_row_reduction` via `transform.include` (`SymbolRefAttr` lookup in a
+`SymbolTable` with `transform.with_named_sequence`). Entry point selection
+uses `--transform-interpreter=entry-point=row_sum_schedule`. A missing
+symbol is a hard lookup failure.
