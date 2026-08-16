@@ -8,6 +8,7 @@
 
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -738,6 +739,8 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
     if (auto *Phi = dyn_cast<PHINode>(X))
       for (Use &V : Phi->incoming_values())
         Worklist.push_back(V.get());
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(X))
+      Worklist.push_back(GEP->getPointerOperand());
     else if (auto *Select = dyn_cast<SelectInst>(X))
       for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
         Worklist.push_back(V);
@@ -884,6 +887,96 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
   DeadInsts.insert(Ptr);
 }
 
+// Rematerialize V into the predecessor on the given incoming edge, cloning the
+// part of its def chain that lives in the phi's merge block. A phi is resolved
+// to its per-edge incoming value; anything defined outside the merge block
+// already dominates the predecessor and is reused as-is.
+static Value *materializeInPred(Value *V, PHINode *Phi, unsigned EdgeIdx,
+                                DenseMap<Value *, Value *> &Materialized,
+                                SmallSetVector<Instruction *, 16> &DeadInsts) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->getParent() != Phi->getParent())
+    return V;
+
+  if (auto *P = dyn_cast<PHINode>(I)) {
+    DeadInsts.insert(P);
+    return materializeInPred(P->getIncomingValue(EdgeIdx), Phi, EdgeIdx,
+                             Materialized, DeadInsts);
+  }
+
+  if (auto It = Materialized.find(I); It != Materialized.end())
+    return It->second;
+
+  assert((!isa<CallBase>(I) || !cast<CallBase>(I)->isConvergent()) &&
+         "Cannot rematerialize a convergent instruction into a predecessor. "
+         "GVN is the only optimization that can create an pattern that looks "
+         "like the load/store of a convergent value into a phi of resource "
+         "pointers. This must already be dealt with during index propogation.");
+
+  BasicBlock *PredBB = Phi->getIncomingBlock(EdgeIdx);
+  auto *Clone = I->clone();
+  if (I->hasName())
+    Clone->setName(I->getName());
+  for (unsigned Op = 0, E = Clone->getNumOperands(); Op < E; ++Op)
+    Clone->setOperand(Op, materializeInPred(I->getOperand(Op), Phi, EdgeIdx,
+                                            Materialized, DeadInsts));
+  Clone->insertBefore(PredBB->getTerminator()->getIterator());
+
+  Materialized[I] = Clone;
+  DeadInsts.insert(I);
+  return Clone;
+}
+
+// Undo an InstCombine/SimplifyCFG/LICM access-sink by cloning it into each
+// predecessor addressing that edge's concrete resource, rematerializing PtrOp
+// (and ValOp, for a store) per edge. A load's per-edge results are merged with
+// a new phi.
+static void hoistResourceAccess(Instruction *Access, PHINode *Phi, Value *PtrOp,
+                                Value *ValOp,
+                                SmallSetVector<Instruction *, 16> &DeadInsts) {
+  // InstCombine/SimplifyCFG/LICM sinks always follow this property. If an
+  // assert fires, another optimization produced an unexpected phi pattern.
+  [[maybe_unused]] BasicBlock *MergeBB = Phi->getParent();
+  assert(Access->getParent() == MergeBB &&
+         "Access must be in the phi's merge block");
+  for ([[maybe_unused]] BasicBlock *Pred : Phi->blocks())
+    assert(Pred->getSingleSuccessor() == MergeBB &&
+           "Phi predecessor must flow unconditionally into the merge block");
+
+  unsigned NumEdges = Phi->getNumIncomingValues();
+
+  // The old resource-pointer phi will be superseded.
+  DeadInsts.insert(Phi);
+
+  PHINode *NewPhi =
+      ValOp ? nullptr
+            : PHINode::Create(Access->getType(), NumEdges, Access->getName(),
+                              Phi->getIterator());
+
+  for (unsigned Idx = 0; Idx < NumEdges; ++Idx) {
+    BasicBlock *BB = Phi->getIncomingBlock(Idx);
+
+    // Rematerialize the operands on this edge so the access has dominating
+    // operands.
+    DenseMap<Value *, Value *> Materialized;
+    auto *Clone = Access->clone();
+    Clone->replaceUsesOfWith(
+        PtrOp, materializeInPred(PtrOp, Phi, Idx, Materialized, DeadInsts));
+    if (ValOp)
+      Clone->replaceUsesOfWith(
+          ValOp, materializeInPred(ValOp, Phi, Idx, Materialized, DeadInsts));
+    Clone->insertBefore(BB->getTerminator()->getIterator());
+
+    if (NewPhi)
+      NewPhi->addIncoming(Clone, BB);
+  }
+
+  if (NewPhi)
+    Access->replaceAllUsesWith(NewPhi);
+
+  DeadInsts.insert(Access);
+}
+
 // Try to legalize dx.resource.handlefrom.*.binding and dx.resource.getpointer
 // calls with their respective index values and propagate the index values to
 // be used at resource access.
@@ -893,8 +986,20 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 // Reports an error if a resource access is not guaranteed into a unique global
 // resource.
 //
-// Returns true if any changes are made.
-static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
+// Returns std::nullopt if an error was encountered, otherwise returns true if
+// any changes were made.
+static std::optional<bool> legalizeResourceHandles(Function &F,
+                                                   DXILResourceTypeMap &DRTM) {
+  // Used below when determining if a hoist is possible. This does not traverse
+  // through a `dx.resource.getpointer` to find the phi. This distinguishes if
+  // we will hoist a optimazation generated phi of pointers or if it was an
+  // illegally created phi of resource handles.
+  auto FindPointerPhi = [](Value *Ptr) -> PHINode * {
+    while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+      Ptr = GEP->getPointerOperand();
+    return dyn_cast<PHINode>(Ptr);
+  };
+
   SmallSetVector<Instruction *, 16> DeadInsts;
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {
@@ -910,12 +1015,27 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           SameGlobalBinding &=
               (B == getHandleIntrinsicBinding(Handles[Idx], DRTM));
 
-        if (!SameGlobalBinding) {
-          diagnoseNonUniqueResourceAccess(&I, Handles);
+        if (SameGlobalBinding) {
+          replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts);
           continue;
         }
 
-        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts);
+        if (auto *LI = dyn_cast<LoadInst>(&I))
+          if (auto *Phi = FindPointerPhi(LI->getPointerOperand())) {
+            hoistResourceAccess(LI, Phi, LI->getPointerOperand(),
+                                /*ValOp=*/nullptr, DeadInsts);
+            continue;
+          }
+
+        if (auto *SI = dyn_cast<StoreInst>(&I))
+          if (auto *Phi = FindPointerPhi(SI->getPointerOperand())) {
+            hoistResourceAccess(SI, Phi, SI->getPointerOperand(),
+                                SI->getValueOperand(), DeadInsts);
+            continue;
+          }
+
+        diagnoseNonUniqueResourceAccess(&I, Handles);
+        return std::nullopt;
       }
     }
   }
@@ -995,9 +1115,12 @@ PreservedAnalyses DXILResourceAccess::run(Function &F,
       MAMProxy.getCachedResult<DXILResourceTypeAnalysis>(*F.getParent());
   assert(DRTM && "DXILResourceTypeAnalysis must be available");
 
-  bool MadeHandleChanges = legalizeResourceHandles(F, *DRTM);
+  std::optional<bool> MadeHandleChanges = legalizeResourceHandles(F, *DRTM);
+  if (!MadeHandleChanges.has_value())
+    return PreservedAnalyses::all();
+
   bool MadeResourceChanges = transformResourcePointers(F, *DRTM);
-  if (!(MadeHandleChanges || MadeResourceChanges))
+  if (!(MadeHandleChanges.value() || MadeResourceChanges))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -1012,9 +1135,11 @@ public:
   bool runOnFunction(Function &F) override {
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-    bool MadeHandleChanges = legalizeResourceHandles(F, DRTM);
+    std::optional<bool> MadeHandleChanges = legalizeResourceHandles(F, DRTM);
+    if (!MadeHandleChanges.has_value())
+      return false;
     bool MadeResourceChanges = transformResourcePointers(F, DRTM);
-    return MadeHandleChanges || MadeResourceChanges;
+    return MadeHandleChanges.value() || MadeResourceChanges;
   }
   StringRef getPassName() const override { return "DXIL Resource Access"; }
   DXILResourceAccessLegacy() : FunctionPass(ID) {}
