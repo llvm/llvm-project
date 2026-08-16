@@ -1151,8 +1151,9 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       // Note: if FD is nullptr currently setting DFK to DefaultedFunctionKind()
       // will ensure that DFK.isComparison() is false. This is important because
       // we will uncondtionally dereference FD in the else if.
-      DefaultedFunctionKind DFK =
-          FD ? getDefaultedFunctionKind(FD) : DefaultedFunctionKind();
+      FunctionDecl::DefaultedFunctionKind DFK =
+          FD ? FD->getDefaultedFunctionKind()
+             : FunctionDecl::DefaultedFunctionKind();
       if (DFK.isSpecialMember()) {
         auto *MD = cast<CXXMethodDecl>(FD);
         DiagFunc(Active->PointOfInstantiation,

@@ -144,6 +144,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
 
+  theModule->setAttr(
+      cir::CIRDialect::getDefaultTlsModelAttrName(),
+      cir::TLSModelAttr::get(&mlirContext, getDefaultCIRTLSModel()));
+
   if (langOpts.OpenMP) {
     mlir::omp::OffloadModuleOpts ompOpts(
         langOpts.OpenMPTargetDebug, langOpts.OpenMPTeamSubscription,
@@ -176,7 +180,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   // Set CUDA GPU binary handle.
   if (langOpts.CUDA) {
-    llvm::StringRef cudaBinaryName = codeGenOpts.CudaGpuBinaryFileName;
+    llvm::StringRef cudaBinaryName = codeGenOpts.OffloadBinaryToEmbedFile;
     if (!cudaBinaryName.empty()) {
       theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
                          cir::CUDABinaryHandleAttr::get(
@@ -447,9 +451,13 @@ void CIRGenModule::emitDeferred() {
           fd->isDefined()) {
         // Functions with an invalid sycl_kernel_entry_point attribute are
         // ignored during device compilation.
-        if (!fd->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr())
-          errorNYI(fd->getSourceRange(),
-                   "SYCL kernel caller offload entry point");
+        if (!fd->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
+          // Generate and emit the SYCL kernel caller function.
+          emitSYCLKernelCaller(fd, getASTContext());
+          // Recurse to emit any symbols directly or indirectly referenced
+          // by the SYCL kernel caller function.
+          emitDeferred();
+        }
         // Do not emit the sycl_kernel_entry_point attributed function.
         continue;
       }
@@ -3095,24 +3103,24 @@ bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
   return true;
 }
 
-static cir::TLS_Model getCIRTLSModel(StringRef S) {
-  return llvm::StringSwitch<cir::TLS_Model>(S)
-      .Case("global-dynamic", cir::TLS_Model::GeneralDynamic)
-      .Case("local-dynamic", cir::TLS_Model::LocalDynamic)
-      .Case("initial-exec", cir::TLS_Model::InitialExec)
-      .Case("local-exec", cir::TLS_Model::LocalExec);
+static cir::TLSModel getCIRTLSModel(StringRef S) {
+  return llvm::StringSwitch<cir::TLSModel>(S)
+      .Case("global-dynamic", cir::TLSModel::GeneralDynamic)
+      .Case("local-dynamic", cir::TLSModel::LocalDynamic)
+      .Case("initial-exec", cir::TLSModel::InitialExec)
+      .Case("local-exec", cir::TLSModel::LocalExec);
 }
 
-cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
+cir::TLSModel CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
-    return cir::TLS_Model::GeneralDynamic;
+    return cir::TLSModel::GeneralDynamic;
   case CodeGenOptions::LocalDynamicTLSModel:
-    return cir::TLS_Model::LocalDynamic;
+    return cir::TLSModel::LocalDynamic;
   case CodeGenOptions::InitialExecTLSModel:
-    return cir::TLS_Model::InitialExec;
+    return cir::TLSModel::InitialExec;
   case CodeGenOptions::LocalExecTLSModel:
-    return cir::TLS_Model::LocalExec;
+    return cir::TLSModel::LocalExec;
   }
   llvm_unreachable("Invalid TLS model!");
 }
@@ -3121,7 +3129,7 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
                               bool isExtendingDecl) {
   assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
 
-  cir::TLS_Model tlm = getDefaultCIRTLSModel();
+  cir::TLSModel tlm = getDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
   if (const auto *attr = d.getAttr<TLSModelAttr>())
@@ -3132,7 +3140,7 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
 
   // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
   // info.
-  if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+  if (d.isStaticLocal())
     return;
 
   // If this function was called to set the TLS mode for a temporary whose
