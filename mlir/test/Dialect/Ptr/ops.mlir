@@ -89,6 +89,7 @@ func.func @scatter_ops_tensor(%value: tensor<8xi64>, %ptrs: tensor<8x!ptr.ptr<#p
 func.func @masked_load_ops(%ptr: !ptr.ptr<#ptr.generic_space>, %mask: vector<4xi1>, %passthrough: vector<4xf32>) -> vector<4xf32> {
   %0 = ptr.masked_load %ptr, %mask, %passthrough : !ptr.ptr<#ptr.generic_space> -> vector<4xf32>
   %1 = ptr.masked_load %ptr, %mask, %passthrough alignment = 16 : !ptr.ptr<#ptr.generic_space> -> vector<4xf32>
+  %2 = ptr.masked_load %ptr, %mask, %passthrough alignment = 16 nontemporal : !ptr.ptr<#ptr.generic_space> -> vector<4xf32> 
   return %0 : vector<4xf32>
 }
 
@@ -96,6 +97,7 @@ func.func @masked_load_ops(%ptr: !ptr.ptr<#ptr.generic_space>, %mask: vector<4xi
 func.func @masked_load_ops_tensor(%ptr: !ptr.ptr<#ptr.generic_space>, %mask: tensor<8xi1>, %passthrough: tensor<8xi32>) -> tensor<8xi32> {
   %0 = ptr.masked_load %ptr, %mask, %passthrough : !ptr.ptr<#ptr.generic_space> -> tensor<8xi32>
   %1 = ptr.masked_load %ptr, %mask, %passthrough alignment = 4 : !ptr.ptr<#ptr.generic_space> -> tensor<8xi32>
+  %2 = ptr.masked_load %ptr, %mask, %passthrough alignment = 4 nontemporal : !ptr.ptr<#ptr.generic_space> -> tensor<8xi32>
   return %0 : tensor<8xi32>
 }
 

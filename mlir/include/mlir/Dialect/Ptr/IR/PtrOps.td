@@ -299,10 +299,15 @@ def Ptr_MaskedLoadOp : Pointer_Op<"masked_load", [
   let arguments = (ins Ptr_PtrType:$ptr,
                        Ptr_Mask1DType:$mask,
                        Ptr_Any1DType:$passthrough,
-                       AlignmentProp:$alignment);
+                       AlignmentProp:$alignment,
+                       UnitProp:$nontemporal);
   let results = (outs Ptr_Any1DType:$result);
   let assemblyFormat = [{
-    $ptr `,` $mask `,` $passthrough (`alignment` `=` $alignment^)?
+    $ptr `,` $mask `,` $passthrough
+    oilist(
+      `alignment` `=` $alignment |
+      `nontemporal` $nontemporal
+    )
     attr-dict `:` qualified(type($ptr)) `->` type($result)
   }];
   let builders = [

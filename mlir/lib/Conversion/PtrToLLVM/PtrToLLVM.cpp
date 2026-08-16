@@ -85,6 +85,16 @@ struct ConstantOpConversion : public ConvertOpToLLVMPattern<ptr::ConstantOp> {
   matchAndRewrite(ptr::ConstantOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
+
+//===----------------------------------------------------------------------===//
+// MaskLoadOpConversion
+//===----------------------------------------------------------------------===//
+struct MaskLoadOpConversion : public ConvertOpToLLVMPattern<ptr::MaskedLoadOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(ptr::MaskedLoadOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -413,6 +423,28 @@ LogicalResult ConstantOpConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// MaskLoadOpConversion
+//===----------------------------------------------------------------------===//
+
+LogicalResult MaskLoadOpConversion::matchAndRewrite(
+    ptr::MaskedLoadOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Type ptrType = getTypeConverter()->convertType(op.getPtr().getType());
+  if (!ptrType)
+    return rewriter.notifyMatchFailure(op, "Couldn't convert the ptr type");
+  Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return rewriter.notifyMatchFailure(op, "Couldn't convert the result type");
+  unsigned alignment = 0;
+  if (std::optional<int64_t> align = op.getAlignment())
+    alignment = *align;
+  rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
+      op, resultType, adaptor.getPtr(), adaptor.getMask(),
+      adaptor.getPassthrough(), alignment, op.getNontemporal());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConvertToLLVMPatternInterface implementation
 //===----------------------------------------------------------------------===//
 
@@ -475,8 +507,8 @@ void mlir::ptr::populatePtrToLLVMConversionPatterns(
 
   // Add conversion patterns.
   patterns.add<FromPtrOpConversion, GetMetadataOpConversion, PtrAddOpConversion,
-               ToPtrOpConversion, TypeOffsetOpConversion, ConstantOpConversion>(
-      converter);
+               ToPtrOpConversion, TypeOffsetOpConversion, ConstantOpConversion,
+               MaskLoadOpConversion>(converter);
 }
 
 void mlir::ptr::registerConvertPtrToLLVMInterface(DialectRegistry &registry) {
