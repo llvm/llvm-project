@@ -3,6 +3,9 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin -mcpu=apple-m4 -aarch64-code-layout-opt-enable=fcmp-fcsel,cmp-csel | FileCheck %s
 ; Default for -mcpu=apple-m4 enables both fcmp-fcsel and cmp-csel; expect identical output.
 ; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin -mcpu=apple-m4 | FileCheck %s
+; Default for -mcpu=apple-m4 also enables page-cross; the insns-range knob is relaxed only because the test functions are tiny.
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-apple-darwin -mcpu=apple-m4 \
+; RUN:   -aarch64-code-layout-opt-page-cross-insns-range=5,1100 | FileCheck %s --check-prefix=PAGECROSS
 
 ; Test coverage for optimizeForCodeLayout function:
 ; * Basic FCMP-FCSEL instruction pair detection and function alignment (single/double precision)
@@ -261,4 +264,63 @@ entry:
   %cmp = icmp eq i32 %a, %b
   %result = zext i1 %cmp to i32
   ret i32 %result
+}
+
+;------------------------------------------------------------------------------
+; Page-cross alignment tests (page-cross flag of -aarch64-code-layout-opt-enable)
+;------------------------------------------------------------------------------
+
+; * Positive - function with nested loop (depth 2) and enough instructions.
+; PAGECROSS: .globl _test_page_cross_positive
+; PAGECROSS-NEXT: .p2align
+; PAGECROSS-NOT: .p2align 2
+; PAGECROSS-LABEL: _test_page_cross_positive:
+define void @test_page_cross_positive(ptr %p, i32 %n, i32 %m) {
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %inner.header
+
+inner.header:
+  %j = phi i32 [ 0, %outer.header ], [ %j.next, %inner.header ]
+  %idx = add i32 %i, %j
+  %ptr = getelementptr i32, ptr %p, i32 %idx
+  %val = load i32, ptr %ptr
+  %inc = add i32 %val, 1
+  store i32 %inc, ptr %ptr
+  %j.next = add i32 %j, 1
+  %inner.cond = icmp slt i32 %j.next, %m
+  br i1 %inner.cond, label %inner.header, label %outer.latch
+
+outer.latch:
+  %i.next = add i32 %i, 1
+  %outer.cond = icmp slt i32 %i.next, %n
+  br i1 %outer.cond, label %outer.header, label %exit
+
+exit:
+  ret void
+}
+
+; * Negative - single (non-nested) loop, depth 1 below threshold of 2.
+; PAGECROSS: .globl _test_page_cross_negative_shallow
+; PAGECROSS-NEXT: .p2align 2
+; PAGECROSS-LABEL: _test_page_cross_negative_shallow:
+define void @test_page_cross_negative_shallow(ptr %p, i32 %n) {
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %ptr = getelementptr i32, ptr %p, i32 %i
+  %val = load i32, ptr %ptr
+  %inc = add i32 %val, 1
+  store i32 %inc, ptr %ptr
+  %i.next = add i32 %i, 1
+  %cond = icmp slt i32 %i.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
 }
