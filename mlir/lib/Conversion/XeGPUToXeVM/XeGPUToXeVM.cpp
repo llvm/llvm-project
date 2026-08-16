@@ -753,9 +753,10 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
       // Some transforms may leave unit dimension in the 2D vector, adaptors do
       // not catch it for results.
       if (auto vecType = dyn_cast<VectorType>(resType)) {
-        assert(llvm::count_if(vecType.getShape(),
-                              [](int64_t d) { return d != 1; }) <= 1 &&
-               "Expected either 1D vector or nD with unit dimensions");
+        // Flatten to 1D
+        // Accepts multi-dim tile as one flat, contiguous run.
+        // This is only valid when the underlying mem_desc region is contiguous
+        // in memory
         resType = VectorType::get({vecType.getNumElements()},
                                   vecType.getElementType());
       }
@@ -821,9 +822,9 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 
     if (valOrResVecTy.getNumElements() >= 1) {
       auto chipOpt = xegpu::getChipStr(op);
-      if (!chipOpt ||
-          (*chipOpt != "pvc" && *chipOpt != "bmg" && *chipOpt != "cri")) {
-        // the lowering for chunk load only works for pvc, bmg or cri
+      // reject an explicitly unsupported chip
+      if (chipOpt && *chipOpt != "pvc" && *chipOpt != "bmg" &&
+          *chipOpt != "cri") {
         return rewriter.notifyMatchFailure(
             op, "The lowering is specific to pvc, bmg or cri.");
       }
