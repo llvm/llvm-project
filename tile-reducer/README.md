@@ -96,3 +96,25 @@ Out-of-bounds columns in the last tile contribute zero via `scf.if`.
 The kernel is K-dynamic and covers
 `K ∈ {1,31,32,33,127,128,129,255,256,257}`. The lane-then-warp tree
 reassociates the K-sum; TileReducer treats row-sum as reassociative.
+
+## Milestone 20
+
+`--tr-emit-gpu-kernels` builds `gpu.module @tr_kernels` with a SymbolTable:
+lookup of an existing module, insertion of `gpu.func` symbols, uniqueness
+when a name is taken, and nested `SymbolRefAttr` on
+`gpu.launch_func @tr_kernels::@row_sum_kernel`. A missing kernel symbol is
+a hard lookup failure.
+
+## Milestone 21
+
+Full `MxK → scalar` uses two kernels, `@full_sum_stage1` and
+`@full_sum_stage2`. Stage 1: thread-local sum, warp reduce, `smem[warp]`,
+barrier, block reduce, one partial per block. Stage 2 reduces the
+partials. No unordered FP atomics.
+
+## Milestone 22
+
+Column reduction on row-major input: coalesced global loads into a
+128×128 workgroup memref, `gpu.barrier`, then one thread per column.
+128 is already a multiple of the warp size, so a padded 128×132 layout
+is not used. Direct strided `in[row, col]` would break coalescing.

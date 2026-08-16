@@ -141,6 +141,27 @@ def ConvertTRRowSumToGPU : Pass<"convert-tr-row-sum-to-gpu", "::mlir::func::Func
   ];
 }
 
+def EmitTRGPUKernels : Pass<"tr-emit-gpu-kernels", "::mlir::ModuleOp"> {
+  let summary = "Outline reductions into gpu.module @tr_kernels and launch by symbol.";
+  let description = [{
+    Uses SymbolTable to look up or insert `gpu.module @tr_kernels`, insert
+    unique `gpu.func` kernel symbols, and reference them from the host with
+    a nested SymbolRefAttr on `gpu.launch_func` (`@tr_kernels::@name`).
+
+    Row sum: `@row_sum_kernel` (no shared memory).
+    Full sum: `@full_sum_stage1` + `@full_sum_stage2` (smem block reduce).
+    Column sum: `@column_sum_kernel` (smem staging + barrier).
+  }];
+  let dependentDialects = [
+    "::mlir::tr::TileReducerDialect",
+    "::mlir::gpu::GPUDialect",
+    "::mlir::scf::SCFDialect",
+    "::mlir::arith::ArithDialect",
+    "::mlir::memref::MemRefDialect",
+    "::mlir::func::FuncDialect"
+  ];
+}
+
 def ConvertTRToLinalg : Pass<"convert-tr-to-linalg", "::mlir::func::FuncOp"> {
   let summary = "Lower tile compute to Linalg over MemRefs. Load becomes a subview.";
   let description = [{
