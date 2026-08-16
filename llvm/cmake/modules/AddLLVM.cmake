@@ -2683,7 +2683,7 @@ function(llvm_codesign name)
 endfunction()
 
 function(llvm_setup_rpath name)
-  if(CMAKE_INSTALL_RPATH)
+  if(CMAKE_INSTALL_RPATH OR CMAKE_INSTALL_NAME_DIR)
     return()
   endif()
 
