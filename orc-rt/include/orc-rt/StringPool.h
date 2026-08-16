@@ -24,15 +24,12 @@
 
 namespace orc_rt {
 
-class PooledStringPtr;
-class NonOwningPooledStringPtr;
-
 /// Interns strings (e.g. symbol names, paths) behind ref-counted handles. An
-/// entry is kept alive as long as at least one PooledStringPtr refers to it;
+/// entry is kept alive as long as at least one StringPool::Ptr refers to it;
 /// clearDeadEntries() reclaims entries with no owners left.
 ///
 /// intern() and clearDeadEntries() may be called concurrently from any
-/// number of threads. Copying, moving, and destroying a PooledStringPtr
+/// number of threads. Copying, moving, and destroying a StringPool::Ptr
 /// requires no lock -- only the atomic refcount in that ptr's own entry is
 /// touched.
 class StringPool {
@@ -43,15 +40,20 @@ private:
 public:
   using PoolEntry = PoolMap::value_type;
 
+  class PtrBase;
+  class Ptr;
+  class WeakPtr;
+  class EntryUnsafe;
+
   StringPool() = default;
   StringPool(const StringPool &) = delete;
   StringPool &operator=(const StringPool &) = delete;
   ~StringPool();
 
-  /// Returns the PooledStringPtr for S, interning a copy on first reference.
-  PooledStringPtr intern(std::string_view S);
+  /// Returns the Ptr for S, interning a copy on first reference.
+  Ptr intern(std::string_view S);
 
-  /// Erase entries with no remaining PooledStringPtr owners.
+  /// Erase entries with no remaining Ptr owners.
   void clearDeadEntries();
 
   /// Returns true if this pool has no entries.
@@ -62,66 +64,62 @@ private:
   PoolMap Pool;
 };
 
-/// Common base for PooledStringPtr and NonOwningPooledStringPtr: bool
-/// conversion, dereference, and comparison.
+/// Common base for StringPool::Ptr and StringPool::WeakPtr: bool conversion,
+/// dereference, and comparison.
 ///
 /// Comparisons and hashing are pointer-identity, scoped to whichever
 /// StringPool produced the handle -- handles from different pools are never
 /// equal, even for identical text.
-class PooledStringPtrBase {
-  friend class StringPoolEntryUnsafe;
+class StringPool::PtrBase {
+  friend class EntryUnsafe;
 
 public:
-  PooledStringPtrBase() = default;
-  PooledStringPtrBase(std::nullptr_t) noexcept {}
+  PtrBase() = default;
+  PtrBase(std::nullptr_t) noexcept {}
 
   explicit operator bool() const noexcept { return E != nullptr; }
 
   const std::string &operator*() const noexcept { return E->first; }
 
-  friend bool operator==(PooledStringPtrBase LHS,
-                         PooledStringPtrBase RHS) noexcept {
+  friend bool operator==(PtrBase LHS, PtrBase RHS) noexcept {
     return LHS.E == RHS.E;
   }
-  friend bool operator!=(PooledStringPtrBase LHS,
-                         PooledStringPtrBase RHS) noexcept {
+  friend bool operator!=(PtrBase LHS, PtrBase RHS) noexcept {
     return !(LHS == RHS);
   }
   // Pointer-order only; not stable across runs (ASLR). Fine as a map/set key
   // ordering, not for anything user-visible.
-  friend bool operator<(PooledStringPtrBase LHS,
-                        PooledStringPtrBase RHS) noexcept {
+  friend bool operator<(PtrBase LHS, PtrBase RHS) noexcept {
     return LHS.E < RHS.E;
   }
 
 protected:
   using PoolEntry = StringPool::PoolEntry;
 
-  explicit PooledStringPtrBase(PoolEntry *E) noexcept : E(E) {}
+  explicit PtrBase(PoolEntry *E) noexcept : E(E) {}
   PoolEntry *E = nullptr;
 };
 
 /// An owning, ref-counted handle to a string interned in some StringPool.
-class PooledStringPtr : public PooledStringPtrBase {
+class StringPool::Ptr : public StringPool::PtrBase {
   friend class StringPool;
 
 public:
-  PooledStringPtr() = default;
-  PooledStringPtr(std::nullptr_t) noexcept {}
+  Ptr() = default;
+  Ptr(std::nullptr_t) noexcept {}
 
-  /// Constructs an owning handle from a non-owning one, incrementing the
-  /// refcount. Other must be backed by an entry that some PooledStringPtr is
-  /// already keeping alive -- constructing from a NonOwningPooledStringPtr
-  /// whose entry has already been reclaimed by clearDeadEntries() is
-  /// undefined behavior.
-  explicit PooledStringPtr(NonOwningPooledStringPtr Other) noexcept;
+  /// Constructs an owning handle from a weak one, incrementing the refcount.
+  /// Other's entry must currently have a nonzero refcount (i.e. some other
+  /// Ptr is known to be keeping it alive right now) -- constructing from a
+  /// WeakPtr whose entry's refcount has already reached zero is undefined
+  /// behavior, whether or not clearDeadEntries() has actually run yet.
+  /// Reclamation can happen on any thread as soon as the count hits zero, so
+  /// there is no safe window to observe "zero but not yet reclaimed".
+  explicit Ptr(WeakPtr Other) noexcept;
 
-  PooledStringPtr(const PooledStringPtr &Other) noexcept
-      : PooledStringPtrBase(Other.E) {
-    incRef();
-  }
+  Ptr(const Ptr &Other) noexcept : PtrBase(Other.E) { incRef(); }
 
-  PooledStringPtr &operator=(const PooledStringPtr &Other) noexcept {
+  Ptr &operator=(const Ptr &Other) noexcept {
     if (this != &Other) {
       decRef();
       E = Other.E;
@@ -130,21 +128,19 @@ public:
     return *this;
   }
 
-  PooledStringPtr(PooledStringPtr &&Other) noexcept { std::swap(E, Other.E); }
+  Ptr(Ptr &&Other) noexcept { std::swap(E, Other.E); }
 
-  PooledStringPtr &operator=(PooledStringPtr &&Other) noexcept {
+  Ptr &operator=(Ptr &&Other) noexcept {
     decRef();
     E = nullptr;
     std::swap(E, Other.E);
     return *this;
   }
 
-  ~PooledStringPtr() { decRef(); }
+  ~Ptr() { decRef(); }
 
 private:
-  explicit PooledStringPtr(PoolEntry *E) noexcept : PooledStringPtrBase(E) {
-    incRef();
-  }
+  explicit Ptr(PoolEntry *E) noexcept : PtrBase(E) { incRef(); }
 
   void incRef() noexcept {
     if (E)
@@ -153,65 +149,64 @@ private:
 
   void decRef() noexcept {
     if (E) {
-      assert(E->second.load() != 0 && "double-release of PooledStringPtr");
+      assert(E->second.load() != 0 && "double-release of StringPool::Ptr");
       --E->second;
     }
   }
 };
 
-/// A non-owning handle to a string interned in some StringPool.
+/// A non-owning (weak) handle to a string interned in some StringPool.
 ///
-/// Comparable and hashable interchangeably with PooledStringPtr (both wrap the
-/// same underlying entry pointer), but copying a NonOwningPooledStringPtr never
-/// touches the refcount, so it's cheaper to pass around than a PooledStringPtr.
-/// It is silently invalidated if the entry's refcount drops to zero and is
-/// reclaimed by clearDeadEntries(), so only use it where a corresponding
-/// PooledStringPtr is known to be keeping the entry alive -- e.g. as a lookup
-/// key into a table whose values (or a side table) hold the owning
-/// PooledStringPtr for that same entry.
-class NonOwningPooledStringPtr : public PooledStringPtrBase {
+/// Comparable and hashable interchangeably with StringPool::Ptr (both wrap the
+/// same underlying entry pointer), but copying a WeakPtr never touches the
+/// refcount, so it's cheaper to pass around than a Ptr. It is invalidated the
+/// instant the entry's refcount drops to zero (not when clearDeadEntries() next
+/// happens to run, which may be arbitrarily later on another thread) so only
+/// dereference, compare, or reconstruct a Ptr from a WeakPtr where a
+/// corresponding Ptr is known to be keeping the entry alive,
+/// e.g. as a lookup key into a table whose values (or a side table) hold the
+/// owning Ptr for that same entry.
+class StringPool::WeakPtr : public StringPool::PtrBase {
 public:
-  NonOwningPooledStringPtr() = default;
-  NonOwningPooledStringPtr(std::nullptr_t) noexcept {}
-  explicit NonOwningPooledStringPtr(const PooledStringPtr &Other) noexcept
-      : PooledStringPtrBase(Other) {}
+  WeakPtr() = default;
+  WeakPtr(std::nullptr_t) noexcept {}
+  explicit WeakPtr(const Ptr &Other) noexcept : PtrBase(Other) {}
 };
 
 /// Provides unsafe (refcount-bypassing) access to the pool-entry pointer
-/// underlying a PooledStringPtrBase. Used to implement std::hash and C API
-/// operations. Not intended for general use.
-class StringPoolEntryUnsafe {
+/// underlying a StringPool::PtrBase. Used to implement std::hash, and
+/// intended to grow C API support (retain/release/take-ownership operations
+/// on an opaque pool-entry token) as that need arises.
+class StringPool::EntryUnsafe {
 public:
   using PoolEntry = StringPool::PoolEntry;
 
   /// Extracts the pool-entry pointer from S without affecting its refcount.
-  static StringPoolEntryUnsafe from(const PooledStringPtrBase &S) {
-    return StringPoolEntryUnsafe(S.E);
-  }
+  static EntryUnsafe from(const PtrBase &S) { return EntryUnsafe(S.E); }
 
   const void *rawPtr() const { return E; }
 
 private:
-  StringPoolEntryUnsafe(PoolEntry *E) : E(E) {}
+  EntryUnsafe(PoolEntry *E) : E(E) {}
   PoolEntry *E = nullptr;
 };
 
-inline PooledStringPtr::PooledStringPtr(NonOwningPooledStringPtr Other) noexcept
-    : PooledStringPtrBase(Other) {
+inline StringPool::Ptr::Ptr(StringPool::WeakPtr Other) noexcept
+    : PtrBase(Other) {
   incRef();
 }
 
 inline StringPool::~StringPool() {
 #ifndef NDEBUG
   clearDeadEntries();
-  assert(Pool.empty() && "Dangling PooledStringPtr at StringPool destruction");
+  assert(Pool.empty() && "Dangling StringPool::Ptr at StringPool destruction");
 #endif
 }
 
-inline PooledStringPtr StringPool::intern(std::string_view S) {
+inline StringPool::Ptr StringPool::intern(std::string_view S) {
   std::scoped_lock<std::mutex> Lock(M);
   auto [I, Added] = Pool.try_emplace(std::string(S), 0);
-  return PooledStringPtr(&*I);
+  return Ptr(&*I);
 }
 
 inline void StringPool::clearDeadEntries() {
@@ -231,17 +226,17 @@ inline bool StringPool::empty() const {
 } // namespace orc_rt
 
 namespace std {
-template <> struct hash<orc_rt::PooledStringPtr> {
-  size_t operator()(const orc_rt::PooledStringPtr &S) const noexcept {
+template <> struct hash<orc_rt::StringPool::Ptr> {
+  size_t operator()(const orc_rt::StringPool::Ptr &S) const noexcept {
     return hash<const void *>()(
-        orc_rt::StringPoolEntryUnsafe::from(S).rawPtr());
+        orc_rt::StringPool::EntryUnsafe::from(S).rawPtr());
   }
 };
 
-template <> struct hash<orc_rt::NonOwningPooledStringPtr> {
-  size_t operator()(const orc_rt::NonOwningPooledStringPtr &S) const noexcept {
+template <> struct hash<orc_rt::StringPool::WeakPtr> {
+  size_t operator()(const orc_rt::StringPool::WeakPtr &S) const noexcept {
     return hash<const void *>()(
-        orc_rt::StringPoolEntryUnsafe::from(S).rawPtr());
+        orc_rt::StringPool::EntryUnsafe::from(S).rawPtr());
   }
 };
 } // namespace std
