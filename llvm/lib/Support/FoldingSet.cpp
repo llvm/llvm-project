@@ -416,10 +416,3 @@ void FoldingSetIteratorImpl::advance() {
     NodePtr = static_cast<FoldingSetNode*>(*Bucket);
   }
 }
-
-//===----------------------------------------------------------------------===//
-// FoldingSetBucketIteratorImpl Implementation
-
-FoldingSetBucketIteratorImpl::FoldingSetBucketIteratorImpl(void **Bucket) {
-  Ptr = (!*Bucket || !GetNextPtr(*Bucket)) ? (void*) Bucket : *Bucket;
-}
