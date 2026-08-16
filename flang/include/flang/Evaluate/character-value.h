@@ -11,6 +11,7 @@
 
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/object-sizes.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <iosfwd>
 #include <optional>
