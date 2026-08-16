@@ -283,6 +283,10 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
+    - name: Install Wix (Windows ARM64)
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: dotnet tool install --global wix
+
     - name: Build Windows
       id: build-windows
       if: runner.os == 'Windows'
