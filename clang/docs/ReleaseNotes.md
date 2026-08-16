@@ -124,6 +124,8 @@ features cannot lower the translation-unit ABI level;
 
 ### C++ Language Changes
 
+- ``auto()`` casts are accepted as an extension pre-C++23.
+
 #### C++2d Feature Support
 
 - Clang now supports [P3658R1](https://wg21.link/p3658r1) (Adjust identifier
