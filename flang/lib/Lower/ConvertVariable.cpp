@@ -1282,7 +1282,9 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
 /// Returns true when \p var is an automatic local variable eligible for
 /// -finit-local= initialization. Excluded: variables without a symbol,
 /// globals, dummy arguments, SAVE'd vars, ALLOCATABLE/POINTER, vars in
-/// an EQUIVALENCE set, and vars with explicit or default initialization.
+/// an EQUIVALENCE set, vars with explicit or default initialization, and
+/// CUDA variables whose storage is not host-accessible (device, constant,
+/// shared, usedevice).
 static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
   if (!var.hasSymbol() || var.isGlobal())
     return false;
@@ -1302,12 +1304,12 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
   if (Fortran::semantics::FindEquivalenceSet(sym))
     return false;
   // Skip CUDA variables whose storage is not host-accessible via a plain
-  // store: device, managed, constant, shared, and usedevice all live in
-  // device memory. Pinned and unified memory are host-accessible and may
-  // be initialized normally.
+  // fir.store: device, constant, shared, and usedevice live exclusively in
+  // device memory and cannot be initialized with a host store. Managed,
+  // unified, and pinned memory are host-accessible and may be initialized
+  // normally with a host store.
   if (auto cudaAttr = Fortran::semantics::GetCUDADataAttr(&sym)) {
     if (*cudaAttr == Fortran::common::CUDADataAttr::Device ||
-        *cudaAttr == Fortran::common::CUDADataAttr::Managed ||
         *cudaAttr == Fortran::common::CUDADataAttr::Constant ||
         *cudaAttr == Fortran::common::CUDADataAttr::Shared ||
         *cudaAttr == Fortran::common::CUDADataAttr::UseDevice) {
@@ -1384,6 +1386,10 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type ty, mlir::Value addr,
                               Fortran::lower::InitLocalKind mode,
                               uint8_t hexByte) {
+  // CHARACTER(0) has zero-length storage -- nothing to initialize.
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(ty))
+    if (charTy.getLen() == 0)
+      return;
   mlir::Value val;
   auto fpTy = mlir::dyn_cast<mlir::FloatType>(ty);
   auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(ty);
@@ -1438,8 +1444,9 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Initialize all storage of the local variable \p var per -finit-local= mode.
-/// Arrays: zero mode uses insert_on_range; non-zero modes use a do_loop +
-/// coordinate_of to avoid llvm.mlir.constant rejecting non-zero ArrayAttrs.
+/// Arrays: all modes use a flat fir.do_loop + fir.coordinate_of over a
+/// rank-1 view to avoid both the llvm.mlir.constant crash on non-zero
+/// ArrayAttrs and the quadratic compile time of fir.insert_on_range.
 /// Derived types walk fields for nan/snan/hex. Scalars store directly.
 static void genInitLocal(Fortran::lower::AbstractConverter &converter,
                          const Fortran::lower::pft::Variable &var,
@@ -1465,49 +1472,14 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
   std::function<void(mlir::Type, mlir::Value)> initAddr =
       [&](mlir::Type ty, mlir::Value addr) {
         if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
-          // Array: build element constant and use insert_on_range.
+          // Array: use a flat fir.do_loop over all elements. Cast to a
+          // rank-1 unknown-extent ref so the flat IV is a valid single-
+          // coordinate index regardless of array rank. This avoids both
+          // the LLVM lowering crash (non-zero ArrayAttr) and the quadratic
+          // compile time of fir.insert_on_range for large arrays.
           mlir::Type eleTy = seqTy.getEleTy();
-          auto fpTy = mlir::dyn_cast<mlir::FloatType>(eleTy);
-          auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(eleTy);
-          mlir::Value elePat;
-          switch (mode) {
-          case Fortran::lower::InitLocalKind::Zero:
-            elePat = fir::ZeroOp::create(builder, loc, eleTy);
-            break;
-          case Fortran::lower::InitLocalKind::Hex:
-            elePat = genByteSplatInit(builder, loc, eleTy, hexByte);
-            break;
-          case Fortran::lower::InitLocalKind::QNaN:
-            if (fpTy) {
-              elePat = genFPNaNInit(builder, loc, fpTy, false);
-            } else if (cplxTy) {
-              auto partFpTy =
-                  mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-              mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, false);
-              elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy,
-                                                       nanPart, nanPart);
-            } else {
-              elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
-            }
-            break;
-          case Fortran::lower::InitLocalKind::SNaN:
-            if (fpTy) {
-              elePat = genFPNaNInit(builder, loc, fpTy, true);
-            } else if (cplxTy) {
-              auto partFpTy =
-                  mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-              mlir::Value nanPart = genFPNaNInit(builder, loc, partFpTy, true);
-              elePat = mlir::complex::CreateOp::create(builder, loc, cplxTy,
-                                                       nanPart, nanPart);
-            } else {
-              elePat = genByteSplatInit(builder, loc, eleTy, 0xAA);
-            }
-            break;
-          default:
-            llvm_unreachable("unexpected InitLocalKind");
-          }
-          // Compute static extents; skip arrays with unknown or zero extents,
-          // and CHARACTER arrays (known TODO, pending PR #159788).
+          // Skip arrays with unknown or zero extents, and CHARACTER arrays
+          // (known TODO, pending PR #159788).
           bool hasUnknown = mlir::isa<fir::CharacterType>(eleTy);
           int64_t totalElems = 1;
           for (auto dim : seqTy.getShape()) {
@@ -1518,39 +1490,25 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
             totalElems *= dim;
           }
           if (!hasUnknown) {
-            if (mode == Fortran::lower::InitLocalKind::Zero) {
-              // Zero mode: fir.insert_on_range + store works correctly through
-              // LLVM lowering (ZeroAttr is accepted by llvm.mlir.constant).
-              llvm::SmallVector<int64_t> rangeBounds;
-              for (auto dim : seqTy.getShape()) {
-                rangeBounds.push_back(0);
-                rangeBounds.push_back(dim - 1);
-              }
-              mlir::Value arrVal = fir::UndefOp::create(builder, loc, seqTy);
-              arrVal = fir::InsertOnRangeOp::create(
-                  builder, loc, seqTy, arrVal, elePat,
-                  builder.getIndexVectorAttr(rangeBounds));
-              fir::StoreOp::create(builder, loc, arrVal, addr);
-            } else {
-              // Non-zero modes: fir.insert_on_range fails at LLVM lowering
-              // because llvm.mlir.constant does not accept ArrayAttr of
-              // non-zero scalars. Use a flat do_loop + coordinate_of instead.
-              mlir::Type idxTy = builder.getIndexType();
-              mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-              mlir::Value last =
-                  builder.createIntegerConstant(loc, idxTy, totalElems - 1);
-              mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-              auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
-                                                /*unordered=*/false,
-                                                /*finalCount=*/false);
-              mlir::OpBuilder::InsertionGuard guard(builder);
-              builder.setInsertionPointToStart(loop.getBody());
-              mlir::Value iv = loop.getInductionVar();
-              mlir::Value elemAddr = fir::CoordinateOp::create(
-                  builder, loc, builder.getRefType(eleTy), addr,
-                  mlir::ValueRange{iv});
-              genInitLocalStore(builder, loc, eleTy, elemAddr, mode, hexByte);
-            }
+            mlir::Type idxTy = builder.getIndexType();
+            mlir::Type rank1SeqTy = fir::SequenceType::get(
+                {fir::SequenceType::getUnknownExtent()}, eleTy);
+            mlir::Value rank1Addr = builder.createConvert(
+                loc, builder.getRefType(rank1SeqTy), addr);
+            mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+            mlir::Value last =
+                builder.createIntegerConstant(loc, idxTy, totalElems - 1);
+            mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+            auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                              /*unordered=*/false,
+                                              /*finalCount=*/false);
+            mlir::OpBuilder::InsertionGuard guard(builder);
+            builder.setInsertionPointToStart(loop.getBody());
+            mlir::Value iv = loop.getInductionVar();
+            mlir::Value elemAddr = fir::CoordinateOp::create(
+                builder, loc, builder.getRefType(eleTy), rank1Addr,
+                mlir::ValueRange{iv});
+            initAddr(eleTy, elemAddr);
           }
         } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
           // Derived type: zero the whole struct, or walk fields for

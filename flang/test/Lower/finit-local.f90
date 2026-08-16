@@ -19,6 +19,9 @@
 ! RUN: bbc -emit-hlfir -finit-local-zero  -o - %s | FileCheck --check-prefix=ZERO  %s
 ! --- Empty value should be rejected by bbc ---
 ! RUN: not bbc -emit-hlfir -finit-local=   -o - %s 2>&1 | FileCheck --check-prefix=EMPTY %s
+! --- Last option wins before validation: -finit-local-zero after a bad value selects zero ---
+! RUN: bbc -emit-hlfir -finit-local=   -finit-local-zero -o - %s | FileCheck --check-prefix=ZERO %s
+! RUN: bbc -emit-hlfir -finit-local=bogus -finit-local-zero -o - %s | FileCheck --check-prefix=ZERO %s
 
 ! EMPTY: bbc: invalid -finit-local= value: (empty)
 
@@ -288,6 +291,22 @@ end subroutine
 ! HEX:  fir.store {{.*}} : !fir.ref<!fir.char<1,10>>
 
 ! ---------------------------------------------------------------------------
+! CHARACTER(0) -- zero-length: no store should be emitted (guard for
+! zero-byte allocation; writing through it would be out of bounds).
+! ---------------------------------------------------------------------------
+subroutine test_char0(res)
+  character(0) :: res
+  character(0) :: x
+  res = x
+end subroutine
+! ZERO-LABEL: func.func @_QPtest_char0
+! ZERO-NOT: fir.store {{.*}} : !fir.ref<!fir.char<1,0>>
+
+! HEX-LABEL:  func.func @_QPtest_char0
+! HEX-NOT:  fir.store {{.*}} : !fir.ref<!fir.char<1,0>>
+
+
+! ---------------------------------------------------------------------------
 ! Derived type -- struct with an INTEGER(4) and a REAL(4) field
 ! nan/hex: field-by-field walk (integer: 0xAA; real: NaN or bitcast)
 ! ---------------------------------------------------------------------------
@@ -322,7 +341,7 @@ end subroutine
 
 
 ! ---------------------------------------------------------------------------
-! Array INTEGER(4)(4) -- 1-D; filled via insert_on_range
+! Array INTEGER(4)(4) -- 1-D; all modes use do_loop + rank-1 view
 ! ---------------------------------------------------------------------------
 subroutine test_int_array(res)
   integer(4) :: res(4)
@@ -330,20 +349,22 @@ subroutine test_int_array(res)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_int_array
-! ZERO: fir.insert_on_range {{.*}} from (0) to (3)
-! ZERO: fir.store {{.*}} : !fir.ref<!fir.array<4xi32>>
+! ZERO: fir.do_loop
+! ZERO: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! ZERO: fir.store {{.*}} : !fir.ref<i32>
 
 ! NAN-LABEL:  func.func @_QPtest_int_array
 ! NAN:  fir.do_loop
-! NAN:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+! NAN:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! NAN:  fir.store {{.*}} : !fir.ref<i32>
 
 ! HEX-LABEL:  func.func @_QPtest_int_array
 ! HEX:  fir.do_loop
-! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! HEX:  fir.store {{.*}} : !fir.ref<i32>
 
 ! OFF-LABEL: func.func @_QPtest_int_array
+! OFF-NOT: fir.do_loop
 ! OFF-NOT: fir.insert_on_range
 
 ! ---------------------------------------------------------------------------
@@ -355,26 +376,27 @@ subroutine test_real_array(res)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_real_array
-! ZERO: fir.insert_on_range {{.*}} from (0) to (3)
-! ZERO: fir.store {{.*}} : !fir.ref<!fir.array<4xf32>>
+! ZERO: fir.do_loop
+! ZERO: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+! ZERO: fir.store {{.*}} : !fir.ref<f32>
 
 ! NAN-LABEL:  func.func @_QPtest_real_array
 ! NAN:  fir.do_loop
-! NAN:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
+! NAN:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! NAN:  fir.store {{.*}} : !fir.ref<f32>
 
 ! SNAN-LABEL: func.func @_QPtest_real_array
 ! SNAN: fir.do_loop
-! SNAN: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
+! SNAN: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! SNAN: fir.store {{.*}} : !fir.ref<f32>
 
 ! HEX-LABEL:  func.func @_QPtest_real_array
 ! HEX:  fir.do_loop
-! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
+! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! HEX:  fir.store {{.*}} : !fir.ref<f32>
 
 ! ---------------------------------------------------------------------------
-! Array INTEGER(4)(3,4) -- 2-D; zero uses insert_on_range, hex uses do_loop
+! Array INTEGER(4)(3,4) -- 2-D; all modes use do_loop + rank-1 view
 ! ---------------------------------------------------------------------------
 subroutine test_int_array_2d(res)
   integer(4) :: res(3,4)
@@ -382,12 +404,13 @@ subroutine test_int_array_2d(res)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_int_array_2d
-! ZERO: fir.insert_on_range {{.*}} from (0, 0) to (2, 3)
-! ZERO: fir.store {{.*}} : !fir.ref<!fir.array<3x4xi32>>
+! ZERO: fir.do_loop
+! ZERO: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! ZERO: fir.store {{.*}} : !fir.ref<i32>
 
 ! HEX-LABEL: func.func @_QPtest_int_array_2d
 ! HEX:  fir.do_loop
-! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<3x4xi32>>, index) -> !fir.ref<i32>
+! HEX:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! HEX:  fir.store {{.*}} : !fir.ref<i32>
 
 ! ---------------------------------------------------------------------------
