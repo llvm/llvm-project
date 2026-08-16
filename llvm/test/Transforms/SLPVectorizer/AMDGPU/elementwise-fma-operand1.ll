@@ -11,7 +11,8 @@
 ; break the scalar fma chain. The 14 runs sit at the cost boundary. The 12 runs
 ; vectorize either way and guard against the fmuladd marking landing on the load
 ; at operand 0 after the fma detection picked the fmul at operand 1, which
-; asserts.
+; asserts. axpy4_mixed_reassoc carries reassoc on one lane only, so the whole
+; bundle has to be reassociative before the search gives up on operand 1.
 
 define void @axpy4_contract(ptr noalias %d, ptr noalias %a, ptr noalias %b, ptr noalias %c) {
 ; CHECK-LABEL: define void @axpy4_contract(
@@ -164,6 +165,129 @@ entry:
   %b3 = load float, ptr %bp3, align 4
   %m3 = fmul contract reassoc float %a3, %b3
   %r3 = fadd contract reassoc float %c3, %m3
+  %dp3 = getelementptr inbounds float, ptr %d, i64 3
+  store float %r3, ptr %dp3, align 4
+  ret void
+}
+
+define void @axpy4_mixed_reassoc(ptr noalias %d, ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+; CHECK-LABEL: define void @axpy4_mixed_reassoc(
+; CHECK-SAME: ptr noalias [[D:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C0:%.*]] = load float, ptr [[C]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract float [[A0]], [[B0]]
+; CHECK-NEXT:    [[R0:%.*]] = fadd reassoc contract float [[C0]], [[M0]]
+; CHECK-NEXT:    store float [[R0]], ptr [[D]], align 4
+; CHECK-NEXT:    [[CP1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
+; CHECK-NEXT:    [[C1:%.*]] = load float, ptr [[CP1]], align 4
+; CHECK-NEXT:    [[AP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[AP1]], align 4
+; CHECK-NEXT:    [[BP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load float, ptr [[BP1]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract float [[A1]], [[B1]]
+; CHECK-NEXT:    [[R1:%.*]] = fadd contract float [[C1]], [[M1]]
+; CHECK-NEXT:    [[DP1:%.*]] = getelementptr inbounds float, ptr [[D]], i64 1
+; CHECK-NEXT:    store float [[R1]], ptr [[DP1]], align 4
+; CHECK-NEXT:    [[CP2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
+; CHECK-NEXT:    [[C2:%.*]] = load float, ptr [[CP2]], align 4
+; CHECK-NEXT:    [[AP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = load float, ptr [[AP2]], align 4
+; CHECK-NEXT:    [[BP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load float, ptr [[BP2]], align 4
+; CHECK-NEXT:    [[M2:%.*]] = fmul contract float [[A2]], [[B2]]
+; CHECK-NEXT:    [[R2:%.*]] = fadd contract float [[C2]], [[M2]]
+; CHECK-NEXT:    [[DP2:%.*]] = getelementptr inbounds float, ptr [[D]], i64 2
+; CHECK-NEXT:    store float [[R2]], ptr [[DP2]], align 4
+; CHECK-NEXT:    [[CP3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
+; CHECK-NEXT:    [[C3:%.*]] = load float, ptr [[CP3]], align 4
+; CHECK-NEXT:    [[AP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = load float, ptr [[AP3]], align 4
+; CHECK-NEXT:    [[BP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
+; CHECK-NEXT:    [[B3:%.*]] = load float, ptr [[BP3]], align 4
+; CHECK-NEXT:    [[M3:%.*]] = fmul contract float [[A3]], [[B3]]
+; CHECK-NEXT:    [[R3:%.*]] = fadd contract float [[C3]], [[M3]]
+; CHECK-NEXT:    [[DP3:%.*]] = getelementptr inbounds float, ptr [[D]], i64 3
+; CHECK-NEXT:    store float [[R3]], ptr [[DP3]], align 4
+; CHECK-NEXT:    ret void
+;
+; THR12-LABEL: define void @axpy4_mixed_reassoc(
+; THR12-SAME: ptr noalias [[D:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; THR12-NEXT:  [[ENTRY:.*:]]
+; THR12-NEXT:    [[C0:%.*]] = load float, ptr [[C]], align 4
+; THR12-NEXT:    [[A0:%.*]] = load float, ptr [[A]], align 4
+; THR12-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 4
+; THR12-NEXT:    [[M0:%.*]] = fmul contract float [[A0]], [[B0]]
+; THR12-NEXT:    [[R0:%.*]] = fadd reassoc contract float [[C0]], [[M0]]
+; THR12-NEXT:    store float [[R0]], ptr [[D]], align 4
+; THR12-NEXT:    [[CP1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
+; THR12-NEXT:    [[C1:%.*]] = load float, ptr [[CP1]], align 4
+; THR12-NEXT:    [[AP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; THR12-NEXT:    [[A1:%.*]] = load float, ptr [[AP1]], align 4
+; THR12-NEXT:    [[BP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; THR12-NEXT:    [[B1:%.*]] = load float, ptr [[BP1]], align 4
+; THR12-NEXT:    [[M1:%.*]] = fmul contract float [[A1]], [[B1]]
+; THR12-NEXT:    [[R1:%.*]] = fadd contract float [[C1]], [[M1]]
+; THR12-NEXT:    [[DP1:%.*]] = getelementptr inbounds float, ptr [[D]], i64 1
+; THR12-NEXT:    store float [[R1]], ptr [[DP1]], align 4
+; THR12-NEXT:    [[CP2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
+; THR12-NEXT:    [[C2:%.*]] = load float, ptr [[CP2]], align 4
+; THR12-NEXT:    [[AP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; THR12-NEXT:    [[A2:%.*]] = load float, ptr [[AP2]], align 4
+; THR12-NEXT:    [[BP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; THR12-NEXT:    [[B2:%.*]] = load float, ptr [[BP2]], align 4
+; THR12-NEXT:    [[M2:%.*]] = fmul contract float [[A2]], [[B2]]
+; THR12-NEXT:    [[R2:%.*]] = fadd contract float [[C2]], [[M2]]
+; THR12-NEXT:    [[DP2:%.*]] = getelementptr inbounds float, ptr [[D]], i64 2
+; THR12-NEXT:    store float [[R2]], ptr [[DP2]], align 4
+; THR12-NEXT:    [[CP3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
+; THR12-NEXT:    [[C3:%.*]] = load float, ptr [[CP3]], align 4
+; THR12-NEXT:    [[AP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; THR12-NEXT:    [[A3:%.*]] = load float, ptr [[AP3]], align 4
+; THR12-NEXT:    [[BP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
+; THR12-NEXT:    [[B3:%.*]] = load float, ptr [[BP3]], align 4
+; THR12-NEXT:    [[M3:%.*]] = fmul contract float [[A3]], [[B3]]
+; THR12-NEXT:    [[R3:%.*]] = fadd contract float [[C3]], [[M3]]
+; THR12-NEXT:    [[DP3:%.*]] = getelementptr inbounds float, ptr [[D]], i64 3
+; THR12-NEXT:    store float [[R3]], ptr [[DP3]], align 4
+; THR12-NEXT:    ret void
+;
+entry:
+  %c0 = load float, ptr %c, align 4
+  %a0 = load float, ptr %a, align 4
+  %b0 = load float, ptr %b, align 4
+  %m0 = fmul contract float %a0, %b0
+  %r0 = fadd contract reassoc float %c0, %m0
+  store float %r0, ptr %d, align 4
+  %cp1 = getelementptr inbounds float, ptr %c, i64 1
+  %c1 = load float, ptr %cp1, align 4
+  %ap1 = getelementptr inbounds float, ptr %a, i64 1
+  %a1 = load float, ptr %ap1, align 4
+  %bp1 = getelementptr inbounds float, ptr %b, i64 1
+  %b1 = load float, ptr %bp1, align 4
+  %m1 = fmul contract float %a1, %b1
+  %r1 = fadd contract float %c1, %m1
+  %dp1 = getelementptr inbounds float, ptr %d, i64 1
+  store float %r1, ptr %dp1, align 4
+  %cp2 = getelementptr inbounds float, ptr %c, i64 2
+  %c2 = load float, ptr %cp2, align 4
+  %ap2 = getelementptr inbounds float, ptr %a, i64 2
+  %a2 = load float, ptr %ap2, align 4
+  %bp2 = getelementptr inbounds float, ptr %b, i64 2
+  %b2 = load float, ptr %bp2, align 4
+  %m2 = fmul contract float %a2, %b2
+  %r2 = fadd contract float %c2, %m2
+  %dp2 = getelementptr inbounds float, ptr %d, i64 2
+  store float %r2, ptr %dp2, align 4
+  %cp3 = getelementptr inbounds float, ptr %c, i64 3
+  %c3 = load float, ptr %cp3, align 4
+  %ap3 = getelementptr inbounds float, ptr %a, i64 3
+  %a3 = load float, ptr %ap3, align 4
+  %bp3 = getelementptr inbounds float, ptr %b, i64 3
+  %b3 = load float, ptr %bp3, align 4
+  %m3 = fmul contract float %a3, %b3
+  %r3 = fadd contract float %c3, %m3
   %dp3 = getelementptr inbounds float, ptr %d, i64 3
   store float %r3, ptr %dp3, align 4
   ret void
