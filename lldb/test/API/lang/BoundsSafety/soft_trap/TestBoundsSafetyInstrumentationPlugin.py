@@ -11,9 +11,13 @@ STOP_REASON_MAX_LEN = 100
 SOFT_TRAP_FUNC_MINIMAL = "__bounds_safety_soft_trap"
 SOFT_TRAP_FUNC_WITH_STR = "__bounds_safety_soft_trap_s"
 
-
 class BoundsSafetyTestSoftTrapPlugin(TestBase):
     SHARED_BUILD_TESTCASE = False
+
+    def setUp(self):
+        TestBase.setUp(self)
+        self.line_first_soft_trap = line_number("main.c", "// first soft trap:")
+        self.line_second_soft_trap = line_number("main.c", "// second soft trap:")
 
     def _check_stop_reason_impl(
         self,
@@ -76,6 +80,11 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
             expected_line_num=line_num,
         )
 
+    def bs_plugin_is_enabled(self, domain: str):
+        return self.plugin_is_enabled(
+            "instrumentation-runtime", "BoundsSafety", domain=domain
+        )
+
     # Skip the tests on Windows because they fail due to the stop reason
     # being `eStopReasonNon` instead of the expected
     # `eStopReasonInstrumentation`.
@@ -91,13 +100,15 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
         self.runCmd("run")
 
         process = self.test_target.process
+        self.assertTrue(self.bs_plugin_is_enabled(domain="global"))
+        self.assertTrue(self.bs_plugin_is_enabled(domain="target"))
 
         # First soft trap hit
         self.check_state_soft_trap_minimal(
             "Soft Bounds check failed: indexing above upper bound in 'buffer[2]'",
             "main",
             "main.c",
-            7,
+            self.line_first_soft_trap,
         )
 
         process.Continue()
@@ -107,7 +118,7 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
             "Soft Bounds check failed: indexing below lower bound in 'buffer[-1]'",
             "main",
             "main.c",
-            8,
+            self.line_second_soft_trap,
         )
 
         process.Continue()
@@ -126,13 +137,15 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
         self.runCmd("run")
 
         process = self.test_target.process
+        self.assertTrue(self.bs_plugin_is_enabled(domain="global"))
+        self.assertTrue(self.bs_plugin_is_enabled(domain="target"))
 
         # First soft trap hit
         self.check_state_soft_trap_with_str(
             "Soft Bounds check failed: indexing above upper bound in 'buffer[2]'",
             "main",
             "main.c",
-            7,
+            self.line_first_soft_trap,
         )
 
         process.Continue()
@@ -142,9 +155,105 @@ class BoundsSafetyTestSoftTrapPlugin(TestBase):
             "Soft Bounds check failed: indexing below lower bound in 'buffer[-1]'",
             "main",
             "main.c",
-            8,
+            self.line_second_soft_trap,
         )
 
         process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
+
+    @skipIfWindows
+    @skipUnlessBoundsSafety
+    @no_debug_info_test
+    def test_call_minimal_enable_then_disable_plugin(self):
+        """
+        Test starting with the plugin enabled on code built with
+        -fbounds-safety-soft-traps=call-minimal and then later disable the
+        plugin
+        """
+        self.build(make_targets=["soft-trap-test-minimal"])
+        self.test_target = self.createTestTarget()
+
+        # Check the plugin is enabled before we run
+        self.assertTrue(self.bs_plugin_is_enabled(domain="global"))
+        self.runCmd("run")
+
+        process = self.test_target.process
+
+        # First soft trap hit
+        self.check_state_soft_trap_minimal(
+            "Soft Bounds check failed: indexing above upper bound in 'buffer[2]'",
+            "main",
+            "main.c",
+            self.line_first_soft_trap,
+        )
+
+        # Disable the plugin on the target so we do not stop at the second soft trap
+        self.runCmd(
+            "plugin disable --domain target instrumentation-runtime.BoundsSafety"
+        )
+        self.assertFalse(self.bs_plugin_is_enabled(domain="target"))
+        self.assertTrue(self.bs_plugin_is_enabled(domain="global"))
+
+        process.Continue()
+        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertEqual(process.GetExitStatus(), 0)
+
+    @skipIfWindows
+    @skipUnlessBoundsSafety
+    @no_debug_info_test
+    def test_call_minimal_disable_then_enable_plugin(self):
+        """
+        Test starting with the plugin disabled on code built with
+        -fbounds-safety-soft-traps=call-minimal and then later enable the
+        plugin
+        """
+        # Disable the plugin so we do not stop at the second soft trap
+        self.runCmd("plugin disable instrumentation-runtime.BoundsSafety")
+        self.assertFalse(self.bs_plugin_is_enabled(domain="global"))
+
+        self.build(make_targets=["soft-trap-test-minimal"])
+        self.test_target = self.createTestTarget()
+
+        try:
+            # Set a breakpoint on test_breakpoint which is called just before
+            # the last soft trap
+            bp = self.test_target.BreakpointCreateByName("test_breakpoint")
+            self.assertTrue(bp.GetNumLocations() > 0)
+            self.runCmd("run")
+            self.assertFalse(self.bs_plugin_is_enabled(domain="global"))
+            self.assertFalse(self.bs_plugin_is_enabled(domain="target"))
+
+            process = self.test_target.process
+            thread = process.GetSelectedThread()
+            frame = thread.GetSelectedFrame()
+
+            # We should have skipped all UBSan issues and stopped at the
+            # test_breakpoint function.
+            stop_reason = thread.GetStopReason()
+            self.assertStopReason(stop_reason, lldb.eStopReasonBreakpoint)
+            self.assertIn("test_breakpoint", frame.GetFunctionName())
+
+            # Enable the plugin so we stop at the second soft trap
+            self.runCmd(
+                "plugin enable --domain target instrumentation-runtime.BoundsSafety"
+            )
+            self.assertTrue(self.bs_plugin_is_enabled(domain="target"))
+            self.assertFalse(self.bs_plugin_is_enabled(domain="global"))
+            process.Continue()
+
+            # Second soft trap hit
+            self.check_state_soft_trap_minimal(
+                "Soft Bounds check failed: indexing below lower bound in 'buffer[-1]'",
+                "main",
+                "main.c",
+                self.line_second_soft_trap,
+            )
+
+            process.Continue()
+            self.assertEqual(process.GetState(), lldb.eStateExited)
+            self.assertEqual(process.GetExitStatus(), 0)
+        finally:
+            # Restore the global state to avoid affecting other tests
+            self.runCmd("plugin enable instrumentation-runtime.BoundsSafety")
+            self.assertTrue(self.bs_plugin_is_enabled(domain="global"))

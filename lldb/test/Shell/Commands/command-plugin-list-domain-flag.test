@@ -23,34 +23,34 @@ plugin list --domain global instrumentation-runtime.UndefinedBehaviorSanitizer
 
 # Test plugin list --domain debugger returns an error (text format).
 # RUN: %lldb -o "plugin list --domain debugger language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_DEBUGGER
-# ERROR_LIST_DEBUGGER: error: debugger domain is not supported
+# ERROR_LIST_DEBUGGER: error: plugin namespace language does not support querying enablement in the debugger domain
 
 # Test plugin list --domain target returns an error (text format).
 # RUN: %lldb -o "plugin list --domain target language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_TARGET
-# ERROR_LIST_TARGET: error: target domain is not supported
+# ERROR_LIST_TARGET: error: plugin namespace language does not support querying enablement in the target domain
 
 # Test plugin list --domain debugger --json returns an error (json format).
 # RUN: %lldb -o "plugin list --domain debugger --json language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_DEBUGGER
-# ERROR_LIST_JSON_DEBUGGER: error: debugger domain is not supported
+# ERROR_LIST_JSON_DEBUGGER: "error": "plugin namespace language does not support querying enablement in the debugger domain"
 
 # Test plugin list --domain target --json returns an error (json format).
 # RUN: %lldb -o "plugin list --domain target --json language.cplusplus" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_TARGET
-# ERROR_LIST_JSON_TARGET: error: target domain is not supported
+# ERROR_LIST_JSON_TARGET: "error": "plugin namespace language does not support querying enablement in the target domain"
 
 # Error cases with on a plugin that supports all domains.
 
 # Test plugin list --domain debugger returns an error for instrumentation-runtime plugin (text format).
 # RUN: %lldb -o "plugin list --domain debugger instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_DEBUGGER_IR
-# ERROR_LIST_DEBUGGER_IR: error: debugger domain is not supported
+# ERROR_LIST_DEBUGGER_IR: error: plugin namespace instrumentation-runtime does not support querying enablement in the debugger domain
 
 # Test plugin list --domain target returns an error for instrumentation-runtime plugin (text format).
 # RUN: %lldb -o "plugin list --domain target instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_TARGET_IR
-# ERROR_LIST_TARGET_IR: error: target domain is not supported
+# ERROR_LIST_TARGET_IR: error: target not available
 
 # Test plugin list --domain debugger --json returns an error for instrumentation-runtime plugin (json format).
 # RUN: %lldb -o "plugin list --domain debugger --json instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_DEBUGGER_IR
-# ERROR_LIST_JSON_DEBUGGER_IR: error: debugger domain is not supported
+# ERROR_LIST_JSON_DEBUGGER_IR: "error": "plugin namespace instrumentation-runtime does not support querying enablement in the debugger domain"
 
 # Test plugin list --domain target --json returns an error for instrumentation-runtime plugin (json format).
 # RUN: %lldb -o "plugin list --domain target --json instrumentation-runtime.UndefinedBehaviorSanitizer" 2>&1 | FileCheck %s --check-prefix=ERROR_LIST_JSON_TARGET_IR
-# ERROR_LIST_JSON_TARGET_IR: error: target domain is not supported
+# ERROR_LIST_JSON_TARGET_IR: "error": "target not available"
