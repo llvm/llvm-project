@@ -1,9 +1,9 @@
 ; RUN: split-file %s %t
-; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v4 < %t/load.ll  | FileCheck %s --check-prefix=LOAD
-; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v4 < %t/store.ll | FileCheck %s --check-prefix=STORE
-; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v4 < %t/packed-stride.ll | FileCheck %s --check-prefix=PACKED
-; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v4 < %t/p32-index.ll | FileCheck %s --check-prefix=P32
-; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64-v4 < %t/p32-load-index.ll | FileCheck %s --check-prefix=P32LOAD
+; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu < %t/load.ll  | FileCheck %s --check-prefix=LOAD
+; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu < %t/store.ll | FileCheck %s --check-prefix=STORE
+; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu < %t/packed-stride.ll | FileCheck %s --check-prefix=PACKED
+; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu < %t/p32-index.ll | FileCheck %s --check-prefix=P32
+; RUN: opt -S -passes=vector-combine -verify-each -mtriple=x86_64-unknown-linux-gnu < %t/p32-load-index.ll | FileCheck %s --check-prefix=P32LOAD
 
 ;--- load.ll
 target datalayout = "e-p:64:64:64:8"
@@ -50,7 +50,7 @@ target datalayout = "e-p:64:64:64:8-i24:32:32"
 ; the 4-byte ABI allocation size does not.
 define void @insert_store_packed_i24_stride(ptr %p, i24 %x, i6 %idx) {
 ; PACKED-LABEL: define void @insert_store_packed_i24_stride(
-; PACKED-SAME: ptr [[P:%.*]], i24 [[X:%.*]], i6 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+; PACKED-SAME: ptr [[P:%.*]], i24 [[X:%.*]], i6 [[IDX:%.*]]) {
 ; PACKED-NEXT:    [[IDX_FROZEN:%.*]] = freeze i6 [[IDX]]
 ; PACKED-NEXT:    [[BOUNDED:%.*]] = urem i6 [[IDX_FROZEN]], -21
 ; PACKED-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i6 [[BOUNDED]] to i8
@@ -72,7 +72,7 @@ target datalayout = "e-p:64:64:64:32"
 ; zero-extension destination type.
 define void @insert_store_dynamic_p32_index(ptr %p, i8 %x, i4 %idx) {
 ; P32-LABEL: define void @insert_store_dynamic_p32_index(
-; P32-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i4 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+; P32-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i4 [[IDX:%.*]]) {
 ; P32-NEXT:    [[IDX_FROZEN:%.*]] = freeze i4 [[IDX]]
 ; P32-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX_FROZEN]], -1
 ; P32-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i32
@@ -91,7 +91,7 @@ define void @insert_store_dynamic_p32_index(ptr %p, i8 %x, i4 %idx) {
 ; insert/store path. PtrTy remains scalar, as required by load and store.
 define void @insert_store_pointer_vector_dynamic_p32_index(ptr %p, ptr %x, i4 %idx) {
 ; P32-LABEL: define void @insert_store_pointer_vector_dynamic_p32_index(
-; P32-SAME: ptr [[P:%.*]], ptr [[X:%.*]], i4 [[IDX:%.*]]) #[[ATTR0]] {
+; P32-SAME: ptr [[P:%.*]], ptr [[X:%.*]], i4 [[IDX:%.*]]) {
 ; P32-NEXT:    [[IDX_FROZEN:%.*]] = freeze i4 [[IDX]]
 ; P32-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX_FROZEN]], -1
 ; P32-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i32
@@ -111,7 +111,7 @@ define void @insert_store_pointer_vector_dynamic_p32_index(ptr %p, ptr %x, i4 %i
 ; signed index.
 define void @insert_store_constant_high_bit_p32_index(ptr %p, i8 %x) {
 ; P32-LABEL: define void @insert_store_constant_high_bit_p32_index(
-; P32-SAME: ptr [[P:%.*]], i8 [[X:%.*]]) #[[ATTR0]] {
+; P32-SAME: ptr [[P:%.*]], i8 [[X:%.*]]) {
 ; P32-NEXT:    [[GEP:%.*]] = getelementptr inbounds <15 x i8>, ptr [[P]], i32 0, i32 14
 ; P32-NEXT:    store i8 [[X]], ptr [[GEP]], align 1
 ; P32-NEXT:    ret void
@@ -129,7 +129,7 @@ target datalayout = "e-p:64:64:64:32"
 ; extract. The lookup must recover the 32-bit GEP index type for this extract.
 define i8 @load_extract_dynamic_p32_index(ptr %p, i4 %idx) {
 ; P32LOAD-LABEL: define i8 @load_extract_dynamic_p32_index(
-; P32LOAD-SAME: ptr [[P:%.*]], i4 [[IDX:%.*]]) #[[ATTR0:[0-9]+]] {
+; P32LOAD-SAME: ptr [[P:%.*]], i4 [[IDX:%.*]]) {
 ; P32LOAD-NEXT:    [[IDX_FROZEN:%.*]] = freeze i4 [[IDX]]
 ; P32LOAD-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX_FROZEN]], -1
 ; P32LOAD-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i32
@@ -147,7 +147,7 @@ define i8 @load_extract_dynamic_p32_index(ptr %p, i4 %idx) {
 ; load/extract path. PtrTy remains scalar, as required by load instructions.
 define ptr @load_extract_pointer_vector_dynamic_p32_index(ptr %p, i4 %idx) {
 ; P32LOAD-LABEL: define ptr @load_extract_pointer_vector_dynamic_p32_index(
-; P32LOAD-SAME: ptr [[P:%.*]], i4 [[IDX:%.*]]) #[[ATTR0]] {
+; P32LOAD-SAME: ptr [[P:%.*]], i4 [[IDX:%.*]]) {
 ; P32LOAD-NEXT:    [[IDX_FROZEN:%.*]] = freeze i4 [[IDX]]
 ; P32LOAD-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX_FROZEN]], -1
 ; P32LOAD-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i32
