@@ -17,12 +17,31 @@
 #include <concepts>
 #include <ranges>
 
-#include "../types.h"
+#include "test_iterators.h"
 
-using InnerIterator = std::ranges::iterator_t<std::ranges::range_reference_t<std::ranges::chunk_view<input_span<int>>>>;
+// Test `inner_iterator() = delete`
+static_assert(
+    !std::default_initializable<std::ranges::iterator_t< std::ranges::range_reference_t<std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>>);
 
-static_assert(!std::default_initializable<InnerIterator>);
-static_assert(!std::copy_constructible<InnerIterator>);
-static_assert(!std::assignable_from<InnerIterator&, const InnerIterator&>);
-static_assert(std::move_constructible<InnerIterator>);
-static_assert(std::assignable_from<InnerIterator&, InnerIterator>);
+// Test `inner_iterator(const inner_iterator&) = delete`
+static_assert(!std::copy_constructible<std::ranges::iterator_t< std::ranges::range_reference_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>>);
+
+// Test `inner_iterator& operator=(const inner_iterator&) = delete`
+static_assert(!std::assignable_from<
+              std::ranges::iterator_t< std::ranges::range_reference_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>&,
+              const std::ranges::iterator_t< std::ranges::range_reference_t< std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>&>);
+
+// Test `inner_iterator(inner_iterator&&) = default`
+static_assert(std::move_constructible<std::ranges::iterator_t< std::ranges::range_reference_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>>);
+
+// Test `inner_iterator& operator=(inner_iterator&) = default`
+static_assert(std::assignable_from<
+              std::ranges::iterator_t< std::ranges::range_reference_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>&,
+              std::ranges::iterator_t< std::ranges::range_reference_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>>);
