@@ -20,6 +20,16 @@ def RecognizeLoadReduce : Pass<"tr-recognize-load-reduce", "::mlir::func::FuncOp
   let dependentDialects = ["::mlir::tr::TileReducerDialect"];
 }
 
+def AnnotateReductionPlan : Pass<"tr-annotate-reduction-plan", "::mlir::func::FuncOp"> {
+  let summary = "Consume analyses and annotate a reduction strategy candidate.";
+  let description = [{
+    Walks ReduceSumOps, reads Bounds/Layout/Reduction analyses, and sets
+    `tr.plan` to one of `row`, `column`, or `full`. Does not rewrite payload
+    computation.
+  }];
+  let dependentDialects = ["::mlir::tr::TileReducerDialect"];
+}
+
 def ConvertTRForBoundsToArith : Pass<"tr-for-bounds-to-arith", "::mlir::func::FuncOp"> {
   let summary = "Materialize tr.for integer bounds as arith.constant index values.";
   let dependentDialects = [

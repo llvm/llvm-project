@@ -2,6 +2,7 @@
 
 #include "TileReducer/TileReducerPasses.h"
 
+#include "TileReducer/TileReducerAnalyses.h"
 #include "TileReducer/TileReducerDialect.h"
 #include "TileReducer/TileReducerOps.h"
 #include "TileReducer/TileReducerTypes.h"
@@ -14,6 +15,7 @@
 namespace mlir::tr {
 #define GEN_PASS_DEF_FOLDTRADDZERO
 #define GEN_PASS_DEF_RECOGNIZELOADREDUCE
+#define GEN_PASS_DEF_ANNOTATEREDUCTIONPLAN
 #define GEN_PASS_DEF_CONVERTTRFORBOUNDSTOARITH
 #include "TileReducer/TileReducerPasses.h.inc"
 
@@ -84,6 +86,35 @@ struct RecognizeLoadReduce : impl::RecognizeLoadReduceBase<RecognizeLoadReduce> 
     patterns.add<RecognizeLoadReducePattern>(&getContext());
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       signalPassFailure();
+  }
+};
+
+struct AnnotateReductionPlan
+    : impl::AnnotateReductionPlanBase<AnnotateReductionPlan> {
+  void runOnOperation() override {
+    auto &reds = getAnalysis<ReductionAnalysis>();
+    (void)getAnalysis<BoundsAnalysis>();
+    (void)getAnalysis<LayoutAnalysis>();
+    getOperation().walk([&](ReduceSumOp op) {
+      const ReductionInfo *info = reds.get(op);
+      if (!info)
+        return;
+      StringRef plan = "unknown";
+      switch (info->kind) {
+      case ReductionKind::Row:
+        plan = "row";
+        break;
+      case ReductionKind::Column:
+        plan = "column";
+        break;
+      case ReductionKind::Full:
+        plan = "full";
+        break;
+      case ReductionKind::Unknown:
+        break;
+      }
+      op->setAttr("tr.plan", StringAttr::get(op.getContext(), plan));
+    });
   }
 };
 
