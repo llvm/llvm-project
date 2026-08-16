@@ -1,4 +1,4 @@
-// RUN: inter-opt %s --split-input-file --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_regalloc})' | FileCheck %s --check-prefixes=REMAT,SCRATCH,LOOP,WIDE
+// RUN: inter-opt %s --split-input-file --pass-pipeline='builtin.module(transform-preload-library{transform-library-paths=%inter_pipelines},transform-interpreter{entry-point=inter_regalloc})' | FileCheck %s --check-prefixes=REMAT,SCRATCH,LOOP,WIDE,OWNERSHIP
 
 module {
   func.func @rematerialize() attributes {xemachine.grf_count = 5 : i32, xemachine.reserved_grf_count = 0 : i32} {
@@ -25,6 +25,48 @@ module {
 // REMAT: xemachine.mov {{.*}}xemachine.rematerialized
 // REMAT: xemachine.mov {{.*}}xemachine.rematerialized
 // REMAT-NOT: !xemachine.reg<{{.*}}, -1>
+
+// -----
+
+module {
+  func.func @tuple_ownership_handoff() attributes {
+      xemachine.grf_count = 8 : i32,
+      xemachine.reserved_grf_count = 0 : i32} {
+    %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
+    %one = xemachine.imm 1 : i32
+    %group = xemachine.mov %r0 {execSize = 1 : i32, noMask, src0Sub = 6 : i32,
+        src0Type = i32} : (!xemachine.reg<16, 0>, i64)
+        -> !xemachine.reg<2, -1>
+    %shift = xemachine.imm 6 : i64
+    %scalar = xemachine.shl %group, %shift {execSize = 1 : i32, noMask}
+        : (!xemachine.reg<2, -1>, !xemachine.imm, i64)
+        -> !xemachine.reg<2, -1>
+    %base = xemachine.mov %one {execSize = 16 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+    %replacement = xemachine.mov %one {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %last_scalar_use = xemachine.add %scalar, %one {execSize = 1 : i32,
+        noMask} : (!xemachine.reg<2, -1>, !xemachine.imm, i64)
+        -> !xemachine.reg<2, -1>
+    %updated = xemachine.update_tuple %base, %replacement {offsets = [5]}
+        : (!xemachine.reg<16, -1>, !xemachine.reg<1, -1>)
+        -> !xemachine.reg<16, -1>
+    %later = xemachine.add %base, %one {execSize = 1 : i32, noMask}
+        : (!xemachine.reg<16, -1>, !xemachine.imm, i32)
+        -> !xemachine.reg<1, -1>
+    return
+  }
+}
+
+// OWNERSHIP-LABEL: func.func @tuple_ownership_handoff
+// OWNERSHIP-SAME: xemachine.regalloc_iterations = 2
+// OWNERSHIP: [[GROUP:%.*]] = xemachine.mov {{.*}}xemachine.rematerialized
+// OWNERSHIP: xemachine.shl [[GROUP]]{{.*}}xemachine.rematerialized
+// OWNERSHIP: [[GROUP_CLONE:%.*]] = xemachine.mov {{.*}}xemachine.rematerialized
+// OWNERSHIP-NEXT: [[SCALAR_CLONE:%.*]] = xemachine.shl [[GROUP_CLONE]]{{.*}}xemachine.rematerialized
+// OWNERSHIP-NEXT: xemachine.add [[SCALAR_CLONE]],
+// OWNERSHIP: xemachine.mov {{.*}}xemachine.regalloc_copy = "update-base"
+// OWNERSHIP-NOT: !xemachine.reg<{{.*}}, -1>
 
 // -----
 

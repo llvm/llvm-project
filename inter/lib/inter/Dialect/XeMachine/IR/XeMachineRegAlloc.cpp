@@ -8,6 +8,7 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -648,6 +649,85 @@ static bool rematerialize(AllocationState &state,
   return true;
 }
 
+static bool rematerializeOwnershipPredecessor(AllocationComponent &component,
+                                              AllocationState &state) {
+  if (component.fixedBase || component.values.size() != 1)
+    return false;
+  Value value = component.values.front();
+  Operation *definition = value.getDefiningOp();
+  if (!isRematerializable(definition) || !value.hasOneUse())
+    return false;
+  OpOperand &use = *value.use_begin();
+  Operation *consumer = use.getOwner();
+  if (definition->getBlock() != consumer->getBlock() ||
+      state.positions.lookup(definition) + 1 >=
+          state.positions.lookup(consumer))
+    return false;
+
+  OpBuilder builder(consumer);
+  IRMapping mapping;
+  bool clonedAdapter = false;
+  for (Value operand : definition->getOperands()) {
+    MovOp adapter = operand.getDefiningOp<MovOp>();
+    if (!adapter || !operand.hasOneUse())
+      continue;
+    RegType sourceType = dyn_cast<RegType>(adapter.getSrc().getType());
+    if (!sourceType || sourceType.getBaseGRF() < 0)
+      continue;
+    Operation *adapterClone = builder.clone(*adapter);
+    adapter->setAttr(kRematerializedAttr,
+                     UnitAttr::get(definition->getContext()));
+    adapterClone->setAttr(kRematerializedAttr,
+                          UnitAttr::get(definition->getContext()));
+    mapping.map(operand, adapterClone->getResult(0));
+    clonedAdapter = true;
+  }
+  if (!clonedAdapter)
+    return false;
+
+  Operation *clone = builder.clone(*definition, mapping);
+  definition->setAttr(kRematerializedAttr,
+                      UnitAttr::get(definition->getContext()));
+  clone->setAttr(kRematerializedAttr, UnitAttr::get(definition->getContext()));
+  use.set(clone->getResult(0));
+  return true;
+}
+
+static bool repairTupleOwnershipHandoff(func::FuncOp function,
+                                        AllocationState &state) {
+  bool repaired = false;
+  function
+      .walk([&](UpdateTupleOp update) {
+        if (repaired || !hasPreparedUpdateBaseCopy(update))
+          return WalkResult::advance();
+        const RegisterAliasAnalysis::ValueInfo *resultInfo =
+            state.aliases.lookup(update.getResult());
+        assert(resultInfo &&
+               "prepared tuple result is missing alias information");
+        const AllocationComponent &successor =
+            state.components[resultInfo->component];
+
+        AllocationComponent *predecessor = nullptr;
+        for (AllocationComponent &component : state.components) {
+          if (&component == &successor || component.fixedBase ||
+              component.values.size() != 1 ||
+              component.end >= successor.start ||
+              !registersOverlap(component.assignment, component.widthGRFs(),
+                                successor.assignment, successor.widthGRFs()))
+            continue;
+          if (!predecessor || predecessor->end < component.end)
+            predecessor = &component;
+        }
+        if (predecessor)
+          if (predecessor->values.front().getDefiningOp()->getBlock() ==
+              update->getBlock())
+            repaired = rematerializeOwnershipPredecessor(*predecessor, state);
+        return repaired ? WalkResult::interrupt() : WalkResult::advance();
+      })
+      .wasInterrupted();
+  return repaired;
+}
+
 static Value getScratchSurfaceOffset(func::FuncOp function, OpBuilder &builder,
                                      Location location,
                                      Operation *spillDefinition) {
@@ -1169,6 +1249,10 @@ static LogicalResult runTransformLinearScan(Operation *target) {
         tryAllocate(state, config->grfLimit, config->reservedGrfCount);
     Builder builder(function.getContext());
     if (!allocationFailure) {
+      if (repairTupleOwnershipHandoff(function, state)) {
+        function->removeAttr(kStateAttr);
+        continue;
+      }
       commitAllocation(state);
       function->setAttr(
           kStateAttr,

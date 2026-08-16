@@ -969,6 +969,10 @@ repairRepetitiveCycles(func::FuncOp function, const RegionFlow &flow,
 
 } // namespace
 
+bool inter::xemachine::hasPreparedUpdateBaseCopy(UpdateTupleOp update) {
+  return update && isMarkedCopy(update.getBase(), "update-base");
+}
+
 LogicalResult
 inter::xemachine::prepareRegisterAllocation(func::FuncOp function) {
   if (!function)

@@ -22,6 +22,28 @@ module {
     return
   }
 
+  func.func @materialized_base_owns_storage() attributes {
+      xemachine.grf_count = 8 : i32,
+      xemachine.reserved_grf_count = 0 : i32} {
+    %one = xemachine.imm 1 : i32
+    %scalar = xemachine.mov %one {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i64) -> !xemachine.reg<2, -1>
+    %base = xemachine.mov %one {execSize = 16 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<16, -1>
+    %replacement = xemachine.mov %one {execSize = 1 : i32, noMask}
+        : (!xemachine.imm, i32) -> !xemachine.reg<1, -1>
+    %last_scalar_use = xemachine.add %scalar, %scalar {execSize = 1 : i32,
+        noMask} : (!xemachine.reg<2, -1>, !xemachine.reg<2, -1>, i64)
+        -> !xemachine.reg<2, -1>
+    %updated = xemachine.update_tuple %base, %replacement {offsets = [5]}
+        : (!xemachine.reg<16, -1>, !xemachine.reg<1, -1>)
+        -> !xemachine.reg<16, -1>
+    %later = xemachine.add %base, %one {execSize = 1 : i32, noMask}
+        : (!xemachine.reg<16, -1>, !xemachine.imm, i32)
+        -> !xemachine.reg<1, -1>
+    return
+  }
+
   func.func @tuple_update_value_copy() attributes {
       xemachine.grf_count = 16 : i32,
       xemachine.reserved_grf_count = 0 : i32} {
@@ -614,6 +636,11 @@ module {
 // PREP-NEXT: [[UPDATE_COPY:%.*]] = xemachine.mov {{.*}}xemachine.regalloc_copy = "update-value"
 // PREP-NEXT: [[UPDATED:%.*]] = xemachine.update_tuple [[BASE_COPY]], [[UPDATE_COPY]]
 // PREP: xemachine.add [[BASE]],
+
+// PREP-LABEL: func.func @materialized_base_owns_storage
+// PREP: [[OWNED_BASE:%.*]] = xemachine.mov {{.*}}-> !xemachine.reg<16, -1>
+// PREP: [[OWNED_BASE_COPY:%.*]] = xemachine.mov [[OWNED_BASE]] {{.*}}xemachine.regalloc_copy = "update-base"
+// PREP: xemachine.update_tuple [[OWNED_BASE_COPY]],
 
 // PREP-LABEL: func.func @tuple_update_value_copy
 // PREP: [[TUPLE_UPDATE:%.*]] = xemachine.tuple_from_elements
