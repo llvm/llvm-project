@@ -3389,11 +3389,14 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     if (isa<UsedAttr>(I) || isa<RetainAttr>(I))
       continue;
 
-    if (isa<InferredNoReturnAttr>(I)) {
+    // Don't propagate inferred noreturn or conflicting inline attributes to
+    // explicit specializations.
+    if (isa<InferredNoReturnAttr>(I) || isa<AlwaysInlineAttr>(I) ||
+        isa<NoInlineAttr>(I)) {
       if (auto *FD = dyn_cast<FunctionDecl>(New);
           FD &&
           FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
-        continue; // Don't propagate inferred noreturn attributes to explicit
+        continue;
     }
 
     if (mergeDeclAttribute(*this, New, I, LocalAMK))
