@@ -22,6 +22,7 @@
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/Timer.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -42,6 +43,7 @@ private:
   void segregate(size_t begin, size_t end, bool constant);
 
   bool assocEquals(const SectionChunk *a, const SectionChunk *b);
+  bool funcletParentEqual(const SectionChunk *a, const SectionChunk *b);
 
   bool equalsConstant(const SectionChunk *a, const SectionChunk *b);
   bool equalsVariable(const SectionChunk *a, const SectionChunk *b);
@@ -56,6 +58,8 @@ private:
   void forEachClass(std::function<void(size_t, size_t)> fn);
 
   std::vector<SectionChunk *> chunks;
+  llvm::DenseMap<const SectionChunk *, const SectionChunk *> funcletParent;
+
   int cnt = 0;
   std::atomic<bool> repeat = {false};
 
@@ -143,6 +147,52 @@ bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
                     });
 }
 
+namespace {
+
+bool isFunclet(const SectionChunk *c) {
+  return c->selection == llvm::COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE &&
+         (c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE);
+}
+
+} // namespace
+
+// Returns true if it is safe to fold the two sections with respect to their
+// parent (leader) sections.
+//
+// A C++ exception-handling funclet (a catch/cleanup block) is emitted as an
+// associative, executable comdat section (typically ".text$x"). Unlike a normal
+// function, a funclet's own unwind info (its .pdata/.xdata) is emitted in
+// sections that are associative to the funclet's *parent* function, not to the
+// funclet itself. Those unwind sections chain back to the parent's
+// exception-handling data, so a given funclet is only correct for one specific
+// parent.
+//
+// ICF folds each associative section independently, and a funclet's own body
+// carries no reference to its unwind info, so two funclets with identical code
+// look mergeable even when their parents (and thus their unwind info) differ.
+// Folding them would leave the single surviving funclet described by two
+// different .pdata entries with the same address range but conflicting unwind
+// info, which corrupts exception dispatch (llvm/llvm-project#41566).
+//
+// To keep folding safe, a funclet may only be folded with another funclet when
+// their parents are themselves in the same equivalence class (i.e. are being
+// folded too); in that case the parents' exception-handling data is identical
+// and the funclet's unwind info is consistent for both.
+bool ICF::funcletParentEqual(const SectionChunk *a, const SectionChunk *b) {
+  bool aFunclet = isFunclet(a);
+  if (aFunclet != isFunclet(b))
+    return false;
+  if (!aFunclet)
+    return true;
+
+  const SectionChunk *pa = funcletParent.lookup(a);
+  const SectionChunk *pb = funcletParent.lookup(b);
+  // Be conservative and refuse to fold if we can't identify both parents.
+  if (!pa || !pb)
+    return false;
+  return pa->eqClass[cnt % 2] == pb->eqClass[cnt % 2];
+}
+
 // Compare "non-moving" part of two sections, namely everything
 // except relocation targets.
 bool ICF::equalsConstant(const SectionChunk *a, const SectionChunk *b) {
@@ -174,7 +224,8 @@ bool ICF::equalsConstant(const SectionChunk *a, const SectionChunk *b) {
          a->getSectionName() == b->getSectionName() &&
          a->header->SizeOfRawData == b->header->SizeOfRawData &&
          a->checksum == b->checksum && a->getContents() == b->getContents() &&
-         a->getMachine() == b->getMachine() && assocEquals(a, b);
+         a->getMachine() == b->getMachine() && funcletParentEqual(a, b) &&
+         assocEquals(a, b);
 }
 
 // Compare "moving" part of two sections, namely relocation targets.
@@ -201,7 +252,7 @@ bool ICF::equalsVariable(const SectionChunk *a, const SectionChunk *b) {
 
   return std::equal(a->getRelocs().begin(), a->getRelocs().end(),
                     b->getRelocs().begin(), eq) &&
-         assocEquals(a, b);
+         funcletParentEqual(a, b) && assocEquals(a, b);
 }
 
 // Find the first Chunk after Begin that has a different class from Begin.
@@ -262,10 +313,15 @@ void ICF::run() {
   uint32_t nextId = 1;
   for (Chunk *c : ctx.driver.getChunks()) {
     if (auto *sc = dyn_cast<SectionChunk>(c)) {
-      if (isEligible(sc))
+      if (isEligible(sc)) {
         chunks.push_back(sc);
-      else
+        // see funcletParentEqual.
+        for (const SectionChunk &child : sc->children())
+          if (isFunclet(&child))
+            funcletParent[&child] = sc;
+      } else {
         sc->eqClass[0] = nextId++;
+      }
     }
   }
 
