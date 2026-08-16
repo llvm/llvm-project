@@ -535,6 +535,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpl
     libc.src.math.ufromfpx
     libc.src.math.ufromfpxf
+    libc.src.math.ufromfpxf128
     libc.src.math.ufromfpxl
 )
 

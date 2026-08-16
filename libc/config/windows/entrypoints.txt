@@ -325,6 +325,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncf
     libc.src.math.truncl
     libc.src.math.ufromfpf128
+    libc.src.math.ufromfpxf128
 )
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS

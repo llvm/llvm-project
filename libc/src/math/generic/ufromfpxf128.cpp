@@ -7,13 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/ufromfpxf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/ufromfpxf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, ufromfpxf128,
                    (float128 x, int rnd, unsigned int width)) {
-  return math::ufromfpxf128(x, rnd, width);
+  return cpp::bit_cast<float128>(
+      math::ufromfpxf128(cpp::bit_cast<Float128>(x), rnd, width));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

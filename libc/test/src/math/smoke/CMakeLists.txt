@@ -2004,6 +2004,7 @@ add_fp_unittest(
   HDRS
     UfromfpxTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.ufromfpxf128
 )
 
