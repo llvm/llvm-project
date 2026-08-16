@@ -560,7 +560,10 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @\"??_V@YAXPAXI@Z\"(ptr, i32)\n"
 
       // These other functions were derived from the .def C declaration.
+      "declare void @_Unwind_Resume(ptr)\n"
+      "declare ptr @__cxa_allocate_exception(i64)\n"
       "declare i32 @__cxa_atexit(ptr, ptr, ptr)\n"
+      "declare ptr @__cxa_begin_catch(ptr)\n"
       "declare void @__cxa_guard_abort(ptr)\n"
       "declare i32 @__cxa_guard_acquire(ptr)\n"
       "declare void @__cxa_guard_release(ptr)\n"
