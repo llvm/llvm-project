@@ -60,6 +60,11 @@ struct FrameInfo {
   bool HandlesExceptions = false;
   bool EmitAttempted = false;
   bool Fragment = false;
+  /// On AArch64, set when the function length could not be computed as an
+  /// absolute value at unwind-emission time (e.g. an inline-asm alignment
+  /// directive defers layout); the .xdata length field is then emitted as a
+  /// relocation that is resolved once the section layout is final.
+  bool FuncLengthRelocatable = false;
   constexpr static uint8_t DefaultVersion = 1;
   uint8_t Version = DefaultVersion;
 
