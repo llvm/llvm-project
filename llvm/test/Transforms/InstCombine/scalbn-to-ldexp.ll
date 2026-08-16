@@ -10,7 +10,7 @@ declare fp128 @scalbnl(fp128, i32)
 define float @scalbnf_f32(float %x, i32 %exp) {
 ; CHECK-LABEL: define float @scalbnf_f32(
 ; CHECK-SAME: float [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call fast float @scalbnf(float [[X]], i32 [[EXP]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = tail call fast float @llvm.ldexp.f32.i32(float [[X]], i32 [[EXP]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = tail call fast float @scalbnf(float %x, i32 %exp) memory(none)
@@ -22,7 +22,7 @@ define float @scalbnf_f32(float %x, i32 %exp) {
 define double @scalbn_f64(double %x, i32 %exp) {
 ; CHECK-LABEL: define double @scalbn_f64(
 ; CHECK-SAME: double [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call double @scalbn(double [[X]], i32 [[EXP]]) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.ldexp.f64.i32(double [[X]], i32 [[EXP]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @scalbn(double %x, i32 %exp) memory(none)
@@ -34,7 +34,7 @@ define double @scalbn_f64(double %x, i32 %exp) {
 define fp128 @scalbnl_f128(fp128 %x, i32 %exp) {
 ; CHECK-LABEL: define fp128 @scalbnl_f128(
 ; CHECK-SAME: fp128 [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call fp128 @scalbnl(fp128 [[X]], i32 [[EXP]]) #[[ATTR1]]
+; CHECK-NEXT:    [[R:%.*]] = call fp128 @llvm.ldexp.f128.i32(fp128 [[X]], i32 [[EXP]])
 ; CHECK-NEXT:    ret fp128 [[R]]
 ;
   %r = call fp128 @scalbnl(fp128 %x, i32 %exp) memory(none)
