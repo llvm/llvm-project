@@ -1706,7 +1706,7 @@ bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
 
   if (const auto *Ty = Param[0]->getType(); Ty->isVectorTy()) {
     const auto *VTy = dyn_cast<FixedVectorType>(Ty);
-    // Skip scalable vectors
+    // TODO: Add support for scalable vectors if possible.
     if (!VTy)
       return false;
 
