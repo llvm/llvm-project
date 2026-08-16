@@ -491,7 +491,6 @@ using std::__math::atan2;
 using std::__math::atanh;
 using std::__math::cbrt;
 using std::__math::ceil;
-using std::__math::copysign;
 using std::__math::cos;
 using std::__math::cosh;
 using std::__math::erf;
