@@ -1,13 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
 
 // This structure's size is not a power of two, so the property does
-// not get native atomics, even though x86-64 can do unaligned atomics
-// with a lock prefix.
+// not get native atomics.
 struct s3 { char c[3]; };
 
-// This structure's size is, so it does, because it can.
-// FIXME: But we don't at the moment; the backend doesn't know how to generate
-// correct code.
+// This structure's size is a power of two, but its alignment is 1.
 struct s4 { char c[4]; };
 
 @interface Test0
