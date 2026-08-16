@@ -300,19 +300,12 @@ features = [
         name="has-filecheck",
         when=lambda cfg: runScriptExitCode(cfg, ["FileCheck --version"]) == 0,
     ),
-    # On 32-bit ARM (EHABI unwinding via .ARM.exidx/.ARM.extab), unwind table
-    # emission is tied to -fexceptions, unlike on x86/AArch64 where it's on by default.
-    # -fno-exceptions test builds therefore silently lose the unwind info that
-    # std::stacktrace's default implementation needs to walk the stack, even though
-    # no exception is ever thrown. libunwind and libc++abi already force
-    # -funwind-tables for their own sources for the same reason (see the comment in
-    # libunwind/CMakeLists.txt above its own add_compile_flags_if_supported call).
-    # Covers both hosted (-linux-gnueabi*) and bare-metal (-none-eabi, e.g. the
-    # armv7m-picolibc bots) 32-bit ARM targets.
+    # On 32-bit ARM (EHABI unwinding via `.ARM.exidx` / `.ARM.extab`), unwind table emission
+    # for a given function isn't reliably implied by `-fexceptions`, breaking `<stacktrace>`.
     Feature(
-        name="arm-no-exceptions-needs-funwind-tables",
+        name="arm-needs-funwind-tables",
         when=lambda cfg: BooleanExpression.evaluate(
-            "no-exceptions && target={{arm.*-(linux-gnueabi|none-eabi).*}}",
+            "target={{arm.*-(linux-gnueabi|none-eabi).*}}",
             cfg.available_features,
         ),
         actions=[AddFlagIfSupported("-funwind-tables")],
