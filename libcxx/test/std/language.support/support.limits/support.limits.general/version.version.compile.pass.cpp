@@ -8335,6 +8335,15 @@
 #    error "__cpp_lib_type_identity should have the value 201806L in c++26"
 #  endif
 
+#  if __has_builtin(__builtin_type_order)
+#    ifndef __cpp_lib_type_order
+#      error "__cpp_lib_type_order should be defined in c++26"
+#    endif
+#    if __cpp_lib_type_order != 202506L
+#      error "__cpp_lib_type_order should have the value 202506L in c++26"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_type_trait_variable_templates
 #    error "__cpp_lib_type_trait_variable_templates should be defined in c++26"
 #  endif

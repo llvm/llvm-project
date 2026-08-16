@@ -63,6 +63,15 @@
 #    error "__cpp_lib_three_way_comparison should have the value 201907L in c++26"
 #  endif
 
+#  if __has_builtin(__builtin_type_order)
+#    ifndef __cpp_lib_type_order
+#      error "__cpp_lib_type_order should be defined in c++26"
+#    endif
+#    if __cpp_lib_type_order != 202506L
+#      error "__cpp_lib_type_order should have the value 202506L in c++26"
+#    endif
+#  endif
+
 #endif // TEST_STD_VER > 23
 
 // clang-format on
