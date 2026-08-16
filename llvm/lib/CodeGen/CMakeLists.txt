@@ -1,10 +1,28 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+# Marked optional so LLVM's source audit does not require it in default builds.
+list(APPEND LLVM_OPTIONAL_SOURCES
+  MLIRRegAllocEvictModel.cpp)
+
+set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
+set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING
+  "URL to download the LLVM register allocator eviction model")
+
+# Release-mode regalloc eviction can be backed either by TensorFlow AOT
+# artifacts or by the in-tree MLIR flow. In both cases LLVM builds a thin
+# wrapper so MLRegAllocEvictAdvisor continues to talk to one serving interface.
+if (LLVM_BUILD_REGALLOCEVICTMODEL)
   include(TensorFlowCompile)
-  set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
-
-  set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM register allocator eviction model")
-
-  if (DEFINED LLVM_HAVE_TF_AOT)
+  if (LLVM_USE_MLIR_FOR_MLGO)
+    list(APPEND CodeGenInTreeModelSources
+      MLIRRegAllocEvictModel.cpp)
+    mlir_find_and_compile(
+      ${LLVM_RAEVICT_MODEL_PATH}
+      ${LLVM_RAEVICT_MODEL_CURRENT_URL}
+      ${LLVM_RAEVICT_MODEL_PATH_DEFAULT}
+      "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/regalloc-eviction-test-model-tosa.mlir"
+      RegAllocEvictModel
+      "llvm/CodeGen/MLIRRegAllocEvictModel.inc"
+    )
+  else()
     tf_find_and_compile(
       ${LLVM_RAEVICT_MODEL_PATH}
       ${LLVM_RAEVICT_MODEL_CURRENT_URL}
@@ -16,10 +34,10 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
       llvm::RegAllocEvictModel
     )
   endif()
+endif()
 
-  if (LLVM_HAVE_TFLITE)
-    list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
-  endif()
+if (LLVM_HAVE_TFLITE)
+  list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
 endif()
 
 add_llvm_component_library(LLVMCodeGen
@@ -258,6 +276,7 @@ add_llvm_component_library(LLVMCodeGen
   WindowsSecureHotPatching.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
+  ${CodeGenInTreeModelSources}
   ${GeneratedMLSources}
 
   LiveDebugValues/LiveDebugValues.cpp
@@ -294,6 +313,11 @@ add_llvm_component_library(LLVMCodeGen
   TargetParser
   TransformUtils
   )
+
+if (LLVM_BUILD_REGALLOCEVICTMODEL AND LLVM_USE_MLIR_FOR_MLGO)
+  target_compile_definitions(LLVMCodeGen
+    PRIVATE LLVM_HAVE_MLIR_REGALLOCEVICTMODEL)
+endif()
 
 add_subdirectory(SelectionDAG)
 add_subdirectory(AsmPrinter)

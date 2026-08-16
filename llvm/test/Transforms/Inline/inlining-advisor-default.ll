@@ -2,6 +2,7 @@
 ; trying to use ML-driven inlining.
 ; REQUIRES: !have_tf_aot
 ; REQUIRES: !have_tflite
+; REQUIRES: !have_mlir_mlgo
 ; RUN: not opt -passes=scc-oz-module-inliner -enable-ml-inliner=development -S < %s 2>&1 | FileCheck %s
 ; RUN: not opt -passes=scc-oz-module-inliner -enable-ml-inliner=release -S < %s 2>&1 | FileCheck %s
 

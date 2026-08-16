@@ -1,10 +1,33 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
+# Marked optional so LLVM's source audit does not require it in default builds.
+list(APPEND LLVM_OPTIONAL_SOURCES
+  MLIRInlinerSizeModel.cpp)
+
+if (LLVM_HAVE_TFLITE)
+  list(APPEND MLLinkDeps
+    tensorflow-lite::tensorflow-lite)
+endif()
+
+set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
+set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING
+    "URL to download the LLVM inliner model")
+
+# Release-mode inlining can be backed either by TensorFlow AOT artifacts or by
+# the in-tree MLIR flow. In both cases LLVM builds a thin wrapper so
+# MLInlineAdvisor continues to talk to one serving interface.
+if (LLVM_BUILD_INLINERSIZEMODEL)
   include(TensorFlowCompile)
-  set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
-
-  set(LLVM_INLINER_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM inliner model")
-
-  if (DEFINED LLVM_HAVE_TF_AOT)
+  if (LLVM_USE_MLIR_FOR_MLGO)
+    list(APPEND AnalysisInTreeModelSources
+      MLIRInlinerSizeModel.cpp)
+    mlir_find_and_compile(
+      ${LLVM_INLINER_MODEL_PATH}
+      ${LLVM_INLINER_MODEL_CURRENT_URL}
+      ${LLVM_INLINER_MODEL_PATH_DEFAULT}
+      "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/inline-oz-test-model-tosa.mlir"
+      InlinerSizeModel
+      "llvm/Analysis/MLIRInlinerSizeModel.inc"
+    )
+  else()
     tf_find_and_compile(
       ${LLVM_INLINER_MODEL_PATH}
       ${LLVM_INLINER_MODEL_CURRENT_URL}
@@ -15,11 +38,6 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
       InlinerSizeModel
       llvm::InlinerSizeModel
     )
-  endif()
-
-  if (LLVM_HAVE_TFLITE)
-    list(APPEND MLLinkDeps
-      tensorflow-lite::tensorflow-lite)
   endif()
 endif()
 
@@ -163,6 +181,7 @@ add_llvm_component_library(LLVMAnalysis
   ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
+  ${AnalysisInTreeModelSources}
   ${GeneratedMLSources}
 
   ADDITIONAL_HEADER_DIRS
@@ -185,6 +204,11 @@ add_llvm_component_library(LLVMAnalysis
   Support
   TargetParser
   )
+
+if (LLVM_BUILD_INLINERSIZEMODEL AND LLVM_USE_MLIR_FOR_MLGO)
+  target_compile_definitions(LLVMAnalysis
+    PRIVATE LLVM_HAVE_MLIR_INLINERSIZEMODEL)
+endif()
 
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
