@@ -474,6 +474,10 @@ AsmStmt::addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
     return Constraint.str();
   StringRef Register = Attr->getLabel();
   assert(Target.isValidGCCRegisterName(Register));
+  // Preserve matching constraints instead of replacing them with the
+  // register variable's fixed register.
+  if (Constraint[0] == '%' || isdigit(Constraint[0]))
+    return Constraint.str();
   // We're using validateOutputConstraint here because we only care if
   // this is a register constraint.
   TargetInfo::ConstraintInfo Info(Constraint, "");
