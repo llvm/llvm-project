@@ -4921,6 +4921,32 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *Mul = foldSelectZeroOrFixedOp(SI, *this))
     return Mul;
 
+  // fold select (X + umax(X, A) < X), C, umin(X + umax(X, A), C) -> umin(X +
+  // umax(X, A), C) If X + umax(X, A) has nsw and A and C are non-negative, the
+  // unsigned wrap implies X + umax(X, A) >= 2^(bw-1). Since C < 2^(bw-1), umin
+  // will return C.
+  {
+    auto *ICI = dyn_cast<ICmpInst>(CondVal);
+    Value *X, *A, *Sum, *CVal;
+    if (ICI && ICI->hasOneUse() && match(TrueVal, m_Value(CVal)) &&
+        match(FalseVal,
+              m_c_Intrinsic<Intrinsic::umin>(m_Value(Sum), m_Specific(CVal))) &&
+        match(Sum, m_c_Add(m_Value(X), m_c_UMax(m_Deferred(X), m_Value(A))))) {
+      ICmpInst::Predicate Pred = ICI->getPredicate();
+
+      if ((Pred == ICmpInst::ICMP_ULT && ICI->getOperand(0) == Sum &&
+           ICI->getOperand(1) == X) ||
+          (Pred == ICmpInst::ICMP_UGT && ICI->getOperand(0) == X &&
+           ICI->getOperand(1) == Sum)) {
+        auto *Add = cast<OverflowingBinaryOperator>(Sum);
+        if (Add->hasNoSignedWrap() &&
+            isKnownNonNegative(CVal, SQ.getWithInstruction(&SI)) &&
+            isKnownNonNegative(A, SQ.getWithInstruction(&SI)))
+          return replaceInstUsesWith(SI, FalseVal);
+      }
+    }
+  }
+
   // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))
   auto *TI = dyn_cast<Instruction>(TrueVal);
   auto *FI = dyn_cast<Instruction>(FalseVal);
