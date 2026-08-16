@@ -14,6 +14,8 @@
 
 using namespace llvm;
 
+#ifndef NDEBUG
+
 static void reportNodeError(const SelectionDAG &DAG, const SDNode *N,
                             const Twine &Msg) {
   std::string S;
@@ -70,7 +72,7 @@ public:
 } // namespace
 
 void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
-  const SDNodeDesc &Desc = getDesc(N->getOpcode());
+  const SDNodeVerifyDesc &Desc = getVerifyDesc(N->getOpcode());
   bool HasChain = Desc.hasProperty(SDNPHasChain);
   bool HasOutGlue = Desc.hasProperty(SDNPOutGlue);
   bool HasInGlue = Desc.hasProperty(SDNPInGlue);
@@ -172,7 +174,7 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
   auto GetConstraintVT = [&](const SDTypeConstraint &C) {
     if (!C.NumHwModes)
       return static_cast<MVT::SimpleValueType>(C.VT);
-    for (auto [Mode, VT] : ArrayRef(&VTByHwModeTable[C.VT], C.NumHwModes))
+    for (auto [Mode, VT] : ArrayRef(&getVTByHwModeTable()[C.VT], C.NumHwModes))
       if (Mode == VTHwMode)
         return VT;
     llvm_unreachable("No value type for this HW mode");
@@ -242,3 +244,9 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
     }
   }
 }
+
+#else
+
+void SDNodeInfo::verifyNode(const SelectionDAG &, const SDNode *) const {}
+
+#endif // NDEBUG
