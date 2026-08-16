@@ -2734,17 +2734,28 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       }
     }
 
-    // Try to push the constant operand into a ZExt: A + zext (-A + B) -> zext
-    // (B), if trunc (A) + -A + B  does not unsigned-wrap.
-    const SCEVAddExpr *InnerAdd;
-    if (match(B, m_scev_ZExt(m_scev_Add(InnerAdd)))) {
-      const SCEV *NarrowA = getTruncateExpr(A, InnerAdd->getType());
-      if (NarrowA == getNegativeSCEV(InnerAdd->getOperand(0)) &&
-          getZeroExtendExpr(NarrowA, B->getType()) == A &&
-          hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
-                                         SCEV::FlagAnyWrap),
-                   SCEV::FlagNUW)) {
-        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
+    // Push a negative constant addend out of a ZExt when the inner add is
+    // provably non-negative in the narrow type:
+    //
+    //   A + zext(C + X)  ->  WideAC + zext(X)   [WideAC = A + sext(C)]
+    //
+    // Require A to be a constant so that `A + sext(C)` folds into a single wide
+    // constant, actually simplifying the expression.
+    const SCEVAddExpr *Add;
+    if (isa<SCEVConstant>(A) && match(B, m_scev_ZExt(m_scev_Add(Add)))) {
+      const auto *InnerSC = dyn_cast<SCEVConstant>(Add->getOperand(0));
+      if (InnerSC && InnerSC->getAPInt().isNegative() &&
+          // NUW on `(-C) + (C + X) = X` proves that `C + X` did not wrap
+          // below zero, so `zext(C + X) == sext(C) + zext(X)`.
+          hasFlags(
+              StrengthenNoWrapFlags(this, scAddExpr,
+                                    {getConstant(-InnerSC->getAPInt()), Add},
+                                    SCEV::FlagAnyWrap),
+              SCEV::FlagNUW)) {
+        SmallVector<SCEVUse, 4> Operands(drop_begin(Add->operands()));
+        const SCEV *XAdd = getAddExpr(Operands);
+        return getAddExpr(A, getSignExtendExpr(InnerSC, B->getType()),
+                          getZeroExtendExpr(XAdd, B->getType()));
       }
     }
   }
