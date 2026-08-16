@@ -118,6 +118,7 @@ private:
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
   bool selectReturnAddress(MachineInstr &I) const;
+  bool selectFrameAddress(MachineInstr &I) const;
   bool selectG_INTRINSIC(MachineInstr &I) const;
 
   bool selectEndCfIntrinsic(MachineInstr &MI) const;
