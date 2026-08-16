@@ -13,8 +13,10 @@
 
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include <climits>
 
 using namespace llvm;
 
@@ -63,6 +65,63 @@ bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
   }
 
   llvm_unreachable("covered switch over denormal mode");
+}
+
+void KnownFPClass::propagateExpRange(const KnownFPClass &Src, int LoExp,
+                                     int HiExp, bool IsNegative,
+                                     const fltSemantics &Sem,
+                                     DenormalMode Mode) {
+  FPClassTest Result = fcNone;
+  FPClassTest KnownFPClasses = Src.KnownFPClasses;
+
+  if (!Src.isKnownNeverLogicalPosZero(Mode))
+    KnownFPClasses |= fcPosZero;
+  if (!Src.isKnownNeverLogicalNegZero(Mode))
+    KnownFPClasses |= fcNegZero;
+
+  if (IsNegative)
+    KnownFPClasses = llvm::fneg(KnownFPClasses);
+
+  // A scale that cannot grow keeps |result| <= |source|.
+  if (HiExp <= 0)
+    Result |= ~KnownFPClasses & (fcInf | fcNormal);
+
+  if (LoExp >= 0) {
+    // 2^MantissaBits lifts even the smallest value 2^(emin - MantissaBits) into
+    // the normal range. Double-double reports no precision and has no such
+    // threshold, only its source can rule a subnormal out.
+    const int MantissaBits =
+        static_cast<int>(APFloat::semanticsPrecision(Sem)) - 1;
+    const bool LiftsOutOfSubnormals =
+        MantissaBits >= 0 && LoExp >= MantissaBits;
+
+    Result |=
+        LiftsOutOfSubnormals ? fcSubnormal : ~KnownFPClasses & fcSubnormal;
+
+    // A subnormal result can still be flushed onto a zero
+    //
+    //   ieee          no flush
+    //   preservesign  +sub => +0, -sub => -0
+    //   positivezero  +sub => +0, -sub => +0
+    //   dynamic       +sub => +0, -sub => +/-0
+
+    FPClassTest FlushToPos = fcNone;
+    FPClassTest FlushToNeg = fcNone;
+
+    if (Mode.Output != DenormalMode::IEEE) {
+      const bool IsKeepSign = Mode.Output == DenormalMode::PreserveSign;
+      const bool IsPosZero = Mode.Output == DenormalMode::PositiveZero;
+      FlushToPos = IsKeepSign ? fcPosSubnormal : fcSubnormal;
+      FlushToNeg = IsPosZero ? fcNone : fcNegSubnormal;
+    }
+
+    if ((Result & FlushToPos) == FlushToPos)
+      Result |= ~KnownFPClasses & fcPosZero;
+    if ((Result & FlushToNeg) == FlushToNeg)
+      Result |= ~KnownFPClasses & fcNegZero;
+  }
+
+  knownNot(Result);
 }
 
 void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
@@ -334,18 +393,16 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
 }
 
 KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc,
+                                     const fltSemantics &Sem,
                                      DenormalMode Mode) {
   KnownFPClass Known = fadd(KnownSrc, KnownSrc, Mode);
 
-  // Doubling 0 will give the same 0.
-  if (KnownSrc.isKnownNeverLogicalPosZero(Mode) &&
-      (Mode.Output == DenormalMode::IEEE ||
-       (Mode.Output == DenormalMode::PreserveSign &&
-        KnownSrc.isKnownNeverPosSubnormal()) ||
-       (Mode.Output == DenormalMode::PositiveZero &&
-        KnownSrc.isKnownNeverSubnormal())))
-    Known.knownNot(fcPosZero);
+  // The scale can only refine the subnormal and zero classes here.
+  if ((KnownSrc.KnownFPClasses & (fcZero | fcSubnormal)) ==
+      (fcZero | fcSubnormal))
+    return Known;
 
+  Known.propagateExpRange(KnownSrc, 1, 1, /*IsNegative=*/false, Sem, Mode);
   return Known;
 }
 
@@ -387,32 +444,21 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   return Known;
 }
 
-// TODO: This generalizes to known ranges
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
-                                const APFloat &CRHS, DenormalMode Mode) {
-  // Match denormal scaling pattern, similar to the case in ldexp. If the
-  // constant's exponent is sufficiently large, the result cannot be subnormal.
+                                const APFloat &ConstRHS, DenormalMode Mode) {
+  auto Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(ConstRHS), Mode);
 
-  const fltSemantics &Flt = CRHS.getSemantics();
-  unsigned Precision = APFloat::semanticsPrecision(Flt);
-  const int MantissaBits = Precision - 1;
+  // ilogb needs a finite nonzero magnitude.
+  if (!ConstRHS.isFiniteNonZero())
+    return Known;
 
-  int MinKnownExponent = ilogb(CRHS);
-  bool CannotBeSubnormal = (MinKnownExponent >= MantissaBits);
+  const int Exp = ilogb(ConstRHS);
+  const bool IsPow2 = ConstRHS.getExactLog2Abs() != INT_MIN;
 
-  KnownFPClass Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(CRHS), Mode);
-  if (CannotBeSubnormal)
-    Known.knownNot(fcSubnormal);
-
-  // Multiply of values <= 1 cannot introduce overflow.
-  if (KnownLHS.isKnownNever(fcInf)) {
-    if (MinKnownExponent < 0)
-      Known.knownNot(fcInf);
-    else if (MinKnownExponent == 0 && CRHS.compareAbsoluteValue(APFloat::getOne(
-                                          Flt)) == APFloat::cmpEqual)
-      Known.knownNot(fcInf);
-  }
-
+  // |C| in [2^Exp, 2^Exp] exactly when C is power of two
+  // |C| in [2^Exp, 2^(Exp+1)) otherwise
+  Known.propagateExpRange(KnownLHS, Exp, IsPow2 ? Exp : Exp + 1,
+                          ConstRHS.isNegative(), ConstRHS.getSemantics(), Mode);
   return Known;
 }
 
@@ -442,6 +488,24 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   if (KnownRHS.isKnownAlways(fcZero))
     Known.knownNot(fcFinite);
 
+  return Known;
+}
+
+KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
+                                const APFloat &ConstRHS, DenormalMode Mode) {
+  auto Known = KnownFPClass::fdiv(KnownLHS, KnownFPClass(ConstRHS), Mode);
+
+  // ilogb needs a finite nonzero magnitude.
+  if (!ConstRHS.isFiniteNonZero())
+    return Known;
+
+  const int Exp = ilogb(ConstRHS);
+  const bool IsPow2 = ConstRHS.getExactLog2Abs() != INT_MIN;
+
+  // |1 / C| in [2^-Exp, 2^-Exp] exactly when C is power of two
+  // |1 / C| in (2^(-Exp-1), 2^-Exp] otherwise
+  Known.propagateExpRange(KnownLHS, IsPow2 ? -Exp : -Exp - 1, -Exp,
+                          ConstRHS.isNegative(), ConstRHS.getSemantics(), Mode);
   return Known;
 }
 
@@ -809,32 +873,23 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
   else if (KnownSrc.cannotBeOrderedGreaterThanZero())
     Known.knownNot(OrderedGreaterThanZeroMask);
 
-  unsigned Precision = APFloat::semanticsPrecision(Flt);
-  const int MantissaBits = Precision - 1;
-  if (ConstantRangeExpMin.sge(MantissaBits))
-    Known.knownNot(fcSubnormal);
-
   if (ConstantRangeExpMin.isZero() && ConstantRangeExpMax.isZero()) {
     // ldexp(x, 0) -> x, so propagate everything.
     Known.propagateCanonicalizingSrc(KnownSrc, Mode);
-  } else if (ConstantRangeExpMax.isNonPositive()) {
-    // If we know the power is <= 0, can't introduce inf
-    if (KnownSrc.isKnownNeverPosInfinity())
-      Known.knownNot(fcPosInf);
-    if (KnownSrc.isKnownNeverNegInfinity())
-      Known.knownNot(fcNegInf);
-  } else if (ConstantRangeExpMin.isNonNegative()) {
-    // If we know the power is >= 0, can't introduce subnormal or zero
-    if (KnownSrc.isKnownNeverPosSubnormal())
-      Known.knownNot(fcPosSubnormal);
-    if (KnownSrc.isKnownNeverNegSubnormal())
-      Known.knownNot(fcNegSubnormal);
-    if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
-      Known.knownNot(fcPosZero);
-    if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
-      Known.knownNot(fcNegZero);
+    return Known;
   }
 
+  // The exponent operand can be any integer width. Truncating it would map a
+  // huge exponent onto a small one and invert the tests below.
+  auto SaturatedIntExp = [](const APInt &Exp) {
+    if (Exp.isSignedIntN(sizeof(int) * CHAR_BIT))
+      return static_cast<int>(Exp.getSExtValue());
+    return Exp.isNegative() ? INT_MIN : INT_MAX;
+  };
+
+  Known.propagateExpRange(KnownSrc, SaturatedIntExp(ConstantRangeExpMin),
+                          SaturatedIntExp(ConstantRangeExpMax),
+                          /*IsNegative=*/false, Flt, Mode);
   return Known;
 }
 

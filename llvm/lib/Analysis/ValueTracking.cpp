@@ -5591,18 +5591,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::ldexp: {
-      KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                          KnownSrc, Q, Depth + 1);
-      // Can refine inf/zero handling based on the exponent operand.
-      const FPClassTest ExpInfoMask = fcZero | fcSubnormal | fcInf;
+      // Ruling out a zero result also reads the source subnormal classes.
+      FPClassTest InterestedSrcs = InterestedClasses;
+      if (InterestedClasses & fcZero)
+        InterestedSrcs |= fcSubnormal;
 
-      const Value *ExpArg = II->getArgOperand(1);
-      ConstantRange ExpKnownRange =
-          ((KnownSrc.KnownFPClasses & ExpInfoMask) != fcNone)
-              ? computeConstantRange(ExpArg, /*ForSigned=*/true, Q, Depth + 1)
-              : ConstantRange::getFull(
-                    ExpArg->getType()->getScalarSizeInBits());
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                          KnownSrc, Q, Depth + 1);
+
+      ConstantRange ExpKnownRange = computeConstantRange(
+          II->getArgOperand(1), /*ForSigned=*/true, Q, Depth + 1);
 
       const fltSemantics &Flt =
           II->getType()->getScalarType()->getFltSemantics();
@@ -5810,7 +5809,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
       if (Self && Opc == Instruction::FAdd) {
-        Known = KnownFPClass::fadd_self(KnownLHS, Mode);
+        Known = KnownFPClass::fadd_self(KnownLHS, FltSem, Mode);
       } else {
         // RHS is canonically cheaper to compute. Skip inspecting the LHS if
         // there's no point.
@@ -5851,6 +5850,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     const APFloat *CRHS;
     if (match(RHS, m_APFloat(CRHS))) {
+      KnownRHS = KnownFPClass(*CRHS);
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
                           Depth + 1);
       Known = KnownFPClass::fmul(KnownLHS, *CRHS, Mode);
@@ -5912,17 +5912,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
 
+    // A constant divisor bounds the scale factor, which refines both signs.
+    const APFloat *CRHS = nullptr;
+    if (Opc == Instruction::FDiv)
+      match(Op->getOperand(1), m_APFloat(CRHS));
+
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive =
-        Opc == Instruction::FRem && (InterestedClasses & fcPositive) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone &&
+                              (Opc == Instruction::FRem || CRHS);
     if (!WantNan && !WantNegative && !WantPositive)
       break;
 
     KnownFPClass KnownLHS, KnownRHS;
 
     computeKnownFPClass(Op->getOperand(1), DemandedElts,
-                        fcNan | fcInf | fcZero | fcNegative, KnownRHS, Q,
-                        Depth + 1);
+                        fcNan | fcInf | fcZero | fcSubnormal | fcNegative,
+                        KnownRHS, Q, Depth + 1);
 
     bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
                                KnownRHS.isKnownNever(fcNegative) ||
@@ -5940,7 +5945,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (Op->getOpcode() == Instruction::FDiv) {
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
+      Known = CRHS ? KnownFPClass::fdiv(KnownLHS, *CRHS, Mode)
+                   : KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     } else {
       // Inf REM x and x REM 0 produce NaN.
       if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&

@@ -248,7 +248,7 @@ struct KnownFPClass {
 
   /// Report known values for fadd x, x
   LLVM_ABI static KnownFPClass
-  fadd_self(const KnownFPClass &Src,
+  fadd_self(const KnownFPClass &Src, const fltSemantics &Sem,
             DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Report known values for fsub
@@ -279,6 +279,10 @@ struct KnownFPClass {
   /// Report known values for fdiv
   LLVM_ABI static KnownFPClass
   fdiv(const KnownFPClass &LHS, const KnownFPClass &RHS,
+       DenormalMode Mode = DenormalMode::getDynamic());
+
+  LLVM_ABI static KnownFPClass
+  fdiv(const KnownFPClass &LHS, const APFloat &RHS,
        DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Report known values for fdiv x, x
@@ -404,6 +408,14 @@ struct KnownFPClass {
         (LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcPositive)))
       knownNot(fcPositive);
   }
+
+  /// Refine the known classes of Src scaled by a factor with magnitude in
+  /// [2^LoExp, 2^HiExp], as ldexp and a constant multiply or divide do. A
+  /// scale that cannot grow rules out infinities and normals, one that cannot
+  /// shrink rules out subnormals and zeroes. IsNegative flips the sign.
+  LLVM_ABI void propagateExpRange(const KnownFPClass &Src, int LoExp, int HiExp,
+                                  bool IsNegative, const fltSemantics &Sem,
+                                  DenormalMode Mode);
 
   /// Propagate knowledge from a source value that could be a denormal or
   /// zero. We have to be conservative since output flushing is not guaranteed,

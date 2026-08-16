@@ -1714,6 +1714,29 @@ TEST_F(AArch64GISelMITest, TestFPClassFMulAbsULEOne) {
   EXPECT_EQ(std::nullopt, Known.SignBit);
 }
 
+// G_FDIV by a constant of magnitude > 1 cannot grow the result. No infinity
+// or normal appears that the source does not have.
+TEST_F(AArch64GISelMITest, TestFPClassFDivByConstPow2) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %finite:_(s32) = nnan ninf G_FABS %val
+    %c:_(s32) = G_FCONSTANT float 2.0
+    %fdiv:_(s32) = G_FDIV %finite, %c
+    %copy:_(s32) = COPY %fdiv
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+  EXPECT_EQ(fcPosZero | fcPosSubnormal | fcPosNormal, Known.KnownFPClasses);
+  EXPECT_EQ(false, Known.SignBit);
+}
+
 // G_FMA with A == B (and A guaranteed not-undef): the multiply part is a
 // square, so the result is known non-negative (never fcNegative).
 TEST_F(AArch64GISelMITest, TestFPClassFMASelfSquare) {
