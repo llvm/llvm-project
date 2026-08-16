@@ -1,7 +1,8 @@
 ! Tests that -finit-local= respects CUDA data attributes in shouldInitLocal.
-! Variables in device-only memory (device, managed, constant, shared) must NOT
-! be initialized via a plain host store. Host-accessible storage (pinned,
-! unified) MAY be initialized normally.
+! Variables in device-only memory (device, constant, shared) must NOT be
+! initialized via a plain host store. Host-accessible storage (managed, pinned,
+! unified) and per-thread locals in device procedures MAY be initialized
+! normally.
 !
 ! RUN: bbc -emit-hlfir -fcuda -finit-local=zero -o - %s | FileCheck %s
 
@@ -37,4 +38,28 @@ contains
   ! CHECK: fir.zero_bits f32
   ! CHECK: fir.store
 
+
+  ! managed (non-allocatable): host-accessible unified memory -- MUST be
+  ! initialized. An explicit host assignment to a managed scalar lowers to
+  ! hlfir.assign, so a plain fir.store initialization is valid here.
+  subroutine test_managed(res)
+    real, managed :: x
+    real :: res
+    res = x
+  end subroutine
+  ! CHECK-LABEL: func.func @_QMfinit_cuda_modPtest_managed
+  ! CHECK: fir.zero_bits f32
+  ! CHECK: fir.store
+
 end module
+
+! Per-thread locals in an attributes(global) kernel are stack-allocated via
+! fir.alloca and run on the device; a plain fir.store in device code IS the
+! correct initialization. Verify that shouldInitLocal includes them.
+attributes(global) subroutine test_global_local()
+  integer :: n
+  n = 42
+end subroutine
+! CHECK-LABEL: func.func @{{.*}}test_global_local
+! CHECK: fir.zero_bits i32
+! CHECK: fir.store
