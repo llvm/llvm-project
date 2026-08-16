@@ -174,8 +174,29 @@ integer-literal ::= decimal-literal | hexadecimal-literal
 decimal-literal ::= digit+
 hexadecimal-literal ::= `0x` hex_digit+
 float-literal ::= [-+]?[0-9]+[.][0-9]*([eE][-+]?[0-9]+)?
+                | `0x` hex_digit+ (`.` hex_digit*)? [pP] [-+]? digit+
+                | float-special-literal
+float-special-literal ::= [-+] (`inf` | `qnan` | `s`? `nan` (`(` `0x` hex_digit+ `)`)?)
 string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO: define escaping rules
 ```
+
+Special floating point values are spelled with a mandatory sign: `+inf`/`-inf`
+for infinities, `+qnan`/`-qnan` for the preferred quiet NaN, and
+`+nan(0x..)`/`+snan(0x..)` for quiet/signaling NaNs with an explicit hexadecimal
+payload. A payload and the quiet/signaling distinction are only accepted for
+types whose NaN encoding supports them (the standard IEEE encoding). A type
+whose NaN carries no payload spells it as a plain `+nan`/`-nan`, and a type
+whose only NaN is negative accepts only `-nan`. The parser rejects a payload,
+an `snan`, or a positive NaN that the type's NaN encoding cannot represent,
+rather than silently re-encoding the value. Finite values may also be written
+as C-style hexadecimal floats (`0x1.8p3`). The `0x` bit-pattern form without a
+fractional part or exponent (e.g. `0x7F800000`) is instead interpreted as the
+raw bit pattern of the target type.
+
+The `--mlir-print-float-special-literals-as-hex` flag makes the printer emit infinities
+and NaNs as a `0x` bit pattern instead of the human-readable form. This restores
+the legacy output for backwards compatibility. The parser accepts both forms
+regardless of the flag.
 
 Not listed here, but MLIR does support comments. They use standard BCPL syntax,
 starting with a `//` and going until the end of the line.

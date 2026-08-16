@@ -177,7 +177,7 @@ func.func @struct_constant_identified() -> () {
 // -----
 
 func.func @coop_matrix_const_non_dense() -> () {
-    // expected-error @+2 {{floating point value not valid for specified type}}
+    // expected-error @below {{floating point value not valid for specified type}}
     %0 = spirv.Constant 0.000000e+00 : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
     return
 }

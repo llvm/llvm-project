@@ -332,7 +332,7 @@ func.func @div_op_with_rhs_has_nan_real() -> complex<f32> {
   %a = complex.constant [0x7fffffff : f32, 1.0 : f32]: complex<f32>
   %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
   %div = complex.div %a, %b : complex<f32>
-  // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [+nan(0x3FFFFF) : f32, +nan(0x3FFFFF) : f32] : complex<f32>
   // CHECK: return %[[DIV]] : complex<f32>
   return %div : complex<f32>
 }
@@ -342,7 +342,7 @@ func.func @div_op_with_rhs_has_nan_imag() -> complex<f32> {
   %a = complex.constant [1.0 : f32, 0x7fffffff : f32]: complex<f32>
   %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
   %div = complex.div %a, %b : complex<f32>
-  // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [+nan(0x3FFFFF) : f32, +nan(0x3FFFFF) : f32] : complex<f32>
   // CHECK: return %[[DIV]] : complex<f32>
   return %div : complex<f32>
 }
@@ -352,7 +352,7 @@ func.func @div_op_with_rhs_has_nan_real_imag() -> complex<f32> {
   %a = complex.constant [0x7fffffff : f32, 0x7fffffff : f32]: complex<f32>
   %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
   %div = complex.div %a, %b : complex<f32>
-  // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [+nan(0x3FFFFF) : f32, +nan(0x3FFFFF) : f32] : complex<f32>
   // CHECK: return %[[DIV]] : complex<f32>
   return %div : complex<f32>
 }

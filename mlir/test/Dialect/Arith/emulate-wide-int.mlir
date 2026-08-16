@@ -991,7 +991,7 @@ func.func @uitofp_i64_f64_vector(%a : vector<3xi64>) -> vector<3xf64> {
 // CHECK-NEXT:    [[HIEQ0:%.+]]  = arith.cmpi eq, [[HI]], [[CST0]] : i32
 // CHECK-NEXT:    [[LOWFP:%.+]]  = arith.uitofp [[LOW]] : i32 to f16
 // CHECK-NEXT:    [[HIFP:%.+]]   = arith.uitofp [[HI]] : i32 to f16
-// CHECK-NEXT:    [[POW:%.+]]    = arith.constant 0x7C00 : f16
+// CHECK-NEXT:    [[POW:%.+]]    = arith.constant +inf : f16
 // CHECK-NEXT:    [[RESHI:%.+]]  = arith.mulf [[HIFP]], [[POW]] : f16
 // CHECK-NEXT:    [[RES:%.+]]    = arith.addf [[LOWFP]], [[RESHI]] : f16
 // CHECK-NEXT:    [[SEL:%.+]]    = arith.select [[HIEQ0]], [[LOWFP]], [[RES]] : f16

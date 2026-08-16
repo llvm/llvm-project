@@ -6,8 +6,8 @@
 // CHECK-SAME: ([[V:%.+]]: f16)
 // CHECK-DAG: [[CMin:%.+]] = arith.constant -5.734400e+04 : f16
 // CHECK-DAG: [[CMax:%.+]] = arith.constant 5.734400e+04 : f16
-// CHECK-DAG: [[CInf:%.+]] = arith.constant 0x7C00 : f16
-// CHECK-DAG: [[CNegInf:%.+]] = arith.constant 0xFC00 : f16
+// CHECK-DAG: [[CInf:%.+]] = arith.constant +inf : f16
+// CHECK-DAG: [[CNegInf:%.+]] = arith.constant -inf : f16
 // CHECK: [[ISINF:%.+]] = arith.cmpf oeq, [[V]], [[CInf]]
 // CHECK: [[ISNEGINF:%.+]] = arith.cmpf oeq, [[V]], [[CNegInf]]
 // CHECK: [[ISNAN:%.+]] = arith.cmpf uno, [[V]], [[V]]
@@ -33,8 +33,8 @@ func.func @scalar_trunc(%v: f16) -> f8E5M2FNUZ {
 // CHECK-SAME: ([[V:%.+]]: vector<2xf32>) -> vector<2xf8E4M3FNUZ> {
 // CHECK-DAG: [[CMin:%.+]] = arith.constant dense<-2.400000e+02> : vector<2xf32>
 // CHECK-DAG: [[CMax:%.+]] = arith.constant dense<2.400000e+02> : vector<2xf32>
-// CHECK-DAG: [[CInf:%.+]] = arith.constant dense<0x7F800000> : vector<2xf32>
-// CHECK-DAG: [[CNegInf:%.+]] = arith.constant dense<0xFF800000> : vector<2xf32>
+// CHECK-DAG: [[CInf:%.+]] = arith.constant dense<+inf> : vector<2xf32>
+// CHECK-DAG: [[CNegInf:%.+]] = arith.constant dense<-inf> : vector<2xf32>
 // CHECK: [[ISINF:%.+]] = arith.cmpf oeq, [[V]], [[CInf]]
 // CHECK: [[ISNEGINF:%.+]] = arith.cmpf oeq, [[V]], [[CNegInf]]
 // CHECK: [[ISNAN:%.+]] = arith.cmpf uno, [[V]], [[V]]

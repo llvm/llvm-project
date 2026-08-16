@@ -117,7 +117,7 @@ func.func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 // CHECK: %[[LHS_CONTAINS_NOT_NAN_VALUE:.*]] = arith.ori %[[LHS_REAL_IS_NOT_NAN]], %[[LHS_IMAG_IS_NOT_NAN]] : i1
 // CHECK: %[[RHS_IS_ZERO:.*]] = arith.andi %[[RHS_REAL_ABS_IS_ZERO]], %[[RHS_IMAG_ABS_IS_ZERO]] : i1
 // CHECK: %[[RESULT_IS_INFINITY:.*]] = arith.andi %[[LHS_CONTAINS_NOT_NAN_VALUE]], %[[RHS_IS_ZERO]] : i1
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
 // CHECK: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = math.copysign %[[INF]], %[[RHS_REAL]] : f32
 // CHECK: %[[INFINITY_RESULT_REAL:.*]] = arith.mulf %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_REAL]] : f32
 // CHECK: %[[INFINITY_RESULT_IMAG:.*]] = arith.mulf %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_IMAG]] : f32
@@ -213,7 +213,7 @@ func.func @complex_exp(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
 // CHECK-DAG: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG: %[[HALF:.*]] = arith.constant 5.000000e-01 : f32
-// CHECK-DAG: %[[INF:.*]] = arith.constant 0x7F800000 : f32
+// CHECK-DAG: %[[INF:.*]] = arith.constant +inf : f32
 // CHECK-DAG: %[[EXP_REAL:.*]] = math.exp %[[REAL]] : f32
 // CHECK-DAG: %[[REAL_HALF:.*]] = arith.mulf %[[REAL]], %[[HALF]] : f32
 // CHECK-DAG: %[[EXP_HALF:.*]] = math.exp %[[REAL_HALF]] : f32
@@ -486,7 +486,7 @@ func.func @complex_tan(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[V0:.*]] = complex.im %[[ARG]] : complex<f32>
 // CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
 // CHECK: %[[REAL:.*]] = arith.mulf %[[V0]], %[[NEG_ONE]] : f32
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
 // CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] : f32
 // CHECK: %[[NEG_TWO_REAL:.*]] = arith.mulf %[[NEG_ONE]], %[[TWO_REAL]] : f32
@@ -508,7 +508,7 @@ func.func @complex_tan(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_IMAG:.*]] = arith.divf %[[IMAG_NUM]], %[[DENOM]] : f32
 // CHECK: %[[ABS_REAL:.*]] = math.absf %[[REAL]] : f32
 // CHECK: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK: %[[NAN:.*]] = arith.constant +qnan : f32
 // CHECK: %[[ABS_REAL_INF:.*]] = arith.cmpf oeq, %[[ABS_REAL]], %[[INF]] : f32
 // CHECK: %[[IMAG_ZERO:.*]] = arith.cmpf oeq, %[[IMAG]], %[[ZERO]] : f32
 // CHECK: %true = arith.constant true
@@ -534,7 +534,7 @@ func.func @complex_tanh(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
 // CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
 // CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
 // CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] : f32
 // CHECK: %[[NEG_TWO_REAL:.*]] = arith.mulf %[[NEG_ONE]], %[[TWO_REAL]] : f32
@@ -556,7 +556,7 @@ func.func @complex_tanh(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_IMAG:.*]] = arith.divf %[[IMAG_NUM]], %[[DENOM]] : f32
 // CHECK: %[[ABS_REAL:.*]] = math.absf %[[REAL]] : f32
 // CHECK: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK: %[[NAN:.*]] = arith.constant +qnan : f32
 // CHECK: %[[ABS_REAL_INF:.*]] = arith.cmpf oeq, %[[ABS_REAL]], %[[INF]] : f32
 // CHECK: %[[IMAG_ZERO:.*]] = arith.cmpf oeq, %[[IMAG]], %[[ZERO]] : f32
 // CHECK: %true = arith.constant true
@@ -605,9 +605,9 @@ func.func @complex_sqrt(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_RE:.*]] = arith.mulf %[[SQRT_ABS]], %[[COS]] : f32
 // CHECK: %[[RESULT_IM:.*]] = arith.mulf %[[SQRT_ABS]], %[[SIN]] : f32
 // CHECK: %[[RESULT_IM2:.*]] = arith.select %[[SIN_ZERO]], %[[ZERO]], %[[RESULT_IM]] : f32
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
-// CHECK: %[[NINF:.*]] = arith.constant 0xFF800000 : f32
-// CHECK: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
+// CHECK: %[[NINF:.*]] = arith.constant -inf : f32
+// CHECK: %[[NAN:.*]] = arith.constant +qnan : f32
 // CHECK: %[[ABSIM:.*]] = math.absf %[[IM]] : f32
 // CHECK: %[[ABSIMINF:.*]] = arith.cmpf oeq, %[[ABSIM]], %[[INF]] : f32
 // CHECK: %[[ABSIMNOTINF:.*]] = arith.cmpf one, %[[ABSIM]], %[[INF]] : f32
@@ -847,7 +847,7 @@ func.func @complex_exp_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
 // CHECK-DAG: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG: %[[HALF:.*]] = arith.constant 5.000000e-01 : f32
-// CHECK-DAG: %[[INF:.*]] = arith.constant 0x7F800000 : f32
+// CHECK-DAG: %[[INF:.*]] = arith.constant +inf : f32
 // CHECK-DAG: %[[EXP_REAL:.*]] = math.exp %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK-DAG: %[[REAL_HALF:.*]] = arith.mulf %[[REAL]], %[[HALF]] fastmath<nnan,contract> : f32
 // CHECK-DAG: %[[EXP_HALF:.*]] = math.exp %[[REAL_HALF]] fastmath<nnan,contract> : f32
@@ -1011,9 +1011,9 @@ func.func @complex_atan2_with_fmf(%lhs: complex<f32>,
 // CHECK: %[[RESULT_RE:.*]] = arith.mulf %[[SQRT_ABS]], %[[COS]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_IM:.*]] = arith.mulf %[[SQRT_ABS]], %[[SIN]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_IM2:.*]] = arith.select %[[SIN_ZERO]], %[[ZERO]], %[[RESULT_IM]] : f32
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
-// CHECK: %[[NINF:.*]] = arith.constant 0xFF800000 : f32
-// CHECK: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
+// CHECK: %[[NINF:.*]] = arith.constant -inf : f32
+// CHECK: %[[NAN:.*]] = arith.constant +qnan : f32
 // CHECK: %[[ABSIM:.*]] = math.absf %[[IM]] fastmath<nnan,contract> : f32
 // CHECK: %[[ABSIMINF:.*]] = arith.cmpf oeq, %[[ABSIM]], %[[INF]] fastmath<nnan,contract> : f32
 // CHECK: %[[ABSIMNOTINF:.*]] = arith.cmpf one, %[[ABSIM]], %[[INF]] fastmath<nnan,contract> : f32
@@ -1084,7 +1084,7 @@ func.func @complex_atan2_with_fmf(%lhs: complex<f32>,
 // CHECK: %[[VAR355:.*]] = arith.ori %[[VAR353]], %[[VAR354]] : i1
 // CHECK: %[[VAR356:.*]] = arith.andi %[[VAR350]], %[[VAR352]] : i1
 // CHECK: %[[VAR357:.*]] = arith.andi %[[VAR355]], %[[VAR356]] : i1
-// CHECK: %[[CST_17:.*]] = arith.constant 0x7F800000 : f32
+// CHECK: %[[CST_17:.*]] = arith.constant +inf : f32
 // CHECK: %[[VAR358:.*]] = math.copysign %[[CST_17]], %[[VAR329]] : f32
 // CHECK: %[[VAR359:.*]] = arith.mulf %[[VAR358]], %[[VAR327]] fastmath<nnan,contract> : f32
 // CHECK: %[[VAR360:.*]] = arith.mulf %[[VAR358]], %[[VAR328]] fastmath<nnan,contract> : f32
@@ -1221,7 +1221,7 @@ func.func @complex_div_with_fmf(%lhs: complex<f32>, %rhs: complex<f32>) -> compl
 // CHECK: %[[LHS_CONTAINS_NOT_NAN_VALUE:.*]] = arith.ori %[[LHS_REAL_IS_NOT_NAN]], %[[LHS_IMAG_IS_NOT_NAN]] : i1
 // CHECK: %[[RHS_IS_ZERO:.*]] = arith.andi %[[RHS_REAL_ABS_IS_ZERO]], %[[RHS_IMAG_ABS_IS_ZERO]] : i1
 // CHECK: %[[RESULT_IS_INFINITY:.*]] = arith.andi %[[LHS_CONTAINS_NOT_NAN_VALUE]], %[[RHS_IS_ZERO]] : i1
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
 // CHECK: %[[INF_WITH_SIGN_OF_RHS_REAL:.*]] = math.copysign %[[INF]], %[[RHS_REAL]] : f32
 // CHECK: %[[INFINITY_RESULT_REAL:.*]] = arith.mulf %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[INFINITY_RESULT_IMAG:.*]] = arith.mulf %[[INF_WITH_SIGN_OF_RHS_REAL]], %[[LHS_IMAG]] fastmath<nnan,contract> : f32
@@ -1323,9 +1323,9 @@ func.func @complex_sqrt_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_RE:.*]] = arith.mulf %[[SQRT_ABS]], %[[COS]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_IM:.*]] = arith.mulf %[[SQRT_ABS]], %[[SIN]] fastmath<nnan,contract> : f32
 // CHECK: %[[RESULT_IM2:.*]] = arith.select %[[SIN_ZERO]], %[[ZERO]], %[[RESULT_IM]] : f32
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
-// CHECK: %[[NINF:.*]] = arith.constant 0xFF800000 : f32
-// CHECK: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
+// CHECK: %[[NINF:.*]] = arith.constant -inf : f32
+// CHECK: %[[NAN:.*]] = arith.constant +qnan : f32
 // CHECK: %[[ABSIM:.*]] = math.absf %[[IM]] fastmath<nnan,contract> : f32
 // CHECK: %[[ABSIMINF:.*]] = arith.cmpf oeq, %[[ABSIM]], %[[INF]] fastmath<nnan,contract> : f32
 // CHECK: %[[ABSIMNOTINF:.*]] = arith.cmpf one, %[[ABSIM]], %[[INF]] fastmath<nnan,contract> : f32
@@ -1440,7 +1440,7 @@ func.func @complex_tan_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[V0:.*]] = complex.im %[[ARG]] : complex<f32>
 // CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
 // CHECK: %[[REAL:.*]] = arith.mulf %[[V0]], %cst fastmath<nnan,contract> : f32
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
 // CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[NEG_TWO_REAL:.*]] = arith.mulf %[[NEG_ONE]], %[[TWO_REAL]] fastmath<nnan,contract> : f32
@@ -1462,7 +1462,7 @@ func.func @complex_tan_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_IMAG:.*]] = arith.divf %[[IMAG_NUM]], %[[DENOM]] fastmath<nnan,contract> : f32
 // CHECK: %[[ABS_REAL:.*]] = math.absf %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK: %[[NAN:.*]] = arith.constant +qnan : f32
 // CHECK: %[[ABS_REAL_INF:.*]] = arith.cmpf oeq, %[[ABS_REAL]], %[[INF]] fastmath<nnan,contract> : f32
 // CHECK: %[[IMAG_ZERO:.*]] = arith.cmpf oeq, %[[IMAG]], %[[ZERO]] fastmath<nnan,contract> : f32
 // CHECK: %true = arith.constant true
@@ -1489,7 +1489,7 @@ func.func @complex_tanh_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
 // CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
 // CHECK: %[[NEG_ONE:.*]] = arith.constant -1.000000e+00 : f32
-// CHECK: %[[INF:.*]] = arith.constant 0x7F800000 : f32
+// CHECK: %[[INF:.*]] = arith.constant +inf : f32
 // CHECK: %[[FOUR:.*]] = arith.constant 4.000000e+00 : f32
 // CHECK: %[[TWO_REAL:.*]] = arith.addf %[[REAL]], %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[NEG_TWO_REAL:.*]] = arith.mulf %[[NEG_ONE]], %[[TWO_REAL]] fastmath<nnan,contract> : f32
@@ -1511,7 +1511,7 @@ func.func @complex_tanh_with_fmf(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT_IMAG:.*]] = arith.divf %[[IMAG_NUM]], %[[DENOM]] fastmath<nnan,contract> : f32
 // CHECK: %[[ABS_REAL:.*]] = math.absf %[[REAL]] fastmath<nnan,contract> : f32
 // CHECK: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK: %[[NAN:.*]] = arith.constant 0x7FC00000 : f32
+// CHECK: %[[NAN:.*]] = arith.constant +qnan : f32
 // CHECK: %[[ABS_REAL_INF:.*]] = arith.cmpf oeq, %[[ABS_REAL]], %[[INF]] fastmath<nnan,contract> : f32
 // CHECK: %[[IMAG_ZERO:.*]] = arith.cmpf oeq, %[[IMAG]], %[[ZERO]] fastmath<nnan,contract> : f32
 // CHECK: %true = arith.constant true

@@ -401,14 +401,9 @@ ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
                                           const llvm::fltSemantics &semantics) {
   // Check for a floating point value.
   if (tok.is(Token::floatliteral)) {
-    auto val = tok.getFloatingPointValue();
-    if (!val)
-      return emitError(tok.getLoc()) << "floating point value too large";
-
-    result.emplace(isNegative ? -*val : *val);
-    bool unused;
-    result->convert(semantics, APFloat::rmNearestTiesToEven, &unused);
-    return success();
+    result = tok.getFloatingPointValue(isNegative, semantics,
+                                       [&] { return emitError(tok.getLoc()); });
+    return failure(!result);
   }
 
   // Check for a hexadecimal float value.
