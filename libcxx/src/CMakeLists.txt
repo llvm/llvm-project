@@ -71,7 +71,7 @@ set(LIBCXX_SOURCES
 # entry into its own section; on some bare-metal targets the final link doesn't keep
 # these address-sorted, which breaks the binary-search unwind lookup. trace.cpp's
 # stack-walking code needs reliable unwind info, so exempt it.
-if (NOT CMAKE_CXX_COMPILER_ID MATCHES "XL")
+if (NOT MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "XL")
   set_source_files_properties(stacktrace/trace.cpp PROPERTIES
                                COMPILE_OPTIONS "-fno-function-sections;-fno-data-sections")
 endif()
