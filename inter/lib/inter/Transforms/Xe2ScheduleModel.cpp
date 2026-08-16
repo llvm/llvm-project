@@ -216,9 +216,7 @@ static void collectTokenCompletionUses(
 }
 
 static bool extendsPayloadToTokenCompletion(Operation *operation) {
-  return isa<SendOp, LoadA64Op, StoreA64Op, LoadSLMOp, StoreSLMOp,
-             AtomicIAddA64Op, LoadBlockA32Op, FenceSLMOp, BarrierSignalOp,
-             EotOp>(operation);
+  return isa<AsyncScoreboardOpInterface>(operation);
 }
 
 static PressureModel

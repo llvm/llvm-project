@@ -113,8 +113,9 @@ private:
         lowerSync(sync);
         continue;
       }
-      if (isa<LoadA64Op, StoreA64Op, LoadSLMOp, StoreSLMOp, AtomicIAddA64Op,
-              LoadBlockA32Op, FenceSLMOp, BarrierSignalOp, EotOp>(operation)) {
+      InstructionIssueOpInterface issue =
+          dyn_cast<InstructionIssueOpInterface>(&operation);
+      if (issue && issue.getInstructionKind() == MachineInstructionKind::send) {
         if (failed(lowerMessage(&operation)))
           return failure();
         continue;
@@ -475,24 +476,33 @@ private:
   LogicalResult lowerAlu(Operation *operation) {
     AluInstruction instruction;
     bool negateFirstSource = false;
-    if (isa<MovOp>(operation))
+    MachineInstructionKind instructionKind =
+        cast<InstructionIssueOpInterface>(operation).getInstructionKind();
+    if (instructionKind == MachineInstructionKind::mov)
       instruction.opcode = AluOpcode::mov;
-    else if (isa<AddOp>(operation))
+    else if (instructionKind == MachineInstructionKind::add)
       instruction.opcode = AluOpcode::add;
-    else if (isa<ShlOp>(operation))
+    else if (instructionKind == MachineInstructionKind::shl)
       instruction.opcode = AluOpcode::shl;
-    else if (isa<ShrOp>(operation))
+    else if (instructionKind == MachineInstructionKind::shr)
       instruction.opcode = AluOpcode::shr;
-    else if (isa<AndOp>(operation))
+    else if (instructionKind == MachineInstructionKind::and_)
       instruction.opcode = AluOpcode::and_;
-    else if (isa<OrOp>(operation))
+    else if (instructionKind == MachineInstructionKind::or_)
       instruction.opcode = AluOpcode::or_;
-    else if (isa<SubOp>(operation)) {
+    else if (instructionKind == MachineInstructionKind::sub) {
       instruction.opcode = AluOpcode::add;
       negateFirstSource = true;
-    } else if (isa<Add3Op>(operation))
+    } else if (instructionKind == MachineInstructionKind::add3)
       instruction.opcode = AluOpcode::add3;
-    else if (isa<MulOp>(operation))
+    else if (instructionKind == MachineInstructionKind::csel) {
+      CselOp csel = cast<CselOp>(operation);
+      instruction.opcode = AluOpcode::csel;
+      instruction.condition = csel.getCond();
+      instruction.flag =
+          getArfReference(cast<ARFType>(csel.getFlag().getType()), 0);
+      instruction.destinationSigned = csel.getSignedInt();
+    } else if (instructionKind == MachineInstructionKind::mul)
       instruction.opcode = AluOpcode::mul;
     else
       return operation->emitError("unsupported operation in Xe emitter");
@@ -529,11 +539,15 @@ private:
           getSourceOperand(operand, alu.getSourceSubregister(index), sourceType,
                            getSourceRegion(alu.getSourceRegion(index)));
       if (operand.getDefiningOp<ImmOp>() && !explicitType)
-        source.type = index == 1 && isa<ShlOp, ShrOp>(operation)
+        source.type = index == 1 &&
+                              (instructionKind == MachineInstructionKind::shl ||
+                               instructionKind == MachineInstructionKind::shr)
                           ? DataType::ud
                           : instruction.destinationType;
       source.negate = negateFirstSource && index == 0;
-      source.isSigned = index == 0 && operation->hasAttr("signedSource");
+      source.isSigned = instructionKind == MachineInstructionKind::csel
+                            ? cast<CselOp>(operation).getSignedInt()
+                            : index == 0 && operation->hasAttr("signedSource");
       instruction.sources.push_back(std::move(source));
     }
     instruction.swsb = getFinalSwsb(operation);

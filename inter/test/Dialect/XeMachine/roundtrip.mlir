@@ -18,6 +18,15 @@ func.func @kernel(%arg0: !xemachine.reg<32, -1>, %flag: !xemachine.arf<f, 2, -1>
   %add = xemachine.add %arg0, %imm {execSize = 32 : i32} : (!xemachine.reg<32, -1>, !xemachine.imm, i32) -> !xemachine.reg<32, -1>
   // CHECK: %[[MV:.*]] = xemachine.mov %[[ADD]] : (!xemachine.reg<32, -1>, i32) -> !xemachine.reg<32, -1>
   %mv = xemachine.mov %add : (!xemachine.reg<32, -1>, i32) -> !xemachine.reg<32, -1>
+  // CHECK: %[[CSEL:.*]], %[[CSEL_FLAG:.*]] = xemachine.csel eq %[[MV]], %[[MV]], %[[MV]] {execSize = 4 : i32, noMask, signedInt, src0Region = #xemachine.region<4, 4, 1>, src1Region = #xemachine.region<4, 4, 1>, src2Region = #xemachine.region<4, 4, 1>} : (!xemachine.reg<32, -1>, !xemachine.reg<32, -1>, !xemachine.reg<32, -1>, i16) -> (!xemachine.reg<32, -1>, !xemachine.arf<f, 2, 0>)
+  %csel, %csel_flag = xemachine.csel eq %mv, %mv, %mv {
+      execSize = 4 : i32, noMask, signedInt,
+      src0Region = #xemachine.region<4, 4, 1>,
+      src1Region = #xemachine.region<4, 4, 1>,
+      src2Region = #xemachine.region<4, 4, 1>}
+      : (!xemachine.reg<32, -1>, !xemachine.reg<32, -1>,
+         !xemachine.reg<32, -1>, i16)
+      -> (!xemachine.reg<32, -1>, !xemachine.arf<f, 2, 0>)
 
   // CHECK: xemachine.send ugm %[[MV]] dep %{{.*}} {desc = 2 : i32, exdesc = 3 : i32, sfid = 1 : i32} : (!xemachine.reg<32, -1>) -> (!xemachine.reg<32, -1>, !xemachine.mem.token)
   %t0 = xemachine.token

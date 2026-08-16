@@ -66,11 +66,10 @@ static unsigned getExecutionSize(Operation *operation) {
     return value.getInt();
   if (isa<FenceAwaitOp>(operation))
     return 8;
-  if (isa<LoadA64Op, StoreA64Op, LoadSLMOp, StoreSLMOp, AtomicIAddA64Op>(
-          operation))
-    return 32;
-  if (isa<SendOp, LoadBlockA32Op, FenceSLMOp, BarrierSignalOp, EotOp, SyncOp>(
-          operation))
+  MachineInstructionKind instructionKind =
+      cast<InstructionIssueOpInterface>(operation).getInstructionKind();
+  if (instructionKind == MachineInstructionKind::send ||
+      instructionKind == MachineInstructionKind::sync)
     return 1;
   return 16;
 }

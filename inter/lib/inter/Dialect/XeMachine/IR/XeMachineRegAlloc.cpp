@@ -146,8 +146,9 @@ static LogicalResult validateSendFootprint(SendOp send) {
 }
 
 static LogicalResult validateMessageFootprint(Operation *operation) {
-  if (!isa<LoadA64Op, StoreA64Op, LoadSLMOp, StoreSLMOp, AtomicIAddA64Op,
-           FenceSLMOp, BarrierSignalOp, EotOp, LoadBlockA32Op>(operation))
+  InstructionIssueOpInterface issue =
+      dyn_cast<InstructionIssueOpInterface>(operation);
+  if (!issue || issue.getInstructionKind() != MachineInstructionKind::send)
     return success();
 
   FailureOr<int64_t> source0 = getMessageGRFLength(
@@ -197,10 +198,9 @@ static LogicalResult validateAluFootprint(Operation *operation) {
     return validateSendFootprint(send);
   if (failed(validateMessageFootprint(operation)))
     return failure();
-  if (!isa<MovOp, AddOp, SubOp, ShlOp, ShrOp, AndOp, OrOp, Add3Op, MulOp,
-           CmpOp>(operation))
+  ALUOpInterface alu = dyn_cast<ALUOpInterface>(operation);
+  if (!alu)
     return success();
-  ALUOpInterface alu = cast<ALUOpInterface>(operation);
   Type elementType = alu.getInstructionElementType();
   int64_t executionSize = alu.getExecutionSize();
   if (executionSize <= 0)
@@ -391,9 +391,7 @@ static LogicalResult finalizeComponents(func::FuncOp function,
   };
 
   function.walk([&](Operation *operation) {
-    if (!isa<SendOp, LoadA64Op, StoreA64Op, LoadSLMOp, StoreSLMOp,
-             AtomicIAddA64Op, LoadBlockA32Op, FenceSLMOp, BarrierSignalOp,
-             EotOp>(operation))
+    if (!isa<AsyncScoreboardOpInterface>(operation))
       return;
     int64_t completion = state.positions.lookup(operation);
     for (Value result : operation->getResults()) {
@@ -592,7 +590,7 @@ static bool isRematerializable(Operation *operation) {
   if (llvm::any_of(operation->getOperandTypes(),
                    [](Type type) { return isa<ARFType>(type); }))
     return false;
-  return isa<MovOp, AddOp, SubOp, ShlOp, AndOp, OrOp, Add3Op>(operation);
+  return operation->hasTrait<OpTrait::xemachine::Rematerializable>();
 }
 
 static bool hasUseAtOrAfter(Value value, const AllocationState &state,

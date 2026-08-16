@@ -170,40 +170,45 @@ AsyncScoreboardKind DpasOp::getAsyncScoreboardKind() {
 }
 bool DpasOp::hasAsyncDestination() { return true; }
 
-DEFINE_ALU_COMMON(Add3Op)
-DEFINE_ALU_DESTINATION(Add3Op)
-RegionAttr Add3Op::getSourceRegion(unsigned index) {
-  if (index == 0)
-    return getSrc0RegionAttr();
-  if (index == 1)
-    return getSrc1RegionAttr();
-  return index == 2 ? getSrc2RegionAttr() : RegionAttr();
-}
-void Add3Op::setSourceRegion(unsigned index, RegionAttr region) {
-  if (index == 0)
-    setSrc0RegionAttr(region);
-  else if (index == 1)
-    setSrc1RegionAttr(region);
-  else if (index == 2)
-    setSrc2RegionAttr(region);
-}
-std::optional<Type> Add3Op::getExplicitSourceElementType(unsigned index) {
-  if (index == 0)
-    return getSrc0Type();
-  if (index == 1)
-    return getSrc1Type();
-  return index == 2 ? getSrc2Type() : std::nullopt;
-}
-int64_t Add3Op::getSourceSubregister(unsigned index) {
-  if (index == 0)
-    return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;
-  if (index == 1)
-    return getSrc1SubAttr() ? getSrc1SubAttr().getInt() : 0;
-  if (index == 2)
-    return getSrc2SubAttr() ? getSrc2SubAttr().getInt() : 0;
-  return 0;
-}
+#define DEFINE_TERNARY_ALU_INTERFACE(Op)                                       \
+  DEFINE_ALU_COMMON(Op)                                                        \
+  DEFINE_ALU_DESTINATION(Op)                                                   \
+  RegionAttr Op::getSourceRegion(unsigned index) {                             \
+    if (index == 0)                                                            \
+      return getSrc0RegionAttr();                                              \
+    if (index == 1)                                                            \
+      return getSrc1RegionAttr();                                              \
+    return index == 2 ? getSrc2RegionAttr() : RegionAttr();                    \
+  }                                                                            \
+  void Op::setSourceRegion(unsigned index, RegionAttr region) {                \
+    if (index == 0)                                                            \
+      setSrc0RegionAttr(region);                                               \
+    else if (index == 1)                                                       \
+      setSrc1RegionAttr(region);                                               \
+    else if (index == 2)                                                       \
+      setSrc2RegionAttr(region);                                               \
+  }                                                                            \
+  std::optional<Type> Op::getExplicitSourceElementType(unsigned index) {       \
+    if (index == 0)                                                            \
+      return getSrc0Type();                                                    \
+    if (index == 1)                                                            \
+      return getSrc1Type();                                                    \
+    return index == 2 ? getSrc2Type() : std::nullopt;                          \
+  }                                                                            \
+  int64_t Op::getSourceSubregister(unsigned index) {                           \
+    if (index == 0)                                                            \
+      return getSrc0SubAttr() ? getSrc0SubAttr().getInt() : 0;                 \
+    if (index == 1)                                                            \
+      return getSrc1SubAttr() ? getSrc1SubAttr().getInt() : 0;                 \
+    if (index == 2)                                                            \
+      return getSrc2SubAttr() ? getSrc2SubAttr().getInt() : 0;                 \
+    return 0;                                                                  \
+  }
+
+DEFINE_TERNARY_ALU_INTERFACE(Add3Op)
+DEFINE_TERNARY_ALU_INTERFACE(CselOp)
 DEFINE_SWSB_INTERFACE(Add3Op)
+DEFINE_SWSB_INTERFACE(CselOp)
 
 DEFINE_ALU_COMMON(CmpOp)
 DstRegionAttr CmpOp::getDestinationRegion() { return {}; }
@@ -237,6 +242,7 @@ int64_t CmpOp::getSourceSubregister(unsigned index) {
 
 #undef DEFINE_UNARY_ALU_INTERFACE
 #undef DEFINE_BINARY_ALU_INTERFACE
+#undef DEFINE_TERNARY_ALU_INTERFACE
 #undef DEFINE_SOURCE_SUBREGISTER
 #undef DEFINE_ALU_DESTINATION
 #undef DEFINE_ALU_COMMON

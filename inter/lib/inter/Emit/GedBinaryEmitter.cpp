@@ -122,6 +122,8 @@ private:
       return GED_OPCODE_or;
     case AluOpcode::add3:
       return GED_OPCODE_add3;
+    case AluOpcode::csel:
+      return GED_OPCODE_csel;
     case AluOpcode::mul:
       return GED_OPCODE_mul;
     }
@@ -142,6 +144,24 @@ private:
       return GED_DATA_TYPE_f;
     }
     llvm_unreachable("unknown data type");
+  }
+
+  static GED_DATA_TYPE getDataType(DataType type, bool isSigned) {
+    if (!isSigned)
+      return getDataType(type);
+    switch (type) {
+    case DataType::ub:
+      return GED_DATA_TYPE_b;
+    case DataType::uw:
+      return GED_DATA_TYPE_w;
+    case DataType::ud:
+      return GED_DATA_TYPE_d;
+    case DataType::q:
+      return GED_DATA_TYPE_q;
+    case DataType::f:
+      return GED_DATA_TYPE_f;
+    }
+    llvm_unreachable("unknown signed data type");
   }
 
   static uint32_t getTypeBytes(DataType type) {
@@ -379,8 +399,7 @@ private:
 
   LogicalResult setBasicSource(ged_ins_t &instruction, uint32_t index,
                                const SourceOperand &source) {
-    GED_DATA_TYPE type =
-        source.isSigned ? GED_DATA_TYPE_d : getDataType(source.type);
+    GED_DATA_TYPE type = getDataType(source.type, source.isSigned);
     if (const auto *immediate = std::get_if<Immediate>(&source.value)) {
       GED_DATA_TYPE immediateType = type;
       if (index == 0) {
@@ -503,8 +522,7 @@ private:
     uint32_t subRegister;
     if (failed(getRegister(reference, source.type, file, number, subRegister)))
       return failure();
-    GED_DATA_TYPE type =
-        source.isSigned ? GED_DATA_TYPE_d : getDataType(source.type);
+    GED_DATA_TYPE type = getDataType(source.type, source.isSigned);
     GED_SRC_MOD modifier =
         source.negate ? GED_SRC_MOD_Negative : GED_SRC_MOD_Normal;
     if (index == 0) {
@@ -557,9 +575,12 @@ private:
       RETURN_IF_GED_ERROR(
           GED_SetCondModifier(&instruction, GED_COND_MODIFIER_Normal));
 
-    if (value.opcode == AluOpcode::add3) {
+    bool ternary =
+        value.opcode == AluOpcode::add3 || value.opcode == AluOpcode::csel;
+    if (ternary) {
       if (value.sources.size() != 3 || !value.destination) {
-        moduleOp.emitError("add3 requires one destination and three sources");
+        moduleOp.emitError("ternary ALU instruction requires one destination "
+                           "and three sources");
         return failure();
       }
       GED_EXECUTION_DATA_TYPE executionType =
@@ -576,8 +597,9 @@ private:
                              file, number, subRegister)))
         return failure();
       RETURN_IF_GED_ERROR(GED_SetSaturate(&instruction, GED_SATURATE_Normal));
-      RETURN_IF_GED_ERROR(
-          GED_SetDstDataType(&instruction, getDataType(value.destinationType)));
+      RETURN_IF_GED_ERROR(GED_SetDstDataType(
+          &instruction,
+          getDataType(value.destinationType, value.destinationSigned)));
       RETURN_IF_GED_ERROR(GED_SetDstRegFile(&instruction, file));
       RETURN_IF_GED_ERROR(GED_SetDstRegNum(&instruction, number));
       RETURN_IF_GED_ERROR(GED_SetDstSubRegNum(&instruction, subRegister));
@@ -586,6 +608,18 @@ private:
       for (auto [index, source] : llvm::enumerate(value.sources))
         if (failed(setTernarySource(instruction, index, source)))
           return failure();
+      if (value.opcode == AluOpcode::csel) {
+        if (!value.condition || !value.flag || value.flag->file != ARFFile::f) {
+          moduleOp.emitError("csel requires a condition and flag destination");
+          return failure();
+        }
+        RETURN_IF_GED_ERROR(
+            GED_SetCondModifier(&instruction, getCondition(*value.condition)));
+        RETURN_IF_GED_ERROR(
+            GED_SetFlagRegNum(&instruction, value.flag->number));
+        RETURN_IF_GED_ERROR(
+            GED_SetFlagSubRegNum(&instruction, value.flag->sub));
+      }
     } else {
       uint32_t expectedSources = value.opcode == AluOpcode::mov ? 1 : 2;
       if (value.sources.size() != expectedSources) {

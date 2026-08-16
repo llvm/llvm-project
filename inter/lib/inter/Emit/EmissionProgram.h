@@ -16,7 +16,7 @@ namespace inter::detail {
 
 enum class DataType { ub, uw, ud, q, f };
 
-enum class AluOpcode { mov, add, shl, shr, and_, or_, add3, mul };
+enum class AluOpcode { mov, add, shl, shr, and_, or_, add3, csel, mul };
 
 struct ExecutionInfo {
   uint32_t size = 1;
@@ -82,7 +82,10 @@ struct AluInstruction {
   ExecutionInfo execution;
   std::optional<Destination> destination;
   DataType destinationType = DataType::ud;
+  bool destinationSigned = false;
   llvm::SmallVector<SourceOperand, 3> sources;
+  std::optional<xemachine::CondModifier> condition;
+  std::optional<ArfReference> flag;
   SwsbInfo swsb;
 };
 

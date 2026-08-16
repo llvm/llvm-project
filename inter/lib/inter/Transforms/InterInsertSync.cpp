@@ -1198,7 +1198,8 @@ static SmallVector<RegisterSpan, 4> getALUDestinationSpans(Operation *operation,
       getRegisterSpan(operation->getResult(0));
   if (!storage)
     return {};
-  if (isa<CmpOp>(operation))
+  if (cast<InstructionIssueOpInterface>(operation).getInstructionKind() ==
+      MachineInstructionKind::cmp)
     return {*storage};
 
   std::optional<int64_t> elementBytes =

@@ -46,6 +46,14 @@ module {
     %cmp = xemachine.cmp gt %r2, %r2 {execSize = 16 : i32}
         : (!xemachine.reg<32, 2>, !xemachine.reg<32, 2>, i32)
         -> !xemachine.arf<f, 2, 0>
+    %csel, %csel_flag = xemachine.csel eq %r0, %r0, %r0 {
+        execSize = 4 : i32, noMask, signedInt,
+        src0Region = #xemachine.region<4, 4, 1>,
+        src1Region = #xemachine.region<4, 4, 1>,
+        src2Region = #xemachine.region<4, 4, 1>}
+        : (!xemachine.reg<16, 0>, !xemachine.reg<16, 0>,
+           !xemachine.reg<16, 0>, i16)
+        -> (!xemachine.reg<16, -1>, !xemachine.arf<f, 2, 1>)
     %a0 = xemachine.and %r0, %one {dstRegion = #xemachine.dstregion<1>,
         dstSub = 2 : i32, execSize = 1 : i32, noMask,
         src0Region = #xemachine.region<0, 1, 0>}
@@ -141,6 +149,7 @@ module {
 // CHECK: xemachine.mul class=accumulator-arithmetic pipe=integer latency=6 occupancy=1 raw-gap=6 war-gap=2 order-gap=1
 // CHECK: xemachine.mul class=arithmetic pipe=integer latency=10 occupancy=1 raw-gap=10 war-gap=2 order-gap=1
 // CHECK: xemachine.cmp class=arf-write pipe=integer latency=16 occupancy=2 raw-gap=16 war-gap=2 order-gap=2
+// CHECK: xemachine.csel class=arf-write pipe=integer latency=16 occupancy=1 raw-gap=16 war-gap=2 order-gap=1
 // CHECK: xemachine.and class=arf-write pipe=integer latency=16 occupancy=1 raw-gap=16 war-gap=2 order-gap=1
 // CHECK: xemachine.dpas class=systolic pipe=systolic latency=22 occupancy=2 raw-gap=22 war-gap=2 order-gap=2
 // CHECK: xemachine.dpas class=systolic pipe=systolic latency=23 occupancy=2 raw-gap=23 war-gap=2 order-gap=2

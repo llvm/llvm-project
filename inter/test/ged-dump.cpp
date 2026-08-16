@@ -25,6 +25,8 @@ static const char *getOpcodeName(GED_OPCODE opcode) {
     return "or";
   case GED_OPCODE_add3:
     return "add3";
+  case GED_OPCODE_csel:
+    return "csel";
   case GED_OPCODE_mul:
     return "mul";
   case GED_OPCODE_dpas:
@@ -93,8 +95,12 @@ static const char *getDataTypeName(GED_DATA_TYPE type) {
   switch (type) {
   case GED_DATA_TYPE_ub:
     return "ub";
+  case GED_DATA_TYPE_b:
+    return "b";
   case GED_DATA_TYPE_uw:
     return "uw";
+  case GED_DATA_TYPE_w:
+    return "w";
   case GED_DATA_TYPE_ud:
     return "ud";
   case GED_DATA_TYPE_d:
@@ -354,7 +360,7 @@ int main(int argc, char **argv) {
       std::cout << " inverse=" << (inverse == GED_PRED_INV_Invert)
                 << " flag=" << flag << "." << sub;
     }
-    if (opcode == GED_OPCODE_cmp) {
+    if (opcode == GED_OPCODE_cmp || opcode == GED_OPCODE_csel) {
       GED_COND_MODIFIER condition = getField<GED_COND_MODIFIER>(
           GED_GetCondModifier, instruction, "CondModifier");
       uint32_t flag =
@@ -398,8 +404,8 @@ int main(int argc, char **argv) {
     } else if (opcode == GED_OPCODE_mov || opcode == GED_OPCODE_add ||
                opcode == GED_OPCODE_shl || opcode == GED_OPCODE_shr ||
                opcode == GED_OPCODE_and || opcode == GED_OPCODE_or ||
-               opcode == GED_OPCODE_add3 || opcode == GED_OPCODE_mul ||
-               opcode == GED_OPCODE_cmp) {
+               opcode == GED_OPCODE_add3 || opcode == GED_OPCODE_csel ||
+               opcode == GED_OPCODE_mul || opcode == GED_OPCODE_cmp) {
       GED_REG_FILE destinationFile =
           getField<GED_REG_FILE>(GED_GetDstRegFile, instruction, "DstRegFile");
       GED_DATA_TYPE destinationType = getField<GED_DATA_TYPE>(
@@ -414,7 +420,7 @@ int main(int argc, char **argv) {
                 << "." << destinationSub << ":"
                 << getDataTypeName(destinationType) << "<" << destinationStride
                 << ">";
-      bool ternary = opcode == GED_OPCODE_add3;
+      bool ternary = opcode == GED_OPCODE_add3 || opcode == GED_OPCODE_csel;
       printSource(instruction, 0, ternary);
       if (opcode != GED_OPCODE_mov)
         printSource(instruction, 1, ternary);

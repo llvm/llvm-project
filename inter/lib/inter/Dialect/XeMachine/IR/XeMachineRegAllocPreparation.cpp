@@ -34,7 +34,8 @@ static void legalizeWideImmediates(func::FuncOp function) {
   function.walk([&](Operation *operation) {
     auto alu = dyn_cast<ALUOpInterface>(operation);
     if (!alu || !alu.getInstructionElementType().isInteger(64) ||
-        isa<MovOp>(operation))
+        cast<InstructionIssueOpInterface>(operation).getInstructionKind() ==
+            MachineInstructionKind::mov)
       return;
     for (OpOperand &operand : operation->getOpOperands())
       if (operand.get().getDefiningOp<ImmOp>())

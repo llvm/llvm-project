@@ -43,6 +43,8 @@ def XeMachine_CompletionFree
     : NativeOpTrait<"xemachine::CompletionFree">;
 def XeMachine_FullScoreboardDrain
     : NativeOpTrait<"xemachine::FullScoreboardDrain">;
+def XeMachine_Rematerializable
+    : NativeOpTrait<"xemachine::Rematerializable">;
 
 // SSA immediate. Element type rides on the op: immediates are untyped in the
 // encoding, typed by the consuming instruction.
@@ -76,7 +78,8 @@ class XeMachine_SWSBFields {
 }
 
 def XeMachine_MovOp : XeMachine_ALUOp<"mov", [
-    DeclareOpInterfaceMethods<ConditionallySpeculatable>]>, XeMachine_SWSBFields {
+    DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+    XeMachine_Rematerializable]>, XeMachine_SWSBFields {
   let summary = "register/immediate move";
   let arguments = !con((ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
@@ -94,8 +97,9 @@ def XeMachine_MovOp : XeMachine_ALUOp<"mov", [
 }
 
 class XeMachine_BinOp<string mnemonic, string instructionKind,
-                      string issueClass = "arithmetic"> :
-    XeMachine_ALUOp<mnemonic, [], issueClass, instructionKind>,
+                       string issueClass = "arithmetic",
+                       list<Trait> traits = []> :
+    XeMachine_ALUOp<mnemonic, traits, issueClass, instructionKind>,
     XeMachine_SWSBFields {
   let arguments = !con((ins TypeAttr:$elemType,
                        DefaultValuedAttr<I32Attr, "16">:$execSize,
@@ -115,25 +119,31 @@ class XeMachine_BinOp<string mnemonic, string instructionKind,
       "$src0 `,` $src1 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` $elemType `)` `->` qualified(type($dst))";
 }
 
-def XeMachine_AddOp : XeMachine_BinOp<"add", "add"> { let summary = "add"; }
-def XeMachine_ShlOp : XeMachine_BinOp<"shl", "shl"> { let summary = "shift left"; }
+def XeMachine_AddOp : XeMachine_BinOp<"add", "add", "arithmetic",
+    [XeMachine_Rematerializable]> { let summary = "add"; }
+def XeMachine_ShlOp : XeMachine_BinOp<"shl", "shl", "arithmetic",
+    [XeMachine_Rematerializable]> { let summary = "shift left"; }
 def XeMachine_ShrOp : XeMachine_BinOp<"shr", "shr"> {
   let summary = "logical shift right";
 }
-def XeMachine_AndOp : XeMachine_BinOp<"and", "and_", "moveOrLogic"> {
+def XeMachine_AndOp : XeMachine_BinOp<"and", "and_", "moveOrLogic",
+    [XeMachine_Rematerializable]> {
   let summary = "bitwise and";
 }
-def XeMachine_OrOp : XeMachine_BinOp<"or", "or_", "moveOrLogic"> {
+def XeMachine_OrOp : XeMachine_BinOp<"or", "or_", "moveOrLogic",
+    [XeMachine_Rematerializable]> {
   let summary = "bitwise or";
 }
 
 // EU sub is add with a negated first source; the emitter prints the add
 // mnemonic with a negated src0.
-def XeMachine_SubOp : XeMachine_BinOp<"sub", "add"> {
+def XeMachine_SubOp : XeMachine_BinOp<"sub", "sub", "arithmetic",
+    [XeMachine_Rematerializable]> {
   let summary = "sub: add(-s0, s1)";
 }
 
-def XeMachine_Add3Op : XeMachine_ALUOp<"add3", [], "arithmetic", "add3">,
+def XeMachine_Add3Op : XeMachine_ALUOp<"add3", [XeMachine_Rematerializable],
+    "arithmetic", "add3">,
     XeMachine_SWSBFields {
   let summary = "three-input add";
   let arguments = !con((ins TypeAttr:$elemType,
@@ -156,6 +166,33 @@ def XeMachine_Add3Op : XeMachine_ALUOp<"add3", [], "arithmetic", "add3">,
   let results = (outs XeMachine_RegType:$dst);
   let assemblyFormat =
       "$src0 `,` $src1 `,` $src2 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` qualified(type($src2)) `,` $elemType `)` `->` qualified(type($dst))";
+}
+
+def XeMachine_CselOp : XeMachine_ALUOp<"csel", [], "arithmetic", "csel">,
+    XeMachine_SWSBFields {
+  let summary = "conditional select and compare into a flag register";
+  let arguments = !con((ins XeMachine_CondModifier:$cond,
+                       TypeAttr:$elemType,
+                       DefaultValuedAttr<I32Attr, "16">:$execSize,
+                       OptionalAttr<XeMachine_DstRegionAttr>:$dstRegion,
+                       OptionalAttr<XeMachine_RegionAttr>:$src0Region,
+                       OptionalAttr<XeMachine_RegionAttr>:$src1Region,
+                       OptionalAttr<XeMachine_RegionAttr>:$src2Region,
+                       OptionalAttr<I32Attr>:$dstSub,
+                       OptionalAttr<I32Attr>:$src0Sub,
+                       OptionalAttr<I32Attr>:$src1Sub,
+                       OptionalAttr<I32Attr>:$src2Sub,
+                       OptionalAttr<TypeAttr>:$src0Type,
+                       OptionalAttr<TypeAttr>:$src1Type,
+                       OptionalAttr<TypeAttr>:$src2Type,
+                       UnitAttr:$signedInt,
+                       UnitAttr:$noMask,
+                       DefaultValuedAttr<I32Attr, "0">:$maskOffset,
+                       XeMachine_RegOrImm:$src0, XeMachine_RegOrImm:$src1,
+                       XeMachine_RegOrImm:$src2), swsbFields);
+  let results = (outs XeMachine_RegType:$dst, XeMachine_ARFType:$flag);
+  let assemblyFormat =
+      "$cond $src0 `,` $src1 `,` $src2 attr-dict `:` `(` qualified(type($src0)) `,` qualified(type($src1)) `,` qualified(type($src2)) `,` $elemType `)` `->` `(` qualified(type($dst)) `,` qualified(type($flag)) `)`";
 }
 
 // Shared-function message. Null destination is a reg with widthDwords = 0

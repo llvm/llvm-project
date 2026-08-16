@@ -21,6 +21,10 @@ template <typename ConcreteType>
 class FullScoreboardDrain
     : public mlir::OpTrait::TraitBase<ConcreteType, FullScoreboardDrain> {};
 
+template <typename ConcreteType>
+class Rematerializable
+    : public mlir::OpTrait::TraitBase<ConcreteType, Rematerializable> {};
+
 } // namespace mlir::OpTrait::xemachine
 
 #endif // INTER_DIALECT_XEMACHINE_IR_XEMACHINETRAITS_H

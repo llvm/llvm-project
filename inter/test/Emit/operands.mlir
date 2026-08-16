@@ -24,5 +24,26 @@ func.func @k() attributes {xemachine.target = #xemachine.target<chip = "bmg">} {
   %bytes = xemachine.archreg 12 : !xemachine.reg<32, 12>
   // CHECK-NEXT: pc=112 opcode=mov exec=16 swsb=0x0 {{.*}}src0=grf12.16:ub
   %byte = xemachine.mov %bytes {src0Sub = 16 : i32, src0Type = i8} : (!xemachine.reg<32, 12>, i8) -> !xemachine.reg<16, 14>
+
+  %r0 = xemachine.archreg 0 : !xemachine.reg<16, 0>
+  // CHECK-NEXT: pc=128 opcode=csel exec=4 swsb=0x0 {{.*}}condition=eq flag=0.0 {{.*}}dst=grf15.0:w<1> src0=grf0.0:w<4;1> src1=grf0.0:w<4;1> src2=grf0.0:w<0;1>
+  %csel, %csel_flag = xemachine.csel eq %r0, %r0, %r0 {
+      execSize = 4 : i32, noMask, signedInt,
+      src0Region = #xemachine.region<4, 4, 1>,
+      src1Region = #xemachine.region<4, 4, 1>,
+      src2Region = #xemachine.region<4, 4, 1>}
+      : (!xemachine.reg<16, 0>, !xemachine.reg<16, 0>,
+         !xemachine.reg<16, 0>, i16)
+      -> (!xemachine.reg<16, 15>, !xemachine.arf<f, 2, 0>)
+
+  // CHECK-NEXT: pc=144 opcode=csel exec=4 swsb=0x0 {{.*}}condition=eq flag=1.0 {{.*}}dst=grf16.16:f<1> src0=grf0.16:f<4;1> src1=grf0.16:f<4;1> src2=grf0.16:f<0;1>
+  %csel_f, %csel_f_flag = xemachine.csel eq %r0, %r0, %r0 {
+      dstSub = 4 : i32, execSize = 4 : i32, noMask,
+      src0Region = #xemachine.region<4, 4, 1>, src0Sub = 4 : i32,
+      src1Region = #xemachine.region<4, 4, 1>, src1Sub = 4 : i32,
+      src2Region = #xemachine.region<4, 4, 1>, src2Sub = 4 : i32}
+      : (!xemachine.reg<16, 0>, !xemachine.reg<16, 0>,
+         !xemachine.reg<16, 0>, f32)
+      -> (!xemachine.reg<16, 16>, !xemachine.arf<f, 2, 1>)
   return
 }
