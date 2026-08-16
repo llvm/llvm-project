@@ -36,7 +36,7 @@ def TileReducer_TileType : TileReducer_Type<"Tile", "tile"> {
       return $_get(elementType.getContext(), shape, elementType);
     }]>
   ];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` custom<TRShape>($shape, $elementType) `>`";
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{
     int64_t getRank() const { return static_cast<int64_t>(getShape().size()); }
@@ -68,7 +68,7 @@ def TileReducer_BufferType : TileReducer_Type<"Buffer", "buffer"> {
       return $_get(elementType.getContext(), shape, elementType, dimNames);
     }]>
   ];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` custom<TRBufferShape>($shape, $elementType, $dimNames) `>`";
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{
     int64_t getRank() const { return static_cast<int64_t>(getShape().size()); }

@@ -13,4 +13,7 @@ add_mlir_dialect_library(MLIRTileReducer
         MLIRIR
         MLIRSupport
         MLIRAsmParser
+        MLIRControlFlowInterfaces
+        MLIRInferTypeOpInterface
+        MLIRSideEffectInterfaces
         )
