@@ -3133,8 +3133,8 @@ void ItaniumCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
   // destructors which we can handle directly in the runtime. Note that this is
   // not strictly 1-to-1 with using `atexit` because we no longer tear down
   // globals in reverse order of when they were constructed.
-  if (!CGM.getLangOpts().hasAtExit() && !D.isStaticLocal())
-    return CGF.registerGlobalDtorWithLLVM(D, dtor, addr);
+  // if (!CGM.getLangOpts().hasAtExit() && !D.isStaticLocal())
+  //   return CGF.registerGlobalDtorWithLLVM(D, dtor, addr);
 
   // If '-fno-use-cxa-atexit' and '-fno-register-global-dtors-with-atexit' are also sepcified,
   // this means the user does not want any invocation to __cxa_atexit or atexit,
@@ -3142,10 +3142,11 @@ void ItaniumCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
   // which should not be supported by this case.
   // As we investigated, ELF has its .fini_array section to support the global destructors.
   // So we can safely apply this to ELF.
-  if (CGM.getTarget().getTriple().isOSBinFormatELF() &&
-    !CGM.getCodeGenOpts().CXAAtExit &&
-    !CGM.getCodeGenOpts().RegisterGlobalDtorsWithAtExit &&
-    !D.isStaticLocal() && !D.getTLSKind())
+  if (!CGM.getLangOpts().hasAtExit() && !D.isStaticLocal() &&
+      CGM.getTarget().getTriple().isOSBinFormatELF() &&
+      !CGM.getCodeGenOpts().CXAAtExit &&
+      !CGM.getCodeGenOpts().RegisterGlobalDtorsWithAtExit &&
+      !D.isStaticLocal() && !D.getTLSKind())
     return CGF.registerGlobalDtorWithLLVM(D, dtor, addr);
 
   // emitGlobalDtorWithCXAAtExit will emit a call to either __cxa_thread_atexit
