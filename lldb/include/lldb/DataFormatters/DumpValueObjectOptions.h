@@ -125,6 +125,8 @@ public:
 
   DumpValueObjectOptions &SetRevealEmptyAggregates(bool reveal = true);
 
+  DumpValueObjectOptions &SetPrintBraces(bool print = true);
+
   DumpValueObjectOptions &SetExpandPointerTypeFlags(unsigned flags);
 
   DumpValueObjectOptions &SetElementCount(uint32_t element_count = 0);
@@ -162,6 +164,7 @@ public:
   bool m_allow_oneliner_mode : 1;
   bool m_hide_pointer_value : 1;
   bool m_reveal_empty_aggregates : 1;
+  bool m_print_braces : 1;
 };
 
 } // namespace lldb_private

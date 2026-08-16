@@ -583,12 +583,16 @@ void ValueObjectPrinter::PrintChildrenPreamble(bool value_printed,
       m_stream->EOL();
   } else {
     if (ShouldPrintValueObject()) {
-      if (IsRef()) {
-        m_stream->PutCString(": ");
-      } else if (value_printed || summary_printed || ShouldShowName()) {
-        m_stream->PutChar(' ');
+      if (m_options.m_print_braces) {
+        if (IsRef()) {
+          m_stream->PutCString(": ");
+        } else if (value_printed || summary_printed || ShouldShowName()) {
+          m_stream->PutChar(' ');
+        }
+
+        m_stream->PutChar('{');
       }
-      m_stream->PutCString("{\n");
+      m_stream->EOL();
     }
     m_stream->IndentMore();
   }
@@ -667,7 +671,8 @@ void ValueObjectPrinter::PrintChildrenPostamble(bool print_dotdotdot) {
       m_stream->Indent("...\n");
     }
     m_stream->IndentLess();
-    m_stream->Indent("}\n");
+    if (m_options.m_print_braces)
+      m_stream->Indent("}\n");
   }
 }
 
