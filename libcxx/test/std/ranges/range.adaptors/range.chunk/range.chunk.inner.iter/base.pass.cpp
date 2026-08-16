@@ -17,17 +17,24 @@
 #include <concepts>
 #include <iterator>
 #include <ranges>
+#include <vector>
 
-#include "../types.h"
+#include "test_iterators.h"
 
 constexpr bool test() {
-  int buffer[] = {1, 2, 3, 4};
-
-  std::ranges::chunk_view<input_span<int>> chunked(input_span<int>(buffer, 4), 2);
+  // Test `constexpr const iterator_t<V> base() const&`
+  std::vector<int> vector = {1, 2, 3, 4};
+  std::ranges::chunk_view<
+      std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+      chunked(
+          std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+              cpp17_input_iterator<int*>(vector.data()),
+              sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))),
+          2);
   auto outer = chunked.begin();
   auto inner = (*outer).begin();
 
-  std::same_as<const std::ranges::iterator_t<input_span<int>>> decltype(auto) base = inner.base();
+  std::same_as<const cpp17_input_iterator<int*>> decltype(auto) base = inner.base();
   assert(*base == 1);
 
   ++inner;
