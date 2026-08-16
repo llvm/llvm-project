@@ -12,7 +12,9 @@
 // template<container-compatible-range<T> R>
 //   void push_range(R&& rg); // C++23
 
+#include <list>
 #include <stack>
+#include <vector>
 
 #include "../../push_range_container_adaptors.h"
 #include "test_macros.h"
@@ -20,6 +22,9 @@
 int main(int, char**) {
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
     test_push_range<std::stack<int, std::deque<int, Alloc>>, Iter, Sent>();
+    // Also cover other valid underlying containers, including a non-random-access one.
+    test_push_range<std::stack<int, std::vector<int, Alloc>>, Iter, Sent>();
+    test_push_range<std::stack<int, std::list<int, Alloc>>, Iter, Sent>();
   });
   test_push_range_move_only<std::stack>();
   test_push_range_inserter_choice<std::stack, int>();

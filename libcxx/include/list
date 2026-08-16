@@ -1710,7 +1710,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void list<_Tp, _Alloc>::reverse() _NOEXCEPT {
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 bool list<_Tp, _Alloc>::__invariants() const {
-  return size() == std::distance(begin(), end());
+  return size() == static_cast<size_type>(std::distance(begin(), end()));
 }
 
 template <class _Tp, class _Alloc>

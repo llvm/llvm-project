@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+#include <list>
 #include <queue>
 
 #include "../../from_range_container_adaptors.h"
@@ -20,6 +21,8 @@
 int main(int, char**) {
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
     test_container_adaptor<std::queue, std::deque, int, Iter, Sent, Alloc>();
+    // Also cover a non-random-access (forward-iterator-only) underlying container.
+    test_container_adaptor<std::queue, std::list, int, Iter, Sent, Alloc>();
   });
   test_container_adaptor_move_only<std::queue>();
 

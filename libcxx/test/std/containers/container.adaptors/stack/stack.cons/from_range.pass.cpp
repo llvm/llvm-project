@@ -8,7 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+#include <list>
 #include <stack>
+#include <vector>
 
 #include "../../from_range_container_adaptors.h"
 #include "test_macros.h"
@@ -20,6 +22,9 @@
 int main(int, char**) {
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
     test_container_adaptor<std::stack, std::deque, int, Iter, Sent, Alloc>();
+    // Also cover other valid underlying containers, including a non-random-access one.
+    test_container_adaptor<std::stack, std::vector, int, Iter, Sent, Alloc>();
+    test_container_adaptor<std::stack, std::list, int, Iter, Sent, Alloc>();
   });
   test_container_adaptor_move_only<std::stack>();
 

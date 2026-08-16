@@ -18,10 +18,10 @@
 
 int main(int, char**) {
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_push_range<std::priority_queue<int, std::vector<int, Alloc>>, Iter, Sent>(/*is_result_heapified=*/true);
+    test_push_range<std::priority_queue<int, std::vector<int, Alloc>>, Iter, Sent, /*IsResultHeapified=*/true>();
   });
   test_push_range_move_only<std::priority_queue>();
-  test_push_range_inserter_choice<std::priority_queue, int>(/*is_result_heapified=*/true);
+  test_push_range_inserter_choice<std::priority_queue, int, /*IsResultHeapified=*/true>();
 
   static_assert(test_constraints_push_range<std::priority_queue, int, double>());
 
