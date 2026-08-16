@@ -39,6 +39,7 @@ constexpr bool test() {
                   cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
           std::views::chunk(2);
   assert(std::ranges::iter_move((*chunked.begin()).begin()) == 1);
+  
   return true;
 }
 

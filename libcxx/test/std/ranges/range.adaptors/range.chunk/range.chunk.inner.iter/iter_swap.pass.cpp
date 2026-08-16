@@ -17,27 +17,39 @@
 
 #include <cassert>
 #include <ranges>
+#include <vector>
 
-#include "../types.h"
+#include "test_iterators.h"
 
 constexpr bool test() {
-  int a[] = {1, 2, 3, 4};
-  int b[] = {5, 6, 7, 8};
-
-  // Each chunk_view owns its own `current_` cache, so use two independent views to observe a real swap.
-  std::ranges::chunk_view<input_span<int>> chunked_a(input_span<int>(a, 4), 2);
-  std::ranges::chunk_view<input_span<int>> chunked_b(input_span<int>(b, 4), 2);
+  // Test `friend constexpr void iter_swap(const inner_iterator&, const inner_iterator&)`
+  std::vector<int> vector_a = {1, 2, 3, 4};
+  std::vector<int> vector_b = {5, 6, 7, 8};
+  std::ranges::chunk_view<
+      std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+      chunked_a(std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                    cpp17_input_iterator<int*>(vector_a.data()),
+                    sentinel_wrapper<cpp17_input_iterator<int*>>(
+                        cpp17_input_iterator<int*>(vector_a.data() + vector_a.size()))),
+                2);
+  std::ranges::chunk_view<
+      std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+      chunked_b(std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                    cpp17_input_iterator<int*>(vector_b.data()),
+                    sentinel_wrapper<cpp17_input_iterator<int*>>(
+                        cpp17_input_iterator<int*>(vector_b.data() + vector_b.size()))),
+                2);
 
   auto inner_a = (*chunked_a.begin()).begin();
   auto inner_b = (*chunked_b.begin()).begin();
 
-  assert(a[0] == 1);
-  assert(b[0] == 5);
+  assert(vector_a[0] == 1);
+  assert(vector_b[0] == 5);
 
   std::ranges::iter_swap(inner_a, inner_b);
 
-  assert(a[0] == 5);
-  assert(b[0] == 1);
+  assert(vector_a[0] == 5);
+  assert(vector_b[0] == 1);
 
   return true;
 }
