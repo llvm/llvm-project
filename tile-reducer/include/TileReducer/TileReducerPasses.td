@@ -207,6 +207,26 @@ def TRBenchReport : Pass<"tr-bench-report", "::mlir::ModuleOp"> {
   ];
 }
 
+def SplitTRHostDevice : Pass<"tr-split-host-device", "::mlir::ModuleOp"> {
+  let summary = "Make the GPU host/device split explicit. No computation rewrite.";
+  let description = [{
+    A GPU program is not one linear function. After `tr-emit-gpu-kernels`:
+
+      host:  func.func + gpu.launch_func   (runtime / launch)
+      device: gpu.module @tr_kernels / gpu.func  (payload)
+
+    This pass records that split: attaches `#nvvm.target` (A100 sm_80) to
+    each device module, sets `tr.role = "host"` / `"device"`, and verifies
+    every `gpu.launch_func` resolves through the SymbolTable. It does not
+    lower ops; later passes own GPU->NVVM and host runtime lowering.
+  }];
+  let dependentDialects = [
+    "::mlir::gpu::GPUDialect",
+    "::mlir::NVVM::NVVMDialect",
+    "::mlir::func::FuncDialect"
+  ];
+}
+
 def ConvertTRToLinalg : Pass<"convert-tr-to-linalg", "::mlir::func::FuncOp"> {
   let summary = "Lower tile compute to Linalg over MemRefs. Load becomes a subview.";
   let description = [{

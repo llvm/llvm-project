@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRTileReducer
         TileReducerGPUTarget.cpp
         TileReducerGPURowSum.cpp
         TileReducerGPUKernels.cpp
+        TileReducerHostDevice.cpp
         ReductionCostModel.cpp
         TileReducerCostPasses.cpp
         TileReducerPasses.cpp
@@ -31,6 +32,8 @@ add_mlir_dialect_library(MLIRTileReducer
         MLIRControlFlowInterfaces
         MLIRFuncDialect
         MLIRGPUDialect
+        MLIRNVVMDialect
+        MLIRLLVMDialect
         MLIRAffineDialect
         MLIRAffineToStandard
         MLIRAffineUtils

@@ -153,3 +153,11 @@ Boundary matrix `M ∈ {1,31,32,127,128,129}`,
 Property: `full_sum(A) ~= sum(row_sum(A)) ~= sum(column_sum(A))`.
 `--tr-bench-report` records latency, GB/s, threads/block, registers,
 smem, occupancy, and kernel count.
+
+## Milestone 28
+
+`--tr-split-host-device` records the host/device cut after kernels are
+outlined. Host `func.func` keeps `gpu.launch_func` (`tr.role = "host"`).
+Device `gpu.func` symbols live in `gpu.module @tr_kernels` with
+`#nvvm.target<chip = "sm_80">` (`tr.role = "device"`). A missing kernel
+symbol is a hard lookup failure. No computation is rewritten.

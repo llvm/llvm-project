@@ -4,6 +4,8 @@ set(LIBS
     MLIRFuncDialect
     MLIRFuncInlinerExtension
     MLIRGPUDialect
+    MLIRLLVMDialect
+    MLIRNVVMDialect
     MLIRLinalgDialect
     MLIRLinalgTransformOps
     MLIRLinalgTransforms
