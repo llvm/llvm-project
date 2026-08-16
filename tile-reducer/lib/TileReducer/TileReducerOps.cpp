@@ -4,6 +4,7 @@
 #include "TileReducer/TileReducerDialect.h"
 #include "TileReducer/TileReducerTypes.h"
 
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -26,21 +27,30 @@ static LogicalResult verifyAxis(Operation *op, int64_t axis, int64_t rank,
   return success();
 }
 
-static LogicalResult verifyTileCoords(Operation *op, BufferType buffer,
+static LogicalResult verifyTileCoords(Operation *op, Type bufferType,
                                       ValueRange indices, TileType tile,
                                       StringRef kind) {
-  if (static_cast<int64_t>(indices.size()) != buffer.getRank())
+  int64_t rank = -1;
+  Type elem;
+  if (auto buffer = dyn_cast<BufferType>(bufferType)) {
+    rank = buffer.getRank();
+    elem = buffer.getElementType();
+  } else if (auto memref = dyn_cast<MemRefType>(bufferType)) {
+    rank = memref.getRank();
+    elem = memref.getElementType();
+  } else {
+    return op->emitOpError("expected !tr.buffer or memref, got ") << bufferType;
+  }
+  if (static_cast<int64_t>(indices.size()) != rank)
     return op->emitOpError("expected ")
-           << buffer.getRank() << " tile " << kind << " indices, got "
-           << indices.size();
-  if (tile.getRank() != buffer.getRank())
+           << rank << " tile " << kind << " indices, got " << indices.size();
+  if (tile.getRank() != rank)
     return op->emitOpError("tile rank ")
-           << tile.getRank() << " does not match buffer rank "
-           << buffer.getRank();
-  if (tile.getElementType() != buffer.getElementType())
+           << tile.getRank() << " does not match buffer rank " << rank;
+  if (tile.getElementType() != elem)
     return op->emitOpError("tile element type ")
            << tile.getElementType() << " does not match buffer element type "
-           << buffer.getElementType();
+           << elem;
   return success();
 }
 
@@ -125,19 +135,19 @@ LogicalResult ConstantOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult LoadOp::verify() {
-  auto buffer = dyn_cast<BufferType>(getBuffer().getType());
   auto tile = dyn_cast<TileType>(getType());
-  if (!buffer || !tile)
-    return emitOpError("load requires !tr.buffer and !tr.tile");
-  return verifyTileCoords(*this, buffer, getIndices(), tile, "load");
+  if (!tile)
+    return emitOpError("load result must be a !tr.tile");
+  return verifyTileCoords(*this, getBuffer().getType(), getIndices(), tile,
+                          "load");
 }
 
 LogicalResult StoreOp::verify() {
-  auto buffer = dyn_cast<BufferType>(getBuffer().getType());
   auto tile = dyn_cast<TileType>(getValue().getType());
-  if (!buffer || !tile)
-    return emitOpError("store requires !tr.buffer and !tr.tile");
-  return verifyTileCoords(*this, buffer, getIndices(), tile, "store");
+  if (!tile)
+    return emitOpError("store value must be a !tr.tile");
+  return verifyTileCoords(*this, getBuffer().getType(), getIndices(), tile,
+                          "store");
 }
 
 //===----------------------------------------------------------------------===//

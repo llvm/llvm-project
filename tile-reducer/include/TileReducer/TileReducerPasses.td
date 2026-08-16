@@ -30,6 +30,21 @@ def AnnotateReductionPlan : Pass<"tr-annotate-reduction-plan", "::mlir::func::Fu
   let dependentDialects = ["::mlir::tr::TileReducerDialect"];
 }
 
+def ConvertTRBuffersToMemRef : Pass<"convert-tr-buffers-to-memref", "::mlir::ModuleOp"> {
+  let summary = "Dialect-convert !tr.buffer to memref. Leaves !tr.tile in place.";
+  let description = [{
+    Uses ConversionTarget, TypeConverter, and OpConversionPattern.
+    `!tr.buffer<MxKxf32>` becomes `memref<?x?xf32>`. Function signatures
+    are rewritten. `tr.dim` becomes `memref.dim`. Tile ops stay.
+  }];
+  let dependentDialects = [
+    "::mlir::tr::TileReducerDialect",
+    "::mlir::memref::MemRefDialect",
+    "::mlir::func::FuncDialect",
+    "::mlir::arith::ArithDialect"
+  ];
+}
+
 def ConvertTRForBoundsToArith : Pass<"tr-for-bounds-to-arith", "::mlir::func::FuncOp"> {
   let summary = "Materialize tr.for integer bounds as arith.constant index values.";
   let dependentDialects = [
