@@ -27,6 +27,13 @@ static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
                                                   llvm::cl::Hidden,
                                                   llvm::cl::init(false));
 
+/// Enable boosting inline threshold for calls inside OpenMP SIMD regions.
+static llvm::cl::opt<bool> enableOpenMPSIMDInlineBoost(
+    "openmp-simd-inline-boost", llvm::cl::Hidden,
+    llvm::cl::desc("Enable experimental inline-threshold boost for calls to "
+                   "declare-simd functions inside OpenMP SIMD loops"),
+    llvm::cl::init(false));
+
 namespace fir {
 
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
@@ -372,6 +379,8 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+  if (enableOpenMPSIMDInlineBoost)
+    pm.addPass(mlir::omp::createOpenMPSIMDInlineBoostPass());
 
   // Delete unreachable target operations before FunctionFilteringPass
   // extracts them.
