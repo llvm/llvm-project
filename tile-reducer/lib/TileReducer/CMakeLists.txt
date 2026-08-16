@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRTileReducer
         TileReducerGPURowSum.cpp
         TileReducerGPUKernels.cpp
         TileReducerHostDevice.cpp
+        TileReducerLLVMLowering.cpp
         ReductionCostModel.cpp
         TileReducerCostPasses.cpp
         TileReducerPasses.cpp
@@ -34,6 +35,27 @@ add_mlir_dialect_library(MLIRTileReducer
         MLIRGPUDialect
         MLIRNVVMDialect
         MLIRLLVMDialect
+        MLIRControlFlowDialect
+        MLIRIndexDialect
+        MLIRGPUTransforms
+        MLIRGPUToNVVMTransforms
+        MLIRGPUToGPURuntimeTransforms
+        MLIRSCFToControlFlow
+        MLIRArithToLLVM
+        MLIRFuncToLLVM
+        MLIRMemRefToLLVM
+        MLIRMemRefTransforms
+        MLIRIndexToLLVM
+        MLIRControlFlowToLLVM
+        MLIRReconcileUnrealizedCasts
+        MLIRNVVMToLLVM
+        MLIRMathToLLVM
+        MLIRUBToLLVM
+        MLIRConvertToLLVMInterface
+        MLIRTargetLLVMIRExport
+        MLIRBuiltinToLLVMIRTranslation
+        MLIRLLVMToLLVMIRTranslation
+        MLIRNVVMToLLVMIRTranslation
         MLIRAffineDialect
         MLIRAffineToStandard
         MLIRAffineUtils

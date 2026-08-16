@@ -207,6 +207,54 @@ def TRBenchReport : Pass<"tr-bench-report", "::mlir::ModuleOp"> {
   ];
 }
 
+def LowerTRDeviceToNVVM : Pass<"tr-lower-device-to-nvvm", "::mlir::ModuleOp"> {
+  let summary = "Lower gpu.module payload to NVVM / LLVM dialect.";
+  let description = [{
+    Device path only. f32 `gpu.subgroup_reduce` becomes butterfly
+    `gpu.shuffle`, then upstream `convert-gpu-to-nvvm` produces
+    `nvvm.read.ptx.sreg.*`, `nvvm.shfl.sync`, and `llvm.func` kernels.
+    Host `func.func` / `gpu.launch_func` are left alone.
+  }];
+  let dependentDialects = [
+    "::mlir::gpu::GPUDialect",
+    "::mlir::NVVM::NVVMDialect",
+    "::mlir::LLVM::LLVMDialect",
+    "::mlir::cf::ControlFlowDialect",
+    "::mlir::arith::ArithDialect",
+    "::mlir::memref::MemRefDialect"
+  ];
+}
+
+def LowerTRHostToLLVM : Pass<"tr-lower-host-to-llvm", "::mlir::ModuleOp"> {
+  let summary = "Lower host launch/runtime ops toward the LLVM dialect.";
+  let description = [{
+    Host path only. Uses upstream `gpu-to-llvm` so `gpu.launch_func`
+    keeps the MLIR GPU runtime ABI (`mgpu*` when a binary is present;
+    legalized launch_func + LLVM types otherwise). Does not invent a
+    proprietary runtime.
+  }];
+  let dependentDialects = [
+    "::mlir::gpu::GPUDialect",
+    "::mlir::LLVM::LLVMDialect",
+    "::mlir::func::FuncDialect",
+    "::mlir::arith::ArithDialect",
+    "::mlir::memref::MemRefDialect"
+  ];
+}
+
+def EmitTRDeviceLLVMIR : Pass<"tr-emit-device-llvmir", "::mlir::ModuleOp"> {
+  let summary = "Translate device LLVM dialect to actual LLVM IR (.ll).";
+  let description = [{
+    MLIR LLVM dialect is not LLVM IR. This pass calls
+    `translateModuleToLLVMIR` on the lowered `gpu.module` kernels and
+    writes a `.ll` file. The MLIR module is unchanged.
+  }];
+  let options = [
+    Option<"outputPath", "output", "std::string", /*default=*/[{""}],
+           "Path for the device .ll (empty = stderr)">
+  ];
+}
+
 def SplitTRHostDevice : Pass<"tr-split-host-device", "::mlir::ModuleOp"> {
   let summary = "Make the GPU host/device split explicit. No computation rewrite.";
   let description = [{

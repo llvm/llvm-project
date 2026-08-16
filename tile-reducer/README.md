@@ -161,3 +161,12 @@ outlined. Host `func.func` keeps `gpu.launch_func` (`tr.role = "host"`).
 Device `gpu.func` symbols live in `gpu.module @tr_kernels` with
 `#nvvm.target<chip = "sm_80">` (`tr.role = "device"`). A missing kernel
 symbol is a hard lookup failure. No computation is rewritten.
+
+## Milestone 29
+
+Device: `--tr-lower-device-to-nvvm` turns `gpu.func` into NVVM / LLVM
+dialect (`nvvm.read.ptx.sreg.*`, `nvvm.shfl.sync`, `llvm.func`).
+Host: `--tr-lower-host-to-llvm` uses upstream `gpu-to-llvm` so launch
+ops become LLVM-typed runtime/launch IR. `--tr-emit-device-llvmir`
+translates the device LLVM dialect to actual LLVM IR (`.ll`). Those
+are not the same representation.

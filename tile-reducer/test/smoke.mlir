@@ -4,7 +4,7 @@
 // Milestone 1: the driver registers `tr` (plus func/arith from the canonical
 // source) and can parse a module. Types and ops are Milestone 2 / 3.
 
-// DIALECT: Available Dialects: affine,arith,builtin,func,gpu,linalg,llvm,memref,nvvm,scf,tr,transform
+// DIALECT: Available Dialects: affine,arith,builtin,cf,func,gpu,index,linalg,llvm,memref,nvvm,scf,tr,transform
 
 module {
   // CHECK-LABEL: func.func @smoke

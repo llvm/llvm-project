@@ -3,9 +3,18 @@ set(LIBS
     MLIRArithDialect
     MLIRFuncDialect
     MLIRFuncInlinerExtension
+    MLIRControlFlowDialect
     MLIRGPUDialect
+    MLIRIndexDialect
     MLIRLLVMDialect
     MLIRNVVMDialect
+    MLIRNVVMToLLVM
+    MLIRMathToLLVM
+    MLIRUBToLLVM
+    MLIRTargetLLVMIRExport
+    MLIRBuiltinToLLVMIRTranslation
+    MLIRLLVMToLLVMIRTranslation
+    MLIRNVVMToLLVMIRTranslation
     MLIRLinalgDialect
     MLIRLinalgTransformOps
     MLIRLinalgTransforms
