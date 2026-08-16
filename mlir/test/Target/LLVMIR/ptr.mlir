@@ -118,6 +118,7 @@ llvm.func @gather_ops_i32(%ptrs: vector<8x!ptr.ptr<#llvm.address_space<0>>>, %ma
 // CHECK-SAME: (ptr %[[PTR:.*]], <4 x i1> %[[MASK:.*]], <4 x float> %[[PASSTHROUGH:.*]]) {
 // CHECK-NEXT:   %[[V0:.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 1 %[[PTR]], <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
 // CHECK-NEXT:   %[[V1:.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 16 %[[PTR]], <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]])
+// CHECK-NEXT:   %[[V2:.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 16 %[[PTR]], <4 x i1> %[[MASK]], <4 x float> %[[PASSTHROUGH]]), !nontemporal
 // CHECK-NEXT:   ret <4 x float> %[[V0]]
 // CHECK-NEXT: }
 llvm.func @masked_load_ops(%ptr: !ptr.ptr<#llvm.address_space<0>>, %mask: vector<4xi1>, %passthrough: vector<4xf32>) -> vector<4xf32> {
@@ -125,6 +126,8 @@ llvm.func @masked_load_ops(%ptr: !ptr.ptr<#llvm.address_space<0>>, %mask: vector
   %0 = ptr.masked_load %ptr, %mask, %passthrough : !ptr.ptr<#llvm.address_space<0>> -> vector<4xf32>
   // Masked load with alignment
   %1 = ptr.masked_load %ptr, %mask, %passthrough alignment = 16 : !ptr.ptr<#llvm.address_space<0>> -> vector<4xf32>
+  // Masked load with nontemporal
+  %2 = ptr.masked_load %ptr, %mask, %passthrough alignment = 16 nontemporal : !ptr.ptr<#llvm.address_space<0>> -> vector<4xf32>
   llvm.return %0 : vector<4xf32>
 }
 
