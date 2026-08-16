@@ -511,7 +511,6 @@ static_assert(1 == [] {
       .is_nan();
 }());
 static_assert(float128(0.0) ==
-static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
