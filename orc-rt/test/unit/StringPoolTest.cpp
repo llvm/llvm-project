@@ -53,14 +53,14 @@ TEST(StringPoolTest, DifferentPoolsAreDistinct) {
 }
 
 TEST(StringPoolTest, DefaultConstructedIsNull) {
-  PooledStringPtr Null;
+  StringPool::Ptr Null;
   EXPECT_FALSE(Null);
-  EXPECT_EQ(Null, PooledStringPtr(nullptr));
+  EXPECT_EQ(Null, StringPool::Ptr(nullptr));
 }
 
 TEST(StringPoolTest, CopyKeepsEntryAlive) {
   StringPool SP;
-  PooledStringPtr Copy;
+  StringPool::Ptr Copy;
   {
     auto Foo = SP.intern("foo");
     Copy = Foo;
@@ -103,40 +103,39 @@ TEST(StringPoolTest, MoveLeavesSourceNull) {
   EXPECT_EQ(*Moved, "foo");
 }
 
-TEST(StringPoolTest, NonOwningPtrComparesEqualToOwning) {
+TEST(StringPoolTest, WeakPtrComparesEqualToOwning) {
   StringPool SP;
   auto Foo = SP.intern("foo");
-  NonOwningPooledStringPtr NonOwningFoo(Foo);
-  EXPECT_EQ(Foo, NonOwningFoo);
-  EXPECT_EQ(*NonOwningFoo, "foo");
+  StringPool::WeakPtr WeakFoo(Foo);
+  EXPECT_EQ(Foo, WeakFoo);
+  EXPECT_EQ(*WeakFoo, "foo");
 }
 
-TEST(StringPoolTest, NonOwningPtrDoesNotKeepEntryAlive) {
+TEST(StringPoolTest, WeakPtrDoesNotKeepEntryAlive) {
   StringPool SP;
-  NonOwningPooledStringPtr NonOwningFoo;
+  StringPool::WeakPtr WeakFoo;
   {
     auto Foo = SP.intern("foo");
-    NonOwningFoo = NonOwningPooledStringPtr(Foo);
+    WeakFoo = StringPool::WeakPtr(Foo);
   }
   // Foo has been destroyed and was the only owner, so the entry should be
-  // reclaimed even though NonOwningFoo still points at it.
+  // reclaimed even though WeakFoo still points at it.
   SP.clearDeadEntries();
   EXPECT_TRUE(SP.empty());
 }
 
-TEST(StringPoolTest, ConstructOwningFromNonOwningIncrementsRefcount) {
+TEST(StringPoolTest, ConstructOwningFromWeakWhileStillAlive) {
   StringPool SP;
-  NonOwningPooledStringPtr NonOwningFoo;
-  {
-    auto Foo = SP.intern("foo");
-    NonOwningFoo = NonOwningPooledStringPtr(Foo);
-  }
-  // The entry's refcount is now zero, but it has not yet been reclaimed by
-  // clearDeadEntries(), so re-deriving an owning ptr from NonOwningFoo here
-  // is well-defined and should keep the entry alive.
-  PooledStringPtr Reowned(NonOwningFoo);
-  SP.clearDeadEntries();
-  ASSERT_FALSE(SP.empty());
+  auto Foo = SP.intern("foo");
+  StringPool::WeakPtr WeakFoo(Foo);
+  // Foo is still alive here, so the entry's refcount is nonzero and
+  // reconstructing an owning Ptr from WeakFoo is well-defined. Constructing
+  // from a WeakPtr whose entry's refcount has already reached zero is
+  // undefined behavior -- there is no safe way to detect that case from the
+  // WeakPtr side, since reclamation can happen on another thread as soon as
+  // the count hits zero.
+  StringPool::Ptr Reowned(WeakFoo);
+  EXPECT_EQ(Reowned, Foo);
   EXPECT_EQ(*Reowned, "foo");
 }
 
@@ -146,7 +145,7 @@ TEST(StringPoolTest, UsableAsUnorderedSetKey) {
   auto Foo2 = SP.intern("foo");
   auto Bar = SP.intern("bar");
 
-  std::unordered_set<PooledStringPtr> S;
+  std::unordered_set<StringPool::Ptr> S;
   S.insert(Foo1);
   S.insert(Foo2);
   S.insert(Bar);
@@ -156,11 +155,11 @@ TEST(StringPoolTest, UsableAsUnorderedSetKey) {
   EXPECT_TRUE(S.count(Bar));
 }
 
-TEST(StringPoolTest, OwningAndNonOwningHashInterchangeably) {
+TEST(StringPoolTest, OwningAndWeakHashInterchangeably) {
   StringPool SP;
   auto Foo = SP.intern("foo");
-  NonOwningPooledStringPtr NonOwningFoo(Foo);
+  StringPool::WeakPtr WeakFoo(Foo);
 
-  EXPECT_EQ(std::hash<PooledStringPtr>()(Foo),
-            std::hash<NonOwningPooledStringPtr>()(NonOwningFoo));
+  EXPECT_EQ(std::hash<StringPool::Ptr>()(Foo),
+            std::hash<StringPool::WeakPtr>()(WeakFoo));
 }
