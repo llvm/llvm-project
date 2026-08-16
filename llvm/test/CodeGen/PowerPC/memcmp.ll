@@ -6,10 +6,10 @@ define signext i32 @memcmp8(ptr nocapture readonly %buffer1, ptr nocapture reado
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ldbrx 3, 0, 3
 ; CHECK-NEXT:    ldbrx 4, 0, 4
-; CHECK-NEXT:    subc 6, 4, 3
-; CHECK-NEXT:    sub 5, 3, 4
-; CHECK-NEXT:    subfe 3, 4, 3
-; CHECK-NEXT:    subfe 3, 3, 5
+; CHECK-NEXT:    subc 3, 3, 4
+; CHECK-NEXT:    subfe 4, 3, 3
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
 ; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr %buffer1, ptr %buffer2, i64 8)
@@ -21,10 +21,10 @@ define signext i32 @memcmp4(ptr nocapture readonly %buffer1, ptr nocapture reado
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lwbrx 3, 0, 3
 ; CHECK-NEXT:    lwbrx 4, 0, 4
-; CHECK-NEXT:    subc 6, 4, 3
-; CHECK-NEXT:    sub 5, 3, 4
-; CHECK-NEXT:    subfe 3, 4, 3
-; CHECK-NEXT:    subfe 3, 3, 5
+; CHECK-NEXT:    subc 3, 3, 4
+; CHECK-NEXT:    subfe 4, 3, 3
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
 ; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(ptr %buffer1, ptr %buffer2, i64 4)
