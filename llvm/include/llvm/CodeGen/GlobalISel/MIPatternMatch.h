@@ -439,6 +439,14 @@ struct MIFlagsRef {
 
 inline MIFlagsRef m_MIFlags(uint32_t &Flags) { return {Flags}; }
 
+/// Optional trailing operand for a load matcher (e.g. m_GLoad(m_Reg(Ptr),
+/// m_MMO(MMO))) that binds the matched instruction's MachineMemOperand.
+struct MMORef {
+  const MachineMemOperand *&MMO;
+};
+
+inline MMORef m_MMO(const MachineMemOperand *&MMO) { return {MMO}; }
+
 template <typename BindTy> struct deferred_helper {
   static bool match(const MachineRegisterInfo &MRI, BindTy &VR, BindTy &V) {
     return VR == V;
@@ -525,6 +533,57 @@ struct GConstantBitsMatch {
 
 inline GConstantBitsMatch m_GConstantOrFConstantBits(APInt &Bits) {
   return {Bits};
+}
+
+/// Match a load of type \p Class, binding its pointer operand (like IR's
+/// m_Load), and optionally the instruction and/or its MachineMemOperand.
+template <typename Class, typename PtrP> struct LoadOp_match {
+  PtrP Ptr;
+  Class **InstOut = nullptr;
+  const MachineMemOperand **MMOOut = nullptr;
+
+  LoadOp_match(const PtrP &Ptr) : Ptr(Ptr) {}
+  LoadOp_match(const PtrP &Ptr, MMORef MMO) : Ptr(Ptr), MMOOut(&MMO.MMO) {}
+  LoadOp_match(Class *&Inst, const PtrP &Ptr) : Ptr(Ptr), InstOut(&Inst) {}
+  LoadOp_match(Class *&Inst, const PtrP &Ptr, MMORef MMO)
+      : Ptr(Ptr), InstOut(&Inst), MMOOut(&MMO.MMO) {}
+
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (!mi_match(Reg, MRI, m_MInstr(TmpMI)))
+      return false;
+    auto *Load = dyn_cast<Class>(TmpMI);
+    if (!Load || !Ptr.match(MRI, Load->getPointerReg()))
+      return false;
+    if (InstOut)
+      *InstOut = Load;
+    if (MMOOut)
+      *MMOOut = &Load->getMMO();
+    return true;
+  }
+};
+
+template <typename PtrP>
+inline LoadOp_match<GAnyLoad, PtrP> m_GAnyLoad(const PtrP &Ptr) {
+  return LoadOp_match<GAnyLoad, PtrP>(Ptr);
+}
+template <typename PtrP>
+inline LoadOp_match<GAnyLoad, PtrP> m_GAnyLoad(GAnyLoad *&Inst,
+                                               const PtrP &Ptr) {
+  return LoadOp_match<GAnyLoad, PtrP>(Inst, Ptr);
+}
+template <typename PtrP>
+inline LoadOp_match<GAnyLoad, PtrP> m_GAnyLoad(GAnyLoad *&Inst, const PtrP &Ptr,
+                                               MMORef MMO) {
+  return LoadOp_match<GAnyLoad, PtrP>(Inst, Ptr, MMO);
+}
+template <typename PtrP>
+inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr) {
+  return LoadOp_match<GLoad, PtrP>(Ptr);
+}
+template <typename PtrP>
+inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr, MMORef MMO) {
+  return LoadOp_match<GLoad, PtrP>(Ptr, MMO);
 }
 
 /// Instruction binders for ops with no operand-form matcher (constant-immediate
