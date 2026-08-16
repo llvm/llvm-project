@@ -93,6 +93,22 @@ static bool isKnownLibFunction(Function &F, TargetLibraryInfo &TLI) {
          TLI.isKnownVectorFunctionInLibrary(F.getName());
 }
 
+/// Collects basic blocks unreachable from the entry block into DeadBlocks.
+static void
+recordDeadBasicBlocks(Function &F,
+                      SmallPtrSetImpl<const BasicBlock *> &DeadBlocks) {
+  SmallSetVector<const BasicBlock *, 8> Reachable;
+  Reachable.insert(&F.getEntryBlock());
+
+  for (unsigned Idx = 0; Idx < Reachable.size(); ++Idx)
+    for (const BasicBlock *Succ : successors(Reachable[Idx]))
+      Reachable.insert(Succ);
+
+  for (BasicBlock &BB : F)
+    if (!Reachable.contains(&BB))
+      DeadBlocks.insert(&BB);
+}
+
 PreservedAnalyses ModuleInlinerPass::run(Module &M,
                                          ModuleAnalysisManager &MAM) {
   LLVM_DEBUG(dbgs() << "---- Module Inliner is Running ---- \n");
@@ -177,9 +193,15 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   // defer deleting these to make it easier to handle the call graph updates.
   SmallVector<Function *, 4> DeadFunctions;
 
+  // Track the dead basic blocks to prune once finished with inlining calls. We
+  // defer pruning these to avoid dangling pointers in the worklist queue.
+  SmallPtrSet<const BasicBlock *, 8> DeadBlocks;
+
   // Loop forward over all of the calls.
   while (!Calls->empty()) {
     CallBase *CB = Calls->pop();
+    if (DeadBlocks.count(CB->getParent()))
+      continue;
     Function &F = *CB->getCaller();
     Function &Callee = *CB->getCalledFunction();
 
@@ -272,6 +294,8 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     }
     if (!CalleeWasDeleted)
       Advice->recordInlining();
+
+    recordDeadBasicBlocks(F, DeadBlocks);
   }
 
   // Now that we've finished inlining all of the calls across this module,
