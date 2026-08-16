@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRTileReducer
         TileReducerLinalgTiling.cpp
         TileReducerTransformOps.cpp
         TileReducerGPUTarget.cpp
+        TileReducerGPURowSum.cpp
         TileReducerPasses.cpp
 
         ADDITIONAL_HEADER_DIRS
@@ -26,6 +27,7 @@ add_mlir_dialect_library(MLIRTileReducer
         MLIRArithDialect
         MLIRControlFlowInterfaces
         MLIRFuncDialect
+        MLIRGPUDialect
         MLIRAffineDialect
         MLIRAffineToStandard
         MLIRAffineUtils

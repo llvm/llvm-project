@@ -118,6 +118,29 @@ def AnnotateGPUTarget : Pass<"tr-annotate-gpu-target", "::mlir::ModuleOp"> {
   }];
 }
 
+def ConvertTRRowSumToGPU : Pass<"convert-tr-row-sum-to-gpu", "::mlir::func::FuncOp"> {
+  let summary = "Lower the canonical row-sum to GPU dialect. No 128x128 temp.";
+  let description = [{
+    Fuses `tr.load` -> `tr.reduce_sum(axis=1)` into coalesced global loads,
+    per-lane register accumulation (4 elements), and `gpu.subgroup_reduce`.
+
+    Physical map for a 128x128 logical tile and a 256-thread block:
+      8 warps; warp w walks rows w, w+8, ..., 120
+      lane L owns columns L, L+32, L+64, L+96
+
+    `tr.program_id` stays a logical program instance (not threadIdx).
+    No shared memory. Tails use `arith.ceildivui` and OOB zeros.
+  }];
+  let dependentDialects = [
+    "::mlir::tr::TileReducerDialect",
+    "::mlir::gpu::GPUDialect",
+    "::mlir::scf::SCFDialect",
+    "::mlir::arith::ArithDialect",
+    "::mlir::memref::MemRefDialect",
+    "::mlir::func::FuncDialect"
+  ];
+}
+
 def ConvertTRToLinalg : Pass<"convert-tr-to-linalg", "::mlir::func::FuncOp"> {
   let summary = "Lower tile compute to Linalg over MemRefs. Load becomes a subview.";
   let description = [{

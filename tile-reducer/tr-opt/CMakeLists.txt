@@ -3,6 +3,7 @@ set(LIBS
     MLIRArithDialect
     MLIRFuncDialect
     MLIRFuncInlinerExtension
+    MLIRGPUDialect
     MLIRLinalgDialect
     MLIRLinalgTransformOps
     MLIRLinalgTransforms

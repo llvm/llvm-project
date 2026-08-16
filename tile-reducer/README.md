@@ -75,3 +75,10 @@ payload ops produce a silenceable diagnostic.
 capacities, and the baseline launch (256 threads, 8 warps).
 `--tr-annotate-gpu-target` writes those fields as `tr.target.*` module
 attributes. They are target properties, not source semantics.
+
+## Milestone 17
+
+`--convert-tr-row-sum-to-gpu` maps a 128×128 logical tile onto 256
+threads / 8 warps. Warp `w` walks rows `w, w+8, …, 120`. Lane `L` owns
+columns `L, L+32, L+64, L+96`. Four register values are summed, then
+`gpu.subgroup_reduce`. `tr.program_id` stays a logical program instance.

@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/TransformOps/DialectExtension.h"
 #include "mlir/Dialect/Linalg/Transforms/TilingInterfaceImpl.h"
@@ -30,8 +31,9 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::tr::TileReducerDialect, mlir::affine::AffineDialect,
                   mlir::arith::ArithDialect, mlir::func::FuncDialect,
-                  mlir::linalg::LinalgDialect, mlir::memref::MemRefDialect,
-                  mlir::scf::SCFDialect, mlir::transform::TransformDialect>();
+                  mlir::gpu::GPUDialect, mlir::linalg::LinalgDialect,
+                  mlir::memref::MemRefDialect, mlir::scf::SCFDialect,
+                  mlir::transform::TransformDialect>();
   mlir::func::registerInlinerExtension(registry);
   mlir::linalg::registerTilingInterfaceExternalModels(registry);
   mlir::linalg::registerTransformDialectExtension(registry);
