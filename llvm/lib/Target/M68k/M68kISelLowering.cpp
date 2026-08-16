@@ -93,6 +93,7 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
     setOperationAction(ISD::SDIV, MVT::i32, LibCall);
     setOperationAction(ISD::UDIV, MVT::i32, LibCall);
   }
+  setOperationAction(ISD::MUL, MVT::i64, LibCall);
 
   setOperationAction({ISD::SREM, ISD::UREM}, MVT::i8, Legal);
   setOperationAction({ISD::SREM, ISD::UREM}, MVT::i16, Legal);
