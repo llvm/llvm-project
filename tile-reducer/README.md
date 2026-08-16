@@ -26,3 +26,10 @@ The same pass realizes `tr.load` as `memref.subview` of the input
 (offset = tile coordinate × tile size). A 128×128 tile is not allocated.
 A 128-element alloca is used only for the accumulator / reduce destination.
 `tr.store` is a subview of the output plus `memref.copy`.
+
+## Milestone 10
+
+`--tr-tile-linalg=tile-sizes=M,K` tiles `linalg.generic` reductions with
+`scf::tileUsingSCF`. Representative sizes: 128×128, 64×128, 32×128. Outer
+`scf.for` is the parallel (row) dimension; inner is the reduction (K)
+dimension. No GPU thread mapping.

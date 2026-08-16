@@ -9,7 +9,9 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Transforms/TilingInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
@@ -22,7 +24,9 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::tr::TileReducerDialect, mlir::affine::AffineDialect,
                   mlir::arith::ArithDialect, mlir::func::FuncDialect,
-                  mlir::linalg::LinalgDialect, mlir::memref::MemRefDialect>();
+                  mlir::linalg::LinalgDialect, mlir::memref::MemRefDialect,
+                  mlir::scf::SCFDialect>();
+  mlir::linalg::registerTilingInterfaceExternalModels(registry);
 
   return mlir::asMainReturnCode(
       mlir::MlirOptMain(argc, argv, "TileReducer optimizer driver\n", registry));

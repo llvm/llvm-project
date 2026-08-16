@@ -53,6 +53,27 @@ def ConvertTRForBoundsToArith : Pass<"tr-for-bounds-to-arith", "::mlir::func::Fu
   ];
 }
 
+def TileTRLinalg : Pass<"tr-tile-linalg", "::mlir::func::FuncOp"> {
+  let summary = "Tile Linalg reductions with scf.for. No GPU mapping.";
+  let description = [{
+    Uses the TilingInterface (`scf::tileUsingSCF`) on `linalg.generic`
+    reductions. Representative tile sizes: 128x128, 64x128, 32x128.
+    Parallel and reduction dimensions are identified from iterator_types.
+    Does not map loops to GPU threads.
+  }];
+  let dependentDialects = [
+    "::mlir::linalg::LinalgDialect",
+    "::mlir::scf::SCFDialect",
+    "::mlir::affine::AffineDialect",
+    "::mlir::arith::ArithDialect",
+    "::mlir::memref::MemRefDialect"
+  ];
+  let options = [
+    ListOption<"tileSizes", "tile-sizes", "int64_t",
+               "Tile sizes per loop dimension (0 = do not tile)">
+  ];
+}
+
 def ConvertTRToLinalg : Pass<"convert-tr-to-linalg", "::mlir::func::FuncOp"> {
   let summary = "Lower tile compute to Linalg over MemRefs. Load becomes a subview.";
   let description = [{

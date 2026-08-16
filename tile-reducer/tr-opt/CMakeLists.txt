@@ -3,7 +3,9 @@ set(LIBS
     MLIRArithDialect
     MLIRFuncDialect
     MLIRLinalgDialect
+    MLIRLinalgTransforms
     MLIRMemRefDialect
+    MLIRSCFDialect
     MLIROptLib
     MLIRTileReducer
   )
