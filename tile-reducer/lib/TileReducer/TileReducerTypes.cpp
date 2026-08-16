@@ -176,8 +176,6 @@ static LogicalResult verifyElement(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult TileType::verify(function_ref<InFlightDiagnostic()> emitError,
                                ArrayRef<int64_t> shape, Type elementType) {
-  if (shape.empty())
-    return emitError() << "tile must have rank >= 1";
   for (int64_t d : shape) {
     if (ShapedType::isDynamic(d))
       return emitError() << "tile dimensions must be static";

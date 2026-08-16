@@ -16,14 +16,6 @@ func.func @named_tile(%t: !tr.tile<Mxf32>) {
 
 // -----
 
-// Verifier: rank-0 tile.
-func.func @scalar_tile(%t: !tr.tile<f32>) {
-  // expected-error@-1 {{tile must have rank >= 1}}
-  return
-}
-
-// -----
-
 // Verifier: zero extent. Spaces keep `0 x f32` from lexing as the hex
 // integer `0xf32` (the same special case builtin tensor types have).
 func.func @zero_tile(%t: !tr.tile<0 x f32>) {

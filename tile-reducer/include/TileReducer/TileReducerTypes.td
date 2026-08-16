@@ -21,8 +21,9 @@ def TileReducer_TileType : TileReducer_Type<"Tile", "tile"> {
     `!tr.tile<128x128xf32>` is a logical collection of values. It does not
     imply a memref allocation, thread ownership, or a hardware load.
 
-    All dimensions must be static and positive. Dynamic or named extents are
-    rejected: those belong on `!tr.buffer`.
+    Dimensions must be static and positive. Rank 0 (`!tr.tile<f32>`) is
+    allowed so a full reduction can produce a scalar tile. Dynamic or named
+    extents are rejected: those belong on `!tr.buffer`.
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,

@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRTileReducer
         TileReducerTypes.cpp
         TileReducerAnalyses.cpp
         TileReducerBufferConversion.cpp
+        TileReducerLinalgConversion.cpp
         TileReducerPasses.cpp
 
         ADDITIONAL_HEADER_DIRS
@@ -20,7 +21,9 @@ add_mlir_dialect_library(MLIRTileReducer
         MLIRArithDialect
         MLIRControlFlowInterfaces
         MLIRFuncDialect
+        MLIRAffineDialect
         MLIRFuncTransforms
+        MLIRLinalgDialect
         MLIRMemRefDialect
         MLIRInferTypeOpInterface
         MLIRPass

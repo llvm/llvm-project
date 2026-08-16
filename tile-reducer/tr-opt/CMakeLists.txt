@@ -1,6 +1,8 @@
 set(LIBS
+    MLIRAffineDialect
     MLIRArithDialect
     MLIRFuncDialect
+    MLIRLinalgDialect
     MLIRMemRefDialect
     MLIROptLib
     MLIRTileReducer

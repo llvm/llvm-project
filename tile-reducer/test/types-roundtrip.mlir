@@ -4,10 +4,11 @@
 
 // CHECK-LABEL: func.func @tiles
 func.func @tiles(%t1: !tr.tile<128xf32>, %t2: !tr.tile<128x128xf32>,
-                 %t3: !tr.tile<64x32xi32>) {
+                 %t3: !tr.tile<64x32xi32>, %t0: !tr.tile<f32>) {
   // CHECK: !tr.tile<128xf32>
   // CHECK: !tr.tile<128x128xf32>
   // CHECK: !tr.tile<64x32xi32>
+  // CHECK: !tr.tile<f32>
   return
 }
 

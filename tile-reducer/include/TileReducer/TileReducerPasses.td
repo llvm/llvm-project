@@ -53,5 +53,30 @@ def ConvertTRForBoundsToArith : Pass<"tr-for-bounds-to-arith", "::mlir::func::Fu
   ];
 }
 
+def ConvertTRToLinalg : Pass<"convert-tr-to-linalg", "::mlir::func::FuncOp"> {
+  let summary = "Lower tile compute to Linalg over MemRefs. Load becomes a subview.";
+  let description = [{
+    `!tr.tile` becomes a memref of the same static shape. Reductions become
+    `linalg.generic` with `arith.addf`/`arith.addi` and the iterator types
+    required by Milestone 8:
+
+      row    (axis = 1 on rank 2): parallel, reduction
+      column (axis = 0 on rank 2): reduction, parallel
+      full   (rank 1, or fused 2D->scalar): reduction [, reduction]
+
+    `tr.load` is a `memref.subview` of the input (tile coord * tile size).
+    No `memref.alloc` of the loaded tile. A small alloca for an accumulator
+    or reduce destination is allowed. `tr.store` is a subview plus copy.
+    `tr.for` stays; only its iter_arg types change.
+  }];
+  let dependentDialects = [
+    "::mlir::tr::TileReducerDialect",
+    "::mlir::linalg::LinalgDialect",
+    "::mlir::memref::MemRefDialect",
+    "::mlir::arith::ArithDialect",
+    "::mlir::func::FuncDialect"
+  ];
+}
+
 
 #endif // TILE_REDUCER_PASSES
