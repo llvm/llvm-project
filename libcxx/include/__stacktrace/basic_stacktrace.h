@@ -31,9 +31,6 @@
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <__fwd/ostream.h>
 #endif // _LIBCPP_HAS_LOCALIZATION
-#if !defined(_WIN32)
-#  include <unwind.h>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -46,15 +43,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
-
-// Purposely avoids optimizations to make call-chain predictable
-#  if __has_cpp_attribute(_Clang::__disable_tail_calls__)
-#    define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT [[_Clang::__disable_tail_calls__]]
-#  elif __has_cpp_attribute(__gnu__::__optimize__)
-#    define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT [[__gnu__::__optimize__("no-optimize-sibling-calls")]]
-#  else
-#    define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT
-#  endif
 
 namespace __stacktrace {
 
@@ -91,8 +79,9 @@ struct _Trace {
   // Windows: full, self-contained impl in this function
   _LIBCPP_EXPORTED_FROM_ABI void __windows_impl(size_t skip, size_t max_depth);
 #  else
-  _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NOINLINE void __populate_addrs(size_t __skip, size_t __depth);
+  // Out-of-line (not header-inline) so it can never get folded into its caller: it must
+  // always be its own stack frame for the `__skip + 1` in trace.cpp to skip correctly.
+  _LIBCPP_EXPORTED_FROM_ABI void __populate_addrs(size_t __skip, size_t __depth);
   _LIBCPP_EXPORTED_FROM_ABI void __populate_images();
 #  endif
 };
@@ -316,48 +305,8 @@ struct hash<basic_stacktrace<_Allocator>> {
 
 namespace __stacktrace {
 
-#  if !defined(_WIN32)
-
-struct _Unwind_Wrapper {
-  _Trace& base_;
-  size_t skip_;
-  size_t maxDepth_;
-
-  _LIBCPP_HIDE_FROM_ABI _Unwind_Reason_Code callback(_Unwind_Context* __ucx) {
-    if (skip_) {
-      --skip_;
-      return _Unwind_Reason_Code::_URC_NO_REASON;
-    }
-    if (!maxDepth_) {
-      return _Unwind_Reason_Code::_URC_NORMAL_STOP;
-    }
-    --maxDepth_;
-    int __ip_before{0};
-    auto __ip = _Unwind_GetIPInfo(__ucx, &__ip_before);
-    if (!__ip) {
-      return _Unwind_Reason_Code::_URC_NORMAL_STOP;
-    }
-    auto& __entry = base_.__entry_append_();
-    auto& __eb    = (_Entry&)__entry;
-    __eb.__addr_  = (__ip_before ? __ip : __ip - 1);
-    return _Unwind_Reason_Code::_URC_NO_REASON;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static _Unwind_Reason_Code callback(_Unwind_Context* __cx, void* __self) {
-    return ((_Unwind_Wrapper*)__self)->callback(__cx);
-  }
-};
-
-_LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT _LIBCPP_HIDE_FROM_ABI _LIBCPP_NOINLINE inline void
-_Trace::__populate_addrs(size_t __skip, size_t __depth) {
-  if (!__depth) {
-    return;
-  }
-  _Unwind_Wrapper __bt{*this, __skip + 1, __depth}; /* +1 to skip our own frame */
-  _Unwind_Backtrace(_Unwind_Wrapper::callback, &__bt);
-}
-
-#  endif // _WIN32
+// __populate_addrs (non-Windows) is defined out-of-line in trace.cpp, not here; see the
+// comment on its declaration above for why it must never be inlined into its caller.
 
 _Trace& _Trace::__trace_base(auto& __trace) { return *static_cast<_Trace*>(std::addressof(__trace)); }
 
@@ -367,8 +316,6 @@ _Trace const& _Trace::__trace_base(auto const& __trace) { return *static_cast<_T
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
-
-#  undef _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT
 
 #endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 

@@ -17,10 +17,72 @@
 #  include <sstream>
 #endif //_LIBCPP_HAS_LOCALIZATION
 
+#if !defined(_WIN32)
+#  include <unwind.h>
+#endif
+
+// Purposely avoids optimizations to make call-chain predictable
+#if __has_cpp_attribute(_Clang::__disable_tail_calls__)
+#  define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT [[_Clang::__disable_tail_calls__]]
+#elif __has_cpp_attribute(__gnu__::__optimize__)
+#  define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT [[__gnu__::__optimize__("no-optimize-sibling-calls")]]
+#else
+#  define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace __stacktrace {
+
+#if !defined(_WIN32)
+
+namespace {
+
+struct _Unwind_Wrapper {
+  _Trace& base_;
+  size_t skip_;
+  size_t maxDepth_;
+
+  _Unwind_Reason_Code callback(_Unwind_Context* __ucx) {
+    if (skip_) {
+      --skip_;
+      return _Unwind_Reason_Code::_URC_NO_REASON;
+    }
+    if (!maxDepth_) {
+      return _Unwind_Reason_Code::_URC_NORMAL_STOP;
+    }
+    --maxDepth_;
+    int __ip_before{0};
+    auto __ip = _Unwind_GetIPInfo(__ucx, &__ip_before);
+    if (!__ip) {
+      return _Unwind_Reason_Code::_URC_NORMAL_STOP;
+    }
+    auto& __entry = base_.__entry_append_();
+    auto& __eb    = (_Entry&)__entry;
+    __eb.__addr_  = (__ip_before ? __ip : __ip - 1);
+    return _Unwind_Reason_Code::_URC_NO_REASON;
+  }
+
+  static _Unwind_Reason_Code callback(_Unwind_Context* __cx, void* __self) {
+    return ((_Unwind_Wrapper*)__self)->callback(__cx);
+  }
+};
+
+} // namespace
+
+// Kept out-of-line here rather than in the header: GCC has been observed to inline this
+// despite `noinline` when reached through an always-inline call chain with a single call
+// site, which silently shifts the captured frames by one (see the `+1` below).
+_LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT void _Trace::__populate_addrs(size_t __skip, size_t __depth) {
+  if (!__depth) {
+    return;
+  }
+  _Unwind_Wrapper __bt{*this, __skip + 1, __depth}; /* +1 to skip our own frame */
+  _Unwind_Backtrace(_Unwind_Wrapper::callback, &__bt);
+}
+
+#endif // !_WIN32
 
 #if _LIBCPP_HAS_LOCALIZATION
 

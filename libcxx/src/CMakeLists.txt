@@ -67,6 +67,15 @@ set(LIBCXX_SOURCES
   verbose_abort.cpp
   )
 
+# -ffunction-sections (enabled above) splits each function's ARM EHABI unwind-index
+# entry into its own section; on some bare-metal targets the final link doesn't keep
+# these address-sorted, which breaks the binary-search unwind lookup. trace.cpp's
+# stack-walking code needs reliable unwind info, so exempt it.
+if (NOT CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set_source_files_properties(stacktrace/trace.cpp PROPERTIES
+                               COMPILE_OPTIONS "-fno-function-sections;-fno-data-sections")
+endif()
+
 if (LIBCXX_ENABLE_THREADS)
   list(APPEND LIBCXX_SOURCES
     atomic.cpp
