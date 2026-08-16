@@ -113,8 +113,8 @@ declare ptr @_ZNK18G__FastAllocString4dataEv() nounwind
 ; happen before the store.  
 define i32 @test7(ptr %tmp1, i32 %tmp71, i32 %tmp63) nounwind  {
 ; X64-LABEL: test7:
-; X64:    movl	8({{%rdi|%rcx}}), %eax
-; X64:     movl	$4, 8({{%rdi|%rcx}})
+; X64:    movl	8([[BASE:%r[a-z0-9]+]]), {{%e[a-z0-9]+}}
+; X64:     movl	$4, 8([[BASE]])
 
 
   %tmp29 = getelementptr inbounds {i32,i32,i32}, ptr %tmp1, i32 0, i32 2

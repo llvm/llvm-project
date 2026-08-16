@@ -57,6 +57,14 @@
 
 using namespace llvm;
 
+static cl::opt<cl::boolOrDefault> EnableRegAllocFastSSA(
+    "regalloc-fast-ssa",
+    cl::desc("Have the fast register allocator consume SSA MachineIR, "
+             "lowering PHIs and tied operands itself instead of running "
+             "PHIElimination and TwoAddressInstructionPass (overrides the "
+             "target's default)"),
+    cl::Hidden);
+
 static cl::opt<bool>
     EnableIPRA("enable-ipra", cl::init(false), cl::Hidden,
                cl::desc("Enable interprocedural register allocation "
@@ -1467,10 +1475,19 @@ bool TargetPassConfig::usingDefaultRegAlloc() const {
 /// Add the minimum set of target-independent passes that are required for
 /// register allocation. No coalescing or scheduling.
 void TargetPassConfig::addFastRegAlloc() {
-  addPass(&PHIEliminationID);
-  addPass(&TwoAddressInstructionPassID);
+  if (!useSSAFastRegAlloc(*TM)) {
+    addPass(&PHIEliminationID);
+    addPass(&TwoAddressInstructionPassID);
+  }
 
   addRegAssignAndRewriteFast();
+}
+
+bool llvm::useSSAFastRegAlloc(const TargetMachine &TM) {
+  if (EnableRegAllocFastSSA != cl::boolOrDefault::BOU_UNSET)
+    return EnableRegAllocFastSSA == cl::boolOrDefault::BOU_TRUE;
+  // Otherwise, respect TargetMachine preference.
+  return TM.enableSSAFastRegAlloc();
 }
 
 /// Add standard target-independent passes that are tightly coupled with

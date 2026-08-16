@@ -331,8 +331,8 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ; X86-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOCMOV-NEXT:  .LBB6_4: # %atomicrmw.start
 ; X86-NOCMOV-NEXT:    # in Loop: Header=BB6_1 Depth=1
-; X86-NOCMOV-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOCMOV-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOCMOV-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NOCMOV-NEXT:    sete %cl
 ; X86-NOCMOV-NEXT:    testb $1, %cl
@@ -365,8 +365,8 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOX87-NEXT:  .LBB6_4: # %atomicrmw.start
 ; X86-NOX87-NEXT:    # in Loop: Header=BB6_1 Depth=1
-; X86-NOX87-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOX87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOX87-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOX87-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NOX87-NEXT:    sete %cl
 ; X86-NOX87-NEXT:    testb $1, %cl
@@ -448,8 +448,8 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ; X86-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOCMOV-NEXT:  .LBB7_4: # %atomicrmw.start
 ; X86-NOCMOV-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; X86-NOCMOV-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOCMOV-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOCMOV-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NOCMOV-NEXT:    sete %cl
 ; X86-NOCMOV-NEXT:    testb $1, %cl
@@ -482,8 +482,8 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOX87-NEXT:  .LBB7_4: # %atomicrmw.start
 ; X86-NOX87-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; X86-NOX87-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOX87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOX87-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOX87-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NOX87-NEXT:    sete %cl
 ; X86-NOX87-NEXT:    testb $1, %cl
@@ -565,8 +565,8 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ; X86-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOCMOV-NEXT:  .LBB8_4: # %atomicrmw.start
 ; X86-NOCMOV-NEXT:    # in Loop: Header=BB8_1 Depth=1
-; X86-NOCMOV-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOCMOV-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOCMOV-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NOCMOV-NEXT:    sete %cl
 ; X86-NOCMOV-NEXT:    testb $1, %cl
@@ -599,8 +599,8 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOX87-NEXT:  .LBB8_4: # %atomicrmw.start
 ; X86-NOX87-NEXT:    # in Loop: Header=BB8_1 Depth=1
-; X86-NOX87-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOX87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOX87-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOX87-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NOX87-NEXT:    sete %cl
 ; X86-NOX87-NEXT:    testb $1, %cl
@@ -682,8 +682,8 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ; X86-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOCMOV-NEXT:  .LBB9_4: # %atomicrmw.start
 ; X86-NOCMOV-NEXT:    # in Loop: Header=BB9_1 Depth=1
-; X86-NOCMOV-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOCMOV-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOCMOV-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NOCMOV-NEXT:    sete %cl
 ; X86-NOCMOV-NEXT:    testb $1, %cl
@@ -716,8 +716,8 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NOX87-NEXT:  .LBB9_4: # %atomicrmw.start
 ; X86-NOX87-NEXT:    # in Loop: Header=BB9_1 Depth=1
-; X86-NOX87-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOX87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NOX87-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NOX87-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NOX87-NEXT:    sete %cl
 ; X86-NOX87-NEXT:    testb $1, %cl

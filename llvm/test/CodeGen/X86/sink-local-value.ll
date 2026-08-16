@@ -99,12 +99,12 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK:                                 # %entry
 ; CHECK: cmpl    $0,
 ; CHECK:                                 # %if.then
-; CHECK: movl    $42, %[[REG:[a-z]+]]
-; CHECK: #DEBUG_VALUE: phi_const_cast:4 <- $[[REG]]
+; CHECK: movl    $42, %{{[a-z]+}}
+; CHECK: #DEBUG_VALUE: phi_const_cast:4 <- [$esp+{{[0-9]+}}]
 ; CHECK: jmp
 ; CHECK:                                 # %if.else
-; CHECK: movl    $1, %[[REG:[a-z]+]]
-; CHECK: #DEBUG_VALUE: phi_const_cast:5 <- $[[REG]]
+; CHECK: movl    $1, %{{[a-z]+}}
+; CHECK: #DEBUG_VALUE: phi_const_cast:5 <- [$esp+{{[0-9]+}}]
 ; CHECK:                                 # %if.end
 
 declare void @may_throw() local_unnamed_addr #1

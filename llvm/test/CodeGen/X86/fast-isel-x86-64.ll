@@ -73,7 +73,7 @@ define void @test5(i32 %x, ptr %p) nounwind {
 
 ; CHECK-LABEL: test5:
 ; CHECK: movl	$50000, %ecx
-; CHECK: sarl	%cl, %edi
+; CHECK: sarl	%cl, {{%e[a-z0-9]+}}
 ; CHECK: ret
 }
 

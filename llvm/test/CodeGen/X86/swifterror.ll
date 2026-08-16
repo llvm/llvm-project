@@ -422,7 +422,8 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-O0-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, %rax
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    jmp LBB4_1
 ; CHECK-O0-NEXT:  LBB4_1: ## %bb_loop
 ; CHECK-O0-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -957,11 +958,11 @@ define void @swifterror_isel(ptr) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-O0-NEXT:    .cfi_offset %r12, -24
 ; CHECK-O0-NEXT:    .cfi_offset %r13, -16
+; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    ## implicit-def: $ax
 ; CHECK-O0-NEXT:    ## implicit-def: $al
 ; CHECK-O0-NEXT:    testb $1, %al
-; CHECK-O0-NEXT:    ## implicit-def: $ax
-; CHECK-O0-NEXT:    ## implicit-def: $r12
 ; CHECK-O0-NEXT:    jne LBB8_2
 ; CHECK-O0-NEXT:  LBB8_1: ## =>This Inner Loop Header: Depth=1
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
@@ -971,10 +972,11 @@ define void @swifterror_isel(ptr) {
 ; CHECK-O0-NEXT:    movw %ax, %di
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    callq *%rax
-; CHECK-O0-NEXT:    ## implicit-def: $rax
-; CHECK-O0-NEXT:    movw (%rax), %ax
-; CHECK-O0-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-O0-NEXT:    movq %r12, %rax
+; CHECK-O0-NEXT:    ## implicit-def: $rcx
+; CHECK-O0-NEXT:    movw (%rcx), %cx
+; CHECK-O0-NEXT:    movw %cx, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    jmp LBB8_1
 ; CHECK-O0-NEXT:  LBB8_2:
 ; CHECK-O0-NEXT:    addq $40, %rsp

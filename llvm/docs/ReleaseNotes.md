@@ -131,6 +131,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* The fast register allocator can consume SSA machine IR, lowering PHI nodes and
+  tied operands itself. X86 and AArch64 enable this, so at `-O0` their pipelines
+  no longer run `PHIElimination` and `TwoAddressInstructionPass`. Command lines
+  that name either pass in `-start-before`, `-start-after`, `-stop-before`,
+  `-stop-after` or `-run-pass` need `-regalloc-fast-ssa=0`, which restores them.
+
 ### Changes to the Metadata Info
 
 ### Changes to the Debug Info

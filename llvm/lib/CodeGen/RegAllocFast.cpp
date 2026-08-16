@@ -6,21 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This register allocator allocates registers to a basic block at a
-/// time, attempting to keep values in registers and reusing registers as
-/// appropriate.
+// This register allocator allocates registers to a basic block at a time,
+// attempting to keep values in registers and reusing registers as appropriate.
+// A value living across a block boundary gets a stack slot of its own, spilled
+// at the end of a block and reloaded where next used.
+//
+// Where the target enables it, the input is SSA MachineIR: PHIElimination
+// and TwoAddressInstructionPass are left out of the pipeline and this pass
+// lowers PHIs and tied operands itself. Most PHIs then cost nothing, the
+// incoming value being written straight into the destination's stack slot;
+// only where that write could escape on another edge out of the predecessor
+// does a virtual register carry it instead, as PHIElimination does.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "PHIEliminationUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -34,6 +45,7 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
@@ -53,6 +65,7 @@ using namespace llvm;
 STATISTIC(NumStores, "Number of stores added");
 STATISTIC(NumLoads, "Number of loads added");
 STATISTIC(NumCoalesced, "Number of copies coalesced");
+STATISTIC(NumPHIsViaVReg, "Number of PHIs lowered through a virtual register");
 
 // FIXME: Remove this switch when all testcases are fixed!
 static cl::opt<bool> IgnoreMissingDefs("rafast-ignore-missing-defs",
@@ -60,6 +73,10 @@ static cl::opt<bool> IgnoreMissingDefs("rafast-ignore-missing-defs",
 
 static RegisterRegAlloc fastRegAlloc("fast", "fast register allocator",
                                      createFastRegisterAllocator);
+
+// Budget for walking a virtual register's use or def list when deciding
+// whether it stays within one basic block.
+constexpr unsigned BlockLocalScanLimit = 8;
 
 namespace {
 
@@ -331,10 +348,20 @@ private:
 public:
   bool ClearVirtRegs;
 
+  /// The input is SSA MachineIR (the pipeline did not run PHIElimination and
+  /// TwoAddressInstructionPass): lower PHIs and tied operands here.
+  /// Determined per function from the input's properties.
+  bool SSAInput = false;
+
   bool runOnMachineFunction(MachineFunction &MF);
 
 private:
   void allocateBasicBlock(MachineBasicBlock &MBB);
+  bool canWritePHISlotInPreds(const MachineInstr &PHI,
+                              ArrayRef<unsigned> SCCId) const;
+  void lowerPHIs(MachineFunction &MF);
+  void lowerPHIEdgeCopies(MachineBasicBlock &MBB);
+  void expandSSAPseudo(MachineInstr &MI);
 
   void addRegClassDefCounts(MutableArrayRef<unsigned> RegClassDefCounts,
                             Register Reg) const;
@@ -421,20 +448,13 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoPHIs();
-  }
-
   MachineFunctionProperties getSetProperties() const override {
-    if (Impl.ClearVirtRegs) {
-      return MachineFunctionProperties().setNoVRegs();
-    }
-
-    return MachineFunctionProperties();
-  }
-
-  MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().setIsSSA();
+    MachineFunctionProperties P;
+    P.setNoPHIs();
+    P.setTiedOpsRewritten();
+    if (Impl.ClearVirtRegs)
+      P.setNoVRegs();
+    return P;
   }
 };
 
@@ -554,12 +574,10 @@ bool RegAllocFastImpl::mayLiveOut(Register VirtReg) {
     }
   }
 
-  // See if the first \p Limit uses of the register are all in the current
-  // block.
-  static const unsigned Limit = 8;
+  // See if the first few uses of the register are all in the current block.
   unsigned C = 0;
   for (const MachineInstr &UseInst : MRI->use_nodbg_instructions(VirtReg)) {
-    if (UseInst.getParent() != MBB || ++C >= Limit) {
+    if (UseInst.getParent() != MBB || ++C >= BlockLocalScanLimit) {
       MayLiveAcrossBlocks.set(VirtReg.virtRegIndex());
       // Cannot be live-out if there are no successors.
       return !MBB->succ_empty();
@@ -584,11 +602,10 @@ bool RegAllocFastImpl::mayLiveIn(Register VirtReg) {
   if (MayLiveAcrossBlocks.test(VirtReg.virtRegIndex()))
     return !MBB->pred_empty();
 
-  // See if the first \p Limit def of the register are all in the current block.
-  static const unsigned Limit = 8;
+  // See if the first few defs of the register are all in the current block.
   unsigned C = 0;
   for (const MachineInstr &DefInst : MRI->def_instructions(VirtReg)) {
-    if (DefInst.getParent() != MBB || ++C >= Limit) {
+    if (DefInst.getParent() != MBB || ++C >= BlockLocalScanLimit) {
       MayLiveAcrossBlocks.set(VirtReg.virtRegIndex());
       return !MBB->pred_empty();
     }
@@ -677,7 +694,8 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
     MachineBasicBlock &MBB, SmallSet<Register, 2> &PrologLiveIns) const {
   MachineBasicBlock::iterator I = MBB.begin();
   while (I != MBB.end()) {
-    if (I->isLabel()) {
+    // PHIs must stay first: successor scans and PHI deletion use MBB.phis().
+    if (I->isLabel() || I->isPHI()) {
       ++I;
       continue;
     }
@@ -733,7 +751,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
       // FIXME: Theoretically this should use an insert point skipping labels
       // but I'm not sure how labels should interact with prolog instruction
       // that need reloads.
-      reload(MBB.begin(), LR.VirtReg, PhysReg);
+      reload(MBB.getFirstNonPHI(), LR.VirtReg, PhysReg);
     } else
       reload(InsertBefore, LR.VirtReg, PhysReg);
   }
@@ -888,34 +906,51 @@ void RegAllocFastImpl::assignVirtToPhysReg(MachineInstr &AtMI, LiveReg &LR,
   assignDanglingDebugValues(AtMI, VirtReg, PhysReg);
 }
 
-static bool isCoalescable(const MachineInstr &MI) { return MI.isFullCopy(); }
-
 Register RegAllocFastImpl::traceCopyChain(Register Reg) const {
   static const unsigned ChainLengthLimit = 3;
-  unsigned C = 0;
-  do {
+  for (unsigned C = 0; C <= ChainLengthLimit; ++C) {
     if (Reg.isPhysical())
       return Reg;
-    assert(Reg.isVirtual());
-
-    MachineInstr *VRegDef = MRI->getUniqueVRegDef(Reg);
-    if (!VRegDef || !isCoalescable(*VRegDef))
-      return 0;
-    Reg = VRegDef->getOperand(1).getReg();
-  } while (++C <= ChainLengthLimit);
-  return 0;
+    const MachineOperand *DefMO = MRI->getOneDef(Reg);
+    if (!DefMO)
+      return {};
+    const MachineInstr *Def = DefMO->getParent();
+    if (Def->isFullCopy()) {
+      Reg = Def->getOperand(1).getReg();
+      continue;
+    }
+    if (!SSAInput)
+      return {};
+    // In SSA form a two-address instruction's def and tied use end up in the
+    // same register, so the tie continues the chain.
+    if (!DefMO->isTied() || DefMO->getSubReg())
+      return {};
+    Reg = Def->getOperand(Def->findTiedOperandIdx(DefMO->getOperandNo()))
+              .getReg();
+  }
+  return {};
 }
 
 /// Check if any of \p VirtReg's definitions is a copy. If it is follow the
 /// chain of copies to check whether we reach a physical register we can
 /// coalesce with.
 Register RegAllocFastImpl::traceCopies(Register VirtReg) const {
+  if (SSAInput) {
+    // A single def: enter the chain past a copy so the walk keeps the same
+    // reach as the multi-def loop below.
+    const MachineOperand *DefMO = MRI->getOneDef(VirtReg);
+    if (!DefMO)
+      return {};
+    const MachineInstr *Def = DefMO->getParent();
+    return Def->isFullCopy() ? traceCopyChain(Def->getOperand(1).getReg())
+                             : traceCopyChain(VirtReg);
+  }
+
   static const unsigned DefLimit = 3;
   unsigned C = 0;
   for (const MachineInstr &MI : MRI->def_instructions(VirtReg)) {
-    if (isCoalescable(MI)) {
-      Register Reg = MI.getOperand(1).getReg();
-      Reg = traceCopyChain(Reg);
+    if (MI.isFullCopy()) {
+      Register Reg = traceCopyChain(MI.getOperand(1).getReg());
       if (Reg.isValid())
         return Reg;
     }
@@ -1178,8 +1213,61 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
     assert((!MO.isKill() || LRI->LastUse == &MI) && "Invalid kill flag");
   }
 
-  // If necessary allocate a register.
-  if (LRI->PhysReg == 0) {
+  // SSA two-address lowering: the tied use is a distinct value whose range
+  // ends here (the tied def's range ended at this instruction in the
+  // backward walk).
+  const MachineOperand *TiedDefMO =
+      SSAInput && MO.isTied()
+          ? &MI.getOperand(MI.findTiedOperandIdx(MO.getOperandNo()))
+          : nullptr;
+  if (TiedDefMO && TiedDefMO->getReg().isPhysical()) {
+    const MachineOperand &DefMO = *TiedDefMO;
+    Register DefReg = DefMO.getReg();
+    unsigned SubReg = MO.getSubReg();
+    if (LRI->PhysReg == 0) {
+      // Take over the def's register. A register outside this operand's class
+      // cannot hold the value, as the def's class may be the wider one. A
+      // reserved register (e.g. the base pointer, tied to an inline asm
+      // operand) may not hold a virtual register. An early-clobber def that
+      // also reads this value through another operand needs that operand in a
+      // different register than the def. A subregister read is a truncation,
+      // so the value the def wants is a part of this one. All four allocate
+      // elsewhere and copy below.
+      bool MustCopy = SubReg || MRI->isReserved(DefReg) ||
+                      !MRI->getRegClass(VirtReg)->contains(DefReg);
+      if (DefMO.isEarlyClobber())
+        for (const MachineOperand &O : MI.operands())
+          if (&O != &MO && O.isReg() && O.isUse() && O.getReg() == VirtReg)
+            MustCopy = true;
+      if (!MustCopy) {
+        freePhysReg(DefReg.asMCReg());
+        assignVirtToPhysReg(MI, *LRI, DefReg.asMCReg());
+      } else {
+        allocVirtReg(MI, *LRI, 0, false);
+      }
+    }
+    MCRegister SrcReg = LRI->PhysReg;
+    if (SubReg)
+      SrcReg = TRI->getSubReg(SrcReg, SubReg);
+    if (Register(SrcReg) != DefReg) {
+      // The value lives in its own register (for other uses or code below);
+      // satisfy the tie the way TwoAddressInstructionPass does: copy it into
+      // the def's register right before the instruction and read it there.
+      BuildMI(*MBB, MI.getIterator(), MI.getDebugLoc(),
+              TII->get(TargetOpcode::COPY), DefReg)
+          .addReg(SrcReg);
+      LRI->LastUse = &MI;
+      markRegUsedInInstr(LRI->PhysReg);
+      MO.setReg(DefReg);
+      MO.setSubReg(0);
+      // A reserved register may not be renamed.
+      MO.setIsRenamable(!MRI->isReserved(DefReg));
+      // The tied def's value range ends here; the "free def operands" step
+      // keeps tied defs for the same-vreg case, so release it explicitly.
+      freePhysReg(DefReg.asMCReg());
+      return false;
+    }
+  } else if (LRI->PhysReg == 0) {
     assert(!MO.isTied() && "tied op should be allocated");
     Register Hint;
     if (MI.isCopy() && MI.getOperand(1).getSubReg() == 0) {
@@ -1802,8 +1890,14 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
 
   Coalesced.clear();
 
-  // Traverse block in reverse order allocating instructions one by one.
-  for (MachineInstr &MI : reverse(MBB)) {
+  // Traverse block in reverse order allocating instructions one by one. The
+  // iterator is advanced before the instruction is handled, since allocating
+  // it inserts copies and reloads ahead of it.
+  for (auto It = MBB.rbegin(), E = MBB.rend(); It != E;) {
+    MachineInstr &MI = *It;
+    ++It;
+    if (MI.isPHI())
+      continue;
     LLVM_DEBUG(dbgs() << "\n>> " << MI << "Regs:"; dumpState());
 
     // Special handling for debug values. Note that they are not allowed to
@@ -1850,6 +1944,285 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
   LLVM_DEBUG(MBB.dump());
 }
 
+/// Expand REG_SEQUENCE and INSERT_SUBREG into subregister COPYs: the
+/// lowering TwoAddressInstructionPass performs when it runs before
+/// allocation, plus the base-value copy its tie-processing provides.
+void RegAllocFastImpl::expandSSAPseudo(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  if (MI.isInsertSubreg()) {
+    // %d = INSERT_SUBREG %base, %sub, idx  ->  %d = COPY %base
+    //                                          %d.idx = COPY %sub
+    Register Dst = MI.getOperand(0).getReg();
+    const MachineOperand &BaseMO = MI.getOperand(1);
+    const MachineOperand &SubMO = MI.getOperand(2);
+    unsigned SubIdx = MI.getOperand(3).getImm();
+    assert(MI.getOperand(0).getSubReg() == 0 && "Unexpected subreg idx");
+    if (!BaseMO.isUndef())
+      BuildMI(MBB, MI.getIterator(), DL, TII->get(TargetOpcode::COPY), Dst)
+          .addReg(BaseMO.getReg(), RegState::NoFlags, BaseMO.getSubReg());
+    BuildMI(MBB, MI.getIterator(), DL, TII->get(TargetOpcode::COPY))
+        .addReg(Dst, RegState::Define | getUndefRegState(BaseMO.isUndef()),
+                SubIdx)
+        .addReg(SubMO.getReg(), getKillRegState(SubMO.isKill()),
+                SubMO.getSubReg());
+    MI.eraseFromParent();
+    return;
+  }
+
+  // %d = REG_SEQUENCE %s1, idx1, ...  ->  undef %d.idx1 = COPY %s1
+  //                                       %d.idx2 = COPY %s2 ...
+  assert(MI.isRegSequence());
+  Register Dst = MI.getOperand(0).getReg();
+  bool DefEmitted = false;
+  for (unsigned I = 1, E = MI.getNumOperands(); I + 1 < E; I += 2) {
+    MachineOperand &SrcMO = MI.getOperand(I);
+    unsigned SubIdx = MI.getOperand(I + 1).getImm();
+    BuildMI(MBB, MI.getIterator(), DL, TII->get(TargetOpcode::COPY))
+        .addReg(Dst, RegState::Define | getUndefRegState(!DefEmitted), SubIdx)
+        .addReg(SrcMO.getReg(), RegState::NoFlags, SrcMO.getSubReg());
+    DefEmitted = true;
+  }
+  MI.eraseFromParent();
+}
+
+// Whether this PHI can be lowered by having every predecessor write the
+// incoming value straight into the destination's own stack slot. Yes if such
+// escaped writes cannot be observed.
+bool RegAllocFastImpl::canWritePHISlotInPreds(const MachineInstr &PHI,
+                                              ArrayRef<unsigned> SCCId) const {
+  const MachineBasicBlock *MBB = PHI.getParent();
+  Register Dst = PHI.getOperand(0).getReg();
+
+  for (unsigned I = 1, E = PHI.getNumOperands(); I != E; I += 2) {
+    const MachineBasicBlock *Pred = PHI.getOperand(I + 1).getMBB();
+    // Different SCC means MBB cannot reach Pred, so Dst, defined by MBB,
+    // is not live at Pred. Early write at Pred is ok.
+    if (SCCId[Pred->getNumber()] != SCCId[MBB->getNumber()])
+      continue;
+    // If Pred has another successor, the early write may clobber a value of
+    // Dst that is still read after leaving Pred that way. When MBB is a landing
+    // pad: findPHICopyInsertPoint then puts the write before the call that may
+    // throw rather than before the terminator, so it runs even when the call
+    // returns normally.
+    if (Pred->succ_size() == 1 && !MBB->isEHPad())
+      continue;
+    // Unless every read of Dst is in MBB: an edge into MBB rewrites the slot,
+    // so the escaped write is never observed. A PHI operand does not count,
+    // being read on the edge, in the predecessor. Last as it walks the uses.
+    return all_of(MRI->use_nodbg_instructions(Dst),
+                  [&](const MachineInstr &UseMI) {
+                    return !UseMI.isPHI() && UseMI.getParent() == MBB;
+                  });
+  }
+  return true;
+}
+
+/// Whether one stack slot can serve both register classes, so that a PHI
+/// source may take the destination's. getStackSpaceFor() creates the slot for
+/// one class and every access uses the class of the register it moves, so only
+/// the geometry has to agree.
+static bool sharesStackSlot(const TargetRegisterInfo &TRI,
+                            const TargetRegisterClass &A,
+                            const TargetRegisterClass &B) {
+  return &A == &B || (TRI.getSpillSize(A) == TRI.getSpillSize(B) &&
+                      TRI.getSpillAlign(A) == TRI.getSpillAlign(B) &&
+                      TRI.getSpillStackID(A) == TRI.getSpillStackID(B));
+}
+
+/// Lower the PHIs of \p MF to copies at the end of the predecessors. Those
+/// canWritePHISlotInPreds() rejects go through an extra virtual register, as
+/// PHIElimination does, so that a copy on a not-taken edge cannot be
+/// observed; the rest have the copy define the destination itself. A source
+/// dying in its predecessor is given the destination's stack slot instead,
+/// making its spill the transfer, so that edge needs no copy at all.
+///
+/// Only registers the PHIs already reference are looked up in
+/// StackSlotForVirtReg, so the caller need only have sized it for those.
+void RegAllocFastImpl::lowerPHIs(MachineFunction &MF) {
+  SmallVector<unsigned, 0> SCCId(MF.getNumBlockIDs(), ~0u);
+  unsigned Id = 0;
+  for (scc_iterator<MachineFunction *> I = scc_begin(&MF); !I.isAtEnd();
+       ++I, ++Id)
+    for (MachineBasicBlock *MBB : *I)
+      SCCId[MBB->getNumber()] = Id;
+
+  // Determine PHIs that cannot be lowered by writing the destination's slot in
+  // the predecessors. Collected first: the copies below move the end of
+  // MBB.phis(), and the queries above need the still-SSA form.
+  SmallVector<MachineInstr *, 8> Unsafe;
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &PHI : MBB.phis())
+      if (!canWritePHISlotInPreds(PHI, SCCId))
+        Unsafe.push_back(&PHI);
+
+  // Isolate such unsafe PHIs the way PHIElimination does: a fresh register
+  // carries the value over every edge, and a copy at the top of the block moves
+  // it to the destination. Read at that one place, it cannot be observed when
+  // written on a not-taken edge.
+  //
+  // This destroys SSA: Incoming is defined once per predecessor. leaveSSA() has
+  // run and the allocator proper is built for multiple definitions, but nothing
+  // past this point may assume a unique def.
+  SmallPtrSet<MachineBasicBlock *, 8> InsertedInto;
+  for (MachineInstr *PHI : Unsafe) {
+    MachineBasicBlock &MBB = *PHI->getParent();
+    Register Dst = PHI->getOperand(0).getReg();
+    Register Incoming = MRI->createVirtualRegister(MRI->getRegClass(Dst));
+    TII->createPHIDestinationCopy(MBB, MBB.SkipPHIsAndLabels(MBB.begin()),
+                                  PHI->getDebugLoc(), Incoming, Dst);
+    InsertedInto.clear();
+    for (unsigned I = 1, E = PHI->getNumOperands(); I != E; I += 2) {
+      const MachineOperand &SrcMO = PHI->getOperand(I);
+      MachineBasicBlock &Pred = *PHI->getOperand(I + 1).getMBB();
+      // Duplicate predecessors carry the same value; one copy suffices.
+      if (!InsertedInto.insert(&Pred).second)
+        continue;
+      // No debug location: the copy lands in another block than the PHI.
+      TII->createPHISourceCopy(
+          Pred, findPHICopyInsertPoint(&Pred, &MBB, SrcMO.getReg()), DebugLoc(),
+          SrcMO.getReg(), SrcMO.getSubReg(), Incoming);
+    }
+    PHI->eraseFromParent();
+    ++NumPHIsViaVReg;
+  }
+
+  // For each source of a safe PHI node, perform a conservative interference
+  // test to try sharing slot with Dst. Each source is decided on its own, so
+  // the order blocks are visited in does not matter.
+  SmallPtrSet<const MachineBasicBlock *, 8> DstReadIn;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &PHI : MBB.phis()) {
+      Register Dst = PHI.getOperand(0).getReg();
+      // Blocks reading Dst. A PHI reads its operand on the edge, in the
+      // predecessor, though its parent is the successor.
+      DstReadIn.clear();
+      for (const MachineInstr &UseMI : MRI->use_nodbg_instructions(Dst)) {
+        DstReadIn.insert(UseMI.getParent());
+        if (UseMI.isPHI())
+          for (unsigned J = 1, JE = UseMI.getNumOperands(); J != JE; J += 2)
+            if (UseMI.getOperand(J).getReg() == Dst)
+              DstReadIn.insert(UseMI.getOperand(J + 1).getMBB());
+      }
+      for (unsigned I = 1, E = PHI.getNumOperands(); I != E; I += 2) {
+        MachineOperand &SrcMO = PHI.getOperand(I);
+        Register Src = SrcMO.getReg();
+        if (!Src.isVirtual() || SrcMO.getSubReg())
+          continue;
+        if (StackSlotForVirtReg[Src] != -1 ||
+            !sharesStackSlot(*TRI, *MRI->getRegClass(Src),
+                             *MRI->getRegClass(Dst)))
+          continue;
+        MachineBasicBlock *Pred = PHI.getOperand(I + 1).getMBB();
+        const MachineInstr *Def = MRI->getUniqueVRegDef(Src);
+        // If the value is defined and only used (except the PHI) in Pred, its
+        // live range lies entirely inside Pred. The use-list walk follows
+        // mayLiveOut().
+        if (!Def || Def->getParent() != Pred)
+          continue;
+        bool DiesInPred = true;
+        unsigned C = 0;
+        for (const MachineInstr &UseMI : MRI->use_nodbg_instructions(Src)) {
+          if (++C >= BlockLocalScanLimit ||
+              (&UseMI != &PHI &&
+               (UseMI.getParent() != Pred || UseMI.isPHI()))) {
+            DiesInPred = false;
+            break;
+          }
+        }
+        if (!DiesInPred)
+          continue;
+        // If Dst is not read in Pred, Src and Dst don't overlap.
+        if (!DstReadIn.contains(Pred))
+          StackSlotForVirtReg[Src] = getStackSpaceFor(Dst);
+      }
+    }
+  }
+
+  for (MachineBasicBlock &MBB : MF)
+    lowerPHIEdgeCopies(MBB);
+}
+
+/// Emit the copies carrying the PHI values of \p MBB's successors on the edges
+/// leaving \p MBB, before the terminators. A source sharing the destination's
+/// slot needs none, its spill being the transfer. The rest are ordered so that
+/// a destination is written only once nothing left reads it; a cycle is broken
+/// by copying one value aside first. An operand a copy has taken over is
+/// rewritten to the destination, so that the PHI no longer keeps the source
+/// alive across the edge.
+void RegAllocFastImpl::lowerPHIEdgeCopies(MachineBasicBlock &MBB) {
+  struct EdgeCopy {
+    Register Dst, Src;
+    MachineOperand *PHIOp;
+  };
+  SmallPtrSet<MachineBasicBlock *, 4> SeenSucc;
+  SmallVector<EdgeCopy, 4> Copies;
+  SmallDenseMap<Register, unsigned, 8> ReadCount;
+  for (MachineBasicBlock *Succ : MBB.successors()) {
+    if (!SeenSucc.insert(Succ).second)
+      continue;
+    Copies.clear();
+    ReadCount.clear();
+    // Not MBB.phis(): a copy below can land inside its range when MBB is its
+    // own successor.
+    for (MachineInstr &PHI : *Succ) {
+      if (!PHI.isPHI())
+        break;
+      Register Dst = PHI.getOperand(0).getReg();
+      for (unsigned I = 1, E = PHI.getNumOperands(); I != E; I += 2) {
+        if (PHI.getOperand(I + 1).getMBB() != &MBB)
+          continue;
+        MachineOperand &SrcMO = PHI.getOperand(I);
+        Register Src = SrcMO.getReg();
+        if (!Src.isVirtual() || StackSlotForVirtReg[Src] == -1 ||
+            StackSlotForVirtReg[Src] != StackSlotForVirtReg[Dst]) {
+          Copies.push_back({Dst, Src, &SrcMO});
+          ++ReadCount[Src];
+        }
+        // Duplicate predecessors carry the same value; one copy suffices.
+        break;
+      }
+    }
+    if (Copies.empty())
+      continue;
+
+    MachineBasicBlock::iterator IP =
+        findPHICopyInsertPoint(&MBB, Succ, Copies.front().Src);
+    while (!Copies.empty()) {
+      bool Progress = false;
+      for (unsigned I = 0; I != Copies.size(); ++I) {
+        if (ReadCount.lookup(Copies[I].Dst))
+          continue;
+        const EdgeCopy &C = Copies[I];
+        // No debug location: the copy lands in another block than the PHI.
+        TII->createPHISourceCopy(MBB, IP, DebugLoc(), C.Src,
+                                 C.PHIOp->getSubReg(), C.Dst);
+        // The copy is the transfer now. The PHI's own read of the source would
+        // keep it alive across the edge, costing a spill, so point it at the
+        // destination instead.
+        C.PHIOp->setReg(C.Dst);
+        C.PHIOp->setSubReg(0);
+        --ReadCount[C.Src];
+        Copies.erase(Copies.begin() + I);
+        Progress = true;
+        break;
+      }
+      if (Progress)
+        continue;
+      // Every destination left is still read, so they form a cycle. Copy one
+      // value aside and let its readers take that register instead.
+      EdgeCopy &C = Copies.front();
+      Register Tmp = MRI->createVirtualRegister(MRI->getRegClass(C.Dst));
+      TII->createPHISourceCopy(MBB, IP, DebugLoc(), C.Dst, 0, Tmp);
+      ReadCount[Tmp] = ReadCount[C.Dst];
+      ReadCount[C.Dst] = 0;
+      for (EdgeCopy &O : Copies)
+        if (O.Src == C.Dst)
+          O.Src = Tmp;
+    }
+  }
+}
+
 bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** FAST REGISTER ALLOCATION **********\n"
                     << "********** Function: " << MF.getName() << '\n');
@@ -1864,6 +2237,38 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   InstrGen = 0;
   UsedInInstr.assign(NumRegUnits, 0);
 
+  // For SSA input, lower PHI and tied operands ourselves, skipping the
+  // SSA-destroying PHIElimination and TwoAddressInstructionPass. We want to
+  // require SSAInput in the future. The currently hasIsSSA() supports partial
+  // pipelines (-run-pass, -start-before).
+  SSAInput =
+      MF.getProperties().hasIsSSA() && useSSAFastRegAlloc(MF.getTarget());
+  assert((SSAInput || none_of(MF,
+                              [](const MachineBasicBlock &MBB) {
+                                return !MBB.empty() && MBB.begin()->isPHI();
+                              })) &&
+         "PHIs in non-SSA input: PHIElimination did not run and this target "
+         "does not consume SSA MachineIR");
+  // A target that has not opted in may still be handed SSA MachineIR.
+  MRI->leaveSSA();
+
+  bool HasPHIs = false;
+  if (SSAInput) {
+    HasPHIs = any_of(MF, [](const MachineBasicBlock &MBB) {
+      return !MBB.empty() && MBB.begin()->isPHI();
+    });
+    if (HasPHIs) {
+      // Only the registers the PHIs reference are looked up, so this sizing is
+      // enough.
+      StackSlotForVirtReg.resize(MRI->getNumVirtRegs());
+      lowerPHIs(MF);
+    }
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : make_early_inc_range(MBB))
+        if (MI.isRegSequence() || MI.isInsertSubreg())
+          expandSSAPseudo(MI);
+  }
+
   // initialize the virtual->physical register map to have a 'null'
   // mapping for all virtual registers
   unsigned NumVirtRegs = MRI->getNumVirtRegs();
@@ -1872,9 +2277,23 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   MayLiveAcrossBlocks.clear();
   MayLiveAcrossBlocks.resize(NumVirtRegs);
 
+  // A PHI destination lives across the edge by construction: the copies
+  // lowerPHIEdgeCopies() inserted define it at the end of the predecessors,
+  // and it is read in the PHI's own block. The use-list walk in mayLiveOut()
+  // cannot tell, the PHI itself not being a use, so say so directly.
+  if (HasPHIs)
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &PHI : MBB.phis())
+        MayLiveAcrossBlocks.set(PHI.getOperand(0).getReg().virtRegIndex());
+
   // Loop over all of the basic blocks, eliminating virtual register references
   for (MachineBasicBlock &MBB : MF)
     allocateBasicBlock(MBB);
+
+  if (HasPHIs)
+    for (MachineBasicBlock &MBB : MF)
+      for (MachineInstr &MI : make_early_inc_range(MBB.phis()))
+        MI.eraseFromParent();
 
   if (ClearVirtRegs) {
     // All machine operands and other references to virtual registers have been

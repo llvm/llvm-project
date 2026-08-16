@@ -478,6 +478,11 @@ protected:
 LLVM_ABI void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                       TargetMachine &);
 
+/// Whether the fast register allocator consumes SSA MachineIR for \p TM,
+/// resolving the target default against -regalloc-fast-ssa. Shared by both
+/// codegen pipelines.
+LLVM_ABI bool useSSAFastRegAlloc(const TargetMachine &TM);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_TARGETPASSCONFIG_H

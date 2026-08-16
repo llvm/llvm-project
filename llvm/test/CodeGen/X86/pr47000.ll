@@ -15,13 +15,13 @@ define <4 x half> @doTheTestMod(<4 x half> %0, <4 x half> %1) nounwind {
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
 ; CHECK-NEXT:    psrlq $48, %xmm3
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
-; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
+; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
 ; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    movaps %xmm6, %xmm7
 ; CHECK-NEXT:    movaps %xmm6, %xmm4
 ; CHECK-NEXT:    psrlq $48, %xmm4
 ; CHECK-NEXT:    movaps %xmm6, %xmm5
-; CHECK-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1,1,1]
+; CHECK-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,1],xmm6[1,1]
 ; CHECK-NEXT:    psrld $16, %xmm6
 ; CHECK-NEXT:    pextrw $0, %xmm7, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax

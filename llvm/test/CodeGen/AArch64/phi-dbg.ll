@@ -1,4 +1,5 @@
-; RUN: llc -O0 %s -mtriple=aarch64 -stop-after=phi-node-elimination -o - | FileCheck %s
+; RUN: llc -O0 %s -mtriple=aarch64 -regalloc-fast-ssa=0 -stop-after=phi-node-elimination -o - | FileCheck %s
+; -regalloc-fast-ssa=0 restores phi-node-elimination, which -stop-after names.
 
 ; Test that a DEBUG_VALUE node is create for variable c after the phi has been
 ; converted to a ldr.    The DEBUG_VALUE must be *after* the ldr and not before it.

@@ -4,16 +4,16 @@
 define i32 @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
+; CHECK-NEXT:    subl $12, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movw $10959, {{[0-9]+}}(%esp) # imm = 0x2ACF
 ; CHECK-NEXT:    movw $-15498, {{[0-9]+}}(%esp) # imm = 0xC376
 ; CHECK-NEXT:    movw $19417, {{[0-9]+}}(%esp) # imm = 0x4BD9
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    cmpw $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    cmpw $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %lor.rhs
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -21,18 +21,18 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_2: # %lor.end
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; CHECK-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
 ; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    movzbl %cl, %ecx
 ; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    setl %al
 ; CHECK-NEXT:    andb $1, %al
-; CHECK-NEXT:    movzbl %al, %ecx
-; CHECK-NEXT:    xorl $-1, %ecx
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    cmpl $0, %ecx
-; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    xorl $-1, %eax
+; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    cmpl $0, %eax
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %lor.rhs4
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -46,7 +46,7 @@ define i32 @_Z3foov() {
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $16, %esp
+; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:

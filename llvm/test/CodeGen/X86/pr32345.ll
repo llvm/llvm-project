@@ -41,31 +41,33 @@ define void @foo() {
 ; X86-O0-NEXT:    .cfi_offset %ebp, -8
 ; X86-O0-NEXT:    movl %esp, %ebp
 ; X86-O0-NEXT:    .cfi_def_cfa_register %ebp
+; X86-O0-NEXT:    pushl %esi
 ; X86-O0-NEXT:    andl $-8, %esp
 ; X86-O0-NEXT:    subl $24, %esp
+; X86-O0-NEXT:    .cfi_offset %esi, -12
 ; X86-O0-NEXT:    movzwl var_22, %eax
 ; X86-O0-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-O0-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-O0-NEXT:    movzwl var_22, %edx
-; X86-O0-NEXT:    movb var_27, %cl
-; X86-O0-NEXT:    addb $30, %cl
-; X86-O0-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-O0-NEXT:    xorl %eax, %eax
-; X86-O0-NEXT:    shrdl %cl, %eax, %edx
-; X86-O0-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %cl # 1-byte Reload
-; X86-O0-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-O0-NEXT:    testb $32, %cl
-; X86-O0-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-O0-NEXT:    movb var_27, %al
+; X86-O0-NEXT:    addb $30, %al
+; X86-O0-NEXT:    xorl %esi, %esi
+; X86-O0-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-O0-NEXT:    movb %al, %cl
+; X86-O0-NEXT:    shrdl %cl, %esi, %edx
+; X86-O0-NEXT:    movl %edx, (%esp) # 4-byte Spill
+; X86-O0-NEXT:    testb $32, %al
 ; X86-O0-NEXT:    jne .LBB0_2
 ; X86-O0-NEXT:  # %bb.1: # %bb
-; X86-O0-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-O0-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-O0-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-O0-NEXT:  .LBB0_2: # %bb
 ; X86-O0-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-O0-NEXT:    movb %al, %cl
 ; X86-O0-NEXT:    # implicit-def: $eax
 ; X86-O0-NEXT:    movb %cl, (%eax)
-; X86-O0-NEXT:    movl %ebp, %esp
+; X86-O0-NEXT:    leal -4(%ebp), %esp
+; X86-O0-NEXT:    popl %esi
 ; X86-O0-NEXT:    popl %ebp
 ; X86-O0-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-O0-NEXT:    retl

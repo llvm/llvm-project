@@ -1221,8 +1221,12 @@ CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignAndRewriteOptimized(
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::addFastRegAlloc(
     PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(PHIEliminationPass(), PMW);
-  addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
+  // When the fast allocator consumes SSA MachineIR it lowers PHIs and tied
+  // operands itself, detecting the input form per function from IsSSA.
+  if (!useSSAFastRegAlloc(TM)) {
+    addMachineFunctionPass(PHIEliminationPass(), PMW);
+    addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
+  }
   return derived().addRegAssignAndRewriteFast(PMW);
 }
 

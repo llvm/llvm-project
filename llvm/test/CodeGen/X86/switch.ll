@@ -1327,7 +1327,8 @@ define void @phi_node_trouble(ptr %s) {
 ;
 ; NOOPT-LABEL: phi_node_trouble:
 ; NOOPT:       # %bb.0: # %entry
-; NOOPT-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; NOOPT-NEXT:    movq %rdi, %rax
+; NOOPT-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; NOOPT-NEXT:    jmp .LBB13_1
 ; NOOPT-NEXT:  .LBB13_1: # %header
 ; NOOPT-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -2526,9 +2527,9 @@ define i32 @pr27135(i32 %i) {
 ; NOOPT:       # %bb.0: # %entry
 ; NOOPT-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; NOOPT-NEXT:    xorl %eax, %eax
-; NOOPT-NEXT:    # implicit-def: $cl
-; NOOPT-NEXT:    testb $1, %cl
 ; NOOPT-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; NOOPT-NEXT:    # implicit-def: $al
+; NOOPT-NEXT:    testb $1, %al
 ; NOOPT-NEXT:    jne .LBB24_1
 ; NOOPT-NEXT:    jmp .LBB24_4
 ; NOOPT-NEXT:  .LBB24_1: # %sw

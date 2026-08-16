@@ -346,10 +346,10 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; O0-NEXT:    vzeroupper
 ; O0-NEXT:    callq foo
 ; O0-NEXT:  # %bb.1:
-; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
-; O0-NEXT:    xorl %eax, %eax
-; O0-NEXT:    cmpl $0, %ecx
-; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; O0-NEXT:    cmpl $0, %eax
 ; O0-NEXT:    jg .LBB2_4
 ; O0-NEXT:    jmp .LBB2_3
 ; O0-NEXT:  .LBB2_2:
@@ -358,8 +358,6 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; O0-NEXT:    je .LBB2_5
 ; O0-NEXT:    jmp .LBB2_4
 ; O0-NEXT:  .LBB2_3: # =>This Inner Loop Header: Depth=1
-; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:    movl $buf, %ecx
 ; O0-NEXT:    movl $32, %edx
 ; O0-NEXT:    movw $8, %ax
@@ -566,8 +564,6 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; O0-NEXT:    xorl %eax, %eax
 ; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
-; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; O0-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; O0-NEXT:    vzeroupper
 ; O0-NEXT:    callq foo
 ; O0-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload

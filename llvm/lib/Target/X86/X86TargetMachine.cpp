@@ -205,6 +205,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   }
 
   setMachineOutliner(true);
+  setEnableSSAFastRegAlloc(true);
 
   // x86 supports the debug entry values.
   setSupportsDebugEntryValues(true);

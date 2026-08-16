@@ -1428,10 +1428,10 @@ define void @rmw_fold_sdiv1(ptr %p, i64 %v) {
 ; CHECK-O0-NEXT:    imulq %rdx
 ; CHECK-O0-NEXT:    movq %rdx, %rax
 ; CHECK-O0-NEXT:    addq %rcx, %rax
-; CHECK-O0-NEXT:    movq %rax, %rcx
-; CHECK-O0-NEXT:    shrq $63, %rcx
+; CHECK-O0-NEXT:    movq %rax, %rdx
+; CHECK-O0-NEXT:    shrq $63, %rdx
 ; CHECK-O0-NEXT:    sarq $3, %rax
-; CHECK-O0-NEXT:    addq %rcx, %rax
+; CHECK-O0-NEXT:    addq %rdx, %rax
 ; CHECK-O0-NEXT:    movq %rax, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;

@@ -120,6 +120,7 @@ protected: // Can only create subclasses.
 
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
+  unsigned EnableSSAFastRegAlloc : 1;
 
   // PGO related tunables.
   std::optional<PGOOptions> PGOOption;
@@ -259,6 +260,14 @@ public:
 
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
+
+  /// Whether the fast register allocator consumes SSA MachineIR, lowering
+  /// PHIs and tied operands itself instead of running PHIElimination and
+  /// TwoAddressInstructionPass.
+  /// TODO: AMDGPU inserts passes anchored on those pass IDs, must leave this
+  /// false.
+  bool enableSSAFastRegAlloc() const { return EnableSSAFastRegAlloc; }
+  void setEnableSSAFastRegAlloc(bool Value) { EnableSSAFastRegAlloc = Value; }
 
   /// Returns the code generation relocation model. The choices are static, PIC,
   /// and dynamic-no-pic, and target default.

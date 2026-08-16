@@ -12597,10 +12597,10 @@ define void @atomic128_store_unordered(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection383:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection384:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection384:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection385:
 ; O0-NEXT:    jmp .LBB203_1
 ; O0-NEXT:  .LBB203_1: # %atomicrmw.start
@@ -12616,8 +12616,10 @@ define void @atomic128_store_unordered(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection389:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection390:
 ; O0-NEXT:    jne .LBB203_1
 ; O0-NEXT:    jmp .LBB203_2
@@ -12734,10 +12736,10 @@ define void @atomic128_store_monotonic(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection391:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection392:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection392:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection393:
 ; O0-NEXT:    jmp .LBB204_1
 ; O0-NEXT:  .LBB204_1: # %atomicrmw.start
@@ -12753,8 +12755,10 @@ define void @atomic128_store_monotonic(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection397:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection398:
 ; O0-NEXT:    jne .LBB204_1
 ; O0-NEXT:    jmp .LBB204_2
@@ -12871,10 +12875,10 @@ define void @atomic128_store_release(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection399:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection400:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection400:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection401:
 ; O0-NEXT:    jmp .LBB205_1
 ; O0-NEXT:  .LBB205_1: # %atomicrmw.start
@@ -12890,8 +12894,10 @@ define void @atomic128_store_release(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection405:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection406:
 ; O0-NEXT:    jne .LBB205_1
 ; O0-NEXT:    jmp .LBB205_2
@@ -13008,10 +13014,10 @@ define void @atomic128_store_seq_cst(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection407:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection408:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection408:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection409:
 ; O0-NEXT:    jmp .LBB206_1
 ; O0-NEXT:  .LBB206_1: # %atomicrmw.start
@@ -13027,8 +13033,10 @@ define void @atomic128_store_seq_cst(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection413:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection414:
 ; O0-NEXT:    jne .LBB206_1
 ; O0-NEXT:    jmp .LBB206_2
@@ -13194,10 +13202,10 @@ define void @atomic128_xchg_monotonic(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection416:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection417:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection417:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection418:
 ; O0-NEXT:    jmp .LBB208_1
 ; O0-NEXT:  .LBB208_1: # %atomicrmw.start
@@ -13213,8 +13221,10 @@ define void @atomic128_xchg_monotonic(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection422:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection423:
 ; O0-NEXT:    jne .LBB208_1
 ; O0-NEXT:    jmp .LBB208_2
@@ -13348,10 +13358,10 @@ define void @atomic128_add_monotonic(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection424:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection425:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection425:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection426:
 ; O0-NEXT:    jmp .LBB209_1
 ; O0-NEXT:  .LBB209_1: # %atomicrmw.start
@@ -13367,8 +13377,10 @@ define void @atomic128_add_monotonic(ptr %a) {
 ; O0-NEXT:    adcq $0, %rcx
 ; O0-NEXT:  .Lpcsection429:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection430:
 ; O0-NEXT:    jne .LBB209_1
 ; O0-NEXT:    jmp .LBB209_2
@@ -13510,10 +13522,10 @@ define void @atomic128_sub_monotonic(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection431:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection432:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection432:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection433:
 ; O0-NEXT:    jmp .LBB210_1
 ; O0-NEXT:  .LBB210_1: # %atomicrmw.start
@@ -13529,8 +13541,10 @@ define void @atomic128_sub_monotonic(ptr %a) {
 ; O0-NEXT:    adcq $-1, %rcx
 ; O0-NEXT:  .Lpcsection436:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection437:
 ; O0-NEXT:    jne .LBB210_1
 ; O0-NEXT:    jmp .LBB210_2
@@ -13672,10 +13686,10 @@ define void @atomic128_and_monotonic(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection438:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection439:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection439:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection440:
 ; O0-NEXT:    jmp .LBB211_1
 ; O0-NEXT:  .LBB211_1: # %atomicrmw.start
@@ -13693,8 +13707,10 @@ define void @atomic128_and_monotonic(ptr %a) {
 ; O0-NEXT:    # kill: def $rcx killed $ecx
 ; O0-NEXT:  .Lpcsection444:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection445:
 ; O0-NEXT:    jne .LBB211_1
 ; O0-NEXT:    jmp .LBB211_2
@@ -13832,10 +13848,10 @@ define void @atomic128_or_monotonic(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection446:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection447:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection447:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection448:
 ; O0-NEXT:    jmp .LBB212_1
 ; O0-NEXT:  .LBB212_1: # %atomicrmw.start
@@ -13849,8 +13865,10 @@ define void @atomic128_or_monotonic(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection450:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection451:
 ; O0-NEXT:    jne .LBB212_1
 ; O0-NEXT:    jmp .LBB212_2
@@ -13984,10 +14002,10 @@ define void @atomic128_xor_monotonic(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection452:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection453:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection453:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection454:
 ; O0-NEXT:    jmp .LBB213_1
 ; O0-NEXT:  .LBB213_1: # %atomicrmw.start
@@ -14001,8 +14019,10 @@ define void @atomic128_xor_monotonic(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection456:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection457:
 ; O0-NEXT:    jne .LBB213_1
 ; O0-NEXT:    jmp .LBB213_2
@@ -14136,10 +14156,10 @@ define void @atomic128_nand_monotonic(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection458:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection459:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection459:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection460:
 ; O0-NEXT:    jmp .LBB214_1
 ; O0-NEXT:  .LBB214_1: # %atomicrmw.start
@@ -14159,8 +14179,10 @@ define void @atomic128_nand_monotonic(ptr %a) {
 ; O0-NEXT:    movq $-1, %rcx
 ; O0-NEXT:  .Lpcsection465:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection466:
 ; O0-NEXT:    jne .LBB214_1
 ; O0-NEXT:    jmp .LBB214_2
@@ -14306,10 +14328,10 @@ define void @atomic128_xchg_acquire(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection467:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection468:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection468:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection469:
 ; O0-NEXT:    jmp .LBB215_1
 ; O0-NEXT:  .LBB215_1: # %atomicrmw.start
@@ -14325,8 +14347,10 @@ define void @atomic128_xchg_acquire(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection473:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection474:
 ; O0-NEXT:    jne .LBB215_1
 ; O0-NEXT:    jmp .LBB215_2
@@ -14460,10 +14484,10 @@ define void @atomic128_add_acquire(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection475:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection476:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection476:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection477:
 ; O0-NEXT:    jmp .LBB216_1
 ; O0-NEXT:  .LBB216_1: # %atomicrmw.start
@@ -14479,8 +14503,10 @@ define void @atomic128_add_acquire(ptr %a) {
 ; O0-NEXT:    adcq $0, %rcx
 ; O0-NEXT:  .Lpcsection480:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection481:
 ; O0-NEXT:    jne .LBB216_1
 ; O0-NEXT:    jmp .LBB216_2
@@ -14622,10 +14648,10 @@ define void @atomic128_sub_acquire(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection482:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection483:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection483:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection484:
 ; O0-NEXT:    jmp .LBB217_1
 ; O0-NEXT:  .LBB217_1: # %atomicrmw.start
@@ -14641,8 +14667,10 @@ define void @atomic128_sub_acquire(ptr %a) {
 ; O0-NEXT:    adcq $-1, %rcx
 ; O0-NEXT:  .Lpcsection487:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection488:
 ; O0-NEXT:    jne .LBB217_1
 ; O0-NEXT:    jmp .LBB217_2
@@ -14784,10 +14812,10 @@ define void @atomic128_and_acquire(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection489:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection490:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection490:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection491:
 ; O0-NEXT:    jmp .LBB218_1
 ; O0-NEXT:  .LBB218_1: # %atomicrmw.start
@@ -14805,8 +14833,10 @@ define void @atomic128_and_acquire(ptr %a) {
 ; O0-NEXT:    # kill: def $rcx killed $ecx
 ; O0-NEXT:  .Lpcsection495:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection496:
 ; O0-NEXT:    jne .LBB218_1
 ; O0-NEXT:    jmp .LBB218_2
@@ -14944,10 +14974,10 @@ define void @atomic128_or_acquire(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection497:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection498:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection498:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection499:
 ; O0-NEXT:    jmp .LBB219_1
 ; O0-NEXT:  .LBB219_1: # %atomicrmw.start
@@ -14961,8 +14991,10 @@ define void @atomic128_or_acquire(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection501:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection502:
 ; O0-NEXT:    jne .LBB219_1
 ; O0-NEXT:    jmp .LBB219_2
@@ -15096,10 +15128,10 @@ define void @atomic128_xor_acquire(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection503:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection504:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection504:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection505:
 ; O0-NEXT:    jmp .LBB220_1
 ; O0-NEXT:  .LBB220_1: # %atomicrmw.start
@@ -15113,8 +15145,10 @@ define void @atomic128_xor_acquire(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection507:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection508:
 ; O0-NEXT:    jne .LBB220_1
 ; O0-NEXT:    jmp .LBB220_2
@@ -15248,10 +15282,10 @@ define void @atomic128_nand_acquire(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection509:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection510:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection510:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection511:
 ; O0-NEXT:    jmp .LBB221_1
 ; O0-NEXT:  .LBB221_1: # %atomicrmw.start
@@ -15271,8 +15305,10 @@ define void @atomic128_nand_acquire(ptr %a) {
 ; O0-NEXT:    movq $-1, %rcx
 ; O0-NEXT:  .Lpcsection516:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection517:
 ; O0-NEXT:    jne .LBB221_1
 ; O0-NEXT:    jmp .LBB221_2
@@ -15418,10 +15454,10 @@ define void @atomic128_xchg_release(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection518:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection519:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection519:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection520:
 ; O0-NEXT:    jmp .LBB222_1
 ; O0-NEXT:  .LBB222_1: # %atomicrmw.start
@@ -15437,8 +15473,10 @@ define void @atomic128_xchg_release(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection524:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection525:
 ; O0-NEXT:    jne .LBB222_1
 ; O0-NEXT:    jmp .LBB222_2
@@ -15571,10 +15609,10 @@ define void @atomic128_add_release(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection526:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection527:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection527:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection528:
 ; O0-NEXT:    jmp .LBB223_1
 ; O0-NEXT:  .LBB223_1: # %atomicrmw.start
@@ -15590,8 +15628,10 @@ define void @atomic128_add_release(ptr %a) {
 ; O0-NEXT:    adcq $0, %rcx
 ; O0-NEXT:  .Lpcsection531:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection532:
 ; O0-NEXT:    jne .LBB223_1
 ; O0-NEXT:    jmp .LBB223_2
@@ -15733,10 +15773,10 @@ define void @atomic128_sub_release(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection533:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection534:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection534:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection535:
 ; O0-NEXT:    jmp .LBB224_1
 ; O0-NEXT:  .LBB224_1: # %atomicrmw.start
@@ -15752,8 +15792,10 @@ define void @atomic128_sub_release(ptr %a) {
 ; O0-NEXT:    adcq $-1, %rcx
 ; O0-NEXT:  .Lpcsection538:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection539:
 ; O0-NEXT:    jne .LBB224_1
 ; O0-NEXT:    jmp .LBB224_2
@@ -15895,10 +15937,10 @@ define void @atomic128_and_release(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection540:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection541:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection541:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection542:
 ; O0-NEXT:    jmp .LBB225_1
 ; O0-NEXT:  .LBB225_1: # %atomicrmw.start
@@ -15916,8 +15958,10 @@ define void @atomic128_and_release(ptr %a) {
 ; O0-NEXT:    # kill: def $rcx killed $ecx
 ; O0-NEXT:  .Lpcsection546:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection547:
 ; O0-NEXT:    jne .LBB225_1
 ; O0-NEXT:    jmp .LBB225_2
@@ -16055,10 +16099,10 @@ define void @atomic128_or_release(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection548:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection549:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection549:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection550:
 ; O0-NEXT:    jmp .LBB226_1
 ; O0-NEXT:  .LBB226_1: # %atomicrmw.start
@@ -16072,8 +16116,10 @@ define void @atomic128_or_release(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection552:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection553:
 ; O0-NEXT:    jne .LBB226_1
 ; O0-NEXT:    jmp .LBB226_2
@@ -16207,10 +16253,10 @@ define void @atomic128_xor_release(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection554:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection555:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection555:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection556:
 ; O0-NEXT:    jmp .LBB227_1
 ; O0-NEXT:  .LBB227_1: # %atomicrmw.start
@@ -16224,8 +16270,10 @@ define void @atomic128_xor_release(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection558:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection559:
 ; O0-NEXT:    jne .LBB227_1
 ; O0-NEXT:    jmp .LBB227_2
@@ -16359,10 +16407,10 @@ define void @atomic128_nand_release(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection560:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection561:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection561:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection562:
 ; O0-NEXT:    jmp .LBB228_1
 ; O0-NEXT:  .LBB228_1: # %atomicrmw.start
@@ -16382,8 +16430,10 @@ define void @atomic128_nand_release(ptr %a) {
 ; O0-NEXT:    movq $-1, %rcx
 ; O0-NEXT:  .Lpcsection567:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection568:
 ; O0-NEXT:    jne .LBB228_1
 ; O0-NEXT:    jmp .LBB228_2
@@ -16529,10 +16579,10 @@ define void @atomic128_xchg_acq_rel(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection569:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection570:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection570:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection571:
 ; O0-NEXT:    jmp .LBB229_1
 ; O0-NEXT:  .LBB229_1: # %atomicrmw.start
@@ -16548,8 +16598,10 @@ define void @atomic128_xchg_acq_rel(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection575:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection576:
 ; O0-NEXT:    jne .LBB229_1
 ; O0-NEXT:    jmp .LBB229_2
@@ -16683,10 +16735,10 @@ define void @atomic128_add_acq_rel(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection577:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection578:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection578:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection579:
 ; O0-NEXT:    jmp .LBB230_1
 ; O0-NEXT:  .LBB230_1: # %atomicrmw.start
@@ -16702,8 +16754,10 @@ define void @atomic128_add_acq_rel(ptr %a) {
 ; O0-NEXT:    adcq $0, %rcx
 ; O0-NEXT:  .Lpcsection582:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection583:
 ; O0-NEXT:    jne .LBB230_1
 ; O0-NEXT:    jmp .LBB230_2
@@ -16845,10 +16899,10 @@ define void @atomic128_sub_acq_rel(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection584:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection585:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection585:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection586:
 ; O0-NEXT:    jmp .LBB231_1
 ; O0-NEXT:  .LBB231_1: # %atomicrmw.start
@@ -16864,8 +16918,10 @@ define void @atomic128_sub_acq_rel(ptr %a) {
 ; O0-NEXT:    adcq $-1, %rcx
 ; O0-NEXT:  .Lpcsection589:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection590:
 ; O0-NEXT:    jne .LBB231_1
 ; O0-NEXT:    jmp .LBB231_2
@@ -17007,10 +17063,10 @@ define void @atomic128_and_acq_rel(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection591:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection592:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection592:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection593:
 ; O0-NEXT:    jmp .LBB232_1
 ; O0-NEXT:  .LBB232_1: # %atomicrmw.start
@@ -17028,8 +17084,10 @@ define void @atomic128_and_acq_rel(ptr %a) {
 ; O0-NEXT:    # kill: def $rcx killed $ecx
 ; O0-NEXT:  .Lpcsection597:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection598:
 ; O0-NEXT:    jne .LBB232_1
 ; O0-NEXT:    jmp .LBB232_2
@@ -17167,10 +17225,10 @@ define void @atomic128_or_acq_rel(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection599:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection600:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection600:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection601:
 ; O0-NEXT:    jmp .LBB233_1
 ; O0-NEXT:  .LBB233_1: # %atomicrmw.start
@@ -17184,8 +17242,10 @@ define void @atomic128_or_acq_rel(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection603:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection604:
 ; O0-NEXT:    jne .LBB233_1
 ; O0-NEXT:    jmp .LBB233_2
@@ -17319,10 +17379,10 @@ define void @atomic128_xor_acq_rel(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection605:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection606:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection606:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection607:
 ; O0-NEXT:    jmp .LBB234_1
 ; O0-NEXT:  .LBB234_1: # %atomicrmw.start
@@ -17336,8 +17396,10 @@ define void @atomic128_xor_acq_rel(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection609:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection610:
 ; O0-NEXT:    jne .LBB234_1
 ; O0-NEXT:    jmp .LBB234_2
@@ -17471,10 +17533,10 @@ define void @atomic128_nand_acq_rel(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection611:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection612:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection612:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection613:
 ; O0-NEXT:    jmp .LBB235_1
 ; O0-NEXT:  .LBB235_1: # %atomicrmw.start
@@ -17494,8 +17556,10 @@ define void @atomic128_nand_acq_rel(ptr %a) {
 ; O0-NEXT:    movq $-1, %rcx
 ; O0-NEXT:  .Lpcsection618:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection619:
 ; O0-NEXT:    jne .LBB235_1
 ; O0-NEXT:    jmp .LBB235_2
@@ -17641,10 +17705,10 @@ define void @atomic128_xchg_seq_cst(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection620:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection621:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection621:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection622:
 ; O0-NEXT:    jmp .LBB236_1
 ; O0-NEXT:  .LBB236_1: # %atomicrmw.start
@@ -17660,8 +17724,10 @@ define void @atomic128_xchg_seq_cst(ptr %a) {
 ; O0-NEXT:    movl $42, %ebx
 ; O0-NEXT:  .Lpcsection626:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection627:
 ; O0-NEXT:    jne .LBB236_1
 ; O0-NEXT:    jmp .LBB236_2
@@ -17795,10 +17861,10 @@ define void @atomic128_add_seq_cst(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection628:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection629:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection629:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection630:
 ; O0-NEXT:    jmp .LBB237_1
 ; O0-NEXT:  .LBB237_1: # %atomicrmw.start
@@ -17814,8 +17880,10 @@ define void @atomic128_add_seq_cst(ptr %a) {
 ; O0-NEXT:    adcq $0, %rcx
 ; O0-NEXT:  .Lpcsection633:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection634:
 ; O0-NEXT:    jne .LBB237_1
 ; O0-NEXT:    jmp .LBB237_2
@@ -17957,10 +18025,10 @@ define void @atomic128_sub_seq_cst(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection635:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection636:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection636:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection637:
 ; O0-NEXT:    jmp .LBB238_1
 ; O0-NEXT:  .LBB238_1: # %atomicrmw.start
@@ -17976,8 +18044,10 @@ define void @atomic128_sub_seq_cst(ptr %a) {
 ; O0-NEXT:    adcq $-1, %rcx
 ; O0-NEXT:  .Lpcsection640:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection641:
 ; O0-NEXT:    jne .LBB238_1
 ; O0-NEXT:    jmp .LBB238_2
@@ -18119,10 +18189,10 @@ define void @atomic128_and_seq_cst(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection642:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection643:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection643:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection644:
 ; O0-NEXT:    jmp .LBB239_1
 ; O0-NEXT:  .LBB239_1: # %atomicrmw.start
@@ -18140,8 +18210,10 @@ define void @atomic128_and_seq_cst(ptr %a) {
 ; O0-NEXT:    # kill: def $rcx killed $ecx
 ; O0-NEXT:  .Lpcsection648:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection649:
 ; O0-NEXT:    jne .LBB239_1
 ; O0-NEXT:    jmp .LBB239_2
@@ -18279,10 +18351,10 @@ define void @atomic128_or_seq_cst(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection650:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection651:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection651:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection652:
 ; O0-NEXT:    jmp .LBB240_1
 ; O0-NEXT:  .LBB240_1: # %atomicrmw.start
@@ -18296,8 +18368,10 @@ define void @atomic128_or_seq_cst(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection654:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection655:
 ; O0-NEXT:    jne .LBB240_1
 ; O0-NEXT:    jmp .LBB240_2
@@ -18431,10 +18505,10 @@ define void @atomic128_xor_seq_cst(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection656:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection657:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection657:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection658:
 ; O0-NEXT:    jmp .LBB241_1
 ; O0-NEXT:  .LBB241_1: # %atomicrmw.start
@@ -18448,8 +18522,10 @@ define void @atomic128_xor_seq_cst(ptr %a) {
 ; O0-NEXT:    movq %rcx, %rdx
 ; O0-NEXT:  .Lpcsection660:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection661:
 ; O0-NEXT:    jne .LBB241_1
 ; O0-NEXT:    jmp .LBB241_2
@@ -18583,10 +18659,10 @@ define void @atomic128_nand_seq_cst(ptr %a) {
 ; O0-NEXT:    movq foo(%rip), %rax
 ; O0-NEXT:  .Lpcsection662:
 ; O0-NEXT:    movq (%rdi), %rax
-; O0-NEXT:  .Lpcsection663:
-; O0-NEXT:    movq 8(%rdi), %rdx
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection663:
+; O0-NEXT:    movq 8(%rdi), %rax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection664:
 ; O0-NEXT:    jmp .LBB242_1
 ; O0-NEXT:  .LBB242_1: # %atomicrmw.start
@@ -18606,8 +18682,10 @@ define void @atomic128_nand_seq_cst(ptr %a) {
 ; O0-NEXT:    movq $-1, %rcx
 ; O0-NEXT:  .Lpcsection669:
 ; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, %rcx
+; O0-NEXT:    movq %rdx, %rax
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; O0-NEXT:  .Lpcsection670:
 ; O0-NEXT:    jne .LBB242_1
 ; O0-NEXT:    jmp .LBB242_2

@@ -27,20 +27,13 @@ public:
 
   RegAllocFastPass(Options Opts = Options()) : Opts(std::move(Opts)) {}
 
-  MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().setNoPHIs();
-  }
-
   MachineFunctionProperties getSetProperties() const {
-    if (Opts.ClearVRegs) {
-      return MachineFunctionProperties().setNoVRegs();
-    }
-
-    return MachineFunctionProperties();
-  }
-
-  MachineFunctionProperties getClearedProperties() const {
-    return MachineFunctionProperties().setIsSSA();
+    MachineFunctionProperties P;
+    P.setNoPHIs();
+    P.setTiedOpsRewritten();
+    if (Opts.ClearVRegs)
+      P.setNoVRegs();
+    return P;
   }
 
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,

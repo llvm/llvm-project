@@ -23,17 +23,13 @@ define void @test() nounwind {
 ; SDAG-LABEL: test:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    sub sp, sp, #16
-; SDAG-NEXT:    mov x1, xzr
-; SDAG-NEXT:    mov x0, x1
+; SDAG-NEXT:    mov x0, xzr
+; SDAG-NEXT:    mov x1, x0
 ; SDAG-NEXT:    str x1, [sp] // 8-byte Spill
 ; SDAG-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; SDAG-NEXT:    b .LBB0_1
 ; SDAG-NEXT:  .LBB0_1: // %loop
 ; SDAG-NEXT:    // =>This Inner Loop Header: Depth=1
-; SDAG-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
-; SDAG-NEXT:    ldr x1, [sp] // 8-byte Reload
-; SDAG-NEXT:    str x1, [sp] // 8-byte Spill
-; SDAG-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; SDAG-NEXT:    b .LBB0_1
 entry:
   br label %loop

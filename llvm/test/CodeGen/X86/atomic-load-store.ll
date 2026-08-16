@@ -980,7 +980,7 @@ define void @store_atomic_vec4_half(ptr %x, <4 x half> %v) nounwind {
 ; CHECK-SSE2-O0-NEXT:    movaps %xmm3, %xmm2
 ; CHECK-SSE2-O0-NEXT:    psrlq $48, %xmm2
 ; CHECK-SSE2-O0-NEXT:    movaps %xmm3, %xmm1
-; CHECK-SSE2-O0-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; CHECK-SSE2-O0-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm3[1,1]
 ; CHECK-SSE2-O0-NEXT:    psrld $16, %xmm3
 ; CHECK-SSE2-O0-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; CHECK-SSE2-O0-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]

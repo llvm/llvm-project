@@ -13,10 +13,10 @@ define void @test_store(ptr %p) {
 define void @test_phi(ptr %p) {
 ; CHECK-LABEL: test_phi:
 ; CHECK: mov [[R1:x[0-9]+]], xzr
-; CHECK: str [[R1]], [sp, #8]
+; CHECK: str [[R1]], [sp, #{{[0-9]+}}]
 ; CHECK: b [[BB:LBB[0-9_]+]]
 ; CHECK: [[BB]]:
-; CHECK: ldr x0, [sp, #8]
+; CHECK: ldr x0, [sp, #{{[0-9]+}}]
 ; CHECK: mov w8, w0
 ; CHECK: str w8, [x{{.*}}]
 

@@ -549,7 +549,8 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
 ; CHECK-O0-AARCH64-NEXT:    str s0, [sp, #16] ; 4-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    stur w0, [x29, #-12] ; 4-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    stur x21, [x29, #-8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    mov x0, x21
+; CHECK-O0-AARCH64-NEXT:    stur x0, [x29, #-8] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    b LBB4_1
 ; CHECK-O0-AARCH64-NEXT:  LBB4_1: ; %bb_loop
 ; CHECK-O0-AARCH64-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -590,7 +591,8 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
 ; CHECK-O0-ARM64_32-NEXT:    str s0, [sp, #16] ; 4-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    str w0, [sp, #20] ; 4-byte Spill
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #24] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    mov x0, x21
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #24] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    b LBB4_1
 ; CHECK-O0-ARM64_32-NEXT:  LBB4_1: ; %bb_loop
 ; CHECK-O0-ARM64_32-NEXT:    ; =>This Inner Loop Header: Depth=1
