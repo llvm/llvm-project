@@ -3,10 +3,8 @@
 
 define i1 @is_overflow_cmp(i8 %0, i8 %1) {
 ; CHECK-LABEL: @is_overflow_cmp(
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i8 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[TMP0:%.*]], i8 [[TMP1:%.*]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { i8, i1 } [[TMP3]], 1
 ; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
   %3 = icmp slt i8 %0, %1
@@ -18,10 +16,9 @@ define i1 @is_overflow_cmp(i8 %0, i8 %1) {
 
 define i1 @is_no_overflow_cmp(i8 %0, i8 %1) {
 ; CHECK-LABEL: @is_no_overflow_cmp(
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i8 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i8 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sge i8 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[TMP0:%.*]], i8 [[TMP1:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i8, i1 } [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP4]], true
 ; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
   %3 = sub i8 %0, %1
