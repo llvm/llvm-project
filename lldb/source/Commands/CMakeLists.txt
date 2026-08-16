@@ -10,6 +10,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandObjectCommands.cpp
   CommandObjectDiagnostics.cpp
   CommandObjectDisassemble.cpp
+  CommandObjectDWARFExpression.cpp
   CommandObjectDWIMPrint.cpp
   CommandObjectExpression.cpp
   CommandObjectFrame.cpp
