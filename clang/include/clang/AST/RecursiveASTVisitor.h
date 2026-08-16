@@ -1739,17 +1739,15 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
+  const TemplateName Template = D->getFriendTemplateName();
   if (D->getFriendType())
     TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
+  else if (!Template.isNull())
+    TRY_TO(TraverseTemplateName(Template));
   else
     TRY_TO(TraverseDecl(D->getFriendDecl()));
-  for (unsigned I = 0, E = D->getNumTemplateParameters(); I < E; ++I) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(I);
-    for (TemplateParameterList::iterator ITPL = TPL->begin(), ETPL = TPL->end();
-         ITPL != ETPL; ++ITPL) {
-      TRY_TO(TraverseDecl(*ITPL));
-    }
-  }
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    TRY_TO(TraverseTemplateParameterListHelper(TPL));
 })
 
 DEF_TRAVERSE_DECL(LinkageSpecDecl, {})
