@@ -74,6 +74,41 @@ def TileTRLinalg : Pass<"tr-tile-linalg", "::mlir::func::FuncOp"> {
   ];
 }
 
+def ConvertTRIndexToAffine : Pass<"tr-index-to-affine", "::mlir::func::FuncOp"> {
+  let summary = "Raise affine index arithmetic to affine.apply. Leave non-affine ops alone.";
+  let description = [{
+    `arith.muli` of an index by a constant and `arith.addi` of index values
+    become `affine.apply`. Used for genuinely affine relations such as
+
+      rowBase   = programId * 128
+      globalRow = programId * 128 + localRow
+      globalCol = kt * 128 + lane + j * 32
+
+    Product of two SSA values is not affine and is left as `arith.muli`.
+    `affine.for` is used only for constant-bound loops whose body is affine;
+    `scf.for` around Linalg is not rewritten.
+  }];
+  let dependentDialects = [
+    "::mlir::affine::AffineDialect",
+    "::mlir::arith::ArithDialect"
+  ];
+}
+
+def LowerTRAffine : Pass<"tr-lower-affine", "::mlir::func::FuncOp"> {
+  let summary = "Lower affine.for/apply to scf.for and arith using upstream patterns.";
+  let description = [{
+    Applies `populateAffineToStdConversionPatterns`:
+      affine.for   -> scf.for
+      affine.apply -> arith.addi / arith.muli on index
+  }];
+  let dependentDialects = [
+    "::mlir::affine::AffineDialect",
+    "::mlir::arith::ArithDialect",
+    "::mlir::scf::SCFDialect",
+    "::mlir::memref::MemRefDialect"
+  ];
+}
+
 def ConvertTRToLinalg : Pass<"convert-tr-to-linalg", "::mlir::func::FuncOp"> {
   let summary = "Lower tile compute to Linalg over MemRefs. Load becomes a subview.";
   let description = [{

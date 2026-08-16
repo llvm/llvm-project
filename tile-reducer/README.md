@@ -55,3 +55,10 @@ symbol is a hard lookup failure.
 handle, checks the payload is a row-reduction `linalg.generic`, and annotates
 `tr.warps_per_block=8`, `tr.warp_size=32`, `tr.elements_per_lane=4`. Wrong
 payload ops produce a silenceable diagnostic.
+
+## Milestone 14
+
+`--tr-index-to-affine` raises affine index arithmetic to `affine.apply`:
+`programId * 128`, `programId * 128 + localRow`, and
+`kt * 128 + lane + j * 32`. A product of two SSA values stays `arith.muli`.
+`affine.for` is used for constant-bound local-row walks, not for Linalg.
