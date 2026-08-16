@@ -697,23 +697,16 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
           IndDesc.getKind() == InductionDescriptor::IK_FpInduction) &&
          "must have an integer or float induction at this point");
 
+  VPValue *IncStep;
+  bool HasInLoopStepIncrement =
+      (match(BackedgeVal, m_c_Add(m_Specific(PhiR), m_VPValue(IncStep))) ||
+       match(BackedgeVal, m_Sub(m_Specific(PhiR), m_VPValue(IncStep)))) &&
+      IncStep->hasDefiningRecipe();
+
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
-  bool HasVariantStepIncrement = false;
-  // Use m_c_Add to capture IncStep regardless of operand order; subtraction
-  // is non-commutative so m_Sub requires PhiR on the left.
-  VPValue *IncStep;
-  if (match(BackedgeVal, m_c_Add(m_Specific(PhiR), m_VPValue(IncStep))) ||
-      match(BackedgeVal, m_Sub(m_Specific(PhiR), m_VPValue(IncStep)))) {
-    const SCEV *IncStepSCEV = vputils::getSCEVExprForVPValue(IncStep, PSE);
-    // If the VPlan step has no computable SCEV, conservatively treat it as
-    // variant to avoid replacing it with the (potentially mismatched) IndDesc
-    // step or computing a wrong exit value.
-    HasVariantStepIncrement = isa<SCEVCouldNotCompute>(IncStepSCEV) ||
-                               !SE.isLoopInvariant(IncStepSCEV, &OrigLoop);
-  }
-  if (!HasVariantStepIncrement &&
+  if (!HasInLoopStepIncrement &&
       match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue())))
     BackedgeVal->getDefiningRecipe()->setOperand(1, Step);
 
@@ -725,7 +718,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
 
-  if (!HasVariantStepIncrement)
+  if (!HasInLoopStepIncrement)
     ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
   return WideIV;
 }
