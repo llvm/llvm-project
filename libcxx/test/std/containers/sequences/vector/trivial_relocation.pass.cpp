@@ -8,7 +8,7 @@
 
 // MSVC does not support [[clang::trivial_abi]], while GCC supports it only since GCC 17.
 // UNSUPPORTED: msvc
-// UNSUPPORTED: gcc-15, gcc-16
+// UNSUPPORTED: gcc-16
 
 // <vector>
 
