@@ -82,3 +82,9 @@ attributes. They are target properties, not source semantics.
 threads / 8 warps. Warp `w` walks rows `w, w+8, …, 120`. Lane `L` owns
 columns `L, L+32, L+64, L+96`. Four register values are summed, then
 `gpu.subgroup_reduce`. `tr.program_id` stays a logical program instance.
+
+## Milestone 18
+
+The same pass fuses `tr.load` → `tr.reduce_sum(axis=1)` into coalesced
+`memref.load`s, per-lane `arith.addf`, and a subgroup reduce. No 128×128
+temporary and no shared memory.
