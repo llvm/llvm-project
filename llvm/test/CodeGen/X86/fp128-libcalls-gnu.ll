@@ -3,11 +3,18 @@
 ; RUN:     -enable-legalize-types-checking | FileCheck %s --check-prefix=GNU
 ; RUN: llc < %s -O2 -mtriple=i686-linux-gnu -mattr=sse2 \
 ; RUN:     -enable-legalize-types-checking | FileCheck %s --check-prefix=X86
+; RUN: llc < %s -O2 -mtriple=x86_64-linux-android \
+; RUN:     -enable-legalize-types-checking | FileCheck %s --check-prefix=ANDROID
 
-; These fp128 libcall operations only have a libcall on targets whose libc
-; provides the f128-suffixed math functions (glibc). The android/windows
-; variants have no libcall and are covered by fp128-libcalls.ll (arithmetic
-; only) plus the no-libcall diagnostic tests.
+; These fp128 operations have a libcall on targets whose libc provides the
+; relevant math functions. On x86_64/i686 glibc (GNU/X86) long double is x87, so
+; an fp128 operand lowers to the _Float128-suffixed function (e.g. sqrtf128). On
+; android long double is itself fp128, so the same operation lowers to the
+; l-suffixed long double function (e.g. sqrtl); this is the coverage that caught
+; the regression in #214944 where X86 stopped providing the fp128 long double
+; libcalls, producing "no libcall available" link errors on android.
+; The windows variants have no fp128 math libcall at all and are exercised by the
+; no-libcall diagnostic tests.
 
 @vf64 = common dso_local global double 0.000000e+00, align 8
 @vf128 = common dso_local global fp128 0xL00000000000000000000000000000000, align 16
@@ -56,6 +63,14 @@ define dso_local void @Test128Rem(fp128 %d1, fp128 %d2) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Rem:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq fmodl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %div = frem fp128 %d1, %d2
   store fp128 %div, ptr @vf128, align 16
@@ -108,6 +123,16 @@ define dso_local void @Test128_1Rem(fp128 %d1) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128_1Rem:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    movaps %xmm0, %xmm1
+; ANDROID-NEXT:    movaps vf128(%rip), %xmm0
+; ANDROID-NEXT:    callq fmodl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %0 = load fp128, ptr @vf128, align 16
   %div = frem fp128 %0, %d1
@@ -145,6 +170,14 @@ define dso_local void @Test128Sqrt(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Sqrt:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq sqrtl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.sqrt.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -181,6 +214,14 @@ define dso_local void @Test128Sin(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Sin:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq sinl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.sin.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -217,6 +258,14 @@ define dso_local void @Test128Cos(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Cos:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq cosl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.cos.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -253,6 +302,14 @@ define dso_local void @Test128Ceil(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Ceil:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq ceill@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.ceil.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -289,6 +346,14 @@ define dso_local void @Test128Floor(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Floor:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq floorl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.floor.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -325,6 +390,14 @@ define dso_local void @Test128Trunc(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Trunc:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq truncl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.trunc.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -361,6 +434,14 @@ define dso_local void @Test128Nearbyint(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Nearbyint:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq nearbyintl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.nearbyint.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -397,6 +478,14 @@ define dso_local void @Test128Rint(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Rint:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq rintl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.rint.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -433,6 +522,14 @@ define dso_local void @Test128Round(fp128 %d1) nounwind {
 ; X86-NEXT:    addl $56, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Round:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq roundl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
 entry:
   %sqrt = call fp128 @llvm.round.f128(fp128 %d1)
   store fp128 %sqrt, ptr @vf128, align 16
@@ -489,6 +586,10 @@ define fp128 @Test128FMA(fp128 %a, fp128 %b, fp128 %c) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128FMA:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    jmp fmal@PLT # TAILCALL
 entry:
   %call = call fp128 @llvm.fma.f128(fp128 %a, fp128 %b, fp128 %c)
   ret fp128 %call
@@ -524,6 +625,10 @@ define fp128 @Test128Acos(fp128 %a) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Acos:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp acosl@PLT # TAILCALL
   %x = call fp128 @llvm.acos.f128(fp128 %a)
   ret fp128 %x
 }
@@ -558,6 +663,10 @@ define fp128 @Test128Asin(fp128 %a) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Asin:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp asinl@PLT # TAILCALL
   %x = call fp128 @llvm.asin.f128(fp128 %a)
   ret fp128 %x
 }
@@ -592,6 +701,10 @@ define fp128 @Test128Atan(fp128 %a) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Atan:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp atanl@PLT # TAILCALL
   %x = call fp128 @llvm.atan.f128(fp128 %a)
   ret fp128 %x
 }
@@ -638,6 +751,10 @@ define fp128 @Test128Atan2(fp128 %a, fp128 %b) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Atan2:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp atan2l@PLT # TAILCALL
   %x = call fp128 @llvm.atan2.f128(fp128 %a, fp128 %b)
   ret fp128 %x
 }
@@ -672,6 +789,10 @@ define fp128 @Test128Cosh(fp128 %a) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Cosh:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp coshl@PLT # TAILCALL
   %x = call fp128 @llvm.cosh.f128(fp128 %a)
   ret fp128 %x
 }
@@ -706,6 +827,10 @@ define fp128 @Test128Sinh(fp128 %a) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Sinh:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp sinhl@PLT # TAILCALL
   %x = call fp128 @llvm.sinh.f128(fp128 %a)
   ret fp128 %x
 }
@@ -740,6 +865,10 @@ define fp128 @Test128Tan(fp128 %a) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Tan:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp tanl@PLT # TAILCALL
   %x = call fp128 @llvm.tan.f128(fp128 %a)
   ret fp128 %x
 }
@@ -774,6 +903,10 @@ define fp128 @Test128Tanh(fp128 %a) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Tanh:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    jmp tanhl@PLT # TAILCALL
   %x = call fp128 @llvm.tanh.f128(fp128 %a)
   ret fp128 %x
 }
@@ -819,10 +952,137 @@ define { fp128, fp128 } @Test128Modf(fp128 %a) nounwind {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
+;
+; ANDROID-LABEL: Test128Modf:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    subq $24, %rsp
+; ANDROID-NEXT:    movq %rsp, %rdi
+; ANDROID-NEXT:    callq modfl@PLT
+; ANDROID-NEXT:    movaps (%rsp), %xmm1
+; ANDROID-NEXT:    addq $24, %rsp
+; ANDROID-NEXT:    retq
   %x = call { fp128, fp128 } @llvm.modf.f128(fp128 %a)
   ret { fp128, fp128 } %x
 }
 
+define dso_local void @Test128Max(fp128 %d1, fp128 %d2) nounwind {
+; GNU-LABEL: Test128Max:
+; GNU:       # %bb.0: # %entry
+; GNU-NEXT:    pushq %rax
+; GNU-NEXT:    callq fmaxf128@PLT
+; GNU-NEXT:    movaps %xmm0, vf128(%rip)
+; GNU-NEXT:    popq %rax
+; GNU-NEXT:    retq
+;
+; X86-LABEL: Test128Max:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll fmaxf128
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    movaps %xmm0, vf128
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Max:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq fmaxl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
+entry:
+  %max = call fp128 @llvm.maxnum.f128(fp128 %d1, fp128 %d2)
+  store fp128 %max, ptr @vf128, align 16
+  ret void
+}
+
+define dso_local void @Test128Min(fp128 %d1, fp128 %d2) nounwind {
+; GNU-LABEL: Test128Min:
+; GNU:       # %bb.0: # %entry
+; GNU-NEXT:    pushq %rax
+; GNU-NEXT:    callq fminf128@PLT
+; GNU-NEXT:    movaps %xmm0, vf128(%rip)
+; GNU-NEXT:    popq %rax
+; GNU-NEXT:    retq
+;
+; X86-LABEL: Test128Min:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll fminf128
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    movaps %xmm0, vf128
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; ANDROID-LABEL: Test128Min:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq fminl@PLT
+; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
+entry:
+  %min = call fp128 @llvm.minnum.f128(fp128 %d1, fp128 %d2)
+  store fp128 %min, ptr @vf128, align 16
+  ret void
+}
+
+declare fp128 @llvm.maxnum.f128(fp128, fp128)
+declare fp128 @llvm.minnum.f128(fp128, fp128)
 declare fp128 @llvm.sqrt.f128(fp128)
 declare fp128 @llvm.sin.f128(fp128)
 declare fp128 @llvm.cos.f128(fp128)

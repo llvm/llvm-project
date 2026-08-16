@@ -3421,6 +3421,11 @@ defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_
 
 defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
 
+// frexpl/ldexpl/exp10l are added separately below with their own guards.
+defvar X86LongDoubleF128Body =
+    !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
+                [frexpl_f128, ldexpl_f128, exp10l_f128]);
+
 defvar X86CommonLibcalls =
   (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
        DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern, MacOSUnlockedIO,
@@ -3431,6 +3436,9 @@ defvar X86CommonLibcalls =
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF80, LibmHasLdexpF80,
        LibcallImpls<(add frexpl_f128, ldexpl_f128, exp10l_f128), hasExpFrexplLdexplF128>,
+       // The l-suffixed long double math is fp128 only when long double is fp128
+       // (e.g. x86_64 Android/OHOS). frexpl/ldexpl/exp10l are added above.
+       LibcallImpls<(add X86LongDoubleF128Body), isLongDoubleF128>,
        DefaultRuntimeLibcallImpls_f80,
        LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F80,
        LibcallImpls<(add MostPowI), isNotOSMSVCRT>,
