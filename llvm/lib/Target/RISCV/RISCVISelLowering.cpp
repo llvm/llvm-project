@@ -20433,6 +20433,13 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
         VT.getScalarSizeInBits() * 2 < SrcVT.getScalarSizeInBits())
       return SDValue();
 
+    // If we'll need to write FRM, don't fold unless the src has a single use.
+    // This avoids potentially writing FRM multiple times. RTZ has a dedicated
+    // instruction and DYN uses the current FRM, so neither needs a write.
+    if (FRM != RISCVFPRndMode::RTZ && FRM != RISCVFPRndMode::DYN &&
+        !Src.hasOneUse())
+      return SDValue();
+
     // Make fixed-length vectors scalable first
     if (SrcVT.isFixedLengthVector()) {
       SrcContainerVT = getContainerForFixedLengthVector(SrcVT, Subtarget);
