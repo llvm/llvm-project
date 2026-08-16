@@ -608,7 +608,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {
   while (true) {
     const MachineInstr *MI = MRI->getVRegDef(SrcReg);
-    if (!MI->isCopyLike())
+    if (!MI || !MI->isCopyLike())
       return SrcReg;
 
     Register CopySrcReg;
