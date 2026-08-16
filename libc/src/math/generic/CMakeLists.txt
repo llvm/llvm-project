@@ -2093,6 +2093,7 @@ add_entrypoint_object(
   HDRS
     ../fmaxf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.fmaxf128
 )
 

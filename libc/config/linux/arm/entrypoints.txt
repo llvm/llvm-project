@@ -407,6 +407,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
+    libc.src.math.fmaxf128
     libc.src.math.fmaximum
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_mag_num
