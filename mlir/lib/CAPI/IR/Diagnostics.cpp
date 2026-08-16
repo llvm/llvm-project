@@ -78,3 +78,11 @@ void mlirContextDetachDiagnosticHandler(MlirContext context,
 void mlirEmitError(MlirLocation location, const char *message) {
   emitError(unwrap(location)) << message;
 }
+
+void mlirEmitWarning(MlirLocation location, const char *message) {
+  emitWarning(unwrap(location)) << message;
+}
+
+void mlirEmitRemark(MlirLocation location, const char *message) {
+  emitRemark(unwrap(location)) << message;
+}
