@@ -597,6 +597,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
     libc.src.math.ufromfp
     libc.src.math.ufromfpf
+    libc.src.math.ufromfpf128
     libc.src.math.ufromfpl
     libc.src.math.ufromfpx
     libc.src.math.ufromfpxf
@@ -805,7 +806,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.totalorderf128
     libc.src.math.totalordermagf128
     libc.src.math.truncf128
-    libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
   )
 endif()
