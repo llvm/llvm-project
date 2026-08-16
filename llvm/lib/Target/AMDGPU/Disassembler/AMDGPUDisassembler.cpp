@@ -2103,6 +2103,13 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const MCInst &Inst,
     return MCOperand::createImm(Val);
 
   if (Val == LITERAL64_CONST && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
+    // Only VOP1, VOP2, VOPC, SOP1, SOP2 and SOPC may encode a 64-bit literal.
+    // VOP3, VOP3P and VOPD have to use a 32-bit one.
+    if (SIInstrFlags::isVOP3Like(*MCII, Inst) ||
+        AMDGPU::isVOPD(Inst.getOpcode())) {
+      return errOperand(Val,
+                        "64-bit literal is not supported by this instruction");
+    }
     return decodeLiteral64Constant();
   }
 
