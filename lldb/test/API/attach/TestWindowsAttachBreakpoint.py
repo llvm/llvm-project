@@ -98,7 +98,7 @@ class WindowsAttachLoaderBreakpointTestCase(TestBase):
             process_information.hThread,
         )
 
-    @skipUnlessWindows
+    @requireWindows
     def test_attach_ignores_loader_breakpoint(self):
         """
         lldb must not report the loader's int3 (raised in a system module while

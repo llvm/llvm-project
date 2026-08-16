@@ -202,7 +202,7 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
 
 // Strict double -> float conversion used for X86 PD2PS/cvtsd2ss intrinsics.
 // Reject NaN/Inf/Subnormal inputs and any lossy/inexact conversions.
-static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst,
+static bool convertDoubleToFloatStrict(const APFloat &Src, Floating &Dst,
                                        InterpState &S, const Expr *DiagExpr) {
   if (Src.isInfinity()) {
     if (S.diagnosing())
@@ -6822,7 +6822,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       CurrentType = AT->getElementType();
       CharUnits ElementSize = S.getASTContext().getTypeSizeInChars(CurrentType);
       int64_t ElemSize = ElementSize.getQuantity();
-      if (Index != 0 && ElemSize > llvm::maxIntN(64) / Index) {
+      if (Index != 0 && ElemSize > (llvm::maxIntN(64) / Index)) {
         S.FFDiag(S.Current->getLocation(OpPC),
                  diag::note_constexpr_offsetof_overflow)
             << S.Current->getRange(OpPC);

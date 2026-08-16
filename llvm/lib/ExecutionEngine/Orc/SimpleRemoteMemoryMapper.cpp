@@ -9,7 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 
 namespace llvm::orc {
 
@@ -19,7 +19,7 @@ SimpleRemoteMemoryMapper::SimpleRemoteMemoryMapper(ExecutorProcessControl &EPC,
 
 void SimpleRemoteMemoryMapper::reserve(size_t NumBytes,
                                        OnReservedFunction OnReserved) {
-  EPC.callSPSWrapperAsync<rt::SPSSimpleRemoteMemoryMapReserveSignature>(
+  EPC.callSPSWrapperAsync<rt::sps_ci::MemMgrReserve::SPSSig>(
       SAs.Reserve,
       [NumBytes, OnReserved = std::move(OnReserved)](
           Error SerializationErr, Expected<ExecutorAddr> Result) mutable {
@@ -54,7 +54,7 @@ void SimpleRemoteMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                            Seg.ContentSize + Seg.ZeroFillSize,
                            ArrayRef<char>(Seg.WorkingMem, Seg.ContentSize)});
 
-  EPC.callSPSWrapperAsync<rt::SPSSimpleRemoteMemoryMapInitializeSignature>(
+  EPC.callSPSWrapperAsync<rt::sps_ci::MemMgrInitialize::SPSSig>(
       SAs.Initialize,
       [OnInitialized = std::move(OnInitialized)](
           Error SerializationErr, Expected<ExecutorAddr> Result) mutable {
@@ -71,7 +71,7 @@ void SimpleRemoteMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 void SimpleRemoteMemoryMapper::deinitialize(
     ArrayRef<ExecutorAddr> Allocations,
     MemoryMapper::OnDeinitializedFunction OnDeinitialized) {
-  EPC.callSPSWrapperAsync<rt::SPSSimpleRemoteMemoryMapDeinitializeSignature>(
+  EPC.callSPSWrapperAsync<rt::sps_ci::MemMgrDeinitialize::SPSSig>(
       SAs.Deinitialize,
       [OnDeinitialized = std::move(OnDeinitialized)](Error SerializationErr,
                                                      Error Result) mutable {
@@ -87,7 +87,7 @@ void SimpleRemoteMemoryMapper::deinitialize(
 
 void SimpleRemoteMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
                                        OnReleasedFunction OnReleased) {
-  EPC.callSPSWrapperAsync<rt::SPSSimpleRemoteMemoryMapReleaseSignature>(
+  EPC.callSPSWrapperAsync<rt::sps_ci::MemMgrRelease::SPSSig>(
       SAs.Release,
       [OnReleased = std::move(OnReleased)](Error SerializationErr,
                                            Error Result) mutable {

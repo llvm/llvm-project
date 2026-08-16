@@ -13,9 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H
 
-#include "PluginInterface.h"
-#include "Shared/Requirements.h"
-#include "omptarget.h"
+#include "OffloadError.h"
 
 enum class AllocOptionTy : int32_t {
   ALLOC_OPT_NONE = 0,

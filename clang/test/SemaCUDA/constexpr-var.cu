@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -fsyntax-only -verify
 // RUN: %clang_cc1 -triple x86_64 -x hip %s \
 // RUN:   -fsyntax-only -verify=host

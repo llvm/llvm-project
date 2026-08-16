@@ -44,6 +44,12 @@ let Class = CountAttributedType in {
   def : Creator<[{ return ctx.getCountAttributedType(WrappedTy, CountExpr, CountInBytes, OrNull, CoupledDecls); }]>;
 }
 
+let Class = LateParsedAttrType in {
+  // Note: LateParsedAttrType is a transient placeholder type that should
+  // normally be replaced before serialization. So this won't be serialized.
+  def : Creator<[{ (void)ctx; llvm_unreachable("unreachable for serialization"); }]>;
+}
+
 let Class = AdjustedType in {
   def : Property<"originalType", QualType> {
     let Read = [{ node->getOriginalType() }];
@@ -875,6 +881,10 @@ let Class = BuiltinType in {
 #define HLSL_INTANGIBLE_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
+#define SPIRV_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/SPIRVTypes.def"
 
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;

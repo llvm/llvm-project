@@ -28,7 +28,7 @@ def isUbuntu18_04():
     return None
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class TestRerunExprDylib(TestBase):
     SHARED_BUILD_TESTCASE = False
 

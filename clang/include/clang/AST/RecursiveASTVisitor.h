@@ -1164,6 +1164,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
   TRY_TO(TraverseType(T->desugar()));
 })
 
+DEF_TRAVERSE_TYPE(LateParsedAttrType,
+                  { TRY_TO(TraverseType(T->getWrappedType())); })
+
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1520,6 +1523,9 @@ DEF_TRAVERSE_TYPELOC(AttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getModifiedLoc())); })
 
 DEF_TRAVERSE_TYPELOC(CountAttributedType,
+                     { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
+
+DEF_TRAVERSE_TYPELOC(LateParsedAttrType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
@@ -2567,6 +2573,11 @@ DEF_TRAVERSE_STMT(CXXCatchStmt, {
   // children() iterates over the handler block.
 })
 
+DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {
+  TRY_TO(TraverseDecl(S->getCatchParamDecl()));
+  // children() iterates over the handler block.
+})
+
 DEF_TRAVERSE_STMT(DeclStmt, {
   for (auto *I : S->decls()) {
     TRY_TO(TraverseDecl(I));
@@ -2596,7 +2607,6 @@ DEF_TRAVERSE_STMT(IndirectGotoStmt, {})
 DEF_TRAVERSE_STMT(LabelStmt, {})
 DEF_TRAVERSE_STMT(AttributedStmt, {})
 DEF_TRAVERSE_STMT(NullStmt, {})
-DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtFinallyStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtSynchronizedStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtThrowStmt, {})
@@ -3311,7 +3321,10 @@ DEF_TRAVERSE_STMT(OMPDepobjDirective,
 DEF_TRAVERSE_STMT(OMPScanDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
-DEF_TRAVERSE_STMT(OMPOrderedDirective,
+DEF_TRAVERSE_STMT(OMPOrderedStandaloneDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPOrderedBlockAssocDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPAtomicDirective,
@@ -3699,6 +3712,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPWriteClause(OMPWriteClause *) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPUpdateClause(OMPUpdateClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *) {
   return true;
 }
 

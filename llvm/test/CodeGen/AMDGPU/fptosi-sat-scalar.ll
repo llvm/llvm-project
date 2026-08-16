@@ -133,7 +133,7 @@ define i16 @test_signed_i16_f32(float %f) nounwind {
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX7-GI-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x8000
+; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v1, s4
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -142,7 +142,7 @@ define i16 @test_signed_i16_f32(float %f) nounwind {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0x8000
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX9-NEXT:    v_med3_i32 v0, v0, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -542,7 +542,7 @@ define i16 @test_s_signed_i16_f32(float inreg %f) nounwind {
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, s16
 ; GFX7-GI-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x8000
+; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v1, s4
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -551,7 +551,7 @@ define i16 @test_s_signed_i16_f32(float inreg %f) nounwind {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v0, s16
 ; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0x8000
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX9-NEXT:    v_med3_i32 v0, v0, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1823,7 +1823,7 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX7-GI-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x8000
+; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v1, s4
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
@@ -2232,7 +2232,7 @@ define i16 @test_s_signed_i16_f16(half inreg %f) nounwind {
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v0, s16
 ; GFX7-GI-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0x8000
+; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX7-GI-NEXT:    v_med3_i32 v0, v0, v1, s4
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]

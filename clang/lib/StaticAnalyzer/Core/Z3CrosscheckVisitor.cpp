@@ -54,8 +54,8 @@ Z3CrosscheckVisitor::Z3CrosscheckVisitor(Z3CrosscheckVisitor::Z3Result &Result,
     : Constraints(ConstraintMap::Factory().getEmptyMap()), Result(Result),
       Opts(Opts) {}
 
-void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
-                                          const ExplodedNode *EndPathNode,
+void Z3CrosscheckVisitor::finalizeVisitor(const ExplodedNode *EndPathNode,
+                                          BugReporterContext &BRC,
                                           PathSensitiveBugReport &BR) {
   // Collect new constraints
   addConstraints(EndPathNode, /*OverwriteConstraintsOnExistingSyms=*/true);

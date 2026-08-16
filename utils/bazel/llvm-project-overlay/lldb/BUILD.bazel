@@ -163,6 +163,7 @@ expand_template(
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
         "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
         "#cmakedefine LLDB_GLOBAL_INIT_DIRECTORY R\"(${LLDB_GLOBAL_INIT_DIRECTORY})\"": "#define LLDB_GLOBAL_INIT_DIRECTORY \"\"",
+        "#cmakedefine LLDB_DWO_DIAGNOSTIC_SUFFIX \"${LLDB_DWO_DIAGNOSTIC_SUFFIX}\"": "#define LLDB_DWO_DIAGNOSTIC_SUFFIX \"Debugging will be degraded.\"",
         "${LLDB_INSTALL_LIBDIR_BASENAME}": "lib",
         "${LLDB_BUG_REPORT_URL}": "",
     } | select({
@@ -266,11 +267,11 @@ cc_library(
     name = "API",
     srcs = glob([
         "source/API/**/*.cpp",
-        "source/API/**/*.h",
     ]),
     hdrs = glob(["include/lldb/API/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     includes = ["include"],
     deps = [
+        ":APIPrivateHeaders",
         ":Breakpoint",
         ":Commands",
         ":Core",
@@ -419,6 +420,16 @@ cc_library(
 )
 
 cc_library(
+    name = "APIPrivateHeaders",
+    hdrs = glob(["source/API/**/*.h"]),
+    features = ["-parse_headers"],  # Would otherwise have circular dependencies
+    includes = ["source"],
+    deps = [
+        ":APIHeaders",
+    ],
+)
+
+cc_library(
     name = "InterpreterHeaders",
     hdrs = glob(["include/lldb/Interpreter/**/*.h"]),
     features = ["-parse_headers"],  # Would otherwise have circular dependencies
@@ -460,6 +471,7 @@ cc_library(
     srcs = glob(["source/Interpreter/**/*.cpp"]),
     deps = [
         ":API",
+        ":APIPrivateHeaders",
         ":Commands",
         ":Core",
         ":DataFormatters",
@@ -637,6 +649,10 @@ cc_library(
             "include/lldb/Host/linux/*.h",
             "include/lldb/Host/posix/*.h",
         ]),
+        "@platforms//os:windows": glob(
+            ["include/lldb/Host/windows/*.h"],
+            exclude = ["include/lldb/Host/windows/ConPTYUtils.h"],
+        ),
     }) + select({
         ":libedit_enabled": ["include/lldb/Host/Editline.h"],
         "//conditions:default": [],

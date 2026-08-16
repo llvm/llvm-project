@@ -13,6 +13,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Edit/FileOffset.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,6 +27,7 @@ namespace clang {
 class LangOptions;
 class PPConditionalDirectiveRecord;
 class SourceManager;
+class FixItHint;
 
 namespace edit {
 
@@ -110,6 +112,13 @@ private:
   void finishedCommit();
 };
 
+/// Merges \p FixItHints into a normalized set of file edits.
+///
+/// \p MergedFixits is cleared before use. Removals may be adjusted to avoid
+/// changing token boundaries.
+void mergeFixits(ArrayRef<FixItHint> FixItHints, const SourceManager &SM,
+                 const LangOptions &LangOpts,
+                 SmallVectorImpl<FixItHint> &MergedFixits);
 } // namespace edit
 
 } // namespace clang
