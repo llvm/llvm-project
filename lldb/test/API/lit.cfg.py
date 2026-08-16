@@ -241,6 +241,8 @@ if is_configured("has_libcxx") and config.has_libcxx:
 # against it on non-Apple platforms.
 if is_configured("objc_gnustep_dir"):
     dotest_cmd += ["--objc-gnustep-dir", config.objc_gnustep_dir]
+if is_configured("objc_gnustep_base_dir"):
+    dotest_cmd += ["--objc-gnustep-base-dir", config.objc_gnustep_base_dir]
 
 # Forward ASan-specific environment variables to tests, as a test may load an
 # ASan-ified dylib.

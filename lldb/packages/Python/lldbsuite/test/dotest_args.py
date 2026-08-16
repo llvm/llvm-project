@@ -93,6 +93,14 @@ def create_parser():
             "Specify the path to a GNUstep libobjc2 installation to build Objective-C tests against on non-Apple platforms."
         ),
     )
+    group.add_argument(
+        "--objc-gnustep-base-dir",
+        metavar="dir",
+        dest="objc_gnustep_base_dir",
+        help=textwrap.dedent(
+            "Specify the path to a GNUstep gnustep-base (Foundation) installation; enables the objc-gnustep-base tests."
+        ),
+    )
     # FIXME? This won't work for different extra flags according to each triple.
     group.add_argument(
         "-E",

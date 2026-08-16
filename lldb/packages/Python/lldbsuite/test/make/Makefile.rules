@@ -565,6 +565,29 @@ ifneq "$(strip $(OBJC_GNUSTEP_DIR))" ""
 			LDFLAGS +=-Wl,/debug:dwarf
 			GNUSTEP_NEEDS_DLL_COPY := 1
 		endif
+		# gnustep-base (Foundation) on top of the runtime, for tests of the
+		# Foundation data formatters. Its headers need the gnustep-2.x string
+		# ABI (a newer -fobjc-runtime than the bare-runtime tests use), blocks
+		# and exceptions, and on Windows the dllimport declarations.
+		ifneq "$(strip $(OBJC_GNUSTEP_BASE_DIR))" ""
+			GNUSTEP_BASE_FLAGS := -fobjc-runtime=gnustep-2.2 -fblocks -fexceptions
+			GNUSTEP_BASE_FLAGS += -fobjc-exceptions -fconstant-string-class=NSConstantString
+			GNUSTEP_BASE_FLAGS += -DGNUSTEP -DGNUSTEP_BASE_LIBRARY=1 -DGNU_RUNTIME=1
+			GNUSTEP_BASE_FLAGS += -I$(OBJC_GNUSTEP_BASE_DIR)/include
+			ifeq "$(OS)" "Windows_NT"
+				GNUSTEP_BASE_FLAGS += -DGNUSTEP_WITH_DLL
+			endif
+			# .m files are compiled with CFLAGS in this file.
+			OBJCFLAGS += $(GNUSTEP_BASE_FLAGS)
+			CFLAGS += $(GNUSTEP_BASE_FLAGS)
+			LDFLAGS +=-L$(OBJC_GNUSTEP_BASE_DIR)/lib -lgnustep-base
+			ifeq "$(OS)" "Linux"
+				LDFLAGS +=-Wl,-rpath,$(OBJC_GNUSTEP_BASE_DIR)/lib
+			endif
+			ifeq "$(OS)" "Windows_NT"
+				GNUSTEP_NEEDS_BASE_DLL_COPY := 1
+			endif
+		endif
 	endif
 endif
 
@@ -761,6 +784,17 @@ all: objc.dll
 
 objc.dll: $(OBJC_GNUSTEP_DIR)/lib/objc.dll
 	cp $< $@
+endif
+
+# Likewise for gnustep-base and the runtime DLLs it depends on, which the
+# tools-windows-msvc layout keeps under bin/. Their PDBs come along: the
+# runtime's small-object class table is a hidden symbol that LLDB can only
+# see through the PDB, and tagged pointers cannot be typed without it.
+ifeq "$(GNUSTEP_NEEDS_BASE_DLL_COPY)" "1"
+all: gnustep-base-dlls
+
+gnustep-base-dlls:
+	cp $(OBJC_GNUSTEP_BASE_DIR)/bin/*.dll $(OBJC_GNUSTEP_BASE_DIR)/bin/*.pdb .
 endif
 
 ### Local Variables: ###

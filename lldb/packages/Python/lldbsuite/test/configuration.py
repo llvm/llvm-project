@@ -152,6 +152,10 @@ libcxx_library_dir = None
 # non-Apple platforms.
 objc_gnustep_dir = None
 
+# GNUstep gnustep-base (Foundation) installation directory, for the tests
+# that need Foundation classes on top of the runtime.
+objc_gnustep_base_dir = None
+
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []
 

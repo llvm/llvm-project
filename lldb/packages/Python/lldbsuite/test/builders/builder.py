@@ -244,9 +244,14 @@ class Builder:
         return []
 
     def getObjcGnustepArgs(self):
+        args = []
         if configuration.objc_gnustep_dir:
-            return ["OBJC_GNUSTEP_DIR={}".format(configuration.objc_gnustep_dir)]
-        return []
+            args.append("OBJC_GNUSTEP_DIR={}".format(configuration.objc_gnustep_dir))
+        if configuration.objc_gnustep_base_dir:
+            args.append(
+                "OBJC_GNUSTEP_BASE_DIR={}".format(configuration.objc_gnustep_base_dir)
+            )
+        return args
 
     def getLLDBObjRoot(self):
         if configuration.lldb_obj_root:

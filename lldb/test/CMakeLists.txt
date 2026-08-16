@@ -83,6 +83,20 @@ elseif (LLDB_TEST_OBJC_GNUSTEP_DIR)
   set(LLDB_TEST_OBJC_GNUSTEP_DIR "" CACHE PATH "Custom path to the GNUstep shared library" FORCE)
 endif()
 
+# gnustep-base (Foundation) is a separate, larger dependency than the runtime;
+# tests of the Foundation data formatters need it and are gated on this.
+set(LLDB_TEST_OBJC_GNUSTEP_BASE_DIR "" CACHE PATH
+  "Path to a GNUstep gnustep-base install (Foundation/Foundation.h under include/) used by data-formatter tests")
+if (LLDB_TEST_OBJC_GNUSTEP_BASE_DIR)
+  if (NOT LLDB_TEST_OBJC_GNUSTEP)
+    message(SEND_ERROR "LLDB_TEST_OBJC_GNUSTEP_BASE_DIR requires LLDB_TEST_OBJC_GNUSTEP=On.")
+  endif()
+  if (NOT EXISTS "${LLDB_TEST_OBJC_GNUSTEP_BASE_DIR}/include/Foundation/Foundation.h")
+    message(SEND_ERROR "Failed to find Foundation/Foundation.h under ${LLDB_TEST_OBJC_GNUSTEP_BASE_DIR}/include. "
+                       "Please check LLDB_TEST_OBJC_GNUSTEP_BASE_DIR.")
+  endif()
+endif()
+
 # LLVM_BUILD_MODE is used in lit.site.cfg
 if (CMAKE_CFG_INTDIR STREQUAL ".")
   set(LLVM_BUILD_MODE ".")
