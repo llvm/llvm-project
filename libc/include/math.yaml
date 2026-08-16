@@ -2756,6 +2756,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tgamma
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: totalorder
     standards:
       - stdc

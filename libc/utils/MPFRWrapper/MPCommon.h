@@ -211,6 +211,7 @@ public:
   MPFRNumber floor() const;
   MPFRNumber fmod(const MPFRNumber &b);
   MPFRNumber frexp(int &exp);
+  MPFRNumber gamma() const;
   MPFRNumber hypot(const MPFRNumber &b);
   MPFRNumber lgamma() const;
   MPFRNumber log() const;

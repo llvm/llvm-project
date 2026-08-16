@@ -181,6 +181,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tgamma_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tgamma_test.cpp
+  DEPENDS
+    libc.src.math.tgamma
+    libc.hdr.errno_macros
+)
+
+add_fp_unittest(
   fabs_test
   SUITE
     libc-math-smoke-tests

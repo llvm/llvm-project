@@ -68,6 +68,7 @@ enum class Operation : int {
   Tan,
   Tanh,
   Tanpi,
+  Tgamma,
   Trunc,
   EndUnaryOperationsSingleOutput,
 

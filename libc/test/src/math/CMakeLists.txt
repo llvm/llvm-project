@@ -279,6 +279,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tgamma_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tgamma_test.cpp
+  DEPENDS
+    libc.src.math.tgamma
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fabs_test
   NEED_MPFR
   SUITE

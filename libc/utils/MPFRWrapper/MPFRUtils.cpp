@@ -115,6 +115,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.tanh();
   case Operation::Tanpi:
     return mpfrInput.tanpi();
+  case Operation::Tgamma:
+    return mpfrInput.gamma();
   case Operation::Trunc:
     return mpfrInput.trunc();
   default:
