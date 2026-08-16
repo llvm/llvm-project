@@ -88,3 +88,11 @@ columns `L, L+32, L+64, L+96`. Four register values are summed, then
 The same pass fuses `tr.load` → `tr.reduce_sum(axis=1)` into coalesced
 `memref.load`s, per-lane `arith.addf`, and a subgroup reduce. No 128×128
 temporary and no shared memory.
+
+## Milestone 19
+
+The source `arith.divui` trip count is replaced by `arith.ceildivui`.
+Out-of-bounds columns in the last tile contribute zero via `scf.if`.
+The kernel is K-dynamic and covers
+`K ∈ {1,31,32,33,127,128,129,255,256,257}`. The lane-then-warp tree
+reassociates the K-sum; TileReducer treats row-sum as reassociative.
