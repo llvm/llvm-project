@@ -25,6 +25,7 @@
 
 #include <chrono>
 #include <cassert>
+#include <ratio>
 #include <type_traits>
 #include <utility>
 
@@ -36,6 +37,8 @@ using years          = std::chrono::years;
 using month          = std::chrono::month;
 using months         = std::chrono::months;
 using year_month_day = std::chrono::year_month_day;
+using decamonths     = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, months::period>>;
+using decades        = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, years::period>>;
 
 constexpr bool test() {
   { // year_month_day + months
@@ -65,6 +68,23 @@ constexpr bool test() {
     }
   }
 
+  {
+    year_month_day ym{year{1234}, std::chrono::January, day{12}};
+    for (unsigned int i = 0; i < 5; i++) {
+      months added_months = decamonths(i);
+      year_month_day ym1  = ym + decamonths(i);
+      year_month_day ym2  = decamonths(i) + ym;
+      assert(ym1.month() == ym.month() + decamonths(i));
+      assert(ym2.month() == ym.month() + decamonths(i));
+
+      years added_years{(static_cast<unsigned>(ym.month()) - 1 + added_months.count()) / 12};
+      year expected_year = ym.year() + added_years;
+      assert(ym1.year() == expected_year);
+      assert(ym2.year() == expected_year);
+      assert(ym1 == ym2);
+    }
+  }
+
   { // year_month_day + years
     year_month_day ym{year{1234}, std::chrono::January, day{12}};
     for (int i = 0; i <= 10; ++i) {
@@ -77,6 +97,19 @@ constexpr bool test() {
       assert(ymd1.day() == day{12});
       assert(ymd2.day() == day{12});
       assert(ymd1 == ymd2);
+    }
+
+    {
+      for (int i = 0; i <= 3; ++i) {
+        year_month_day ym1 = ym + decades(i);
+        year_month_day ym2 = decades(i) + ym;
+        assert(ym1.month() == std::chrono::January);
+        assert(ym1.year() == ym.year() + years{i * 10});
+
+        assert(ym2.month() == std::chrono::January);
+        assert(ym2.year() == ym.year() + years{i * 10});
+        assert(ym1 == ym2);
+      }
     }
   }
 
