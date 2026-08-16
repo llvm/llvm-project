@@ -1084,22 +1084,30 @@ void clang::printDependencyDirectivesAsSource(
     ArrayRef<dependency_directives_scan::Directive> Directives,
     llvm::raw_ostream &OS) {
   // Add a space separator where it is convenient for testing purposes.
-  auto needsSpaceSeparator =
-      [](tok::TokenKind Prev,
-         const dependency_directives_scan::Token &Tok) -> bool {
-    if (Prev == Tok.Kind)
+  auto needsSpaceSeparator = [](const dependency_directives_scan::Token &Prev,
+                                const dependency_directives_scan::Token &Tok,
+                                DirectiveKind Kind, unsigned TokIdx) -> bool {
+    if (Prev.Kind == Tok.Kind)
       return !Tok.isOneOf(tok::l_paren, tok::r_paren, tok::l_square,
                           tok::r_square);
-    if (Prev == tok::raw_identifier &&
+    if (Prev.Kind == tok::raw_identifier &&
         Tok.isOneOf(tok::hash, tok::numeric_constant, tok::string_literal,
                     tok::char_constant, tok::header_name))
       return true;
-    if (Prev == tok::r_paren &&
+    if (Prev.Kind == tok::r_paren &&
         Tok.isOneOf(tok::raw_identifier, tok::hash, tok::string_literal,
                     tok::char_constant, tok::unknown))
       return true;
-    if (Prev == tok::comma &&
+    if (Prev.Kind == tok::comma &&
         Tok.isOneOf(tok::l_paren, tok::string_literal, tok::less))
+      return true;
+    // For object-like macros that begin with an lparen, preserve a space
+    // between the name and the body to avoid it being converted to a
+    // function-like macro.
+    constexpr unsigned FirstBodyIdx = 3; // `#`, `define`, <NAME>, <BODY...>
+    if (Kind == pp_define && TokIdx == FirstBodyIdx &&
+        Prev.is(tok::raw_identifier) && Tok.is(tok::l_paren) &&
+        Tok.Offset > Prev.getEnd())
       return true;
     return false;
   };
@@ -1107,11 +1115,13 @@ void clang::printDependencyDirectivesAsSource(
   for (const dependency_directives_scan::Directive &Directive : Directives) {
     if (Directive.Kind == tokens_present_before_eof)
       OS << "<TokBeforeEOF>";
-    std::optional<tok::TokenKind> PrevTokenKind;
+    const dependency_directives_scan::Token *PrevTok = nullptr;
+    unsigned TokIdx = 0;
     for (const dependency_directives_scan::Token &Tok : Directive.Tokens) {
-      if (PrevTokenKind && needsSpaceSeparator(*PrevTokenKind, Tok))
+      if (PrevTok && needsSpaceSeparator(*PrevTok, Tok, Directive.Kind, TokIdx))
         OS << ' ';
-      PrevTokenKind = Tok.Kind;
+      PrevTok = &Tok;
+      ++TokIdx;
       OS << Source.slice(Tok.Offset, Tok.getEnd());
     }
   }
