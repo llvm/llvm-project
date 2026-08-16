@@ -47,6 +47,15 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
+// Purposely avoids optimizations to make call-chain predictable
+#  if __has_cpp_attribute(_Clang::__disable_tail_calls__)
+#    define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT [[_Clang::__disable_tail_calls__]]
+#  elif __has_cpp_attribute(__gnu__::__optimize__)
+#    define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT [[__gnu__::__optimize__("no-optimize-sibling-calls")]]
+#  else
+#    define _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT
+#  endif
+
 namespace __stacktrace {
 
 template <typename _Tp, typename _Bp = _Tp>
@@ -79,11 +88,11 @@ struct _Trace {
   _LIBCPP_HIDE_FROM_ABI static _Trace const& __trace_base(auto const& __trace);
 
 #  ifdef _WIN32
-  // Windows impl uses dbghelp and psapi DLLs to do the full stacktrace operation.
+  // Windows: full, self-contained impl in this function
   _LIBCPP_EXPORTED_FROM_ABI void __windows_impl(size_t skip, size_t max_depth);
 #  else
-  // Non-windows: impl separated out into several smaller platform-dependent parts.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void __populate_addrs(size_t __skip, size_t __depth);
+  _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NOINLINE void __populate_addrs(size_t __skip, size_t __depth);
   _LIBCPP_EXPORTED_FROM_ABI void __populate_images();
 #  endif
 };
@@ -339,11 +348,12 @@ struct _Unwind_Wrapper {
   }
 };
 
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::__populate_addrs(size_t __skip, size_t __depth) {
+_LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT _LIBCPP_HIDE_FROM_ABI _LIBCPP_NOINLINE inline void
+_Trace::__populate_addrs(size_t __skip, size_t __depth) {
   if (!__depth) {
     return;
   }
-  _Unwind_Wrapper __bt{*this, __skip, __depth};
+  _Unwind_Wrapper __bt{*this, __skip + 1, __depth}; /* +1 to skip our own frame */
   _Unwind_Backtrace(_Unwind_Wrapper::callback, &__bt);
 }
 
@@ -357,6 +367,8 @@ _Trace const& _Trace::__trace_base(auto const& __trace) { return *static_cast<_T
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
+
+#  undef _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT
 
 #endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
