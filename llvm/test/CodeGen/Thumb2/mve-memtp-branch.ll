@@ -34,9 +34,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ Child Loop BB0_11 Depth 2
 ; CHECK-NEXT:    ldr.w r0, [r2, r3, lsl #2]
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    ite ne
+; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    ldrbne r0, [r1, r3]
-; CHECK-NEXT:    moveq r0, #0
 ; CHECK-NEXT:    mla r3, r3, r12, r5
 ; CHECK-NEXT:    add r3, r0
 ; CHECK-NEXT:    rsb.w r0, r0, #108
@@ -49,9 +48,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    ldr r0, [r2, #4]
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    ite ne
+; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    ldrbne r0, [r1, #1]
-; CHECK-NEXT:    moveq r0, #0
 ; CHECK-NEXT:    adds r3, r5, r0
 ; CHECK-NEXT:    rsb.w r0, r0, #108
 ; CHECK-NEXT:    adds r3, #19
@@ -64,9 +62,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    ldr r0, [r2, #4]
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    ite ne
+; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    ldrbne r0, [r1, #1]
-; CHECK-NEXT:    moveq r0, #0
 ; CHECK-NEXT:    adds r3, r5, r0
 ; CHECK-NEXT:    rsb.w r0, r0, #108
 ; CHECK-NEXT:    adds r3, #19
@@ -79,9 +76,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    ldr r0, [r2, #4]
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    ite ne
+; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    ldrbne r0, [r1, #1]
-; CHECK-NEXT:    moveq r0, #0
 ; CHECK-NEXT:    adds r3, r5, r0
 ; CHECK-NEXT:    rsb.w r0, r0, #108
 ; CHECK-NEXT:    add.w r4, r0, #15
@@ -109,9 +105,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ in Loop: Header=BB0_14 Depth=1
 ; CHECK-NEXT:    ldr r3, [r2, #4]
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    ite ne
+; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    ldrbne r3, [r1, #1]
-; CHECK-NEXT:    moveq r3, #0
 ; CHECK-NEXT:    add.w r5, r12, r3
 ; CHECK-NEXT:    rsb.w r3, r3, #108
 ; CHECK-NEXT:    add.w r4, r5, #19
@@ -129,9 +124,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ in Loop: Header=BB0_14 Depth=1
 ; CHECK-NEXT:    ldr r3, [r2, #4]
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    ite ne
+; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    ldrbne r3, [r1, #1]
-; CHECK-NEXT:    moveq r3, #0
 ; CHECK-NEXT:    add.w r5, r12, r3
 ; CHECK-NEXT:    rsb.w r3, r3, #108
 ; CHECK-NEXT:    add.w r4, r5, #19
@@ -148,9 +142,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ in Loop: Header=BB0_14 Depth=1
 ; CHECK-NEXT:    ldr r3, [r2, #4]
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    ite ne
+; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    ldrbne r3, [r1, #1]
-; CHECK-NEXT:    moveq r3, #0
 ; CHECK-NEXT:    add.w r5, r12, r3
 ; CHECK-NEXT:    rsb.w r3, r3, #108
 ; CHECK-NEXT:    add.w r4, r5, #19
@@ -167,9 +160,8 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ in Loop: Header=BB0_14 Depth=1
 ; CHECK-NEXT:    ldr r3, [r2, #4]
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    ite ne
+; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    ldrbne r3, [r1, #1]
-; CHECK-NEXT:    moveq r3, #0
 ; CHECK-NEXT:    add.w r5, r12, r3
 ; CHECK-NEXT:    rsb.w r3, r3, #108
 ; CHECK-NEXT:    add.w r4, r5, #19

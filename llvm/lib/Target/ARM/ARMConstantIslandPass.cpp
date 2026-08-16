@@ -27,6 +27,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -1861,6 +1862,29 @@ bool ARMConstantIslands::optimizeThumb2Instructions() {
   return MadeChange;
 }
 
+/// isCPSRDeadOnCondBranchExit - Return whether CPSR is dead on exit from \p Br.
+/// Used to verify that folding tCMPi8+t2Bcc into tCBZ/tCBNZ is safe.
+static bool isCPSRDeadOnCondBranchExit(const MachineInstr &Br,
+                                       const TargetRegisterInfo *TRI) {
+  // Fast path when kill markers are still accurate.
+  if (Br.killsRegister(ARM::CPSR, TRI))
+    return true;
+
+  // Kill markers may have been cleared (e.g. by arm-copyelim).  Compute
+  // whether CPSR is live on exit from Br: start from block liveouts and, if
+  // there are instructions after Br, walk backward over that suffix only.
+  // When Br is the last instruction, liveouts alone give the answer.
+  const MachineBasicBlock *MBB = Br.getParent();
+  LiveRegUnits LRU(*TRI);
+  LRU.addLiveOuts(*MBB);
+  for (auto I = MBB->rbegin(); I != MBB->rend(); ++I) {
+    if (&*I == &Br)
+      break;
+    LRU.stepBackward(*I);
+  }
+
+  return LRU.available(ARM::CPSR);
+}
 
 bool ARMConstantIslands::optimizeThumb2Branches() {
 
@@ -1910,7 +1934,8 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
 
     // If the conditional branch doesn't kill CPSR, then CPSR can be liveout
     // so this transformation is not safe.
-    if (!Br.MI->killsRegister(ARM::CPSR, /*TRI=*/nullptr))
+    auto *TRI = STI->getRegisterInfo();
+    if (!isCPSRDeadOnCondBranchExit(*Br.MI, TRI))
       return false;
 
     Register PredReg;
@@ -1932,7 +1957,6 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
       return false;
 
     // Search backwards to find a tCMPi8
-    auto *TRI = STI->getRegisterInfo();
     MachineInstr *CmpMI = findCMPToFoldIntoCBZ(Br.MI, TRI);
     if (!CmpMI || CmpMI->getOpcode() != ARM::tCMPi8)
       return false;

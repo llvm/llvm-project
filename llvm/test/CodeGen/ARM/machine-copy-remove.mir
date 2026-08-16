@@ -1,0 +1,186 @@
+# RUN: llc -mtriple=thumbv7-none-eabi -run-pass=arm-copyelim %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv7-none-eabi -passes=arm-copyelim %s -verify-machineinstrs -o - | FileCheck %s
+
+# CHECK-LABEL: name: cbz_zero
+# CHECK: tCBZ
+# CHECK: bb.1:
+# CHECK-NOT: t2MOVi
+---
+name: cbz_zero
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    tCBZ $r0, %bb.1
+    t2B %bb.2, 14, $noreg
+
+  bb.1:
+    liveins: $r1
+    $r0 = t2MOVi 0, 14, $noreg, $noreg
+    STRi12 killed $r0, $r1, 0, 14, $noreg
+
+  bb.2:
+    tBX_RET 14, $noreg
+
+...
+# CHECK-LABEL: name: cmp_imm
+# CHECK: t2CMPri
+# CHECK: bb.1:
+# CHECK-NOT: t2MOVi
+---
+name: cmp_imm
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    t2CMPri $r0, 1, 14, $noreg, implicit-def $cpsr
+    t2Bcc %bb.1, 0, killed $cpsr
+    t2B %bb.2, 14, $noreg
+
+  bb.1:
+    liveins: $r1
+    $r0 = t2MOVi 1, 14, $noreg, $noreg
+    STRi12 killed $r0, $r1, 0, 14, $noreg
+
+  bb.2:
+    tBX_RET 14, $noreg
+
+...
+# CHECK-LABEL: name: subs_zero
+# CHECK: t2SUBrr
+# CHECK: bb.1:
+# CHECK-NOT: t2MOVi
+---
+name: subs_zero
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+    $r0 = t2SUBrr $r1, $r2, 14, $noreg, def $cpsr
+    STRi12 killed $r0, $r1, 0, 14, $noreg
+    t2Bcc %bb.2, 1, killed $cpsr
+    t2B %bb.1, 14, $noreg
+
+  bb.1:
+    liveins: $r1
+    $r0 = t2MOVi 0, 14, $noreg, $noreg
+    STRi12 killed $r0, $r1, 4, 14, $noreg
+
+  bb.2:
+    tBX_RET 14, $noreg
+
+...
+# CHECK-LABEL: name: cmp_rr
+# CHECK: t2CMPrr
+# CHECK: bb.1:
+# CHECK-NOT: t2MOVr
+---
+name: cmp_rr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+    t2CMPrr $r0, $r1, 14, $noreg, implicit-def $cpsr
+    t2Bcc %bb.1, 0, killed $cpsr
+    t2B %bb.2, 14, $noreg
+
+  bb.1:
+    liveins: $r1, $r2
+    $r0 = t2MOVr $r1, 14, $noreg, $noreg
+    STRi12 killed $r0, $r2, 0, 14, $noreg
+
+  bb.2:
+    tBX_RET 14, $noreg
+
+...
+# CHECK-LABEL: name: cmp_copy_prop
+# CHECK: t2CMPrr
+# CHECK: bb.1:
+# CHECK-NOT: t2MOVr
+---
+name: cmp_copy_prop
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+    $r2 = COPY $r0
+    t2CMPrr $r0, $r1, 14, $noreg, implicit-def $cpsr
+    t2Bcc %bb.1, 0, killed $cpsr
+    t2B %bb.2, 14, $noreg
+
+  bb.1:
+    liveins: $r1, $r2
+    $r0 = t2MOVr $r2, 14, $noreg, $noreg
+    STRi12 killed $r0, $r2, 0, 14, $noreg
+
+  bb.2:
+    tBX_RET 14, $noreg
+
+...
+# CHECK-LABEL: name: tmovi_dead_cpsr
+# CHECK: tCBZ
+# CHECK: bb.1:
+# CHECK-NOT: tMOVi8
+---
+name: tmovi_dead_cpsr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    tCBZ $r0, %bb.1
+    t2B %bb.2, 14, $noreg
+
+  bb.1:
+    liveins: $r1
+    $r0, dead $cpsr = tMOVi8 0, 14, $noreg
+    STRi12 killed $r0, $r1, 0, 14, $noreg
+
+  bb.2:
+    tBX_RET 14, $noreg
+
+...
+# CHECK-LABEL: name: tmovi_live_cpsr
+# CHECK: tCBZ
+# CHECK: bb.1:
+# CHECK: tMOVi8
+# CHECK: t2Bcc
+---
+name: tmovi_live_cpsr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+    tCBZ $r0, %bb.1
+    t2B %bb.2, 14, $noreg
+
+  bb.1:
+    liveins: $r1, $r2
+    $r0, $cpsr = tMOVi8 0, 14, $noreg
+    STRi12 killed $r0, $r1, 0, 14, $noreg
+    t2Bcc %bb.2, 1, killed $cpsr
+
+  bb.2:
+    tBX_RET 14, $noreg
+
+...
+# CHECK-LABEL: name: cmp_reg_predicated
+# CHECK: t2CMPrr
+# CHECK: bb.1:
+# CHECK: t2MOVr
+---
+name: cmp_reg_predicated
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $cpsr
+    t2CMPrr $r0, $r1, 1, $cpsr, implicit-def $cpsr
+    t2Bcc %bb.1, 0, killed $cpsr
+    t2B %bb.2, 14, $noreg
+
+  bb.1:
+    liveins: $r1, $r2
+    $r0 = t2MOVr $r1, 14, $noreg, $noreg
+    STRi12 killed $r0, $r2, 0, 14, $noreg
+
+  bb.2:
+    tBX_RET 14, $noreg

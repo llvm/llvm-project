@@ -931,7 +931,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; ENABLE-V4T-NEXT:    @ InlineAsm Start
 ; ENABLE-V4T-NEXT:    mov r8, r8
 ; ENABLE-V4T-NEXT:    @ InlineAsm End
-; ENABLE-V4T-NEXT:    movs r0, #0
 ; ENABLE-V4T-NEXT:    pop {r4}
 ; ENABLE-V4T-NEXT:    pop {r1}
 ; ENABLE-V4T-NEXT:    bx r1
@@ -963,7 +962,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; ENABLE-V5T-NEXT:    @ InlineAsm Start
 ; ENABLE-V5T-NEXT:    mov r8, r8
 ; ENABLE-V5T-NEXT:    @ InlineAsm End
-; ENABLE-V5T-NEXT:    movs r0, #0
 ; ENABLE-V5T-NEXT:    pop {r4, pc}
 ; ENABLE-V5T-NEXT:  LBB7_4: @ %if.else
 ; ENABLE-V5T-NEXT:    lsls r0, r1, #1
@@ -994,7 +992,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; DISABLE-V4T-NEXT:    @ InlineAsm Start
 ; DISABLE-V4T-NEXT:    mov r8, r8
 ; DISABLE-V4T-NEXT:    @ InlineAsm End
-; DISABLE-V4T-NEXT:    movs r0, #0
 ; DISABLE-V4T-NEXT:    b LBB7_5
 ; DISABLE-V4T-NEXT:  LBB7_4: @ %if.else
 ; DISABLE-V4T-NEXT:    lsls r0, r1, #1
@@ -1027,7 +1024,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; DISABLE-V5T-NEXT:    @ InlineAsm Start
 ; DISABLE-V5T-NEXT:    mov r8, r8
 ; DISABLE-V5T-NEXT:    @ InlineAsm End
-; DISABLE-V5T-NEXT:    movs r0, #0
 ; DISABLE-V5T-NEXT:    pop {r4, pc}
 ; DISABLE-V5T-NEXT:  LBB7_4: @ %if.else
 ; DISABLE-V5T-NEXT:    lsls r0, r1, #1

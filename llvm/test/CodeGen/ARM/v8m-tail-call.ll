@@ -61,7 +61,6 @@ define hidden i32 @f2(i32, i32, i32, i32, i32) {
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    b h2
 ; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    mvns r0, r0
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
