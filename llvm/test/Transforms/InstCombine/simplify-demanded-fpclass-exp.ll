@@ -372,8 +372,8 @@ define nofpclass(pzero) float @source_is_known_nzero(float nofpclass(nan inf nor
 define nofpclass(nzero) float @source_is_known_inf(float nofpclass(nan norm sub zero) %must.be.inf) !prof !0 {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_inf(
 ; CHECK-SAME: float nofpclass(nan zero sub norm) [[MUST_BE_INF:%.*]]) !prof [[PROF0:![0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq float [[MUST_BE_INF]], +inf
-; CHECK-NEXT:    [[EXP:%.*]] = select i1 [[TMP1]], float [[MUST_BE_INF]], float 0.000000e+00, !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan ueq float [[MUST_BE_INF]], +inf
+; CHECK-NEXT:    [[EXP:%.*]] = select i1 [[TMP1]], float +inf, float 0.000000e+00, !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    ret float [[EXP]]
 ;
   %exp = call float @llvm.exp2.f32(float %must.be.inf)
@@ -383,8 +383,8 @@ define nofpclass(nzero) float @source_is_known_inf(float nofpclass(nan norm sub 
 define nofpclass(nzero) <2 x float> @source_is_known_inf_vec(<2 x float> nofpclass(nan norm sub zero) %must.be.inf) {
 ; CHECK-LABEL: define nofpclass(nzero) <2 x float> @source_is_known_inf_vec(
 ; CHECK-SAME: <2 x float> nofpclass(nan zero sub norm) [[MUST_BE_INF:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq <2 x float> [[MUST_BE_INF]], splat (float +inf)
-; CHECK-NEXT:    [[EXP:%.*]] = select <2 x i1> [[TMP1]], <2 x float> [[MUST_BE_INF]], <2 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan ueq <2 x float> [[MUST_BE_INF]], splat (float +inf)
+; CHECK-NEXT:    [[EXP:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float +inf), <2 x float> zeroinitializer
 ; CHECK-NEXT:    ret <2 x float> [[EXP]]
 ;
   %exp = call <2 x float> @llvm.exp2.v2f32(<2 x float> %must.be.inf)

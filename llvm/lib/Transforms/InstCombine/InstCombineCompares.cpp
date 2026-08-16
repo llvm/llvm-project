@@ -9223,6 +9223,16 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       return replaceOperand(I, 1, ConstantFP::getZero(OpType));
   }
 
+  // If neither operand can be a NaN, the comparison cannot see a NaN, so it is
+  // safe to set 'nnan'. This exposes the fact to min/max recognition and lets
+  // codegen use the cheaper ordered form.
+  if (!I.hasNoNaNs() &&
+      isKnownNeverNaN(Op0, getSimplifyQuery().getWithInstruction(&I)) &&
+      isKnownNeverNaN(Op1, getSimplifyQuery().getWithInstruction(&I))) {
+    I.setHasNoNaNs(true);
+    return &I;
+  }
+
   // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
   Value *X, *Y;
   if (match(Op0, m_FNeg(m_Value(X))) && match(Op1, m_FNeg(m_Value(Y))))
