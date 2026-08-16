@@ -127,7 +127,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: 'func.func' Pipeline
-! ALL-NEXT:   MemoryAllocationOpt
+! ALL-NEXT:   AllocationPlacement
 
 ! ALL-NEXT: Inliner
 ! ALL-NEXT: SimplifyRegionLite

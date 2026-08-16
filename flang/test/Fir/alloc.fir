@@ -1,5 +1,7 @@
-// RUN: tco %s | FileCheck %s
-// RUN: %flang_fc1 -emit-llvm  %s -o - | FileCheck %s
+// This test checks FIR alloca/allocmem lowering to LLVM; disable the
+// allocation-placement pass so it does not move allocations by policy.
+// RUN: tco -disable-allocation-placement %s | FileCheck %s
+// RUN: %flang_fc1 -mllvm -disable-allocation-placement -emit-llvm  %s -o - | FileCheck %s
 
 // UNSUPPORTED: system-windows
 // Disabled on 32-bit targets due to the additional `trunc` opcodes required

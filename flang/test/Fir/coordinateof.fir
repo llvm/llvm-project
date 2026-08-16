@@ -1,4 +1,5 @@
-// RUN: fir-opt %s | tco | FileCheck %s
+// Disable allocation-placement so the tested allocas are not moved by policy.
+// RUN: fir-opt %s | tco -disable-allocation-placement | FileCheck %s
 
 // tests on coordinate_of op
 

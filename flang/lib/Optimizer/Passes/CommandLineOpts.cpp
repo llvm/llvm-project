@@ -61,9 +61,16 @@ cl::opt<bool> useOldAliasTags(
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
 EnableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
-EnableOption(AllocationPlacement, "allocation-placement",
-             "unified array allocation placement (experimental; replaces "
-             "stack-arrays and memory-allocation-opt)");
+// Enabled by default: the unified allocation-placement pass supersedes the
+// legacy stack-arrays and memory-allocation-opt passes. Pass
+// -enable-allocation-placement=false to fall back to the legacy passes.
+cl::opt<bool> enableAllocationPlacement(
+    "enable-allocation-placement",
+    cl::desc("use the unified array allocation-placement pass instead of the "
+             "legacy stack-arrays and memory-allocation-opt passes"),
+    cl::init(true), cl::Hidden);
+DisableOption(AllocationPlacement, "allocation-placement",
+              "unified array allocation placement");
 
 cl::opt<std::size_t> allocationPlacementSmallArraySize(
     "allocation-placement-small-array-size",
