@@ -363,6 +363,7 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.truncf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 

@@ -334,6 +334,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanpif
     libc.src.math.trunc
     libc.src.math.truncf
+    libc.src.math.truncf128
     libc.src.math.truncl
 )
 

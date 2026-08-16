@@ -536,6 +536,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
+    libc.src.math.truncf128
     libc.src.math.truncl
     # FIXME: Broken.
     # libc.src.math.ufromfp
