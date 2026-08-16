@@ -857,3 +857,53 @@ let Predicates = [HasVendorXCVmac, IsRV32] in {
   def : PatCoreVMacGprGprGprUimm5<"macsRN", "MACSRN">;
   def : PatCoreVMacGprGprGprUimm5<"machhsRN", "MACHHSRN">;
 }
+
+//===----------------------------------------------------------------------===//
+// XCVsimd: select the element-wise SIMD instructions from generic
+// packed-vector IR.
+//
+// 2 x i16 / 4 x i8 are legal GPR-resident types for XCVsimd (RV32), so the
+// element-wise vector operations map directly to the SIMD instructions without
+// needing dedicated intrinsics. Bitwise ops are lane-agnostic and reuse the
+// base scalar AND/OR/XOR.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXCVsimd, IsRV32] in {
+  // The packed vectors live in a GPR, so a bitcast to/from i32 is a no-op
+  // (used by the calling convention to pass/return them in a register).
+  def : Pat<(i32   (bitconvert (v2i16 GPR:$x))), (COPY_TO_REGCLASS GPR:$x, GPR)>;
+  def : Pat<(v2i16 (bitconvert (i32   GPR:$x))), (COPY_TO_REGCLASS GPR:$x, GPR)>;
+  def : Pat<(i32   (bitconvert (v4i8  GPR:$x))), (COPY_TO_REGCLASS GPR:$x, GPR)>;
+  def : Pat<(v4i8  (bitconvert (i32   GPR:$x))), (COPY_TO_REGCLASS GPR:$x, GPR)>;
+
+  def : Pat<(v2i16 (add GPR:$rs1, GPR:$rs2)), (CV_ADD_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (add GPR:$rs1, GPR:$rs2)), (CV_ADD_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (sub GPR:$rs1, GPR:$rs2)), (CV_SUB_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (sub GPR:$rs1, GPR:$rs2)), (CV_SUB_B GPR:$rs1, GPR:$rs2)>;
+
+  def : Pat<(v2i16 (smin GPR:$rs1, GPR:$rs2)), (CV_MIN_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (smin GPR:$rs1, GPR:$rs2)), (CV_MIN_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (umin GPR:$rs1, GPR:$rs2)), (CV_MINU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (umin GPR:$rs1, GPR:$rs2)), (CV_MINU_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (smax GPR:$rs1, GPR:$rs2)), (CV_MAX_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (smax GPR:$rs1, GPR:$rs2)), (CV_MAX_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (umax GPR:$rs1, GPR:$rs2)), (CV_MAXU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (umax GPR:$rs1, GPR:$rs2)), (CV_MAXU_B GPR:$rs1, GPR:$rs2)>;
+
+  // Bitwise ops do not depend on lane boundaries: reuse the scalar insns.
+  def : Pat<(v2i16 (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (or  GPR:$rs1, GPR:$rs2)), (OR  GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (or  GPR:$rs1, GPR:$rs2)), (OR  GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i8  (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
+
+  // abs: per-lane absolute value.
+  def : Pat<(v2i16 (abs GPR:$rs1)), (CV_ABS_H GPR:$rs1)>;
+  def : Pat<(v4i8  (abs GPR:$rs1)), (CV_ABS_B GPR:$rs1)>;
+
+  def : LdPat<load, LW, v2i16>;
+  def : LdPat<load, LW, v4i8>;
+  def : StPat<store, SW, GPR, v2i16>;
+  def : StPat<store, SW, GPR, v4i8>;
+}
