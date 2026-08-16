@@ -4,7 +4,7 @@
 
 define i32 @load_extract_idx_0(ptr %x) {
 ; CHECK-LABEL: @load_extract_idx_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -27,7 +27,7 @@ define i32 @vscale_load_extract_idx_0(ptr %x) {
 ; smaller alignment should be used.
 define i32 @load_extract_idx_0_small_alignment(ptr %x) {
 ; CHECK-LABEL: @load_extract_idx_0_small_alignment(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -38,7 +38,7 @@ define i32 @load_extract_idx_0_small_alignment(ptr %x) {
 
 define i32 @load_extract_idx_1(ptr %x) {
 ; CHECK-LABEL: @load_extract_idx_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -49,7 +49,7 @@ define i32 @load_extract_idx_1(ptr %x) {
 
 define i32 @load_extract_idx_2(ptr %x) {
 ; CHECK-LABEL: @load_extract_idx_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -60,7 +60,7 @@ define i32 @load_extract_idx_2(ptr %x) {
 
 define i32 @vscale_load_extract_idx_2(ptr %x) {
 ; CHECK-LABEL: @vscale_load_extract_idx_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -71,7 +71,7 @@ define i32 @vscale_load_extract_idx_2(ptr %x) {
 
 define i32 @load_extract_idx_3(ptr %x) {
 ; CHECK-LABEL: @load_extract_idx_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -475,7 +475,7 @@ declare void @clobber()
 define i32 @load_extract_clobber_call_before(ptr %x) {
 ; CHECK-LABEL: @load_extract_clobber_call_before(
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -500,7 +500,7 @@ define i32 @load_extract_clobber_call_between(ptr %x) {
 
 define i32 @load_extract_clobber_call_after(ptr %x) {
 ; CHECK-LABEL: @load_extract_clobber_call_after(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -514,7 +514,7 @@ define i32 @load_extract_clobber_call_after(ptr %x) {
 define i32 @load_extract_clobber_store_before(ptr %x, ptr %y) {
 ; CHECK-LABEL: @load_extract_clobber_store_before(
 ; CHECK-NEXT:    store i8 0, ptr [[Y:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -567,7 +567,7 @@ define i32 @load_extract_clobber_store_after_limit(ptr %x, ptr %y, <8 x i32> %z)
 ; LIMIT-DEFAULT-LABEL: @load_extract_clobber_store_after_limit(
 ; LIMIT-DEFAULT-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[Z:%.*]], <8 x i32> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4>
 ; LIMIT-DEFAULT-NEXT:    [[Z_0:%.*]] = call i32 @llvm.vector.reduce.add.v5i32(<5 x i32> [[TMP2]])
-; LIMIT-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 2
+; LIMIT-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 0, i64 2
 ; LIMIT-DEFAULT-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 8
 ; LIMIT-DEFAULT-NEXT:    store i8 0, ptr [[Y:%.*]], align 1
 ; LIMIT-DEFAULT-NEXT:    [[ADD_4:%.*]] = add i32 [[Z_0]], [[R]]
@@ -649,7 +649,7 @@ define i1 @load_with_non_power_of_2_element_type_2(ptr %x) {
 define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx(
 ; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i64 0, i64 1
 ; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -666,7 +666,7 @@ define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 define i32 @load_multiple_extracts_with_constant_idx_profitable(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx_profitable(
 ; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i32>, ptr [[TMP1]], i32 0, i32 6
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i32>, ptr [[TMP1]], i64 0, i64 6
 ; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
