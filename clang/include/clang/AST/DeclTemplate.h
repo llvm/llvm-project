@@ -19,7 +19,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/TemplateBase.h"
@@ -2458,78 +2457,76 @@ public:
 /// \code
 /// template \<typename T> class A {
 ///   friend class MyVector<T>; // not a friend template
-///   template \<typename U> friend class B; // friend class template
+///   template \<typename U> friend class B; // not a friend template
 ///   template \<typename U> friend class Foo<T>::Nested; // friend template
 /// };
 /// \endcode
-class FriendTemplateDecl final
-    : public FriendDecl,
-      private llvm::TrailingObjects<FriendTemplateDecl,
-                                    TemplateParameterList *> {
-  void anchor() override;
+///
+/// \note This class is not currently in use.  All of the above
+/// will yield a FriendDecl, not a FriendTemplateDecl.
+class FriendTemplateDecl : public Decl {
+  virtual void anchor();
+
+public:
+  using FriendUnion = llvm::PointerUnion<NamedDecl *,TypeSourceInfo *>;
 
 private:
-  unsigned NumTPLists = 0;
-  TemplateName Template;
+  // The number of template parameters;  always non-zero.
+  unsigned NumParams = 0;
 
-  FriendTemplateDecl(DeclContext *DC, SourceLocation Loc, FriendUnion Friend,
-                     SourceLocation FriendLoc, SourceLocation EllipsisLoc,
-                     ArrayRef<TemplateParameterList *> FriendTPLists,
-                     TemplateName Template = {})
-      : FriendDecl(Decl::FriendTemplate, DC, Loc, Friend, FriendLoc,
-                   EllipsisLoc),
-        NumTPLists(FriendTPLists.size()), Template(Template) {
-    assert(!FriendTPLists.empty());
-    llvm::copy(FriendTPLists, getTrailingObjects());
-  }
+  // The parameter list.
+  TemplateParameterList **Params = nullptr;
 
-  FriendTemplateDecl(EmptyShell Empty, unsigned NumFriendTPLists)
-      : FriendDecl(Decl::FriendTemplate, Empty), NumTPLists(NumFriendTPLists) {
-    assert(NumFriendTPLists != 0);
-  }
+  // The declaration that's a friend of this class.
+  FriendUnion Friend;
+
+  // Location of the 'friend' specifier.
+  SourceLocation FriendLoc;
+
+  FriendTemplateDecl(DeclContext *DC, SourceLocation Loc,
+                     TemplateParameterList **Params, unsigned NumParams,
+                     FriendUnion Friend, SourceLocation FriendLoc)
+      : Decl(Decl::FriendTemplate, DC, Loc), NumParams(NumParams),
+        Params(Params), Friend(Friend), FriendLoc(FriendLoc) {}
+
+  FriendTemplateDecl(EmptyShell Empty) : Decl(Decl::FriendTemplate, Empty) {}
 
 public:
   friend class ASTDeclReader;
-  friend class ASTDeclWriter;
-  friend TrailingObjects;
-
-  enum class FriendTemplateEntityKind { Type, Template, Decl };
 
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
-         FriendUnion Friend, SourceLocation FriendLoc,
-         ArrayRef<TemplateParameterList *> FriendTPLists,
-         SourceLocation EllipsisLoc = {}, TemplateName Template = {});
+         MutableArrayRef<TemplateParameterList *> Params, FriendUnion Friend,
+         SourceLocation FriendLoc);
 
-  static FriendTemplateDecl *
-  Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
-         TemplateName Template, SourceLocation FriendLoc,
-         ArrayRef<TemplateParameterList *> FriendTPLists,
-         SourceLocation EllipsisLoc = {});
+  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
-  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                                unsigned NumFriendTPLists);
-
-  SourceRange getSourceRange() const override LLVM_READONLY;
-
-  TemplateName getFriendTemplateName() const { return Template; }
-
-  FriendTemplateEntityKind getFriendKind() const {
-    if (getFriendType())
-      return FriendTemplateEntityKind::Type;
-    if (Template.isNull())
-      return FriendTemplateEntityKind::Decl;
-    return FriendTemplateEntityKind::Template;
+  /// If this friend declaration names a templated type (or
+  /// a dependent member type of a templated type), return that
+  /// type;  otherwise return null.
+  TypeSourceInfo *getFriendType() const {
+    return Friend.dyn_cast<TypeSourceInfo*>();
   }
 
-  NamedDecl *getFriendDecl() const override {
-    if (NamedDecl *ND = Friend.dyn_cast<NamedDecl *>())
-      return ND;
-    return Template.getAsTemplateDecl();
+  /// If this friend declaration names a templated function (or
+  /// a member function of a templated type), return that type;
+  /// otherwise return null.
+  NamedDecl *getFriendDecl() const {
+    return Friend.dyn_cast<NamedDecl*>();
   }
 
-  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
-    return ArrayRef(getTrailingObjects(), NumTPLists);
+  /// Retrieves the location of the 'friend' keyword.
+  SourceLocation getFriendLoc() const {
+    return FriendLoc;
+  }
+
+  TemplateParameterList *getTemplateParameterList(unsigned i) const {
+    assert(i <= NumParams);
+    return Params[i];
+  }
+
+  unsigned getNumTemplateParameters() const {
+    return NumParams;
   }
 
   // Implement isa/cast/dyncast/etc.

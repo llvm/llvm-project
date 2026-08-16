@@ -123,7 +123,6 @@ features cannot lower the translation-unit ABI level;
 ## What's New in Clang {{env.config.release}}?
 
 ### C++ Language Changes
-- Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
 
 #### C++2d Feature Support
 

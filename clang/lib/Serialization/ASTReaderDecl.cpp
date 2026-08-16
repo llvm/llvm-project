@@ -2408,37 +2408,26 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
     D->Friend = readDeclAs<NamedDecl>();
   else
     D->Friend = readTypeSourceInfo();
+  for (unsigned i = 0; i != D->NumTPLists; ++i)
+    D->getTrailingObjects()[i] = Record.readTemplateParameterList();
   D->NextFriend = readDeclID().getRawValue();
+  D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
   D->EllipsisLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
-  for (unsigned I = 0; I != D->NumTPLists; ++I)
-    D->getTrailingObjects()[I] = Record.readTemplateParameterList();
-  auto Kind = static_cast<FriendTemplateDeclKind>(Record.readInt());
-  switch (Kind) {
-  case FTDK_Type:
-    D->Friend = readTypeSourceInfo();
-    break;
-  case FTDK_Decl:
+  unsigned NumParams = Record.readInt();
+  D->NumParams = NumParams;
+  D->Params = new (Reader.getContext()) TemplateParameterList *[NumParams];
+  for (unsigned i = 0; i != NumParams; ++i)
+    D->Params[i] = Record.readTemplateParameterList();
+  if (Record.readInt()) // HasFriendDecl
     D->Friend = readDeclAs<NamedDecl>();
-    break;
-  case FTDK_Template:
-    D->Template = Record.readTemplateName();
-    assert(D->Template.getAsTemplateDecl() &&
-           "friend template name must resolve to a template declaration");
-    D->Friend = D->Template.getAsTemplateDecl();
-    break;
-  case FTDK_Dependent:
+  else
     D->Friend = readTypeSourceInfo();
-    D->Template = Record.readTemplateName();
-    break;
-  }
-  D->NextFriend = readDeclID().getRawValue();
   D->FriendLoc = readSourceLocation();
-  D->EllipsisLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitTemplateDecl(TemplateDecl *D) {
@@ -4115,11 +4104,10 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     D = AccessSpecDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FRIEND:
-    D = FriendDecl::CreateDeserialized(Context, ID);
+    D = FriendDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
   case DECL_FRIEND_TEMPLATE:
-    D = FriendTemplateDecl::CreateDeserialized(Context, ID,
-                                               /*NumTPLists=*/Record.readInt());
+    D = FriendTemplateDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_CLASS_TEMPLATE:
     D = ClassTemplateDecl::CreateDeserialized(Context, ID);

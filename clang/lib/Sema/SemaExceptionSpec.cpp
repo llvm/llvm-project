@@ -655,8 +655,7 @@ static bool CheckEquivalentExceptionSpecImpl(
     return true;
   }
 
-  if (DiagID.getDiagID() != 0)
-    S.Diag(NewLoc, DiagID);
+  S.Diag(NewLoc, DiagID);
   if (NoteID.getDiagID() != 0 && OldLoc.isValid())
     S.Diag(OldLoc, NoteID);
   return true;
@@ -668,7 +667,7 @@ bool Sema::CheckEquivalentExceptionSpec(const PartialDiagnostic &DiagID,
                                         SourceLocation OldLoc,
                                         const FunctionProtoType *New,
                                         SourceLocation NewLoc) {
-  if (!getLangOpts().CXXExceptions && !getLangOpts().CPlusPlus17)
+  if (!getLangOpts().CXXExceptions)
     return false;
   return CheckEquivalentExceptionSpecImpl(*this, DiagID, NoteID, Old, OldLoc,
                                           New, NewLoc);
