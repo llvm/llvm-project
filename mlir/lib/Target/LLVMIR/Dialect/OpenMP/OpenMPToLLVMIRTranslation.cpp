@@ -512,6 +512,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkTaskReductionByref(op, result);
       })
       .Case([&](omp::TaskwaitOp op) { checkNowait(op, result); })
+      .Case([&](omp::DispatchOp op) {
+        // nowait clause requests asynchronous dispatch and is not yet honored,
+        // so diagnose it rather than silently dropping it.
+        checkNowait(op, result);
+      })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
