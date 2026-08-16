@@ -37,6 +37,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -237,7 +238,15 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
-  FloatABI::ABIType FloatABI = this->Options.FloatABIType;
+  // The float ABI comes from the "float-abi" module flag if present, otherwise
+  // from the legacy -float-abi target option (which the constructor seeded from
+  // the target triple).
+  FloatABI::ABIType FloatABI = F.getParent()->getFloatABI();
+  if (FloatABI == FloatABI::Default) {
+    FloatABI = Options.FloatABIType;
+    assert(FloatABI != FloatABI::Default &&
+           "expected TargetMachine constructor to overwrite default float abi");
+  }
 
   // It is legal to have FloatABI::Hard with +soft-float for targets with SIMD
   // registers, but no floating-point hardware (mve+nofp)

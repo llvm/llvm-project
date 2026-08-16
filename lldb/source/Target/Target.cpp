@@ -66,7 +66,6 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
@@ -2738,15 +2737,11 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
-CompilerType
-Target::GetRegisterType(const std::string &name,
-                        const lldb_private::RegisterType &type_info,
-                        uint32_t byte_size) {
+CompilerType Target::GetRegisterType(const RegisterInfo &reg_info) {
   if (!m_register_type_builder_sp)
     m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
   assert(m_register_type_builder_sp);
-  return m_register_type_builder_sp->GetRegisterType(name, type_info,
-                                                     byte_size);
+  return m_register_type_builder_sp->GetRegisterType(reg_info);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -6024,12 +6019,8 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
   return module_list;
 }
 
-std::recursive_mutex &Target::GetAPIMutex() {
-  Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private)
-    return m_private_mutex;
-
-  return m_mutex;
+TargetAPIMutex Target::GetAPIMutex() {
+  return TargetAPIMutex(shared_from_this());
 }
 
 /// Get metrics associated with this target in JSON format.
