@@ -4,6 +4,8 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+// https://developer.arm.com/documentation/110285/latest
+//
 //===----------------------------------------------------------------------===//
 //
 // This file defines the machine model for the ARM Cortex-A320 processor.
@@ -92,6 +94,21 @@ class CortexA320MC_RC0Write<int n, ProcResourceKind res> : SchedWriteRes<[res]> 
   let BeginGroup = 1;
 }
 
+def CortexA320ScalarMulHigh: SchedWriteRes<[CortexA320UnitMAC]> {
+  let Latency = 6;
+  let ReleaseAtCycles = [4];
+}
+
+def CortexA320WriteIM64MAcc : SchedWriteRes<[CortexA320UnitMAC]> {
+  let Latency = 4;
+  let ReleaseAtCycles = [2];
+}
+
+class CortexA320WriteFCMP<int lat> : SchedWriteRes<[CortexA320UnitVALU]> {
+  let Latency = lat;
+  let ReleaseAtCycles = [lat];
+}
+
 //===----------------------------------------------------------------------===//
 
 // Define generic 2 micro-op types
@@ -173,6 +190,8 @@ def : WriteRes<WriteHint, [CortexA320UnitB]>;
 //   to consumer at F1, the effectively Latency is set as 4.
 def : WriteRes<WriteF, [CortexA320UnitVALU]> { let Latency = 4; }
 def : WriteRes<WriteFCmp, [CortexA320UnitVALU]> { let Latency = 3; }
+
+
 def : WriteRes<WriteFCvt, [CortexA320UnitVALU]> { let Latency = 4; }
 def : WriteRes<WriteFCopy, [CortexA320UnitVALU]> { let Latency = 3; }
 def : WriteRes<WriteFImm, [CortexA320UnitVALU]> { let Latency = 3; }
@@ -206,6 +225,15 @@ def CortexA320WriteFDivSP : SchedWriteRes<[CortexA320UnitVMC]> { let Latency = 1
                                                      let ReleaseAtCycles = [10]; }
 def CortexA320WriteFDivDP : SchedWriteRes<[CortexA320UnitVMC]> { let Latency = 22;
                                                      let ReleaseAtCycles = [19]; }
+def CortexA320WriteScalarFSqrtHP : SchedWriteRes<[CortexA320UnitVMC]> {
+  let Latency = 11; let ReleaseAtCycles = [3];
+}
+def CortexA320WriteScalarFSqrtSP : SchedWriteRes<[CortexA320UnitVMC]> {
+  let Latency = 14; let ReleaseAtCycles = [5];
+}
+def CortexA320WriteScalarFSqrtDP : SchedWriteRes<[CortexA320UnitVMC]> {
+  let Latency = 25; let ReleaseAtCycles = [10];
+}
 def CortexA320WriteFSqrtHP : SchedWriteRes<[CortexA320UnitVMC]> { let Latency = 8;
                                                       let ReleaseAtCycles = [5]; }
 def CortexA320WriteFSqrtSP : SchedWriteRes<[CortexA320UnitVMC]> { let Latency = 12;
@@ -240,11 +268,15 @@ def : ReadAdvance<ReadID, 0>;
 def CortexA320WriteISReg : SchedWriteVariant<[
        SchedVar<RegShiftedPred, [WriteISReg]>,
        SchedVar<NoSchedPred, [WriteI]>]>;
+def : InstRW<[CortexA320ScalarMulHigh], (instregex "^[S|U]MULHrr")>;
+def : InstRW<[CortexA320WriteIM64MAcc], (instregex "^M(ADD|SUB)X")>;
 def : InstRW<[CortexA320WriteISReg], (instregex ".*rs$")>;
 def : InstRW<[WriteIS], (instrs RBITWr, RBITXr)>;
 
 // Pointer Authentication Instructions (v8.3 PAC)
 // -----------------------------------------------------------------------------
+// Compute pointer authentication code, using generic key.
+def : InstRW<[CortexA320Write<5, CortexA320UnitPAC>], (instrs PACGA)>;
 
 // Authenticate data address
 // Authenticate instruction address
@@ -261,21 +293,29 @@ def : InstRW<[CortexA320Write_PAC_B<1>], (instrs BLRAA, BLRAAZ, BLRAB, BLRABZ, B
                                             ERETAA, ERETAB)>;
 
 // Load register, with pointer authentication
-def : InstRW<[CortexA320Write<2, CortexA320UnitPAC>], (instregex "^LDRA[AB](indexed|writeback)")>;
+def : InstRW<[CortexA320Write<4, CortexA320UnitPAC>], (instregex "^LDRA[AB](indexed|writeback)")>;
 
 // Strip pointer authentication code
-def : InstRW<[CortexA320Write<5, CortexA320UnitPAC>], (instrs XPACD, XPACI, XPACLRI)>;
+def : InstRW<[CortexA320Write<4, CortexA320UnitPAC>], (instrs XPACD, XPACI, XPACLRI)>;
 //---
 // Miscellaneous
 //---
 def : InstRW<[CortexA320WriteVLD1SI,CortexA320WriteLDP1], (instregex "LDPS?Wi")>;
 def : InstRW<[CortexA320WriteVLD1,CortexA320WriteLDP1], (instregex "LDPSi")>;
-def : InstRW<[CortexA320WriteVLD1,CortexA320WriteLDP2], (instregex "LDP(X|D)i")>;
-def : InstRW<[CortexA320WriteVLD1,CortexA320WriteLDP4], (instregex "LDPQi")>;
+def : InstRW<[CortexA320WriteVLD1], (instregex "LDPDi")>;
+def : InstRW<[CortexA320WriteVLD1,CortexA320WriteVLD1], (instregex "LDPQi")>;
 def : InstRW<[WriteAdr, CortexA320WriteVLD1SI,CortexA320WriteLDP1], (instregex "LDPS?W(pre|post)")>;
 def : InstRW<[WriteAdr, CortexA320WriteVLD1,CortexA320WriteLDP1], (instregex "LDPS(pre|post)")>;
-def : InstRW<[WriteAdr, CortexA320WriteVLD1,CortexA320WriteLDP2], (instregex "LDP(X|D)(pre|post)")>;
-def : InstRW<[WriteAdr, CortexA320WriteVLD1,CortexA320WriteLDP4], (instregex "LDPQ(pre|post)")>;
+def : InstRW<[WriteAdr, CortexA320WriteVLD1], (instregex "LDPD(pre|post)")>;
+def : InstRW<[WriteAdr, CortexA320WriteVLD1,CortexA320WriteVLD1], (instregex "LDPQ(pre|post)")>;
+// Scalar FP loads
+//---
+def : InstRW<[CortexA320WriteVLD1], (instrs LDRSl, LDRDl, LDRSui, LDRDui,
+                                     LDURSi, LDURDi, LDRSroW, LDRSroX,
+                                     LDRDroW, LDRDroX)>;
+def : InstRW<[WriteAdr, CortexA320WriteVLD1], (instrs LDRSpost, LDRDpost,
+                                               LDRSpre, LDRDpre)>;
+
 def : InstRW<[WriteI], (instrs COPY)>;
 //---
 // Vector Loads - 128-bit per cycle
@@ -412,9 +452,13 @@ def : InstRW<[CortexA320WriteFDivDP], (instrs FDIVDrr)>;
 def : InstRW<[CortexA320WriteFDivHP], (instregex "^FDIVv.*16$")>;
 def : InstRW<[CortexA320WriteFDivSP], (instregex "^FDIVv.*32$")>;
 def : InstRW<[CortexA320WriteFDivDP], (instregex "^FDIVv.*64$")>;
+def : InstRW<[CortexA320WriteScalarFSqrtHP], (instrs FSQRTHr)>;
+def : InstRW<[CortexA320WriteScalarFSqrtSP], (instrs FSQRTSr)>;
+def : InstRW<[CortexA320WriteScalarFSqrtDP], (instrs FSQRTDr)>;
 def : InstRW<[CortexA320WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA320WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA320WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
+def : InstRW<[WriteFCopy], (instrs FMOVHr, FMOVSr, FMOVDr)>;
 
 def : InstRW<[CortexA320WriteFPALU_F3], (instrs FCSELHrrr, FCSELSrrr, FCSELDrrr)>;
 
@@ -1042,6 +1086,11 @@ def : InstRW<[CortexA320Write<5, CortexA320UnitVALU>], (instregex "^FACG[ET]_PPz
                                             "^FCM(EQ|GE|GT|NE)_PPzZ[0Z]_[HSD]",
                                             "^FCM(LE|LT)_PPzZ0_[HSD]",
                                             "^FCMUO_PPzZZ_[HSD]")>;
+
+// FP compare
+// FP conditional compare
+def : InstRW<[CortexA320WriteFCMP<1>], (instregex "^FCMP")>;
+def : InstRW<[CortexA320WriteFCMP<5>], (instregex "^FCCMP")>;
 
 // Floating point complex add
 def : InstRW<[CortexA320Write<4, CortexA320UnitVALU>], (instregex "^FCADD_ZPmZ_[HSD]")>;
