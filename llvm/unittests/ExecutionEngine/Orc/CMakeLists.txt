@@ -49,6 +49,7 @@ add_llvm_unittest(OrcJITTests
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
   SPSProxySpecTest.cpp
+  SymbolLookupSetTest.cpp
   SymbolStringPoolTest.cpp
   TaskDispatchTest.cpp
   ThreadSafeModuleTest.cpp
