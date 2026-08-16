@@ -603,17 +603,6 @@ bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
   return true;
 }
 
-// For minidumps there's no runtime generated code so we don't need JITLoader(s)
-// Avoiding them will also speed up minidump loading since JITLoaders normally
-// try to set up symbolic breakpoints, which in turn may force loading more
-// debug information than needed.
-JITLoaderList &ProcessMinidump::GetJITLoaders() {
-  if (!m_jit_loaders_up) {
-    m_jit_loaders_up = std::make_unique<JITLoaderList>();
-  }
-  return *m_jit_loaders_up;
-}
-
 #define INIT_BOOL(VAR, LONG, SHORT, DESC) \
     VAR(LLDB_OPT_SET_1, false, LONG, SHORT, DESC, false, true)
 #define APPEND_OPT(VAR) \
