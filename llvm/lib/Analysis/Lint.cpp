@@ -593,12 +593,16 @@ void Lint::visitURem(BinaryOperator &I) {
 }
 
 void Lint::visitAllocaInst(AllocaInst &I) {
-  if (isa<ConstantInt>(I.getArraySize()))
+  if (isa<ConstantInt>(I.getArraySize())) {
     // This isn't undefined behavior, it's just an obvious pessimization.
     Check(&I.getParent()->getParent()->getEntryBlock() == I.getParent(),
           "Pessimization: Static alloca outside of entry block", &I);
-
-  // TODO: Check for an unusual size (MSB set?)
+    
+    // Check for unusual sizes in alloca
+    auto* value = dyn_cast<ConstantInt>(I.getArraySize());
+    Check(value->getSExtValue() >= 0, 
+          "Undefined behavior: Static alloca used with a negative number", &I);
+  }
 }
 
 void Lint::visitVAArgInst(VAArgInst &I) {
