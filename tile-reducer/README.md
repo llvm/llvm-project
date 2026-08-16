@@ -118,3 +118,38 @@ Column reduction on row-major input: coalesced global loads into a
 128×128 workgroup memref, `gpu.barrier`, then one thread per column.
 128 is already a multiple of the warp size, so a padded 128×132 layout
 is not used. Direct strided `in[row, col]` would break coalescing.
+
+## Milestone 23
+
+`ReductionSchedule` plus a roofline cost model:
+`T ~= max(T_compute, T_memory) + T_sync + T_launch + T_tail`.
+`--tr-estimate-reduction-cost` records occupancy, coalescing, register /
+smem pressure, and grid saturation. Not cycle-exact.
+
+## Milestone 24
+
+`--tr-emit-gpu-kernels=k-splits=N` refines one logical row program into
+N physical blocks (`gpu.block_id y`) plus `@row_sum_splitk_stage2`.
+`tr.program_id` is still `gpu.block_id x`. Used when M is small and K is
+huge (e.g. M=1, K=1e8).
+
+## Milestone 25
+
+`--tr-autotune-reduction` enumerates a bounded legal space, prunes
+analytically, and caches the winner by
+`kind|axis|dtype|tile|shape-bucket|arch|compiler`. It does not tune
+every exact shape.
+
+## Milestone 26
+
+Async / double-buffering is measured after the baseline. Row-sum
+intensity is too low; extra smem and registers do not pay off, so the
+winner keeps `asyncDepth = 0`.
+
+## Milestone 27
+
+Boundary matrix `M ∈ {1,31,32,127,128,129}`,
+`K ∈ {0,1,31,32,33,127,128,129,255,256,257}` for row, column, and full.
+Property: `full_sum(A) ~= sum(row_sum(A)) ~= sum(column_sum(A))`.
+`--tr-bench-report` records latency, GB/s, threads/block, registers,
+smem, occupancy, and kernel count.

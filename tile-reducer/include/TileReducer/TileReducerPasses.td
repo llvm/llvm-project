@@ -151,6 +151,9 @@ def EmitTRGPUKernels : Pass<"tr-emit-gpu-kernels", "::mlir::ModuleOp"> {
     Row sum: `@row_sum_kernel` (no shared memory).
     Full sum: `@full_sum_stage1` + `@full_sum_stage2` (smem block reduce).
     Column sum: `@column_sum_kernel` (smem staging + barrier).
+
+    `k-splits > 1` refines one logical row program into many physical
+    blocks (`gpu.block_id y`) plus a second reduction stage.
   }];
   let dependentDialects = [
     "::mlir::tr::TileReducerDialect",
@@ -159,6 +162,48 @@ def EmitTRGPUKernels : Pass<"tr-emit-gpu-kernels", "::mlir::ModuleOp"> {
     "::mlir::arith::ArithDialect",
     "::mlir::memref::MemRefDialect",
     "::mlir::func::FuncDialect"
+  ];
+  let options = [
+    Option<"kSplits", "k-splits", "int", /*default=*/"1",
+           "Physical K-splits per logical row (1 = one block per program_id)">
+  ];
+}
+
+def EstimateTRReductionCost : Pass<"tr-estimate-reduction-cost", "::mlir::ModuleOp"> {
+  let summary = "Annotate the baseline ReductionSchedule cost model.";
+  let description = [{
+    T ~= max(T_compute, T_memory) + T_sync + T_launch + T_tail.
+    Includes occupancy, coalescing, register/smem pressure, and grid
+    saturation. Not cycle-exact.
+  }];
+  let options = [
+    Option<"problemM", "rows", "int64_t", /*default=*/"0",
+           "Problem rows (0 = use 1024 as a representative bucket)">,
+    Option<"problemK", "cols", "int64_t", /*default=*/"0",
+           "Problem cols (0 = use 1024 as a representative bucket)">
+  ];
+}
+
+def AutotuneTRReduction : Pass<"tr-autotune-reduction", "::mlir::ModuleOp"> {
+  let summary = "Enumerate legal schedules, prune, rank, and cache by shape bucket.";
+  let description = [{
+    Cache key: kind, axis, dtype, tile shape, shape bucket, arch, compiler.
+    Does not tune every exact M×K. Autotune runs only after a correct
+    baseline exists.
+  }];
+  let options = [
+    Option<"problemM", "rows", "int64_t", /*default=*/"0",
+           "Problem rows for the shape bucket">,
+    Option<"problemK", "cols", "int64_t", /*default=*/"0",
+           "Problem cols for the shape bucket">
+  ];
+}
+
+def TRBenchReport : Pass<"tr-bench-report", "::mlir::ModuleOp"> {
+  let summary = "Record latency, GB/s, occupancy, and kernel-count estimates.";
+  let options = [
+    Option<"problemM", "rows", "int64_t", /*default=*/"0", "Problem rows">,
+    Option<"problemK", "cols", "int64_t", /*default=*/"0", "Problem cols">
   ];
 }
 
