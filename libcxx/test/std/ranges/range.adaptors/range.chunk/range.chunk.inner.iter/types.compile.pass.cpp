@@ -11,8 +11,6 @@
 // <ranges>
 
 //   V models only input_range:
-//     class inner_iterator;
-
 //     using inner_iterator::iterator_concept = input_iterator_tag;
 //     using inner_iterator::difference_type = range_difference_t<V>;
 //     using inner_iterator::value_type = range_value_t<V>;
@@ -21,10 +19,27 @@
 #include <iterator>
 #include <ranges>
 
-#include "../types.h"
+#include "test_iterators.h"
 
-using InnerIterator = std::ranges::iterator_t<std::ranges::range_reference_t<std::ranges::chunk_view<input_span<int>>>>;
+// Test `using inner_iterator::iterator_concept = input_iterator_tag`
+static_assert(std::same_as<
+              typename std::ranges::iterator_t< std::ranges::range_reference_t< std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>::
+                  iterator_concept,
+              std::input_iterator_tag>);
 
-static_assert(std::same_as<typename InnerIterator::iterator_concept, std::input_iterator_tag>);
-static_assert(std::same_as<typename InnerIterator::difference_type, std::ranges::range_difference_t<input_span<int>>>);
-static_assert(std::same_as<typename InnerIterator::value_type, std::ranges::range_value_t<input_span<int>>>);
+// Test `using inner_iterator::difference_type = range_difference_t<V>`
+static_assert(std::same_as<
+              typename std::ranges::iterator_t<std::ranges::range_reference_t< std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>::
+                  difference_type,
+              std::ranges::range_difference_t<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>);
+
+// Test `using inner_iterator::value_type = range_value_t<V>`
+static_assert(std::same_as<
+              typename std::ranges::iterator_t<std::ranges::range_reference_t< std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>::
+                  value_type,
+              std::ranges::range_value_t<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>);
