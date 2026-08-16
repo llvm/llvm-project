@@ -646,8 +646,6 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   SecHdrTableEntry &Entry = SectionHdrLayout[LayoutIdx];
 
   // The setting of SecFlagCompress should happen before markSectionStart.
-  if (Type == SecProfileSymbolList && ProfSymList && ProfSymList->toCompress())
-    setToCompressSection(SecProfileSymbolList);
   if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
   if (Type == SecFuncMetadata &&
