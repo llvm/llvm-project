@@ -828,6 +828,7 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.roundf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
