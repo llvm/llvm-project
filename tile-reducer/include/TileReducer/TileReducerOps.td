@@ -44,7 +44,7 @@ def TileReducer_DimOp : TileReducer_Op<"dim", [Pure]> {
 // tr.constant
 //===----------------------------------------------------------------------===//
 
-def TileReducer_ConstantOp : TileReducer_Op<"constant", [Pure, ConstantLike]> {
+def TileReducer_ConstantOp : TileReducer_Op<"constant", [Pure]> {
   let summary = "Splat a scalar attribute onto a logical tile.";
   let arguments = (ins TypedAttrInterface:$value);
   let results = (outs AnyType:$result);

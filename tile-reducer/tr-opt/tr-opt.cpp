@@ -11,8 +11,11 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
 #include "TileReducer/TileReducerDialect.h"
+#include "TileReducer/TileReducerPasses.h"
 
 int main(int argc, char **argv) {
+  mlir::tr::registerPasses();
+
   mlir::DialectRegistry registry;
   registry.insert<mlir::tr::TileReducerDialect, mlir::arith::ArithDialect,
                   mlir::func::FuncDialect>();
