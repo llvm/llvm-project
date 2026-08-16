@@ -230,7 +230,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
     requires forward_range<__maybe_const<_IsConst, _First>>
   {
     auto __tmp = *this;
@@ -245,7 +245,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
     requires __cartesian_product_is_bidirectional<_IsConst, _First, _Vs...>
   {
     auto __tmp = *this;
