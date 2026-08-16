@@ -4410,7 +4410,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/*.h",
-        "include/llvm/ExecutionEngine/Orc/RTBridge/SPS/**/*.h",
     ]) + [
         "include/llvm-c/LLJIT.h",
         "include/llvm-c/Orc.h",
@@ -4456,10 +4455,9 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Shared/*.h",
-        "include/llvm/ExecutionEngine/Orc/RTBridge/*.h",
-    ] + [
+    ]) + [
         "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
-    ]),
+    ],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
