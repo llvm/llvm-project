@@ -105,10 +105,10 @@ define void @addrspacecast_in_ptr_chain(ptr addrspace(1) %src, ptr noalias %dst)
 ; CHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> poison, double [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x double> [[TMP17]], double [[TMP14]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> [[TMP18]], double [[TMP15]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> poison, double [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x double> [[TMP17]], double [[TMP14]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> [[TMP18]], double [[TMP15]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x ptr> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP7]], i64 1
@@ -117,10 +117,10 @@ define void @addrspacecast_in_ptr_chain(ptr addrspace(1) %src, ptr noalias %dst)
 ; CHECK-NEXT:    [[TMP22:%.*]] = load double, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[TMP7]], i64 3
 ; CHECK-NEXT:    [[TMP23:%.*]] = load double, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x double> poison, double [[TMP20]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x double> [[TMP24]], double [[TMP21]], i32 1
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x double> [[TMP25]], double [[TMP22]], i32 2
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x double> [[TMP26]], double [[TMP23]], i32 3
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x double> poison, double [[TMP20]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x double> [[TMP24]], double [[TMP21]], i64 1
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x double> [[TMP25]], double [[TMP22]], i64 2
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x double> [[TMP26]], double [[TMP23]], i64 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds double, ptr [[TMP28]], i64 4
 ; CHECK-NEXT:    store <4 x double> [[TMP19]], ptr [[TMP28]], align 8

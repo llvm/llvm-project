@@ -1076,10 +1076,6 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Invalid decls have been diagnosed before.
-  if (DiagDecl->isInvalidDecl())
-    return false;
-
   // If this function is not constexpr because it is an inherited
   // non-constexpr constructor, diagnose that directly.
   const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
@@ -1122,8 +1118,8 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
         << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
 
     const FunctionDecl *Definition;
-    const Stmt *Body = DiagDecl->getBody(Definition);
-    if (Body && Definition)
+    bool HasBody = DiagDecl->hasBody(Definition);
+    if (HasBody && Definition)
       S.Note(Definition->getLocation(), diag::note_declared_at);
     else
       S.Note(DiagDecl->getLocation(), diag::note_declared_at);
@@ -1146,16 +1142,12 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
   const FunctionDecl *DiagDecl = F->getDecl();
   const FunctionDecl *Definition = nullptr;
-  DiagDecl->getBody(Definition);
+  DiagDecl->hasBody(Definition);
 
   if (!Definition && S.checkingPotentialConstantExpression() &&
       DiagDecl->isConstexpr()) {
     return false;
   }
-
-  // Implicitly constexpr.
-  if (F->isLambdaStaticInvoker())
-    return true;
 
   return diagnoseCallableDecl(S, OpPC, DiagDecl);
 }
@@ -1800,9 +1792,9 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
     return false;
 
   const FunctionDecl *Definition = nullptr;
-  const Stmt *Body = FD->getBody(Definition);
+  bool HasBody = FD->hasBody(Definition);
 
-  if (Definition && Body &&
+  if (Definition && HasBody &&
       (Definition->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
                                      Definition->hasAttr<MSConstexprAttr>())))
     return true;
@@ -1857,7 +1849,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 
 static void compileFunction(InterpState &S, const Function *Func) {
   const FunctionDecl *Definition;
-  if (!Func->getDecl()->getBody(Definition))
+  if (!Func->getDecl()->hasBody(Definition))
     return;
   if (!Definition)
     return;
@@ -2908,8 +2900,7 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   return Shorter == Longer.take_front(Shorter.size());
 }
 
-static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
-                                PrimType T) {
+static void copyPrimitiveMemory(InterpState &S, PtrView Ptr, PrimType T) {
   if (T == PT_IntAPS) {
     auto &Val = Ptr.deref<IntegralAP<true>>();
     if (!Val.singleWord()) {
@@ -2938,7 +2929,7 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
 }
 
 template <typename T>
-static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
+static void copyPrimitiveMemory(InterpState &S, PtrView Ptr) {
   assert(needsAlloc<T>());
   if constexpr (std::is_same_v<T, MemberPointer>) {
     auto &Val = Ptr.deref<MemberPointer>();
@@ -2955,7 +2946,7 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
   }
 }
 
-static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
+static void finishGlobalRecurse(InterpState &S, PtrView Ptr) {
   if (const Record *R = Ptr.getRecord()) {
     for (const Record::Field &Fi : R->fields()) {
       if (Fi.Desc->isPrimitive()) {
@@ -2979,7 +2970,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
       if (!needsAlloc(PT))
         return;
       assert(NumElems >= 1);
-      const Pointer EP = Ptr.atIndex(0);
+      PtrView EP = Ptr.atIndex(0);
       bool AllSingleWord = true;
       TYPE_SWITCH_ALLOC(PT, {
         if (!EP.deref<T>().singleWord()) {
@@ -2990,13 +2981,13 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
       if (AllSingleWord)
         return;
       for (unsigned I = 1; I != D->getNumElems(); ++I) {
-        const Pointer EP = Ptr.atIndex(I);
+        PtrView EP = Ptr.atIndex(I);
         copyPrimitiveMemory(S, EP, PT);
       }
     } else {
       assert(D->isCompositeArray());
       for (unsigned I = 0; I != D->getNumElems(); ++I) {
-        const Pointer EP = Ptr.atIndex(I).narrow();
+        PtrView EP = Ptr.atIndex(I).narrow();
         finishGlobalRecurse(S, EP);
       }
     }
@@ -3006,7 +2997,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
 bool FinishInitGlobal(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  finishGlobalRecurse(S, Ptr);
+  finishGlobalRecurse(S, Ptr.view());
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();

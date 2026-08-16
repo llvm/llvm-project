@@ -304,7 +304,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
-  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32: {
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32: {
     StringRef FeatureList(
         getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
@@ -344,7 +345,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     // For gather, only one bit can be set indicating which exact component to
     // return.
     bool ExtraGatherChecks =
-        BuiltinID == AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32 &&
+        (BuiltinID ==
+             AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32 ||
+         BuiltinID ==
+             AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32) &&
         SemaRef.BuiltinConstantArgPower2(TheCall, 0);
 
     return ExtraGatherChecks ||

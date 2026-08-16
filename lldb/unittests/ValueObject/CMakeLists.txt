@@ -2,12 +2,21 @@ add_lldb_unittest(LLDBValueObjectTests
   DumpValueObjectOptionsTests.cpp
   DILLexerTests.cpp
   DynamicValueObjectLocalBuffer.cpp
+  GetPointeeDataTest.cpp
 
   LINK_COMPONENTS
     Support
   LINK_LIBS
+    lldbCore
+    lldbSymbol
+    lldbTarget
+    lldbUtility
+    lldbUtilityHelpers
     lldbValueObject
+    lldbPluginObjectFileELF
     lldbPluginPlatformLinux
     lldbPluginScriptInterpreterNone
+    lldbPluginSymbolFileSymtab
+    lldbPluginTypeSystemClang
     LLVMTestingSupport
   )

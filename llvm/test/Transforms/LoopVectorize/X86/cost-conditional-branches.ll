@@ -74,22 +74,22 @@ define void @test_replicate_call_chain(float %x, ptr noalias %A, ptr noalias %B,
 ; CHECK-NEXT:    [[TMP56:%.*]] = tail call float @llvm.pow.f32(float [[TMP38]], float [[X]])
 ; CHECK-NEXT:    [[TMP57:%.*]] = tail call float @llvm.pow.f32(float [[TMP40]], float [[X]])
 ; CHECK-NEXT:    [[TMP58:%.*]] = tail call float @llvm.pow.f32(float [[TMP42]], float [[X]])
-; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <16 x float> poison, float [[TMP43]], i32 0
-; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <16 x float> [[TMP59]], float [[TMP44]], i32 1
-; CHECK-NEXT:    [[TMP61:%.*]] = insertelement <16 x float> [[TMP60]], float [[TMP45]], i32 2
-; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <16 x float> [[TMP61]], float [[TMP46]], i32 3
-; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <16 x float> [[TMP62]], float [[TMP47]], i32 4
-; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <16 x float> [[TMP63]], float [[TMP48]], i32 5
-; CHECK-NEXT:    [[TMP65:%.*]] = insertelement <16 x float> [[TMP64]], float [[TMP49]], i32 6
-; CHECK-NEXT:    [[TMP66:%.*]] = insertelement <16 x float> [[TMP65]], float [[TMP50]], i32 7
-; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <16 x float> [[TMP66]], float [[TMP51]], i32 8
-; CHECK-NEXT:    [[TMP68:%.*]] = insertelement <16 x float> [[TMP67]], float [[TMP52]], i32 9
-; CHECK-NEXT:    [[TMP69:%.*]] = insertelement <16 x float> [[TMP68]], float [[TMP53]], i32 10
-; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <16 x float> [[TMP69]], float [[TMP54]], i32 11
-; CHECK-NEXT:    [[TMP71:%.*]] = insertelement <16 x float> [[TMP70]], float [[TMP55]], i32 12
-; CHECK-NEXT:    [[TMP72:%.*]] = insertelement <16 x float> [[TMP71]], float [[TMP56]], i32 13
-; CHECK-NEXT:    [[TMP73:%.*]] = insertelement <16 x float> [[TMP72]], float [[TMP57]], i32 14
-; CHECK-NEXT:    [[TMP74:%.*]] = insertelement <16 x float> [[TMP73]], float [[TMP58]], i32 15
+; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <16 x float> poison, float [[TMP43]], i64 0
+; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <16 x float> [[TMP59]], float [[TMP44]], i64 1
+; CHECK-NEXT:    [[TMP61:%.*]] = insertelement <16 x float> [[TMP60]], float [[TMP45]], i64 2
+; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <16 x float> [[TMP61]], float [[TMP46]], i64 3
+; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <16 x float> [[TMP62]], float [[TMP47]], i64 4
+; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <16 x float> [[TMP63]], float [[TMP48]], i64 5
+; CHECK-NEXT:    [[TMP65:%.*]] = insertelement <16 x float> [[TMP64]], float [[TMP49]], i64 6
+; CHECK-NEXT:    [[TMP66:%.*]] = insertelement <16 x float> [[TMP65]], float [[TMP50]], i64 7
+; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <16 x float> [[TMP66]], float [[TMP51]], i64 8
+; CHECK-NEXT:    [[TMP68:%.*]] = insertelement <16 x float> [[TMP67]], float [[TMP52]], i64 9
+; CHECK-NEXT:    [[TMP69:%.*]] = insertelement <16 x float> [[TMP68]], float [[TMP53]], i64 10
+; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <16 x float> [[TMP69]], float [[TMP54]], i64 11
+; CHECK-NEXT:    [[TMP71:%.*]] = insertelement <16 x float> [[TMP70]], float [[TMP55]], i64 12
+; CHECK-NEXT:    [[TMP72:%.*]] = insertelement <16 x float> [[TMP71]], float [[TMP56]], i64 13
+; CHECK-NEXT:    [[TMP73:%.*]] = insertelement <16 x float> [[TMP72]], float [[TMP57]], i64 14
+; CHECK-NEXT:    [[TMP74:%.*]] = insertelement <16 x float> [[TMP73]], float [[TMP58]], i64 15
 ; CHECK-NEXT:    call void @llvm.masked.store.v16f32.p0(<16 x float> [[TMP74]], ptr align 4 [[TMP5]], <16 x i1> [[TMP7]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v16f32.p0(<16 x float> zeroinitializer, ptr align 4 [[TMP5]], <16 x i1> [[TMP6]])
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[E:%.*]], align 4

@@ -2364,6 +2364,7 @@ cc_library(
         ":TransformUtils",
         ":asm_printer_defs",
         ":config",
+        ":runtime_libcalls_gen",
         ":vt_gen",
     ],
 )
@@ -4361,7 +4362,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
-        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -4379,6 +4379,7 @@ cc_library(
         ":TargetParser",
         ":TransformUtils",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4409,7 +4410,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/*.h",
-        "include/llvm/ExecutionEngine/Orc/RTBridge/SPS/**/*.h",
     ]) + [
         "include/llvm-c/LLJIT.h",
         "include/llvm-c/Orc.h",
@@ -4455,10 +4455,9 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Shared/*.h",
-        "include/llvm/ExecutionEngine/Orc/RTBridge/*.h",
-    ] + [
+    ]) + [
         "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
-    ]),
+    ],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -4859,7 +4858,15 @@ cc_library(
     hdrs = glob(["include/llvm/HTTP/*.h"]),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lcrypt32",
+            "-lwinhttp",
+        ],
+        ":is_windows_clang_cl": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        ":is_windows_msvc": [
             "crypt32.lib",
             "winhttp.lib",
         ],
