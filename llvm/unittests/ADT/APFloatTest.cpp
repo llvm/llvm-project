@@ -10765,6 +10765,7 @@ TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3B11FNUZ"));
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E3M4"));
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E8M0FNU"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M3FNU"));
   EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E3M2FN"));
   EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E2M3FN"));
   EXPECT_EQ(4u, APFloat::getArbitraryFPFormatSizeInBits("Float4E2M1FN"));
@@ -10774,6 +10775,50 @@ TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("Float8"));
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("float4e2m1fn"));
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("unknown"));
+}
+
+TEST(APFloatTest, getArbitraryFPSemantics) {
+  // Formats that can currently be lowered map to their semantics.
+  EXPECT_EQ(&APFloat::Float8E5M2(),
+            APFloat::getArbitraryFPSemantics("Float8E5M2"));
+  EXPECT_EQ(&APFloat::Float8E4M3FN(),
+            APFloat::getArbitraryFPSemantics("Float8E4M3FN"));
+  EXPECT_EQ(&APFloat::Float6E3M2FN(),
+            APFloat::getArbitraryFPSemantics("Float6E3M2FN"));
+  EXPECT_EQ(&APFloat::Float6E2M3FN(),
+            APFloat::getArbitraryFPSemantics("Float6E2M3FN"));
+  EXPECT_EQ(&APFloat::Float4E2M1FN(),
+            APFloat::getArbitraryFPSemantics("Float4E2M1FN"));
+
+  // Formats that are valid but cannot be lowered yet report no semantics.
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E5M2FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3B11FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E3M4"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E8M0FNU"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E5M3FNU"));
+
+  // Invalid formats report no semantics.
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics(""));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("float8e5m2"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("unknown"));
+}
+
+// The two arbitrary FP format tables must agree: every format with lowerable
+// semantics reports the size of those semantics.
+TEST(APFloatTest, ArbitraryFPSemanticsMatchSizeInBits) {
+  for (StringRef Format :
+       {"Float8E5M2", "Float8E5M2FNUZ", "Float8E4M3", "Float8E4M3FN",
+        "Float8E4M3FNUZ", "Float8E4M3B11FNUZ", "Float8E3M4", "Float8E8M0FNU",
+        "Float8E5M3FNU", "Float6E3M2FN", "Float6E2M3FN", "Float4E2M1FN"}) {
+    ASSERT_TRUE(APFloat::isValidArbitraryFPFormat(Format)) << Format;
+    if (const fltSemantics *Sem = APFloat::getArbitraryFPSemantics(Format))
+      EXPECT_EQ(APFloat::getSizeInBits(*Sem),
+                APFloat::getArbitraryFPFormatSizeInBits(Format))
+          << Format;
+  }
 }
 
 TEST(APFloatTest, DecimalStringPreservesInexactStatus) {
