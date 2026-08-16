@@ -414,6 +414,7 @@ features cannot lower the translation-unit ABI level;
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
+- Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 
 #### Bug Fixes to Compiler Builtins
 
