@@ -388,7 +388,8 @@ bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI) const {
 
   const ConstantFP *Constant = ConstantOperand.getFPImm();
   const APFloat &Val = Constant->getValueAPF();
-  APFloat Expected(180.0 / std::acos(-1.0));
+
+  APFloat Expected(180.0 / llvm::numbers::pi);
   bool LostInfo = false;
   Expected.convert(Val.getSemantics(), APFloat::rmNearestTiesToEven, &LostInfo);
 
