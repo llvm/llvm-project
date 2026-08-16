@@ -462,6 +462,120 @@ cold_exit:
   ret i32 -1
 }
 
+; The gc-managed pointer cannot be freed, so loop-load PRE fires, but the
+; reload is sunk into the cold path and also runs on the loop side-exit.
+; TODO: split the critical edge so it only runs on the path back to the header.
+define i32 @test_load_on_exiting_cold_path_gc(ptr addrspace(1) %p) gc "statepoint-example" personality ptr @personality_function {
+; CHECK-LABEL: @test_load_on_exiting_cold_path_gc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE2:%.*]] = load i32, ptr addrspace(1) [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE2]], [[ENTRY:%.*]] ], [ [[X3:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
+; CHECK:       hot_path:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       cold_path:
+; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr addrspace(1) [[P]], align 4
+; CHECK-NEXT:    br i1 [[SIDE_COND]], label [[BACKEDGE]], label [[COLD_EXIT:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[X3]] = phi i32 [ [[X_PRE]], [[COLD_PATH]] ], [ [[X]], [[HOT_PATH]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[X]]
+; CHECK:       cold_exit:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
+  %x = load i32, ptr addrspace(1) %p
+  %cond = icmp ne i32 %x, 0
+  br i1 %cond, label %hot_path, label %cold_path
+
+hot_path:
+  br label %backedge
+
+cold_path:
+  %side_cond = call i1 @side_effect_cond() nofree
+  br i1 %side_cond, label %backedge, label %cold_exit
+
+backedge:
+  %iv.next = add i32 %iv, %x
+  %loop.cond = icmp ult i32 %iv.next, 1000
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %x
+
+cold_exit:
+  ret i32 -1
+}
+
+; The function is nofree, so the pointer cannot be freed and loop-load PRE
+; fires, but the reload is sunk into the cold path and also runs on the loop
+; side-exit. TODO: split the critical edge so it only runs on the backedge.
+define i32 @test_load_on_exiting_cold_path_nofree_fn(ptr %p) nofree {
+; CHECK-LABEL: @test_load_on_exiting_cold_path_nofree_fn(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_PRE2:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE2]], [[ENTRY:%.*]] ], [ [[X3:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
+; CHECK:       hot_path:
+; CHECK-NEXT:    br label [[BACKEDGE]]
+; CHECK:       cold_path:
+; CHECK-NEXT:    [[SIDE_COND:%.*]] = call i1 @side_effect_cond() #[[ATTR0]]
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    br i1 [[SIDE_COND]], label [[BACKEDGE]], label [[COLD_EXIT:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[X3]] = phi i32 [ [[X_PRE]], [[COLD_PATH]] ], [ [[X]], [[HOT_PATH]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[X]]
+; CHECK:       cold_exit:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
+  %x = load i32, ptr %p
+  %cond = icmp ne i32 %x, 0
+  br i1 %cond, label %hot_path, label %cold_path
+
+hot_path:
+  br label %backedge
+
+cold_path:
+  %side_cond = call i1 @side_effect_cond() nofree
+  br i1 %side_cond, label %backedge, label %cold_exit
+
+backedge:
+  %iv.next = add i32 %iv, %x
+  %loop.cond = icmp ult i32 %iv.next, 1000
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %x
+
+cold_exit:
+  ret i32 -1
+}
+
 ; Make sure we do not insert load into both cold path & backedge.
 define i32 @test_load_on_cold_path_and_backedge(ptr %p) {
 ; CHECK-LABEL: @test_load_on_cold_path_and_backedge(
