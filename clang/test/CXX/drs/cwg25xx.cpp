@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-14,since-cxx11
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-14,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -Wno-c++23-extensions -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -Wno-c++23-extensions -verify-directives -verify=expected,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -Wno-c++23-extensions -verify-directives -verify=expected,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -Wno-c++23-extensions -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -Wno-c++23-extensions -verify-directives -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors                       -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors                       -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 namespace std {
 struct type_info{};
@@ -138,20 +138,18 @@ struct S2 {
 } // namespace cwg2547
 
 namespace cwg2553 { // cwg2553: 18 review 2023-07-14
-#if __cplusplus >= 202302L
 struct B {
-  virtual void f(this B&); 
-  // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
+  virtual void f(this B&);
+  // expected-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
   static void f(this B&);
-  // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a static function}}
+  // expected-error@-1 {{an explicit object parameter cannot appear in a static function}}
   virtual void g(); // #cwg2553-g
 };
 struct D : B {
   void g(this D&);
-  // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
-  //   since-cxx23-note@#cwg2553-g {{overridden virtual function is here}}
+  // expected-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
+  //   expected-note@#cwg2553-g {{overridden virtual function is here}}
 };
-#endif
 } // namespace cwg2553
 
 namespace cwg2554 { // cwg2554: 18 review 2021-12-10
@@ -188,7 +186,7 @@ struct C {
 void foo() {
     constexpr auto b = [](this C) { return 1; };
     // FIXME: closure type shouldn't have a conversion function to function
-    //        pointer, because explicit object parameter is present. 
+    //        pointer, because explicit object parameter is present.
     constexpr int (*fp)(C) = b;
     static_assert(fp(1) == 1);
     static_assert((&decltype(b)::operator())(1) == 1);
