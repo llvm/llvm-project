@@ -2010,10 +2010,14 @@ def get_qsupported_capabilities(test):
 
 
 def require_qsupported_capability(test, capability):
-    """Mark the test UNSUPPORTED unless the stub advertises *capability* in its
-    qSupported reply.  Requires a live process."""
-    if capability not in get_qsupported_capabilities(test):
-        test.skipTest(UnsupportedReason(f"stub does not support {capability}"))
+    """Require *capability* in the stub's qSupported reply.  Requires a live
+    process.  Our own stub must advertise it, so a miss is a failure; a stub we
+    did not build can lack the feature, and the test is UNSUPPORTED."""
+    if capability in get_qsupported_capabilities(test):
+        return
+    if not lldbtest_config.out_of_tree_debugserver:
+        test.fail(f"stub built from this tree does not advertise {capability}")
+    test.skipTest(UnsupportedReason(f"stub does not support {capability}"))
 
 
 def connect_to_new_remote_platform(testcase, platform_exe, extra_args=[]):
