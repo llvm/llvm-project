@@ -74,6 +74,7 @@ target_include_directories(orc-rt-executor-impl-headers INTERFACE
 # Apply RTTI and exceptions compile flags
 target_compile_options(orc-rt-executor PRIVATE ${ORC_RT_COMPILE_FLAGS})
 # TODO: Use common runtimes infrastructure for output and install paths
+# https://github.com/llvm/llvm-project/commit/afb80bddf147c134c5e3cf3f357f8d00bdfd526c
 install(TARGETS orc-rt-executor
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
           COMPONENT OrcRT_Development
