@@ -6509,18 +6509,10 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   EVT Op1VT = Op1.getValueType();
   EVT Op2VT = Op2.getValueType();
   EVT ResVT = Op.getValueType();
-  unsigned SearchSize = Op2VT.getVectorNumElements();
 
   assert((Op1VT.getVectorElementType() == MVT::i8 ||
           Op1VT.getVectorElementType() == MVT::i16) &&
          "Expected 8-bit or 16-bit characters.");
-
-  if ((Op1VT == MVT::nxv8i16 || Op1VT == MVT::v8i16) && SearchSize != 8)
-    return SDValue();
-
-  if ((Op1VT == MVT::nxv16i8 || Op1VT == MVT::v16i8 || Op1VT == MVT::v8i8) &&
-      SearchSize != 8 && SearchSize != 16)
-    return SDValue();
 
   SDValue ID =
       DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);

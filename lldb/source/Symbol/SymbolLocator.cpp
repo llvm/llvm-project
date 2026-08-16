@@ -10,10 +10,12 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/Platform.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/ThreadPool.h"
 
@@ -31,21 +33,12 @@ std::error_code SymbolLocator::NotFound::convertToErrorCode() const {
 }
 
 llvm::Expected<SymbolLocator::Result>
-SymbolLocator::Locate(const Request &request,
-                      const FileSpecList &search_paths) {
+SymbolLocator::LocateWithPlugins(const Request &request,
+                                 const FileSpecList &search_paths) {
   FileSystem &fs = FileSystem::Instance();
   Result result;
   ModuleSpec &module_spec = result.module_spec;
   module_spec = request.module_spec;
-
-  // The locator plugins have no Platform to consult, so ask it here.
-  if (request.platform) {
-    if (std::optional<ModuleSpec> found = request.platform->FindModuleFiles(
-            module_spec, search_paths, result.statistics)) {
-      result.module_spec = *found;
-      return result;
-    }
-  }
 
   // Can lldb's symbol and executable location schemes find them locally?
   module_spec.GetSymbolFileSpec() = PluginManager::LocateExecutableSymbolFile(
@@ -75,6 +68,78 @@ SymbolLocator::Locate(const Request &request,
   }
 
   return result;
+}
+
+static std::optional<SymbolLocator::Result>
+AskPlatform(const SymbolLocator::Request &request,
+            const FileSpecList &search_paths) {
+  if (!request.platform)
+    return std::nullopt;
+
+  SymbolLocator::Result result;
+  std::optional<ModuleSpec> found = request.platform->FindModuleFiles(
+      request.module_spec, search_paths, result.statistics);
+  if (!found)
+    return std::nullopt;
+
+  result.module_spec = *found;
+  return result;
+}
+
+llvm::Expected<SymbolLocator::Result>
+SymbolLocator::Locate(const Request &request,
+                      const FileSpecList &search_paths) {
+  if (std::optional<Result> answer = AskPlatform(request, search_paths))
+    return std::move(*answer);
+  return LocateWithPlugins(request, search_paths);
+}
+
+std::vector<llvm::Expected<SymbolLocator::Result>>
+SymbolLocator::Locate(llvm::ArrayRef<Request> requests,
+                      const FileSpecList &search_paths, bool parallel) {
+  // One slot per request, so concurrent searches never contend.
+  std::vector<std::optional<llvm::Expected<Result>>> slots(requests.size());
+  std::vector<size_t> remaining;
+
+  if (!requests.empty()) {
+    // Throttled because every search reports through this from its own thread.
+    Progress progress("Locating binaries", "", requests.size(),
+                      /*debugger=*/nullptr,
+                      Progress::kDefaultHighFrequencyReportTime);
+
+    for (auto [i, request] : llvm::enumerate(requests)) {
+      if (std::optional<Result> answer = AskPlatform(request, search_paths)) {
+        slots[i] = std::move(*answer);
+        progress.Increment(1, request.description);
+      } else {
+        remaining.push_back(i);
+      }
+    }
+
+    auto locate = [&](size_t i) {
+      slots[i] = LocateWithPlugins(requests[i], search_paths);
+      progress.Increment(1, requests[i].description);
+    };
+
+    // One search has nothing to overlap with.
+    if (parallel && remaining.size() > 1) {
+      llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
+      for (size_t i : remaining)
+        task_group.async(locate, i);
+      task_group.wait();
+    } else {
+      for (size_t i : remaining)
+        locate(i);
+    }
+  }
+
+  std::vector<llvm::Expected<Result>> results;
+  results.reserve(slots.size());
+  for (std::optional<llvm::Expected<Result>> &slot : slots) {
+    assert(slot && "every request has a result");
+    results.emplace_back(std::move(*slot));
+  }
+  return results;
 }
 
 void SymbolLocator::DownloadSymbolFileAsync(const UUID &uuid) {
