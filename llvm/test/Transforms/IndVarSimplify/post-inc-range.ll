@@ -462,3 +462,147 @@ for.end:
 exit:
   ret void
 }
+
+; We expect the icmp to be widened.
+define void @test_zext_nneg_range(i32 %v, ptr %p0, ptr %p1, ptr %pN) {
+; CHECK-LABEL: @test_zext_nneg_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[PN:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[V:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P0:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[P1:%.*]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %N = load i32, ptr %pN, align 4
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %v, %entry ], [ %iv.next, %for.body ]
+  %idxprom12 = zext nneg i32 %iv to i64
+  %arrayidx13 = getelementptr inbounds nuw [4 x i8], ptr %p0, i64 %idxprom12
+  %1 = load i32, ptr %arrayidx13, align 4
+  store i32 %1, ptr %p1, align 4
+  %iv.next = add nuw nsw i32 %iv, 1
+  %cmp9 = icmp slt i32 %iv.next, %N
+  br i1 %cmp9, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; The zext nneg only need to dominate user, which is the icmp, we want to widen.
+define i64 @test_zext_nneg_range_dominate_user(i32 %init, i32 %sz) {
+; CHECK-LABEL: @test_zext_nneg_range_dominate_user(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[INIT:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[SZ:%.*]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[D:%.*]] = udiv i64 14, [[INDVARS_IV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[D]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %init, %entry ], [ %iv.next, %for.body ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %z = zext nneg i32 %iv to i64
+  %d = udiv i64 14, %z
+  %cmp = icmp slt i32 %iv.next, %sz
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  %r = phi i64 [%d, %for.body]
+  ret i64 %r
+}
+
+; Negative tests for using zext nneg to infer value range.
+define i32 @negative_zext_nneg_range_store_poison(i32 %init, i32 %sz, ptr %q) {
+; CHECK-LABEL: @negative_zext_nneg_range_store_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[INIT:%.*]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    store i64 [[INDVARS_IV]], ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    [[INC_NEXT]] = add nuw i32 [[INC]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[SZ:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC_NEXT]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[INC_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %init, %entry ], [ %iv.next, %for.body ]
+  %inc = phi i32 [ 0, %entry ], [ %inc.next, %for.body ]
+  %z = zext nneg i32 %iv to i64
+  store i64 %z, ptr %q, align 8
+  %inc.next = add i32 %inc, 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %cmp = icmp slt i32 %iv.next, %sz
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  %inc.lcssa = phi i32 [ %inc.next, %for.body ]
+  ret i32 %inc.lcssa
+}
+
+define i32 @negative_zext_nneg_range_dead_poison(i32 %init, i32 %sz, ptr %q) {
+; CHECK-LABEL: @negative_zext_nneg_range_dead_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[INIT:%.*]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    store i64 [[INDVARS_IV]], ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    [[INC_NEXT]] = add nuw i32 [[INC]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[SZ:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC_NEXT]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[INC_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %init, %entry ], [ %iv.next, %for.body ]
+  %inc = phi i32 [ 0, %entry ], [ %inc.next, %for.body ]
+  %z = zext nneg i32 %iv to i64
+  %s = zext i32 %iv to i64
+  store i64 %s, ptr %q, align 8
+  %inc.next = add i32 %inc, 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %cmp = icmp slt i32 %iv.next, %sz
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  %inc.lcssa = phi i32 [ %inc.next, %for.body ]
+  ret i32 %inc.lcssa
+}
