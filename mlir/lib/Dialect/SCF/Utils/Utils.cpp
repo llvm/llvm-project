@@ -1159,8 +1159,7 @@ void mlir::collapseParallelLoops(
   // that is un-normalized already by the previous logic.
   auto newPloop = scf::ParallelOp::create(
       rewriter, loc, lowerBounds, upperBounds, steps, loops.getInitVals(),
-      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs,
-          ValueRange) {
+      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs, ValueRange) {
         for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
           Value previous = ploopIVs[i];
           unsigned numberCombinedDimensions = combinedDimensions[i].size();
