@@ -155,8 +155,7 @@ template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
 
 /// Like FoldingSetTrait, but for ContextualFoldingSets.
 template <typename T, typename Ctx>
-struct ContextualFoldingSetTrait
-    : public DefaultContextualFoldingSetTrait<T, Ctx> {};
+struct ContextualFoldingSetTrait : DefaultContextualFoldingSetTrait<T, Ctx> {};
 
 //===--------------------------------------------------------------------===//
 /// This class describes a reference to an interned FoldingSetNodeID, which can
