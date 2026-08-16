@@ -109,15 +109,21 @@ Error IndexedCodeGenDataReader::read() {
   if (auto E = IndexedCGData::Header::readFromBuffer(Start).moveInto(Header))
     return E;
 
+  // Keep the buffer alive via a shared_ptr so records can be read from it on
+  // demand and outlive this reader.
+  std::shared_ptr<MemoryBuffer> SharedDataBuffer = std::move(DataBuffer);
+
   if (hasOutlinedHashTree()) {
     const unsigned char *Ptr = Start + Header.OutlinedHashTreeOffset;
     if (Ptr >= End)
       return error(cgdata_error::eof);
-    HashTreeRecord.deserialize(Ptr);
+    if (IndexedCodeGenDataLazyLoading)
+      HashTreeRecord.lazyDeserialize(SharedDataBuffer,
+                                     Header.OutlinedHashTreeOffset);
+    else
+      HashTreeRecord.deserialize(Ptr);
   }
 
-  // TODO: lazy loading support for outlined hash tree.
-  std::shared_ptr<MemoryBuffer> SharedDataBuffer = std::move(DataBuffer);
   if (hasStableFunctionMap()) {
     const unsigned char *Ptr = Start + Header.StableFunctionMapOffset;
     if (Ptr >= End)

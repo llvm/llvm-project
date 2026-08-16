@@ -83,5 +83,5 @@ TREE-NEXT: ...
 ;--- merge-concat-template.ll
 
 ; In an linked executable (as opposed to an object file), cgdata in __llvm_outline might be concatenated. Although this is not a typical workflow, we simply support this case to parse cgdata that is concatenated. In other words, the following two trees are encoded back-to-back in a binary format.
-@.data1 = private unnamed_addr constant [72 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_outline"
-@.data2 = private unnamed_addr constant [72 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_outline"
+@.data1 = private unnamed_addr constant [72 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_outline", align 1
+@.data2 = private unnamed_addr constant [72 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_outline", align 1

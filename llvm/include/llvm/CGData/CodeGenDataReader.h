@@ -43,7 +43,7 @@ public:
   virtual bool hasStableFunctionMap() const = 0;
   /// Return the outlined hash tree that is released from the reader.
   std::unique_ptr<OutlinedHashTree> releaseOutlinedHashTree() {
-    return std::move(HashTreeRecord.HashTree);
+    return HashTreeRecord.releaseTree();
   }
   std::unique_ptr<StableFunctionMap> releaseStableFunctionMap() {
     return std::move(FunctionMapRecord.FunctionMap);
