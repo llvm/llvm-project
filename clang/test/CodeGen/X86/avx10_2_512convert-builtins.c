@@ -43,19 +43,21 @@ __m512h test_mm512_maskz_cvtx_round2ps_ph(__mmask32 __U, __m512 __A, __m512 __B)
 
 __m256i test_mm512_cvtbiasph_bf8(__m512i __A, __m512h __B) {
   // CHECK-LABEL: @test_mm512_cvtbiasph_bf8(
-  // CHECK: call <32 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8512(
+  // CHECK: call <32 x i8> @llvm.x86.avx10.vcvtbiasph2bf8512(
   return _mm512_cvtbiasph_bf8(__A, __B);
 }
 
 __m256i test_mm512_mask_cvtbiasph_bf8(__m256i __W, __mmask32 __U, __m512i __A, __m512h __B) {
   // CHECK-LABEL: @test_mm512_mask_cvtbiasph_bf8(
-  // CHECK: call <32 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8512(
+  // CHECK: call <32 x i8> @llvm.x86.avx10.vcvtbiasph2bf8512(
+  // CHECK: call <32 x i8> @llvm.x86.avx512.select.v32i8(
   return _mm512_mask_cvtbiasph_bf8(__W, __U, __A, __B);
 }
 
 __m256i test_mm512_maskz_cvtbiasph_bf8(__mmask32 __U, __m512i __A, __m512h __B) {
   // CHECK-LABEL: @test_mm512_maskz_cvtbiasph_bf8(
-  // CHECK: call <32 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8512(
+  // CHECK: call <32 x i8> @llvm.x86.avx10.vcvtbiasph2bf8512(
+  // CHECK: call <32 x i8> @llvm.x86.avx512.select.v32i8(
   return _mm512_maskz_cvtbiasph_bf8(__U, __A, __B);
 }
 
