@@ -423,6 +423,8 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     const Record *R = P.getBase().getRecord();
     assert(R);
 
+    if (!ASTContext::hasLayout(R->getDecl()))
+      return std::nullopt;
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
     Result += ASTCtx
                   .toCharUnitsFromBits(
@@ -481,8 +483,10 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   PtrView P = view();
   while (true) {
     if (P.isBaseClass()) {
-      const ASTRecordLayout &Layout =
-          ASTCtx.getASTRecordLayout(getRecordDecl(P.getBase()));
+      const CXXRecordDecl *BaseRD = getRecordDecl(P.getBase());
+      if (!ASTContext::hasLayout(BaseRD))
+        return std::nullopt;
+      const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(BaseRD);
       const CXXRecordDecl *RD = getRecordDecl(P);
       if (P.isVirtualBaseClass())
         Result += Layout.getVBaseClassOffset(RD).getQuantity();
@@ -522,6 +526,8 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
 
     assert(P.getField());
     const FieldDecl *F = P.getField();
+    if (!ASTContext::hasLayout(F->getParent()))
+      return std::nullopt;
     const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(F->getParent());
     Result +=
         ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(F->getFieldIndex()))
