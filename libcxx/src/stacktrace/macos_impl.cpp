@@ -13,7 +13,7 @@
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <algorithm>
 #  include <cstdlib>
-#  include <dlfcn.h>
+
 #  include <mach-o/dyld.h>
 #  include <mach-o/loader.h>
 
