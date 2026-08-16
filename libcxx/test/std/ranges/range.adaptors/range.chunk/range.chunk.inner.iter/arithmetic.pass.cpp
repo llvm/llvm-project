@@ -43,8 +43,7 @@ constexpr bool test() {
     assert(std::default_sentinel - (*chunked.begin()).begin() == 3);
   }
 
-  // Test `friend constexpr difference_type operator-(default_sentinel_t, const inner_iterator& x)`
-  // when chunk is at the end
+  // Test `friend constexpr difference_type operator-(default_sentinel_t, const inner_iterator& x)` when chunk is at the end
   {
     std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
     std::ranges::chunk_view<
