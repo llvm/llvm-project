@@ -90,7 +90,8 @@ void TailDuplication::getCallerSavedRegs(const MCInst &Inst, BitVector &Regs,
   Regs |= CallRegs;
 }
 
-bool TailDuplication::regIsPossiblyOverwritten(const MCInst &Inst, MCRegister Reg,
+bool TailDuplication::regIsPossiblyOverwritten(const MCInst &Inst,
+                                               MCRegister Reg,
                                                BinaryContext &BC) const {
   BitVector WrittenRegs = BitVector(BC.MRI->getNumRegs(), false);
   BC.MIB->getWrittenRegs(Inst, WrittenRegs);

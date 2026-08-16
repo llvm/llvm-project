@@ -2201,9 +2201,8 @@ bool BinaryFunction::postProcessIndirectBranches(
         MCInst *PCRelBaseInstr;
         MCInst *FixedEntryLoadInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
-            Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseReg,
-            IndexReg, DispValue, DispExpr, PCRelBaseInstr,
-            FixedEntryLoadInstr);
+            Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseReg, IndexReg,
+            DispValue, DispExpr, PCRelBaseInstr, FixedEntryLoadInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;
 

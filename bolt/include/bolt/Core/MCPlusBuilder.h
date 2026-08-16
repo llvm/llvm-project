@@ -2015,9 +2015,8 @@ public:
 
   /// Create a store instruction using \p StackReg as the base register
   /// and \p Offset as the displacement.
-  virtual void createSaveToStack(MCInst &Inst, MCRegister StackReg,
-                                 int Offset, MCRegister SrcReg,
-                                 int Size) const {
+  virtual void createSaveToStack(MCInst &Inst, MCRegister StackReg, int Offset,
+                                 MCRegister SrcReg, int Size) const {
     llvm_unreachable("not implemented");
   }
 

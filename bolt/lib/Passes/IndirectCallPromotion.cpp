@@ -514,7 +514,8 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
              << "Count = " << Target.first << "\n";
   });
 
-  BC.MIB->getOrCreateAnnotationAs<MCRegister>(CallInst, "JTIndexReg") = IndexReg;
+  BC.MIB->getOrCreateAnnotationAs<MCRegister>(CallInst, "JTIndexReg") =
+      IndexReg;
 
   TargetFetchInst = MemLocInstr;
 

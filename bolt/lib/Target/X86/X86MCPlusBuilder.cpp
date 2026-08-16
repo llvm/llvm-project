@@ -1482,8 +1482,7 @@ public:
   /// TODO: this implementation currently works for the most common opcodes that
   /// load from memory. It can be extended to work with memory store opcodes as
   /// well as more memory load opcodes.
-  bool replaceMemOperandWithReg(MCInst &Inst,
-                                MCRegister Reg) const override {
+  bool replaceMemOperandWithReg(MCInst &Inst, MCRegister Reg) const override {
     unsigned NewOpcode;
 
     switch (Inst.getOpcode()) {
@@ -2290,9 +2289,8 @@ public:
     Inst.addOperand(MCOperand::createReg(SrcReg));
   }
 
-  void createRestoreFromStack(MCInst &Inst, MCRegister StackReg,
-                              int Offset, MCRegister DstReg,
-                              int Size) const override {
+  void createRestoreFromStack(MCInst &Inst, MCRegister StackReg, int Offset,
+                              MCRegister DstReg, int Size) const override {
     return createLoad(Inst, StackReg, /*Scale=*/1, /*IndexReg=*/MCRegister(),
                       Offset, nullptr, /*AddrSegmentReg=*/MCRegister(), DstReg,
                       Size);
