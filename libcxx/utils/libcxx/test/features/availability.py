@@ -226,4 +226,16 @@ features += [
             cfg.available_features,
         ),
     ),
+    # Tests that require std::stacktrace_entry::source_file()/description() to resolve to
+    # something non-empty for a real capture. On bare-metal targets (no dynamic loader, no
+    # filesystem), there's no dl_iterate_phdr/proc-self-exe equivalent to learn the running
+    # image's own name from, so entries can never be associated with a source file/description,
+    # even though capturing a stacktrace itself works fine.
+    Feature(
+        name="availability-stacktrace-no-image-info",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "target={{.*-none-eabi.*}}",
+            cfg.available_features,
+        ),
+    ),
 ]

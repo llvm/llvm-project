@@ -8,6 +8,7 @@
 
 // REQUIRES: std-at-least-c++23
 // UNSUPPORTED: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-no-image-info
 
 /*
     (19.6.3.4) Query [stacktrace.entry.query]
