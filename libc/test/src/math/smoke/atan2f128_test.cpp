@@ -49,9 +49,12 @@ TEST_F(LlvmLibcAtan2f128Test, SpecialNumbers) {
   EXPECT_FP_EQ(-THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f128(neg_inf, neg_inf));
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f128(aNaN, zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f128(1.0, aNaN));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f128(1.0, inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f128(-1.0, inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN,
+                            LIBC_NAMESPACE::atan2f128(Float128(1.0), aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero,
+                            LIBC_NAMESPACE::atan2f128(Float128(1.0), inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero,
+                            LIBC_NAMESPACE::atan2f128(Float128(-1.0), inf));
 
   float128 x = FPBits(0x4000ffff'ffffffff'ffffffff'ffffffe7_u128)
                    .get_val(); // 0x1.ffffffffffffffffffffffffffe7p1q
