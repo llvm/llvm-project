@@ -982,6 +982,7 @@
 {'is_defined': True, 'name': '__ZNSt3__112__rs_defaultD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__rs_defaultD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__rs_defaultclEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__112__stacktrace6_Trace16__populate_addrsEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace6_Trace17__populate_imagesEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112bad_weak_ptrD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112bad_weak_ptrD1Ev', 'type': 'FUNC'}
