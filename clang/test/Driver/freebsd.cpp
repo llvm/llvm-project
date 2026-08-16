@@ -36,7 +36,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LIBCXX-SYSROOT %s
 // CHECK-LIBCXX-SYSROOT: "-cc1"
 // CHECK-LIBCXX-SYSROOT-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-LIBCXX-SYSROOT-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-LIBCXX-SYSROOT-SAME: "-internal-isystem" "[[SYSROOT]][[SEP:/|\\\\]]usr[[SEP]]include[[SEP]]c++[[SEP]]v1"
 
 // Test include paths when the sysroot path ends with `/`.
 // RUN: %clangxx %s -### -fsyntax-only 2>&1 \
@@ -47,4 +47,4 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LIBCXX-SYSROOT-SLASH %s
 // CHECK-LIBCXX-SYSROOT-SLASH: "-cc1"
 // CHECK-LIBCXX-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
-// CHECK-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/include/c++/v1"
+// CHECK-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr[[SEP:/|\\\\]]include[[SEP]]c++[[SEP]]v1"
