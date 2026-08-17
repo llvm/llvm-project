@@ -42,21 +42,28 @@ using namespace llvm::dwarf;
 namespace {
 /// A mock implementation of DWARFExpression::Delegate for testing.
 /// This class provides default implementations of all delegate methods,
-/// with the DWARF version being configurable via the constructor.
+/// with the DWARF version and offset byte size configurable via the
+/// constructor.
 class MockDwarfDelegate : public DWARFExpression::Delegate {
 public:
   static constexpr uint16_t DEFAULT_DWARF_VERSION = 5;
   static MockDwarfDelegate Dwarf5() { return MockDwarfDelegate(5); }
   static MockDwarfDelegate Dwarf2() { return MockDwarfDelegate(2); }
+  static MockDwarfDelegate Dwarf64() {
+    return MockDwarfDelegate(DEFAULT_DWARF_VERSION, /*offset_byte_size=*/8);
+  }
 
   MockDwarfDelegate() : MockDwarfDelegate(DEFAULT_DWARF_VERSION) {}
-  explicit MockDwarfDelegate(uint16_t version) : m_dwarf_version(version) {}
+  explicit MockDwarfDelegate(uint16_t version, uint8_t offset_byte_size = 4)
+      : m_dwarf_version(version), m_offset_byte_size(offset_byte_size) {}
 
   uint16_t GetVersion() const override { return m_dwarf_version; }
 
   dw_addr_t GetBaseAddress() const override { return 0; }
 
   uint8_t GetAddressByteSize() const override { return 4; }
+
+  uint8_t GetDwarfOffsetByteSize() const override { return m_offset_byte_size; }
 
   llvm::Expected<std::pair<uint64_t, bool>>
   GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override {
@@ -83,6 +90,7 @@ public:
 
 private:
   uint16_t m_dwarf_version;
+  uint8_t m_offset_byte_size;
 };
 
 /// Mock memory implementation for testing.
@@ -817,6 +825,57 @@ TEST(DWARFExpression, DW_OP_implicit_value) {
                           /*addr_size*/ 4);
   DWARFExpression dwarf_expr(extractor);
   EXPECT_THAT_EXPECTED(dwarf_expr.GetLocation_DW_OP_addr(nullptr),
+                       llvm::HasValue(0x40302010u));
+}
+
+TEST(DWARFExpression, GetLocationSkipsDW_OP_call_refOperand) {
+  {
+    // In DWARF64 the reference is eight bytes even when addresses are four
+    // bytes. Embed a false DW_OP_addr after the first four operand bytes to
+    // detect an address-sized skip.
+    uint8_t expr[] = {DW_OP_call_ref, 0x00, 0x00, 0x00, 0x00,
+                      DW_OP_addr,     0x11, 0x22, 0x33, DW_OP_addr,
+                      0x10,           0x20, 0x30, 0x40};
+    DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                            /*addr_size=*/4);
+    DWARFExpression dwarf_expr(extractor);
+    MockDwarfDelegate dwarf64 = MockDwarfDelegate::Dwarf64();
+    EXPECT_THAT_EXPECTED(dwarf_expr.GetLocation_DW_OP_addr(&dwarf64),
+                         llvm::HasValue(0x40302010u));
+  }
+
+  {
+    // In DWARF32 the reference is four bytes even when addresses are eight
+    // bytes. An address-sized skip would consume the following DW_OP_addr.
+    uint8_t expr[] = {DW_OP_call_ref, 0x00, 0x00, 0x00, 0x00, DW_OP_addr, 0x30,
+                      0x31,           0x32, 0x30, 0x31, 0x32, 0x33,       0x34};
+    DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                            /*addr_size=*/8);
+    DWARFExpression dwarf_expr(extractor);
+    MockDwarfDelegate dwarf32;
+    EXPECT_THAT_EXPECTED(dwarf_expr.GetLocation_DW_OP_addr(&dwarf32),
+                         llvm::HasValue(lldb::addr_t{0x3433323130323130}));
+  }
+}
+
+TEST(DWARFExpression, GetLocationSkipsDW_OP_implicit_pointerOperands) {
+  // DW_OP_implicit_pointer contains an eight-byte reference in DWARF64,
+  // followed by an SLEB128 offset. The operand bytes contain false DW_OP_addr
+  // operations that detect either an address-sized reference or decoding the
+  // SLEB128 before skipping the reference.
+  uint8_t expr[] = {
+      DW_OP_implicit_pointer,
+      // Eight-byte reference with a false DW_OP_addr at byte six.
+      0x00, 0x11, 0x22, 0x33, 0x44, DW_OP_addr, 0x55, 0x66,
+      // Two-byte SLEB128 whose final byte is another false DW_OP_addr.
+      0x80, DW_OP_addr,
+      // The real address operation.
+      DW_OP_addr, 0x10, 0x20, 0x30, 0x40};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size=*/4);
+  DWARFExpression dwarf_expr(extractor);
+  MockDwarfDelegate dwarf64 = MockDwarfDelegate::Dwarf64();
+  EXPECT_THAT_EXPECTED(dwarf_expr.GetLocation_DW_OP_addr(&dwarf64),
                        llvm::HasValue(0x40302010u));
 }
 

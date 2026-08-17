@@ -127,6 +127,9 @@ public:
   uint8_t GetAddressByteSize() const override {
     return m_header.getAddressByteSize();
   }
+  uint8_t GetDwarfOffsetByteSize() const override {
+    return GetFormParams().getDwarfOffsetByteSize();
+  }
   dw_addr_t GetAddrBase() const { return m_addr_base.value_or(0); }
   dw_addr_t GetBaseAddress() const override { return m_base_addr; }
   dw_offset_t GetLineTableOffset();
