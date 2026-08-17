@@ -2942,18 +2942,16 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
     }
   }
 
-  MachineInstr *Shuffle = MRI.getVRegDef(Trunc);
-  if (Shuffle->getOpcode() != AMDGPU::G_SHUFFLE_VECTOR)
+  ArrayRef<int> Mask;
+  Register Src1;
+  if (!mi_match(Trunc, MRI, m_GShuffleVector(m_Reg(Src1), m_Reg(), Mask)))
     return false;
 
-  assert(MRI.getType(Shuffle->getOperand(0).getReg()) ==
-         LLT::fixed_vector(2, 16));
-
-  ArrayRef<int> Mask = Shuffle->getOperand(3).getShuffleMask();
+  assert(MRI.getType(Src1) == LLT::fixed_vector(2, 16));
   assert(Mask.size() == 2);
 
   if (Mask[0] == 1 && Mask[1] <= 1) {
-    Out = Shuffle->getOperand(0).getReg();
+    Out = Trunc;
     return true;
   }
 
@@ -6499,24 +6497,23 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   std::optional<int> FI;
   Register VAddr = Root.getReg();
 
-  const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
   Register PtrBase;
   int64_t ConstOffset;
   std::tie(PtrBase, ConstOffset, std::ignore) =
       getPtrBaseWithConstantOffset(VAddr, *MRI);
+  int MatchedFI;
   if (ConstOffset != 0) {
     if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
         (!STI.privateMemoryResourceIsRangeChecked() ||
          VT->signBitIsZero(PtrBase))) {
-      const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
-      if (PtrBaseDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
-        FI = PtrBaseDef->getOperand(1).getIndex();
+      if (mi_match(PtrBase, *MRI, m_GFrameIndex(MatchedFI)))
+        FI = MatchedFI;
       else
         VAddr = PtrBase;
       Offset = ConstOffset;
     }
-  } else if (RootDef->getOpcode() == AMDGPU::G_FRAME_INDEX) {
-    FI = RootDef->getOperand(1).getIndex();
+  } else if (mi_match(Root.getReg(), *MRI, m_GFrameIndex(MatchedFI))) {
+    FI = MatchedFI;
   }
 
   return {{[=](MachineInstrBuilder &MIB) { // rsrc
@@ -6736,8 +6733,8 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
 }
 
 std::pair<Register, unsigned>
-AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const {
-  const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
+AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(
+    MachineOperand &Root) const {
   int64_t ConstAddr = 0;
 
   Register PtrBase;
@@ -6750,13 +6747,11 @@ AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const 
       // (add n0, c0)
       return std::pair(PtrBase, Offset);
     }
-  } else if (RootDef->getOpcode() == AMDGPU::G_SUB) {
+  } else if (mi_match(Root.getReg(), *MRI, m_GSub(m_Reg(), m_Reg()))) {
     // TODO
-
 
   } else if (mi_match(Root.getReg(), *MRI, m_ICst(ConstAddr))) {
     // TODO
-
   }
 
   return std::pair(Root.getReg(), 0);
@@ -6799,7 +6794,6 @@ AMDGPUInstructionSelector::selectDSReadWrite2(MachineOperand &Root,
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
                                                   unsigned Size) const {
-  const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
   int64_t ConstAddr = 0;
 
   Register PtrBase;
@@ -6814,12 +6808,11 @@ AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
       // (add n0, c0)
       return std::pair(PtrBase, OffsetValue0 / Size);
     }
-  } else if (RootDef->getOpcode() == AMDGPU::G_SUB) {
+  } else if (mi_match(Root.getReg(), *MRI, m_GSub(m_Reg(), m_Reg()))) {
     // TODO
 
   } else if (mi_match(Root.getReg(), *MRI, m_ICst(ConstAddr))) {
     // TODO
-
   }
 
   return std::pair(Root.getReg(), 0);
