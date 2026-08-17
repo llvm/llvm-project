@@ -8,27 +8,23 @@
 define void @masked_min_max(ptr %pSrc, ptr %pMsk, i64 %n, ptr %pMin, ptr %pMax) {
 ; CHECK-LABEL: masked_min_max:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm1 = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
-; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm1 = [+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf]
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovaps %zmm1, %zmm2
-; CHECK-NEXT:    vmovaps %zmm0, %zmm1
-; CHECK-NEXT:    vmovdqu (%rsi,%rax), %xmm0
-; CHECK-NEXT:    vptestnmb %xmm0, %xmm0, %k1
-; CHECK-NEXT:    vmovups (%rdi,%rax,4), %zmm3
-; CHECK-NEXT:    vminps %zmm3, %zmm1, %zmm0
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
-; CHECK-NEXT:    vmaxps %zmm3, %zmm2, %zmm1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm1 {%k1}
+; CHECK-NEXT:    vmovdqu (%rsi,%rax), %xmm2
+; CHECK-NEXT:    vptestmb %xmm2, %xmm2, %k1
+; CHECK-NEXT:    vmovups (%rdi,%rax,4), %zmm2
+; CHECK-NEXT:    vminps %zmm2, %zmm1, %zmm1 {%k1}
+; CHECK-NEXT:    vmaxps %zmm2, %zmm0, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    cmpq %rdx, %rax
 ; CHECK-NEXT:    jb .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
-; CHECK-NEXT:    vmovaps %zmm0, (%rcx)
-; CHECK-NEXT:    vmovaps %zmm1, (%r8)
+; CHECK-NEXT:    vmovaps %zmm1, (%rcx)
+; CHECK-NEXT:    vmovaps %zmm0, (%r8)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:

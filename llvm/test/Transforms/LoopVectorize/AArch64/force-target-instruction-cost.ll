@@ -55,7 +55,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST1-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[START]], 32
 ; COST1-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST1:       [[VECTOR_PH]]:
-; COST1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[START]], 32
+; COST1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[START]], 31
 ; COST1-NEXT:    [[N_VEC:%.*]] = sub i64 [[START]], [[N_MOD_VF]]
 ; COST1-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
 ; COST1-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
@@ -77,7 +77,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; COST1:       [[VEC_EPILOG_PH]]:
 ; COST1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; COST1-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[START]], 4
+; COST1-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[START]], 3
 ; COST1-NEXT:    [[N_VEC3:%.*]] = sub i64 [[START]], [[N_MOD_VF2]]
 ; COST1-NEXT:    [[TMP2:%.*]] = sub i64 [[START]], [[N_VEC3]]
 ; COST1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC3]]
@@ -108,7 +108,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST10-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[START]], 16
 ; COST10-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST10:       [[VECTOR_PH]]:
-; COST10-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[START]], 16
+; COST10-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[START]], 15
 ; COST10-NEXT:    [[N_VEC:%.*]] = sub i64 [[START]], [[N_MOD_VF]]
 ; COST10-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
 ; COST10-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
@@ -128,7 +128,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST10-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; COST10:       [[VEC_EPILOG_PH]]:
 ; COST10-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; COST10-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[START]], 4
+; COST10-NEXT:    [[N_MOD_VF2:%.*]] = and i64 [[START]], 3
 ; COST10-NEXT:    [[N_VEC3:%.*]] = sub i64 [[START]], [[N_MOD_VF2]]
 ; COST10-NEXT:    [[TMP1:%.*]] = sub i64 [[START]], [[N_VEC3]]
 ; COST10-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC3]]
@@ -319,7 +319,7 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; COST1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST1:       [[VECTOR_PH]]:
-; COST1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; COST1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; COST1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST1:       [[VECTOR_BODY]]:
@@ -346,7 +346,7 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST10-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; COST10-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COST10:       [[VECTOR_PH]]:
-; COST10-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; COST10-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; COST10-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COST10-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST10:       [[VECTOR_BODY]]:
@@ -718,18 +718,18 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST1-NEXT:    [[TMP26:%.*]] = load i8, ptr [[TMP18]], align 1, !alias.scope [[META19]]
 ; COST1-NEXT:    [[TMP27:%.*]] = load i8, ptr [[TMP19]], align 1, !alias.scope [[META19]]
 ; COST1-NEXT:    [[TMP28:%.*]] = load i8, ptr [[TMP20]], align 1, !alias.scope [[META19]]
-; COST1-NEXT:    [[TMP29:%.*]] = insertelement <4 x i8> poison, i8 [[TMP25]], i32 0
-; COST1-NEXT:    [[TMP30:%.*]] = insertelement <4 x i8> [[TMP29]], i8 [[TMP26]], i32 1
-; COST1-NEXT:    [[TMP31:%.*]] = insertelement <4 x i8> [[TMP30]], i8 [[TMP27]], i32 2
-; COST1-NEXT:    [[TMP32:%.*]] = insertelement <4 x i8> [[TMP31]], i8 [[TMP28]], i32 3
+; COST1-NEXT:    [[TMP29:%.*]] = insertelement <4 x i8> poison, i8 [[TMP25]], i64 0
+; COST1-NEXT:    [[TMP30:%.*]] = insertelement <4 x i8> [[TMP29]], i8 [[TMP26]], i64 1
+; COST1-NEXT:    [[TMP31:%.*]] = insertelement <4 x i8> [[TMP30]], i8 [[TMP27]], i64 2
+; COST1-NEXT:    [[TMP32:%.*]] = insertelement <4 x i8> [[TMP31]], i8 [[TMP28]], i64 3
 ; COST1-NEXT:    [[TMP33:%.*]] = load i8, ptr [[TMP21]], align 1, !alias.scope [[META19]]
 ; COST1-NEXT:    [[TMP34:%.*]] = load i8, ptr [[TMP22]], align 1, !alias.scope [[META19]]
 ; COST1-NEXT:    [[TMP35:%.*]] = load i8, ptr [[TMP23]], align 1, !alias.scope [[META19]]
 ; COST1-NEXT:    [[TMP36:%.*]] = load i8, ptr [[TMP24]], align 1, !alias.scope [[META19]]
-; COST1-NEXT:    [[TMP37:%.*]] = insertelement <4 x i8> poison, i8 [[TMP33]], i32 0
-; COST1-NEXT:    [[TMP38:%.*]] = insertelement <4 x i8> [[TMP37]], i8 [[TMP34]], i32 1
-; COST1-NEXT:    [[TMP39:%.*]] = insertelement <4 x i8> [[TMP38]], i8 [[TMP35]], i32 2
-; COST1-NEXT:    [[TMP40:%.*]] = insertelement <4 x i8> [[TMP39]], i8 [[TMP36]], i32 3
+; COST1-NEXT:    [[TMP37:%.*]] = insertelement <4 x i8> poison, i8 [[TMP33]], i64 0
+; COST1-NEXT:    [[TMP38:%.*]] = insertelement <4 x i8> [[TMP37]], i8 [[TMP34]], i64 1
+; COST1-NEXT:    [[TMP39:%.*]] = insertelement <4 x i8> [[TMP38]], i8 [[TMP35]], i64 2
+; COST1-NEXT:    [[TMP40:%.*]] = insertelement <4 x i8> [[TMP39]], i8 [[TMP36]], i64 3
 ; COST1-NEXT:    [[TMP41:%.*]] = zext <4 x i8> [[TMP32]] to <4 x i32>
 ; COST1-NEXT:    [[TMP46:%.*]] = zext <4 x i8> [[TMP40]] to <4 x i32>
 ; COST1-NEXT:    [[TMP44:%.*]] = extractelement <4 x i32> [[TMP41]], i64 0
@@ -838,10 +838,10 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST10-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP10]], align 1, !alias.scope [[META19]]
 ; COST10-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP11]], align 1, !alias.scope [[META19]]
 ; COST10-NEXT:    [[TMP16:%.*]] = load i8, ptr [[TMP12]], align 1, !alias.scope [[META19]]
-; COST10-NEXT:    [[TMP17:%.*]] = insertelement <4 x i8> poison, i8 [[TMP13]], i32 0
-; COST10-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[TMP14]], i32 1
-; COST10-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP18]], i8 [[TMP15]], i32 2
-; COST10-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP16]], i32 3
+; COST10-NEXT:    [[TMP17:%.*]] = insertelement <4 x i8> poison, i8 [[TMP13]], i64 0
+; COST10-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[TMP14]], i64 1
+; COST10-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> [[TMP18]], i8 [[TMP15]], i64 2
+; COST10-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP16]], i64 3
 ; COST10-NEXT:    [[TMP21:%.*]] = zext <4 x i8> [[TMP20]] to <4 x i32>
 ; COST10-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP21]], i64 0
 ; COST10-NEXT:    store i32 [[TMP24]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META22:![0-9]+]], !noalias [[META19]]

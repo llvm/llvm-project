@@ -3,7 +3,7 @@
 // RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
-// RUN:   -march=aarch64 -mattr="+sve,+sme" \
+// RUN:   -march=aarch64 -mattr="+sme" \
 // RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib | \
 // RUN: FileCheck %s
 
@@ -67,8 +67,12 @@ module attributes {transform.with_named_sequence} {
       : !transform.any_op
 
     // Step 3: Bufferize ahead of TransferReadDropUnitDimsPattern, which
-    // currently only supports memrefs.
-    %bufferize = transform.bufferization.one_shot_bufferize %module
+    // currently only supports memrefs. Force an identity (contiguous) layout
+    // map at function boundaries: the default inferred layout is fully
+    // dynamic for function arguments, which later fails vector-to-ArmSME
+    // lowering's requirement that the tile memref have unit stride on its
+    // most minor dimension.
+    %bufferize = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %module
       {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 
     %func = transform.structured.match ops{["func.func"]} in %bufferize

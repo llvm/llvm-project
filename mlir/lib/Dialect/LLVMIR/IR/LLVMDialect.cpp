@@ -115,6 +115,7 @@ REGISTER_ENUM_TYPE(Linkage);
 REGISTER_ENUM_TYPE(UnnamedAddr);
 REGISTER_ENUM_TYPE(CConv);
 REGISTER_ENUM_TYPE(TailCallKind);
+REGISTER_ENUM_TYPE(ThreadLocalMode);
 REGISTER_ENUM_TYPE(Visibility);
 } // namespace
 
@@ -2373,12 +2374,15 @@ LogicalResult ComdatOp::verifyRegions() {
 void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool isConstant, Linkage linkage, StringRef name,
                      Attribute value, uint64_t alignment, unsigned addrSpace,
-                     bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
-                     ArrayRef<NamedAttribute> attrs,
+                     bool dsoLocal, ThreadLocalMode threadModel,
+                     SymbolRefAttr comdat, ArrayRef<NamedAttribute> attrs,
                      ArrayRef<Attribute> dbgExprs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
+  result.addAttribute(
+      getTlsModeAttrName(result.name),
+      ThreadLocalModeAttr::get(builder.getContext(), threadModel));
   if (isConstant)
     result.addAttribute(getConstantAttrName(result.name),
                         builder.getUnitAttr());
@@ -2386,9 +2390,6 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
     result.addAttribute(getValueAttrName(result.name), value);
   if (dsoLocal)
     result.addAttribute(getDsoLocalAttrName(result.name),
-                        builder.getUnitAttr());
-  if (threadLocal)
-    result.addAttribute(getThreadLocal_AttrName(result.name),
                         builder.getUnitAttr());
   if (comdat)
     result.addAttribute(getComdatAttrName(result.name), comdat);
@@ -2420,8 +2421,15 @@ static void printCommonGlobalAndAlias(OpAsmPrinter &p, OpType op) {
   StringRef visibility = stringifyVisibility(op.getVisibility_());
   if (!visibility.empty())
     p << visibility << ' ';
-  if (op.getThreadLocal_())
-    p << "thread_local ";
+
+  if (ThreadLocalMode mode = op.getTlsMode();
+      mode != ThreadLocalMode::NotThreadLocal) {
+    p << "thread_local";
+    if (mode != ThreadLocalMode::GeneralDynamic)
+      p << '(' << mode << ')';
+    p << ' ';
+  }
+
   if (auto unnamedAddr = op.getUnnamedAddr()) {
     StringRef str = stringifyUnnamedAddr(*unnamedAddr);
     if (!str.empty())
@@ -2448,7 +2456,7 @@ void GlobalOp::print(OpAsmPrinter &p) {
                           {SymbolTable::getSymbolAttrName(),
                            getGlobalTypeAttrName(), getConstantAttrName(),
                            getValueAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
+                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
                            getVisibility_AttrName(), getComdatAttrName()});
 
   // Print the trailing type unless it's a string global.
@@ -2512,9 +2520,25 @@ static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
                           parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
                               parser, LLVM::Visibility::Default)));
 
-  if (succeeded(parser.parseOptionalKeyword("thread_local")))
-    result.addAttribute(OpType::getThreadLocal_AttrName(result.name),
-                        parser.getBuilder().getUnitAttr());
+  if (succeeded(parser.parseOptionalKeyword("thread_local"))) {
+    ThreadLocalMode threadModel = ThreadLocalMode::GeneralDynamic;
+
+    if (succeeded(parser.parseOptionalLParen())) {
+      SMLoc kwLoc;
+      if (parser.getCurrentLocation(&kwLoc))
+        return failure();
+      threadModel = parseOptionalLLVMKeyword<ThreadLocalMode>(
+          parser, ThreadLocalMode::NotThreadLocal);
+      if (threadModel == ThreadLocalMode::NotThreadLocal) {
+        parser.emitError(kwLoc, "invalid value for thread_local");
+        return failure();
+      }
+      if (parser.parseRParen())
+        return failure();
+    }
+    result.addAttribute(OpType::getTlsModeAttrName(result.name),
+                        ThreadLocalModeAttr::get(ctx, threadModel));
+  }
 
   // Parse optional UnnamedAddr, default to None.
   result.addAttribute(OpType::getUnnamedAddrAttrName(result.name),
@@ -2527,7 +2551,8 @@ static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
 
 // operation ::= `llvm.mlir.global` linkage? visibility?
 //               (`unnamed_addr` | `local_unnamed_addr`)?
-//               `thread_local`? `constant`? `@` identifier
+//               (`thread_local` (`(` tls-mode `)`)? )?
+//               `constant`? `@` identifier
 //               `(` attribute? `)` (`comdat(` symbol-ref-id `)`)?
 //               attribute-list? (`:` type)? region?
 //
@@ -2765,15 +2790,16 @@ LogicalResult GlobalDtorsOp::verify() {
 
 void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
                     Linkage linkage, StringRef name, bool dsoLocal,
-                    bool threadLocal, ArrayRef<NamedAttribute> attrs) {
+                    ThreadLocalMode threadModel,
+                    ArrayRef<NamedAttribute> attrs) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getAliasTypeAttrName(result.name), TypeAttr::get(type));
+  result.addAttribute(
+      getTlsModeAttrName(result.name),
+      ThreadLocalModeAttr::get(builder.getContext(), threadModel));
   if (dsoLocal)
     result.addAttribute(getDsoLocalAttrName(result.name),
-                        builder.getUnitAttr());
-  if (threadLocal)
-    result.addAttribute(getThreadLocal_AttrName(result.name),
                         builder.getUnitAttr());
 
   result.addAttribute(getLinkageAttrName(result.name),
@@ -2790,7 +2816,7 @@ void AliasOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs(),
                           {SymbolTable::getSymbolAttrName(),
                            getAliasTypeAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
+                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
                            getVisibility_AttrName()});
 
   // Print the trailing type.
@@ -2801,8 +2827,8 @@ void AliasOp::print(OpAsmPrinter &p) {
 
 // operation ::= `llvm.mlir.alias` linkage? visibility?
 //               (`unnamed_addr` | `local_unnamed_addr`)?
-//               `thread_local`? `@` identifier
-//               `(` attribute? `)`
+//               (`thread_local` (`(` tls-mode `)`)? )?
+//               `@` identifier `(` attribute? `)`
 //               attribute-list? `:` type region
 //
 ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {

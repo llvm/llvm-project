@@ -2007,8 +2007,8 @@ define i16 @test_v32i16_v32i8(<32 x i16> %a0) nounwind {
 ; AVX512BW-LABEL: test_v32i16_v32i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512BW-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512BW-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
@@ -2022,8 +2022,8 @@ define i16 @test_v32i16_v32i8(<32 x i16> %a0) nounwind {
 ; AVX512BWVL-LABEL: test_v32i16_v32i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512BWVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpmovwb %zmm0, %ymm0
 ; AVX512BWVL-NEXT:    vpsadbw %ymm1, %ymm0, %ymm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512BWVL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0

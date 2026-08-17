@@ -930,6 +930,59 @@ LogicalResult spirv::EntryPointOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ExecutionMode / spirv.ExecutionModeId
+//===----------------------------------------------------------------------===//
+
+namespace {
+// Describes the extra operands a SPIR-V ExecutionMode expects: whether they
+// are <id> operands (only valid on spirv.ExecutionModeId) or literal integers
+// (only valid on spirv.ExecutionMode), and how many of them are required.
+struct ExecutionModeOperandSchema {
+  bool isIdOperand;
+  unsigned numOperands;
+};
+
+ExecutionModeOperandSchema
+getExecutionModeOperandSchema(spirv::ExecutionMode mode) {
+  switch (mode) {
+  case spirv::ExecutionMode::Invocations:
+  case spirv::ExecutionMode::OutputVertices:
+  case spirv::ExecutionMode::VecTypeHint:
+  case spirv::ExecutionMode::SubgroupSize:
+  case spirv::ExecutionMode::SubgroupsPerWorkgroup:
+  case spirv::ExecutionMode::DenormPreserve:
+  case spirv::ExecutionMode::DenormFlushToZero:
+  case spirv::ExecutionMode::SignedZeroInfNanPreserve:
+  case spirv::ExecutionMode::RoundingModeRTE:
+  case spirv::ExecutionMode::RoundingModeRTZ:
+  case spirv::ExecutionMode::OutputPrimitivesEXT:
+  case spirv::ExecutionMode::SharedLocalMemorySizeINTEL:
+  case spirv::ExecutionMode::RoundingModeRTPINTEL:
+  case spirv::ExecutionMode::RoundingModeRTNINTEL:
+  case spirv::ExecutionMode::FloatingPointModeALTINTEL:
+  case spirv::ExecutionMode::FloatingPointModeIEEEINTEL:
+  case spirv::ExecutionMode::MaxWorkDimINTEL:
+  case spirv::ExecutionMode::NumSIMDWorkitemsINTEL:
+  case spirv::ExecutionMode::SchedulerTargetFmaxMhzINTEL:
+  case spirv::ExecutionMode::StreamingInterfaceINTEL:
+  case spirv::ExecutionMode::NamedBarrierCountINTEL:
+    return {/*isIdOperand=*/false, /*numOperands=*/1};
+  case spirv::ExecutionMode::LocalSize:
+  case spirv::ExecutionMode::LocalSizeHint:
+  case spirv::ExecutionMode::MaxWorkgroupSizeINTEL:
+    return {/*isIdOperand=*/false, /*numOperands=*/3};
+  case spirv::ExecutionMode::SubgroupsPerWorkgroupId:
+    return {/*isIdOperand=*/true, /*numOperands=*/1};
+  case spirv::ExecutionMode::LocalSizeId:
+  case spirv::ExecutionMode::LocalSizeHintId:
+    return {/*isIdOperand=*/true, /*numOperands=*/3};
+  default:
+    return {/*isIdOperand=*/false, /*numOperands=*/0};
+  }
+}
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // spirv.ExecutionMode
 //===----------------------------------------------------------------------===//
 
@@ -977,6 +1030,23 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
     printer << ", " << llvm::interleaved(values.getAsValueRange<IntegerAttr>());
 }
 
+LogicalResult spirv::ExecutionModeOp::verify() {
+  ExecutionModeOperandSchema schema =
+      getExecutionModeOperandSchema(getExecutionMode());
+
+  if (schema.isIdOperand)
+    return emitOpError("expected ExecutionMode that takes extra operands "
+                       "that are not <id> operands, got: ")
+           << stringifyExecutionMode(getExecutionMode());
+
+  if (getValues().size() != schema.numOperands)
+    return emitOpError("expected ")
+           << schema.numOperands << " value operand(s), got "
+           << getValues().size();
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.ExecutionModeId
 //===----------------------------------------------------------------------===//
@@ -1018,20 +1088,18 @@ void spirv::ExecutionModeIdOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::ExecutionModeIdOp::verify() {
-  // Valid as of SPIRV 1.6
-  switch (getExecutionMode()) {
-  case ExecutionMode::SubgroupsPerWorkgroupId:
-  case ExecutionMode::LocalSizeId:
-  case ExecutionMode::LocalSizeHintId:
-    break;
-  default:
+  ExecutionModeOperandSchema schema =
+      getExecutionModeOperandSchema(getExecutionMode());
+
+  if (!schema.isIdOperand)
     return emitOpError("expected ExecutionMode that takes extra operands that "
                        "are <id> operands, got: ")
            << stringifyExecutionMode(getExecutionMode());
-  }
 
-  if (getValues().empty())
-    return emitOpError("expected at least one value operand");
+  if (getValues().size() != schema.numOperands)
+    return emitOpError("expected ")
+           << schema.numOperands << " value operand(s), got "
+           << getValues().size();
 
   for (Attribute value : getValues()) {
     auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);

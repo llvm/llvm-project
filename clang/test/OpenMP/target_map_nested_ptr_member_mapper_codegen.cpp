@@ -3,12 +3,9 @@
 // RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// PRESENT is propagated to pointee (attach-ptr) entries only at OpenMP >= 6.0.
-// FIXME: that propagation is done in a follow-on; until then the CHECK-60
-// output below is identical to CHECK (the pointee entries carry map-type mask
-// 1036 = ALWAYS|DELETE|CLOSE, without PRESENT). Once PRESENT is propagated, the
-// attach-ptr pointee entries should use mask 5132 = ALWAYS|DELETE|CLOSE|PRESENT
-// at 6.0.
+// PRESENT is propagated to pointee entries only at OpenMP >= 6.0:
+// at 6.0 those entries carry map-type mask 5132 = ALWAYS|DELETE|CLOSE|PRESENT,
+// while the default (<= 5.2) CHECK uses 1036 = ALWAYS|DELETE|CLOSE (no PRESENT).
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-60
 
 // expected-no-diagnostics
@@ -17,12 +14,17 @@
 
 // S2 mapper for: map(to: arr[0:2])
 // Per-element entries (i = array element index; N = __tgt_mapper_num_components()):
-//   &arr[i],     &arr[i].s1p,    sizeof(s1p..z),  MEMBER_OF(N) | ALLOC
-//   &arr[i],     &arr[i].z,      sizeof(int),     MEMBER_OF(N+1) | TO | FROM
-//   &arr[i].s1p, &arr[i].s1p->x, sizeof(int),     MEMBER_OF(N+1) | TO | FROM | PTR_AND_OBJ
-//   &arr[i].s1p, &arr[i].s1p->y, sizeof(int),     MEMBER_OF(N+1) | TO | FROM | PTR_AND_OBJ
-// FIXME: should use attach-style codegen for s1p->x/y instead of PTR_AND_OBJ,
-// which unnecessarily also maps s1p.
+//   &arr[i],        &arr[i].z,      sizeof(int),       MEMBER_OF(N)|TO|FROM
+//   &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y), ALLOC
+//   &arr[i].s1p[0], &arr[i].s1p->x, sizeof(int),       MEMBER_OF(N+2)|TO|FROM
+//   &arr[i].s1p[0], &arr[i].s1p->y, sizeof(int),       MEMBER_OF(N+2)|TO|FROM
+//   &arr[i].s1p,    &arr[i].s1p->x, sizeof(S1 *),      ATTACH
+//
+// The s1p->x/y entries use attach-style codegen: their storage is the pointee
+// block, so they are not MEMBER_OF the arr[i] struct. They are MEMBER_OF the
+// combined ALLOC entry that covers that block (inner MEMBER_OF(2), shifted by
+// N), and a separate ATTACH entry links arr[i].s1p to it. Unlike PTR_AND_OBJ,
+// this does not also map s1p itself.
 
 typedef struct {
   int x;
@@ -37,8 +39,9 @@ typedef struct {
 #pragma omp declare mapper(default : S2 s2) map(s2.z, s2.s1p->x, s2.s1p->y)
 
 void foo(S2 *arr) {
-  // &arr,    &arr[0], 2*sizeof(S2), TARGET_PARAM | TO
-  // (mapper handles individual members)
+  // Top-level entries (the mapper above expands each element's members):
+  //   arr,  &arr[0], 2*sizeof(S2), TO       (with the S2 mapper attached)
+  //   &arr, &arr[0], sizeof(S2 *), ATTACH   (no mapper)
 #pragma omp target enter data map(to: arr[0:2])
   {}
 }
@@ -353,7 +356,7 @@ void foo(S2 *arr) {
 // CHECK-60:    br label [[OMP_TYPE_END9]]
 // CHECK-60:       omp.type.end9:
 // CHECK-60:    [[OMP_MAPTYPE10:%.*]] = phi i64 [ 0, [[OMP_TYPE_ALLOC4]] ], [ 0, [[OMP_TYPE_TO6]] ], [ 0, [[OMP_TYPE_FROM8]] ], [ 0, [[OMP_TYPE_TO_ELSE7]] ]
-// CHECK-60:    [[TMP38:%.*]] = and i64 [[TMP4]], 1036
+// CHECK-60:    [[TMP38:%.*]] = and i64 [[TMP4]], 5132
 // CHECK-60:    [[OMP_MAPTYPE_WITH_MODIFIERS11:%.*]] = or i64 [[OMP_MAPTYPE10]], [[TMP38]]
 // CHECK-60:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP15]], ptr [[X]], i64 [[TMP22]], i64 [[OMP_MAPTYPE_WITH_MODIFIERS11]], ptr null)
 // CHECK-60:    [[TMP39:%.*]] = add nuw i64 562949953421315, [[TMP24]]
@@ -377,7 +380,7 @@ void foo(S2 *arr) {
 // CHECK-60:    br label [[OMP_TYPE_END17]]
 // CHECK-60:       omp.type.end17:
 // CHECK-60:    [[OMP_MAPTYPE18:%.*]] = phi i64 [ [[TMP42]], [[OMP_TYPE_ALLOC12]] ], [ [[TMP44]], [[OMP_TYPE_TO14]] ], [ [[TMP46]], [[OMP_TYPE_FROM16]] ], [ [[TMP39]], [[OMP_TYPE_TO_ELSE15]] ]
-// CHECK-60:    [[TMP47:%.*]] = and i64 [[TMP4]], 1036
+// CHECK-60:    [[TMP47:%.*]] = and i64 [[TMP4]], 5132
 // CHECK-60:    [[OMP_MAPTYPE_WITH_MODIFIERS19:%.*]] = or i64 [[OMP_MAPTYPE18]], [[TMP47]]
 // CHECK-60:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP15]], ptr [[X]], i64 4, i64 [[OMP_MAPTYPE_WITH_MODIFIERS19]], ptr null)
 // CHECK-60:    [[TMP48:%.*]] = add nuw i64 562949953421315, [[TMP24]]
@@ -401,7 +404,7 @@ void foo(S2 *arr) {
 // CHECK-60:    br label [[OMP_TYPE_END25]]
 // CHECK-60:       omp.type.end25:
 // CHECK-60:    [[OMP_MAPTYPE26:%.*]] = phi i64 [ [[TMP51]], [[OMP_TYPE_ALLOC20]] ], [ [[TMP53]], [[OMP_TYPE_TO22]] ], [ [[TMP55]], [[OMP_TYPE_FROM24]] ], [ [[TMP48]], [[OMP_TYPE_TO_ELSE23]] ]
-// CHECK-60:    [[TMP56:%.*]] = and i64 [[TMP4]], 1036
+// CHECK-60:    [[TMP56:%.*]] = and i64 [[TMP4]], 5132
 // CHECK-60:    [[OMP_MAPTYPE_WITH_MODIFIERS27:%.*]] = or i64 [[OMP_MAPTYPE26]], [[TMP56]]
 // CHECK-60:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP17]], ptr [[Y]], i64 4, i64 [[OMP_MAPTYPE_WITH_MODIFIERS27]], ptr null)
 // CHECK-60:    [[TMP57:%.*]] = and i64 [[TMP4]], 3

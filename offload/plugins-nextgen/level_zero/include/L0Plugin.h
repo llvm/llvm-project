@@ -17,6 +17,7 @@
 #include "L0Memory.h"
 #include "L0Options.h"
 #include "L0Program.h"
+#include "L0Queue.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -29,17 +30,32 @@ public:
                            ze_driver_handle_t Driver,
                            ze_context_handle_t ZeContext, bool OwnsZeContext)
       : PluginContextTy(Plugin, Devices), Driver(Driver), ZeContext(ZeContext),
-        OwnsZeContext(OwnsZeContext) {}
+        OwnsZeContext(OwnsZeContext), QueueCache(*this) {}
 
-  ~LevelZeroPluginContextTy() override;
+  ~LevelZeroPluginContextTy() override = default;
+
+  Error deinit() override;
 
   ze_driver_handle_t getZeDriver() const { return Driver; }
   ze_context_handle_t getZeContext() const { return ZeContext; }
+
+  Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+
+  /// Pop an idle queue for \p Device from the cache, or create a new one.
+  Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {
+    return QueueCache.getQueue(*Device);
+  }
+
+  /// Return an idle queue to the cache.
+  void returnCachedQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
 
 private:
   ze_driver_handle_t Driver;
   ze_context_handle_t ZeContext;
   bool OwnsZeContext;
+
+  L0QueueCacheTy QueueCache;
 };
 
 /// Class implementing the LevelZero specific functionalities of the plugin.

@@ -1377,34 +1377,52 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitRotate(e, /*isRotateLeft=*/false);
 
   case Builtin::BI__builtin_coro_id:
-  case Builtin::BI__builtin_coro_promise:
-  case Builtin::BI__builtin_coro_resume:
-  case Builtin::BI__builtin_coro_noop:
-  case Builtin::BI__builtin_coro_destroy:
-  case Builtin::BI__builtin_coro_done:
-  case Builtin::BI__builtin_coro_alloc:
-  case Builtin::BI__builtin_coro_begin:
+    return RValue::get(emitCoroIDBuiltinCall(e).getResult());
+  case Builtin::BI__builtin_coro_alloc: {
+    cir::CoroAllocOp coroAlloc = emitCoroAllocBuiltinCall(e);
+    return coroAlloc ? RValue::get(coroAlloc.getResult())
+                     : getUndefRValue(e->getType());
+  }
+  case Builtin::BI__builtin_coro_begin: {
+    cir::CoroBeginOp coroBeg = emitCoroBeginBuiltinCall(e);
+    return coroBeg ? RValue::get(coroBeg.getResult())
+                   : getUndefRValue(e->getType());
+  }
   case Builtin::BI__builtin_coro_end:
+    return RValue::get(emitCoroEndBuiltinCall(e).getResult());
+  case Builtin::BI__builtin_coro_promise:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
+    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_resume:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_resume NYI");
+    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_noop:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
+    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_destroy:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_destroy NYI");
+    return getUndefRValue(e->getType());
+  case Builtin::BI__builtin_coro_done:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_done NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_suspend:
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_align:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_id like NYI");
+    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_align NYI");
     return getUndefRValue(e->getType());
 
   case Builtin::BI__builtin_coro_frame: {
     return emitCoroutineFrame();
   }
-  case Builtin::BI__builtin_coro_free:
-    return RValue::get(emitCoroFreeBuiltin(e).getResult());
+  case Builtin::BI__builtin_coro_free: {
+    cir::CoroFreeOp coroFree = emitCoroFreeBuiltin(e);
+    return coroFree ? RValue::get(coroFree.getResult())
+                    : getUndefRValue(e->getType());
+  }
+
   case Builtin::BI__builtin_coro_size: {
-    GlobalDecl gd{fd};
-    mlir::Type ty = cgm.getTypes().getFunctionType(
-        cgm.getTypes().arrangeGlobalDeclaration(gd));
-    const auto *nd = cast<NamedDecl>(gd.getDecl());
-    cir::FuncOp fnOp =
-        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false);
-    fnOp.setBuiltin(true);
-    return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
-                    returnValue);
+    return RValue::get(emitCoroSizeBuiltinCall(e).getResult());
   }
 
   case Builtin::BI__builtin_constant_p: {
@@ -2029,6 +2047,25 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       ptr = cir::LaunderOp::create(builder, loc, ptr).getResult();
     }
     return RValue::get(ptr);
+  }
+  case Builtin::BI__builtin_clear_padding: {
+    Address addr = emitPointerWithAlignment(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+    QualType pointeeTy = e->getArg(0)->getType()->getPointeeType();
+
+    llvm::ArrayRef<ASTContext::BitInterval> padding =
+        cgm.getASTContext().getPaddingIntervals(pointeeTy);
+
+    llvm::SmallVector<mlir::Attribute> paddingLocs;
+    for (const auto &interval : padding)
+      paddingLocs.push_back(cir::OffsetPairAttr::get(
+          &getMLIRContext(), interval.First, interval.Last));
+
+    cir::ClearPaddingOp::create(
+        builder, loc, addr.getPointer(),
+        builder.getI64IntegerAttr(addr.getAlignment().getQuantity()),
+        mlir::ArrayAttr::get(&getMLIRContext(), paddingLocs));
+    return RValue::get(nullptr);
   }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:

@@ -488,11 +488,12 @@ private:
   ComplexRendererFns
   selectCVTFixedPointVecBase(const MachineOperand &Root,
                              bool isReciprocal = false) const;
+  void renderFixedPointScalarXForm(MachineInstrBuilder &MIB,
+                                   const MachineInstr &MI, int OpIdx) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
   void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
                                   const MachineInstr &MI, int OpIdx = -1) const;
-
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -778,62 +779,12 @@ static std::optional<uint64_t> getImmedFromMO(const MachineOperand &Root) {
   return Immed;
 }
 
-/// Check whether \p I is a currently unsupported binary operation:
-/// - it has an unsized type
-/// - an operand is not a vreg
-/// - all operands are not in the same bank
-/// These are checks that should someday live in the verifier, but right now,
-/// these are mostly limitations of the aarch64 selector.
-static bool unsupportedBinOp(const MachineInstr &I,
-                             const AArch64RegisterBankInfo &RBI,
-                             const MachineRegisterInfo &MRI,
-                             const AArch64RegisterInfo &TRI) {
-  LLT Ty = MRI.getType(I.getOperand(0).getReg());
-  if (!Ty.isValid()) {
-    LLVM_DEBUG(dbgs() << "Generic binop register should be typed\n");
-    return true;
-  }
-
-  const RegisterBank *PrevOpBank = nullptr;
-  for (auto &MO : I.operands()) {
-    // FIXME: Support non-register operands.
-    if (!MO.isReg()) {
-      LLVM_DEBUG(dbgs() << "Generic inst non-reg operands are unsupported\n");
-      return true;
-    }
-
-    // FIXME: Can generic operations have physical registers operands? If
-    // so, this will need to be taught about that, and we'll need to get the
-    // bank out of the minimal class for the register.
-    // Either way, this needs to be documented (and possibly verified).
-    if (!MO.getReg().isVirtual()) {
-      LLVM_DEBUG(dbgs() << "Generic inst has physical register operand\n");
-      return true;
-    }
-
-    const RegisterBank *OpBank = RBI.getRegBank(MO.getReg(), MRI, TRI);
-    if (!OpBank) {
-      LLVM_DEBUG(dbgs() << "Generic register has no bank or class\n");
-      return true;
-    }
-
-    if (PrevOpBank && OpBank != PrevOpBank) {
-      LLVM_DEBUG(dbgs() << "Generic inst operands have different banks\n");
-      return true;
-    }
-    PrevOpBank = OpBank;
-  }
-  return false;
-}
-
-/// Select the AArch64 opcode for the basic binary operation \p GenericOpc
-/// (such as G_OR or G_SDIV), appropriate for the register bank \p RegBankID
-/// and of size \p OpSize.
+/// Select the AArch64 opcode for the basic binary operation \p GenericOpc,
+/// appropriate for the register bank \p RegBankID and of size \p OpSize.
 /// \returns \p GenericOpc if the combination is unsupported.
 static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
                                unsigned OpSize) {
-  switch (RegBankID) {
-  case AArch64::GPRRegBankID:
+  if (RegBankID == AArch64::GPRRegBankID) {
     if (OpSize == 32) {
       switch (GenericOpc) {
       case TargetOpcode::G_SHL:
@@ -847,8 +798,6 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
       }
     } else if (OpSize == 64) {
       switch (GenericOpc) {
-      case TargetOpcode::G_PTR_ADD:
-        return AArch64::ADDXrr;
       case TargetOpcode::G_SHL:
         return AArch64::LSLVXr;
       case TargetOpcode::G_LSHR:
@@ -859,39 +808,6 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return GenericOpc;
       }
     }
-    break;
-  case AArch64::FPRRegBankID:
-    switch (OpSize) {
-    case 32:
-      switch (GenericOpc) {
-      case TargetOpcode::G_FADD:
-        return AArch64::FADDSrr;
-      case TargetOpcode::G_FSUB:
-        return AArch64::FSUBSrr;
-      case TargetOpcode::G_FMUL:
-        return AArch64::FMULSrr;
-      case TargetOpcode::G_FDIV:
-        return AArch64::FDIVSrr;
-      default:
-        return GenericOpc;
-      }
-    case 64:
-      switch (GenericOpc) {
-      case TargetOpcode::G_FADD:
-        return AArch64::FADDDrr;
-      case TargetOpcode::G_FSUB:
-        return AArch64::FSUBDrr;
-      case TargetOpcode::G_FMUL:
-        return AArch64::FMULDrr;
-      case TargetOpcode::G_FDIV:
-        return AArch64::FDIVDrr;
-      case TargetOpcode::G_OR:
-        return AArch64::ORRv8i8;
-      default:
-        return GenericOpc;
-      }
-    }
-    break;
   }
   return GenericOpc;
 }
@@ -3034,7 +2950,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     // The code below doesn't support truncating stores, so we need to split it
     // again.
-    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
+    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits &&
+        RB.getID() == AArch64::FPRRegBankID) {
       unsigned SubReg;
       LLT MemTy = LdSt.getMMO().getMemoryType();
       auto *RC = getRegClassForTypeOnBank(MemTy, RB);
@@ -3161,7 +3078,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     if (MRI.getType(I.getOperand(0).getReg()).isVector())
       return selectVectorAshrLshr(I, MRI);
     [[fallthrough]];
-  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_SHL: {
     if (Opcode == TargetOpcode::G_SHL &&
         MRI.getType(I.getOperand(0).getReg()).isVector())
       return selectVectorSHL(I, MRI);
@@ -3185,14 +3102,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         I.getOperand(2).setReg(Trunc.getReg(0));
       }
     }
-    [[fallthrough]];
-  case TargetOpcode::G_OR: {
-    // Reject the various things we don't support yet.
-    if (unsupportedBinOp(I, RBI, MRI, TRI))
-      return false;
 
     const unsigned OpSize = Ty.getSizeInBits();
-
     const Register DefReg = I.getOperand(0).getReg();
     const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
 
@@ -3208,7 +3119,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
   }
-
   case TargetOpcode::G_PTR_ADD: {
     emitADD(I.getOperand(0).getReg(), I.getOperand(1), I.getOperand(2), MIB);
     I.eraseFromParent();
@@ -8054,6 +7964,13 @@ InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
     MachineOperand &Root) const {
   return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
+}
+
+void AArch64InstructionSelector::renderFixedPointScalarXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx == 3 && MI.getOperand(OpIdx).isImm() &&
+         "Expected vecshift immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,

@@ -426,6 +426,7 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
      Set an attribute for the vscale range on functions, to allow scalable
      vector operations to be used on processors with variable vector length.
   }];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
   let options = [Option<"vscaleMin", "vscale-min", "unsigned", /*default=*/"1",
                         "vector scale minimum value. Defaults to \"1\"">,
                  Option<"vscaleMax", "vscale-max", "unsigned", /*default=*/"0",
