@@ -14,8 +14,10 @@
 namespace clang {
 namespace api_notes {
 
-// Conservatively detect spellings where cv-qualification belongs to an
-// indirect/declarator layer rather than the by-value parameter itself.
+// Detect whether top-level value const stripping would reach past the
+// parameter itself.
+// "const int" -> "int"
+// "const int *" -> "const int*"
 static bool
 hasTopLevelIndirectParameterSelectorSpelling(llvm::StringRef Spelling) {
   unsigned Depth = 0;
@@ -54,6 +56,8 @@ hasTopLevelIndirectParameterSelectorSpelling(llvm::StringRef Spelling) {
   return false;
 }
 
+// Return true when a space sits next to selector punctuation.
+// The space in "int *" is dropped, but the space in "unsigned int" is kept.
 static bool shouldDropParameterSelectorSpace(char Previous, char Next) {
   if (Previous == '<' || Previous == ',' || Next == '>' || Next == ',' ||
       Next == '<')
@@ -68,6 +72,8 @@ static bool shouldDropParameterSelectorSpace(char Previous, char Next) {
   return false;
 }
 
+// Collapse runs of whitespace between tokens.
+// "  unsigned   int  " -> "unsigned int"
 static std::string
 collapseParameterSelectorWhitespace(llvm::StringRef Spelling) {
   llvm::SmallVector<llvm::StringRef, 4> Tokens;
@@ -75,12 +81,16 @@ collapseParameterSelectorWhitespace(llvm::StringRef Spelling) {
   return llvm::join(Tokens, " ");
 }
 
+// Normalize the short spelling for unsigned int.
+// "unsigned" -> "unsigned int"
 static llvm::StringRef normalizeUnsignedIntSpelling(llvm::StringRef Spelling) {
   if (Spelling == "unsigned")
     return "unsigned int";
   return Spelling;
 }
 
+// Strip const from by-value parameters only.
+// "const int" -> "int", but "const int *" stays unchanged here.
 static llvm::StringRef stripTopLevelValueConst(llvm::StringRef Spelling) {
   if (hasTopLevelIndirectParameterSelectorSpelling(Spelling))
     return Spelling;
@@ -92,6 +102,7 @@ static llvm::StringRef stripTopLevelValueConst(llvm::StringRef Spelling) {
 
 // Remove spaces around selector punctuation while preserving token-separating
 // spaces such as the one in "unsigned int".
+// "int *" -> "int*", "Box<int, double>" -> "Box<int,double>"
 static void removeParameterSelectorPunctuationSpaces(
     llvm::StringRef Spelling, llvm::SmallVectorImpl<char> &Normalized) {
   Normalized.clear();
@@ -105,6 +116,8 @@ static void removeParameterSelectorPunctuationSpaces(
   }
 }
 
+// Strip const from the pointer object itself.
+// "int* const" -> "int*", but "const int*" stays unchanged.
 static std::string stripTopLevelPointerConst(llvm::StringRef Spelling) {
   if (!Spelling.consume_back("*const") && !Spelling.consume_back("* const"))
     return Spelling.str();
@@ -114,6 +127,8 @@ static std::string stripTopLevelPointerConst(llvm::StringRef Spelling) {
   return WithoutTopLevelConst;
 }
 
+// Apply the full lexical selector normalization pipeline.
+// " const  int " -> "int", " int  *  const " -> "int*"
 std::string normalizeAPINotesParameterSelector(llvm::StringRef Spelling) {
   std::string Collapsed = collapseParameterSelectorWhitespace(Spelling);
 
