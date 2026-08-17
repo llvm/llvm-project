@@ -299,7 +299,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
 private:
   mlir::DataLayout *dl;
   const fir::LLVMTypeConverter *typeConverter;
-  std::string descriptorAllocFunction;
+  const std::string descriptorAllocFunction;
 };
 
 struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
@@ -357,7 +357,7 @@ struct CUFFreeOpConversion : public mlir::OpRewritePattern<cuf::FreeOp> {
   }
 
 private:
-  std::string descriptorFreeFunction;
+  const std::string descriptorFreeFunction;
 };
 
 struct CUFAllocateOpConversion
