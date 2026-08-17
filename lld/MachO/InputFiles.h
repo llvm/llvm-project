@@ -154,7 +154,7 @@ struct FDE {
   uint32_t funcLength;
   Symbol *personality;
   InputSection *lsda;
-  SmallVector<std::pair<uint32_t, uint8_t>> absifiedRanges;
+  SmallVector<std::pair<uint32_t, uint8_t>, 3> absifiedRanges;
 };
 
 // .o file

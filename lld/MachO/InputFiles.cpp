@@ -1560,7 +1560,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       ehRelocator.makePcRel(lsdaAddrOff, lsdaIsec, target->p2WordSize);
     }
 
-    SmallVector<std::pair<uint32_t, uint8_t>> absifiedRanges;
+    SmallVector<std::pair<uint32_t, uint8_t>, 3> absifiedRanges;
     if (config->icfLevel != ICFLevel::none) {
       // "abs-ified" relocations can have data embedded in their section data.
       // Record these offsets so ICF can fold these sections
@@ -1569,7 +1569,8 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       if (lsdaIsec)
         absifiedRanges.emplace_back(lsdaAddrOff, cie.lsdaPtrSize);
     }
-    fdes[isec] = {funcLength, cie.personalitySymbol, lsdaIsec, absifiedRanges};
+    fdes[isec] = {funcLength, cie.personalitySymbol, lsdaIsec,
+                  std::move(absifiedRanges)};
     funcSym->originalUnwindEntry = isec;
     ehRelocator.commit();
   }

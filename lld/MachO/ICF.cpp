@@ -628,8 +628,10 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
             continue;
           // Zero out "abs-ified" relocation section data so we can fold them
           MutableArrayRef<uint8_t> copy = unwindIsec->data.copy(bAlloc());
-          for (const auto &[offset, size] : fdesIt->second.absifiedRanges)
+          for (const auto &[offset, size] : fdesIt->second.absifiedRanges) {
+            assert(offset + size <= copy.size());
             memset(copy.data() + offset, 0, size);
+          }
           unwindIsec->data = copy;
         }
       }
