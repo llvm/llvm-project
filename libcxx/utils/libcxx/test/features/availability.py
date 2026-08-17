@@ -222,7 +222,11 @@ features += [
             # comment there and https://github.com/android/ndk/issues/693). Here it manifests as
             # std::stacktrace::current() silently capturing an empty/truncated trace rather than
             # a crash, so just treat stacktrace as unavailable on this narrow legacy combination.
-            "|| (target={{i686-linux-android.*}} && android-device-api={{2[123]}})",
+            "|| (target={{i686-linux-android.*}} && android-device-api={{2[123]}})"
+            # 32-bit x86 Windows: capture crashes outright (RtlCaptureContext's frame-pointer
+            # capture is unreliable on i686) rather than just producing a bad trace. Not treated
+            # as worth chasing further; declared unsupported here rather than fixed.
+            "|| target={{i686-.*windows.*}}",
             cfg.available_features,
         ),
     ),

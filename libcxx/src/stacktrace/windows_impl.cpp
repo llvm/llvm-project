@@ -32,9 +32,10 @@ bool get_func(HMODULE module, F** func, char const* name) {
 }
 
 // clang-format off
-BOOL   (WINAPI* EnumProcessModules)(HANDLE, HMODULE*, DWORD, LPDWORD);
-BOOL   (WINAPI* GetModuleInformation)(HANDLE, HMODULE, LPMODULEINFO, DWORD);
-DWORD  (WINAPI* GetModuleBaseNameW)(HANDLE, HMODULE, LPWSTR, DWORD);
+BOOL   (WINAPI*   EnumProcessModules)(HANDLE, HMODULE*, DWORD, LPDWORD);
+BOOL   (WINAPI*   GetModuleInformation)(HANDLE, HMODULE, LPMODULEINFO, DWORD);
+DWORD  (WINAPI*   GetModuleBaseNameW)(HANDLE, HMODULE, LPWSTR, DWORD);
+PIMAGE_NT_HEADERS (WINAPI* ImageNtHeader)(PVOID);
 BOOL   (WINAPI* SymCleanup)(HANDLE);
 DWORD  (WINAPI* SymGetOptions)();
 BOOL   (WINAPI* SymGetSearchPathW)(HANDLE, PWSTR, DWORD);
@@ -42,15 +43,25 @@ BOOL   (WINAPI* SymInitialize)(HANDLE, PCSTR, BOOL);
 DWORD  (WINAPI* SymSetOptions)(DWORD);
 BOOL   (WINAPI* SymSetSearchPathW)(HANDLE, PCWSTR);
 #  ifdef _WIN64
+PVOID  (WINAPI* SymFunctionTableAccess)(HANDLE, DWORD64);
 BOOL   (WINAPI* SymGetLineFromAddr)(HANDLE, DWORD64, PDWORD, IMAGEHLP_LINE64*);
+DWORD64(WINAPI* SymGetModuleBase)(HANDLE, DWORD64);
 BOOL   (WINAPI* SymGetModuleInfo)(HANDLE, DWORD64, PIMAGEHLP_MODULE64);
 BOOL   (WINAPI* SymGetSymFromAddr)(HANDLE, DWORD64, PDWORD64, PIMAGEHLP_SYMBOL64);
 DWORD64(WINAPI* SymLoadModule)(HANDLE, HANDLE, PCSTR, PCSTR, DWORD64, DWORD);
+BOOL   (WINAPI* StackWalk)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64, PVOID,
+                             PREAD_PROCESS_MEMORY_ROUTINE64, PFUNCTION_TABLE_ACCESS_ROUTINE64,
+                             PGET_MODULE_BASE_ROUTINE64, PTRANSLATE_ADDRESS_ROUTINE64);
 #  else
+PVOID  (WINAPI* SymFunctionTableAccess)(HANDLE, DWORD);
 BOOL   (WINAPI* SymGetLineFromAddr)(HANDLE, DWORD, PDWORD, IMAGEHLP_LINE*);
+DWORD  (WINAPI* SymGetModuleBase)(HANDLE, DWORD);
 BOOL   (WINAPI* SymGetModuleInfo)(HANDLE, DWORD, PIMAGEHLP_MODULE);
 BOOL   (WINAPI* SymGetSymFromAddr)(HANDLE, DWORD, PDWORD, PIMAGEHLP_SYMBOL);
 DWORD  (WINAPI* SymLoadModule)(HANDLE, HANDLE, PCSTR, PCSTR, DWORD, DWORD);
+BOOL   (WINAPI* StackWalk)(DWORD, HANDLE, HANDLE, STACKFRAME*, PVOID,
+                             PREAD_PROCESS_MEMORY_ROUTINE, PFUNCTION_TABLE_ACCESS_ROUTINE,
+                             PGET_MODULE_BASE_ROUTINE, PTRANSLATE_ADDRESS_ROUTINE);
 #  endif
 // clang-format on
 
@@ -80,6 +91,7 @@ bool loadFuncs() {
       && get_func(psapi, &EnumProcessModules, "EnumProcessModules")
       && get_func(psapi, &GetModuleInformation, "GetModuleInformation")
       && get_func(psapi, &GetModuleBaseNameW, "GetModuleBaseNameW")
+      && get_func(dbghelp, &ImageNtHeader, "ImageNtHeader")
       && get_func(dbghelp, &SymCleanup, "SymCleanup")
       && get_func(dbghelp, &SymGetOptions, "SymGetOptions")
       && get_func(dbghelp, &SymGetSearchPathW, "SymGetSearchPathW")
@@ -87,12 +99,18 @@ bool loadFuncs() {
       && get_func(dbghelp, &SymSetOptions, "SymSetOptions")
       && get_func(dbghelp, &SymSetSearchPathW, "SymSetSearchPathW")
 #ifdef _WIN64
+      && get_func(dbghelp, &StackWalk, "StackWalk64")
+      && get_func(dbghelp, &SymFunctionTableAccess, "SymFunctionTableAccess64")
       && get_func(dbghelp, &SymGetLineFromAddr, "SymGetLineFromAddr64")
+      && get_func(dbghelp, &SymGetModuleBase, "SymGetModuleBase64")
       && get_func(dbghelp, &SymGetModuleInfo, "SymGetModuleInfo64")
       && get_func(dbghelp, &SymGetSymFromAddr, "SymGetSymFromAddr64")
       && get_func(dbghelp, &SymLoadModule, "SymLoadModule64")
 #else
+      && get_func(dbghelp, &StackWalk, "StackWalk")
+      && get_func(dbghelp, &SymFunctionTableAccess, "SymFunctionTableAccess")
       && get_func(dbghelp, &SymGetLineFromAddr, "SymGetLineFromAddr")
+      && get_func(dbghelp, &SymGetModuleBase, "SymGetModuleBase")
       && get_func(dbghelp, &SymGetModuleInfo, "SymGetModuleInfo")
       && get_func(dbghelp, &SymGetSymFromAddr, "SymGetSymFromAddr")
       && get_func(dbghelp, &SymLoadModule, "SymLoadModule")
@@ -132,6 +150,10 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
   std::lock_guard<std::mutex> api_guard(api_mutex);
 
   HANDLE proc = GetCurrentProcess();
+  HMODULE exe = GetModuleHandleW(nullptr);
+  if (!exe) {
+    return;
+  }
 
   SymInitScope symscope(proc);
 
@@ -161,23 +183,54 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
     }
   }
 
+  IMAGE_NT_HEADERS* nt_headers;
+  if (!(nt_headers = ImageNtHeader(exe))) {
+    return;
+  }
+
   SymSetOptions(SymGetOptions() | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
+
+  HANDLE thread = GetCurrentThread();
+  int machine   = nt_headers->FileHeader.Machine;
+
+  CONTEXT ccx;
+  RtlCaptureContext(&ccx);
+
+#  if defined(_M_AMD64)
+  STACKFRAME64 frame{};
+  frame.AddrPC.Offset    = ccx.Rip;
+  frame.AddrStack.Offset = ccx.Rsp;
+  frame.AddrFrame.Offset = ccx.Rbp;
+#  elif defined(_M_ARM64)
+  STACKFRAME64 frame{};
+  frame.AddrPC.Offset    = ccx.Pc;
+  frame.AddrStack.Offset = ccx.Sp;
+  frame.AddrFrame.Offset = ccx.Fp;
+#  elif defined(_M_IX86)
+  STACKFRAME frame{};
+  frame.AddrPC.Offset    = ccx.Eip;
+  frame.AddrStack.Offset = ccx.Esp;
+  frame.AddrFrame.Offset = ccx.Ebp;
+#  else
+#    error unrecognized architecture
+#  endif
+
+  frame.AddrPC.Mode    = AddrModeFlat;
+  frame.AddrStack.Mode = AddrModeFlat;
+  frame.AddrFrame.Mode = AddrModeFlat;
 
   // Skip call to this `current_impl` func
   ++skip;
 
-  // CaptureStackBackTrace is implemented directly by the OS (ntdll's
-  // RtlCaptureStackBackTrace) rather than through RtlCaptureContext + StackWalk, so it
-  // needs no seeded CONTEXT and no per-architecture register mapping.
-  // More importantly it also sidesteps a documented bug in RtlCaptureContext's
-  // frame-pointer capture on i686, which was causing every capture to crash there.
-  PVOID raw_addrs[_Trace::__absolute_max_depth];
-  DWORD to_capture = DWORD(max_depth > _Trace::__absolute_max_depth ? _Trace::__absolute_max_depth : max_depth);
-  DWORD captured   = CaptureStackBackTrace(DWORD(skip), to_capture, raw_addrs, nullptr);
+  while (max_depth) {
+    if (!StackWalk(machine, proc, thread, &frame, &ccx, nullptr, SymFunctionTableAccess, SymGetModuleBase, nullptr)) {
+      break;
+    }
 
-  for (DWORD i = 0; i < captured; i++) {
-    auto raw_addr = reinterpret_cast<uintptr_t>(raw_addrs[i]);
-    if (!raw_addr) {
+    if (skip && skip--) {
+      continue;
+    }
+    if (!frame.AddrPC.Offset) {
       break;
     }
 
@@ -187,7 +240,7 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
     // function call. This assumes the more common (presumably) case of
     // normal function calls, so we'll always back up 1 byte to get into the
     // previous (calling) instruction.
-    entry.__addr_ = raw_addr - 1;
+    entry.__addr_ = frame.AddrPC.Offset - 1;
 
     // Get the filename of the module containing this calling instruction,
     // i.e. the program itself or a DLL.  This is used in place of the source
@@ -195,9 +248,11 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
     // If the source file can be determined this will be overwritten.
     IMAGEHLP_MODULE mod_info{};
     mod_info.SizeOfStruct = sizeof(mod_info);
-    if (SymGetModuleInfo(proc, raw_addr, &mod_info)) {
+    if (SymGetModuleInfo(proc, frame.AddrPC.Offset, &mod_info)) {
       entry.__file_.__assign(mod_info.LoadedImageName);
     }
+
+    --max_depth;
   }
 
   DWORD need_bytes = 0;
