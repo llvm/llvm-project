@@ -156,6 +156,10 @@ struct VariantMatchInfo {
   SmallVector<StringRef, 8> ISATraits;
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
+
+  /// True if this variant has a user condition that could not be evaluated at
+  /// compile time (non-constant expression).
+  bool HasNonConstantUserCondition = false;
 };
 
 /// The context for a source location is made up of active property traits,

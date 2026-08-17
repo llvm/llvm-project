@@ -3086,8 +3086,10 @@ void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
           VMI.addTrait(CondVal->isZero() ? TraitProperty::user_condition_false
                                          : TraitProperty::user_condition_true,
                        "<condition>");
-        else
+        else {
           VMI.addTrait(TraitProperty::user_condition_false, "<condition>");
+          VMI.HasNonConstantUserCondition = true;
+        }
         continue;
       }
 
