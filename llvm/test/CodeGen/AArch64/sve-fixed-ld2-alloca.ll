@@ -9,37 +9,33 @@ declare void @def(ptr)
 define void @st1d_fixed(ptr %ptr) #0 {
 ; CHECK-IAENABLED-LABEL: st1d_fixed:
 ; CHECK-IAENABLED:       // %bb.0:
-; CHECK-IAENABLED-NEXT:    sub sp, sp, #160
-; CHECK-IAENABLED-NEXT:    stp x20, x19, [sp, #144] // 16-byte Folded Spill
+; CHECK-IAENABLED-NEXT:    sub sp, sp, #144
+; CHECK-IAENABLED-NEXT:    stp x30, x19, [sp, #128] // 16-byte Folded Spill
 ; CHECK-IAENABLED-NEXT:    mov x19, x0
 ; CHECK-IAENABLED-NEXT:    mov x0, sp
-; CHECK-IAENABLED-NEXT:    str x30, [sp, #128] // 8-byte Spill
-; CHECK-IAENABLED-NEXT:    mov x20, sp
 ; CHECK-IAENABLED-NEXT:    bl def
 ; CHECK-IAENABLED-NEXT:    ptrue p0.d
-; CHECK-IAENABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
-; CHECK-IAENABLED-NEXT:    ldr x30, [sp, #128] // 8-byte Reload
+; CHECK-IAENABLED-NEXT:    mov x8, sp
+; CHECK-IAENABLED-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x8]
 ; CHECK-IAENABLED-NEXT:    str z0, [x19]
-; CHECK-IAENABLED-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
-; CHECK-IAENABLED-NEXT:    add sp, sp, #160
+; CHECK-IAENABLED-NEXT:    ldp x30, x19, [sp, #128] // 16-byte Folded Reload
+; CHECK-IAENABLED-NEXT:    add sp, sp, #144
 ; CHECK-IAENABLED-NEXT:    ret
 ;
 ; CHECK-IADISABLED-LABEL: st1d_fixed:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    sub sp, sp, #160
-; CHECK-IADISABLED-NEXT:    stp x20, x19, [sp, #144] // 16-byte Folded Spill
+; CHECK-IADISABLED-NEXT:    sub sp, sp, #144
+; CHECK-IADISABLED-NEXT:    stp x30, x19, [sp, #128] // 16-byte Folded Spill
 ; CHECK-IADISABLED-NEXT:    mov x19, x0
 ; CHECK-IADISABLED-NEXT:    mov x0, sp
-; CHECK-IADISABLED-NEXT:    str x30, [sp, #128] // 8-byte Spill
-; CHECK-IADISABLED-NEXT:    mov x20, sp
 ; CHECK-IADISABLED-NEXT:    bl def
-; CHECK-IADISABLED-NEXT:    ldr z0, [x20, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x20]
-; CHECK-IADISABLED-NEXT:    ldr x30, [sp, #128] // 8-byte Reload
+; CHECK-IADISABLED-NEXT:    mov x8, sp
+; CHECK-IADISABLED-NEXT:    ldr z0, [x8, #1, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z1, [x8]
 ; CHECK-IADISABLED-NEXT:    uzp1 z0.d, z1.d, z0.d
 ; CHECK-IADISABLED-NEXT:    str z0, [x19]
-; CHECK-IADISABLED-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
-; CHECK-IADISABLED-NEXT:    add sp, sp, #160
+; CHECK-IADISABLED-NEXT:    ldp x30, x19, [sp, #128] // 16-byte Folded Reload
+; CHECK-IADISABLED-NEXT:    add sp, sp, #144
 ; CHECK-IADISABLED-NEXT:    ret
   %alloc = alloca [16 x double]
   call void @def(ptr %alloc)
@@ -52,20 +48,18 @@ define void @st1d_fixed(ptr %ptr) #0 {
 define void @st1d_fixed_intrinsic(ptr %ptr) #0 {
 ; CHECK-LABEL: st1d_fixed_intrinsic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #160
-; CHECK-NEXT:    stp x20, x19, [sp, #144] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #144
+; CHECK-NEXT:    stp x30, x19, [sp, #128] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x0, sp
-; CHECK-NEXT:    str x30, [sp, #128] // 8-byte Spill
-; CHECK-NEXT:    mov x20, sp
 ; CHECK-NEXT:    bl def
-; CHECK-NEXT:    ldr z0, [x20, #1, mul vl]
-; CHECK-NEXT:    ldr z1, [x20]
-; CHECK-NEXT:    ldr x30, [sp, #128] // 8-byte Reload
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ldr z0, [x8, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [x8]
 ; CHECK-NEXT:    uzp1 z0.d, z1.d, z0.d
 ; CHECK-NEXT:    str z0, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #160
+; CHECK-NEXT:    ldp x30, x19, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #144
 ; CHECK-NEXT:    ret
   %alloc = alloca [16 x double]
   call void @def(ptr %alloc)

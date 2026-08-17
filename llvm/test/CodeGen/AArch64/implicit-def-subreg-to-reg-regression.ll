@@ -27,7 +27,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    .cfi_offset w26, -80
 ; CHECK-NEXT:    .cfi_offset w27, -88
 ; CHECK-NEXT:    .cfi_offset w28, -96
-; CHECK-NEXT:    mov w19, w6
+; CHECK-NEXT:    mov w28, w6
 ; CHECK-NEXT:    mov w20, w5
 ; CHECK-NEXT:    mov x21, x4
 ; CHECK-NEXT:    mov x22, x3
@@ -39,7 +39,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    adrp x27, LJTI0_0@PAGE
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    add x27, x27, LJTI0_0@PAGEOFF
-; CHECK-NEXT:    mov w28, #1 ; =0x1
+; CHECK-NEXT:    mov w19, #1 ; =0x1
 ; CHECK-NEXT:    ; implicit-def: $w8
 ; CHECK-NEXT:    str x8, [sp, #40] ; 8-byte Spill
 ; CHECK-NEXT:    b LBB0_2
@@ -64,7 +64,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    br x8
 ; CHECK-NEXT:  LBB0_4: ; %bb9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    str w28, [x23]
+; CHECK-NEXT:    str w19, [x23]
 ; CHECK-NEXT:    b LBB0_2
 ; CHECK-NEXT:  LBB0_5: ; %bb8
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -75,7 +75,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    str x8, [sp, #40] ; 8-byte Spill
-; CHECK-NEXT:    tbz w19, #0, LBB0_2
+; CHECK-NEXT:    tbz w28, #0, LBB0_2
 ; CHECK-NEXT:  ; %bb.7: ; %bb14
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    mov x0, xzr

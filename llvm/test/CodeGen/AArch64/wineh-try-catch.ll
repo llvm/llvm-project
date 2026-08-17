@@ -15,11 +15,10 @@
 ; We check this offset in the table later on.
 
 ; CHECK-LABEL: "?func@@YAHXZ":
-; CHECK:       stp     x19, x20, [sp, #-64]!
-; CHECK:       str     x21, [sp, #16]
-; CHECK:       str     x28, [sp, #24]
-; CHECK:       stp     x29, x30, [sp, #32]
-; CHECK:       add     x29, sp, #32
+; CHECK:       str     x19, [sp, #-48]!
+; CHECK:       str     x28, [sp, #8]
+; CHECK:       stp     x29, x30, [sp, #16]
+; CHECK:       add     x29, sp, #16
 ; CHECK:       sub     sp, sp, #608
 ; CHECK:       mov     x19, sp
 ; CHECK:       mov     x0, #-2
@@ -47,11 +46,10 @@
 ; CHECK-LABEL: "?catch$4@?0??func@@YAHXZ@4HA":
 
 ; Check that the stack space is allocated only for the callee saved registers.
-; CHECK:       stp     x19, x20, [sp, #-48]!
-; CHECK:       str     x21, [sp, #16]
-; CHECK:       str     x28, [sp, #24]
-; CHECK:       stp     x29, x30, [sp, #32]
-; CHECK:       add     x20, x19, #0
+; CHECK:       str     x19, [sp, #-32]!
+; CHECK:       str     x28, [sp, #8]
+; CHECK:       stp     x29, x30, [sp, #16]
+; CHECK:       add     x0, x19, #0
 
 ; Check that there are no further stack updates.
 ; CHECK-NOT:   sub     sp, sp
@@ -85,18 +83,16 @@
 
 ; UNWIND: Function: ?func@@YAHXZ (0x0)
 ; UNWIND: Prologue [
-; UNWIND-NEXT: ; add fp, sp, #32
-; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
-; UNWIND-NEXT: ; str x28, [sp, #24]
-; UNWIND-NEXT: ; str x21, [sp, #16]
-; UNWIND-NEXT: ; stp x19, x20, [sp, #-64]!
+; UNWIND-NEXT: ; add fp, sp, #16
+; UNWIND-NEXT: ; stp x29, x30, [sp, #16]
+; UNWIND-NEXT: ; str x28, [sp, #8]
+; UNWIND-NEXT: ; str x19, [sp, #-48]!
 ; UNWIND-NEXT: ; end
 ; UNWIND: Function: ?catch$4@?0??func@@YAHXZ@4HA
 ; UNWIND: Prologue [
-; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
-; UNWIND-NEXT: ; str x28, [sp, #24]
-; UNWIND-NEXT: ; str x21, [sp, #16]
-; UNWIND-NEXT: ; stp x19, x20, [sp, #-48]!
+; UNWIND-NEXT: ; stp x29, x30, [sp, #16]
+; UNWIND-NEXT: ; str x28, [sp, #8]
+; UNWIND-NEXT: ; str x19, [sp, #-32]!
 ; UNWIND-NEXT: ; end
 
 target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"

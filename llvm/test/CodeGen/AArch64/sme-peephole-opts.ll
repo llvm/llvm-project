@@ -225,15 +225,16 @@ define void @test7() nounwind "aarch64_inout_zt0" {
 ; CHECK-LABEL: test7:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    mov x19, sp
-; CHECK-NEXT:    str zt0, [x19]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEXT:    str zt0, [x8]
 ; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    ldr zt0, [x19]
-; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ldr zt0, [x8]
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
   call void @callee()
