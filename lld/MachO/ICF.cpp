@@ -623,7 +623,8 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
           if (!obj)
             continue;
           auto fdesIt = obj->fdes.find(unwindIsec);
-          if (fdesIt == obj->fdes.end() || fdesIt->second.absifiedRanges.empty())
+          if (fdesIt == obj->fdes.end() ||
+              fdesIt->second.absifiedRanges.empty())
             continue;
           // Zero out "abs-ified" relocation section data so we can fold them
           MutableArrayRef<uint8_t> copy = unwindIsec->data.copy(bAlloc());
