@@ -838,6 +838,65 @@ static llvm::EquivalenceClasses<Value> computeTiedSuccessorInputs(
 /// }
 /// There are two sets: {{%r1}, {%r2}}. Each set has one value, so there each
 /// value can be removed independently of the other values.
+/// Augment `tied` with *structural* ties between successor inputs that are
+/// forwarded from the same region-terminator operand.
+///
+/// `getSuccessorOperandInputMapping` is built from the op's
+/// `getSuccessorRegions`, which may be refined by control-flow precision. For
+/// example, `scf.for` with a statically-known trip count of 1 drops its
+/// region->region back edge (the loop provably never iterates back). That back
+/// edge is what forwards a region terminator operand to the region iter_args;
+/// without it, the iter_arg and its corresponding op result are no longer tied
+/// through a shared operand, and `RemoveDeadRegionBranchOpSuccessorInputs` may
+/// remove a dead iter_arg without its (structurally required) result, producing
+/// a structurally invalid op.
+///
+/// The structural tie exists regardless of trip count: for a single-region
+/// self-looping op (e.g. `scf.for`, `scf.forall`), the region terminator
+/// forwards each operand both to a region iter_arg (self/back edge) and to the
+/// corresponding op result (exit edge), so those two inputs must be added or
+/// removed together. Reconstruct that coupling by querying the terminator's
+/// operands for both edges explicitly, independent of the (possibly refined)
+/// `getSuccessorRegions`.
+static void
+augmentWithStructuralTerminatorTies(RegionBranchOpInterface branchOp,
+                                    llvm::EquivalenceClasses<Value> &tied) {
+  Operation *op = branchOp.getOperation();
+  // Only single-region ops have a region->same-region back edge. For
+  // multi-region ops (e.g. scf.while/scf.if) the terminator does not branch to
+  // its own region, and querying that edge is invalid.
+  if (op->getNumRegions() != 1)
+    return;
+  Region &region = op->getRegion(0);
+  if (region.empty())
+    return;
+  auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
+      region.back().getTerminator());
+  if (!terminator)
+    return;
+
+  DenseMap<OpOperand *, Value> operandToInput;
+  auto record = [&](OperandRange ops, ValueRange inputs) {
+    if (ops.size() != inputs.size())
+      return;
+    for (auto [operand, input] :
+         llvm::zip_equal(operandsToOpOperands(ops), inputs)) {
+      auto [it, inserted] = operandToInput.try_emplace(&operand, input);
+      tied.insert(input);
+      if (!inserted)
+        tied.unionSets(it->second, input);
+    }
+  };
+  // Exit edge: terminator operands -> op results.
+  RegionSuccessor exitEdge(op);
+  record(terminator.getSuccessorOperands(exitEdge),
+         branchOp.getSuccessorInputs(exitEdge));
+  // Self/back edge: terminator operands -> region iter_args.
+  RegionSuccessor backEdge(&region);
+  record(terminator.getSuccessorOperands(backEdge),
+         branchOp.getSuccessorInputs(backEdge));
+}
+
 struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
   RemoveDeadRegionBranchOpSuccessorInputs(MLIRContext *context, StringRef name,
                                           PatternBenefit benefit = 1)
@@ -856,6 +915,12 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
     regionBranchOp.getSuccessorOperandInputMapping(operandToInputs);
     llvm::EquivalenceClasses<Value> tiedSuccessorInputs =
         computeTiedSuccessorInputs(operandToInputs);
+    // The successor-operand/input mapping above is derived from
+    // `getSuccessorRegions`, which may drop structurally-required edges for
+    // control-flow precision (e.g. the back edge of a statically-single-trip
+    // loop). Add back the structural ties so that a region iter_arg is never
+    // removed without its corresponding op result.
+    augmentWithStructuralTerminatorTies(regionBranchOp, tiedSuccessorInputs);
 
     // Determine which values to remove and group them by block and operation.
     SmallVector<Value> valuesToRemove;
