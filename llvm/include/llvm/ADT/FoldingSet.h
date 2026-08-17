@@ -16,7 +16,6 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -46,7 +45,7 @@ namespace llvm {
 /// FoldingSetNode.  The node class must also define a Profile method used to
 /// establish the unique bits of data for the node.  The Profile method is
 /// passed a FoldingSetNodeID object which is used to gather the bits.  Just
-/// call one of the Add* functions defined in the FoldingSetBase::NodeID class.
+/// call one of the Add* functions defined in the FoldingSetNodeID class.
 /// NOTE: That the folding set does not own the nodes and it is the
 /// responsibility of the user to dispose of the nodes.
 ///
@@ -328,11 +327,11 @@ public:
   unsigned size() const { return NumNodes; }
 
   /// Returns true if there are no nodes in the folding set.
-  bool empty() const { return NumNodes == 0; }
+  [[nodiscard]] bool empty() const { return NumNodes == 0; }
 
   /// Returns the number of nodes permitted in the folding set
   /// before a rebucket operation is performed.
-  unsigned capacity() {
+  unsigned capacity() const {
     // We allow a load factor of up to 2.0,
     // so that means our capacity is NumBuckets * 2
     return NumBuckets * 2;
@@ -458,7 +457,7 @@ public:
   /// won't cause a rebucket operation. reserve is permitted to allocate more
   /// space than requested by EltCount.
   void reserve(unsigned EltCount) {
-    return FoldingSetBase::reserve(EltCount, Derived::getFoldingSetInfo());
+    FoldingSetBase::reserve(EltCount, Derived::getFoldingSetInfo());
   }
 
   /// Remove a node from the folding set, returning true if one
@@ -670,7 +669,7 @@ public:
   unsigned size() const { return Set.size(); }
 
   /// Returns true if there are no nodes in the folding set.
-  bool empty() const { return Set.empty(); }
+  [[nodiscard]] bool empty() const { return Set.empty(); }
 };
 
 //===----------------------------------------------------------------------===//

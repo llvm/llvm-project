@@ -162,6 +162,7 @@ static FoldingSetBase::Node *GetNextPtr(void *NextInBucketPtr) {
   return static_cast<FoldingSetBase::Node *>(NextInBucketPtr);
 }
 
+/// GetBucketPtr - Provides a casting of a bucket pointer for isNode
 /// testing.
 static void **GetBucketPtr(void *NextInBucketPtr) {
   intptr_t Ptr = reinterpret_cast<intptr_t>(NextInBucketPtr);
