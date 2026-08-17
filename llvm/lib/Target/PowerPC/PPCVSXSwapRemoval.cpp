@@ -611,7 +611,12 @@ void PPCVSXSwapRemoval::formWebs() {
       if (!MO.isUse())
         continue;
 
-      MachineInstr* DefMI = MRI->getVRegDef(Reg);
+      MachineInstr *DefMI = MRI->getVRegDef(Reg);
+      if (!DefMI) {
+        SwapVector[EntryIdx].MentionsPhysVR = 1;
+        continue;
+      }
+
       assert(SwapMap.contains(DefMI) &&
              "Inconsistency: def of vector reg not found in swap map!");
       int DefIdx = SwapMap[DefMI];
