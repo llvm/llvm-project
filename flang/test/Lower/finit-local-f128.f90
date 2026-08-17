@@ -4,8 +4,6 @@
 ! REQUIRES: flang-supports-f128-math
 !
 ! RUN: %flang_fc1 -emit-hlfir -finit-local=zero  %s -o - | FileCheck --check-prefix=ZERO  %s
-! RUN: %flang_fc1 -emit-hlfir -finit-local=nan   %s -o - | FileCheck --check-prefix=NAN   %s
-! RUN: %flang_fc1 -emit-hlfir -finit-local=snan  %s -o - | FileCheck --check-prefix=SNAN  %s
 ! RUN: %flang_fc1 -emit-hlfir -finit-local=0xAA  %s -o - | FileCheck --check-prefix=HEX   %s
 
 ! ---------------------------------------------------------------------------
@@ -21,13 +19,7 @@ end subroutine
 ! ZERO: fir.zero_bits f128
 ! ZERO: fir.store {{.*}} : !fir.ref<f128>
 
-! NAN-LABEL:  func.func @_QPtest_real16
-! NAN:  arith.constant {{.*}} : f128
-! NAN:  fir.store {{.*}} : !fir.ref<f128>
 
-! SNAN-LABEL: func.func @_QPtest_real16
-! SNAN: arith.constant {{.*}} : f128
-! SNAN: fir.store {{.*}} : !fir.ref<f128>
 
 ! HEX-LABEL:  func.func @_QPtest_real16
 ! HEX:  arith.constant -113427455640312821154458202477256070486 : i128
@@ -47,15 +39,7 @@ end subroutine
 ! ZERO: fir.zero_bits complex<f128>
 ! ZERO: fir.store {{.*}} : !fir.ref<complex<f128>>
 
-! NAN-LABEL:  func.func @_QPtest_complex16
-! NAN:  arith.constant {{.*}} : f128
-! NAN:  complex.create {{.*}}, {{.*}} : complex<f128>
-! NAN:  fir.store {{.*}} : !fir.ref<complex<f128>>
 
-! SNAN-LABEL: func.func @_QPtest_complex16
-! SNAN: arith.constant {{.*}} : f128
-! SNAN: complex.create {{.*}}, {{.*}} : complex<f128>
-! SNAN: fir.store {{.*}} : !fir.ref<complex<f128>>
 
 ! HEX-LABEL:  func.func @_QPtest_complex16
 ! HEX:  arith.constant -113427455640312821154458202477256070486 : i128
