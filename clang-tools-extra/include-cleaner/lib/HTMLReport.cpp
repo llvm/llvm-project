@@ -26,6 +26,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
+#include "llvm/Support/Path.h"
 
 namespace clang::include_cleaner {
 namespace {

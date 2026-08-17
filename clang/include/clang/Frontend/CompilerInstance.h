@@ -558,10 +558,7 @@ public:
     return *Context;
   }
 
-  IntrusiveRefCntPtr<ASTContext> getASTContextPtr() const {
-    assert(Context && "Compiler instance has no AST context!");
-    return Context;
-  }
+  IntrusiveRefCntPtr<ASTContext> getASTContextPtr() const;
 
   void resetAndLeakASTContext() {
     llvm::BuryPointer(Context.get());

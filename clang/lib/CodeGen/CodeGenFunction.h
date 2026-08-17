@@ -44,6 +44,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
+#include "clang/AST/Attr.h"
 
 namespace llvm {
 class BasicBlock;

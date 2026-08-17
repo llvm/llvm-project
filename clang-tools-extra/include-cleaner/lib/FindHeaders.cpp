@@ -30,6 +30,7 @@
 #include <queue>
 #include <set>
 #include <utility>
+#include "llvm/Support/Path.h"
 
 namespace clang::include_cleaner {
 namespace {

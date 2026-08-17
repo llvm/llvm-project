@@ -47,6 +47,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "clang/AST/ASTContext.h"
 
 namespace clang {
 namespace clangd {

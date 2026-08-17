@@ -10,12 +10,17 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H
 
-#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
+
+namespace clang {
+// Only ever named through a pointer here, so the generated attribute
+// class definitions are not needed.
+class LifetimeBoundAttr;
+} // namespace clang
 
 namespace clang ::lifetimes {
 

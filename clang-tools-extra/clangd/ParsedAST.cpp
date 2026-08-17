@@ -80,6 +80,7 @@
 #if CLANGD_TIDY_CHECKS
 #define CLANG_TIDY_DISABLE_STATIC_ANALYZER_CHECKS
 #include "../clang-tidy/ClangTidyForceLinker.h"
+#include "clang/Lex/PreprocessingRecord.h"
 #endif
 
 namespace clang {

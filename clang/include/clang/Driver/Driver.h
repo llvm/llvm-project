@@ -33,6 +33,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace llvm {
 class Triple;

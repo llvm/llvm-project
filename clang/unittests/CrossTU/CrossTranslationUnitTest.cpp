@@ -17,6 +17,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "gtest/gtest.h"
 #include <cassert>
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 
 namespace clang {
 namespace cross_tu {

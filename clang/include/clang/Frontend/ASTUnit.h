@@ -47,6 +47,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace llvm {
 

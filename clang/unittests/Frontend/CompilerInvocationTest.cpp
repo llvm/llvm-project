@@ -15,6 +15,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

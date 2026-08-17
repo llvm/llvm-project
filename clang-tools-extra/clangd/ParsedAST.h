@@ -36,6 +36,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include "clang/AST/DeclCXX.h"
 
 namespace clang {
 class HeuristicResolver;

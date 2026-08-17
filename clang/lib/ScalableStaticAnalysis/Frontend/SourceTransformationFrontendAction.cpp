@@ -29,6 +29,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "clang/AST/ASTContext.h"
 
 using namespace clang;
 using namespace ssaf;

@@ -70,6 +70,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
@@ -118,6 +119,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 using namespace clang::serialization;

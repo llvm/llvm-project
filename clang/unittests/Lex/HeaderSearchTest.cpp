@@ -20,6 +20,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <string>
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace {

@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <limits>
 #include <optional>
+#include "clang/AST/Attr.h"
 
 #define DEBUG_TYPE "FindSymbols"
 

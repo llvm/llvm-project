@@ -18,6 +18,7 @@
 
 #include "gtest/gtest.h"
 #include <string>
+#include "clang/Lex/Preprocessor.h"
 
 namespace clang {
 namespace {

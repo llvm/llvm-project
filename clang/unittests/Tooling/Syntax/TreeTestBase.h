@@ -25,6 +25,7 @@
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace syntax {

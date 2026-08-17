@@ -29,6 +29,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "clang/AST/ASTContext.h"
 
 using namespace cir;
 using namespace clang;

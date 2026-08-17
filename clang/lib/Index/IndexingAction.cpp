@@ -9,6 +9,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "IndexingContext.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Index/IndexDataConsumer.h"

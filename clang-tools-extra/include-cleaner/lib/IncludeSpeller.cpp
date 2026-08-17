@@ -14,6 +14,7 @@
 #include "llvm/Support/Registry.h"
 #include <memory>
 #include <string>
+#include "llvm/Support/VirtualFileSystem.h"
 
 LLVM_INSTANTIATE_REGISTRY(clang::include_cleaner::IncludeSpellingStrategy)
 

@@ -22,6 +22,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <optional>
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 

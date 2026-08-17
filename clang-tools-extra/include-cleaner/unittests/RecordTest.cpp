@@ -36,6 +36,7 @@
 #include <memory>
 #include <optional>
 #include <utility>
+#include "clang/Lex/Preprocessor.h"
 
 namespace clang::include_cleaner {
 namespace {

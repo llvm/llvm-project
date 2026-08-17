@@ -20,6 +20,8 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PPCallbacks.h"
 
 using namespace llvm;
 using namespace clang;

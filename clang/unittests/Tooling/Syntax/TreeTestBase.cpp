@@ -31,6 +31,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
+#include "clang/AST/ASTContext.h"
 
 using namespace clang;
 using namespace clang::syntax;

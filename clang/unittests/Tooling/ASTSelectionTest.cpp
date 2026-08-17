@@ -10,6 +10,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include <optional>
+#include "clang/AST/ExprObjC.h"
 
 using namespace clang;
 using namespace tooling;

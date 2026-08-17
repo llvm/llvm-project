@@ -81,6 +81,7 @@
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/KCFIHash.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <optional>
 #include <set>
 

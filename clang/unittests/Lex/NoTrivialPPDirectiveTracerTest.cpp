@@ -21,6 +21,7 @@
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <initializer_list>
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 

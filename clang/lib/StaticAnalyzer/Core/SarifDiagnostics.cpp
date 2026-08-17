@@ -25,6 +25,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include <memory>
 
 using namespace llvm;

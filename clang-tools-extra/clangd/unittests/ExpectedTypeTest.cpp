@@ -15,6 +15,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
+#include "clang/Sema/CodeCompleteConsumer.h"
 
 namespace clang {
 namespace clangd {

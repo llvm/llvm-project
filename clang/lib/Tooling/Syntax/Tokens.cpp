@@ -28,6 +28,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "llvm/Support/Path.h"
 
 using namespace clang;
 using namespace clang::syntax;

@@ -19,6 +19,7 @@
 #include "llvm/Support/Locale.h"
 #include <algorithm>
 #include <optional>
+#include "llvm/Support/Path.h"
 
 using namespace clang;
 

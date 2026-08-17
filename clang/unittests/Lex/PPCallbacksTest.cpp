@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 

@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include "clang/AST/DeclTemplate.h"
 
 namespace clang {
 namespace clangd {

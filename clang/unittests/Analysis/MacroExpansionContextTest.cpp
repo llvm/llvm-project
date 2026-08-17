@@ -23,6 +23,7 @@
 #include "clang/Parse/Parser.h"
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 // static bool HACK_EnableDebugInUnitTest = (::llvm::DebugFlag = true);
 
