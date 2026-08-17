@@ -10098,6 +10098,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // Look through COPY instructions to find definition.
   while (DefMI->isCopy()) {
     Register CopyVReg = DefMI->getOperand(1).getReg();
+    if (!CopyVReg.isVirtual())
+      return false;
     if (!MRI->hasOneNonDBGUse(CopyVReg))
       return false;
     if (!MRI->hasOneDef(CopyVReg))
