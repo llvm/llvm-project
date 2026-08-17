@@ -134,8 +134,11 @@ EXCLUDE_MAC = {
     "bolt",
     "CIR",  # Depends on mlir, which is excluded below.
     "cross-project-tests",
+    "flang",
+    "flang-rt",
     "libc",
     "mlir",
+    "openmp",
     "polly",
     "libcxx",
     "libcxxabi",

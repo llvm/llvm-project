@@ -62,12 +62,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;flang;lld;lldb;llvm",
+            "clang;clang-tools-extra;lld;lldb;llvm",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-clang check-clang-python check-clang-tools check-flang "
-            "check-lld check-llvm",
+            "check-clang check-clang-python check-clang-tools check-lld check-llvm",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(
@@ -83,13 +82,11 @@ class TestComputeProjects(unittest.TestCase):
         env_variables = compute_projects.get_env_variables(
             ["mlir/CMakeLists.txt"], "Darwin"
         )
-        self.assertEqual(env_variables["projects_to_build"], "clang;flang;llvm")
-        self.assertEqual(env_variables["project_check_targets"], "check-flang")
+        self.assertEqual(env_variables["projects_to_build"], "")
+        self.assertEqual(env_variables["project_check_targets"], "")
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
-        self.assertEqual(
-            env_variables["runtimes_check_targets_needs_reconfig"], ""
-        )
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
         self.assertEqual(env_variables["enable_cir"], "OFF")
 
     def test_cir_mac(self):
@@ -275,32 +272,6 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "flang-rt;openmp")
         self.assertEqual(env_variables["runtimes_check_targets"], "check-flang-rt")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
-        self.assertEqual(env_variables["enable_cir"], "OFF")
-
-    def test_flang_mac(self):
-        env_variables = compute_projects.get_env_variables(
-            ["flang/CMakeLists.txt"], "Darwin"
-        )
-        self.assertEqual(env_variables["projects_to_build"], "clang;flang;lld;llvm")
-        self.assertEqual(env_variables["project_check_targets"], "check-flang")
-        self.assertEqual(env_variables["runtimes_to_build"], "flang-rt;openmp")
-        self.assertEqual(env_variables["runtimes_check_targets"], "check-flang-rt")
-        self.assertEqual(
-            env_variables["runtimes_check_targets_needs_reconfig"], ""
-        )
-        self.assertEqual(env_variables["enable_cir"], "OFF")
-
-    def test_openmp_mac(self):
-        env_variables = compute_projects.get_env_variables(
-            ["openmp/CMakeLists.txt"], "Darwin"
-        )
-        self.assertEqual(env_variables["projects_to_build"], "clang;lld")
-        self.assertEqual(env_variables["project_check_targets"], "")
-        self.assertEqual(env_variables["runtimes_to_build"], "openmp")
-        self.assertEqual(env_variables["runtimes_check_targets"], "openmp")
-        self.assertEqual(
-            env_variables["runtimes_check_targets_needs_reconfig"], ""
-        )
         self.assertEqual(env_variables["enable_cir"], "OFF")
 
     def test_invalid_subproject(self):
