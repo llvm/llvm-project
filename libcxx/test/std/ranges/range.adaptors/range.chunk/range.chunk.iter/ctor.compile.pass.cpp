@@ -21,12 +21,11 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-using ChunkView     = std::ranges::chunk_view<test_view<forward_iterator>>;
-using Iterator      = std::ranges::iterator_t<ChunkView>;
-using ConstIterator = std::ranges::iterator_t<const ChunkView>;
+// `test_view` is not a `simple_view`.
 
-// `test_view`'s const and non-const `begin()` return different iterator types, so the converting
-// constructor is actually exercised here (unlike a simple_view, where both would collapse into one type).
-static_assert(!std::same_as<Iterator, ConstIterator>);
-static_assert(std::convertible_to<Iterator, ConstIterator>);
-static_assert(!std::convertible_to<ConstIterator, Iterator>);
+static_assert(!std::same_as<
+  std::ranges::iterator_t<      std::ranges::chunk_view<test_view<forward_iterator>>>, 
+  std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>>
+>);
+static_assert(std::convertible_to<std::ranges::iterator_t<std::ranges::chunk_view<test_view<forward_iterator>>>, std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>>>);
+static_assert(!std::convertible_to<std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>>, std::ranges::iterator_t<std::ranges::chunk_view<test_view<forward_iterator>>>>);
