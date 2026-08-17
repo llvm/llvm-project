@@ -51,8 +51,8 @@ function(add_unittest_framework_library name)
     target_compile_options(${name} PRIVATE ${compile_options})
   endif()
 
-  if(TEST_LIBC_DEPENDS)
-    add_dependencies(${name} ${TEST_LIBC_DEPENDS})
+  if(TEST_LIB_DEPENDS)
+    add_dependencies(${name} ${TEST_LIB_DEPENDS})
   endif()
 endfunction()
 
