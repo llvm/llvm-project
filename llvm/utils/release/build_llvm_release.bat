@@ -10,7 +10,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc] [--disable-pgo]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc] [--fast-build]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -40,7 +40,7 @@ set arm64=
 set skip-checkout=
 set local-python=
 set force-msvc=
-set disable-pgo=
+set fast-build=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -327,6 +327,7 @@ cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
   %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
+if "%fast-build%" neq "true" (
 ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
@@ -335,6 +336,7 @@ if "%arch%"=="amd64" (
 )
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
+)
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -354,7 +356,7 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build_%arch%
 cd build_%arch%
-if "%disable-pgo%" neq "true" (
+if "%fast-build%" neq "true" (
   call :do_generate_profile || exit /b 1
 )
 cmake -GNinja %cmake_flags% ^
