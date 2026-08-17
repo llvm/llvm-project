@@ -61,6 +61,16 @@ func.func @device_vla(%arg0: index) attributes {cuf.proc_attr = #cuf.cuda_proc<g
   return
 }
 
+// An alloca pinned to the stack stays there: the array function result below is
+// replaced by the caller buffer, so a heap pair would only be dead code.
+// HEAP-LABEL: func.func @array_result(
+// HEAP: fir.alloca !fir.array<?xf32>
+// HEAP-NOT: fir.allocmem
+func.func @array_result(%arg0: index) {
+  %0 = fir.alloca !fir.array<?xf32>, %arg0 {bindc_name = "res", fir.must_be_stack = true, uniq_name = "_QFarray_resultEres"}
+  return
+}
+
 // HEAP-LABEL: func.func @marked_heap(
 // LLVM-LABEL: llvm.func @marked_heap(
 // LLVM: llvm.call @malloc_unified(

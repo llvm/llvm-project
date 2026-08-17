@@ -332,8 +332,8 @@ static bool isDeviceCode(mlir::Operation *func, mlir::ModuleOp mod) {
   return false;
 }
 
-bool fir::promoteDynamicAllocasToCudaHeap(mlir::RewriterBase &rewriter,
-                                          mlir::Operation *func) {
+bool fir::promoteDynamicVariableAllocasToCudaHeap(mlir::RewriterBase &rewriter,
+                                                  mlir::Operation *func) {
   auto mod = func->getParentOfType<mlir::ModuleOp>();
   if (!mod)
     return false;
@@ -342,12 +342,22 @@ bool fir::promoteDynamicAllocasToCudaHeap(mlir::RewriterBase &rewriter,
     return false;
 
   bool changed = false;
-  // Named locals only: automatic arrays and automatic character. Compiler
-  // temporaries do not need unified memory and would turn a stack save/restore
-  // into a malloc/free pair, possibly per loop iteration.
+  // User variables only: automatic arrays and automatic character, which are
+  // the ones carrying a uniqued name. Compiler temporaries do not need unified
+  // memory and would turn a stack save/restore into a malloc/free pair,
+  // possibly per loop iteration.
   auto mustReplace = [](fir::AllocaOp alloca) {
+    if (!alloca.isDynamic())
+      return false;
+    // An alloca pinned to the stack (e.g. an array function result, whose
+    // storage the abstract-result pass replaces by the caller buffer) would
+    // only be left with a dead malloc/free pair.
+    if (auto attr = alloca->getAttrOfType<fir::MustBeStackAttr>(
+            fir::MustBeStackAttr::getAttrName()))
+      if (attr.getValue())
+        return false;
     std::optional<llvm::StringRef> uniqName = alloca.getUniqName();
-    return alloca.isDynamic() && uniqName && !uniqName->empty();
+    return uniqName && !uniqName->empty();
   };
   auto genAllocmem = [&](mlir::OpBuilder &builder, fir::AllocaOp alloca,
                          bool) -> mlir::Value {

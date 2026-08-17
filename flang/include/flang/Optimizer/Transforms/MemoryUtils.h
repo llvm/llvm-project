@@ -57,12 +57,14 @@ bool replaceAllocas(mlir::RewriterBase &rewriter, mlir::Operation *parentOp,
                     MustRewriteCallBack, AllocaRewriterCallBack,
                     DeallocCallBack);
 
-/// Under -gpu=mem:unified|managed, move the dynamically sized fir.alloca of
-/// \p func to fir.allocmem/fir.freemem pairs marked for the unified/managed
-/// allocator. Does nothing for device code, which keeps its stack allocations.
-/// Returns true if the function was modified.
-bool promoteDynamicAllocasToCudaHeap(mlir::RewriterBase &rewriter,
-                                     mlir::Operation *func);
+/// Under -gpu=mem:unified|managed, move the dynamically sized fir.alloca of the
+/// user variables of \p func (automatic arrays and automatic character) to
+/// fir.allocmem/fir.freemem pairs marked for the unified/managed allocator.
+/// Compiler temporaries, fir.must_be_stack allocations, and device code, which
+/// keeps its stack allocations, are left alone. Returns true if the function
+/// was modified.
+bool promoteDynamicVariableAllocasToCudaHeap(mlir::RewriterBase &rewriter,
+                                             mlir::Operation *func);
 
 } // namespace fir
 

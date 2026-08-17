@@ -751,7 +751,8 @@ void StackArraysPass::runOnOperation() {
   // -gpu=mem:unified|managed must place in unified/managed memory. Done before
   // the analysis below, which skips the fir.must_be_heap pairs it creates.
   mlir::IRRewriter cudaHeapRewriter(&getContext());
-  fir::promoteDynamicAllocasToCudaHeap(cudaHeapRewriter, func.getOperation());
+  fir::promoteDynamicVariableAllocasToCudaHeap(cudaHeapRewriter,
+                                               func.getOperation());
 
   auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
   const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps =

@@ -133,7 +133,8 @@ public:
     if (func.empty())
       return;
     mlir::IRRewriter cudaHeapRewriter(context);
-    fir::promoteDynamicAllocasToCudaHeap(cudaHeapRewriter, func.getOperation());
+    fir::promoteDynamicVariableAllocasToCudaHeap(cudaHeapRewriter,
+                                                 func.getOperation());
     auto tryReplacing = [&](fir::AllocaOp alloca) {
       bool res = !keepStackAllocation(alloca, options);
       if (res) {

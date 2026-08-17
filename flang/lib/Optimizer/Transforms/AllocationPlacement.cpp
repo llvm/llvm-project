@@ -202,7 +202,8 @@ void AllocationPlacementPass::runOnOperation() {
   // Done first: the pairs it creates are marked fir.must_be_heap, so the
   // placement decisions below leave them alone.
   mlir::IRRewriter cudaHeapRewriter(&getContext());
-  fir::promoteDynamicAllocasToCudaHeap(cudaHeapRewriter, func.getOperation());
+  fir::promoteDynamicVariableAllocasToCudaHeap(cudaHeapRewriter,
+                                               func.getOperation());
 
   fir::AllocationPlacementThresholds baseThresholds;
   baseThresholds.stackArrays = stackArrays;
