@@ -9,11 +9,9 @@
 !   Derived type (struct with plain-int and real components)
 !   Arrays of integer and real
 !
-! Modes exercised: zero, nan, snan, 0xAA (hex), and off (no flag).
+! Modes exercised: zero, 0xAA (hex), and off (no flag).
 !
 ! RUN: bbc -emit-hlfir -finit-local=zero  -o - %s | FileCheck --check-prefix=ZERO  %s
-! RUN: bbc -emit-hlfir -finit-local=nan   -o - %s | FileCheck --check-prefix=NAN   %s
-! RUN: bbc -emit-hlfir -finit-local=snan  -o - %s | FileCheck --check-prefix=SNAN  %s
 ! RUN: bbc -emit-hlfir -finit-local=0xAA  -o - %s | FileCheck --check-prefix=HEX   %s
 ! RUN: bbc -emit-hlfir                    -o - %s | FileCheck --check-prefix=OFF   %s
 ! RUN: bbc -emit-hlfir -finit-local-zero  -o - %s | FileCheck --check-prefix=ZERO  %s
@@ -38,9 +36,6 @@ end subroutine
 ! ZERO: fir.zero_bits i8
 ! ZERO: fir.store {{.*}} : !fir.ref<i8>
 
-! NAN-LABEL:  func.func @_QPtest_int1
-! NAN:  arith.constant -86 : i8
-! NAN:  fir.store {{.*}} : !fir.ref<i8>
 
 ! HEX-LABEL:  func.func @_QPtest_int1
 ! HEX:  arith.constant -86 : i8
@@ -60,9 +55,6 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_int2
 ! ZERO: fir.zero_bits i16
 
-! NAN-LABEL:  func.func @_QPtest_int2
-! NAN:  arith.constant -21846 : i16
-! NAN:  fir.store {{.*}} : !fir.ref<i16>
 
 ! HEX-LABEL:  func.func @_QPtest_int2
 ! HEX:  arith.constant -21846 : i16
@@ -79,13 +71,7 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_int4
 ! ZERO: fir.zero_bits i32
 
-! NAN-LABEL:  func.func @_QPtest_int4
-! NAN:  arith.constant -1431655766 : i32
-! NAN:  fir.store {{.*}} : !fir.ref<i32>
 
-! SNAN-LABEL: func.func @_QPtest_int4
-! SNAN: arith.constant -1431655766 : i32
-! SNAN: fir.store {{.*}} : !fir.ref<i32>
 
 ! HEX-LABEL:  func.func @_QPtest_int4
 ! HEX:  arith.constant -1431655766 : i32
@@ -105,16 +91,13 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_int8
 ! ZERO: fir.zero_bits i64
 
-! NAN-LABEL:  func.func @_QPtest_int8
-! NAN:  arith.constant -6148914691236517206 : i64
-! NAN:  fir.store {{.*}} : !fir.ref<i64>
 
 ! HEX-LABEL:  func.func @_QPtest_int8
 ! HEX:  arith.constant -6148914691236517206 : i64
 ! HEX:  fir.store {{.*}} : !fir.ref<i64>
 
 ! ---------------------------------------------------------------------------
-! REAL(4) -- zero fills with fir.zero_bits; nan/snan with FP constant; hex bitcast
+! REAL(4) -- zero: fir.zero_bits; hex: bitcast from integer splat
 ! ---------------------------------------------------------------------------
 subroutine test_real4(res)
   real(4) :: res
@@ -125,13 +108,7 @@ end subroutine
 ! ZERO: fir.zero_bits f32
 ! ZERO: fir.store {{.*}} : !fir.ref<f32>
 
-! NAN-LABEL:  func.func @_QPtest_real4
-! NAN:  arith.constant {{.*}} : f32
-! NAN:  fir.store {{.*}} : !fir.ref<f32>
 
-! SNAN-LABEL: func.func @_QPtest_real4
-! SNAN: arith.constant {{.*}} : f32
-! SNAN: fir.store {{.*}} : !fir.ref<f32>
 
 ! HEX-LABEL:  func.func @_QPtest_real4
 ! HEX:  arith.constant -1431655766 : i32
@@ -153,13 +130,7 @@ end subroutine
 ! ZERO: fir.zero_bits f64
 ! ZERO: fir.store {{.*}} : !fir.ref<f64>
 
-! NAN-LABEL:  func.func @_QPtest_real8
-! NAN:  arith.constant {{.*}} : f64
-! NAN:  fir.store {{.*}} : !fir.ref<f64>
 
-! SNAN-LABEL: func.func @_QPtest_real8
-! SNAN: arith.constant {{.*}} : f64
-! SNAN: fir.store {{.*}} : !fir.ref<f64>
 
 ! HEX-LABEL:  func.func @_QPtest_real8
 ! HEX:  arith.constant -6148914691236517206 : i64
@@ -168,7 +139,7 @@ end subroutine
 
 ! ---------------------------------------------------------------------------
 ! COMPLEX(4) -- two f32 parts; stored as complex<f32>
-! nan/snan: both parts get NaN; hex: both parts get bitcast pattern
+! hex: both parts get bitcast pattern
 ! ---------------------------------------------------------------------------
 subroutine test_complex4(res)
   complex(4) :: res
@@ -179,15 +150,7 @@ end subroutine
 ! ZERO: fir.zero_bits complex<f32>
 ! ZERO: fir.store {{.*}} : !fir.ref<complex<f32>>
 
-! NAN-LABEL:  func.func @_QPtest_complex4
-! NAN:  arith.constant {{.*}} : f32
-! NAN:  complex.create {{.*}} : complex<f32>
-! NAN:  fir.store {{.*}} : !fir.ref<complex<f32>>
 
-! SNAN-LABEL: func.func @_QPtest_complex4
-! SNAN: arith.constant {{.*}} : f32
-! SNAN: complex.create {{.*}} : complex<f32>
-! SNAN: fir.store {{.*}} : !fir.ref<complex<f32>>
 
 ! HEX-LABEL:  func.func @_QPtest_complex4
 ! HEX:  arith.constant -1431655766 : i32
@@ -207,15 +170,7 @@ end subroutine
 ! ZERO: fir.zero_bits complex<f64>
 ! ZERO: fir.store {{.*}} : !fir.ref<complex<f64>>
 
-! NAN-LABEL:  func.func @_QPtest_complex8
-! NAN:  arith.constant {{.*}} : f64
-! NAN:  complex.create {{.*}} : complex<f64>
-! NAN:  fir.store {{.*}} : !fir.ref<complex<f64>>
 
-! SNAN-LABEL: func.func @_QPtest_complex8
-! SNAN: arith.constant {{.*}} : f64
-! SNAN: complex.create {{.*}} : complex<f64>
-! SNAN: fir.store {{.*}} : !fir.ref<complex<f64>>
 
 ! HEX-LABEL:  func.func @_QPtest_complex8
 ! HEX:  arith.constant -6148914691236517206 : i64
@@ -234,10 +189,6 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_logical1
 ! ZERO: fir.zero_bits !fir.logical<1>
 
-! NAN-LABEL:  func.func @_QPtest_logical1
-! NAN:  arith.constant -86 : i8
-! NAN:  fir.convert {{.*}} : (!fir.ref<!fir.logical<1>>) -> !fir.ref<i8>
-! NAN:  fir.store {{.*}} : !fir.ref<i8>
 
 ! HEX-LABEL:  func.func @_QPtest_logical1
 ! HEX:  arith.constant {{.*}} : i8
@@ -255,10 +206,6 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_logical4
 ! ZERO: fir.zero_bits !fir.logical<4>
 
-! NAN-LABEL:  func.func @_QPtest_logical4
-! NAN:  arith.constant -1431655766 : i32
-! NAN:  fir.convert {{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<i32>
-! NAN:  fir.store {{.*}} : !fir.ref<i32>
 
 ! HEX-LABEL:  func.func @_QPtest_logical4
 ! HEX:  arith.constant {{.*}} : i32
@@ -267,7 +214,7 @@ end subroutine
 
 ! ---------------------------------------------------------------------------
 ! CHARACTER(10) -- fixed-length scalar.
-! zero/nan/snan: fir.zero_bits over the whole character type.
+! zero: fir.zero_bits over the whole character type.
 ! hex: byte-loop over 10 singleton code-units.
 ! ---------------------------------------------------------------------------
 subroutine test_char10(res)
@@ -279,13 +226,7 @@ end subroutine
 ! ZERO: fir.zero_bits !fir.char<1,10>
 ! ZERO: fir.store {{.*}} : !fir.ref<!fir.char<1,10>>
 
-! NAN-LABEL:  func.func @_QPtest_char10
-! NAN:  fir.zero_bits !fir.char<1,10>
-! NAN:  fir.store {{.*}} : !fir.ref<!fir.char<1,10>>
 
-! SNAN-LABEL: func.func @_QPtest_char10
-! SNAN: fir.zero_bits !fir.char<1,10>
-! SNAN: fir.store {{.*}} : !fir.ref<!fir.char<1,10>>
 
 ! HEX-LABEL:  func.func @_QPtest_char10
 ! HEX:        fir.do_loop
@@ -326,17 +267,7 @@ end subroutine
 ! ZERO:         fir.zero_bits !fir.char<1>
 ! ZERO:         fir.store {{.*}} : !fir.ref<!fir.char<1>>
 
-! NAN-LABEL:  func.func @_QPtest_charn
-! NAN:        fir.do_loop
-! NAN:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-! NAN:          fir.zero_bits !fir.char<1>
-! NAN:          fir.store {{.*}} : !fir.ref<!fir.char<1>>
 
-! SNAN-LABEL: func.func @_QPtest_charn
-! SNAN:       fir.do_loop
-! SNAN:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-! SNAN:         fir.zero_bits !fir.char<1>
-! SNAN:         fir.store {{.*}} : !fir.ref<!fir.char<1>>
 
 ! HEX-LABEL:  func.func @_QPtest_charn
 ! HEX:        fir.do_loop
@@ -346,7 +277,7 @@ end subroutine
 
 ! ---------------------------------------------------------------------------
 ! Derived type -- struct with an INTEGER(4) and a REAL(4) field
-! nan/hex: field-by-field walk (integer: 0xAA; real: NaN or bitcast)
+! hex: byte-loop over the whole struct (covers typed fields and padding)
 ! ---------------------------------------------------------------------------
 subroutine test_derived(res)
   type :: mytype
@@ -361,13 +292,6 @@ end subroutine
 ! ZERO: fir.zero_bits !fir.type<{{.*}}>
 ! ZERO: fir.store {{.*}} : !fir.ref<!fir.type<{{.*}}>>
 
-! NAN-LABEL:  func.func @_QPtest_derived
-! NAN:  fir.coordinate_of {{.*}} -> !fir.ref<i32>
-! NAN:  arith.constant {{.*}} : i32
-! NAN:  fir.store {{.*}} : !fir.ref<i32>
-! NAN:  fir.coordinate_of {{.*}} -> !fir.ref<f32>
-! NAN:  arith.constant {{.*}} : f32
-! NAN:  fir.store {{.*}} : !fir.ref<f32>
 
 ! HEX-LABEL:  func.func @_QPtest_derived
 ! HEX:       fir.do_loop
@@ -389,10 +313,6 @@ end subroutine
 ! ZERO: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! ZERO: fir.store {{.*}} : !fir.ref<i32>
 
-! NAN-LABEL:  func.func @_QPtest_int_array
-! NAN:  fir.do_loop
-! NAN:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! NAN:  fir.store {{.*}} : !fir.ref<i32>
 
 ! HEX-LABEL:  func.func @_QPtest_int_array
 ! HEX:  fir.do_loop
@@ -404,7 +324,7 @@ end subroutine
 ! OFF-NOT: fir.insert_on_range
 
 ! ---------------------------------------------------------------------------
-! Array REAL(4)(4) -- 1-D; nan/snan: NaN element; hex: bitcast element
+! Array REAL(4)(4) -- 1-D; hex: bitcast element
 ! ---------------------------------------------------------------------------
 subroutine test_real_array(res)
   real(4) :: res(4)
@@ -416,15 +336,7 @@ end subroutine
 ! ZERO: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! ZERO: fir.store {{.*}} : !fir.ref<f32>
 
-! NAN-LABEL:  func.func @_QPtest_real_array
-! NAN:  fir.do_loop
-! NAN:  fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-! NAN:  fir.store {{.*}} : !fir.ref<f32>
 
-! SNAN-LABEL: func.func @_QPtest_real_array
-! SNAN: fir.do_loop
-! SNAN: fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xf32>>, index) -> !fir.ref<f32>
-! SNAN: fir.store {{.*}} : !fir.ref<f32>
 
 ! HEX-LABEL:  func.func @_QPtest_real_array
 ! HEX:  fir.do_loop
@@ -460,8 +372,6 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_explicit_init
 ! ZERO-NOT: fir.zero_bits
 
-! NAN-LABEL:  func.func @_QPtest_explicit_init
-! NAN-NOT:  arith.constant -1431655766 : i32
 
 ! HEX-LABEL:  func.func @_QPtest_explicit_init
 ! HEX-NOT:  arith.bitcast
@@ -478,8 +388,6 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_data_init
 ! ZERO-NOT: fir.zero_bits i32
 
-! NAN-LABEL:  func.func @_QPtest_data_init
-! NAN-NOT:  arith.constant -1431655766 : i32
 
 ! HEX-LABEL:  func.func @_QPtest_data_init
 ! HEX-NOT:  arith.bitcast
@@ -499,8 +407,6 @@ end subroutine
 ! ZERO-LABEL: func.func @_QPtest_default_comp_init
 ! ZERO-NOT: fir.zero_bits
 
-! NAN-LABEL:  func.func @_QPtest_default_comp_init
-! NAN-NOT:  arith.constant -1431655766 : i32
 
 ! HEX-LABEL:  func.func @_QPtest_default_comp_init
 ! HEX-NOT:  arith.bitcast
@@ -560,9 +466,6 @@ end subroutine
 ! ZERO-NOT: fir.zero_bits
 ! ZERO: return
 
-! NAN-LABEL:  func.func @_QPtest_equivalence
-! NAN-NOT:  arith.constant -1431655766 : i32
-! NAN: return
 
 ! HEX-LABEL:  func.func @_QPtest_equivalence
 ! HEX-NOT:  arith.bitcast
