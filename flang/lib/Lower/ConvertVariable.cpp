@@ -48,7 +48,6 @@
 #include "flang/Semantics/type.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -1324,8 +1323,9 @@ static bool shouldInitLocal(const Fortran::lower::pft::Variable &var) {
     case Fortran::common::CUDADataAttr::UseDevice:
       return false;
     case Fortran::common::CUDADataAttr::Device:
-      // In a device subprogram the attribute is implicit (SetImplicitCUDADevice)
-      // and the variable is a thread-local stack allocation -- initialize it.
+      // In a device subprogram the attribute is implicit
+      // (SetImplicitCUDADevice) and the variable is a thread-local stack
+      // allocation -- initialize it.
       if (!Fortran::semantics::IsCUDADeviceContext(&sym.owner()))
         return false;
       break;
@@ -1376,40 +1376,21 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
     return makeIntCst(logTy.getFKind() * 8);
   }
-  // CHARACTER with hex mode is handled upstream in genInitLocalStore before
-  // this function is reached. For zero/nan/snan, fir.zero_bits is correct
-  // (zero fills all bytes; nan/snan have no meaningful character value).
+  // Fallback (e.g. fir.char reached via an unexpected path): zero-initialise.
   return fir::ZeroOp::create(builder, loc, eleTy);
-}
-
-/// Build a quiet or signalling NaN constant of the given FP type.
-/// The payload is all-ones (matching clang's initializationPatternFor() and
-/// the RFC spec), and the sign bit is set (negative NaN).
-static mlir::Value genFPNaNInit(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::FloatType fpTy, bool isSignalling) {
-  const llvm::fltSemantics &sem = fpTy.getFloatSemantics();
-  // All-ones payload (precision-1 mantissa bits), negative sign, per RFC.
-  llvm::APInt payload = llvm::APInt::getAllOnes(sem.precision - 1);
-  llvm::APFloat apf =
-      isSignalling ? llvm::APFloat::getSNaN(sem, /*Negative=*/true, &payload)
-                   : llvm::APFloat::getQNaN(sem, /*Negative=*/true, &payload);
-  return mlir::arith::ConstantFloatOp::create(builder, loc, fpTy, apf);
 }
 
 /// Emit a store of the -finit-local= pattern for a single scalar address.
 /// Fixed-length CHARACTER in hex mode: byte-loop over each code unit.
-/// Complex types get NaN on both parts; integer/logical non-FP types use a
-/// 0xAA byte-splat for nan/snan modes. LOGICAL stores via a bitcasted integer
-/// address to preserve the raw bit pattern past fir.convert normalization.
+/// LOGICAL stores via a bitcasted integer address to preserve the raw bit
+/// pattern past fir.convert normalization.
 static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type ty, mlir::Value addr,
                               Fortran::lower::InitLocalKind mode,
                               uint8_t hexByte) {
   // Fixed-length CHARACTER: for hex mode emit a compile-time byte-loop so
-  // every code-unit gets the requested pattern. Zero uses fir.zero_bits
-  // (handled below). nan/snan fall through to the zero fallback in
-  // genByteSplatInit -- those modes have no meaningful value for a character
-  // storage unit anyway.
+  // every code-unit gets the requested pattern. Zero falls through to
+  // fir.zero_bits below.
   if (auto charTy = mlir::dyn_cast<fir::CharacterType>(ty)) {
     // CHARACTER(0) has zero-length storage -- nothing to initialize.
     if (charTy.getLen() == 0)
@@ -1421,10 +1402,9 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
       int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
       if (nUnits > 0) {
         mlir::Type idxTy = builder.getIndexType();
-        mlir::Type i8Ty  = builder.getIntegerType(8);
-        fir::CharacterType byteTy =
-            fir::CharacterType::getSingleton(builder.getContext(),
-                                             charTy.getFKind());
+        mlir::Type i8Ty = builder.getIntegerType(8);
+        fir::CharacterType byteTy = fir::CharacterType::getSingleton(
+            builder.getContext(), charTy.getFKind());
         mlir::Type byteSeqTy = fir::SequenceType::get(
             {fir::SequenceType::getUnknownExtent()}, byteTy);
         mlir::Value byteBase =
@@ -1439,9 +1419,9 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToStart(loop.getBody());
         mlir::Value iv = loop.getInductionVar();
-        mlir::Value byteAddr = fir::CoordinateOp::create(
-            builder, loc, builder.getRefType(byteTy), byteBase,
-            mlir::ValueRange{iv});
+        mlir::Value byteAddr =
+            fir::CoordinateOp::create(builder, loc, builder.getRefType(byteTy),
+                                      byteBase, mlir::ValueRange{iv});
         mlir::Value pat = builder.createIntegerConstant(
             loc, i8Ty, static_cast<int64_t>(hexByte));
         // Store via i8 pointer so the byte pattern is written verbatim
@@ -1455,8 +1435,6 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     }
   }
   mlir::Value val;
-  auto fpTy = mlir::dyn_cast<mlir::FloatType>(ty);
-  auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(ty);
   switch (mode) {
   case Fortran::lower::InitLocalKind::Zero:
     val = fir::ZeroOp::create(builder, loc, ty);
@@ -1464,39 +1442,14 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
   case Fortran::lower::InitLocalKind::Hex:
     val = genByteSplatInit(builder, loc, ty, hexByte);
     break;
-  case Fortran::lower::InitLocalKind::QNaN:
-    if (fpTy) {
-      val = genFPNaNInit(builder, loc, fpTy, /*signalling=*/false);
-    } else if (cplxTy) {
-      auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-      mlir::Value nanPart =
-          genFPNaNInit(builder, loc, partFpTy, /*signalling=*/false);
-      val = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
-                                            nanPart);
-    } else {
-      val = genByteSplatInit(builder, loc, ty, 0xAA);
-    }
-    break;
-  case Fortran::lower::InitLocalKind::SNaN:
-    if (fpTy) {
-      val = genFPNaNInit(builder, loc, fpTy, /*signalling=*/true);
-    } else if (cplxTy) {
-      auto partFpTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-      mlir::Value nanPart =
-          genFPNaNInit(builder, loc, partFpTy, /*signalling=*/true);
-      val = mlir::complex::CreateOp::create(builder, loc, cplxTy, nanPart,
-                                            nanPart);
-    } else {
-      val = genByteSplatInit(builder, loc, ty, 0xAA);
-    }
-    break;
   default:
     llvm_unreachable("unexpected InitLocalKind in genInitLocalStore");
   }
-  // For LOGICAL types, genByteSplatInit returns a raw integer to preserve
-  // the bit pattern. Store it via a bitcasted address to avoid fir.convert
-  // normalization (which would reduce any nonzero value to logical true).
-  if (mode != Fortran::lower::InitLocalKind::Zero &&
+  // For LOGICAL in hex mode, genByteSplatInit returns a raw integer to
+  // preserve the bit pattern. Store it via a bitcasted address to avoid
+  // fir.convert normalization (which would reduce any nonzero value to
+  // logical true).
+  if (mode == Fortran::lower::InitLocalKind::Hex &&
       mlir::isa<fir::LogicalType>(ty)) {
     unsigned bits = mlir::cast<fir::LogicalType>(ty).getFKind() * 8;
     mlir::Type intRefTy = builder.getRefType(builder.getIntegerType(bits));
@@ -1511,7 +1464,7 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Arrays: all modes use a flat fir.do_loop + fir.coordinate_of over a
 /// rank-1 view to avoid both the llvm.mlir.constant crash on non-zero
 /// ArrayAttrs and the quadratic compile time of fir.insert_on_range.
-/// Derived types walk fields for nan/snan/hex. Scalars store directly.
+/// Derived types use a whole-struct byte-loop for hex. Scalars store directly.
 static void genInitLocal(Fortran::lower::AbstractConverter &converter,
                          const Fortran::lower::pft::Variable &var,
                          Fortran::lower::SymMap &symMap) {
@@ -1581,9 +1534,6 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
           //   hex:  byte-loop over the whole struct using the compile-time
           //         struct size from fir::getTypeSizeAndAlignmentOrCrash --
           //         also covers padding bytes, giving a uniform byte pattern.
-          //   nan/snan: field-by-field walk with typed NaN stores; padding
-          //         bytes between fields are not yet covered (TODO pending
-          //         PR #159788 which will provide memset infrastructure).
           if (mode == Fortran::lower::InitLocalKind::Zero) {
             fir::StoreOp::create(
                 builder, loc, fir::ZeroOp::create(builder, loc, recTy), addr);
@@ -1596,8 +1546,8 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
               mlir::Type i8Ty = builder.getIntegerType(8);
               mlir::Type i8SeqTy = fir::SequenceType::get(
                   {fir::SequenceType::getUnknownExtent()}, i8Ty);
-              mlir::Value byteBase = builder.createConvert(
-                  loc, builder.getRefType(i8SeqTy), addr);
+              mlir::Value byteBase =
+                  builder.createConvert(loc, builder.getRefType(i8SeqTy), addr);
               mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
               mlir::Value last = builder.createIntegerConstant(
                   loc, idxTy, static_cast<int64_t>(byteSize) - 1);
@@ -1614,17 +1564,6 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
               mlir::Value pat = builder.createIntegerConstant(
                   loc, i8Ty, static_cast<int64_t>(hexByte));
               fir::StoreOp::create(builder, loc, pat, byteAddr);
-            }
-          } else {
-            // nan / snan: typed field stores; padding bytes not yet covered.
-            for (auto [fieldName, fieldTy] : recTy.getTypeList()) {
-              auto fieldIdx = fir::FieldIndexOp::create(
-                  builder, loc, fir::FieldType::get(recTy.getContext()),
-                  fieldName, recTy, mlir::ValueRange{});
-              mlir::Value fieldAddr = fir::CoordinateOp::create(
-                  builder, loc, builder.getRefType(fieldTy), addr,
-                  mlir::ValueRange{fieldIdx});
-              initAddr(fieldTy, fieldAddr);
             }
           }
         } else if (!mlir::isa<fir::BaseBoxType>(ty)) {
@@ -1652,11 +1591,10 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::Type idxTy = builder.getIndexType();
       mlir::Value lenIdx = builder.createConvert(loc, idxTy, rtLen);
       mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-      mlir::Value one  = builder.createIntegerConstant(loc, idxTy, 1);
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
       // last = lenIdx - 1; the fir.do_loop trip count is lenIdx so the
       // loop body is skipped entirely when lenIdx == 0 (empty string).
-      mlir::Value last =
-          mlir::arith::SubIOp::create(builder, loc, lenIdx, one);
+      mlir::Value last = mlir::arith::SubIOp::create(builder, loc, lenIdx, one);
       auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
                                         /*unordered=*/false,
                                         /*finalCount=*/false);
@@ -1665,16 +1603,15 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::Value iv = loop.getInductionVar();
       // Treat the storage as an array of singleton characters so that
       // fir.coordinate_of advances by one code-unit per step.
-      fir::CharacterType byteTy =
-          fir::CharacterType::getSingleton(builder.getContext(),
-                                           charTy.getFKind());
+      fir::CharacterType byteTy = fir::CharacterType::getSingleton(
+          builder.getContext(), charTy.getFKind());
       mlir::Type byteSeqTy = fir::SequenceType::get(
           {fir::SequenceType::getUnknownExtent()}, byteTy);
       mlir::Value byteBase =
           builder.createConvert(loc, builder.getRefType(byteSeqTy), base);
-      mlir::Value byteAddr = fir::CoordinateOp::create(
-          builder, loc, builder.getRefType(byteTy), byteBase,
-          mlir::ValueRange{iv});
+      mlir::Value byteAddr =
+          fir::CoordinateOp::create(builder, loc, builder.getRefType(byteTy),
+                                    byteBase, mlir::ValueRange{iv});
       genInitLocalStore(builder, loc, byteTy, byteAddr, mode, hexByte);
       return;
     }

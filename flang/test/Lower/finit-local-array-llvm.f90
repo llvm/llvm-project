@@ -4,7 +4,7 @@
 ! does not accept ArrayAttr of non-zero scalars. The fix uses a do_loop +
 ! coordinate_of instead, which lowers correctly through to LLVM IR.
 !
-! The HEX checks verify:
+! The HEX and ZERO checks verify:
 !   - the loop trip counter PHI starts at the expected element count,
 !   - the GEP uses the element type as the unit stride (so all elements are
 !     reached, not just element 0), and
@@ -12,7 +12,6 @@
 ! These three properties together prove that every element is initialized.
 !
 ! RUN: %flang_fc1 -emit-llvm -finit-local=0xAA %s -o - | FileCheck --check-prefix=HEX %s
-! RUN: %flang_fc1 -emit-llvm -finit-local=nan  %s -o - | FileCheck --check-prefix=NAN %s
 ! RUN: %flang_fc1 -emit-llvm -finit-local=zero %s -o - | FileCheck --check-prefix=ZERO %s
 
 ! ---------------------------------------------------------------------------
@@ -29,10 +28,6 @@ end subroutine
 ! HEX:         store i32 -1431655766,
 ! HEX-NOT:     store i32 0,
 
-! NAN-LABEL: define {{.*}}@{{.*}}test_int_array{{.*}}(
-! NAN:         phi i64 [ {{.*}}, {{.*}} ], [ 4, %{{.*}} ]
-! NAN:         getelementptr i32, ptr {{.*}}, i64
-! NAN:         store i32 -1431655766,
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_int_array{{.*}}(
 ! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 4, %{{.*}} ]
@@ -56,10 +51,6 @@ end subroutine
 ! HEX:         getelementptr i8, ptr {{.*}}, i64
 ! HEX:         store i8 -86,
 
-! NAN-LABEL: define {{.*}}@{{.*}}test_array_in_struct{{.*}}(
-! NAN:         phi i64 [ {{.*}}, {{.*}} ], [ 2, %{{.*}} ]
-! NAN:         getelementptr i32, ptr {{.*}}, i64
-! NAN:         store i32 -1431655766,
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_array_in_struct{{.*}}(
 ! ZERO:        store {{.*}} zeroinitializer,
@@ -78,10 +69,6 @@ end subroutine
 ! HEX:         store i32 -1431655766,
 ! HEX-NOT:     store i32 0,
 
-! NAN-LABEL: define {{.*}}@{{.*}}test_int_array_2d{{.*}}(
-! NAN:         phi i64 [ {{.*}}, {{.*}} ], [ 12, %{{.*}} ]
-! NAN:         getelementptr i32, ptr {{.*}}, i64
-! NAN:         store i32 -1431655766,
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_int_array_2d{{.*}}(
 ! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 12, %{{.*}} ]
@@ -102,10 +89,6 @@ end subroutine
 ! HEX:         store i32 -1431655766,
 ! HEX-NOT:     store i32 0,
 
-! NAN-LABEL: define {{.*}}@{{.*}}test_int_array_3d{{.*}}(
-! NAN:         phi i64 [ {{.*}}, {{.*}} ], [ 24, %{{.*}} ]
-! NAN:         getelementptr i32, ptr {{.*}}, i64
-! NAN:         store i32 -1431655766,
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_int_array_3d{{.*}}(
 ! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 24, %{{.*}} ]
@@ -133,10 +116,6 @@ end subroutine
 ! HEX:         store i8 -86,
 ! HEX-NOT:     store {{.*}} zeroinitializer,
 
-! NAN-LABEL: define {{.*}}@{{.*}}test_array_of_struct{{.*}}(
-! NAN:         phi i64 [ {{.*}}, {{.*}} ], [ 2, %{{.*}} ]
-! NAN:         getelementptr %{{.*}}t, ptr {{.*}}, i64
-! NAN:         store i32 -1431655766,
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_array_of_struct{{.*}}(
 ! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 2, %{{.*}} ]
@@ -164,10 +143,6 @@ end subroutine
 ! HEX:         store i8 -86,
 ! HEX-NOT:     store {{.*}} zeroinitializer,
 
-! NAN-LABEL: define {{.*}}@{{.*}}test_array_of_struct_2d{{.*}}(
-! NAN:         phi i64 [ {{.*}}, {{.*}} ], [ 6, %{{.*}} ]
-! NAN:         getelementptr %{{.*}}t, ptr {{.*}}, i64
-! NAN:         store i32 -1431655766,
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_array_of_struct_2d{{.*}}(
 ! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 6, %{{.*}} ]

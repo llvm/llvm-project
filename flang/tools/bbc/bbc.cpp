@@ -280,7 +280,7 @@ static llvm::cl::opt<std::string>
     initLocalMode("finit-local",
                   llvm::cl::desc("Initialize local variables without explicit "
                                  "or default initialization. "
-                                 "Accepts: zero, nan, snan, or 0x<hex-byte>."),
+                                 "Accepts: zero or 0x<hex-byte>."),
                   llvm::cl::init(""));
 
 static llvm::cl::opt<bool> initLocalZero(
@@ -536,10 +536,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     }
     if (val == "zero") {
       loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
-    } else if (val == "nan") {
-      loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::QNaN);
-    } else if (val == "snan") {
-      loweringOptions.setInitLocalMode(Fortran::lower::InitLocalKind::SNaN);
     } else if (val.starts_with("0x") || val.starts_with("0X")) {
       unsigned long long hexVal = 0;
       if (!val.drop_front(2).getAsInteger(16, hexVal) && hexVal <= 0xFF) {

@@ -94,12 +94,9 @@ page](https://llvm.org/releases/).
 
 - Added `-finit-local=<val>` to initialize automatic local
   variables that have no explicit or default initialization. Accepted values
-  are `zero`, `nan`, `snan`, and `0x<hex-byte>` (e.g. `0xAA`). The gfortran
+  are `zero` and `0x<hex-byte>` (e.g. `0xAA`). The gfortran
   compatibility alias `-finit-local-zero` is equivalent to `-finit-local=zero`.
-  `zero` and `0x<hex-byte>` fill every storage byte including struct padding.
-  The `nan` and `snan` modes currently initialize each typed field individually;
-  padding bytes inside derived-type variables are not yet initialized for
-  those modes.
+  Both modes fill every storage byte including struct padding.
 
 ## Windows Support
 

@@ -403,7 +403,7 @@ def finit_local_EQ : Joined<["-"], "finit-local=">,
   Group<f_Group>,
   Visibility<[FC1Option, FlangOption]>,
   HelpText<"Initialize local variables without explicit or default initialization. "
-           "Accepts: zero, nan, snan, or 0x<hex-byte>.">;
+           "Accepts: zero or 0x<hex-byte>.">;
 
 def finit_local_zero : Flag<["-"], "finit-local-zero">,
   Group<f_Group>,
