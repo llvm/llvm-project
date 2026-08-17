@@ -1,15 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
 float _Complex divf(float _Complex a, float _Complex b) { return a / b; }
 
-// A float pair fits one eightbyte and returns in a single SSE register, so the
-// helper's return coerces to a vector and comes back through memory.
-
+// A float pair is SSE-classified, so the helper return coerces to <2 x float>.
 // CIR-LABEL: cir.func {{.*}}@divf
 // CIR: %[[COERCED:.*]] = cir.call @__divsc3({{.*}}) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.vector<2 x !cir.float>
 // CIR: cir.store %[[COERCED]], %[[SLOT:.*]] : !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>
@@ -35,9 +33,7 @@ float _Complex mulf(float _Complex a, float _Complex b) { return a * b; }
 
 double _Complex divd(double _Complex a, double _Complex b) { return a / b; }
 
-// A double pair spans two eightbytes and returns in two registers, so it stays
-// a two-field record and its lowered call is unchanged by the coercion.
-
+// A double pair spans two eightbytes, so the return stays a two-field record.
 // CIR-LABEL: cir.func {{.*}}@divd
 // CIR: cir.call @__divdc3({{.*}}) : (!cir.double, !cir.double, !cir.double, !cir.double) -> [[REC_D:!rec_anon_struct[0-9]*]]
 
@@ -56,11 +52,13 @@ long double _Complex divld(long double _Complex a, long double _Complex b) {
   return a / b;
 }
 
-// A long double pair is x87-classified and returned in memory, so it also
-// keeps a two-field record.
-
+// A long double pair is x87-classified, so the return stays a two-field record.
 // CIR-LABEL: cir.func {{.*}}@divld
 // CIR: cir.call @__divxc3({{.*}}) : (!cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>) -> [[REC_LD:!rec_anon_struct[0-9]*]]
+
+// An x87 pair is passed indirectly, so the caller's own parameters are byval.
+// LLVMCIR: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
+// OGCG: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
 
 // LLVMCIR: call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 %{{.+}}, x86_fp80 %{{.+}}, x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
 // OGCG: call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}})
