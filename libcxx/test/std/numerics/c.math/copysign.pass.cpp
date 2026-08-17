@@ -8,6 +8,9 @@
 
 // bool copysign(floating-point-type x, floating-point-type y); // constexpr since C++23
 
+// We don't control the implementation on windows
+// UNSUPPORTED: windows
+
 #include <cassert>
 #include <cmath>
 #include <limits>
