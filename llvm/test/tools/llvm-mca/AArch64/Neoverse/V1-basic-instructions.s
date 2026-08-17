@@ -194,10 +194,10 @@
 # CHECK-NEXT:  1      2     0.50                        cmp	x22, x23, asr #63
 # CHECK-NEXT:  1      1     0.33                        cmp	wzr, w0
 # CHECK-NEXT:  1      1     0.33                        cmp	xzr, x0
-# CHECK-NEXT:  1      1     0.25                        mov	sp, x30
-# CHECK-NEXT:  1      1     0.25                        mov	wsp, w20
-# CHECK-NEXT:  1      1     0.25                        mov	x11, sp
-# CHECK-NEXT:  1      1     0.25                        mov	w24, wsp
+# CHECK-NEXT:  1      0     0.13                        mov	sp, x30
+# CHECK-NEXT:  1      0     0.13                        mov	wsp, w20
+# CHECK-NEXT:  1      0     0.13                        mov	x11, sp
+# CHECK-NEXT:  1      0     0.13                        mov	w24, wsp
 # CHECK-NEXT:  1      1     0.25                        adc	w29, w27, w25
 # CHECK-NEXT:  1      1     0.25                        adc	wzr, w3, w4
 # CHECK-NEXT:  1      1     0.25                        adc	w9, wzr, w10
@@ -1272,7 +1272,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  48.00  48.00  48.00  98.67  171.67 171.67 323.25 210.25 142.75 142.75 190.00 56.50  65.50  13.00
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  48.00  48.00  48.00  98.67  171.67 171.67 322.25 209.25 141.75 141.75 190.00 56.50  65.50  13.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -1460,10 +1460,10 @@
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -     cmp	x22, x23, asr #63
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     cmp	wzr, w0
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     cmp	xzr, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	sp, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	wsp, w20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	x11, sp
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     mov	w24, wsp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	sp, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	wsp, w20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x11, sp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w24, wsp
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adc	w29, w27, w25
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adc	wzr, w3, w4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     adc	w9, wzr, w10

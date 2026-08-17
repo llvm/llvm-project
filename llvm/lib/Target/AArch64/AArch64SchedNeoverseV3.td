@@ -1047,6 +1047,9 @@ def : InstRW<[V3Write_1c_1B_1S], (instrs BL, BLR)>;
 // ALU, basic
 def : SchedAlias<WriteI, V3Write_1c_1I>;
 
+// ALU, basic, no flagset
+def : InstRW<[V3Write_0or1c_1I], (instregex "^ADD[WX]ri$")>;
+
 // ALU, basic, flagset
 def : InstRW<[V3Write_1c_1F_1Flg],
              (instregex "^(ADD|SUB)S[WX]r[ir]$",

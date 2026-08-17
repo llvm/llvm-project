@@ -194,10 +194,10 @@
 # CHECK-NEXT:  1      2     0.50                        cmp	x22, x23, asr #63
 # CHECK-NEXT:  1      1     0.33                        cmp	wzr, w0
 # CHECK-NEXT:  1      1     0.33                        cmp	xzr, x0
-# CHECK-NEXT:  1      1     0.17                        mov	sp, x30
-# CHECK-NEXT:  1      1     0.17                        mov	wsp, w20
-# CHECK-NEXT:  1      1     0.17                        mov	x11, sp
-# CHECK-NEXT:  1      1     0.17                        mov	w24, wsp
+# CHECK-NEXT:  1      0     0.17                        mov	sp, x30
+# CHECK-NEXT:  1      0     0.17                        mov	wsp, w20
+# CHECK-NEXT:  1      0     0.17                        mov	x11, sp
+# CHECK-NEXT:  1      0     0.17                        mov	w24, wsp
 # CHECK-NEXT:  1      1     0.17                        adc	w29, w27, w25
 # CHECK-NEXT:  1      1     0.17                        adc	wzr, w3, w4
 # CHECK-NEXT:  1      1     0.17                        adc	w9, wzr, w10
@@ -1274,7 +1274,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  54.33  54.33  54.33  99.33  170.33 170.33 341.50 184.50 116.50 116.50 87.00  87.00  207.25 155.75 39.25  13.75
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  54.33  54.33  54.33  99.33  170.33 170.33 340.83 183.83 115.83 115.83 86.33  86.33  207.25 155.75 39.25  13.75
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
@@ -1462,10 +1462,10 @@
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     cmp	x22, x23, asr #63
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmp	wzr, w0
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmp	xzr, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     mov	sp, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     mov	wsp, w20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     mov	x11, sp
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     mov	w24, wsp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	sp, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	wsp, w20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x11, sp
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w24, wsp
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     adc	w29, w27, w25
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     adc	wzr, w3, w4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     adc	w9, wzr, w10

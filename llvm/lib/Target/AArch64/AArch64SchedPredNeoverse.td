@@ -75,6 +75,9 @@ def NeoverseZeroMove : MCSchedPredicate<
                            CheckAll<[CheckOpcode<[ORRWrs, ORRXrs]>,
                                      CheckAll<[CheckIsReg1Zero,
                                                CheckImmOperand<3, 0>]>]>,
+                           // MOV Wd|WSP, Wn|WSP / MOV Xd|SP, Xn|SP
+                           CheckAll<[CheckOpcode<[ADDWri, ADDXri]>,
+                           CheckImmOperand<2, 0>]>,
                            // FMOV Hd, WZR
                            // FMOV Hd, XZR
                            // FMOV Sd, WZR
