@@ -1075,9 +1075,7 @@ def testExtDialectWithPublicInterfaces():
         assert module.operation.verify()
 
         no_effect_iface = ir.MemoryEffectsOpInterface(no_effect)
-        always_speculatable_iface = ir.ConditionallySpeculatable(
-            always_speculatable
-        )
+        always_speculatable_iface = ir.ConditionallySpeculatable(always_speculatable)
         recursively_speculatable_iface = ir.ConditionallySpeculatable(
             recursively_speculatable
         )
@@ -1149,8 +1147,7 @@ def testExtDialectWithPure():
         # CHECK: pure speculatable: True
         print(
             "pure speculatable:",
-            pure_spec_iface.getSpeculatability()
-            == ir.Speculatability.Speculatable,
+            pure_spec_iface.getSpeculatability() == ir.Speculatability.Speculatable,
         )
 
         patterns = RewritePatternSet()

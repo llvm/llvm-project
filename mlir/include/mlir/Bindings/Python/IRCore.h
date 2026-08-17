@@ -1997,7 +1997,8 @@ public:
   static void bind(nanobind::module_ &m);
 };
 
-class MLIR_PYTHON_API_EXPORTED RecursiveMemoryEffects : public PyDynamicOpTrait {
+class MLIR_PYTHON_API_EXPORTED RecursiveMemoryEffects
+    : public PyDynamicOpTrait {
 public:
   static bool attach(const nanobind::object &opName, PyMlirContext &context);
   static void bind(nanobind::module_ &m);
