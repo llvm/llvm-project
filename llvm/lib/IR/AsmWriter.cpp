@@ -2700,6 +2700,11 @@ static void writeDIObjCProperty(raw_ostream &Out, const DIObjCProperty *N,
   Out << ")";
 }
 
+static void writeDIProperty(raw_ostream &Out, const DIProperty *N,
+                            AsmWriterContext &WriterCtx) {
+  // TODO: implement this
+}
+
 static void writeDIImportedEntity(raw_ostream &Out, const DIImportedEntity *N,
                                   AsmWriterContext &WriterCtx) {
   Out << "!DIImportedEntity(";

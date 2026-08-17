@@ -237,6 +237,11 @@ HANDLE_DW_TAG(0x0048, call_site, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x0049, call_site_parameter, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x004a, skeleton_unit, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x004b, immutable_type, 5, DWARF, DW_KIND_TYPE)
+// New in DWARF v6:
+HANDLE_DW_TAG(0x004c, property, 6, DWARF, DW_KIND_NONE)
+HANDLE_DW_TAG(0x004d, property_getter, 6, DWARF, DW_KIND_NONE)
+HANDLE_DW_TAG(0x004e, property_setter, 6, DWARF, DW_KIND_NONE)
+HANDLE_DW_TAG(0x004f, property_stored, 6, DWARF, DW_KIND_NONE)
 // Vendor extensions:
 HANDLE_DW_TAG(0x4081, MIPS_loop, 0, MIPS, DW_KIND_NONE)
 // Conflicting:
@@ -432,6 +437,16 @@ HANDLE_DW_AT(0x8c, loclists_base, 5, DWARF)
 // New in Dwarf v6:
 HANDLE_DW_AT(0x90, language_name, 6, DWARF)
 HANDLE_DW_AT(0x91, language_version, 6, DWARF)
+// TODO: DWARF v6 adds DW_AT_property_forward, used by the DW_TAG_property_getter
+// / _setter / _stored entries to refer to whatever implements the accessor. Add
+// it here, in numeric order with the entries above.
+//
+// Get its code and form class from Table 8.5 of the DWARF 6 draft rather than
+// from any summary of the proposal. Earlier write-ups of this proposal
+// circulated a different code, which the committee did not end up using -- and
+// picking the wrong one produces object files that every consumer misreads,
+// which no test in this tree would catch. Verifying a code against the actual
+// spec table is the habit worth building here.
 
 // Vendor extensions:
 HANDLE_DW_AT(0x806, GHS_namespace_alias, 0, GHS)

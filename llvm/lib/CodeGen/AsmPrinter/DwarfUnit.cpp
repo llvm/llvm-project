@@ -510,6 +510,12 @@ void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   addSourceLine(Die, Ty->getLine(), /*Column*/ 0, Ty->getFile());
 }
 
+void DwarfUnit::addSourceLine(DIE &Die, const DIProperty *P) {
+  assert(P);
+
+  addSourceLine(Die, P->getLine(), /*Column*/ 0, P->getFile());
+}
+
 void DwarfUnit::addConstantFPValue(DIE &Die, const ConstantFP *CFP) {
   // Pass this down to addConstantValue as an unsigned bag of bits.
   addConstantValue(Die, CFP->getValueAPF().bitcastToAPInt(), true);
@@ -1145,6 +1151,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         if (unsigned PropertyAttributes = Property->getAttributes())
           addUInt(ElemDie, dwarf::DW_AT_APPLE_property_attribute, std::nullopt,
                   PropertyAttributes);
+      } else if (auto *Property = dyn_cast<DIProperty>(Element)) {
+        constructPropertyDIE(Buffer, Property);
       } else if (auto *Composite = dyn_cast<DICompositeType>(Element)) {
         if (Composite->getTag() == dwarf::DW_TAG_variant_part) {
           DIE &VariantPart = createAndAddDIE(Composite->getTag(), Buffer);
@@ -2010,6 +2018,35 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     addFlag(MemberDie, dwarf::DW_AT_artificial);
 
   return MemberDie;
+}
+
+void DwarfUnit::constructPropertyDIE(DIE &Buffer, const DIProperty *P) {
+  // TODO: Emit the property. The DIE tree this needs to produce is:
+  //
+  //   DW_TAG_property
+  //     DW_AT_name              <- P->getName()
+  //     DW_AT_type              <- P->getType()
+  //     DW_AT_decl_file/line    <- addSourceLine() has an overload for this
+  //     DW_TAG_property_getter          (a child DIE, not an attribute)
+  //       DW_AT_property_forward        (a reference to P->getGetterForward())
+  //
+  // createAndAddDIE, addString, addType and addDIEEntry are the helpers you
+  // want. constructMemberDIE, just above, is a good model to follow -- note in
+  // particular how it takes the metadata node as createAndAddDIE's third
+  // argument, and what that buys you.
+  //
+  // Two questions to answer rather than guess at:
+  //
+  //  - getGetterForward() hands you a DINode, but addDIEEntry needs a DIE. How
+  //    do you get from one to the other? The DW_AT_APPLE_property code at the
+  //    end of constructMemberDIE does the same lookup. What should happen when
+  //    that lookup finds nothing -- is it better to emit the getter child
+  //    anyway, or to leave it off?
+  //
+  //  - test/DebugInfo/Generic/property.ll declares two classes, Foo and Bar,
+  //    whose elements lists hold the same two nodes in opposite orders. Both
+  //    must produce the same DWARF. If only one of them does, the fix is
+  //    probably not inside this function.
 }
 
 DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {

@@ -410,6 +410,8 @@ private:
                                        unsigned Abbrev);
   void writeDIObjCProperty(const DIObjCProperty *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIProperty(const DIProperty *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
@@ -2508,6 +2510,12 @@ void ModuleBitcodeWriter::writeDIObjCProperty(const DIObjCProperty *N,
 
   Stream.EmitRecord(bitc::METADATA_OBJC_PROPERTY, Record, Abbrev);
   Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIProperty(const DIProperty *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  // TODO: implement this.
 }
 
 void ModuleBitcodeWriter::writeDIImportedEntity(

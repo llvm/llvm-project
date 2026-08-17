@@ -996,6 +996,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_LABEL:
       case bitc::METADATA_EXPRESSION:
       case bitc::METADATA_OBJC_PROPERTY:
+      case bitc::METADATA_PROPERTY:
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
@@ -2414,6 +2415,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                          getDITypeRefOrNull(Record[7]))),
         NextMetadataNo);
     NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_PROPERTY: {
+    // TODO: implement this.
     break;
   }
   case bitc::METADATA_IMPORTED_ENTITY: {
