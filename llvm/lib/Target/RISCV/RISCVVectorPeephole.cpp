@@ -915,8 +915,7 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     // elements.
     Register DestReg = MI.getOperand(0).getReg();
     MachineInstr *Masked =
-        BuildMI(*MI.getParent(), Cmp, Cmp.getDebugLoc(), MaskedDesc)
-            .addDef(DestReg)
+        BuildMI(*MI.getParent(), Cmp, MIMetadata(Cmp), MaskedDesc, DestReg)
             .addReg(PassthruReg)
             .add(Cmp.getOperand(1))
             .add(Cmp.getOperand(2))
