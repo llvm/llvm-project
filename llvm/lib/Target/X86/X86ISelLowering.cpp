@@ -54946,7 +54946,7 @@ static SDValue combineScalarMinMaxAbsStore(StoreSDNode *St, const SDLoc &DL,
 
   SDValue StoredVal = St->getValue();
   unsigned Opc = StoredVal.getOpcode();
-  bool IsAbs = Opc == ISD::ABS;
+  bool IsAbs = ISD::isAbsOpcode(Opc);
   if ((!IsAbs && !ISD::isMinMaxOpcode(Opc)) || !StoredVal.hasOneUse())
     return SDValue();
 
@@ -54970,7 +54970,10 @@ static SDValue combineScalarMinMaxAbsStore(StoreSDNode *St, const SDLoc &DL,
     else
       return std::nullopt;
 
-    if (!DAG.getTargetLoweringInfo().isOperationLegal(Opc, VecVT))
+    // Vector PABS is ISD::ABS; ABS_MIN_POISON is Expand. PABS(INT_MIN) is
+    // INT_MIN, which is a valid refinement of poison.
+    unsigned LegalOpc = IsAbs ? (unsigned)ISD::ABS : Opc;
+    if (!DAG.getTargetLoweringInfo().isOperationLegal(LegalOpc, VecVT))
       return std::nullopt;
     return VecVT;
   };
