@@ -217,6 +217,14 @@ public:
                                       Stmt *AStmt, SourceLocation StartLoc,
                                       SourceLocation EndLoc);
 
+  /// Called for metadirectives with user conditions that may require runtime
+  /// selection.
+  StmtResult ActOnOpenMPMetaDirective(
+      SourceLocation StartLoc, SourceLocation EndLoc,
+      ArrayRef<OMPTraitInfo *> TraitInfos,
+      ArrayRef<OpenMPClauseKind> ClauseKinds,
+      ArrayRef<OpenMPDirectiveKind> DirectiveKinds, Stmt *AssociatedStmt);
+
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp
   /// threadprivate'.

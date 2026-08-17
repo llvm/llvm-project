@@ -108,6 +108,22 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
   return checkOpenMPDirectiveName(P, Loc, S->Value, Concat);
 }
 
+/// Skip tokens until reaching the matching closing parenthesis.
+/// Handles nested parentheses correctly.
+static void skipToMatchingParen(Parser &P) {
+  int ParenDepth = 0;
+  while ((P.getCurToken().isNot(tok::r_paren) || ParenDepth != 0) &&
+         P.getCurToken().isNot(tok::annot_pragma_openmp_end) &&
+         P.getCurToken().isNot(tok::eof)) {
+    if (P.getCurToken().is(tok::l_paren))
+      ParenDepth++;
+    if (P.getCurToken().is(tok::r_paren) && ParenDepth > 0)
+      ParenDepth--;
+    if (ParenDepth > 0 || P.getCurToken().isNot(tok::r_paren))
+      P.ConsumeAnyToken();
+  }
+}
+
 static DeclarationName parseOpenMPReductionId(Parser &P) {
   Token Tok = P.getCurToken();
   Sema &Actions = P.getActions();
@@ -2614,10 +2630,11 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;
+    SmallVector<OMPTraitInfo *, 4> TraitInfos;
 
     // First iteration of parsing all clauses of metadirective.
-    // This iteration only parses and collects all context selector ignoring the
-    // associated directives.
+    // This iteration only parses and collects all context selectors ignoring
+    // the associated directives.
     TentativeParsingAction TPA(*this);
     ASTContext &ASTContext = Actions.getASTContext();
 
@@ -2693,6 +2710,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       TI.getAsVariantMatchInfo(ASTContext, VMI);
 
       VMIs.push_back(VMI);
+      TraitInfos.push_back(&TI);
     }
 
     TPA.Revert();
@@ -2711,6 +2729,75 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
     // A single match is returned for OpenMP 5.0
     int BestIdx = getBestVariantMatchForContext(VMIs, OMPCtx);
+
+    // Check if we have user conditions with non-constant expressions that
+    // require runtime selection.
+    bool HasUserCondition = false;
+    for (const VariantMatchInfo &VMI : VMIs) {
+      if (VMI.HasNonConstantUserCondition) {
+        HasUserCondition = true;
+        break;
+      }
+    }
+
+    // If we have user conditions that couldn't be resolved at compile time,
+    // parse all variants and the body.
+    if (HasUserCondition) {
+      SmallVector<OpenMPDirectiveKind, 4> DirectiveKinds;
+      SmallVector<OpenMPClauseKind, 4> ClauseKinds;
+
+      // TODO: Phase 2 - Parse directive clauses and store them.
+      // For now in Phase 1, we only extract directive kinds.
+      // Sema will extract conditions from TraitInfos.
+
+      BalancedDelimiterTracker T(*this, tok::l_paren,
+                                 tok::annot_pragma_openmp_end);
+      while (Tok.isNot(tok::annot_pragma_openmp_end)) {
+        OpenMPClauseKind CKind =
+            Tok.isAnnotation() ? OMPC_unknown
+                               : getOpenMPClauseKind(PP.getSpelling(Tok));
+        SourceLocation ClauseLoc = ConsumeToken();
+
+        // Parse '('.
+        T.consumeOpen();
+
+        if (CKind == OMPC_when) {
+          OMPTraitInfo &TI = Actions.getASTContext().getNewOMPTraitInfo();
+          parseOMPContextSelectors(ClauseLoc, TI);
+
+          // Parse ':'.
+          if (Tok.is(tok::colon))
+            ConsumeAnyToken();
+        }
+
+        // Parse directive kind only for now.
+        OpenMPDirectiveKind DKind = OMPD_unknown;
+        if (!Tok.is(tok::r_paren)) {
+          DKind = parseOpenMPDirectiveKind(*this);
+          skipToMatchingParen(*this);
+        }
+
+        // Parse ')'.
+        if (Tok.is(tok::r_paren))
+          T.consumeClose();
+
+        DirectiveKinds.push_back(DKind);
+        ClauseKinds.push_back(CKind);
+      }
+
+      SourceLocation EndLoc = Tok.getLocation();
+      ConsumeAnnotationToken();
+
+      // Parse the body statement.
+      StmtResult AssociatedStmt = ParseStatement();
+      if (AssociatedStmt.isInvalid())
+        return StmtError();
+
+      // Pass to Sema for Phase 2 processing.
+      return Actions.OpenMP().ActOnOpenMPMetaDirective(
+          Loc, EndLoc, TraitInfos, ClauseKinds, DirectiveKinds,
+          AssociatedStmt.get());
+    }
 
     int Idx = 0;
     // In OpenMP 5.0 metadirective is either replaced by another directive or
