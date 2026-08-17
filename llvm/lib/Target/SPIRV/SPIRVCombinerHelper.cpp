@@ -76,17 +76,19 @@ bool SPIRVCombinerHelper::matchFDivToNormalize(MachineInstr &MI) const {
   Register NumeratorReg = MI.getOperand(1).getReg();
   Register DivisorReg = MI.getOperand(2).getReg();
 
-  // The divisor must be a splat (i.e. a shuffle whose all-zeros mask broadcasts
-  // lane 0 to every lane).
+  // Match the divisor as a splat of length, inserted into lane 0.
   MachineInstr *ShuffleInstr = MRI.getVRegDef(DivisorReg);
   if (ShuffleInstr->getOpcode() != TargetOpcode::G_SHUFFLE_VECTOR)
     return false;
   if (!all_of(cast<GShuffleVector>(ShuffleInstr)->getMask(),
               [](int M) { return M == 0; }))
     return false;
+    
   MachineInstr *InsertInstr =
       MRI.getVRegDef(ShuffleInstr->getOperand(1).getReg());
   if (!isSpvIntrinsic(*InsertInstr, Intrinsic::spv_insertelt))
+    return false;
+  if (!mi_match(InsertInstr->getOperand(4).getReg(), MRI, m_ZeroInt()))
     return false;
 
   MachineInstr *LengthInstr =
@@ -94,7 +96,7 @@ bool SPIRVCombinerHelper::matchFDivToNormalize(MachineInstr &MI) const {
   if (!isSpvIntrinsic(*LengthInstr, Intrinsic::spv_length))
     return false;
 
-  // The numerator must be the same as length's argument.
+  // Check that length's argument is the same as the numerator.
   return LengthInstr->getOperand(2).getReg() == NumeratorReg;
 }
 

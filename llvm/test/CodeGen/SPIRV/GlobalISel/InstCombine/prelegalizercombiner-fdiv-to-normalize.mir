@@ -15,8 +15,6 @@ body:             |
     %3:type(s64) = OpTypeFunction %1(s64), %1(s64)
     %4:iid(s64) = OpFunction %1(s64), 0, %3(s64)
     %2:vfid(<4 x s32>) = OpFunctionParameter %1(s64)
-    OpName %4(s64), 1836216174, 2053729377, 1852399461, 1868788851, 1852400237, 1818648421, 880042351, 0
-    OpDecorate %4(s64), 41, 1836216174, 2053729377, 1852399461, 1868788851, 1852400237, 1818648421, 880042351, 0, 0
     %5:_(<4 x s32>) = G_IMPLICIT_DEF
     %6:_(s64) = G_CONSTANT i64 0
     %7:_(s32) = G_INTRINSIC intrinsic(@llvm.spv.length), %2(<4 x s32>)
