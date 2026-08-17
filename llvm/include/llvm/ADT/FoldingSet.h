@@ -296,6 +296,8 @@ public:
 /// facilitate node removal.
 ///
 class FoldingSetBase {
+  friend class FoldingSetIteratorImpl;
+
 protected:
   /// Array of bucket chains.
   void **Buckets;
@@ -374,6 +376,25 @@ private:
   void GrowBucketCount(unsigned NewBucketCount, const FoldingSetInfo &Info);
 
 protected:
+  /// Return the hash bucket for \p Hash.
+  void **getBucketFor(unsigned Hash) const {
+    // NumBuckets is always a power of 2.
+    return Buckets + (Hash & (NumBuckets - 1));
+  }
+
+  /// In order to save space, each bucket is a singly-linked-list. In order to
+  /// make deletion more efficient, we make the list circular, so we can delete
+  /// a node without computing its hash. The problem with this is that the start
+  /// of the hash buckets are not Nodes. If \p NextInBucketPtr is a bucket
+  /// pointer, this method returns null.
+  static Node *GetNextPtr(void *NextInBucketPtr) {
+    // The low bit is set if this is the pointer back to the bucket.
+    if (reinterpret_cast<intptr_t>(NextInBucketPtr) & 1)
+      return nullptr;
+
+    return static_cast<Node *>(NextInBucketPtr);
+  }
+
   // The below methods are protected to encourage subclasses to provide a more
   // type-safe API.
 
@@ -503,6 +524,31 @@ public:
 
   const_iterator begin() const { return const_iterator(Buckets); }
   const_iterator end() const { return const_iterator(Buckets + NumBuckets); }
+
+  /// Look up the node matching \p ID, using \p IsMatch to compare a candidate
+  /// node against it. If there is no such node, return null and set
+  /// \p InsertPos to the insertion token to pass to InsertNode(); the token is
+  /// only valid until the set is modified.
+  ///
+  /// This is an alternative to the FoldingSetInfo-based overload for clients
+  /// whose nodes can be compared against an ID directly.
+  template <typename FnT>
+  T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos,
+                         FnT IsMatch) {
+    void **Bucket = getBucketFor(ID.ComputeHash());
+    for (void *Probe = *Bucket; Node *N = GetNextPtr(Probe);
+         Probe = N->getNextInBucket()) {
+      T *TN = static_cast<T *>(N);
+      if (IsMatch(*TN)) {
+        InsertPos = nullptr;
+        return TN;
+      }
+    }
+
+    // Didn't find the node, return null with the bucket as the InsertPos.
+    InsertPos = Bucket;
+    return nullptr;
+  }
 
   /// Grow the number of buckets so that we can hold at least \p EltCount
   /// nodes before rebucketing. May allocate more space than requested.
