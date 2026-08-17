@@ -83,6 +83,9 @@ configure_furo(
     globals(),
     source_directory="clang/docs/analyzer/",
     html_title="Clang Static Analyzer",
+    html_logo=shared_static_asset("LLVMWyvernSmall.png"),
+    local_static_path=["../_static"],
+    extra_css_files=["custom.css"],
 )
 
 # Add any paths that contain custom themes here, relative to this directory.

@@ -18,10 +18,13 @@ call to `common_conf`, they should be modified/appended to, as in:
 """
 
 import sys
+from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 from enum import Enum, auto
 from sphinx.util.tags import Tags
 from llvm_sphinx.help import venv_help
+
+_SHARED_STATIC_DIR = Path(__file__).parent / "_static"
 
 
 class Markdown(Enum):
@@ -97,6 +100,11 @@ def configure_furo(
     conf["html_static_path"] = list(local_static_path)
     conf["html_css_files"] = list(extra_css_files)
     conf["html_js_files"] = list(extra_js_files)
+
+
+def shared_static_asset(filename: str) -> str:
+    """Return an absolute path to a shared LLVM Sphinx static asset."""
+    return str(_SHARED_STATIC_DIR / filename)
 
 
 # Some of our markdown documentation numbers section titles
