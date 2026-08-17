@@ -48,9 +48,6 @@ TEST(DwarfTest, getOperationEncoding) {
   EXPECT_EQ(DW_OP_deref, getOperationEncoding("DW_OP_deref"));
   EXPECT_EQ(DW_OP_bit_piece, getOperationEncoding("DW_OP_bit_piece"));
 
-  // A vendor extension.
-  EXPECT_EQ(DW_OP_NVIDIA_mux, getOperationEncoding("DW_OP_NVIDIA_mux"));
-
   // Invalid ops.
   EXPECT_EQ(0u, getOperationEncoding("DW_OP_otherthings"));
   EXPECT_EQ(0u, getOperationEncoding("other"));
@@ -66,14 +63,6 @@ TEST(DwarfTest, SubOperationEncoding) {
             SubOperationEncodingString(DW_OP_LLVM_user, DW_OP_LLVM_nop));
   EXPECT_EQ(DW_OP_LLVM_nop,
             getSubOperationEncoding(DW_OP_LLVM_user, "DW_OP_LLVM_nop"));
-}
-
-TEST(DwarfTest, OperationEncodingString) {
-  // A vendor extension.
-  EXPECT_EQ("DW_OP_NVIDIA_mux", OperationEncodingString(DW_OP_NVIDIA_mux));
-
-  // Unassigned encodings in the vendor range shouldn't be stringified.
-  EXPECT_EQ(StringRef(), OperationEncodingString(DW_OP_hi_user));
 }
 
 TEST(DwarfTest, LanguageStringOnInvalid) {

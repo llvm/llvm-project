@@ -214,7 +214,6 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_HP_unmod_range:
   case DW_OP_HP_tls:
   case DW_OP_INTEL_bit_piece:
-  case DW_OP_NVIDIA_mux:
   case DW_OP_WASM_location:
   case DW_OP_WASM_location_int:
   case DW_OP_APPLE_uninit:

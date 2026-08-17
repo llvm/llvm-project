@@ -208,17 +208,17 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_user_unknown_subop) {
                          "DW_OP_LLVM_form_aspace_address (2)>");
 }
 
-// DW_OP_NVIDIA_mux carries an opaque 8-bit selector, so the compact printer
-// cannot know its stack effect and must bail out naming the opcode.
-TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_NVIDIA_mux) {
-  TestExprPrinterFailure({DW_OP_NVIDIA_mux, 0xa5},
-                         "<unknown op DW_OP_NVIDIA_mux (235)>");
+// DW_OP_LLVM_NVIDIA_mux carries an opaque selector, so the compact printer
+// cannot know its stack effect and must bail out naming both opcodes.
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_NVIDIA_mux) {
+  TestExprPrinterFailure({DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01},
+                         "<unknown op DW_OP_LLVM_user (233) subop "
+                         "DW_OP_LLVM_NVIDIA_mux (13)>");
 }
 
-// The selector is a fixed 1-byte operand, so the full printer must consume
-// exactly one byte and print its value.
-TEST(NVIDIAMux, Full_DW_OP_NVIDIA_mux) {
-  const uint8_t Enc[] = {DW_OP_NVIDIA_mux, 0xa5};
+// The selector is a ULEB128 operand, so 165 encodes as two bytes.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux) {
+  const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01};
 
   std::string Result;
   raw_string_ostream OS(Result);
@@ -228,13 +228,14 @@ TEST(NVIDIAMux, Full_DW_OP_NVIDIA_mux) {
   DIDumpOptions DumpOpts;
   printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
 
-  EXPECT_EQ(OS.str(), "DW_OP_NVIDIA_mux 0xa5");
+  EXPECT_EQ(OS.str(), "DW_OP_LLVM_user DW_OP_LLVM_NVIDIA_mux 0xa5");
 }
 
-// A trailing operation must still decode, proving the selector advanced the
-// offset by exactly one byte.
-TEST(NVIDIAMux, Full_DW_OP_NVIDIA_mux_TrailingOp) {
-  const uint8_t Enc[] = {DW_OP_NVIDIA_mux, 0xa5, DW_OP_stack_value};
+// A trailing operation must still decode, proving the selector consumed
+// the bytes of its ULEB128 operand encoding.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TrailingOp) {
+  const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01,
+                         DW_OP_stack_value};
 
   std::string Result;
   raw_string_ostream OS(Result);
@@ -244,7 +245,8 @@ TEST(NVIDIAMux, Full_DW_OP_NVIDIA_mux_TrailingOp) {
   DIDumpOptions DumpOpts;
   printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
 
-  EXPECT_EQ(OS.str(), "DW_OP_NVIDIA_mux 0xa5, DW_OP_stack_value");
+  EXPECT_EQ(OS.str(),
+            "DW_OP_LLVM_user DW_OP_LLVM_NVIDIA_mux 0xa5, DW_OP_stack_value");
 }
 
 // NVPTX packs virtual register names into DWARF register numbers, so compact

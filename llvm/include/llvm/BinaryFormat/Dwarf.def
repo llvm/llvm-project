@@ -920,13 +920,6 @@ HANDLE_DW_OP(0xe5, HP_unmod_range, -1, -1, 0, HP)
 HANDLE_DW_OP(0xe6, HP_tls, -1, -1, 0, HP)
 HANDLE_DW_OP(0xe8, INTEL_bit_piece, -1, -1, 0, INTEL)
 
-// Extension for NVIDIA. DW_OP_NVIDIA_mux acts as an extension multiplexer: its
-// single 1-byte unsigned operand selects an NVIDIA-specific operation. This
-// keeps the cost of the whole NVIDIA extension family at one encoding in the
-// scarce DW_OP_lo_user..DW_OP_hi_user range. The selector value is opaque to
-// LLVM; no NVIDIA operation semantics are defined here.
-HANDLE_DW_OP(0xeb, NVIDIA_mux, 1, -1, 0, NVIDIA)
-
 // Extensions for WebAssembly.
 HANDLE_DW_OP(0xed, WASM_location, -1, -1, 0, WASM)
 HANDLE_DW_OP(0xee, WASM_location_int, -1, -1, 0, WASM)
@@ -970,6 +963,12 @@ HANDLE_DW_OP_LLVM_USEROP(0x0009, aspace_bregx)
 HANDLE_DW_OP_LLVM_USEROP(0x000a, piece_end)
 HANDLE_DW_OP_LLVM_USEROP(0x000b, extend)
 HANDLE_DW_OP_LLVM_USEROP(0x000c, select_bit_piece)
+// The DW_OP_LLVM_NVIDIA_mux operation takes a single ULEB128 operand that
+// selects an NVIDIA-specific operation. It acts as a second-level multiplexer,
+// giving NVIDIA a private encoding space without requiring every NVIDIA
+// operation to be registered here. The selector is opaque to LLVM; no NVIDIA
+// operation semantics are defined here.
+HANDLE_DW_OP_LLVM_USEROP(0x000d, NVIDIA_mux)
 
 // DWARF languages.
 HANDLE_DW_LANG(0x0001, C89, 0, 2, DWARF)
