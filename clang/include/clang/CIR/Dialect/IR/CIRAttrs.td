@@ -2015,23 +2015,64 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
 // StaticLocalInfoAttr
 //===----------------------------------------------------------------------===//
 
+// CIR-native thread-local storage kind. Cases mirror clang::VarDecl::TLSKind
+// so CIRGen can map between them, but CIR does not depend on the underlying
+// clang enumerator values.
+def CIR_TLSKind : CIR_I32EnumAttr<"TLSKind", "thread-local storage kind", [
+  I32EnumAttrCase<"None", 0, "none">,          // clang::VarDecl::TLS_None
+  I32EnumAttrCase<"Static", 1, "static">,      // clang::VarDecl::TLS_Static
+  I32EnumAttrCase<"Dynamic", 2, "dynamic">     // clang::VarDecl::TLS_Dynamic
+]> {
+  let genSpecializedAttr = 0;
+}
+
+// CIR-native template-specialization kind. Cases mirror
+// clang::TemplateSpecializationKind.
+def CIR_TemplateSpecializationKind
+    : CIR_I32EnumAttr<"TemplateSpecializationKind",
+                      "template specialization kind", [
+  // clang::TSK_Undeclared
+  I32EnumAttrCase<"Undeclared", 0, "undeclared">,
+  // clang::TSK_ImplicitInstantiation
+  I32EnumAttrCase<"ImplicitInstantiation", 1, "implicit_instantiation">,
+  // clang::TSK_ExplicitSpecialization
+  I32EnumAttrCase<"ExplicitSpecialization", 2, "explicit_specialization">,
+  // clang::TSK_ExplicitInstantiationDeclaration
+  I32EnumAttrCase<"ExplicitInstantiationDeclaration", 3,
+                  "explicit_instantiation_declaration">,
+  // clang::TSK_ExplicitInstantiationDefinition
+  I32EnumAttrCase<"ExplicitInstantiationDefinition", 4,
+                  "explicit_instantiation_definition">
+]> {
+  let genSpecializedAttr = 0;
+}
+
 def CIR_StaticLocalInfoAttr
     : CIR_Attr<"StaticLocalInfo", "static_local_info"> {
   let summary = "Static-local variable facts needed by later lowering";
   let description = [{
     Holds the subset of a static-local variable's declaration facts that
-    post-CIRGen lowering needs: whether it is a local variable declaration
-    (`is_local_var_decl`), its thread-local storage kind (`tls`), whether it
-    is inline (`is_inline`), and its template-specialization kind (`tsk`).
-    `tls` and `tsk` are stored as plain integers matching the
-    `clang::VarDecl::TLSKind` and `clang::TemplateSpecializationKind`
-    enumerators.
+    post-CIRGen lowering needs, as plain data (no `clang::VarDecl` pointer).
+
+    - `local`: whether the variable is a block-scope (local) declaration.
+      Mirrors `clang::VarDecl::isLocalVarDecl()`. The namespace-scope inline
+      variables that also reach guarded initialization are not local.
+
+    - `tls`: the thread-local storage kind (`none`, `static`, or `dynamic`).
+
+    - `is_inline`: whether the variable is inline. Mirrors
+      `clang::VarDecl::isInline()`.
+
+    - `tsk`: the template-specialization kind (`undeclared`,
+      `implicit_instantiation`, `explicit_specialization`,
+      `explicit_instantiation_declaration`, or
+      `explicit_instantiation_definition`).
 
     Example:
     ```
     cir.global ... @x = ...
       {static_local_info = #cir.static_local_info<
-         is_local_var_decl = true, tls = 0, is_inline = false, tsk = 0>}
+         local = true, tls = none, is_inline = false, tsk = undeclared>}
     ```
 
     Because it stores plain data rather than a `clang::VarDecl` pointer, it
@@ -2042,24 +2083,14 @@ def CIR_StaticLocalInfoAttr
   }];
 
   let parameters = (ins
-    "bool":$is_local_var_decl,
-    "uint32_t":$tls,
+    "bool":$local,
+    EnumParameter<CIR_TLSKind>:$tls,
     "bool":$is_inline,
-    "uint32_t":$tsk
+    EnumParameter<CIR_TemplateSpecializationKind>:$tsk
   );
 
   let assemblyFormat = [{
-    `<` struct($is_local_var_decl, $tls, $is_inline, $tsk) `>`
-  }];
-
-  let extraClassDeclaration = [{
-    // Typed accessors over the stored integer fields.
-    clang::VarDecl::TLSKind getTLSKind() const {
-      return static_cast<clang::VarDecl::TLSKind>(getTls());
-    }
-    clang::TemplateSpecializationKind getTemplateSpecializationKind() const {
-      return static_cast<clang::TemplateSpecializationKind>(getTsk());
-    }
+    `<` struct($local, $tls, $is_inline, $tsk) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

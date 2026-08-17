@@ -26,8 +26,8 @@ int tls() {
 // the retained AST handle.
 // CHECK: @_ZZ3tlsvE1s
 // CHECK-SAME: ast = #cir.var.decl.ast
-// CHECK-SAME: static_local_info = #cir.static_local_info<is_local_var_decl = true, tls = 2, is_inline = false, tsk = 0>
+// CHECK-SAME: static_local_info = #cir.static_local_info<local = true, tls = dynamic, is_inline = false, tsk = undeclared>
 
 // CHECK: @_ZZ7regularvE1s
 // CHECK-SAME: ast = #cir.var.decl.ast
-// CHECK-SAME: static_local_info = #cir.static_local_info<is_local_var_decl = true, tls = 0, is_inline = false, tsk = 0>
+// CHECK-SAME: static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>

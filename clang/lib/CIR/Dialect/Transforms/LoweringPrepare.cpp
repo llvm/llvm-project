@@ -1371,9 +1371,13 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
 
   // Inline variables that weren't instantiated from variable templates have
   // partially-ordered initialization within their translation unit.
-  bool nonTemplateInline =
-      info.getIsInline() &&
-      !clang::isTemplateInstantiation(info.getTemplateSpecializationKind());
+  cir::TemplateSpecializationKind tsk = info.getTsk();
+  bool isTemplateInstantiation =
+      tsk == cir::TemplateSpecializationKind::ImplicitInstantiation ||
+      tsk ==
+          cir::TemplateSpecializationKind::ExplicitInstantiationDeclaration ||
+      tsk == cir::TemplateSpecializationKind::ExplicitInstantiationDefinition;
+  bool nonTemplateInline = info.getIsInline() && !isTemplateInstantiation;
 
   // Inline namespace-scope variables require guarded initialization in a
   // __cxx_global_var_init function. This is not yet implemented.
@@ -1387,8 +1391,8 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // inline variables; other global initialization is always single-threaded
   // or (through lazy dynamic loading in multiple threads) unsequenced.
   bool threadsafe = astCtx->getLangOpts().ThreadsafeStatics &&
-                    (info.getIsLocalVarDecl() || nonTemplateInline) &&
-                    !info.getTLSKind();
+                    (info.getLocal() || nonTemplateInline) &&
+                    info.getTls() == cir::TLSKind::None;
 
   // If we have a global variable with internal linkage and thread-safe statics
   // are disabled, we can just let the guard variable be of type i8.
@@ -1397,7 +1401,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // Create the guard variable if we don't already have it.
   cir::GlobalOp guard = getOrCreateStaticLocalDeclGuardAddress(
       builder, globalOp, globalOp.getStaticLocalGuard()->getName().getValue(),
-      info.getIsLocalVarDecl(), useInt8GuardVariable);
+      info.getLocal(), useInt8GuardVariable);
   if (!guard) {
     // Error was already emitted, just restore the terminator and return.
     localInitBlock->push_back(ret);
@@ -1487,7 +1491,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
         /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location) {
           emitCXXGuardedInitIf(
               builder, globalOp, localInitOp.getCtorRegion(),
-              localInitOp.getDtorRegion(), info.getIsLocalVarDecl(), guardPtr,
+              localInitOp.getDtorRegion(), info.getLocal(), guardPtr,
               builder.getPointerTo(guard.getSymType()), threadsafe);
         });
   } else {
