@@ -11,6 +11,8 @@
 //   CHECK-NOT:   scf.execute_region
 //       CHECK:   llvm.cond_br
 //       CHECK:   llvm.store
+//       CHECK:   cf.br
+//       CHECK:   cf.br
 //       CHECK:   llvm.return
 llvm.func @multi_block_execute_region(%c: i1, %p: !llvm.ptr, %x: i64) {
   scf.execute_region {
