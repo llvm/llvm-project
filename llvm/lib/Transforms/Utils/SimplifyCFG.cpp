@@ -5827,13 +5827,16 @@ static bool mergeCompatibleUnreachableCalls(BasicBlock *BB,
       continue;
 
     bool CanMerge = true;
-    for (unsigned i = 0; i < CI->arg_size(); ++i) {
-      if (CI->getArgOperand(i) != OtherCI->getArgOperand(i) &&
-          !canReplaceOperandWithVariable(CI, i)) {
+    for (unsigned i = 0, e = CI->getNumOperands(); i != e; ++i) {
+      if (CI->getOperand(i) != OtherCI->getOperand(i)) {
+        if (CI->isDataOperand(&CI->getOperandUse(i)) &&
+            canReplaceOperandWithVariable(CI, i))
+          continue;
         CanMerge = false;
         break;
       }
     }
+
     if (CanMerge)
       BlocksToMerge.push_back(OtherBB);
   }
@@ -5854,11 +5857,14 @@ static bool mergeCompatibleUnreachableCalls(BasicBlock *BB,
   if (DTU)
     Updates.reserve(2 * BlocksToMerge.size());
 
-  for (unsigned i = 0; i < MergedCall->arg_size(); ++i) {
+  for (unsigned i = 0, e = MergedCall->getNumOperands(); i != e; ++i) {
+    if (!MergedCall->isDataOperand(&MergedCall->getOperandUse(i)))
+      continue;
+
     bool NeedsPHI = false;
     for (BasicBlock *OldBB : BlocksToMerge) {
       auto *OldCI = cast<CallInst>(&OldBB->front());
-      if (OldCI->getArgOperand(i) != CI->getArgOperand(i)) {
+      if (OldCI->getOperand(i) != CI->getOperand(i)) {
         NeedsPHI = true;
         break;
       }
@@ -5866,13 +5872,13 @@ static bool mergeCompatibleUnreachableCalls(BasicBlock *BB,
 
     if (NeedsPHI) {
       PHINode *PN =
-          PHINode::Create(CI->getArgOperand(i)->getType(), BlocksToMerge.size(),
+          PHINode::Create(CI->getOperand(i)->getType(), BlocksToMerge.size(),
                           "", MergedCall->getIterator());
       for (BasicBlock *OldBB : BlocksToMerge) {
         auto *OldCI = cast<CallInst>(&OldBB->front());
-        PN->addIncoming(OldCI->getArgOperand(i), OldBB);
+        PN->addIncoming(OldCI->getOperand(i), OldBB);
       }
-      MergedCall->setArgOperand(i, PN);
+      MergedCall->setOperand(i, PN);
     }
   }
 
