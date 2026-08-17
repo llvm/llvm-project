@@ -11,7 +11,7 @@ define i32 @eq_undereferenceable(ptr %p) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P:%.*]], getelementptr inbounds (i32, ptr @x, i64 1)
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 2, ptr getelementptr inbounds (i32, ptr @x, i64 1), align 4
+; CHECK-NEXT:    store i32 2, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @y, align 4
@@ -65,7 +65,7 @@ define i1 @eq_undereferenceable_cmp_simp(ptr %p) {
 ; CHECK-NEXT:    [[CMP_0:%.*]] = icmp eq ptr [[P:%.*]], getelementptr inbounds (i32, ptr @x, i64 1)
 ; CHECK-NEXT:    br i1 [[CMP_0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 2, ptr getelementptr inbounds (i32, ptr @x, i64 1), align 4
+; CHECK-NEXT:    store i32 2, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i1 false

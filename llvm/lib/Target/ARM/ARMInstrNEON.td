@@ -5564,7 +5564,7 @@ def : Pat<(v16i8 (vnotq QPR:$src)),
 
 // The TwoAddress pass will not go looking for equivalent operations
 // with different register constraints; it just inserts copies.
-// That is why pseudo VBSP implemented. Is is expanded later into
+// That is why pseudo VBSP implemented. It is expanded later into
 // VBIT/VBIF/VBSL taking into account register constraints to avoid copies.
 def  VBSPd : PseudoNeonI<(outs DPR:$Vd), (ins DPR:$src1, DPR:$Vn, DPR:$Vm),
                          IIC_VBINiD, "", []>;

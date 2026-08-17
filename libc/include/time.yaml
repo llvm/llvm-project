@@ -13,6 +13,7 @@ types:
   - type_name: struct_timespec
   - type_name: struct_tm
   - type_name: time_t
+  - type_name: timer_t
   - type_name: clock_t
   - type_name: rsize_t
   - type_name: size_t
@@ -87,13 +88,6 @@ functions:
     arguments:
       - type: time_t
       - type: time_t
-  - name: gettimeofday
-    standards:
-      - posix
-    return_type: int
-    arguments:
-      - type: struct timeval *
-      - type: void *
   - name: gmtime
     standards:
       - stdc
@@ -139,6 +133,14 @@ functions:
       - type: const char *__restrict
       - type: const struct tm *__restrict
       - type: locale_t
+  - name: strptime
+    standards:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: struct tm *__restrict
   - name: time
     standards:
       - stdc

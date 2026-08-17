@@ -458,6 +458,8 @@ enum NodeType {
   STRICT_FNEARBYINT,
   STRICT_FMAXNUM,
   STRICT_FMINNUM,
+  STRICT_PSEUDO_FMIN,
+  STRICT_PSEUDO_FMAX,
   STRICT_FCEIL,
   STRICT_FFLOOR,
   STRICT_FROUND,
@@ -1127,6 +1129,15 @@ enum NodeType {
   FMINIMUMNUM,
   FMAXIMUMNUM,
 
+  /// PSEUDO_FMIN is strictly equivalent to op0 olt op1 ? op0 : op1.
+  /// PSEUDO_FMAX is strictly equivalent to op0 ogt op1 ? op0 : op1.
+  /// In particular, this implies that if both operands are zeros, the second
+  /// operand is returned (regardless of sign), and that if one operand is NaN,
+  /// the second operand is returned (exactly as-is, without any NaN changes).
+  /// The StrictFP variant assumes signaling fcmp (FSETCCS).
+  PSEUDO_FMIN,
+  PSEUDO_FMAX,
+
   /// FSINCOS - Compute both fsin and fcos as a single operation.
   FSINCOS,
 
@@ -1616,6 +1627,15 @@ enum NodeType {
   /// bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
+  /// VECTOR_MATCH - this corresponds to the llvm.experimental.vector.match
+  /// intrinsic.
+  /// Operands: Source, Needle, Mask
+  /// Source has the same number of elements as the result and Needle may have
+  /// a different number of elements. The result type matches Mask. The ISD
+  /// node supports result and mask types wider than i1, in these cases the
+  /// high bits conform to getBooleanContents similar to the SETCC operator.
+  VECTOR_MATCH,
+
   /// The `llvm.loop.dependence.{war, raw}.mask` intrinsics
   /// Operands: Load pointer, Store pointer, Element size, Lane offset
   /// Output: Mask
@@ -1666,6 +1686,12 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
 /// ISD::ABS_MIN_POISON).
 inline bool isAbsOpcode(unsigned Opcode) {
   return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
+}
+
+/// Whether this is an integer min/max opcode (ISD::(U|S)MIN or ISD::(U|S)MAX).
+inline bool isMinMaxOpcode(unsigned Opcode) {
+  return Opcode == ISD::SMIN || Opcode == ISD::SMAX || Opcode == ISD::UMIN ||
+         Opcode == ISD::UMAX;
 }
 
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns

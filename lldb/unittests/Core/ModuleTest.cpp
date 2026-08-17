@@ -223,7 +223,7 @@ Sections:
 ...
 )";
 
-  const ConstString text_name(".text");
+  llvm::StringRef text_name(".text");
   constexpr int kThreads = 8;
   // Each iteration uses a fresh module so the lazy build (and its race) is
   // re-triggered every time.

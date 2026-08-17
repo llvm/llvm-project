@@ -45,6 +45,7 @@ class EarliestEscapeAnalysis;
 class ExtractValueInst;
 class Function;
 class FunctionPass;
+class GVNLegacyPass;
 class GetElementPtrInst;
 class ImplicitControlFlowTracking;
 class LoadInst;
@@ -61,15 +62,6 @@ class PHINode;
 class TargetLibraryInfo;
 class Value;
 class IntrinsicInst;
-/// A private "module" namespace for types and utilities used by GVN. These
-/// are implementation details and should not be used by clients.
-namespace LLVM_LIBRARY_VISIBILITY_NAMESPACE gvn {
-
-struct AvailableValue;
-struct AvailableValueInBlock;
-class GVNLegacyPass;
-
-} // end namespace gvn
 
 /// A set of parameters to control various transforms performed by GVN pass.
 //  Each of the optional boolean parameters can be set to:
@@ -133,6 +125,8 @@ class GVNPass : public OptionalPassInfoMixin<GVNPass> {
 
 public:
   struct Expression;
+  struct AvailableValue;
+  struct AvailableValueInBlock;
 
   GVNPass(GVNOptions Options = {}) : Options(Options) {}
 
@@ -222,6 +216,7 @@ public:
     LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
     LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                                      Value *LHS, Value *RHS);
+    LLVM_ABI uint32_t lookupPtrToInt(Value *Ptr, Type *Ty);
     LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
                                    const BasicBlock *PhiBlock, uint32_t Num,
                                    GVNPass &GVN);
@@ -247,7 +242,7 @@ public:
   };
 
 private:
-  friend class gvn::GVNLegacyPass;
+  friend class GVNLegacyPass;
   friend struct DenseMapInfo<Expression>;
 
   MemoryDependenceResults *MD = nullptr;
@@ -353,7 +348,7 @@ private:
   bool InvalidBlockRPONumbers = true;
 
   using LoadDepVect = SmallVector<NonLocalDepResult, 64>;
-  using AvailValInBlkVect = SmallVector<gvn::AvailableValueInBlock, 64>;
+  using AvailValInBlkVect = SmallVector<AvailableValueInBlock, 64>;
   using UnavailBlkVect = SmallVector<BasicBlock *, 64>;
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
@@ -453,22 +448,22 @@ private:
 
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.
-  std::optional<gvn::AvailableValue>
-  AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
+  std::optional<AvailableValue>
+  analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
                           Value *Address);
 
   /// Given a select-dependency for the load (the load address is a select of
   /// \p TrueAddr and \p FalseAddr guarded by \p Cond), determine whether a
   /// value is available by finding dominating values for both addresses.  If
   /// so, the load can be rematerialized as a select of those two values.
-  std::optional<gvn::AvailableValue>
-  AnalyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
+  std::optional<AvailableValue>
+  analyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
                             Value *FalseAddr, Instruction *From);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
   /// ValuesPerBlock.  If not, add it to UnavailableBlocks.
-  void AnalyzeLoadAvailability(LoadInst *Load,
+  void analyzeLoadAvailability(LoadInst *Load,
                                SmallVectorImpl<ReachingMemVal> &Deps,
                                AvailValInBlkVect &ValuesPerBlock,
                                UnavailBlkVect &UnavailableBlocks);
@@ -478,7 +473,7 @@ private:
   LoadInst *findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
                                     LoadInst *Load);
 
-  bool PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
+  bool performLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
                       UnavailBlkVect &UnavailableBlocks);
 
   /// Try to replace a load which executes on each loop iteraiton with Phi
@@ -497,7 +492,6 @@ private:
   // Other helper routines.
   bool processInstruction(Instruction *I);
   bool processBlock(BasicBlock *BB);
-  void dump(DenseMap<uint32_t, Value *> &Map) const;
   bool iterateOnFunction(Function &F);
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);

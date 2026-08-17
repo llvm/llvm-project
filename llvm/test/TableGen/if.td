@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen --no-warn-on-unused-template-args %s | FileCheck %s
-// XFAIL: vg_leak
 
 // Support for an `!if' operator as part of a `let' statement.
 // CHECK:      class C

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefixes=SI,GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefixes=SI,GCN %s
 
-; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -enable-var-scope -check-prefixes=VI,GCN %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -enable-var-scope -check-prefixes=VI,GCN %s
 
 ; GCN-LABEL: {{^}}min_fneg_select_regression_0:
 ; GCN-NOT: v_mul

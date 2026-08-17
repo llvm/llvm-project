@@ -44,7 +44,7 @@ static bool CanModuleBeGNUstepObjCLibrary(const ModuleSP &module_sp,
   const FileSpec &module_file_spec = module_sp->GetFileSpec();
   if (!module_file_spec)
     return false;
-  llvm::StringRef filename = module_file_spec.GetFilename().GetStringRef();
+  llvm::StringRef filename = module_file_spec.GetFilename();
   if (TT.isOSBinFormatELF())
     return filename.starts_with("libobjc.so");
   if (TT.isOSWindows())

@@ -12,9 +12,9 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP9:%.*]], %[[BB3]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr null, align 8
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[LOAD]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[TRUNC]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[TRUNC]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP10]], <i32 0, i32 -1>
-; CHECK-NEXT:    [[AND:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
+; CHECK-NEXT:    [[AND:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 0, [[AND]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr <2 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP1]], [[TMP3]]

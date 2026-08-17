@@ -73,6 +73,9 @@ public:
   /// Is this a box describing an array or assumed-rank?
   bool isArray() const;
 
+  /// Is this a box describing a coarray?
+  bool isCoarray() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
@@ -428,6 +431,9 @@ inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
 /// Get the rank from a !fir.box type.
 unsigned getBoxRank(mlir::Type boxTy);
 
+/// Get the corank from a !fir.box type.
+unsigned getBoxCorank(mlir::Type boxTy);
+
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
 
@@ -475,10 +481,11 @@ inline bool isNoneOrSeqNone(mlir::Type type) {
 /// is polymorphic and assumed shape return fir.box<T>.
 inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
                                        bool isPolymorphic = false,
-                                       bool isAssumedType = false) {
+                                       bool isAssumedType = false,
+                                       unsigned corank = 0) {
   if (isPolymorphic && !isAssumedType)
-    return fir::ClassType::get(eleTy);
-  return fir::BoxType::get(eleTy);
+    return fir::ClassType::get(eleTy, /*isVolatile*/ false, corank);
+  return fir::BoxType::get(eleTy, /*isVolatile*/ false, corank);
 }
 
 /// Re-create the given type with the given volatility, if this is a type

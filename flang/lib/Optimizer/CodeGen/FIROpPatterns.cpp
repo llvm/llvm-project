@@ -13,7 +13,6 @@
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "llvm/Support/Debug.h"
 
 static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
                                         unsigned addressSpace = 0) {

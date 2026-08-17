@@ -14,12 +14,12 @@
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Support/Utils.h"
-#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "mlir/IR/IRMapping.h"
 
 //===----------------------------------------------------------------------===//
 // Synchronization statements
@@ -99,7 +99,7 @@ void Fortran::lower::genSyncTeamStatement(
       std::get<Fortran::parser::TeamValue>(stmt.t);
   const SomeExpr *teamExpr = Fortran::semantics::GetExpr(teamValue);
   mlir::Value team =
-      fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+      fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   // Handle STAT and ERRMSG values
   const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
@@ -163,7 +163,7 @@ Fortran::lower::genChangeTeamStmt(Fortran::lower::AbstractConverter &converter,
   // Handle TEAM-VALUE
   const auto *teamExpr =
       Fortran::semantics::GetExpr(std::get<Fortran::parser::TeamValue>(stmt.t));
-  team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+  team = fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   return mif::ChangeTeamOp::create(builder, loc, team, statAddr, errMsgAddr);
 }
@@ -253,7 +253,7 @@ void Fortran::lower::genFormTeamStatement(
   // Handle TEAM-VARIABLE
   const auto *teamExpr = Fortran::semantics::GetExpr(
       std::get<Fortran::parser::TeamVariable>(stmt.t));
-  team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+  team = fir::getBase(converter.genExprAddr(loc, *teamExpr, stmtCtx));
 
   mif::FormTeamOp::create(builder, loc, teamNumber, team, newIndex, statAddr,
                           errMsgAddr);
@@ -262,6 +262,34 @@ void Fortran::lower::genFormTeamStatement(
 //===----------------------------------------------------------------------===//
 // COARRAY utils
 //===----------------------------------------------------------------------===//
+
+/// Generates a vector of cosubscripts from CoarrayRef
+mlir::SmallVector<mlir::Value>
+Fortran::lower::getCosubscripts(Fortran::lower::AbstractConverter &converter,
+                                mlir::Location loc,
+                                const Fortran::evaluate::CoarrayRef &expr) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::SmallVector<mlir::Value> cosubscripts;
+
+  // Creation of the cosubscripts vector
+  mlir::Type i64Ty = builder.getI64Type();
+  unsigned corank = expr.cosubscript().size();
+  for (unsigned dim = 0; dim < corank; ++dim) {
+    auto cosub = ToInt64(expr.cosubscript()[dim]);
+    mlir::Value idx;
+    if (cosub.has_value())
+      idx = builder.createIntegerConstant(loc, i64Ty, cosub.value());
+    else {
+      auto s = ignoreEvConvert(expr.cosubscript()[dim]);
+      idx = builder.createConvert(
+          loc, i64Ty, fir::getBase(converter.genExprValue(loc, s, stmtCtx)));
+    }
+
+    cosubscripts.push_back(idx);
+  }
+  return cosubscripts;
+}
 
 mlir::Value
 Fortran::lower::genLowerCoBounds(Fortran::lower::AbstractConverter &converter,
@@ -330,7 +358,7 @@ Fortran::lower::genUpperCoBounds(Fortran::lower::AbstractConverter &converter,
     ucobounds = builder.createTemporary(loc, arrayType);
     mlir::Value ucovalue;
     for (size_t i = 0; i < corank - 1; i++) {
-      if (auto ub = object->coshape()[i].lbound().GetExplicit()) {
+      if (auto ub = object->coshape()[i].ubound().GetExplicit()) {
         auto ubExpr = ignoreEvConvert(*ub);
         ucovalue = fir::getBase(converter.genExprValue(loc, ubExpr, stmtCtx));
       } else {
@@ -449,6 +477,33 @@ mlir::Value Fortran::lower::genAllocateCoarray(
   mif::AllocCoarrayOp::create(builder, loc, addr, uniqName, lcobounds,
                               ucobounds, stat, errmsg);
   return stat;
+}
+
+void Fortran::lower::genAllocateNonAllocatableSaveCoarray(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const semantics::Symbol &sym, mlir::Value addr) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::ModuleOp mod = builder.getModule();
+  mlir::IRMapping mapping;
+
+  auto func = mif::getOrCreateInitFunc(builder, mod, mifSaveCoarraysAllocName);
+  bool funcIsEmpty = func.empty();
+
+  mlir::Block &entry = func.getBody().front();
+  auto returnOp = entry.getTerminator();
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(returnOp);
+
+  // If the function is empty, then we add the MIF initialization operation
+  // at the beginning.
+  if (funcIsEmpty)
+    mif::InitOp::create(builder, loc);
+
+  mlir::Operation &op = *addr.getDefiningOp();
+  mlir::Operation *localAddrOp = builder.clone(op, mapping);
+  Fortran::lower::genAllocateCoarray(converter, loc, sym,
+                                     localAddrOp->getResult(0));
 }
 
 //===----------------------------------------------------------------------===//

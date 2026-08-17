@@ -62,7 +62,7 @@ static bool isZeroOrOneFP(Value *Op) {
 
 static bool shouldReduceOperand(Use &Op) {
   Type *Ty = Op->getType();
-  if (Ty->isLabelTy() || Ty->isMetadataTy())
+  if (Ty->isLabelTy() || Ty->isMetadataTy() || Ty->isX86_AMXTy())
     return false;
   // TODO: be more precise about which GEP operands we can reduce (e.g. array
   // indexes)

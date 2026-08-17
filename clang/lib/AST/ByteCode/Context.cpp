@@ -208,7 +208,8 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
     }
 
-    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+    if (!Ptr.isLive() || !Ptr.isInitialized() || Ptr.isUnknownSizeArray() ||
+        !Ptr.getFieldDesc()->isPrimitiveArray())
       return false;
 
     // Must be char.
@@ -554,8 +555,8 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 }
 
 bool Context::Run(State &Parent, const Function *Func) {
-  InterpState State(Parent, *P, Stk, *this, Func);
   auto Memory = std::make_unique<char[]>(InterpFrame::allocSize(Func));
+  InterpState State(Parent, *P, Stk, *this, Func);
   InterpFrame *Frame = new (Memory.get()) InterpFrame(
       State, Func, /*Caller=*/nullptr, CodePtr(), Func->getArgSize());
   State.Current = Frame;
@@ -571,7 +572,6 @@ bool Context::Run(State &Parent, const Function *Func) {
   return false;
 }
 
-// TODO: Virtual bases?
 const CXXMethodDecl *
 Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                                const CXXRecordDecl *StaticDecl,
@@ -680,7 +680,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     bool IsConst = PD->getType().isConstQualified();
     bool IsVolatile = PD->getType().isVolatileQualified();
 
-    if (!getASTContext().hasSameType(PD->getType(),
+    if (PD->isInvalidDecl() ||
+        !getASTContext().hasSameType(PD->getType(),
                                      FuncProto->getParamType(ParamIndex)))
       return nullptr;
 

@@ -78,6 +78,7 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("vpclmulqdq");
   (void)__builtin_cpu_supports("avx512vnni");
   (void)__builtin_cpu_supports("avx512bitalg");
+  (void)__builtin_cpu_supports("avx512bmm");
   (void)__builtin_cpu_supports("avx512bf16");
   (void)__builtin_cpu_supports("avx512vp2intersect");
   (void)__builtin_cpu_supports("f16c");

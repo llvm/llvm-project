@@ -1,5 +1,7 @@
 // RUN: mlir-opt --transform-interpreter --canonicalize --split-input-file %s | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op

@@ -349,4 +349,71 @@ TEST(ExecutionContext, EnableDisableBreakpointOnCallback) {
   executionCtx(original, DebuggerAction{});
   EXPECT_EQ(counter, 4);
 }
+
+TEST(ExecutionContext, RerunRequestedFromPostActionCallback) {
+  // If rerun is requested from the post-action callback path,
+  // the same action must be rerun immediately.
+  std::vector<ExecutionContext::Control> controlSequence = {
+      ExecutionContext::Next, ExecutionContext::Rerun, ExecutionContext::Apply};
+  int idx = 0;
+  int callbackCounter = 0;
+  int executionCounter = 0;
+
+  auto onBreakpoint = [&](const ActionActiveStack *backtrace) {
+    ++callbackCounter;
+    EXPECT_EQ(backtrace->getAction().getTag(), DebuggerAction::tag);
+    return controlSequence[idx++];
+  };
+
+  TagBreakpointManager simpleManager;
+  ExecutionContext executionCtx(onBreakpoint);
+  executionCtx.addBreakpointManager(&simpleManager);
+  simpleManager.addBreakpoint(DebuggerAction::tag);
+
+  auto callback = [&]() { ++executionCounter; };
+
+  executionCtx(callback, DebuggerAction{});
+  EXPECT_EQ(callbackCounter, 3);
+  EXPECT_EQ(executionCounter, 2);
+}
+
+TEST(ExecutionContext, RerunStackWithNestedActions) {
+  // Request rerun at an outer depth, then request rerun again at an inner
+  // depth before the outer rerun is consumed.
+  int debuggerHits = 0;
+  int otherHits = 0;
+  int debuggerExecutions = 0;
+  int otherExecutions = 0;
+
+  auto onBreakpoint = [&](const ActionActiveStack *backtrace) {
+    StringRef tag = backtrace->getAction().getTag();
+    if (tag == DebuggerAction::tag)
+      return ++debuggerHits == 1 ? ExecutionContext::Rerun
+                                 : ExecutionContext::Apply;
+    if (tag == OtherAction::tag)
+      return ++otherHits == 1 ? ExecutionContext::Rerun
+                              : ExecutionContext::Apply;
+    ADD_FAILURE();
+    return ExecutionContext::Apply;
+  };
+
+  TagBreakpointManager simpleManager;
+  ExecutionContext executionCtx(onBreakpoint);
+  executionCtx.addBreakpointManager(&simpleManager);
+  simpleManager.addBreakpoint(DebuggerAction::tag);
+  simpleManager.addBreakpoint(OtherAction::tag);
+
+  auto nested = [&]() { ++otherExecutions; };
+  auto original = [&]() {
+    ++debuggerExecutions;
+    executionCtx(nested, OtherAction{});
+  };
+
+  executionCtx(original, DebuggerAction{});
+
+  EXPECT_EQ(debuggerHits, 2);
+  EXPECT_EQ(otherHits, 3);
+  EXPECT_EQ(debuggerExecutions, 2);
+  EXPECT_EQ(otherExecutions, 3);
+}
 } // namespace

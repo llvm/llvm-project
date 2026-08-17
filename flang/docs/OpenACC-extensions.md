@@ -34,6 +34,13 @@ These extensions require no flag.
 * The `if` clause accepts scalar integer expressions in addition to scalar
   logical expressions.
 * `!$acc routine` directives can be placed at the top level.
+* `!$acc routine` directives can be placed directly within an interface block
+  (i.e. as an interface-specification, such as preceding the interface body they
+  name). The OpenACC specification only permits the named `routine` directive in
+  the specification part of a subroutine, function, or module, and the unnamed
+  form within an interface body; Flang additionally accepts a `routine`
+  directive between the `INTERFACE` statement and the interface bodies, applying
+  a named directive to the interface body it names.
 * `!$acc cache` directives accept scalar variables.
 * `!$acc cache` directives are accepted outside of a loop construct.
 * The `!$acc declare` directive accepts assumed-size array arguments for

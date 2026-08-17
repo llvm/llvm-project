@@ -21,7 +21,7 @@ long test_retAgg() {
 // uses memcpy, while OGCG inlines the stores directly. This should be unified
 // to match OGCG's behavior for small aggregates.
 // LLVM-LABEL: @_Z11test_retAggv
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %{{.*}}, ptr @__const._Z11test_retAggv.ref.tmp0, i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 @__const._Z11test_retAggv.ref.tmp0, i64 16, i1 false)
 
 // OGCG-LABEL: @_Z11test_retAggv
 // OGCG:   store i32 13, ptr %{{.*}}, align 8
@@ -37,7 +37,7 @@ int test_retAgg_first() {
 // CIR:   cir.copy
 
 // LLVM-LABEL: @_Z17test_retAgg_firstv
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %{{.*}}, ptr @__const._Z17test_retAgg_firstv.ref.tmp0, i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 @__const._Z17test_retAgg_firstv.ref.tmp0, i64 16, i1 false)
 
 // OGCG-LABEL: @_Z17test_retAgg_firstv
 // OGCG:   store i32 13, ptr %{{.*}}, align 8

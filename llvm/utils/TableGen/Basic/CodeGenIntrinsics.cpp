@@ -17,6 +17,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
@@ -386,6 +387,52 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   // Sort the argument attributes for later benefit.
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
+
+  // Default values are not yet supported for overloaded intrinsics
+  // (overloaded support will come in a follow-up).
+  if (isOverloaded &&
+      llvm::any_of(ParamDefaultValues, [](const std::optional<uint64_t> &DV) {
+        return DV.has_value();
+      }))
+    PrintFatalError(TheDef->getLoc(),
+                    "default argument values are not supported for "
+                    "overloaded intrinsics");
+
+  // Validate: defaults must form a contiguous trailing block ending at
+  // the last parameter (mirrors C++ default-argument rules).
+  unsigned NumParams = IS.ParamTys.size();
+  bool SeenDefault = false;
+  for (unsigned i = 0; i < NumParams; ++i) {
+    bool HasDefault =
+        (i < ParamDefaultValues.size() && ParamDefaultValues[i].has_value());
+    if (HasDefault) {
+      SeenDefault = true;
+    } else if (SeenDefault) {
+      PrintFatalError(TheDef->getLoc(),
+                      "missing default argument on parameter " + Twine(i));
+    }
+  }
+
+  // Validate each declared default: the parameter must be an integer type and
+  // the value (an unsigned bit pattern) must fit in the declared width.
+  for (unsigned i = 0; i < ParamDefaultValues.size(); ++i) {
+    if (!ParamDefaultValues[i].has_value())
+      continue;
+    const Record *VT = IS.ParamTys[i]->getValueAsDef("VT");
+    if (!VT->getValueAsBit("isInteger")) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument on parameter " + Twine(i) +
+                          " requires an integer parameter type");
+    }
+    unsigned Width = VT->getValueAsInt("Size");
+    uint64_t Value = *ParamDefaultValues[i];
+    if (!isUIntN(Width, Value)) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument value " + Twine(Value) +
+                          " out of range for i" + Twine(Width) + " parameter " +
+                          Twine(i));
+    }
+  }
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
@@ -490,6 +537,22 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   } else if (R->isSubClassOf("ImmArg")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, ImmArg);
+
+    // If a DefaultValue (not the NoDefault sentinel) was supplied, record it.
+    // NoDefault is recognized by its Value field being unset (?).
+    const Record *DefaultField = R->getValueAsDef("Default");
+    const RecordVal *ValueField = DefaultField->getValue("Value");
+    if (ValueField && !isa<UnsetInit>(ValueField->getValue())) {
+      int64_t Value = DefaultField->getValueAsInt("Value");
+      // Defaults are stored as an unsigned bit pattern; a negative literal
+      // would silently wrap, so reject it with a clear message.
+      if (Value < 0)
+        PrintFatalError(TheDef->getLoc(), "default argument value " +
+                                              Twine(Value) + " on parameter " +
+                                              Twine(ArgNo - 1) +
+                                              " must be non-negative");
+      addDefaultArgValue(ArgNo - 1, Value);
+    }
   } else if (R->isSubClassOf("Align")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     uint64_t Align = R->getValueAsInt("Align");
@@ -582,4 +645,16 @@ void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
                                           " is already defined as '" +
                                           It->FuncName + "'");
   PrettyPrintFunctions.emplace_back(ArgIdx, ArgName, FuncName);
+}
+
+void CodeGenIntrinsic::addDefaultArgValue(unsigned ArgIdx, uint64_t Value) {
+  if (ArgIdx >= ParamDefaultValues.size())
+    ParamDefaultValues.resize(ArgIdx + 1, std::nullopt);
+
+  if (ParamDefaultValues[ArgIdx].has_value())
+    PrintFatalError(TheDef->getLoc(), "Default value for argument " +
+                                          Twine(ArgIdx) +
+                                          " is already defined");
+
+  ParamDefaultValues[ArgIdx] = Value;
 }

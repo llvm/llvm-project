@@ -44,6 +44,11 @@ public:
                     raw_ostream &O, StringRef Modifier = {});
   void printAtomicCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                        raw_ostream &O, StringRef Modifier = {});
+  void printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
+                                    const MCSubtargetInfo &STI, raw_ostream &O,
+                                    StringRef Modifier = {});
+  void printCachePolicy(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O);
   void printMmaCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O, StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
@@ -64,6 +69,8 @@ public:
                         raw_ostream &O, StringRef Modifier = {});
   void printFTZFlag(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printMultimem(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                     raw_ostream &O);
   void printNegatedPredicate(const MCInst *MI, int OpNum,
                              const MCSubtargetInfo &STI, raw_ostream &O);
 

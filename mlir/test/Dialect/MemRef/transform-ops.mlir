@@ -3,14 +3,14 @@
 // CHECK-DAG: memref.global "private" @[[ALLOC0:alloc.*]] : memref<2x32xf32>
 // CHECK-DAG: memref.global "private" @[[ALLOC1:alloc.*]] : memref<2x32xf32>
 
-// CHECK-DAG: func.func @func(%[[LB:.*]]: index, %[[UB:.*]]: index)
-func.func @func(%lb: index, %ub: index) {
+// CHECK-DAG: func.func @func_alloca(%[[LB:.*]]: index, %[[UB:.*]]: index)
+func.func @func_alloca(%lb: index, %ub: index) {
   // CHECK-DAG: scf.forall (%[[ARG0:.*]], %[[ARG1:.*]]) in (%[[LB]], %[[UB]])
   scf.forall (%arg0, %arg1) in (%lb, %ub) {
-    // CHECK-DAG: %[[MR0:.*]] = memref.get_global @[[ALLOC0]] : memref<2x32xf32>
-    // CHECK-DAG: %[[MR1:.*]] = memref.get_global @[[ALLOC1]] : memref<2x32xf32>
-    // CHECK-DAG: memref.store %{{.*}}, %[[MR0]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
-    // CHECK-DAG: memref.store %{{.*}}, %[[MR1]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
+    // CHECK-DAG: %[[BUF0:.*]] = memref.get_global @[[ALLOC0]] : memref<2x32xf32>
+    // CHECK-DAG: %[[BUF1:.*]] = memref.get_global @[[ALLOC1]] : memref<2x32xf32>
+    // CHECK-DAG: memref.store %{{.*}}, %[[BUF0]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
+    // CHECK-DAG: memref.store %{{.*}}, %[[BUF1]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
     %cst = arith.constant 0.0 : f32
     %mr0 = memref.alloca() : memref<2x32xf32>
     %mr1 = memref.alloca() : memref<2x32xf32>
@@ -26,6 +26,206 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.op<"memref.alloca">
     %get_global, %global = transform.memref.alloca_to_global %alloca
           : (!transform.op<"memref.alloca">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-DAG: memref.global "private" @[[ALLOC0:alloc.*]] : memref<2xf32>
+// CHECK-DAG: memref.global "private" @[[ALLOC1:alloc.*]] : memref<2xf32>
+
+// CHECK-DAG: func.func @func_alloc()
+func.func @func_alloc() {
+  // CHECK-DAG: %[[BUF0:.*]] = memref.get_global @[[ALLOC0]] : memref<2xf32>
+  // CHECK-DAG: %[[BUF1:.*]] = memref.get_global @[[ALLOC1]] : memref<2xf32>
+  // CHECK-NOT: memref.dealloc
+  %mr0 = memref.alloc() : memref<2xf32>
+  %mr1 = memref.alloc() : memref<2xf32>
+  memref.dealloc %mr0 : memref<2xf32>
+  memref.dealloc %mr1 : memref<2xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-DAG: memref.global "private" @[[ALLOC:alloc.*]] : memref<2xf32>
+
+// CHECK-DAG: func.func @func_alloc_with_uses(%[[VAL:.*]]: f32, %[[IDX:.*]]: index)
+func.func @func_alloc_with_uses(%val: f32, %idx: index) {
+  // CHECK-DAG: %[[BUF:.*]] = memref.get_global @[[ALLOC]] : memref<2xf32>
+  // CHECK-DAG: memref.store %[[VAL]], %[[BUF]][%[[IDX]]] : memref<2xf32>
+  // CHECK-NOT: memref.dealloc
+  %mr = memref.alloc() : memref<2xf32>
+  memref.store %val, %mr[%idx] : memref<2xf32>
+  memref.dealloc %mr : memref<2xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Test failure when memref.alloc has dynamic shape.
+func.func @alloc_to_global_dynamic_shape(%arg0: index) {
+  // expected-error @below {{conversion to a global op requires statically shaped memrefs, but got 'memref<?xf32>'}}
+  %alloc = memref.alloc(%arg0) : memref<?xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Test failure when memref.alloca has dynamic shape.
+func.func @alloca_to_global_dynamic_shape(%arg0: index) {
+  // expected-error @below {{conversion to a global op requires statically shaped memrefs, but got 'memref<?xf32>'}}
+  %alloca = memref.alloca(%arg0) : memref<?xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloca = transform.structured.match ops{["memref.alloca"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloca">
+    %get_global, %global = transform.memref.alloca_to_global %alloca
+          : (!transform.op<"memref.alloca">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Test failure when memref.alloca has symbol operands.
+#map0 = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
+
+func.func @alloca_to_global_symbol_operands(%s: index) {
+  // expected-error @below {{conversion to a global op does not support symbol operands, but got 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>>'}}
+  %alloca = memref.alloca()[%s] : memref<8x8xf32, #map0>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloca = transform.structured.match ops{["memref.alloca"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloca">
+    %get_global, %global = transform.memref.alloca_to_global %alloca
+          : (!transform.op<"memref.alloca">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Test failure when memref.alloc has symbol operands.
+#map1 = affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>
+
+func.func @alloc_to_global_symbol_operands(%s: index) {
+  // expected-error @below {{conversion to a global op does not support symbol operands, but got 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>>'}}
+  %alloc = memref.alloc()[%s] : memref<8x8xf32, #map1>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Test failure when memref.alloc has dynamic offset.
+func.func @alloc_to_global_dynamic_offset(%s: index) {
+  // expected-error @below {{conversion to a global op does not support symbol operands, but got 'memref<8x8xf32, strided<[8, 1], offset: ?>>'}}
+  %alloc = memref.alloc()[%s] : memref<8x8xf32, strided<[8, 1], offset: ?>>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Test failure when memref.alloc has dynamic stride.
+func.func @alloc_to_global_dynamic_stride(%s: index) {
+  // expected-error @below {{conversion to a global op does not support symbol operands, but got 'memref<8x8xf32, strided<[?, 1]>>'}}
+  %alloc = memref.alloc()[%s] : memref<8x8xf32, strided<[?, 1], offset: 0>>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Test failure when memref.alloc has non-strided layout.
+#map_non_strided = affine_map<(d0, d1) -> (d0 mod 3 + d1)>
+
+func.func @alloc_to_global_non_strided_layout() {
+  // expected-error @below {{conversion to a global op requires strided layout, but got 'memref<8x8xf32, affine_map<(d0, d1) -> (d0 mod 3 + d1)>>'}}
+  %alloc = memref.alloc() : memref<8x8xf32, #map_non_strided>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
             -> (!transform.any_op, !transform.any_op)
     transform.yield
   }

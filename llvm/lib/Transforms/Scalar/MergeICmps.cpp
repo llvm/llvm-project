@@ -213,6 +213,8 @@ class BCECmpBlock {
   const BCEAtom &Rhs() const { return Cmp.Rhs; }
   int SizeBits() const { return Cmp.SizeBits; }
 
+  DebugLoc getCmpDebugLoc() const { return Cmp.CmpI->getDebugLoc(); }
+
   // Returns true if the block does other works besides comparison.
   bool doesOtherWork() const;
 
@@ -698,11 +700,20 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     RhsLoad->replaceUsesOfWith(RhsLoad->getOperand(0), Rhs);
     // There are no blocks to merge, just do the comparison.
     // If we condition on this IsEqual, we already have its probabilities.
+    Builder.SetCurrentDebugLocation(Comparisons[0].getCmpDebugLoc());
     IsEqual = Builder.CreateICmpEQ(LhsLoad, RhsLoad);
   } else {
     const unsigned TotalSizeBits = std::accumulate(
         Comparisons.begin(), Comparisons.end(), 0u,
         [](int Size, const BCECmpBlock &C) { return Size + C.SizeBits(); });
+
+    // Find the merged debug location for our generated comparison instructions.
+    SmallVector<DebugLoc> OrigCmpDebugLocs;
+    OrigCmpDebugLocs.reserve(Comparisons.size());
+    for (auto &Comparison : Comparisons)
+      OrigCmpDebugLocs.push_back(Comparison.getCmpDebugLoc());
+    DebugLoc CmpDebugLoc = DebugLoc::getMergedLocations(OrigCmpDebugLocs);
+    Builder.SetCurrentDebugLocation(CmpDebugLoc);
 
     // memcmp expects a 'size_t' argument and returns 'int'.
     unsigned SizeTBits = TLI.getSizeTSize(*Phi.getModule());
@@ -717,6 +728,15 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     IsEqual = Builder.CreateICmpEQ(
         MemCmpCall, ConstantInt::get(Builder.getIntNTy(IntBits), 0));
   }
+
+  // Find the merged debug location for our generated branches.
+  SmallVector<DebugLoc> OrigBranchDebugLocs;
+  OrigBranchDebugLocs.reserve(Comparisons.size());
+  for (auto &Comparison : Comparisons)
+    OrigBranchDebugLocs.push_back(
+        Comparison.BB->getTerminator()->getDebugLoc());
+  DebugLoc BranchDebugLoc = DebugLoc::getMergedLocations(OrigBranchDebugLocs);
+  Builder.SetCurrentDebugLocation(BranchDebugLoc);
 
   BasicBlock *const PhiBB = Phi.getParent();
   // Add a branch to the next basic block in the chain.

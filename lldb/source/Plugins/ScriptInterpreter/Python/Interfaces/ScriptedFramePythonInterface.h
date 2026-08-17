@@ -15,7 +15,8 @@
 
 namespace lldb_private {
 class ScriptedFramePythonInterface : public ScriptedFrameInterface,
-                                     public ScriptedPythonInterface {
+                                     public ScriptedPythonInterface,
+                                     public PluginInterface {
 public:
   ScriptedFramePythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
@@ -57,6 +58,16 @@ public:
   lldb::ValueObjectSP
   GetValueObjectForVariableExpression(llvm::StringRef expr, uint32_t options,
                                       Status &status) override;
+
+  static void Initialize();
+
+  static void Terminate();
+
+  static llvm::StringRef GetPluginNameStatic() {
+    return "ScriptedFramePythonInterface";
+  }
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 } // namespace lldb_private
 

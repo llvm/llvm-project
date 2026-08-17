@@ -371,8 +371,12 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       // them into a buffer with vector element types. We need to scale the last
       // index for the vector as a whole, then add one level of index for inside
       // the vector.
-      int srcNumBytes = *srcElemType.getSizeInBytes();
-      int dstNumBytes = *dstElemType.getSizeInBytes();
+      std::optional<int64_t> srcBytes = srcElemType.getSizeInBytes();
+      std::optional<int64_t> dstBytes = dstElemType.getSizeInBytes();
+      if (!srcBytes || !dstBytes)
+        return rewriter.notifyMatchFailure(acOp, "unknown element byte size");
+      int srcNumBytes = *srcBytes;
+      int dstNumBytes = *dstBytes;
       assert(dstNumBytes >= srcNumBytes && dstNumBytes % srcNumBytes == 0);
 
       auto indices = llvm::to_vector<4>(acOp.getIndices());
@@ -398,8 +402,12 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       // The source indices are for a buffer with larger bitwidth scalar/vector
       // element types. Rewrite them into a buffer with smaller bitwidth element
       // types. We only need to scale the last index.
-      int srcNumBytes = *srcElemType.getSizeInBytes();
-      int dstNumBytes = *dstElemType.getSizeInBytes();
+      std::optional<int64_t> srcBytes = srcElemType.getSizeInBytes();
+      std::optional<int64_t> dstBytes = dstElemType.getSizeInBytes();
+      if (!srcBytes || !dstBytes)
+        return rewriter.notifyMatchFailure(acOp, "unknown element byte size");
+      int srcNumBytes = *srcBytes;
+      int dstNumBytes = *dstBytes;
       assert(srcNumBytes >= dstNumBytes && srcNumBytes % dstNumBytes == 0);
 
       auto indices = llvm::to_vector<4>(acOp.getIndices());
@@ -455,8 +463,12 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       // vector types of different component counts. For such cases, we load
       // multiple smaller bitwidth values and construct a larger bitwidth one.
 
-      int srcNumBytes = *srcElemType.getSizeInBytes();
-      int dstNumBytes = *dstElemType.getSizeInBytes();
+      std::optional<int64_t> srcBytes = srcElemType.getSizeInBytes();
+      std::optional<int64_t> dstBytes = dstElemType.getSizeInBytes();
+      if (!srcBytes || !dstBytes)
+        return rewriter.notifyMatchFailure(loadOp, "unknown element byte size");
+      int srcNumBytes = *srcBytes;
+      int dstNumBytes = *dstBytes;
       assert(srcNumBytes > dstNumBytes && srcNumBytes % dstNumBytes == 0);
       int ratio = srcNumBytes / dstNumBytes;
       if (ratio > 4)

@@ -59,6 +59,7 @@ def SplitDoubleTy : DXILOpParamType;
 def BinaryWithCarryTy : DXILOpParamType;
 def DimensionsTy : DXILOpParamType;
 def Fouri32s : DXILOpParamType;
+def TwoI32Ty : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -410,6 +411,27 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 // Concrete definitions of DXIL Operations
 //
 // This are sorted by ascending value of the DXIL Opcodes
+
+def LoadInput : DXILOp<4, loadInput> {
+  let Doc = "Loads a scalar value from a shader input register component.";
+  let intrinsics = [IntrinSelect<int_dx_load_input>];
+  // inputSigId, rowIndex, colIndex, gsVertexOrPrimIndex
+  let arguments = [Int32Ty, Int32Ty, Int8Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def StoreOutput : DXILOp<5, storeOutput> {
+  let Doc = "Stores a scalar value to a shader output register component.";
+  let intrinsics = [IntrinSelect<int_dx_store_output>];
+  // outputSigId, rowIndex, colIndex, value
+  let arguments = [Int32Ty, Int32Ty, Int8Ty, OverloadTy];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
 
 def Abs : DXILOp<6, unary> {
   let Doc = "Returns the absolute value of the input.";
@@ -800,6 +822,28 @@ def Fma : DXILOp<47, tertiary> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def IMul : DXILOp<41, binaryWithTwoOuts> {
+  let Doc = "Signed integer multiply returning the high and low halves of the "
+            "full-width product.";
+  let intrinsics = [IntrinSelect<int_dx_imul>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = TwoI32Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def UMul : DXILOp<42, binaryWithTwoOuts> {
+  let Doc = "Unsigned integer multiply returning the high and low halves of the "
+            "full-width product.";
+  let intrinsics = [IntrinSelect<int_dx_umul>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = TwoI32Ty;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def IMad : DXILOp<48, tertiary> {
   let Doc = "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m "
             "* a + b.";
@@ -959,6 +1003,18 @@ def TextureLoad : DXILOp<66, textureLoad> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def TextureStore : DXILOp<67, textureStore> {
+  let Doc = "writes to an RWTexture";
+  // Handle, Coord0, Coord1, Coord2, Val0, Val1, Val2, Val3, Mask
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy,
+    OverloadTy, Int8Ty
+  ];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def BufferLoad : DXILOp<68, bufferLoad> {
   let Doc = "reads from a TypedBuffer";
   // Handle, Coord0, Coord1
@@ -1004,6 +1060,17 @@ def GetDimensions : DXILOp<72, getDimensions> {
   let Doc = "gets the dimensions of a buffer or texture";
   let arguments = [HandleTy, Int32Ty];
   let result = DimensionsTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def AtomicBinOp : DXILOp<78, atomicBinOp> {
+  let Doc = "performs an atomic read-modify-write on a UAV resource "
+            "element, returning the original value";
+  // Handle, AtomicBinOpCode, Coord0, Coord1, Coord2, NewValue
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>,
+                   Overloads<DXIL1_6, [Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
@@ -1145,6 +1212,15 @@ def WaveIsFirstLane : DXILOp<110, waveIsFirstLane> {
 def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
   let Doc = "returns the index of the current lane in the wave";
   let intrinsics = [IntrinSelect<int_dx_wave_getlaneindex>];
+  let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def WaveGetLaneCount : DXILOp<112, waveGetLaneCount> {
+  let Doc = "returns the number of lanes in a wave on this architecture";
+  let intrinsics = [IntrinSelect<int_dx_wave_get_lane_count>];
   let arguments = [];
   let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];

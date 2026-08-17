@@ -203,10 +203,12 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   // breakpoint messing around in the debugger), continue it now.  But only
   // AFTER calling TerminateProcess to make sure that the very next call to
   // WaitForDebugEventEx is an exit process event.
-  if (m_active_exception.get()) {
+  if (GetActiveException()) {
     LLDB_LOG(log, "masking active exception");
     ContinueAsyncException(ExceptionResult::MaskException);
   }
+
+  ContinueAsyncDllEvent();
 
   if (!terminate) {
     // Indicate that we want to detach.
@@ -237,16 +239,28 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   return error;
 }
 
+ExceptionRecordSP DebuggerThread::GetActiveException() {
+  std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+  return m_active_exception;
+}
+
 void DebuggerThread::ContinueAsyncException(ExceptionResult result) {
-  if (!m_active_exception.get())
-    return;
+  {
+    std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+    if (!m_active_exception)
+      return;
+    m_active_exception.reset();
+  }
 
   Log *log = GetLog(WindowsLog::Process | WindowsLog::Exception);
   LLDB_LOG(log, "broadcasting for inferior process {0}.",
            m_process.GetProcessId());
 
-  m_active_exception.reset();
   m_exception_pred.SetValue(result, eBroadcastAlways);
+}
+
+void DebuggerThread::ContinueAsyncDllEvent() {
+  m_dll_event_pred.SetValue(true, eBroadcastAlways);
 }
 
 void DebuggerThread::FreeProcessHandles() {
@@ -395,15 +409,29 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
 
   bool first_chance = (info.dwFirstChance != 0);
 
-  m_active_exception.reset(
-      new ExceptionRecord(info.ExceptionRecord, thread_id));
+  ExceptionRecordSP active_exception =
+      std::make_shared<ExceptionRecord>(info.ExceptionRecord, thread_id);
+  {
+    std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+    m_active_exception = active_exception;
+  }
+  // Set this before calling the delegate. The delegate can wake up the thread
+  // driving the debugger, and that thread can call ContinueAsyncException
+  // before OnDebugException returns.
+  m_exception_pred.SetValue(ExceptionResult::BreakInDebugger, eBroadcastNever);
+
   LLDB_LOG(log, "encountered {0} chance exception {1:x} on thread {2:x}",
            first_chance ? "first" : "second",
            info.ExceptionRecord.ExceptionCode, thread_id);
 
   ExceptionResult result =
-      m_debug_delegate->OnDebugException(first_chance, *m_active_exception);
-  m_exception_pred.SetValue(result, eBroadcastNever);
+      m_debug_delegate->OnDebugException(first_chance, *active_exception);
+  // The delegate only says what to do, it never continues the exception. If the
+  // result is not BreakInDebugger, continue it here, or the wait below never
+  // ends. If the other thread already continued it, this does nothing and its
+  // result is what the wait below returns.
+  if (result != ExceptionResult::BreakInDebugger)
+    ContinueAsyncException(result);
 
   LLDB_LOG(log, "waiting for ExceptionPred != BreakInDebugger");
   result = *m_exception_pred.WaitForValueNotEqualTo(
@@ -706,6 +734,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                    DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
 
+  DllEventAction action = DllEventAction::ContinueDebugLoop;
   auto on_load_dll = [&](llvm::StringRef path) {
     FileSpec file_spec(path);
     ModuleSpec module_spec(file_spec);
@@ -714,7 +743,8 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     LLDB_LOG(log, "Inferior {0} - DLL '{1}' loaded at address {2:x}...",
              m_process.GetProcessId(), path, info.lpBaseOfDll);
 
-    m_debug_delegate->OnLoadDll(module_spec, load_addr);
+    m_dll_event_pred.SetValue(false, eBroadcastNever);
+    action = m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
   };
 
   std::optional<std::string> resolved_path;
@@ -754,6 +784,9 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
   // Windows does not automatically close info.hFile, so we need to do it.
   if (info.hFile != nullptr)
     ::CloseHandle(info.hFile);
+
+  if (action == DllEventAction::ParkDebugLoop && !m_is_shutting_down.load())
+    m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
 
@@ -764,8 +797,11 @@ DebuggerThread::HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
   LLDB_LOG(log, "process {0} unloading DLL at addr {1:x}.",
            m_process.GetProcessId(), info.lpBaseOfDll);
 
-  m_debug_delegate->OnUnloadDll(
-      reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll));
+  m_dll_event_pred.SetValue(false, eBroadcastNever);
+  DllEventAction action = m_debug_delegate->OnUnloadDll(
+      reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll), thread_id);
+  if (action == DllEventAction::ParkDebugLoop && !m_is_shutting_down.load())
+    m_dll_event_pred.WaitForValueEqualTo(true);
   return DBG_CONTINUE;
 }
 

@@ -12,10 +12,21 @@
 
 #include <ranges>
 #include <utility>
-#include <vector>
+
+struct View : std::ranges::view_interface<View> {
+  int* begin();
+  const int* begin() const;
+  volatile int* end();
+  const volatile int* end() const;
+};
+static_assert(!std::ranges::common_range<View>);
+static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
+static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
+static_assert(std::ranges::sized_range<View>);
+static_assert(std::ranges::forward_range<View>);
 
 void test() {
-  std::vector<int> range;
+  View range;
   std::ranges::enumerate_view ev{range};
 
   // [range.enumerate.view]
@@ -54,6 +65,8 @@ void test() {
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it + 1;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  1 + it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it - 1;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}

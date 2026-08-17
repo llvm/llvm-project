@@ -247,6 +247,9 @@ public:
     return static_cast<ObjCDeclQualifier>(ObjCMethodDeclBits.objcDeclQualifier);
   }
 
+  void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
+                            bool Qualified) const override;
+
   void setObjCDeclQualifier(ObjCDeclQualifier QV) {
     ObjCMethodDeclBits.objcDeclQualifier = QV;
   }
@@ -792,6 +795,9 @@ public:
                                   PropertyControl propControl = None);
 
   static ObjCPropertyDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+
+  void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
+                            bool Qualified) const override;
 
   SourceLocation getAtLoc() const { return AtLoc; }
   void setAtLoc(SourceLocation L) { AtLoc = L; }

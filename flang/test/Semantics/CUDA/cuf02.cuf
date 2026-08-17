@@ -25,6 +25,23 @@ module m
   end
   attributes(device) subroutine s6
     stmtfunc(x) = x + 1. ! ok
+    x = stmtfunc(x) ! ok
+  end
+  attributes(device) real function s6_declared(x)
+    implicit none
+    integer i, n
+    real conv, x, y
+    ! Explicitly declared locals get ATTRIBUTES(DEVICE); statement functions
+    ! are inlined, so CUDA data-attribute matching must not apply to dummies.
+    conv(i) = real(i)
+    n = 0
+    y = x - conv(n) ! ok
+    s6_declared = y
+  end
+  attributes(device) subroutine s6_bad
+    badstmt(x) = hostfunc(x)
+    !ERROR: 'hostfunc' may not be called in device code
+    x = badstmt(x)
   end
   !ERROR: A function may not have ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)
   attributes(global) real function f1

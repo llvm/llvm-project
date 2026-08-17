@@ -43,11 +43,10 @@
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
-@ CHECK-ERRORS-V8: invalid instruction
 @ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: invalid operand for instruction
 
         @ Out of range immediate for ROR.
         @ (Assembling this instruction to "mov r1, r1" might also be OK.)
@@ -135,7 +134,7 @@ foo2:
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS: note: instruction requires: arm-mode
 @ CHECK-ERRORS: note: invalid operand for instruction
-@ CHECK-ERRORS: error: invalid instruction
+@ CHECK-ERRORS: error: invalid operand for instruction
 @ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
 @ CHECK-ERRORS: note: invalid operand for instruction
 @ CHECK-ERRORS: note: instruction requires: arm-mode

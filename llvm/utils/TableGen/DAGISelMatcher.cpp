@@ -190,6 +190,10 @@ void CheckImmAllZerosVMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "CheckAllZerosV\n";
 }
 
+void CheckUndefMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckUndef\n";
+}
+
 void EmitIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "EmitInteger " << Val << " VT=" << VT << '\n';
 }
@@ -412,6 +416,16 @@ bool CheckImmAllOnesVMatcher::isContradictoryImpl(const Matcher *M) const {
 bool CheckImmAllZerosVMatcher::isContradictoryImpl(const Matcher *M) const {
   // AllOnes is contradictory.
   return isa<CheckImmAllOnesVMatcher>(M);
+}
+
+bool CheckUndefMatcher::isContradictoryImpl(const Matcher *M) const {
+  if (const auto *COM = dyn_cast<CheckOpcodeMatcher>(M)) {
+    // If the opcode is neither UNDEF nor POISON, then it is contradictory with
+    // a check that the node is undef/poison.
+    StringRef Opcode = COM->getOpcode().getEnumName();
+    return Opcode != "ISD::UNDEF" && Opcode != "ISD::POISON";
+  }
+  return false;
 }
 
 bool CheckCondCodeMatcher::isContradictoryImpl(const Matcher *M) const {

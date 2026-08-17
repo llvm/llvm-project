@@ -5,7 +5,7 @@ define void @test(ptr %c) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[C]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x ptr> poison, ptr [[C]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x ptr> [[TMP0]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <8 x ptr> [[TMP1]], <8 x i64> <i64 222, i64 228, i64 276, i64 279, i64 282, i64 285, i64 288, i64 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <8 x ptr> [[TMP1]], <8 x i64> <i64 0, i64 345, i64 348, i64 351, i64 354, i64 357, i64 360, i64 363>

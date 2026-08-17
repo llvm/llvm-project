@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,FP16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,FP16 %s
+; RUN: llc -mtriple=amdgpu6.00 -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgpu9.00 -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,FP16 %s
+; RUN: llc -mtriple=amdgpu6.00 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgpu9.00 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,FP16 %s
 
 
 define amdgpu_kernel void @divergent_fneg_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {

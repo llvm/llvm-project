@@ -1,6 +1,7 @@
 #include "CIRGenTypes.h"
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenCall.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -10,6 +11,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <cassert>
 
@@ -304,6 +306,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
 
+  if (astContext.getLangOpts().CUDAIsDevice) {
+    if (type->isCUDADeviceBuiltinSurfaceType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
+        return ty;
+    } else if (type->isCUDADeviceBuiltinTextureType()) {
+      assert(!cir::MissingFeatures::cudaTextureType());
+    }
+  }
+
   // Process record types before the type cache lookup.
   if (const auto *recordType = dyn_cast<RecordType>(type))
     return convertRecordDeclType(recordType->getDecl()->getDefinitionOrSelf());
@@ -449,13 +461,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.fP16Ty;
       break;
     case BuiltinType::Half:
-      if (astContext.getLangOpts().NativeHalfType ||
-          !astContext.getTargetInfo().useFP16ConversionIntrinsics()) {
-        resultType = cgm.fP16Ty;
-      } else {
-        cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
-        resultType = cgm.sInt32Ty;
-      }
+      resultType = cgm.fP16Ty;
       break;
     case BuiltinType::BFloat16:
       resultType = cgm.bFloat16Ty;
@@ -500,7 +506,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
       resultType = cir::VectorType::get(builder.getSInt32Ty(), 8);             \
     } else {                                                                   \
-      resultType = builder.getPointerTo(cgm.voidTy);                           \
+      resultType = builder.getPointerTo(                                       \
+          cgm.voidTy,                                                          \
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), AS));            \
     }                                                                          \
     break;                                                                     \
   }
@@ -652,9 +660,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       auto paddingArray =
           cir::ArrayType::get(cgm.sInt8Ty, (atomicSize - valueSize) / 8);
       mlir::Type elements[] = {resultType, paddingArray};
-      resultType = cir::StructType::get(&getMLIRContext(), /*members=*/elements,
-                                        /*packed=*/false, /*padded=*/false,
-                                        /*is_class=*/false);
+      cir::RecordMemberKind kinds[] = {cir::RecordMemberKind::Data,
+                                       cir::RecordMemberKind::Pad};
+      resultType =
+          cir::StructType::get(&getMLIRContext(), /*members=*/elements,
+                               /*packed=*/false, /*is_class=*/false, kinds);
     }
 
     break;
@@ -774,6 +784,20 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeDeviceKernelCallerDeclaration(QualType resultType,
+                                                  const FunctionArgList &args) {
+  SmallVector<CanQualType, 16> argTypes;
+  for (const VarDecl *arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg->getType()));
+
+  // Classic CodeGen passes FnInfoOpts::None here; that is the no-op case, so
+  // nothing is needed even once CIR models FnInfoOpts.
+  return arrangeCIRFunctionInfo(
+      resultType->getCanonicalTypeUnqualified(), /*isInstanceMethod=*/false,
+      argTypes, FunctionType::ExtInfo(CC_DeviceKernel), RequiredArgs::All);
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
