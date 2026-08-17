@@ -52,6 +52,7 @@ set(ANALYSIS_TEST_SOURCES
   ScalarEvolutionTest.cpp
   SparsePropagation.cpp
   TargetLibraryInfoTest.cpp
+  TargetTransformInfoTest.cpp
   TensorSpecTest.cpp
   TBAATest.cpp
   UnrollAnalyzerTest.cpp
