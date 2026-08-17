@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;.
 ; CHECK: @g26 = dso_local local_unnamed_addr global <4 x i32> zeroinitializer, align 16
 ; CHECK: @g5 = dso_local local_unnamed_addr global i8 0, align 1
-; CHECK: @g10.body = internal unnamed_addr global [16 x i8] undef{{$}}
+; CHECK: @g10.body = internal unnamed_addr global [16 x i8] undef, align 16
 ;.
 define dso_local i32 @main() {
 ; CHECK-LABEL: define dso_local i32 @main() local_unnamed_addr {

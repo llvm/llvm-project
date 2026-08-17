@@ -10,12 +10,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @unaligned = internal global ptr null
 
 ;.
-; CHECK: @aligned.body = internal unnamed_addr global [64 x i8] undef{{$}}
+; CHECK: @aligned.body = internal unnamed_addr global [64 x i8] undef, align 32
 ; CHECK: @unaligned.body = internal unnamed_addr global [64 x i8] undef{{$}}
 ;.
 define void @init_aligned() {
 ; CHECK-LABEL: define void @init_aligned() local_unnamed_addr {
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr @aligned.body, i8 0, i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 32 @aligned.body, i8 0, i64 64, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %m = call noalias align 32 ptr @aligned_calloc(i64 32, i64 64)
