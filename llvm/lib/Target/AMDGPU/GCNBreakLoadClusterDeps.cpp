@@ -69,7 +69,16 @@ class GCNBreakLoadClusterDepsImpl {
   bitset<AMDGPU::NUM_TARGET_REGS> getVGPR32Lanes(Register Reg) const;
   pair<bitset<AMDGPU::NUM_TARGET_REGS>, bitset<AMDGPU::NUM_TARGET_REGS>>
   getUsesAndDefsFor(MachineInstr &MI) const;
+  Register promoteToSuperRegister(MachineInstr &MI, Register SubReg, bool Defs,
+                                  bool Uses);
   Register renameRegister(Register FromReg, Register ToReg, Register RenameReg);
+  bool
+  findReplaceRegisterOperand(MachineInstr &MI, unsigned OpNum,
+                             const bitset<AMDGPU::NUM_TARGET_REGS> &BannedRegs);
+  bool isVGPRLoad(MachineInstr &MI) const {
+    return MI.mayLoad() && MI.getOperand(0).isReg() &&
+           TRI->isVGPR(*MRI, MI.getOperand(0).getReg());
+  }
 
 public:
   bool run(MachineFunction &MF);
@@ -126,6 +135,19 @@ GCNBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
   return ToReturn;
 }
 
+Register GCNBreakLoadClusterDepsImpl::promoteToSuperRegister(MachineInstr &MI,
+                                                             Register SubReg,
+                                                             bool Defs,
+                                                             bool Uses) {
+  for (MachineOperand &Operand : MI.explicit_operands())
+    if (Operand.isReg() && (Defs || Operand.isUse()) &&
+        (Uses || Operand.isDef()) &&
+        TRI->isSuperRegister(SubReg, Operand.getReg()))
+      SubReg = Operand.getReg();
+
+  return SubReg;
+}
+
 Register GCNBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
                                                      Register ToReg,
                                                      Register RenameReg) {
@@ -137,6 +159,139 @@ Register GCNBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
   return RenameReg;
 }
 
+bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
+    MachineInstr &MI, unsigned OpNum,
+    const bitset<AMDGPU::NUM_TARGET_REGS> &BannedRegs) {
+  MachineBasicBlock& MBB = *MI.getParent();
+  MachineInstr *DefToRename = nullptr, *KillerIns = nullptr;
+  Register OldReg = MI.getOperand(OpNum).getReg();
+  bitset<AMDGPU::NUM_TARGET_REGS> OldRegClobbers = getVGPR32Lanes(OldReg);
+  if (MI.getOperand(OpNum).isDef())
+    DefToRename = &MI;
+  else
+    KillerIns = &MI;
+
+  bool Changed = true;
+  while (Changed) {
+    Changed = false;
+
+    // First, go forward from def to find the kill
+    if (DefToRename) {
+      bitset<AMDGPU::NUM_TARGET_REGS> ClobberedSubregs;
+      MachineInstr *NewKiller = KillerIns ? KillerIns : nullptr;
+      Register OldOldReg = OldReg;
+      for (MachineBasicBlock::iterator It =
+               std::next(DefToRename->getIterator());
+           (OldRegClobbers & ~ClobberedSubregs).any() && It != MBB.end();
+           ++It) {
+        auto Subregs = getUsesAndDefsFor(*It);
+        if ((Subregs.second & OldRegClobbers).any())
+          NewKiller = &*It;
+        ClobberedSubregs |= Subregs.first;
+
+        //Handle promoting OldReg to a super-register of it
+        Register NewOldReg = promoteToSuperRegister(*std::prev(It),OldReg,true,false);
+        NewOldReg = promoteToSuperRegister(*It, NewOldReg, false, true);
+        if (NewOldReg != OldReg) {
+          Changed = true;
+          OldReg = NewOldReg;
+          OldRegClobbers = getVGPR32Lanes(OldReg);
+        }
+      }
+
+      if (NewKiller != KillerIns) {
+        KillerIns = NewKiller;
+        Changed = true;
+      }
+
+      // Are we live out with no true kill?  Fail: we can't do this with a
+      // block-local analysis.
+      if (OldOldReg == OldReg && (OldRegClobbers & ~ClobberedSubregs).any()) {
+        LiveRegUnits LRU(*TRI);
+        LRU.addLiveOuts(MBB);
+        if (!LRU.available(OldReg))
+          return false;
+      }
+    }
+
+    //Second, go backward from killer to find the def
+    if (KillerIns) {
+      bitset<AMDGPU::NUM_TARGET_REGS> ClobberedSubregs;
+      MachineInstr *NewDef = DefToRename ? DefToRename : nullptr;
+      for (MachineBasicBlock::reverse_iterator RIt =
+               std::next(KillerIns->getReverseIterator());
+           RIt != MBB.rend(); ++RIt) {
+        if (RIt->modifiesRegister(OldReg, TRI))
+          ClobberedSubregs |= getUsesAndDefsFor(*RIt).first;
+
+        if ((OldRegClobbers & ~ClobberedSubregs).none()) {
+          NewDef = &*RIt;
+          break;
+        }
+      }
+
+      if (NewDef != DefToRename) {
+        DefToRename = NewDef;
+        Changed = true;
+      }
+    }
+  }
+
+  // Now, perform the rename between (DefToRename, KillerIns)
+
+  // Find a free reg
+  LiveRegUnits LRU(*TRI);
+  LRU.addLiveOuts(MBB);
+  for (MachineBasicBlock::reverse_iterator LiveRIt = MBB.rbegin();
+       &*LiveRIt != &*KillerIns; ++LiveRIt)
+    LRU.stepBackward(*LiveRIt);
+  for (MachineBasicBlock::reverse_iterator AccumIt =
+           KillerIns->getReverseIterator();
+       AccumIt != MBB.rend(); ++AccumIt)
+    LRU.accumulate(*AccumIt);
+  
+  // Iterate over registers in physical register class
+  const TargetRegisterClass &DefinedRegClass =
+      *TRI->getPhysRegBaseClass(OldReg);
+  unsigned I;
+  for (I = 0; I < DefinedRegClass.getRegisters().size() &&
+              I * DefinedRegClass.getSizeInBits() / 32 < OccupancyBudget;
+       I++)
+    if (LRU.available(DefinedRegClass.getRegisters()[I]) &&
+        (getVGPR32Lanes(DefinedRegClass.getRegisters()[I]) & BannedRegs).none())
+      break;
+
+  // Fail if we couldn't find a suitable free register
+  if (I == DefinedRegClass.getRegisters().size() ||
+      I * DefinedRegClass.getSizeInBits() / 32 >= OccupancyBudget)
+    return false;
+  
+  // Actually rename the register
+  for (unsigned Op = 0; Op < DefToRename->getNumExplicitOperands(); Op++)
+    if (DefToRename->getOperand(Op).isReg() && DefToRename->getOperand(Op).isDef() &&
+        TRI->regsOverlap(DefToRename->getOperand(Op).getReg(), OldReg))
+      DefToRename->getOperand(Op).setReg(
+        renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                       DefToRename->getOperand(Op).getReg()));
+  for (MachineBasicBlock::iterator RenameIt =
+         std::next(DefToRename->getIterator());
+       RenameIt != KillerIns; ++RenameIt)
+    for (unsigned Op = 0; Op < RenameIt->getNumExplicitOperands(); Op++)
+      if (RenameIt->getOperand(Op).isReg() &&
+          TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg))
+        RenameIt->getOperand(Op).setReg(
+          renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                         RenameIt->getOperand(Op).getReg()));
+  for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
+    if (KillerIns->getOperand(Op).isReg() &&
+        KillerIns->getOperand(Op).isUse() &&
+        TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg))
+      KillerIns->getOperand(Op).setReg(
+        renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                       KillerIns->getOperand(Op).getReg()));
+  return true;
+}
+
 bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
     MachineBasicBlock &MBB) {
   bool ToReturn = false;
@@ -146,25 +301,58 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
   // common scratch register (WAR/WAW anti-dependencies).
   vector<MachineInstr *> AllVectorLoads;
   for (MachineInstr &MI : MBB)
-    if (MI.mayLoad() && MI.getOperand(0).isReg() &&
-        TRI->isVGPR(*MRI, MI.getOperand(0).getReg()))
+    if (isVGPRLoad(MI))
       AllVectorLoads.push_back(&MI);
 
   reverse(AllVectorLoads.begin(), AllVectorLoads.end()); // efficiency
   bitset<AMDGPU::NUM_TARGET_REGS> UsedLoadSourcePhysregs, UsedLoadDestPhysregs;
+  unordered_set<MachineInstr*> ClusterLoads;
   while (!AllVectorLoads.empty()) {
     MachineInstr &VecLoadIns = *AllVectorLoads.back();
     bitset<AMDGPU::NUM_TARGET_REGS> InsDefs, InsUses;
     tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
 
-    // This means the load is not independent from previous loads
-    if ((InsDefs & UsedLoadDestPhysregs).any()) {
+    if (ClusterLoads.size() && !ClusterLoads.count(&VecLoadIns)) {
+      ClusterLoads.clear();
       UsedLoadSourcePhysregs.reset();
       UsedLoadDestPhysregs.reset();
       AllVectorLoads.pop_back();
       continue;
-    }
+    } else if (!ClusterLoads.count(&VecLoadIns)) {
+      bitset<AMDGPU::NUM_TARGET_REGS> ClusterRAWHazards;
+      for (MachineBasicBlock::iterator ForwardIt = VecLoadIns.getIterator();
+           ForwardIt != MBB.end(); ++ForwardIt) {
+        if (isVGPRLoad(*ForwardIt)) {
+          bitset<AMDGPU::NUM_TARGET_REGS> UsedVGPRs;
+          for (MachineOperand &Operand : ForwardIt->uses())
+            if (Operand.isReg() && Operand.isUse() &&
+                TRI->isVGPR(*MRI, Operand.getReg()))
+              UsedVGPRs |= getVGPR32Lanes(Operand.getReg());
+          
+          if ((ClusterRAWHazards & UsedVGPRs).any())
+            break;
 
+          ClusterLoads.insert(&*ForwardIt);
+          ClusterRAWHazards |=
+              getVGPR32Lanes(ForwardIt->getOperand(0).getReg());
+        } else
+          for (MachineOperand &Operand : ForwardIt->defs())
+            if (TRI->isVGPR(*MRI,Operand.getReg()))
+              ClusterRAWHazards &= getVGPR32Lanes(Operand.getReg());
+      }
+    } else
+      ClusterLoads.erase(&VecLoadIns);
+
+    // If it's used or defined by a load that could be in our cluster, it's
+    // _NOT_ free.
+    bitset<AMDGPU::NUM_TARGET_REGS> BannedRegs =
+      UsedLoadDestPhysregs | UsedLoadSourcePhysregs;
+    for (MachineInstr *FutureVecLoad : ClusterLoads) {
+      auto UsesAndDefs = getUsesAndDefsFor(*FutureVecLoad);
+      BannedRegs |= UsesAndDefs.first;
+      BannedRegs |= UsesAndDefs.second;
+    }
+    
     // Check if we have something to rename
     bitset<AMDGPU::NUM_TARGET_REGS> WarConflicts =
         InsUses & UsedLoadSourcePhysregs;
@@ -235,18 +423,6 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
                  KillerIns->getReverseIterator();
              AccumIt != MBB.rend(); ++AccumIt)
           LRU.accumulate(*AccumIt);
-
-        // If it's used by a load that could be in our cluster, it's _NOT_ free.
-        bitset<AMDGPU::NUM_TARGET_REGS> BannedRegs =
-            UsedLoadDestPhysregs | InsDefs;
-        for (auto VecIt = std::next(AllVectorLoads.rbegin());
-             VecIt != AllVectorLoads.rend(); VecIt++) {
-          bitset<AMDGPU::NUM_TARGET_REGS> FutureInsDefs =
-              getUsesAndDefsFor(**VecIt).first;
-          if ((FutureInsDefs & BannedRegs).any())
-            break;
-          BannedRegs |= FutureInsDefs;
-        }
 
         // Iterate over registers in physical register class
         const TargetRegisterClass &DefinedRegClass =
