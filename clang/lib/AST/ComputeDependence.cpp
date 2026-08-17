@@ -908,7 +908,6 @@ ExprDependence clang::computeDependence(DependentTemplateIdExpr *E) {
   if (E->getTemplateName().getDependence() &
       TemplateNameDependence::UnexpandedPack)
     D |= ExprDependence::UnexpandedPack;
-  D |= toExprDependence(E->getQualifier().getDependence());
   D |= getDependenceInExpr(E->getNameInfo());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());

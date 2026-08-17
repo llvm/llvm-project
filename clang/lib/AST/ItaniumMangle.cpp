@@ -5320,7 +5320,7 @@ recurse:
   case Expr::DependentTemplateIdExprClass: {
     NotPrimaryExpr();
     const auto *DTI = cast<DependentTemplateIdExpr>(E);
-    mangleUnresolvedName(DTI->getQualifier(), DTI->getName(),
+    mangleUnresolvedName(NestedNameSpecifier(), DTI->getName(),
                          DTI->template_arguments().data(),
                          DTI->getNumTemplateArgs(), Arity);
     break;

@@ -2647,7 +2647,6 @@ DEF_TRAVERSE_STMT(CXXDependentScopeMemberExpr, {
 })
 
 DEF_TRAVERSE_STMT(DependentTemplateIdExpr, {
-  TRY_TO(TraverseNestedNameSpecifierLoc(S->getQualifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
   TRY_TO(TraverseTemplateArgumentLocsHelper(S->template_arguments().data(),
                                             S->getNumTemplateArgs()));

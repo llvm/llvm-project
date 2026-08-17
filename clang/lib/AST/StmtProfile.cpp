@@ -2356,7 +2356,6 @@ void StmtProfiler::VisitCXXUnresolvedConstructExpr(
 void StmtProfiler::VisitDependentTemplateIdExpr(
     const DependentTemplateIdExpr *S) {
   VisitExpr(S);
-  VisitNestedNameSpecifier(S->getQualifier());
   VisitTemplateName(S->getTemplateName());
   VisitTemplateArguments(S->template_arguments().data(),
                          S->getNumTemplateArgs());

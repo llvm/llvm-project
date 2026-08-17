@@ -16535,16 +16535,10 @@ TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
     DependentTemplateIdExpr *E) {
-  NestedNameSpecifierLoc QualifierLoc = E->getQualifierLoc();
-  if (QualifierLoc) {
-    QualifierLoc = getDerived().TransformNestedNameSpecifierLoc(QualifierLoc);
-    if (!QualifierLoc)
-      return ExprError();
-  }
 
+  NestedNameSpecifierLoc Loc;
   TemplateName Name = getDerived().TransformTemplateName(
-      QualifierLoc, E->getTemplateKeywordLoc(), E->getTemplateName(),
-      E->getNameLoc());
+      Loc, E->getTemplateKeywordLoc(), E->getTemplateName(), E->getNameLoc());
   if (Name.isNull())
     return ExprError();
 
@@ -16558,7 +16552,6 @@ ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
     return ExprError();
 
   CXXScopeSpec SS;
-  SS.Adopt(QualifierLoc);
 
   LookupResult R(SemaRef, E->getNameInfo(), Sema::LookupOrdinaryName);
   R.addDecl(TD);

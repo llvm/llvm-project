@@ -2114,7 +2114,6 @@ void ASTStmtWriter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
   VisitExpr(E);
   Record.push_back(E->getNumTemplateArgs());
   AddTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects());
-  Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
   Record.AddDeclarationNameInfo(E->getNameInfo());
   Record.AddTemplateName(E->getTemplateName());
   Code = serialization::EXPR_DEPENDENT_TEMPLATE_ID;

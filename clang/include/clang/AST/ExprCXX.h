@@ -3470,13 +3470,11 @@ class DependentTemplateIdExpr final
   friend class ASTStmtWriter;
   friend TrailingObjects;
 
-  NestedNameSpecifierLoc QualifierLoc;
   DeclarationNameInfo NameInfo;
   TemplateName Name;
   ASTTemplateKWAndArgsInfo KWAndArgs;
 
   DependentTemplateIdExpr(const ASTContext &Context,
-                          NestedNameSpecifierLoc QualifierLoc,
                           SourceLocation TemplateKWLoc,
                           const DeclarationNameInfo &NameInfo,
                           TemplateName Name,
@@ -3486,17 +3484,12 @@ class DependentTemplateIdExpr final
 
 public:
   static DependentTemplateIdExpr *
-  Create(const ASTContext &Context, NestedNameSpecifierLoc QualifierLoc,
-         SourceLocation TemplateKWLoc, const DeclarationNameInfo &NameInfo,
-         TemplateName Name, const TemplateArgumentListInfo &TemplateArgs);
+  Create(const ASTContext &Context, SourceLocation TemplateKWLoc,
+         const DeclarationNameInfo &NameInfo, TemplateName Name,
+         const TemplateArgumentListInfo &TemplateArgs);
 
   static DependentTemplateIdExpr *CreateEmpty(const ASTContext &Context,
                                               unsigned NumTemplateArgs);
-
-  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
-  NestedNameSpecifier getQualifier() const {
-    return QualifierLoc.getNestedNameSpecifier();
-  }
 
   const DeclarationNameInfo &getNameInfo() const { return NameInfo; }
   DeclarationName getName() const { return NameInfo.getName(); }
@@ -3525,8 +3518,6 @@ public:
   }
 
   SourceLocation getBeginLoc() const {
-    if (QualifierLoc)
-      return QualifierLoc.getBeginLoc();
     if (SourceLocation TemplateKWLoc = getTemplateKeywordLoc();
         TemplateKWLoc.isValid())
       return TemplateKWLoc;

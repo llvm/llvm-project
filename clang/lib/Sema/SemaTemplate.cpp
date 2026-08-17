@@ -4852,9 +4852,8 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
           /*UpdateArgsWithConversions=*/false))
     return true;
 
-  return DependentTemplateIdExpr::Create(
-      getASTContext(), SS.getWithLocInContext(getASTContext()), TemplateLoc,
-      NameInfo, TemplateName(Template), *TemplateArgs);
+  return DependentTemplateIdExpr::Create(getASTContext(), TemplateLoc, NameInfo,
+                                         TemplateName(Template), *TemplateArgs);
 }
 
 void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
