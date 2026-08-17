@@ -2566,8 +2566,3 @@ module std_wctype_h {
   export *
 }
 
-// This header is used by other C compatibility headers so it needs to be in its own module.
-module std_private_mbstate_t {
-  header "__mbstate_t.h"
-  export *
-}
