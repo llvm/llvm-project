@@ -3280,6 +3280,12 @@ public:
     return isZExtFree(Val.getValueType(), VT2);
   }
 
+  /// Return true is an anyext is free from FromTy to ToTy. Usually true for
+  /// scalar types when not trying to pack elements into vector lanes.
+  virtual bool isAnyExtFree(EVT FromTy, EVT ToTy) const {
+    return !FromTy.isVector();
+  }
+
   /// Return true if sign-extension from FromTy to ToTy is cheaper than
   /// zero-extension.
   virtual bool isSExtCheaperThanZExt(EVT FromTy, EVT ToTy) const {

@@ -63,6 +63,7 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
+from lldbsuite.test.skip_reason import UnsupportedReason
 from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
@@ -1287,6 +1288,15 @@ class Base(unittest.TestCase):
             # stderr twice.
             # Once by the Python unittest framework, and a second time by us.
             print("expected failure", file=sbuf)
+
+    def skipTest(self, reason):
+        """Skip the test, reporting an `UnsupportedReason` as UNSUPPORTED.
+
+        `unittest` records a raised `SkipTest` as `str(exception)`, so the reason
+        type never reaches the result; remember the distinction on the test."""
+        if isinstance(reason, UnsupportedReason):
+            self._skipped_as_unsupported = True
+        super().skipTest(reason)
 
     def markSkippedTest(self):
         """Callback invoked when a test is skipped."""

@@ -11517,10 +11517,7 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
     // add   x0, x0, :tprel_lo12:a
     SDValue Var = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, ThreadBase,
-                                      Var,
-                                      DAG.getTargetConstant(0, DL, MVT::i32)),
-                   0);
+    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ThreadBase, Var);
   }
 
   case 24: {
@@ -11536,10 +11533,10 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
                                       HiVar,
                                       DAG.getTargetConstant(0, DL, MVT::i32)),
                    0);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr,
-                                      LoVar,
-                                      DAG.getTargetConstant(0, DL, MVT::i32)),
-                   0);
+    // Emit the low part as an ADDlow so that it can be folded into the
+    // addressing mode of a following load or store, turning the add into a
+    // :tprel_lo12_nc: relocation on the memory access itself.
+    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, Addr, LoVar);
   }
 
   case 32: {
@@ -20276,6 +20273,11 @@ AArch64TargetLowering::getScratchRegisters(CallingConv::ID) const {
 ArrayRef<MCPhysReg> AArch64TargetLowering::getRoundingControlRegisters() const {
   static const MCPhysReg RCRegs[] = {AArch64::FPCR};
   return RCRegs;
+}
+
+bool AArch64TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                                  EVT DestVT) const {
+  return isTypeLegal(DestVT) && DestVT.isVector();
 }
 
 bool
