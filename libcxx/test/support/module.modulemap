@@ -8,6 +8,9 @@ module test {
   module test_allocator                  { header "test_allocator.h" }
   module test_iterators                  { header "test_iterators.h" }
   module test_text_encoding              { header "test_text_encoding.h" }
-  module test_transparent_associative    { header "test_transparent_associative.h" }
+  module test_transparent_associative    {
+    requires cplusplus23
+    header "test_transparent_associative.h"
+  }
   module type_algorithms                 { header "type_algorithms.h" }
 }
