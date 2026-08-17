@@ -480,13 +480,12 @@ struct ImplicitDefMatch {
 
 inline ImplicitDefMatch m_GImplicitDef() { return ImplicitDefMatch(); }
 
-/// Matches a G_CONSTANT and binds the defining instruction. Unlike m_ICst, this
-/// returns the instruction (not the value) and does not look through vector
-/// splats.
-template <typename Class> struct GConstantMatch {
+/// Binds the defining instruction of \p Reg if it is a \p Class. Prefer the
+/// named helpers below so the opcode is spelled out at the call site.
+template <typename Class> struct GInstrBind {
   Class *&Inst;
 
-  GConstantMatch(Class *&Inst) : Inst(Inst) {}
+  GInstrBind(Class *&Inst) : Inst(Inst) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     MachineInstr *TmpMI;
     if (mi_match(Reg, MRI, m_MInstr(TmpMI))) {
@@ -499,8 +498,43 @@ template <typename Class> struct GConstantMatch {
   }
 };
 
-inline GConstantMatch<GConstant> m_GConstant(GConstant *&Inst) { return Inst; }
-inline GConstantMatch<const GConstant> m_GConstant(const GConstant *&Inst) {
+/// Match a literal G_CONSTANT instruction (no look-through of splats or
+/// copies).
+inline GInstrBind<GConstant> m_GConstant(GConstant *&Inst) { return Inst; }
+inline GInstrBind<const GConstant> m_GConstant(const GConstant *&Inst) {
+  return Inst;
+}
+
+/// Match a literal G_CONSTANT or G_FCONSTANT, binding its raw bits to \p Bits
+/// (the integer value, or the float reinterpreted as an integer).
+struct GConstantBitsMatch {
+  APInt &Bits;
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *MI = MRI.getVRegDef(Reg);
+    if (MI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      Bits = MI->getOperand(1).getCImm()->getValue();
+      return true;
+    }
+    if (MI->getOpcode() == TargetOpcode::G_FCONSTANT) {
+      Bits = MI->getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
+      return true;
+    }
+    return false;
+  }
+};
+
+inline GConstantBitsMatch m_GConstantOrFConstantBits(APInt &Bits) {
+  return {Bits};
+}
+
+/// Instruction binders for ops with no operand-form matcher (constant-immediate
+/// or variadic-source ops).
+inline GInstrBind<GUnmerge> m_GUnmerge(GUnmerge *&Inst) { return Inst; }
+inline GInstrBind<GVScale> m_GVScale(GVScale *&Inst) { return Inst; }
+inline GInstrBind<GBuildVector> m_GBuildVector(GBuildVector *&Inst) {
+  return Inst;
+}
+inline GInstrBind<GConcatVectors> m_GConcatVectors(GConcatVectors *&Inst) {
   return Inst;
 }
 
@@ -622,6 +656,12 @@ template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SUB> m_GSub(const LHS &L,
                                                             const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_SUB>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SUB>
+m_GSub(const LHS &L, const RHS &R, MIFlagsRef Flags) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SUB>(L, R, Flags);
 }
 
 template <typename LHS, typename RHS>
