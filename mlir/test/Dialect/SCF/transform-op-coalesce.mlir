@@ -414,3 +414,35 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:     scf.yield %[[UPDATED]]
 //       CHECK:   }
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+// An operation sitting between the two loops of an imperfect nest and reading
+// the outer loop's iteration argument is unsound to coalesce for the same
+// reason as a read from inside the inner loop: after the merge it would see a
+// value updated on every iteration of the coalesced loop.
+
+func.func @no_coalesce_outer_iter_arg_read_between_loops(%init: f32) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %result = scf.for %i = %c0 to %c3 step %c1 iter_args(%outer = %init) -> (f32) {
+    %read = "use"(%outer) : (f32) -> f32
+    %inner_result = scf.for %j = %c0 to %c3 step %c1 iter_args(%inner = %outer) -> (f32) {
+      %updated = "use"(%inner, %read) : (f32, f32) -> f32
+      scf.yield %updated : f32
+    }
+    scf.yield %inner_result : f32
+  } {coalesce_nested}
+  return %result : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce_nested} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
+    // expected-error @below {{failed to coalesce}}
+    %2 = transform.loop.coalesce_nested %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.yield
+  }
+}
