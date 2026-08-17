@@ -12302,6 +12302,51 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
+  case Intrinsic::riscv_pnclipp:
+  case Intrinsic::riscv_pnclipup: {
+    bool IsSigned = IntNo == Intrinsic::riscv_pnclipp;
+    EVT VT = Op.getValueType();
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+    if (Subtarget.is64Bit()) {
+      if (VT == MVT::v2i32 && !Rs1.getValueType().isVector()) {
+        unsigned WOpc = IsSigned ? RISCVISD::PNCLIPP_W : RISCVISD::PNCLIPUP_W;
+        return DAG.getNode(WOpc, DL, VT, Rs1, Rs2);
+      }
+      unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
+      return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+    }
+
+    MVT XLenVT = Subtarget.getXLenVT();
+    SDValue Shift = DAG.getTargetConstant(0, DL, XLenVT);
+    if (VT == MVT::v4i8) {
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
+      SDValue Pair = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs1, Rs2);
+      return DAG.getNode(ClipOpc, DL, VT, Pair, Shift);
+    }
+    if (VT == MVT::v2i16) {
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
+      SDValue Pair = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, Rs1, Rs2);
+      return DAG.getNode(ClipOpc, DL, VT, Pair, Shift);
+    }
+    if (VT == MVT::v2i32) {
+      unsigned ClipOpc = IsSigned ? RISCVISD::NCLIP : RISCVISD::NCLIPU;
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitScalar(Rs1, DL, XLenVT, XLenVT);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitScalar(Rs2, DL, XLenVT, XLenVT);
+      SDValue Lo = DAG.getNode(ClipOpc, DL, XLenVT, Rs1Lo, Rs1Hi, Shift);
+      SDValue Hi = DAG.getNode(ClipOpc, DL, XLenVT, Rs2Lo, Rs2Hi, Shift);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+    if (VT == MVT::v8i8 || VT == MVT::v4i16) {
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
+      MVT HalfVT = VT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
+      SDValue Lo = DAG.getNode(ClipOpc, DL, HalfVT, Rs1, Shift);
+      SDValue Hi = DAG.getNode(ClipOpc, DL, HalfVT, Rs2, Shift);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
+    llvm_unreachable("unexpected VT for pnclipp/pnclipup on RV32");
+  }
   case Intrinsic::riscv_pmulq:
   case Intrinsic::riscv_pmulqr: {
     unsigned Opc;
@@ -16591,8 +16636,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Res = DAG.getNode(Opc, DL, WideVT, Ops);
       else
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
-      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                                    DAG.getVectorIdxConstant(0, DL)));
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_pnclipp:
+    case Intrinsic::riscv_pnclipup: {
+      bool IsSigned = IntNo == Intrinsic::riscv_pnclipp;
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+        return;
+      unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
+      SDValue Src1 = N->getOperand(1);
+      SDValue Src2 = N->getOperand(2);
+      if (VT == MVT::v4i8) {
+        MVT WideSrcVT = MVT::v4i16;
+        SDValue Packed =
+            DAG.getNode(ISD::CONCAT_VECTORS, DL, WideSrcVT, {Src1, Src2});
+        SDValue Res = DAG.getNode(Opc, DL, MVT::v8i8, {Packed, Packed});
+        Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      } else {
+        MVT WideSrcVT = MVT::v2i32;
+        SDValue Packed =
+            DAG.getNode(ISD::BUILD_VECTOR, DL, WideSrcVT, {Src1, Src2});
+        SDValue Res = DAG.getNode(Opc, DL, MVT::v4i16, {Packed, Packed});
+        Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      }
       return;
     }
     case Intrinsic::riscv_pssha:
@@ -17884,7 +17952,7 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     // MULH*/MULHR*: shift amount must be element size, only for i16/i32
     if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
       return SDValue();
-    if (!Subtarget.is64Bit() && (VT == MVT::v2i32 || VT == MVT::v4i16))
+    if (!Subtarget.is64Bit() && VT == MVT::v4i16)
       return SDValue();
     if (IsRounding) {
       if (LHSIsSExt && RHSIsSExt) {
@@ -17910,6 +17978,21 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
           std::swap(A, B);
       } else
         return SDValue();
+    }
+
+    // RV32 has scalar rounded multiply-high instructions, but no paired form.
+    // Split v2i32 while the widening multiply shape is still visible.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      if (!IsRounding)
+        return SDValue();
+      SDLoc DL(N);
+      SDValue ALo = DAG.getExtractVectorElt(DL, MVT::i32, A, 0);
+      SDValue AHi = DAG.getExtractVectorElt(DL, MVT::i32, A, 1);
+      SDValue BLo = DAG.getExtractVectorElt(DL, MVT::i32, B, 0);
+      SDValue BHi = DAG.getExtractVectorElt(DL, MVT::i32, B, 1);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, ALo, BLo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, AHi, BHi);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
     break;
   }
@@ -20416,6 +20499,13 @@ static SDValue performFP_TO_INTCombine(SDNode *N,
     // their operand types
     if (VT.getScalarSizeInBits() > SrcVT.getScalarSizeInBits() * 2 ||
         VT.getScalarSizeInBits() * 2 < SrcVT.getScalarSizeInBits())
+      return SDValue();
+
+    // If we'll need to write FRM, don't fold unless the src has a single use.
+    // This avoids potentially writing FRM multiple times. RTZ has a dedicated
+    // instruction and DYN uses the current FRM, so neither needs a write.
+    if (FRM != RISCVFPRndMode::RTZ && FRM != RISCVFPRndMode::DYN &&
+        !Src.hasOneUse())
       return SDValue();
 
     // Make fixed-length vectors scalable first
@@ -27626,12 +27716,12 @@ ISD::NodeType RISCVTargetLowering::getExtendForAtomicRMWArg(unsigned Op) const {
 }
 
 Register RISCVTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return RISCV::X10;
 }
 
 Register RISCVTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return RISCV::X11;
 }
 

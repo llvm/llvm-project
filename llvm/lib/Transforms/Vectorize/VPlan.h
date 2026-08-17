@@ -1257,7 +1257,6 @@ public:
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.
     IncomingAliasMask,
-    CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     // Abstract instruction that compares two values and branches. This is
@@ -2066,7 +2065,6 @@ class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
   Align Alignment;
 
 public:
-  // TODO: support StoreInst for strided store
   VPWidenMemIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                             ArrayRef<VPValue *> CallArguments, Type *Ty,
                             Align Alignment, const VPIRMetadata &MD = {},
@@ -2075,7 +2073,8 @@ public:
                                VectorIntrinsicID, CallArguments, Ty, {}, MD,
                                DL),
         Alignment(Alignment) {
-    assert(VectorIntrinsicID == Intrinsic::experimental_vp_strided_load &&
+    assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
+            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
            "Unexpected intrinsic");
   }
 

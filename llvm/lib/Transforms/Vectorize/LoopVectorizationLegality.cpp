@@ -1136,6 +1136,10 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   if (LdBB != HBinOp->getParent() || LdBB != HSt->getParent())
     return false;
 
+  // The bucket value and its update must not be used outside the histogram.
+  if (!IndexedLoad->hasOneUse() || !HBinOp->hasOneUse())
+    return false;
+
   LLVM_DEBUG(dbgs() << "LV: Found histogram for: " << *HSt << "\n");
 
   // Store the operations that make up the histogram.

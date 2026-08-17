@@ -107,7 +107,6 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var c_test flags)
   _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
-  libc_add_definition(compile_options "LIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -282,7 +281,6 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
     "${LIBC_UNITTEST_FLAGS}")
-  libc_add_definition(compile_options "LIBC_TEST=UNIT")
 
   get_link_options(link_options
     ${compile_options}
@@ -933,7 +931,13 @@ function(add_libc_hermetic test_name)
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1
       ${link_libraries}
+      ${fq_target_name}.__libc__
       LibcHermeticTestSupport.hermetic
+      # Working around dependency issues caused by compiler introduced libcalls.
+      # We need to repeat the libc target so that we can resolve libcalls which
+      # pull in functions from LibcHermeticTestSupport (which then foward to
+      # internal implementations).
+      # TODO: clean this up
       ${fq_target_name}.__libc__
       ${compiler_runtime}
   )

@@ -1027,6 +1027,10 @@ public:
   /// during analysis.
   void reorderBottomToTop(bool IgnoreReorder = false);
 
+  /// Marks the schedule data of the copyable-modeled operands of \p TE for
+  /// dependency recalculation at the next bundle scheduling.
+  void markCopyableDepsForRecalc(TreeEntry &TE);
+
   /// \return The vector element size in bits to use when vectorizing the
   /// expression tree ending at \p V. If V is a store, the size is the width of
   /// the stored value. Otherwise, the size is the width of the largest loaded
@@ -4748,6 +4752,20 @@ private:
       return Res;
     }
 
+    /// Reordering \p TE permutes its operand columns and may move an operand
+    /// between the edges covered and not covered by copyable scheduling
+    /// data, making the computed dependency counts stale. Mark the schedule
+    /// data of \p TE's copyable-modeled operands for recalculation at the
+    /// next bundle scheduling.
+    void markCopyableDepsForRecalc(const TreeEntry &TE) {
+      for (unsigned OpIdx : seq<unsigned>(TE.getNumOperands()))
+        for (Value *V : TE.getOperand(OpIdx))
+          if (auto *I = dyn_cast<Instruction>(V))
+            if (ScheduleData *SD = getScheduleData(I);
+                SD && !getScheduleCopyableData(I).empty())
+              RecalcCopyableOperandDeps.insert(SD);
+    }
+
     ScheduleCopyableData &addScheduleCopyableData(const EdgeInfo &EI,
                                                   Instruction *I,
                                                   int SchedulingRegionID,
@@ -4936,7 +4954,8 @@ private:
               [&](Instruction *I, TreeEntry *UserTE, unsigned OpIdx,
                   SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>>
                       &Checked,
-                  bool IsExpandedOperand = false) {
+                  bool IsExpandedOperand = false,
+                  bool CopyableDepsOnly = false) {
                 if (!ScheduleCopyableDataMap.empty()) {
                   const EdgeInfo EI = {UserTE, OpIdx};
                   if (ScheduleCopyableData *CD =
@@ -4947,6 +4966,8 @@ private:
                     return;
                   }
                 }
+                if (CopyableDepsOnly)
+                  return;
                 auto It = OperandsUses.find(I);
                 if (It == OperandsUses.end()) {
                   // Column value may be a peeled intermediate, not a direct
@@ -5017,18 +5038,16 @@ private:
                    Bundle->getTreeEntry()->hasReassocScalars()) &&
                   "Missed TreeEntry operands?");
 
-              // Count the number of unique phi nodes, which are the parent for
-              // parent entry, and exit, if all the unique phis are processed.
-              if (IsNonSchedulableWithParentPhiNode) {
-                const TreeEntry *ParentTE =
-                    Bundle->getTreeEntry()->UserTreeIndex.UserTE;
-                Value *User = ParentTE->Scalars[Lane];
-                if (!ParentsUniqueUsers.insert(User).second) {
-                  It = std::find(std::next(It),
-                                 Bundle->getTreeEntry()->Scalars.end(), In);
-                  continue;
-                }
-              }
+              // Count the number of unique phi nodes, which are the parent
+              // entry, and handle the non-copyable deps only on the first lane
+              // for each such phi. Copyable deps are counted per operand column
+              // lane and are released on every lane.
+              bool CopyableDepsOnly =
+                  IsNonSchedulableWithParentPhiNode &&
+                  !ParentsUniqueUsers
+                       .insert(Bundle->getTreeEntry()
+                                   ->UserTreeIndex.UserTE->Scalars[Lane])
+                       .second;
 
               // A blended-load operand node is the synthetic blend mask, not an
               // IR operand of the load. Use the real pointer operand for
@@ -5042,12 +5061,13 @@ private:
                         IsBlended ? In->getOperand(OpIdx)
                                   : Bundle->getTreeEntry()->getOperand(
                                         OpIdx)[Lane])) {
-                  FoundInOpColumns |= I == In;
+                  FoundInOpColumns |= (I == In) && !CopyableDepsOnly;
                   LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): "
                                     << *I << "\n");
                   DecrUnschedForInst(
                       I, Bundle->getTreeEntry(), OpIdx, Checked,
-                      Bundle->getTreeEntry()->isExpandedOperand(In, OpIdx));
+                      Bundle->getTreeEntry()->isExpandedOperand(In, OpIdx),
+                      /*CopyableDepsOnly=*/CopyableDepsOnly);
                 }
               // If parent node is schedulable, it will be handled correctly.
               if (Bundle->getTreeEntry()->isCopyableElement(In))
@@ -7897,6 +7917,14 @@ void BoUpSLP::TreeEntry::reorderSplitNode(unsigned Idx, ArrayRef<int> Mask,
     ReorderIndices.clear();
 }
 
+void BoUpSLP::markCopyableDepsForRecalc(TreeEntry &TE) {
+  if (!TE.hasState())
+    return;
+  if (auto It = BlocksSchedules.find(TE.getMainOp()->getParent());
+      It != BlocksSchedules.end())
+    It->second->markCopyableDepsForRecalc(TE);
+}
+
 void BoUpSLP::reorderTopToBottom() {
   // Maps VF to the graph nodes.
   DenseMap<unsigned, SetVector<TreeEntry *>> VFToOrderedEntries;
@@ -8177,11 +8205,15 @@ void BoUpSLP::reorderTopToBottom() {
         // Build correct orders for extract{element,value}, loads,
         // stores and alternate (split) nodes.
         reorderOrder(TE->ReorderIndices, Mask);
-        if (isa<InsertElementInst, InsertValueInst, StoreInst>(TE->getMainOp()))
+        if (isa<InsertElementInst, InsertValueInst, StoreInst>(
+                TE->getMainOp())) {
           TE->reorderOperands(Mask);
+          markCopyableDepsForRecalc(*TE);
+        }
       } else {
         // Reorder the node and its operands.
         TE->reorderOperands(Mask);
+        markCopyableDepsForRecalc(*TE);
         assert(TE->ReorderIndices.empty() &&
                "Expected empty reorder sequence.");
         reorderScalars(TE->Scalars, Mask);
@@ -8399,6 +8431,15 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
         continue;
       }
+      // Do not move the operand order to the root PHI node when the root
+      // order must be preserved: the root has no user to take over the order
+      // and it cannot be dropped at the end of the reordering.
+      if (!IgnoreReorder && Data.first == VectorizableTree.front().get() &&
+          !Data.first->UserTreeIndex &&
+          Data.first->State == TreeEntry::Vectorize &&
+          Data.first->getOpcode() == Instruction::PHI &&
+          Data.first->ReuseShuffleIndices.empty())
+        continue;
       // Check that operands are used only in the User node.
       SmallVector<TreeEntry *> GatherOps;
       buildReorderableOperands(Data.first, Data.second, NonVectorized,
@@ -8681,8 +8722,10 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       if (Data.first->State != TreeEntry::Vectorize ||
           !isa<ExtractElementInst, ExtractValueInst, LoadInst>(
               Data.first->getMainOp()) ||
-          IsNotProfitableAltCodeNode(*Data.first))
+          IsNotProfitableAltCodeNode(*Data.first)) {
         Data.first->reorderOperands(Mask);
+        markCopyableDepsForRecalc(*Data.first);
+      }
       if (!isa<InsertElementInst, InsertValueInst, StoreInst>(
               Data.first->getMainOp()) ||
           IsNotProfitableAltCodeNode(*Data.first) ||
@@ -14357,7 +14400,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
          "Can only convert to FMA for floating point types");
   assert(S.isAddSubLikeOp() && "Can only convert to FMA for add/sub");
 
-  auto CheckForContractable = [&](ArrayRef<Value *> VL) {
+  auto CheckForContractable = [](ArrayRef<Value *> VL,
+                                 const InstructionsState &S) {
     FastMathFlags FMF;
     FMF.set();
     for (Value *V : VL) {
@@ -14374,7 +14418,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     }
     return FMF.allowContract();
   };
-  if (!CheckForContractable(VL))
+  if (!CheckForContractable(VL, S))
     return InstructionCost::getInvalid();
   // fmul also should be contractable
   InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
@@ -14386,7 +14430,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
 
   if (OpS.isAltShuffle() || OpS.getOpcode() != Instruction::FMul)
     return InstructionCost::getInvalid();
-  if (!CheckForContractable(Operands.front()))
+  if (!CheckForContractable(Operands.front(), OpS))
     return InstructionCost::getInvalid();
   // Compare the costs.
   InstructionCost FMulPlusFAddCost = 0;
@@ -26497,8 +26541,14 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // previously scheduled bundle. The node that introduced the extra direct
     // use is now part of the tree, so clearing and recalculating the
     // dependencies here accounts for that use.
+    // If the schedule is not reset in this round, skip already scheduled
+    // operands: clearing their dependencies also resets the scheduled flag,
+    // so they would enter the ready list and be scheduled twice, decrementing
+    // the dependency counts of their operands once too many.
+    const bool WillReSchedule =
+        ReSchedule || (OldScheduleEnd && ScheduleEnd != OldScheduleEnd);
     for (ScheduleData *SD : RecalcCopyableOperandDeps) {
-      if (!isInSchedulingRegion(*SD))
+      if (!isInSchedulingRegion(*SD) || (!WillReSchedule && SD->isScheduled()))
         continue;
       if (SD->hasValidDependencies())
         SD->clearDirectDependencies();
@@ -26781,9 +26831,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (ScheduleData *OpSD = getScheduleData(I);
             OpSD && OpSD->hasValidDependencies()) {
           OpSD->clearDirectDependencies();
-          if (RegionHasStackSave ||
-              !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
-            ControlDependentMembers.push_back(OpSD);
+          ControlDependentMembers.push_back(OpSD);
           if (any_of(VL, [&](Value *V) { return S.isExpandedBinOp(V); })) {
             // Clear scheduling data for all operands, if this node is operand
             // of the expanded instruction.
@@ -29833,6 +29881,11 @@ class HorizontalReduction {
   /// Maps reduced value to the corresponding reduction operation.
   SmallDenseMap<Value *, SmallVector<Instruction *>, 16> ReducedValsToOps;
   WeakTrackingVH ReductionRoot;
+  /// The narrowing cast of the cast round-trip following the reduction
+  /// operation that consumes the reduced value at the same index (in
+  /// collection order, before the reversal to accumulation order), or null.
+  /// Ordered reductions with cast-interleaved links only.
+  SmallVector<Instruction *> RoundedLinks;
   /// The type of reduction operation.
   RecurKind RdxKind;
   /// Checks if the optimization of original scalar identity operations on
@@ -30254,11 +30307,14 @@ public:
     ReducedVals.clear();
     ReducedValsToOps.clear();
     ReductionOps.clear();
+    RoundedLinks.clear();
     RdxKind = getRdxKind(Root);
     // Currently, only ordered fadd reductions are supported.
     if (RdxKind != RecurKind::FAdd)
       return false;
-    if (isVectorizable(RdxKind, Root) != ReductionOrdering::Ordered)
+    // Reassociable chains with non-elidable cast round-trip links are
+    // handled here as well: the emission keeps the original order.
+    if (isVectorizable(RdxKind, Root) == ReductionOrdering::None)
       return false;
 
     // Ordered reductions only support simple binary ops, not min/max
@@ -30285,6 +30341,7 @@ public:
     unsigned Depth = 0;
     bool ChainComplete = false;
     constexpr unsigned MaxReducedVals = 1024;
+    Instruction *PendingCast = nullptr;
     while (TreeN) {
       if (Depth++ > RecursionMaxDepth)
         break;
@@ -30302,10 +30359,28 @@ public:
       ReducedValsToOps[LeafVal].push_back(TreeN);
       ReducedValsToOps[ChainVal].push_back(TreeN);
       ReducedVals.back().push_back(LeafVal);
+      RoundedLinks.push_back(PendingCast);
+      PendingCast = nullptr;
       auto *ChainInst = dyn_cast<Instruction>(ChainVal);
+      // The link may round the accumulator to a narrower type and extend it
+      // back; look through the cast pair, the rounding is re-emitted later.
+      if (ChainInst && getRdxKind(ChainInst) != RdxKind) {
+        if (Instruction *NarrowCast =
+                lookThroughCastRoundTrip(ChainVal, /*MustBeElidable=*/false)) {
+          auto *I = cast<Instruction>(NarrowCast->getOperand(0));
+          if (getRdxKind(I) == RdxKind &&
+              hasRequiredNumberOfUses(/*IsCmpSelMinMax=*/false, I)) {
+            ReductionOps[0].push_back(ChainVal);
+            ReductionOps[0].push_back(NarrowCast);
+            PendingCast = NarrowCast;
+            ChainInst = I;
+          }
+        }
+      }
       if (!ChainInst || getRdxKind(ChainInst) != RdxKind ||
           !hasRequiredNumberOfUses(/*IsCmpSelMinMax=*/false, ChainInst)) {
         ReducedVals.back().push_back(ChainVal);
+        RoundedLinks.push_back(nullptr);
         ChainComplete = true;
         break;
       }
@@ -30323,6 +30398,7 @@ public:
       ReducedVals.pop_back();
       ReducedValsToOps.clear();
       ReductionOps.clear();
+      RoundedLinks.clear();
       return false;
     }
     std::reverse(ReducedVals.back().begin(), ReducedVals.back().end());
@@ -30368,12 +30444,28 @@ public:
     auto CheckOperands = [&](Instruction *TreeN,
                              SmallVectorImpl<Value *> &PossibleReducedVals,
                              SmallVectorImpl<Instruction *> &ReductionOps,
+                             ReductionOpsType &AllReductionOps,
                              unsigned Level) {
       for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
                                     getNumberOfOperands(TreeN)))) {
         Value *EdgeVal = getRdxOperand(TreeN, I);
-        ReducedValsToOps[EdgeVal].push_back(TreeN);
         auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
+        // The link may be an elidable cast round-trip; look through it to
+        // continue the chain. It is dropped when the reduction is folded.
+        if (EdgeInst && getRdxKind(EdgeInst) != RdxKind) {
+          if (Instruction *NarrowCast =
+                  lookThroughCastRoundTrip(EdgeVal, /*MustBeElidable=*/true)) {
+            auto *SrcI = cast<Instruction>(NarrowCast->getOperand(0));
+            if (getRdxKind(SrcI) == RdxKind &&
+                hasRequiredNumberOfUses(IsCmpSelMinMax, SrcI)) {
+              AllReductionOps.push_back(EdgeVal);
+              AllReductionOps.push_back(NarrowCast);
+              EdgeVal = SrcI;
+              EdgeInst = SrcI;
+            }
+          }
+        }
+        ReducedValsToOps[EdgeVal].push_back(TreeN);
         // If the edge is not an instruction, or it is different from the main
         // reduction opcode or has too many uses - possible reduced value.
         // Also, do not try to reduce const values, if the operation is not
@@ -30461,7 +30553,8 @@ public:
         continue;
       SmallVector<Value *> PossibleRedVals;
       SmallVector<Instruction *> PossibleReductionOps;
-      CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level);
+      CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps,
+                    ReductionOps[0], Level);
       addReductionOps(TreeN);
       ReducedValsCandidates.append(PossibleRedVals.begin(),
                                    PossibleRedVals.end());
@@ -31557,35 +31650,71 @@ public:
     // Fold leading scalars [0, SuccessStart) into an accumulator.
     Type *DestTy = ReductionRoot->getType();
     WeakTrackingVH VectorizedTree = nullptr;
-    for (Value *RdxVal : ArrayRef(Candidates).take_front(SuccessStart)) {
+    if (!all_of(RoundedLinks, equal_to(nullptr))) {
+      // The round-trip links cannot be expressed by the reduction intrinsic:
+      // fold the values into a scalar chain in the original order, extracting
+      // the vectorized ones, and re-emit the round-trips between the folded
+      // operations. The emitted chain matches the same pattern again, so its
+      // operations are marked as analyzed to prevent repeated vectorization.
+      for (unsigned Idx : seq<unsigned>(N)) {
+        Value *RdxVal = Candidates[Idx];
+        Builder.SetCurrentDebugLocation(
+            ReducedValsToOps.at(RdxVal).front()->getDebugLoc());
+        Value *NextVal = TrackedVals.at(RdxVal);
+        if (Idx >= SuccessStart && Idx < SuccessStart + SuccessWidth)
+          NextVal =
+              Builder.CreateExtractElement(SuccessRoot, Idx - SuccessStart);
+        if (!VectorizedTree) {
+          VectorizedTree = NextVal;
+          continue;
+        }
+        auto *Op = cast<Instruction>(createOp(Builder, RdxKind, VectorizedTree,
+                                              NextVal, "op.rdx", ReductionOps));
+        V.analyzedReductionRoot(Op);
+        VectorizedTree = Op;
+        Instruction *Narrow = RoundedLinks[N - 1 - Idx];
+        if (!Narrow)
+          continue;
+        Instruction *NewNarrow = Narrow->clone();
+        NewNarrow->setOperand(0, VectorizedTree);
+        Builder.Insert(NewNarrow);
+        Instruction *NewWide =
+            cast<Instruction>(*Narrow->user_begin())->clone();
+        NewWide->setOperand(0, NewNarrow);
+        VectorizedTree = Builder.Insert(NewWide);
+      }
+    } else {
+      for (Value *RdxVal : ArrayRef(Candidates).take_front(SuccessStart)) {
+        Builder.SetCurrentDebugLocation(
+            ReducedValsToOps.at(RdxVal).front()->getDebugLoc());
+        if (!VectorizedTree)
+          VectorizedTree = TrackedVals.at(RdxVal);
+        else
+          VectorizedTree =
+              createOp(Builder, RdxKind, VectorizedTree, TrackedVals.at(RdxVal),
+                       "op.rdx", ReductionOps);
+      }
+
+      // Emit ordered reduction for the vectorized window. The reduction only
+      // applies to floating point types.
+      assert(DestTy->isFPOrFPVectorTy() &&
+             SuccessRoot->getType()->isFPOrFPVectorTy() &&
+             "Expected floating point types for ordered reduction");
       Builder.SetCurrentDebugLocation(
-          ReducedValsToOps.at(RdxVal).front()->getDebugLoc());
-      if (!VectorizedTree)
-        VectorizedTree = TrackedVals.at(RdxVal);
-      else
+          cast<Instruction>(ReductionRoot)->getDebugLoc());
+      VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, /*Scale=*/1,
+                                      /*IsSigned=*/false, DestTy,
+                                      /*ReducedInTree=*/false, VectorizedTree);
+
+      // Fold trailing scalars [SuccessStart+SuccessWidth, N).
+      for (Value *RdxVal :
+           ArrayRef(Candidates).drop_front(SuccessStart + SuccessWidth)) {
+        Builder.SetCurrentDebugLocation(
+            ReducedValsToOps.at(RdxVal).front()->getDebugLoc());
         VectorizedTree =
             createOp(Builder, RdxKind, VectorizedTree, TrackedVals.at(RdxVal),
                      "op.rdx", ReductionOps);
-    }
-
-    // Emit ordered reduction for the vectorized window. The reduction only
-    // applies to floating point types.
-    assert(DestTy->isFPOrFPVectorTy() &&
-           SuccessRoot->getType()->isFPOrFPVectorTy() &&
-           "Expected floating point types for ordered reduction");
-    Builder.SetCurrentDebugLocation(
-        cast<Instruction>(ReductionRoot)->getDebugLoc());
-    VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, /*Scale=*/1,
-                                    /*IsSigned=*/false, DestTy,
-                                    /*ReducedInTree=*/false, VectorizedTree);
-
-    // Fold trailing scalars [SuccessStart+SuccessWidth, N).
-    for (Value *RdxVal :
-         ArrayRef(Candidates).drop_front(SuccessStart + SuccessWidth)) {
-      Builder.SetCurrentDebugLocation(
-          ReducedValsToOps.at(RdxVal).front()->getDebugLoc());
-      VectorizedTree = createOp(Builder, RdxKind, VectorizedTree,
-                                TrackedVals.at(RdxVal), "op.rdx", ReductionOps);
+      }
     }
 
     ReductionRoot->replaceAllUsesWith(VectorizedTree);

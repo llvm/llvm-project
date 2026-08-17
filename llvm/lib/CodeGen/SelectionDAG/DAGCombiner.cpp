@@ -7917,9 +7917,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (DAG.MaskedValueIsZero(N0Op0, Mask))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0Op0);
 
-    // fold (and (any_ext V), c) -> (zero_ext (and (trunc V), c)) if profitable.
+    // fold (and (any_ext V), c) -> (zero_ext (and V, c)) if profitable, when
+    // the zext is free or the anyext costs the same as the zext.
     if (N1C->getAPIntValue().countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
-        TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
+        (TLI.isZExtFree(SrcVT, VT) || !TLI.isAnyExtFree(SrcVT, VT)) &&
         TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
         TLI.isNarrowingProfitable(N, VT, SrcVT))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
@@ -24362,22 +24363,27 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
     return SDValue();
 
   MachinePointerInfo PointerInfo(ST->getAddressSpace());
+  Align NewAlign;
 
   // If the offset is a known constant then try to recover the pointer
   // info
   SDValue NewPtr;
   if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
-    unsigned COffset = CIdx->getSExtValue() * EltVT.getSizeInBits() / 8;
+    unsigned COffset = CIdx->getSExtValue() * EltVT.getFixedSizeInBits() / 8;
     NewPtr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(COffset), DL);
     PointerInfo = ST->getPointerInfo().getWithOffset(COffset);
+    NewAlign = ST->getAlign();
   } else {
     // The original DAG loaded the entire vector from memory, so arithmetic
     // within it must be inbounds.
     NewPtr = TLI.getInboundsVectorElementPointer(DAG, Ptr, Value.getValueType(),
                                                  Idx);
+    // MachinePointerInfo can't represent a variable offset, so use a generic
+    // MachinePointerInfo and recompute the alignment.
+    NewAlign = commonAlignment(ST->getAlign(), EltVT.getFixedSizeInBits() / 8);
   }
 
-  return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),
+  return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, NewAlign,
                       ST->getMemOperand()->getFlags());
 }
 
@@ -24418,7 +24424,10 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
   Align Alignment = Store->getAlign();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
+  // A legal masked store can still be slower than the original sequence,
+  // e.g. on pre-AVX-512 Zen, which we avoid by checking isTypeDesirableForOp.
   if (!TLI.isOperationLegalOrCustom(ISD::MSTORE, VT) ||
+      !TLI.isTypeDesirableForOp(ISD::MSTORE, VT) ||
       !TLI.allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment))
     return SDValue();
 
@@ -28228,6 +28237,13 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   if (SDValue NarrowLoad = narrowExtractedVectorLoad(NVT, V, ExtIdx, DL, DAG))
     return NarrowLoad;
 
+  // Peek through frozen loads, but ensure the load has a single use.
+  if (V.getOpcode() == ISD::FREEZE && V.hasOneUse() &&
+      V.getOperand(0).hasOneUse())
+    if (SDValue NarrowLoad =
+            narrowExtractedVectorLoad(NVT, V.getOperand(0), ExtIdx, DL, DAG))
+      return DAG.getFreeze(NarrowLoad);
+
   // Combine an extract of an extract into a single extract_subvector.
   // ext (ext X, C1), C2 --> ext X, C1 + C2
   if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
@@ -31060,9 +31076,7 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
 
   // The use checks are intentionally on SDNode because we may be dealing
   // with opcodes that produce more than one SDValue.
-  // TODO: Do we really need to check N0 (the condition operand of the select)?
-  //       But removing that clause could cause an infinite loop...
-  if (!N0->hasOneUse() || !N1->hasOneUse() || !N2->hasOneUse())
+  if (!N1->hasOneUse() || !N2->hasOneUse())
     return SDValue();
 
   // Binops may include opcodes that return multiple values, so all values

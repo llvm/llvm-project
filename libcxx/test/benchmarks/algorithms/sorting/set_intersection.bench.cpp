@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 // Generate two ranges where the larger range holds `n` elements and the smaller one holds every `ratio`th
@@ -38,7 +39,7 @@ std::pair<std::vector<T>, std::vector<T>> spread(std::size_t n, std::size_t rati
 
 int main(int argc, char** argv) {
   auto bm = []<class Container>(std::string name, auto generate) {
-    return benchmark::RegisterBenchmark(name, [generate](auto& st) {
+    return benchmark::RegisterBenchmark(name, [generate](auto& st) TEST_ALIGN_BENCHMARK {
       using ValueType        = typename Container::value_type;
       std::size_t const size = st.range(0);
 

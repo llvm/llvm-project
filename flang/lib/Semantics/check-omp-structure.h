@@ -304,6 +304,7 @@ private:
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
+  void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
   void BeginMetadirectiveVariantScope();
   void EndMetadirectiveVariantScope();
@@ -347,6 +348,8 @@ private:
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
+  void CheckDirectiveInPureProcedure(
+      parser::CharBlock source, llvm::omp::Directive id);
   void CheckClauses(parser::OmpDirectiveName dirName,
       llvm::iterator_range<ClauseIterator> beginClauses,
       llvm::iterator_range<ClauseIterator> endClauses);
