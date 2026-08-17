@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "RISCV.h"
 #include "RISCVStateAttributes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -35,8 +34,8 @@ public:
 
 char RISCVStateCheck::ID = 0;
 
-INITIALIZE_PASS(RISCVStateCheck, "riscv-state-check",
-                RISCV_STATE_CHECK_NAME, false, true)
+INITIALIZE_PASS(RISCVStateCheck, "riscv-state-check", RISCV_STATE_CHECK_NAME,
+                false, true)
 
 static const MachineOperand *getCalleeSymbol(const MachineInstr &MI) {
   for (const MachineOperand &MO : MI.operands())
