@@ -786,9 +786,8 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
                             uint64_t val) const {
   if (rel.type == R_X86_64_TLSGD) {
     // TLSGD can be directly followed by MOVABS (instead of CALL):
-    //   leaq x@tlsgd(%rip), %rdi              # 48 8d 3d <disp32>
-    //   movabsq $__tls_get_addr@pltoff, %rax  # 48 b8 <imm64>,
-    //   R_X86_64_PLTOFF64
+    //   leaq x@tlsgd(%rip), %rdi             # 48 8d 3d <disp32>, TLSGD
+    //   movabsq $__tls_get_addr@pltoff, %rax # 48 b8 <imm64>, PLTOFF64
     //   addq %REG, %rax
     //   callq *%rax
     if (isPltOff64Tls(loc)) {
@@ -853,8 +852,8 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   if (rel.type == R_X86_64_TLSGD) {
     if (isPltOff64Tls(loc)) {
       // Convert
-      //   leaq x@tlsgd(%rip), %rdi
-      //   movabsq $__tls_get_addr@pltoff, %rax
+      //   leaq x@tlsgd(%rip), %rdi             # 48 8d 3d <disp32>, TLSLD
+      //   movabsq $__tls_get_addr@pltoff, %rax # 48 b8 <imm64>, PLTOFF64
       //   addq %REG, %rax
       //   callq *%rax
       // to the following three instructions.
