@@ -1130,9 +1130,7 @@ static void tryConsumeLambdaSpecifierToken(Parser &P,
 static void addStaticToLambdaDeclSpecifier(Parser &P, SourceLocation StaticLoc,
                                            DeclSpec &DS) {
   if (StaticLoc.isValid()) {
-    P.Diag(StaticLoc, !P.getLangOpts().CPlusPlus23
-                          ? diag::err_static_lambda
-                          : diag::warn_cxx20_compat_static_lambda);
+    P.DiagCompat(StaticLoc, diag_compat::static_lambda);
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
     DS.SetStorageClassSpec(P.getActions(), DeclSpec::SCS_static, StaticLoc,
@@ -1147,9 +1145,7 @@ static void
 addConstexprToLambdaDeclSpecifier(Parser &P, SourceLocation ConstexprLoc,
                                   DeclSpec &DS) {
   if (ConstexprLoc.isValid()) {
-    P.Diag(ConstexprLoc, !P.getLangOpts().CPlusPlus17
-                             ? diag::ext_constexpr_on_lambda_cxx17
-                             : diag::warn_cxx14_compat_constexpr_on_lambda);
+    P.DiagCompat(ConstexprLoc, diag_compat::constexpr_on_lambda);
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
     DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, ConstexprLoc, PrevSpec,
@@ -1244,9 +1240,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   MultiParseScope TemplateParamScope(*this);
   if (Tok.is(tok::less)) {
-    Diag(Tok, getLangOpts().CPlusPlus20
-                  ? diag::warn_cxx17_compat_lambda_template_parameter_list
-                  : diag::ext_lambda_template_parameter_list);
+    DiagCompat(Tok, diag_compat::lambda_template_parameter_list);
 
     SmallVector<NamedDecl*, 4> TemplateParams;
     SourceLocation LAngleLoc, RAngleLoc;
@@ -1857,10 +1851,7 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   if (!DG)
     return DG;
 
-  Diag(DeclStart, !getLangOpts().CPlusPlus23
-                      ? diag::ext_alias_in_init_statement
-                      : diag::warn_cxx20_alias_in_init_statement)
-      << SourceRange(DeclStart, DeclEnd);
+  DiagCompat(DeclStart, diag_compat::alias_in_init_statement);
 
   return DG;
 }
@@ -1903,9 +1894,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
 
   const auto WarnOnInit = [this, &CK] {
     if (getLangOpts().CPlusPlus)
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                  ? diag::warn_cxx14_compat_init_statement
-                                  : diag::ext_init_statement)
+      DiagCompat(Tok.getLocation(), diag_compat::init_statement)
           << (CK == Sema::ConditionKind::Switch);
     else
       DiagCompat(Tok.getLocation(), diag_compat::decl_statement)
@@ -2062,8 +2051,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
 
   ExprResult InitExpr = ExprError();
   if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-    Diag(Tok.getLocation(),
-         diag::warn_cxx98_compat_generalized_initializer_lists);
+    Diag(Tok.getLocation(), diag::compat_cxx11_generalized_initializer_lists);
     InitExpr = ParseBraceInitializer();
   } else if (CopyInitialization) {
     PreferredType.enterVariableInit(Tok.getLocation(), DeclOut);
@@ -3015,8 +3003,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
                                              ConstructorRParen,
                                              ConstructorArgs);
   } else if (Tok.is(tok::l_brace) && getLangOpts().CPlusPlus11) {
-    Diag(Tok.getLocation(),
-         diag::warn_cxx98_compat_generalized_initializer_lists);
+    Diag(Tok.getLocation(), diag::compat_cxx11_generalized_initializer_lists);
     Initializer = ParseBraceInitializer();
   }
   if (Initializer.isInvalid())
