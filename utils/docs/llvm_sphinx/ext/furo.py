@@ -14,7 +14,6 @@ def _add_shared_static_files(app):
 
     app.add_js_file(f"{_SHARED_STATIC_PREFIX}/copybutton.js")
     app.add_css_file(f"{_SHARED_STATIC_PREFIX}/copybutton.css")
-    app.add_css_file(f"{_SHARED_STATIC_PREFIX}/furo-common.css")
 
 
 def _copy_shared_static_files(app, exception):
