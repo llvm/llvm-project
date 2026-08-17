@@ -13,7 +13,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/uint128.h"
 #include "src/__support/wchar/string_converter.h"
 #include "test/UnitTest/TestLogger.h"
@@ -71,6 +71,8 @@ cpp::enable_if_t<cpp::is_fixed_point_v<T>, cpp::string> describeValue(T Value) {
 cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+
 cpp::string describeValue(cpp::wstring_view Value) {
   LIBC_NAMESPACE::internal::mbstate State;
   LIBC_NAMESPACE::internal::StringConverter<wchar_t> StringConv(
@@ -87,6 +89,8 @@ cpp::string describeValue(cpp::wstring_view Value) {
 
   return S;
 }
+
+#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
 
 template <typename ValType>
 bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
@@ -235,7 +239,9 @@ namespace internal {
                            TYPE RHS, const char *LHSStr, const char *RHSStr,   \
                            Location Loc)
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST_SPECIALIZATION(wchar_t);
+#endif
 
 TEST_SPECIALIZATION(char);
 TEST_SPECIALIZATION(short);

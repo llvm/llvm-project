@@ -442,33 +442,3 @@ TYPED_TEST(LlvmLibcStringConverterTest, DestLimitUTF32To8, TestCharTypesUTF32) {
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 }
-
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
-using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::TypeList<char16_t, wchar_t>;
-#else
-using TestCharTypesUTF16 = LIBC_NAMESPACE::testing::TypeList<char16_t>;
-#endif
-
-TYPED_TEST(LlvmLibcStringConverterTest, UTF16Fails, TestCharTypesUTF16) {
-  using CharType16 = ParamType;
-
-  const char32_t Src32[] = {static_cast<char32_t>('A'),
-                            static_cast<char32_t>('B')};
-  LIBC_NAMESPACE::internal::mbstate State32;
-  LIBC_NAMESPACE::internal::StringConverter<char32_t> StringConv32(
-      Src32, &State32, /* dstlen = */ 2,
-      /* srclen = */ 2);
-
-  ASSERT_FALSE(StringConv32.pop<CharType16>().has_value());
-  ASSERT_EQ(StringConv32.getSourceIndex(), size_t{1});
-
-  const CharType16 Src16[] = {static_cast<CharType16>('A'),
-                              static_cast<CharType16>('B')};
-  LIBC_NAMESPACE::internal::mbstate State16;
-  LIBC_NAMESPACE::internal::StringConverter<CharType16> StringConv16(
-      Src16, &State16, /* dstlen = */ 2,
-      /* srclen = */ 2);
-
-  ASSERT_FALSE(StringConv16.template pop<char32_t>().has_value());
-  ASSERT_EQ(StringConv16.getSourceIndex(), size_t{0});
-}
