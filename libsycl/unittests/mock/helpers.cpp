@@ -314,10 +314,11 @@ void mock::MockLiboffload::initDefault() {
                             const void **Mems, const size_t *Sizes,
                             ol_mem_migration_flags_t Flags) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
-        if (Count > 0) {
-          EXPECT_NE(Mems, nullptr);
-          EXPECT_NE(Sizes, nullptr);
-        }
+        EXPECT_EQ(Count, 1);
+        EXPECT_NE(Mems, nullptr);
+        EXPECT_NE(*Mems, nullptr);
+        EXPECT_NE(Sizes, nullptr);
+        EXPECT_GT(*Sizes, 0);
         EXPECT_EQ(Flags, OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE);
         return OL_SUCCESS;
       });
