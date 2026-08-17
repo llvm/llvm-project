@@ -19,33 +19,53 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <iterator>
 #include <ranges>
 #include <vector>
 
-#include "test_range.h"
+#include "test_iterators.h"
 
 constexpr bool test() {
-  std::vector<int> vector                                                  = {1, 2, 3, 4, 5, 6, 7, 8};
-  std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>> chunked = vector | std::views::chunk(2);
+  std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
 
-  // Test `constexpr iterator& operator--();`
-  {
-    /*chunk_view::__iterator*/ std::bidirectional_iterator auto it = chunked.end();
-    assert(std::ranges::equal(*--it, std::vector{7, 8}));
-  }
-
+  // Test `constexpr iterator& operator--()`
   // Test `constexpr iterator operator--(int)`
   {
-    /*chunk_view::__iterator*/ std::bidirectional_iterator auto it = chunked.end();
-    it--;
+    std::ranges::chunk_view<
+        std::ranges::
+            subrange<bidirectional_iterator<int*>, bidirectional_iterator<int*>, std::ranges::subrange_kind::sized>>
+        chunked(std::ranges::subrange<bidirectional_iterator<int*>,
+                                      bidirectional_iterator<int*>,
+                                      std::ranges::subrange_kind::sized>(
+                    bidirectional_iterator<int*>(vector.data()),
+                    bidirectional_iterator<int*>(vector.data() + vector.size()),
+                    vector.size()),
+                2);
+    auto it                                                                         = chunked.end();
+    std::same_as<std::ranges::iterator_t<decltype(chunked)>&> decltype(auto) result = --it;
+    assert(&result == &it);
     assert(std::ranges::equal(*it, std::vector{7, 8}));
+    std::same_as<std::ranges::iterator_t<decltype(chunked)>> decltype(auto) it2 = it--;
+    assert(std::ranges::equal(*it, std::vector{5, 6}));
+    assert(std::ranges::equal(*it2, std::vector{7, 8}));
   }
 
-  // Test `constexpr iterator& operator-=(difference_type)`
+  // Test `iterator& operator-=(difference_type)`
   {
-    /*chunk_view::__iterator*/ std::random_access_iterator auto it = chunked.end();
-    it -= 3;
+    std::ranges::chunk_view<
+        std::ranges::
+            subrange<random_access_iterator<int*>, random_access_iterator<int*>>>
+        chunked(std::ranges::subrange<random_access_iterator<int*>,
+                                      random_access_iterator<int*>>(
+                    random_access_iterator<int*>(vector.data()),
+                    random_access_iterator<int*>(vector.data() + vector.size()),
+                    vector.size()),
+                2);
+    auto it = chunked.end();
+    it -= 1;
+    assert(std::ranges::equal(*it, std::vector{7, 8}));
+    it -= 2;
     assert(std::ranges::equal(*it, std::vector{3, 4}));
   }
 
