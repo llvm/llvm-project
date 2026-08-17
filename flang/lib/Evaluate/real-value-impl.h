@@ -256,16 +256,6 @@ public:
   }
 
 private:
-  template <typename INT>
-  static IntegerValue IntegerValueFromFixed(const INT &);
-
-  template <typename INT>
-  static INT FixedIntegerFromValue(const IntegerValue &);
-
-  template <typename R>
-  static ValueWithRealFlags<R> FromIntegerValue(
-      const IntegerValue &v, bool isUnsigned, Rounding rounding);
-
   Storage storage_;
 };
 

@@ -23,7 +23,8 @@ RealValueImpl::RealValueImpl(int kind, const Word &w) {
     if (w.IsMonostate()) {
       storage_ = R{};
     } else {
-      storage_ = R{FixedIntegerFromValue<typename R::Word>(w)};
+      storage_ =
+          R{IntegerValueImpl::CoerceUnsigned<typename R::Word>(w.impl())};
     }
   });
 }
@@ -249,8 +250,11 @@ IntegerValue RealValueImpl::RawBits() const {
     return {};
   }
 
-  return withWord(
-      [](const auto &v) { return IntegerValueFromFixed(v.RawBits()); });
+  return withWord([](const auto &v) {
+    IntegerValue result;
+    result.impl() = IntegerValueImpl::FromWord(v.RawBits());
+    return result;
+  });
 }
 
 Relation RealValueImpl::Compare(const RealValueImpl &y) const {
@@ -452,7 +456,7 @@ ValueWithRealFlags<IntegerValue> RealValueImpl::ToInteger(
       using W = decltype(target);
       auto r{v.template ToInteger<W>(mode)};
       ValueWithRealFlags<IntegerValue> result;
-      result.value = IntegerValueFromFixed(r.value);
+      result.value.impl() = IntegerValueImpl::FromWord(r.value);
       result.flags = r.flags;
       return result;
     }};
@@ -503,7 +507,10 @@ IntegerValue RealValueImpl::EXPONENT() const {
     llvm_unreachable("unsupported operation over uninitialized value");
   }
   return withWord([](const auto &v) -> IntegerValue {
-    return IntegerValueFromFixed(v.template EXPONENT<Integer<32>>());
+    IntegerValue result;
+    result.impl() =
+        IntegerValueImpl::FromWord(v.template EXPONENT<Integer<32>>());
+    return result;
   });
 }
 
@@ -514,7 +521,10 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::FromInteger(
   }
   return withWordProto(
       kind, [&](auto proto) -> ValueWithRealFlags<RealValueImpl> {
-        auto r{FromIntegerValue<decltype(proto)>(n, isUnsigned, rounding)};
+        using R = std::decay_t<decltype(proto)>;
+        auto r{n.impl().withWord([&](const auto &concrete) {
+          return R::FromInteger(concrete, isUnsigned, rounding);
+        })};
         return {FromWord(r.value), r.flags};
       });
 }
@@ -564,26 +574,6 @@ llvm::raw_ostream &RealValueImpl::AsFortran(
     return 0;
   });
   return o;
-}
-
-template <typename INT>
-IntegerValue RealValueImpl::IntegerValueFromFixed(const INT &n) {
-  IntegerValue result;
-  result.impl() = IntegerValueImpl::FromWord(n);
-  return result;
-}
-
-template <typename INT>
-INT RealValueImpl::FixedIntegerFromValue(const IntegerValue &v) {
-  return IntegerValueImpl::CoerceUnsigned<INT>(v.impl());
-}
-
-template <typename R>
-ValueWithRealFlags<R> RealValueImpl::FromIntegerValue(
-    const IntegerValue &n, bool isUnsigned, Rounding rounding) {
-  return n.impl().withWord([&](const auto &concrete) {
-    return R::FromInteger(concrete, isUnsigned, rounding);
-  });
 }
 
 } // namespace Fortran::evaluate::value
