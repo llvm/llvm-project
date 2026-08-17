@@ -198,3 +198,4 @@ body:             |
     %2:_(i8) = G_ZEXT %1(i1)
     G_STORE %2(i8), %0(p0) :: (store seq_cst (i8))
     RET_ReallyLR
+...
