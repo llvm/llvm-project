@@ -247,10 +247,35 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
       Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
   }
 
+  // If no standard library declaration was found in the AST (freestanding
+  // code calling builtins directly without headers), perform automatic
+  // resolution of MSVC CRT symbol names and DLL import attributes.
+  bool IsNoHeader = (D == GlobalDecl(FD));
+  if (IsNoHeader && getTriple().isWindowsMSVCEnvironment() &&
+      Name == "hypotf") {
+    // Map C99 float math functions to their MSVC CRT prefixed names on Windows.
+    // (Only hypotf needs mapping as it is not exported without prefix in UCRT
+    // on both x86 and x64).
+    Name = "_hypotf";
+  }
+
   llvm::FunctionType *Ty =
     cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
 
-  return GetOrCreateLLVMFunction(Name, Ty, D, /*ForVTable=*/false);
+  llvm::Constant *C = GetOrCreateLLVMFunction(Name, Ty, D, /*ForVTable=*/false);
+
+  // When compiling under dynamic CRT (/MD or -D_DLL), standard CRT library
+  // functions reside in dynamic runtime DLLs. Automatically attach dllimport
+  // storage class and clear dso_local for freestanding builtin calls.
+  if (IsNoHeader && getTriple().isWindowsMSVCEnvironment() &&
+      Context.Idents.get("_DLL").hasMacroDefinition()) {
+    auto *F = dyn_cast<llvm::Function>(C);
+    if (F && F->isDeclaration() && !F->hasDLLImportStorageClass()) {
+      F->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+      F->setDSOLocal(false);
+    }
+  }
+  return C;
 }
 
 /// Emit the conversions required to turn the given value into an
