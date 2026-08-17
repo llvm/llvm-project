@@ -471,6 +471,30 @@ struct ImplicitDefMatch {
 
 inline ImplicitDefMatch m_GImplicitDef() { return ImplicitDefMatch(); }
 
+/// Matches a G_CONSTANT and binds the defining instruction. Unlike m_ICst, this
+/// returns the instruction (not the value) and does not look through vector
+/// splats.
+template <typename Class> struct GConstantMatch {
+  Class *&Inst;
+
+  GConstantMatch(Class *&Inst) : Inst(Inst) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (mi_match(Reg, MRI, m_MInstr(TmpMI))) {
+      if (auto *Cst = dyn_cast<Class>(TmpMI)) {
+        Inst = Cst;
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+inline GConstantMatch<GConstant> m_GConstant(GConstant *&Inst) { return Inst; }
+inline GConstantMatch<const GConstant> m_GConstant(const GConstant *&Inst) {
+  return Inst;
+}
+
 // Helper for matching G_FCONSTANT
 inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
 
@@ -739,6 +763,27 @@ template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>
 m_GFPTrunc(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>(Src);
+}
+
+/// Matches a G_SEXT_INREG, binding its source operand. G_SEXT_INREG has an
+/// extra immediate operand, so it does not fit the plain UnaryOp_match shape.
+template <typename SrcTy> struct SExtInRegMatch {
+  SrcTy L;
+
+  SExtInRegMatch(const SrcTy &LHS) : L(LHS) {}
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (mi_match(Op, MRI, m_MInstr(TmpMI)) &&
+        TmpMI->getOpcode() == TargetOpcode::G_SEXT_INREG)
+      return L.match(MRI, TmpMI->getOperand(1).getReg());
+    return false;
+  }
+};
+
+template <typename SrcTy>
+inline SExtInRegMatch<SrcTy> m_GSExtInReg(const SrcTy &Src) {
+  return SExtInRegMatch<SrcTy>(Src);
 }
 
 template <typename SrcTy>

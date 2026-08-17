@@ -15,6 +15,12 @@
 
 namespace llvm::omp::target::plugin {
 
+L0ContextTy::L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
+                         int32_t DriverId)
+    : Plugin(Plugin), zeDriver(zeDriver) {}
+
+L0ContextTy::~L0ContextTy() = default;
+
 Error L0ContextTy::init() {
   auto CleanupOnError = [&]() {
     if (zeContext) {
@@ -57,10 +63,31 @@ Error L0ContextTy::init() {
   if (RC != ZE_RESULT_SUCCESS)
     zexKernelGetArgumentSize = nullptr;
 
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeCommandListAppendHostFunction",
+          (void **)&zeCommandListAppendHostFunction);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeCommandListAppendHostFunction = nullptr;
+
+  CALL_ZE(RC, zeDriverGetExtensionFunctionAddress, zeDriver,
+          "zeDriverGetDefaultContext", (void **)&zeDriverGetDefaultContext);
+  if (RC != ZE_RESULT_SUCCESS)
+    zeDriverGetDefaultContext = nullptr;
+
+  DefaultUserCtx = std::make_unique<LevelZeroPluginContextTy>(
+      Plugin, /*Devices=*/llvm::ArrayRef<GenericDeviceTy *>{}, zeDriver,
+      zeContext, /*OwnsZeContext=*/false);
+
   return Plugin::success();
 }
 
 Error L0ContextTy::deinit() {
+  // Release the default context (drains its queue cache) before zeContext.
+  if (DefaultUserCtx) {
+    if (auto Err = DefaultUserCtx->deinit())
+      return Err;
+    DefaultUserCtx.reset();
+  }
   if (auto Err = EventPool.deinit())
     return Err;
   if (auto Err = HostMemAllocator.deinit())
