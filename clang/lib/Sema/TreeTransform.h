@@ -16532,6 +16532,41 @@ TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
       T, E->getLParenLoc(), Args, E->getRParenLoc(), E->isListInitialization());
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
+    DependentTemplateIdExpr *E) {
+  NestedNameSpecifierLoc QualifierLoc = E->getQualifierLoc();
+  if (QualifierLoc) {
+    QualifierLoc = getDerived().TransformNestedNameSpecifierLoc(QualifierLoc);
+    if (!QualifierLoc)
+      return ExprError();
+  }
+
+  TemplateName Name = getDerived().TransformTemplateName(
+      QualifierLoc, E->getTemplateKeywordLoc(), E->getTemplateName(),
+      E->getNameLoc());
+  if (Name.isNull())
+    return ExprError();
+
+  TemplateDecl *TD = Name.getAsTemplateDecl();
+  if (!TD)
+    return ExprError();
+
+  TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
+  if (getDerived().TransformTemplateArguments(
+          E->template_arguments().data(), E->getNumTemplateArgs(), TransArgs))
+    return ExprError();
+
+  CXXScopeSpec SS;
+  SS.Adopt(QualifierLoc);
+
+  LookupResult R(SemaRef, E->getNameInfo(), Sema::LookupOrdinaryName);
+  R.addDecl(TD);
+  R.resolveKind();
+  return getDerived().RebuildTemplateIdExpr(SS, E->getTemplateKeywordLoc(), R,
+                                            /*RequiresADL=*/false, &TransArgs);
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXDependentScopeMemberExpr(

@@ -401,14 +401,45 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   return End;
 }
 
-static bool UnresolvedLookupExprIsVariableOrConceptParameterPack(
-    UnresolvedSetIterator Begin, UnresolvedSetIterator End) {
-  if (std::distance(Begin, End) != 1)
-    return false;
-  NamedDecl *ND = *Begin;
-  if (const auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND))
-    return TTP->isParameterPack();
-  return false;
+DependentTemplateIdExpr::DependentTemplateIdExpr(
+    const ASTContext &Context, NestedNameSpecifierLoc QualifierLoc,
+    SourceLocation TemplateKWLoc, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs)
+    : Expr(DependentTemplateIdExprClass, Context.DependentTy, VK_LValue,
+           OK_Ordinary),
+      QualifierLoc(QualifierLoc), NameInfo(NameInfo), Name(Name) {
+  getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
+      TemplateKWLoc, TemplateArgs, getTrailingObjects<TemplateArgumentLoc>());
+  setDependence(computeDependence(this));
+}
+
+DependentTemplateIdExpr::DependentTemplateIdExpr(EmptyShell Empty,
+                                                 unsigned NumTemplateArgs)
+    : Expr(DependentTemplateIdExprClass, Empty) {
+  getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs =
+      NumTemplateArgs;
+}
+
+DependentTemplateIdExpr *DependentTemplateIdExpr::Create(
+    const ASTContext &Context, NestedNameSpecifierLoc QualifierLoc,
+    SourceLocation TemplateKWLoc, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs) {
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+          1, TemplateArgs.size()),
+      alignof(DependentTemplateIdExpr));
+  return new (Mem) DependentTemplateIdExpr(Context, QualifierLoc, TemplateKWLoc,
+                                           NameInfo, Name, TemplateArgs);
+}
+
+DependentTemplateIdExpr *
+DependentTemplateIdExpr::CreateEmpty(const ASTContext &Context,
+                                     unsigned NumTemplateArgs) {
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+          1, NumTemplateArgs),
+      alignof(DependentTemplateIdExpr));
+  return new (Mem) DependentTemplateIdExpr(EmptyShell(), NumTemplateArgs);
 }
 
 // UnresolvedLookupExpr
@@ -419,11 +450,10 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent,
     bool KnownInstantiationDependent)
-    : OverloadExpr(
-          UnresolvedLookupExprClass, Context, QualifierLoc, TemplateKWLoc,
-          NameInfo, TemplateArgs, Begin, End, KnownDependent,
-          KnownInstantiationDependent,
-          UnresolvedLookupExprIsVariableOrConceptParameterPack(Begin, End)),
+    : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
+                   TemplateKWLoc, NameInfo, TemplateArgs, Begin, End,
+                   KnownDependent, KnownInstantiationDependent,
+                   /*KnownContainsUnexpandedParameterPack=*/false),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
 }

@@ -3287,37 +3287,9 @@ public:
            getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
-  bool isConceptReference() const {
-    return getNumDecls() == 1 && [&]() {
-      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
-              getTrailingResults()->getDecl()))
-        return TTP->templateParameterKind() == TNK_Concept_template;
-      if (isa<ConceptDecl>(getTrailingResults()->getDecl()))
-        return true;
-      return false;
-    }();
-  }
-
-  bool isVarDeclReference() const {
-    return getNumDecls() == 1 && [&]() {
-      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
-              getTrailingResults()->getDecl()))
-        return TTP->templateParameterKind() == TNK_Var_template;
-      if (isa<VarTemplateDecl>(getTrailingResults()->getDecl()))
-        return true;
-      return false;
-    }();
-  }
-
   TemplateDecl *getTemplateDecl() const {
     assert(getNumDecls() == 1);
     return dyn_cast_or_null<TemplateDecl>(getTrailingResults()->getDecl());
-  }
-
-  TemplateTemplateParmDecl *getTemplateTemplateDecl() const {
-    assert(getNumDecls() == 1);
-    return dyn_cast_or_null<TemplateTemplateParmDecl>(
-        getTrailingResults()->getDecl());
   }
 
   TemplateArgumentLoc const *getTemplateArgs() const {
@@ -3485,6 +3457,110 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == UnresolvedLookupExprClass;
+  }
+};
+
+/// A template-id naming a variable template or a concept through a template
+/// template parameter.
+class DependentTemplateIdExpr final
+    : public Expr,
+      private llvm::TrailingObjects<DependentTemplateIdExpr,
+                                    ASTTemplateKWAndArgsInfo,
+                                    TemplateArgumentLoc> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
+  NestedNameSpecifierLoc QualifierLoc;
+
+  DeclarationNameInfo NameInfo;
+
+  TemplateName Name;
+
+  DependentTemplateIdExpr(const ASTContext &Context,
+                          NestedNameSpecifierLoc QualifierLoc,
+                          SourceLocation TemplateKWLoc,
+                          const DeclarationNameInfo &NameInfo,
+                          TemplateName Name,
+                          const TemplateArgumentListInfo &TemplateArgs);
+
+  DependentTemplateIdExpr(EmptyShell Empty, unsigned NumTemplateArgs);
+
+  unsigned numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
+    return 1;
+  }
+
+public:
+  static DependentTemplateIdExpr *
+  Create(const ASTContext &Context, NestedNameSpecifierLoc QualifierLoc,
+         SourceLocation TemplateKWLoc, const DeclarationNameInfo &NameInfo,
+         TemplateName Name, const TemplateArgumentListInfo &TemplateArgs);
+
+  static DependentTemplateIdExpr *CreateEmpty(const ASTContext &Context,
+                                              unsigned NumTemplateArgs);
+
+  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
+  NestedNameSpecifier getQualifier() const {
+    return QualifierLoc.getNestedNameSpecifier();
+  }
+
+  const DeclarationNameInfo &getNameInfo() const { return NameInfo; }
+  DeclarationName getName() const { return NameInfo.getName(); }
+  SourceLocation getNameLoc() const { return NameInfo.getLoc(); }
+
+  TemplateName getTemplateName() const { return Name; }
+
+  TemplateTemplateParmDecl *getParameter() const {
+    return cast<TemplateTemplateParmDecl>(Name.getAsTemplateDecl());
+  }
+
+  bool isConceptReference() const {
+    return getParameter()->templateParameterKind() == TNK_Concept_template;
+  }
+
+  SourceLocation getTemplateKeywordLoc() const {
+    return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->TemplateKWLoc;
+  }
+  SourceLocation getLAngleLoc() const {
+    return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->LAngleLoc;
+  }
+  SourceLocation getRAngleLoc() const {
+    return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->RAngleLoc;
+  }
+
+  unsigned getNumTemplateArgs() const {
+    return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
+  }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return getTrailingObjects<TemplateArgumentLoc>(getNumTemplateArgs());
+  }
+
+  SourceLocation getBeginLoc() const {
+    if (QualifierLoc)
+      return QualifierLoc.getBeginLoc();
+    if (SourceLocation TemplateKWLoc = getTemplateKeywordLoc();
+        TemplateKWLoc.isValid())
+      return TemplateKWLoc;
+    return getNameLoc();
+  }
+
+  SourceLocation getEndLoc() const {
+    if (SourceLocation RAngleLoc = getRAngleLoc(); RAngleLoc.isValid())
+      return RAngleLoc;
+    return NameInfo.getEndLoc();
+  }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == DependentTemplateIdExprClass;
   }
 };
 
