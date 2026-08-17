@@ -2726,7 +2726,8 @@ unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
     if (A->getOption().matches(options::OPT_O0))
       return 0;
 
-    if (A->getOption().matches(options::OPT_Ofast) || A->getOption().matches(options::OPT_O4))
+    if (A->getOption().matches(options::OPT_Ofast) ||
+        A->getOption().matches(options::OPT_O4))
       return 3;
 
     assert(A->getOption().matches(options::OPT_O));
