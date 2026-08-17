@@ -5438,8 +5438,8 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
 }
 
 llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
-                                                   llvm::Type *RetTy,
                                                    ArrayRef<llvm::Value *> Args,
+                                                   llvm::Type *RetTy,
                                                    const llvm::Twine &Name) {
   SmallVector<llvm::Type *> ArgTys;
   ArgTys.reserve(Args.size());
