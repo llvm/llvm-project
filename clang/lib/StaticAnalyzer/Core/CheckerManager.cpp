@@ -774,13 +774,9 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
       ProgramPoint L = ProgramPoint::getProgramPoint(
           UpdatedCall->getOriginExpr(), ProgramPoint::PostStmtKind,
           Pred->getStackFrame(), EvalCallChecker.Checker);
-      bool evaluated = false;
-      { // CheckerContext generates transitions (populates checkDest) on
-        // destruction, so introduce the scope to make sure it gets properly
-        // populated.
-        CheckerContext C(B, Eng, Pred, L);
-        evaluated = EvalCallChecker(*UpdatedCall, C);
-      }
+
+      CheckerContext C(B, Eng, Pred, L);
+      bool evaluated = EvalCallChecker(*UpdatedCall, C);
 #ifndef NDEBUG
       if (evaluated && evaluatorChecker) {
         const auto toString = [](const CallEvent &Call) -> std::string {
