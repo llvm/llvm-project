@@ -4679,6 +4679,170 @@ uint64_t test_vcvts_u64_f32(float32_t a) {
 }
 
 //===------------------------------------------------------===//
+// 2.1.4.1 Convearions (truncate to nearest)
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#conversions
+//
+// TODO: Add vcvntd_* variants, e.g. vcvtnd_s32_f64.
+//===------------------------------------------------------===//
+// LLVM-LABEL: @test_vcvtn_s32_f32(
+// CIR-LABEL: @vcvtn_s32_f32(
+int32x2_t test_vcvtn_s32_f32(float32x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtns"
+
+// LLVM-SAME: <2 x float> noundef [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM:    [[VCVTN_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM:    [[VCVTN1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtns.v2i32.v2f32(<2 x float> [[VCVTN_I]])
+// LLVM:    ret <2 x i32> [[VCVTN1_I]]
+  return vcvtn_s32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtn_u32_f32(
+// CIR-LABEL: @vcvtn_u32_f32(
+uint32x2_t test_vcvtn_u32_f32(float32x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtnu"
+
+// LLVM-SAME: <2 x float> noundef [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM:    [[VCVTN_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM:    [[VCVTN1_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtnu.v2i32.v2f32(<2 x float> [[VCVTN_I]])
+// LLVM:    ret <2 x i32> [[VCVTN1_I]]
+  return vcvtn_u32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtnq_s32_f32(
+// CIR-LABEL: @vcvtnq_s32_f32(
+int32x4_t test_vcvtnq_s32_f32(float32x4_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtns"
+
+// LLVM-SAME: <4 x float> noundef [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM:    [[VCVTN_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM:    [[VCVTN1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtns.v4i32.v4f32(<4 x float> [[VCVTN_I]])
+// LLVM:    ret <4 x i32> [[VCVTN1_I]]
+  return vcvtnq_s32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtnq_u32_f32(
+// CIR-LABEL: @vcvtnq_u32_f32(
+uint32x4_t test_vcvtnq_u32_f32(float32x4_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtnu"
+
+// LLVM-SAME: <4 x float> noundef [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM:    [[VCVTN_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM:    [[VCVTN1_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtnu.v4i32.v4f32(<4 x float> [[VCVTN_I]])
+// LLVM:    ret <4 x i32> [[VCVTN1_I]]
+  return vcvtnq_u32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtns_s32_f32
+// CIR-LABEL: @vcvtns_s32_f32
+int32_t test_vcvtns_s32_f32(float32_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtns"
+
+// LLVM-SAME: (float noundef [[A:%.*]])
+// LLVM:    [[VCVTNS_S32_F32_I:%.*]] = call i32 @llvm.aarch64.neon.fcvtns.i32.f32(float [[A]])
+// LLVM:    ret i32 [[VCVTNS_S32_F32_I]]
+  return (int32_t)vcvtns_s32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtns_s64_f32
+// CIR-LABEL: @vcvtns_s64_f32
+int64_t test_vcvtns_s64_f32(float32_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtns"
+
+// LLVM-SAME: (float noundef [[A:%.*]])
+// LLVM:    [[VCVTNS_S64_F32_I:%.*]] = call i64 @llvm.aarch64.neon.fcvtns.i64.f32(float [[A]])
+// LLVM:    ret i64 [[VCVTNS_S64_F32_I]]
+  return (int64_t)vcvtns_s64_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtns_u32_f32
+// CIR-LABEL: @vcvtns_u32_f32
+uint32_t test_vcvtns_u32_f32(float32_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtnu"
+
+// LLVM-SAME: (float noundef [[A:%.*]])
+// LLVM:    [[VCVTNS_U32_F32_I:%.*]] = call i32 @llvm.aarch64.neon.fcvtnu.i32.f32(float [[A]])
+// LLVM:    ret i32 [[VCVTNS_U32_F32_I]]
+  return (uint32_t)vcvtns_u32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtns_u64_f32
+// CIR-LABEL: @vcvtns_u64_f32
+uint64_t test_vcvtns_u64_f32(float32_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtnu"
+
+// LLVM-SAME: (float noundef [[A:%.*]])
+// LLVM:    [[VCVTNS_U64_F32_I:%.*]] = call i64 @llvm.aarch64.neon.fcvtnu.i64.f32(float [[A]])
+// LLVM:    ret i64 [[VCVTNS_U64_F32_I]]
+  return (uint64_t)vcvtns_u64_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtn_s64_f64(
+// CIR-LABEL: @vcvtn_s64_f64(
+int64x1_t test_vcvtn_s64_f64(float64x1_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtns"
+
+// LLVM-SAME: <1 x double> noundef [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
+// LLVM:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
+// LLVM:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+// LLVM:    [[VCVTN_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
+// LLVM:    [[VCVTN1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtns.v1i64.v1f64(<1 x double> [[VCVTN_I]])
+// LLVM:    ret <1 x i64> [[VCVTN1_I]]
+  return vcvtn_s64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtnq_s64_f64(
+// CIR-LABEL: @vcvtnq_s64_f64(
+int64x2_t test_vcvtnq_s64_f64(float64x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtns"
+
+// LLVM-SAME: <2 x double> noundef [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[VCVTN_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVTN1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtns.v2i64.v2f64(<2 x double> [[VCVTN_I]])
+// LLVM:    ret <2 x i64> [[VCVTN1_I]]
+  return vcvtnq_s64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtn_u64_f64(
+// CIR-LABEL: @vcvtn_u64_f64(
+uint64x1_t test_vcvtn_u64_f64(float64x1_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtnu"
+
+// LLVM-SAME: <1 x double> noundef [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
+// LLVM:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
+// LLVM:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+// LLVM:    [[VCVTN_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
+// LLVM:    [[VCVTN1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtnu.v1i64.v1f64(<1 x double> [[VCVTN_I]])
+// LLVM:    ret <1 x i64> [[VCVTN1_I]]
+  return vcvtn_u64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtnq_u64_f64(
+// CIR-LABEL: @vcvtnq_u64_f64(
+uint64x2_t test_vcvtnq_u64_f64(float64x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.fcvtnu"
+
+// LLVM-SAME: <2 x double> noundef [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[VCVTN_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVTN1_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtnu.v2i64.v2f64(<2 x double> [[VCVTN_I]])
+// LLVM:    ret <2 x i64> [[VCVTN1_I]]
+  return vcvtnq_u64_f64(a);
+}
+
+//===------------------------------------------------------===//
 // 2.1.3.2.3 Vector shift right and accumulate
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-right-and-accumulate
 //===------------------------------------------------------===//
