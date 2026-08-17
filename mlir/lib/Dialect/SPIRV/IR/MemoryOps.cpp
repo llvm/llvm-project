@@ -357,7 +357,7 @@ LogicalResult AccessChainOp::verify() {
 
 void InBoundsAccessChainOp::build(OpBuilder &builder, OperationState &state,
                                   Value basePtr, ValueRange indices) {
-  auto type = getElementPtrType(basePtr.getType(), indices, state.location);
+  Type type = getElementPtrType(basePtr.getType(), indices, state.location);
   assert(type && "Unable to deduce return type based on basePtr and indices");
   build(builder, state, type, basePtr, indices);
 }
