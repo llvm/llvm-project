@@ -838,6 +838,15 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     return true;
   }
 
+  // Compute the maximum possible quotient from the ranges.
+  // MaxQ = XCR.umax() / YCR.umin()
+  // If YCR contains zero, we can't safely compute MaxQ (division by zero is
+  // UB, so we can assume Y != 0, but the range may still include it).
+  APInt YMin = YCR.getUnsignedMin();
+  if (YMin.isZero())
+    return false;
+  APInt MaxQ = XCR.getUnsignedMax().udiv(YMin);
+
   // Given
   //   R  = X u% Y
   // We can represent the modulo operation as a loop/self-recursion:
@@ -847,51 +856,105 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
   //       ret X
   //     else
   //       ret urem_rec(Z, Y)
-  // which isn't better, but if we only need a single iteration
-  // to compute the answer, this becomes quite good:
-  //   R  = X < Y ? X : X - Y    iff X u< 2*Y (w/ unsigned saturation)
-  // Now, we do not care about all full multiples of Y in X, they do not change
-  // the answer, thus we could rewrite the expression as:
-  //   X* = X - (Y * |_ X / Y _|)
-  //   R  = X* % Y
-  // so we don't need the *first* iteration to return, we just need to
-  // know *which* iteration will always return, so we could also rewrite it as:
-  //   X* = X - (Y * |_ X / Y _|)
-  //   R  = X* % Y                 iff X* u< 2*Y (w/ unsigned saturation)
-  // but that does not seem profitable here.
+  // which isn't better, but if we only need a small number of iterations
+  // to compute the answer, this becomes quite good.
+  //
+  // For udiv, the quotient is just the count of thresholds crossed:
+  //   X u/ Y = sum_i zext(X >= i*Y)
+  // For urem, we use the identity R = X - Y * Q.
+
+  // MaxQ == 1:
+  //   X u/ Y -> zext(X >= Y)
+  //   X u% Y -> X < Y ? X : X - Y
+  //
+  // MaxQ == 2:
+  //   X u/ Y -> zext(X >= Y) + zext(X >= 2*Y)
+  //   X u% Y -> X - Y * (zext(X >= Y) + zext(X >= 2*Y))
+
+  if (MaxQ.isZero() || MaxQ.ugt(2))
+    return false;
 
   // Even if we don't know X's range, the divisor may be so large, X can't ever
   // be 2x larger than that. I.e. if divisor is always negative.
-  if (!XCR.icmp(ICmpInst::ICMP_ULT, YCR.uadd_sat(YCR)) && !YCR.isAllNegative())
-    return false;
+  // This is subsumed by the MaxQ check above for the MaxQ <= 1 case, but for
+  // correctness we rely on the MaxQ computation.
 
   IRBuilder<> B(Instr);
   Value *ExpandedOp;
-  if (XCR.icmp(ICmpInst::ICMP_UGE, YCR)) {
-    // If X is between Y and 2*Y the result is known.
-    if (IsRem)
-      ExpandedOp = B.CreateNUWSub(X, Y);
-    else
-      ExpandedOp = ConstantInt::get(Instr->getType(), 1);
-  } else if (IsRem) {
-    // NOTE: this transformation introduces two uses of X,
-    //       but it may be undef so we must freeze it first.
-    Value *FrozenX = X;
-    if (!isGuaranteedNotToBeUndef(X))
-      FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
-    Value *FrozenY = Y;
-    if (!isGuaranteedNotToBeUndef(Y))
-      FrozenY = B.CreateFreeze(Y, Y->getName() + ".frozen");
-    auto *AdjX = B.CreateNUWSub(FrozenX, FrozenY, Instr->getName() + ".urem");
-    auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, FrozenY,
-                             Instr->getName() + ".cmp");
-    ExpandedOp =
-        B.CreateSelectWithUnknownProfile(Cmp, FrozenX, AdjX, DEBUG_TYPE);
+
+  if (MaxQ == 1) {
+    if (XCR.icmp(ICmpInst::ICMP_UGE, YCR)) {
+      // If X is between Y and 2*Y the result is known.
+      if (IsRem)
+        ExpandedOp = B.CreateNUWSub(X, Y);
+      else
+        ExpandedOp = ConstantInt::get(Instr->getType(), 1);
+    } else if (IsRem) {
+      // NOTE: this transformation introduces two uses of X,
+      //       but it may be undef so we must freeze it first.
+      Value *FrozenX = X;
+      if (!isGuaranteedNotToBeUndef(X))
+        FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
+      Value *FrozenY = Y;
+      if (!isGuaranteedNotToBeUndef(Y))
+        FrozenY = B.CreateFreeze(Y, Y->getName() + ".frozen");
+      auto *AdjX = B.CreateNUWSub(FrozenX, FrozenY, Instr->getName() + ".urem");
+      auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, FrozenY,
+                               Instr->getName() + ".cmp");
+      ExpandedOp =
+          B.CreateSelectWithUnknownProfile(Cmp, FrozenX, AdjX, DEBUG_TYPE);
+    } else {
+      auto *Cmp =
+          B.CreateICmp(ICmpInst::ICMP_UGE, X, Y, Instr->getName() + ".cmp");
+      ExpandedOp = B.CreateZExt(Cmp, Ty, Instr->getName() + ".udiv");
+    }
   } else {
-    auto *Cmp =
-        B.CreateICmp(ICmpInst::ICMP_UGE, X, Y, Instr->getName() + ".cmp");
-    ExpandedOp = B.CreateZExt(Cmp, Ty, Instr->getName() + ".udiv");
+    assert(MaxQ == 2 && "Expected MaxQ == 2");
+    // MaxQ == 2: X < 3*Y (with unsigned saturation)
+    //   udiv: zext(X >= Y) + zext(X >= 2*Y)
+    //   urem: X >= 2*Y ? X - 2*Y : (X >= Y ? X - Y : X)
+    //
+    // To avoid overflow when computing 2*Y, we can use the mathematical
+    // equivalent (X >> 1) >= Y instead of X >= 2*Y.
+
+    if (IsRem) {
+      // For urem, X and Y are used multiple times; freeze if needed
+      // so we don't accidentally compute a remainder >= Y.
+      Value *FrozenX = X;
+      if (!isGuaranteedNotToBeUndef(X))
+        FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
+      Value *FrozenY = Y;
+      if (!isGuaranteedNotToBeUndef(Y))
+        FrozenY = B.CreateFreeze(Y, Y->getName() + ".frozen");
+
+      auto *HalfX = B.CreateLShr(FrozenX, 1, Instr->getName() + ".halfx");
+      auto *Cmp1 = B.CreateICmp(ICmpInst::ICMP_UGE, FrozenX, FrozenY,
+                                Instr->getName() + ".cmp1");
+      auto *Cmp2 = B.CreateICmp(ICmpInst::ICMP_UGE, HalfX, FrozenY,
+                                Instr->getName() + ".cmp2");
+
+      // Sub1 = X - Y
+      // Sub2 = X - 2Y = Sub1 - Y
+      auto *Sub1 = B.CreateSub(FrozenX, FrozenY, Instr->getName() + ".sub1");
+      auto *Sub2 = B.CreateSub(Sub1, FrozenY, Instr->getName() + ".sub2");
+      auto *Sel1 =
+          B.CreateSelectWithUnknownProfile(Cmp1, Sub1, FrozenX, DEBUG_TYPE);
+      ExpandedOp =
+          B.CreateSelectWithUnknownProfile(Cmp2, Sub2, Sel1, DEBUG_TYPE);
+    } else {
+      // For udiv, the expanded expression only produces 0, 1, or 2,
+      // all of which are valid quotients, so we don't need to freeze.
+      auto *HalfX = B.CreateLShr(X, 1, Instr->getName() + ".halfx");
+      auto *Cmp1 =
+          B.CreateICmp(ICmpInst::ICMP_UGE, X, Y, Instr->getName() + ".cmp1");
+      auto *Cmp2 = B.CreateICmp(ICmpInst::ICMP_UGE, HalfX, Y,
+                                Instr->getName() + ".cmp2");
+      auto *Zext1 = B.CreateZExt(Cmp1, Ty, Instr->getName() + ".zext1");
+      auto *Zext2 = B.CreateZExt(Cmp2, Ty, Instr->getName() + ".zext2");
+      ExpandedOp = B.CreateNUWAdd(Zext1, Zext2, Instr->getName() + ".q");
+    }
   }
+
   ExpandedOp->takeName(Instr);
   Instr->replaceAllUsesWith(ExpandedOp);
   Instr->eraseFromParent();
