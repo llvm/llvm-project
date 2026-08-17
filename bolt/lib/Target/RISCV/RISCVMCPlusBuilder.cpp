@@ -109,6 +109,7 @@ public:
     default:
       return MCPlusBuilder::isPseudo(Inst);
     case RISCV::PseudoCALL:
+    case RISCV::PseudoCALLReg:
     case RISCV::PseudoTAIL:
       return false;
     }
@@ -259,16 +260,36 @@ public:
   }
 
   void createCall(unsigned Opcode, MCInst &Inst, const MCSymbol *Target,
-                  MCContext *Ctx) {
+                  MCContext *Ctx,
+                  const MCOperand &LinkReg = MCOperand()) const {
     Inst.setOpcode(Opcode);
     Inst.clear();
+    if (LinkReg.isValid())
+      Inst.addOperand(LinkReg);
     Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
         MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT, *Ctx)));
   }
 
+  MCPhysReg getCallLinkRegister(const MCInst &Inst) const {
+    switch (Inst.getOpcode()) {
+    default:
+      return RISCV::X1;
+    case RISCV::JAL:
+    case RISCV::JALR:
+    case RISCV::PseudoCALLReg:
+      return Inst.getOperand(0).getReg();
+    }
+  }
+
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
-    return createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
+    MCPhysReg LinkReg = getCallLinkRegister(Inst);
+    unsigned Opcode;
+    if (LinkReg == RISCV::X1)
+      createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
+    else
+      createCall(RISCV::PseudoCALLReg, Inst, Target, Ctx,
+                 MCOperand::createReg(LinkReg));
   }
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
@@ -341,6 +362,9 @@ public:
     case RISCV::PseudoCALL:
     case RISCV::PseudoTAIL:
       OpNum = 0;
+      return true;
+    case RISCV::PseudoCALLReg:
+      OpNum = 1;
       return true;
     case RISCV::AUIPC:
     case RISCV::JAL:
