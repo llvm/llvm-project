@@ -32,6 +32,7 @@ ENUM_CODEGENOPT(ProfileUse, llvm::driver::ProfileInstrKind, 2, llvm::driver::Pro
 
 CODEGENOPT(InstrumentFunctions, 1, 0) ///< Set when -finstrument_functions is
                                       ///< enabled on the compile step.
+CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
 

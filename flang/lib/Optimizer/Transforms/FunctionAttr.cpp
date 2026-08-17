@@ -145,5 +145,12 @@ void FunctionAttrPass::runOnOperation() {
                          llvmFuncOpName)),
         mlir::BoolAttr::get(context, true));
 
+  if (disableTailCalls)
+    func->setAttr(
+        getLlvmFuncPropertyAttrName(
+            context, mlir::LLVM::LLVMFuncOp::getDisableTailCallsAttrName(
+                         llvmFuncOpName)),
+        mlir::BoolAttr::get(context, true));
+
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
