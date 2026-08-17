@@ -812,9 +812,8 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
     assert(NumEdges != 0 && "Malformed Phi Node");
 
     IRBuilder<> Builder(Phi);
-    SmallVector<BasicBlock *> Blocks;
-    SmallVector<Value *> GetPtrIdxs;
-    SmallVector<Value *> HandleIdxs;
+    PHINode *GetPtrPhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+    PHINode *HandlePhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
 
     bool HasGetPtr = true;
     for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
@@ -822,29 +821,20 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts) {
       auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(Idx));
       auto AccessIdx = getAccessIndices(V, DeadInsts);
       HasGetPtr &= AccessIdx.hasGetPtrIdx();
-      Blocks.push_back(BB);
-      GetPtrIdxs.push_back(AccessIdx.GetPtrIdx);
-      HandleIdxs.push_back(AccessIdx.HandleIdx);
+      if (HasGetPtr)
+        GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
+      HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
     }
 
-    // Only build a PHI to merge the per-edge index values when they actually
-    // differ. If every edge supplies the same value (e.g. all candidate
-    // resources share a handle index of 0) the PHI would be redundant, so use
-    // that value directly rather than constructing and later folding it.
-    auto MergeIndices = [&](ArrayRef<Value *> Idxs) -> Value * {
-      if (llvm::all_equal(Idxs))
-        return Idxs.front();
-      PHINode *IdxPhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
-      for (unsigned Idx = 0; Idx < NumEdges; Idx++)
-        IdxPhi->addIncoming(Idxs[Idx], Blocks[Idx]);
-      Builder.Insert(IdxPhi);
-      return IdxPhi;
-    };
+    if (HasGetPtr)
+      Builder.Insert(GetPtrPhi);
+    else
+      GetPtrPhi = nullptr;
 
-    Value *GetPtrIdx = HasGetPtr ? MergeIndices(GetPtrIdxs) : nullptr;
-    Value *HandleIdx = MergeIndices(HandleIdxs);
+    Builder.Insert(HandlePhi);
+
     DeadInsts.insert(Phi);
-    return {GetPtrIdx, HandleIdx};
+    return {GetPtrPhi, HandlePhi};
   }
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
