@@ -5424,29 +5424,25 @@ static bool checkRB(Register Reg, unsigned int RBNo,
 // Thus
 // 1. If RootOp is SGPR, then NewOp can be SGPR or VGPR.
 // 2. If RootOp is VGPR, then NewOp must be VGPR.
-static Register getLegalRegBank(Register NewReg, Register RootReg,
-                                const AMDGPURegisterBankInfo &RBI,
-                                MachineRegisterInfo &MRI,
-                                const TargetRegisterInfo &TRI,
-                                const SIInstrInfo &TII) {
+static Register
+getLegalRegBank(Register NewReg, Register RootReg, MachineInstr &Use,
+                const AMDGPURegisterBankInfo &RBI, MachineRegisterInfo &MRI,
+                const TargetRegisterInfo &TRI, const SIInstrInfo &TII) {
   // RootOp can only be VGPR or SGPR (some hand written cases such as.
   // inst-select-ashr.v2s16.mir::ashr_v2s16_vs).
   if (checkRB(RootReg, AMDGPU::SGPRRegBankID, RBI, MRI, TRI) ||
       checkRB(NewReg, AMDGPU::VGPRRegBankID, RBI, MRI, TRI))
     return NewReg;
 
-  MachineInstr *MI = MRI.getVRegDef(RootReg);
-  if (MI->getOpcode() == AMDGPU::COPY && NewReg == MI->getOperand(1).getReg()) {
+  if (mi_match(RootReg, MRI, m_Copy(m_SpecificReg(NewReg)))) {
     // RootOp is VGPR, NewOp is not VGPR, but RootOp = COPY NewOp.
     return RootReg;
   }
 
-  MachineBasicBlock *BB = MI->getParent();
   Register DstReg = MRI.cloneVirtualRegister(RootReg);
-
-  MachineInstrBuilder MIB =
-      BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
-          .addReg(NewReg);
+  MachineInstrBuilder MIB = BuildMI(*Use.getParent(), Use, Use.getDebugLoc(),
+                                    TII.get(AMDGPU::COPY), DstReg)
+                                .addReg(NewReg);
 
   // Only accept VGPR.
   return MIB->getOperand(0).getReg();
@@ -5460,7 +5456,8 @@ AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
   unsigned Mods;
   std::tie(Reg, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, IsDOT);
 
-  Reg = getLegalRegBank(Reg, Root.getReg(), RBI, MRI, TRI, TII);
+  Reg = getLegalRegBank(Reg, Root.getReg(), *Root.getParent(), RBI, MRI, TRI,
+                        TII);
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Reg); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
