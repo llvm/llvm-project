@@ -97,7 +97,7 @@ void TESTONLY_set_passwd_path(const char *path) {
   pwd_file_path = path;
 }
 
-ErrorOr<int> open() {
+ErrorOr<void> open() {
   if (!pwd_file) {
     auto result = openfile(pwd_file_path, "r");
     if (!result.has_value())
@@ -108,17 +108,17 @@ ErrorOr<int> open() {
     if (!result.has_value())
       return Error(result.error());
   }
-  return 0;
+  return {};
 }
 
-ErrorOr<int> close() {
+ErrorOr<void> close() {
   if (pwd_file) {
     int result = pwd_file->close();
     pwd_file = nullptr;
     if (result != 0)
       return Error(result);
   }
-  return 0;
+  return {};
 }
 
 struct ReadLineResult {

@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_for_each = [](auto first, auto last, auto f) { return std::for_each(first, last, f); };
@@ -30,7 +31,7 @@ int main(int argc, char** argv) {
       using ElemType = typename Container::value_type;
       benchmark::RegisterBenchmark(
           name,
-          [for_each](auto& st) {
+          [for_each](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             Container c(size, 1);
             auto first = c.begin();
@@ -58,7 +59,7 @@ int main(int argc, char** argv) {
                            std::type_identity<Container>, std::bool_constant<IsMapLike>, std::string name) {
       benchmark::RegisterBenchmark(
           name,
-          [](auto& st) {
+          [](auto& st) TEST_ALIGN_BENCHMARK {
             Container c;
             for (std::int64_t i = 0; i != st.range(0); ++i) {
               if constexpr (IsMapLike)
@@ -87,7 +88,7 @@ int main(int argc, char** argv) {
                             std::type_identity<Container>, std::bool_constant<IsMapLike>, std::string name) {
       benchmark::RegisterBenchmark(
           name,
-          [](auto& st) {
+          [](auto& st) TEST_ALIGN_BENCHMARK {
             Container c;
             const std::size_t size = st.range(0);
 
@@ -122,7 +123,7 @@ int main(int argc, char** argv) {
 
       benchmark::RegisterBenchmark(
           name,
-          [for_each](auto& st) {
+          [for_each](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size     = st.range(0);
             std::size_t const seg_size = 256;
             std::size_t const segments = (size + seg_size - 1) / seg_size;

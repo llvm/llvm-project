@@ -328,6 +328,7 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
   writeVar(Strings.index(Sym.Documentation), OS);
   writeVar(Strings.index(Sym.ReturnType), OS);
   writeVar(Strings.index(Sym.Type), OS);
+  writeVar(Sym.Tags, OS);
 
   auto WriteInclude = [&](const Symbol::IncludeHeaderWithReferences &Include) {
     writeVar(Strings.index(Include.IncludeHeader), OS);
@@ -357,6 +358,7 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings,
   Sym.Documentation = Data.consumeString(Strings);
   Sym.ReturnType = Data.consumeString(Strings);
   Sym.Type = Data.consumeString(Strings);
+  Sym.Tags = Data.consumeVar();
   if (!Data.consumeSize(Sym.IncludeHeaders))
     return Sym;
   for (auto &I : Sym.IncludeHeaders) {
@@ -457,7 +459,7 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 20;
+constexpr static uint32_t Version = 21;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
                                      SymbolOrigin Origin) {

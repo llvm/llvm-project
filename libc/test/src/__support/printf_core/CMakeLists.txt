@@ -1,6 +1,5 @@
 add_libc_test(
   parser_test
-  UNIT_TEST_ONLY # Fails to link on GPUs
   SUITE
     libc-support-tests
   SRCS

@@ -337,8 +337,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
-  Args.addOptInFlag(CmdArgs, options::OPT_freal_sum_reassociation,
-                    options::OPT_fno_real_sum_reassociation);
+  Args.addOptInFlag(CmdArgs, options::OPT_ffp_sum_reassociation,
+                    options::OPT_fno_fp_sum_reassociation);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -894,6 +894,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   StringRef FPContract;
+  StringRef LastSeenFfpContractOption;
+  StringRef LastFpContractOverrideOption;
   bool HonorINFs = true;
   bool HonorNaNs = true;
   bool ApproxFunc = false;
@@ -903,23 +905,6 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   StringRef LastComplexRangeOption;
   LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
-
-  if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
-    const StringRef Val = A->getValue();
-    if (Val == "fast" || Val == "off") {
-      FPContract = Val;
-    } else if (Val == "on") {
-      // Warn instead of error because users might have makefiles written for
-      // gfortran (which accepts -ffp-contract=on)
-      D.Diag(diag::warn_drv_unsupported_option_for_flang)
-          << Val << A->getOption().getName() << "off";
-      FPContract = "off";
-    } else
-      // Clang's "fast-honor-pragmas" option is not supported because it is
-      // non-standard
-      D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << Val;
-  }
 
   for (const Arg *A : Args) {
     auto optId = A->getOption().getID();
@@ -983,6 +968,32 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     case options::OPT_fno_reciprocal_math:
       ReciprocalMath = false;
       break;
+    case options::OPT_ffp_contract: {
+      StringRef Val = A->getValue();
+      if (Val == "fast" || Val == "off") {
+        if (Val != FPContract && LastFpContractOverrideOption != "") {
+          D.Diag(clang::diag::warn_drv_overriding_option)
+              << LastFpContractOverrideOption
+              << Args.MakeArgString("-ffp-contract=" + Val);
+        }
+        FPContract = Val;
+        LastSeenFfpContractOption = Val;
+      } else if (Val == "on") {
+        // Warn instead of error because users might have makefiles written for
+        // gfortran (which accepts -ffp-contract=on)
+        D.Diag(diag::warn_drv_unsupported_option_for_flang)
+            << Val << A->getOption().getName() << "off";
+        FPContract = "off";
+        LastSeenFfpContractOption = "off";
+      } else {
+        // Clang's "fast-honor-pragmas" option is not supported because it is
+        // non-standard
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << Val;
+      }
+      LastFpContractOverrideOption = "";
+      break;
+    }
     case options::OPT_Ofast:
       [[fallthrough]];
     case options::OPT_ffast_math:
@@ -993,6 +1004,10 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = true;
       SignedZeros = false;
       FPContract = "fast";
+      if (A->getOption().getID() == options::OPT_Ofast)
+        LastFpContractOverrideOption = "-Ofast";
+      else
+        LastFpContractOverrideOption = "-ffast-math";
       setComplexRange(D, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_Basic,
                       LastComplexRangeOption, Range);
@@ -1005,13 +1020,17 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = false;
       SignedZeros = true;
       // -fno-fast-math should undo -ffast-math so I return FPContract to the
-      // default. It is important to check it is "fast" (the default) so that
-      // --ffp-contract=off -fno-fast-math --> -ffp-contract=off
-      if (FPContract == "fast")
+      // default. If -ffp-contract= was explicitly specified, restore the
+      // user-requested value from LastSeenFfpContractOption so that
+      // -ffp-contract=off -fno-fast-math --> -ffp-contract=off
+      if (LastSeenFfpContractOption != "")
+        FPContract = LastSeenFfpContractOption;
+      else
         FPContract = "";
       setComplexRange(D, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_None,
                       LastComplexRangeOption, Range);
+      LastFpContractOverrideOption = "";
       break;
     }
 

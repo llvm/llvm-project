@@ -540,7 +540,10 @@ class value(object):
         return complex (int(self))
 
     def __int__(self):
-        is_num,is_sign = is_numeric_type(self.sbvalue.GetType().GetCanonicalType().GetBasicType())
+        ty = self.sbvalue.GetType().GetCanonicalType()
+        if ty.IsPointerType():
+            return self.sbvalue.GetValueAsUnsigned()
+        is_num,is_sign = is_numeric_type(ty.GetBasicType())
         if is_num and not is_sign: return self.sbvalue.GetValueAsUnsigned()
         return self.sbvalue.GetValueAsSigned()
 
