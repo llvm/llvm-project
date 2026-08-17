@@ -104,7 +104,7 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   // `vector.transfer_read`/`vector.transfer_write`).
   if (VectorType::isValidElementType(type.getElementType())) {
     // Vector types require strictly positive extents, so a memref with a zero
-    // extent (which holds no elements) has nothing to promote.
+    // extent has nothing to promote.
     if (llvm::is_contained(type.getShape(), 0))
       return {};
 

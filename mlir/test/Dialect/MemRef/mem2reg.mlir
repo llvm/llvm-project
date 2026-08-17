@@ -312,9 +312,7 @@ func.func @two_consecutive_merge_points(%cond1: i1, %cond2: i1) -> i32 {
 
 // -----
 
-// A memref with a zero extent holds no elements and cannot be promoted: the
-// vector type mem2reg would build for whole-buffer promotion requires strictly
-// positive extents.
+// A memref with a zero extent holds no elements and cannot be promoted.
 
 // CHECK-LABEL: func.func @zero_extent_alloca
 func.func @zero_extent_alloca() {
