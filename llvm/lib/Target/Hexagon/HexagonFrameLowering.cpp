@@ -2455,8 +2455,9 @@ Register HexagonFrameLowering::findPhysReg(
   return 0;
 }
 
-void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
-      SmallVectorImpl<Register> &VRegs, const RegisterClassInfo &RCI) const {
+void HexagonFrameLowering::optimizeSpillSlots(
+    MachineFunction &MF, SmallVectorImpl<Register> &VRegs,
+    const RegisterClassInfo &RCI) const {
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HII = *HST.getInstrInfo();
   auto &HRI = *HST.getRegisterInfo();

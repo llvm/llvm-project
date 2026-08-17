@@ -179,8 +179,8 @@ private:
                        HexagonBlockRanges::RegToRangeMap &DeadMap,
                        const TargetRegisterClass *RC,
                        const RegisterClassInfo &RCI) const;
-  void optimizeSpillSlots(MachineFunction &MF,
-      SmallVectorImpl<Register> &VRegs, const RegisterClassInfo &RCI) const;
+  void optimizeSpillSlots(MachineFunction &MF, SmallVectorImpl<Register> &VRegs,
+                          const RegisterClassInfo &RCI) const;
 
   void findShrunkPrologEpilog(MachineFunction &MF, MachineBasicBlock *&PrologB,
       MachineBasicBlock *&EpilogB) const;
