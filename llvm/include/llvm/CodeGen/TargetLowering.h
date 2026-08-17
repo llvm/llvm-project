@@ -2279,11 +2279,11 @@ public:
   /// require a more complex expansion.
   unsigned getMinCmpXchgSizeInBits() const { return MinCmpXchgSizeInBits; }
 
-  /// Return true if the target can lower the atomic instruction \p I when it
-  /// has the given \p Alignment, for an access of \p SizeInBytes bytes. The
-  /// default implementation only allows naturally aligned atomics, unless
-  /// setSupportsUnalignedAtomics(true) was called.
-  virtual bool supportsAtomicAlignment(const Instruction *I, Align Alignment,
+  /// Return true if the target supports an atomic access of \p SizeInBytes
+  /// bytes at the given \p Alignment. The default implementation only allows
+  /// naturally aligned atomics, unless setSupportsUnalignedAtomics(true) was
+  /// called.
+  virtual bool supportsAtomicAlignment(Align Alignment,
                                        uint64_t SizeInBytes) const {
     return SupportsUnalignedAtomics || Alignment.value() >= SizeInBytes;
   }
