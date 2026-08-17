@@ -23,6 +23,22 @@ function(add_unittest_framework_library name)
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
     endif()
+
+    # Find out if the target supports catching signals.
+    if(NOT LLVM_LIBC_FULL_BUILD)
+      # In an overlay build of libc, assume signal.h is available: the host
+      # libc will provide it even if we don't.
+      set(no_signal FALSE)
+    elseif(TARGET libc.src.signal.signal)
+      # In a full build, signal.h only exists if we provide it ourselves, which
+      # we might not on bare metal.
+      get_target_property(no_signal libc.src.signal.signal SKIPPED)
+    else()
+      set(no_signal TRUE)
+    endif()
+    if(NOT no_signal)
+      target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_SIGNAL_CATCHING)
+    endif()
   endforeach()
 
   if(LLVM_LIBC_FULL_BUILD)
