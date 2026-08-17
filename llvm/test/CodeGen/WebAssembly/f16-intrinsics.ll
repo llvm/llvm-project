@@ -111,6 +111,17 @@ define <8 x half> @vselect_v8f16(<8 x i1> %cond, <8 x half> %a,
   ret <8 x half> %result
 }
 
+; CHECK-LABEL: vselect_cmp_v8f16:
+; CHECK:       f16x8.lt $push0=, $0, $1
+; CHECK-NEXT:  v128.bitselect $push1=, $2, $3, $pop0
+; CHECK-NEXT:  return $pop1
+define <8 x half> @vselect_cmp_v8f16(<8 x half> %a, <8 x half> %b,
+                                      <8 x half> %x, <8 x half> %y) {
+  %cond = fcmp olt <8 x half> %a, %b
+  %result = select <8 x i1> %cond, <8 x half> %x, <8 x half> %y
+  ret <8 x half> %result
+}
+
 ; CHECK-LABEL: add_v8f16:
 ; CHECK:       f16x8.add $push0=, $0, $1
 ; CHECK-NEXT:  return $pop0
