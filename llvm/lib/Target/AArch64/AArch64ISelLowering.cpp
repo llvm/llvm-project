@@ -20278,6 +20278,11 @@ ArrayRef<MCPhysReg> AArch64TargetLowering::getRoundingControlRegisters() const {
   return RCRegs;
 }
 
+bool AArch64TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                                  EVT DestVT) const {
+  return isTypeLegal(DestVT) && DestVT.isVector();
+}
+
 bool
 AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
                                                      CombineLevel Level) const {
