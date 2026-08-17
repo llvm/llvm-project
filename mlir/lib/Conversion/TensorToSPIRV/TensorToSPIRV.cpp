@@ -81,11 +81,10 @@ public:
     auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto indexType = typeConverter.getIndexType();
 
-    spirv::LinearizedIndexNoWrapFlags noWrapFlags;
-    if (typeConverter.getTargetEnv().allows(
-            spirv::Extension::SPV_KHR_no_integer_wrap_decoration))
-      noWrapFlags = spirv::getLinearizedIndexNoWrapFlags(
-          tensorType.getShape(), strides, /*offset=*/0, indexType);
+    spirv::LinearizedIndexNoWrapFlags noWrapFlags =
+        spirv::getLinearizedIndexNoWrapFlags(typeConverter.getTargetEnv(),
+                                             tensorType.getShape(), strides,
+                                             /*offset=*/0, indexType);
     Value index = spirv::linearizeIndex(adaptor.getIndices(), strides,
                                         /*offset=*/0, indexType, loc, rewriter,
                                         noWrapFlags);

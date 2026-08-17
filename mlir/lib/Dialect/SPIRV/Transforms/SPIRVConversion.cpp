@@ -1316,17 +1316,6 @@ static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
   return maxLinearIndex;
 }
 
-static spirv::LinearizedIndexNoWrapFlags
-shouldEmitNoWrapDecorations(const SPIRVTypeConverter &typeConverter,
-                            MemRefType baseType, ArrayRef<int64_t> strides,
-                            int64_t offset, Type indexType) {
-  if (!typeConverter.getTargetEnv().allows(
-          spirv::Extension::SPV_KHR_no_integer_wrap_decoration))
-    return {};
-  return spirv::getLinearizedIndexNoWrapFlags(baseType.getShape(), strides,
-                                              offset, indexType);
-}
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1381,10 +1370,14 @@ Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
 //===----------------------------------------------------------------------===//
 
 mlir::spirv::LinearizedIndexNoWrapFlags
-mlir::spirv::getLinearizedIndexNoWrapFlags(ArrayRef<int64_t> shape,
+mlir::spirv::getLinearizedIndexNoWrapFlags(const TargetEnv &targetEnv,
+                                           ArrayRef<int64_t> shape,
                                            ArrayRef<int64_t> strides,
                                            int64_t offset, Type integerType) {
   LinearizedIndexNoWrapFlags flags;
+  if (!targetEnv.allows(Extension::SPV_KHR_no_integer_wrap_decoration))
+    return flags;
+
   auto integer = dyn_cast<IntegerType>(integerType);
   if (!integer)
     return flags;
@@ -1450,8 +1443,9 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   auto indexType = typeConverter.getIndexType();
-  LinearizedIndexNoWrapFlags noWrapFlags = shouldEmitNoWrapDecorations(
-      typeConverter, baseType, strides, offset, indexType);
+  LinearizedIndexNoWrapFlags noWrapFlags = getLinearizedIndexNoWrapFlags(
+      typeConverter.getTargetEnv(), baseType.getShape(), strides, offset,
+      indexType);
 
   SmallVector<Value, 2> linearizedIndices;
   auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
@@ -1486,8 +1480,9 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   auto indexType = typeConverter.getIndexType();
-  LinearizedIndexNoWrapFlags noWrapFlags = shouldEmitNoWrapDecorations(
-      typeConverter, baseType, strides, offset, indexType);
+  LinearizedIndexNoWrapFlags noWrapFlags = getLinearizedIndexNoWrapFlags(
+      typeConverter.getTargetEnv(), baseType.getShape(), strides, offset,
+      indexType);
 
   SmallVector<Value, 2> linearizedIndices;
   Value linearIndex;

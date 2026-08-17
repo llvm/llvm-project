@@ -183,11 +183,10 @@ Value linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 
 /// Returns no-wrap guarantees for an in-bounds index into the static layout
 /// described by `shape`, `strides`, and `offset` when linearized as
-/// `integerType`.
-LinearizedIndexNoWrapFlags
-getLinearizedIndexNoWrapFlags(ArrayRef<int64_t> shape,
-                              ArrayRef<int64_t> strides, int64_t offset,
-                              Type integerType);
+/// `integerType`, if supported by `targetEnv`.
+LinearizedIndexNoWrapFlags getLinearizedIndexNoWrapFlags(
+    const TargetEnv &targetEnv, ArrayRef<int64_t> shape,
+    ArrayRef<int64_t> strides, int64_t offset, Type integerType);
 
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `basePtr`, using the layout map of `baseType`.
