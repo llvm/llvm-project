@@ -120,7 +120,7 @@ cir.func @ptr_stride_dynamic_not_stripped(%n: !s32i) {
 // CHECK-DAG: m2_0#0 <-> m2_1#0: MayAlias
 
 !s32i = !cir.int<s, 32>
-!rec_S = !cir.struct<"S" {!s32i, !s32i}>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
 cir.func @get_member_distinct_allocas() {
   %s1 = cir.alloca "s1" align(4) : !cir.ptr<!rec_S> {test.ptr = "s1"}
   %s2 = cir.alloca "s2" align(4) : !cir.ptr<!rec_S> {test.ptr = "s2"}
@@ -183,8 +183,8 @@ cir.func @get_element_distinct_allocas() {
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
-!rec_Base    = !cir.struct<"Base"    {!u8i}>
-!rec_Derived = !cir.struct<"Derived" {!rec_Base, !s32i}>
+!rec_Base    = !cir.struct<"Base"    {data !u8i}>
+!rec_Derived = !cir.struct<"Derived" {data !rec_Base, data !s32i}>
 cir.func @base_class_addr_distinct_allocas() {
   %d1    = cir.alloca "d1" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d1"}
   %d2    = cir.alloca "d2" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d2"}
@@ -207,8 +207,8 @@ cir.func @base_class_addr_distinct_allocas() {
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
-!rec_Base    = !cir.struct<"Base"    {!u8i}>
-!rec_Derived = !cir.struct<"Derived" {!s32i, !rec_Base}>
+!rec_Base    = !cir.struct<"Base"    {data !u8i}>
+!rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
 cir.func @base_class_addr_nonzero_offset() {
   %d1    = cir.alloca "d1" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d1"}
   %d2    = cir.alloca "d2" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d2"}
@@ -231,8 +231,8 @@ cir.func @base_class_addr_nonzero_offset() {
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
-!rec_Base    = !cir.struct<"Base"    {!u8i}>
-!rec_Derived = !cir.struct<"Derived" {!rec_Base, !s32i}>
+!rec_Base    = !cir.struct<"Base"    {data !u8i}>
+!rec_Derived = !cir.struct<"Derived" {data !rec_Base, data !s32i}>
 cir.func @derived_class_addr_zero_offset() {
   %b1    = cir.alloca "d1" align(4) : !cir.ptr<!rec_Base> {test.ptr = "b1"}
   %b2    = cir.alloca "d2" align(4) : !cir.ptr<!rec_Base> {test.ptr = "b2"}
@@ -255,8 +255,8 @@ cir.func @derived_class_addr_zero_offset() {
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
-!rec_Base    = !cir.struct<"Base"    {!u8i}>
-!rec_Derived = !cir.struct<"Derived" {!s32i, !rec_Base}>
+!rec_Base    = !cir.struct<"Base"    {data !u8i}>
+!rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
 cir.func @derived_class_addr_nonzero_offset() {
   %b1    = cir.alloca "d1" align(4) : !cir.ptr<!rec_Base> {test.ptr = "b1"}
   %b2    = cir.alloca "d2" align(4) : !cir.ptr<!rec_Base> {test.ptr = "b2"}

@@ -650,6 +650,19 @@ namespace DynamicCast {
 }
 
 #if __cplusplus >= 202302L
+namespace BrokenContinueLabel {
+  constexpr int test() {
+  bar: {} // all-note {{here}}
+  bar: // all-error {{redefinition of label 'bar'}}
+    for (;;) {
+      continue bar; // all-error {{only supported in C2y}}
+    }
+    return 0;
+  }
+
+  static_assert(test(), ""); // all-error {{not an integral constant expression}}
+}
+
 namespace BrokenShuffleVector {
   typedef float __m128 __attribute__((__vector_size__(16)));
 

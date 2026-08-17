@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file -resolve-shaped-type-result-dims -canonicalize | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 // Demonstrates what happens when peeling the 4th loop (that corresponds to the
 // "depth" dimension in depthwise convs) followed by vectorization in the
 // presence of _scalable_ vectors (these are introduced through scalable

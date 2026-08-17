@@ -430,6 +430,15 @@ inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
 inline bind_ty<FPClassTest> m_FPClassTest(FPClassTest &T) { return T; }
 
+/// Wraps a MIFlags output for use as an optional trailing operand of an
+/// instruction matcher (e.g. m_GPtrAdd(L, R, m_MIFlags(Flags))). On a
+/// successful match the matched instruction's flags are written to \p Flags.
+struct MIFlagsRef {
+  uint32_t &Flags;
+};
+
+inline MIFlagsRef m_MIFlags(uint32_t &Flags) { return {Flags}; }
+
 template <typename BindTy> struct deferred_helper {
   static bool match(const MachineRegisterInfo &MRI, BindTy &VR, BindTy &V) {
     return VR == V;
@@ -471,6 +480,30 @@ struct ImplicitDefMatch {
 
 inline ImplicitDefMatch m_GImplicitDef() { return ImplicitDefMatch(); }
 
+/// Matches a G_CONSTANT and binds the defining instruction. Unlike m_ICst, this
+/// returns the instruction (not the value) and does not look through vector
+/// splats.
+template <typename Class> struct GConstantMatch {
+  Class *&Inst;
+
+  GConstantMatch(Class *&Inst) : Inst(Inst) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (mi_match(Reg, MRI, m_MInstr(TmpMI))) {
+      if (auto *Cst = dyn_cast<Class>(TmpMI)) {
+        Inst = Cst;
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+inline GConstantMatch<GConstant> m_GConstant(GConstant *&Inst) { return Inst; }
+inline GConstantMatch<const GConstant> m_GConstant(const GConstant *&Inst) {
+  return Inst;
+}
+
 // Helper for matching G_FCONSTANT
 inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
 
@@ -480,8 +513,12 @@ template <typename LHS_P, typename RHS_P, unsigned Opcode,
 struct BinaryOp_match {
   LHS_P L;
   RHS_P R;
+  // Optional output: when set, receives the matched instruction's flags.
+  uint32_t *FlagsOut = nullptr;
 
   BinaryOp_match(const LHS_P &LHS, const RHS_P &RHS) : L(LHS), R(RHS) {}
+  BinaryOp_match(const LHS_P &LHS, const RHS_P &RHS, MIFlagsRef FlagsOut)
+      : L(LHS), R(RHS), FlagsOut(&FlagsOut.Flags) {}
   template <typename OpTy>
   bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     const MachineInstr *TmpMI;
@@ -497,7 +534,11 @@ struct BinaryOp_match {
             (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
              !R.match(MRI, TmpMI->getOperand(1).getReg())))
           return false;
-        return (TmpMI->getFlags() & Flags) == Flags;
+        if ((TmpMI->getFlags() & Flags) != Flags)
+          return false;
+        if (FlagsOut)
+          *FlagsOut = TmpMI->getFlags();
+        return true;
       }
     }
     return false;
@@ -569,6 +610,12 @@ template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>
 m_GPtrAdd(const LHS &L, const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>
+m_GPtrAdd(const LHS &L, const RHS &R, MIFlagsRef Flags) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_PTR_ADD, false>(L, R, Flags);
 }
 
 template <typename LHS, typename RHS>
@@ -739,6 +786,27 @@ template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>
 m_GFPTrunc(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>(Src);
+}
+
+/// Matches a G_SEXT_INREG, binding its source operand. G_SEXT_INREG has an
+/// extra immediate operand, so it does not fit the plain UnaryOp_match shape.
+template <typename SrcTy> struct SExtInRegMatch {
+  SrcTy L;
+
+  SExtInRegMatch(const SrcTy &LHS) : L(LHS) {}
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (mi_match(Op, MRI, m_MInstr(TmpMI)) &&
+        TmpMI->getOpcode() == TargetOpcode::G_SEXT_INREG)
+      return L.match(MRI, TmpMI->getOperand(1).getReg());
+    return false;
+  }
+};
+
+template <typename SrcTy>
+inline SExtInRegMatch<SrcTy> m_GSExtInReg(const SrcTy &Src) {
+  return SExtInRegMatch<SrcTy>(Src);
 }
 
 template <typename SrcTy>
