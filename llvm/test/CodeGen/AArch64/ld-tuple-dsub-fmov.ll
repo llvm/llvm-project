@@ -12,7 +12,6 @@ target triple = "aarch64-unknown-linux-gnu"
 define <16 x i8> @ld2_u8_val0(ptr %a) {
 ; CHECK-LABEL: ld2_u8_val0:
 ; CHECK:         ld2 { v0.8b, v1.8b }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld2 = call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0(ptr %a)
@@ -26,7 +25,6 @@ define <16 x i8> @ld2_u8_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld2 { v0.8b, v1.8b }, [x8], #16
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -41,7 +39,6 @@ entry:
 define <8 x i16> @ld2_u16_val0(ptr %a) {
 ; CHECK-LABEL: ld2_u16_val0:
 ; CHECK:         ld2 { v0.4h, v1.4h }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld2 = call { <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld2.v4i16.p0(ptr %a)
@@ -56,7 +53,6 @@ define <8 x i16> @ld2_u16_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld2 { v0.4h, v1.4h }, [x8], #16
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -71,7 +67,6 @@ entry:
 define <4 x i32> @ld2_u32_val0(ptr %a) {
 ; CHECK-LABEL: ld2_u32_val0:
 ; CHECK:         ld2 { v0.2s, v1.2s }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld2 = call { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2.v2i32.p0(ptr %a)
@@ -86,7 +81,6 @@ define <4 x i32> @ld2_u32_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld2 { v0.2s, v1.2s }, [x8], #16
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -102,7 +96,6 @@ define <2 x i64> @ld2_u64_val0(ptr %a) {
 ;
 ; CHECK-LABEL: ld2_u64_val0:
 ; CHECK:         ld1 { v0.1d, v1.1d }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld2 = call { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2.v1i64.p0(ptr %a)
@@ -118,7 +111,6 @@ define <2 x i64> @ld2_u64_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld1 { v0.1d, v1.1d }, [x8], #16
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -133,7 +125,6 @@ entry:
 define <16 x i8> @ld3_u8_val0(ptr %a) {
 ; CHECK-LABEL: ld3_u8_val0:
 ; CHECK:         ld3 { v0.8b, v1.8b, v2.8b }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld3 = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3.v8i8.p0(ptr %a)
@@ -149,7 +140,6 @@ define <16 x i8> @ld3_u8_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld3 { v0.8b, v1.8b, v2.8b }, [x8], #24
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -164,7 +154,6 @@ entry:
 define <8 x i16> @ld3_u16_val0(ptr %a) {
 ; CHECK-LABEL: ld3_u16_val0:
 ; CHECK:         ld3 { v0.4h, v1.4h, v2.4h }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld3 = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3.v4i16.p0(ptr %a)
@@ -180,7 +169,6 @@ define <8 x i16> @ld3_u16_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld3 { v0.4h, v1.4h, v2.4h }, [x8], #24
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -195,7 +183,6 @@ entry:
 define <4 x i32> @ld3_u32_val0(ptr %a) {
 ; CHECK-LABEL: ld3_u32_val0:
 ; CHECK:         ld3 { v0.2s, v1.2s, v2.2s }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld3 = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld3.v2i32.p0(ptr %a)
@@ -211,7 +198,6 @@ define <4 x i32> @ld3_u32_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld3 { v0.2s, v1.2s, v2.2s }, [x8], #24
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -227,7 +213,6 @@ define <2 x i64> @ld3_u64_val0(ptr %a) {
 ;
 ; CHECK-LABEL: ld3_u64_val0:
 ; CHECK:         ld1 { v0.1d, v1.1d, v2.1d }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld3 = call { <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld3.v1i64.p0(ptr %a)
@@ -243,7 +228,6 @@ define <2 x i64> @ld3_u64_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld1 { v0.1d, v1.1d, v2.1d }, [x8], #24
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -258,7 +242,6 @@ entry:
 define <16 x i8> @ld4_u8_val0(ptr %a) {
 ; CHECK-LABEL: ld4_u8_val0:
 ; CHECK:         ld4 { v0.8b, v1.8b, v2.8b, v3.8b }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld4 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld4.v8i8.p0(ptr %a)
@@ -274,7 +257,6 @@ define <16 x i8> @ld4_u8_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld4 { v0.8b, v1.8b, v2.8b, v3.8b }, [x8], #32
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -289,7 +271,6 @@ entry:
 define <8 x i16> @ld4_u16_val0(ptr %a) {
 ; CHECK-LABEL: ld4_u16_val0:
 ; CHECK:         ld4 { v0.4h, v1.4h, v2.4h, v3.4h }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld4 = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4.v4i16.p0(ptr %a)
@@ -305,7 +286,6 @@ define <8 x i16> @ld4_u16_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld4 { v0.4h, v1.4h, v2.4h, v3.4h }, [x8], #32
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -320,7 +300,6 @@ entry:
 define <4 x i32> @ld4_u32_val0(ptr %a) {
 ; CHECK-LABEL: ld4_u32_val0:
 ; CHECK:         ld4 { v0.2s, v1.2s, v2.2s, v3.2s }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld4 = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld4.v2i32.p0(ptr %a)
@@ -336,7 +315,6 @@ define <4 x i32> @ld4_u32_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld4 { v0.2s, v1.2s, v2.2s, v3.2s }, [x8], #32
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -352,7 +330,6 @@ define <2 x i64> @ld4_u64_val0(ptr %a) {
 ;
 ; CHECK-LABEL: ld4_u64_val0:
 ; CHECK:         ld1 { v0.1d, v1.1d, v2.1d, v3.1d }, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %vld4 = call { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld4.v1i64.p0(ptr %a)
@@ -368,7 +345,6 @@ define <2 x i64> @ld4_u64_val0_post(ptr %a) {
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld1 { v0.1d, v1.1d, v2.1d, v3.1d }, [x8], #32
 ; CHECK-NEXT:    str x8, [x0]
-; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
 entry:
   %0 = load ptr, ptr %a, align 8
@@ -384,8 +360,7 @@ entry:
 
 define <4 x i32> @ld4_u32_val1(ptr %a) {
 ; CHECK-LABEL: ld4_u32_val1:
-; CHECK:         ld4 { v0.2s, v1.2s, v2.2s, v3.2s }, [x0]
-; CHECK-NEXT:    fmov d0, d1
+; CHECK:         ld4 { v31.2s, v0.2s, v1.2s, v2.2s }, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %vld4 = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld4.v2i32.p0(ptr %a)
@@ -396,8 +371,7 @@ entry:
 
 define <4 x i32> @ld4_u32_val2(ptr %a) {
 ; CHECK-LABEL: ld4_u32_val2:
-; CHECK:         ld4 { v0.2s, v1.2s, v2.2s, v3.2s }, [x0]
-; CHECK-NEXT:    fmov d0, d2
+; CHECK:         ld4 { v30.2s, v31.2s, v0.2s, v1.2s }, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %vld4 = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld4.v2i32.p0(ptr %a)
@@ -409,8 +383,7 @@ entry:
 
 define <4 x i32> @ld4_u32_val3(ptr %a) {
 ; CHECK-LABEL: ld4_u32_val3:
-; CHECK:         ld4 { v0.2s, v1.2s, v2.2s, v3.2s }, [x0]
-; CHECK-NEXT:    fmov d0, d3
+; CHECK:         ld4 { v29.2s, v30.2s, v31.2s, v0.2s }, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %vld4 = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld4.v2i32.p0(ptr %a)
