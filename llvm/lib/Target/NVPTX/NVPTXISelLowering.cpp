@@ -5548,8 +5548,6 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   }
   case Intrinsic::nvvm_tcgen05_alloc_cg1:
   case Intrinsic::nvvm_tcgen05_alloc_cg2:
-  case Intrinsic::nvvm_tcgen05_alloc_exclusive_cg1:
-  case Intrinsic::nvvm_tcgen05_alloc_exclusive_cg2:
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
