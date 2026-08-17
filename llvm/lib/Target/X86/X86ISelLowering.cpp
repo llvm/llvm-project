@@ -1267,7 +1267,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::FP_TO_SINT,         MVT::v4i32, Custom);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v4i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT, MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT,         MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT,         MVT::v2i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v4i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v2i32, Custom);
     if (!Subtarget.hasAVX10_2()) {
