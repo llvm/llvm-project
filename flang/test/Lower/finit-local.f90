@@ -266,8 +266,9 @@ end subroutine
 ! HEX:  fir.store {{.*}} : !fir.ref<i32>
 
 ! ---------------------------------------------------------------------------
-! CHARACTER(10) -- fir::CharacterType is not mlir::FloatType/IntegerType/ComplexType
-! nan/snan/hex: fall back to fir.zero_bits (known limitation, TODO)
+! CHARACTER(10) -- fixed-length scalar.
+! zero/nan/snan: fir.zero_bits over the whole character type.
+! hex: byte-loop over 10 singleton code-units.
 ! ---------------------------------------------------------------------------
 subroutine test_char10(res)
   character(10) :: res
@@ -287,8 +288,10 @@ end subroutine
 ! SNAN: fir.store {{.*}} : !fir.ref<!fir.char<1,10>>
 
 ! HEX-LABEL:  func.func @_QPtest_char10
-! HEX:  fir.zero_bits !fir.char<1,10>
-! HEX:  fir.store {{.*}} : !fir.ref<!fir.char<1,10>>
+! HEX:        fir.do_loop
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          arith.constant {{.*}} : i8
+! HEX:          fir.store {{.*}} : !fir.ref<i8>
 
 ! ---------------------------------------------------------------------------
 ! CHARACTER(0) -- zero-length: no store should be emitted (guard for
@@ -305,6 +308,41 @@ end subroutine
 ! HEX-LABEL:  func.func @_QPtest_char0
 ! HEX-NOT:  fir.store {{.*}} : !fir.ref<!fir.char<1,0>>
 
+! ---------------------------------------------------------------------------
+! CHARACTER(n) -- runtime-length: emit a fir.do_loop over [0, n-1] so
+! every byte is initialised. The loop body uses fir.coordinate_of on a
+! rank-1 unknown-extent array view of the allocation.
+! When n == 0 the trip count is 0 and the body is never entered.
+! ---------------------------------------------------------------------------
+subroutine test_charN(res, n)
+  integer, intent(in) :: n
+  character(n) :: res
+  character(n) :: x
+  res = x
+end subroutine
+! ZERO-LABEL: func.func @_QPtest_charn
+! ZERO:       fir.do_loop
+! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! ZERO:         fir.zero_bits !fir.char<1>
+! ZERO:         fir.store {{.*}} : !fir.ref<!fir.char<1>>
+
+! NAN-LABEL:  func.func @_QPtest_charn
+! NAN:        fir.do_loop
+! NAN:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! NAN:          fir.zero_bits !fir.char<1>
+! NAN:          fir.store {{.*}} : !fir.ref<!fir.char<1>>
+
+! SNAN-LABEL: func.func @_QPtest_charn
+! SNAN:       fir.do_loop
+! SNAN:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! SNAN:         fir.zero_bits !fir.char<1>
+! SNAN:         fir.store {{.*}} : !fir.ref<!fir.char<1>>
+
+! HEX-LABEL:  func.func @_QPtest_charn
+! HEX:        fir.do_loop
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          arith.constant {{.*}} : i8
+! HEX:          fir.store {{.*}} : !fir.ref<i8>
 
 ! ---------------------------------------------------------------------------
 ! Derived type -- struct with an INTEGER(4) and a REAL(4) field
@@ -332,12 +370,10 @@ end subroutine
 ! NAN:  fir.store {{.*}} : !fir.ref<f32>
 
 ! HEX-LABEL:  func.func @_QPtest_derived
-! HEX:  fir.coordinate_of {{.*}} -> !fir.ref<i32>
-! HEX:  arith.constant {{.*}} : i32
-! HEX:  fir.store {{.*}} : !fir.ref<i32>
-! HEX:  fir.coordinate_of {{.*}} -> !fir.ref<f32>
-! HEX:  arith.bitcast {{.*}} : i32 to f32
-! HEX:  fir.store {{.*}} : !fir.ref<f32>
+! HEX:       fir.do_loop
+! HEX:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! HEX:         arith.constant {{.*}} : i8
+! HEX:         fir.store {{.*}} : !fir.ref<i8>
 
 
 ! ---------------------------------------------------------------------------
