@@ -617,10 +617,3 @@ main_body:
   store i128 %load, ptr addrspace(1) %out
   ret void
 }
-
-declare i1 @llvm.amdgcn.s.buffer.load.i1(<4 x i32>, i32, i32)
-declare i4 @llvm.amdgcn.s.buffer.load.i4(<4 x i32>, i32, i32)
-declare <2 x i1> @llvm.amdgcn.s.buffer.load.v2i1(<4 x i32>, i32, i32)
-declare <3 x i16> @llvm.amdgcn.s.buffer.load.v3i16(<4 x i32>, i32, i32)
-declare <6 x i8> @llvm.amdgcn.s.buffer.load.v6i8(<4 x i32>, i32, i32)
-declare i128 @llvm.amdgcn.s.buffer.load.i128(<4 x i32>, i32, i32)
