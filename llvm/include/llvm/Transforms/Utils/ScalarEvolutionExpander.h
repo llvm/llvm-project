@@ -538,6 +538,8 @@ private:
 
   Value *visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S);
 
+  Value *visitSDivExpr(SCEVUseT<const SCEVSDivExpr *> S);
+
   Value *visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S);
 
   Value *visitSMaxExpr(SCEVUseT<const SCEVSMaxExpr *> S);

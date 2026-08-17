@@ -393,6 +393,11 @@ void SCEV::print(raw_ostream &OS) const {
     OS << "(" << UDiv->getLHS() << " /u " << UDiv->getRHS() << ")";
     return;
   }
+  case scSDivExpr: {
+    const SCEVSDivExpr *SDiv = cast<SCEVSDivExpr>(this);
+    OS << "(" << *SDiv->getLHS() << " /s " << *SDiv->getRHS() << ")";
+    return;
+  }
   case scUnknown:
     cast<SCEVUnknown>(this)->getValue()->printAsOperand(OS, false);
     return;
@@ -425,6 +430,8 @@ ArrayRef<SCEVUse> SCEV::operands() const {
     return cast<SCEVNAryExpr>(this)->operands();
   case scUDivExpr:
     return cast<SCEVUDivExpr>(this)->operands();
+  case scSDivExpr:
+    return cast<SCEVSDivExpr>(this)->operands();
   case scCouldNotCompute:
     llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   }
@@ -729,6 +736,7 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
+  case scSDivExpr:
   case scSMaxExpr:
   case scUMaxExpr:
   case scSMinExpr:
@@ -3037,15 +3045,19 @@ const SCEV *ScalarEvolution::getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
   return S;
 }
 
-const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS) {
+const SCEV *ScalarEvolution::getOrCreateDivExpr(bool IsSigned, SCEVUse LHS,
+                                                SCEVUse RHS) {
   FoldingSetNodeID ID;
-  ID.AddInteger(scUDivExpr);
+  ID.AddInteger(IsSigned ? scSDivExpr : scUDivExpr);
   ID.AddPointer(LHS.getOpaqueValue());
   ID.AddPointer(RHS.getOpaqueValue());
   FoldingSetInsertToken Token;
   SCEV *S = UniqueSCEVs.lookup(ID, Token);
   if (!S) {
-    S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator), LHS, RHS);
+    if (IsSigned)
+      S = new (SCEVAllocator) SCEVSDivExpr(ID.Intern(SCEVAllocator), LHS, RHS);
+    else
+      S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator), LHS, RHS);
     UniqueSCEVs.insert(S, Token);
     S->computeAndSetCanonical(*this);
     registerUser(S, ArrayRef<SCEVUse>({LHS, RHS}));
@@ -3440,27 +3452,42 @@ const SCEV *ScalarEvolution::getURemExpr(SCEVUse LHS, SCEVUse RHS) {
 
 /// Get a canonical unsigned division expression, or something simpler if
 /// possible.
-const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
+const SCEV *ScalarEvolution::getDivExpr(bool IsSigned, SCEVUse LHS,
+                                        SCEVUse RHS) {
   assert(!LHS->getType()->isPointerTy() &&
-         "SCEVUDivExpr operand can't be pointer!");
+         "SCEVDivExpr operand can't be pointer!");
   assert(LHS->getType() == RHS->getType() &&
-         "SCEVUDivExpr operand types don't match!");
+         "SCEVDivExpr operand types don't match!");
 
-  if (SCEV *S =
-          findExistingSCEVInCache(scUDivExpr, ArrayRef<SCEVUse>({LHS, RHS})))
+  if (SCEV *S = findExistingSCEVInCache(IsSigned ? scSDivExpr : scUDivExpr,
+                                        ArrayRef<SCEVUse>({LHS, RHS})))
     return S;
 
-  // 0 udiv Y == 0
+  if (IsSigned && isKnownNonNegative(LHS) && isKnownNonNegative(RHS))
+    return getDivExpr(false, LHS, RHS);
+
+  // 0/y --> 0
   if (match(LHS, m_scev_Zero()))
     return LHS;
 
   if (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS)) {
     if (RHSC->getValue()->isOne())
-      return LHS;                               // X udiv 1 --> x
-    // If the denominator is zero, the result of the udiv is undefined. Don't
-    // try to analyze it, because the resolution chosen here may differ from
-    // the resolution chosen in other parts of the compiler.
-    if (!RHSC->getValue()->isZero()) {
+      return LHS; // x/1 --> x
+    // If the denominator is zero, the result of the both udiv and sdiv are
+    // undefined. Similarly if the denominator of is -1, and the numerator is
+    // INT_MIN, sdiv is undefined. Don't try to analyze it, because the
+    // resolution chosen here may differ from the resolution chosen in other
+    // parts of the compiler.
+    Type *Ty = LHS->getType();
+    unsigned BW = Ty->getIntegerBitWidth();
+    bool DivIsUndefined = RHSC->getValue()->isZero();
+    bool SDivIsUndefined =
+        RHSC->getValue()->isAllOnesValue() &&
+        getSignedRangeMin(LHS) == APInt::getSignedMinValue(BW);
+    if (!DivIsUndefined && (!IsSigned || !SDivIsUndefined)) {
+      if (IsSigned && RHSC->getValue()->isAllOnesValue())
+        return getNegativeSCEV(LHS); // x/-1 --> -x
+
       // Determine if the division can be folded into the operands of
       // its operands.
       // TODO: Generalize this to non-constants by using known-bits information.
@@ -3472,18 +3499,20 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       if (!RHSC->getAPInt().isPowerOf2())
         ++MaxShiftAmt;
       IntegerType *ExtTy =
-        IntegerType::get(getContext(), getTypeSizeInBits(Ty) + MaxShiftAmt);
-      if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(LHS))
+          IntegerType::get(getContext(), getTypeSizeInBits(Ty) + MaxShiftAmt);
+      /// TODO: Extend to signed case once we have SRem expressions.
+      if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+          AR && !IsSigned)
         if (const SCEVConstant *Step =
-            dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this))) {
+                dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this))) {
           // {X,+,N}/C --> {X/C,+,N/C} if safe and N/C can be folded.
           const APInt &StepInt = Step->getAPInt();
           const APInt &DivInt = RHSC->getAPInt();
           if (!StepInt.urem(DivInt) &&
               getZeroExtendExpr(AR, ExtTy) ==
-              getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
-                            getZeroExtendExpr(Step, ExtTy),
-                            AR->getLoop(), SCEV::FlagAnyWrap)) {
+                  getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
+                                getZeroExtendExpr(Step, ExtTy), AR->getLoop(),
+                                SCEV::FlagAnyWrap)) {
             SmallVector<SCEVUse, 4> Operands;
             for (const SCEV *Op : AR->operands())
               Operands.push_back(getUDivExpr(Op, RHS));
@@ -3522,12 +3551,12 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
         }
       // (A*B)/C --> A*(B/C) if safe and B/C can be folded.
       if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(LHS)) {
-        if (M->hasNoUnsignedWrap()) {
+        if (IsSigned ? M->hasNoSignedWrap() : M->hasNoUnsignedWrap()) {
           // Find an operand that's safely divisible.
           for (unsigned i = 0, e = M->getNumOperands(); i != e; ++i) {
             const SCEV *Op = M->getOperand(i);
-            const SCEV *Div = getUDivExpr(Op, RHSC);
-            if (!isa<SCEVUDivExpr>(Div) && getMulExpr(Div, RHSC) == Op) {
+            const SCEV *Div = getDivExpr(IsSigned, Op, RHSC);
+            if (!isa<SCEVDivExpr>(Div) && getMulExpr(Div, RHSC) == Op) {
               SmallVector<SCEVUse, 4> Operands(M->operands());
               Operands[i] = Div;
               return getMulExpr(Operands);
@@ -3536,43 +3565,47 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
 
           // Even if it's not divisible, try to remove a common factor.
           if (const auto *LHSC = dyn_cast<SCEVConstant>(M->getOperand(0))) {
-            APInt Factor = APIntOps::GreatestCommonDivisor(LHSC->getAPInt(),
-                                                           RHSC->getAPInt());
+            APInt Factor = APIntOps::GreatestCommonDivisor(
+                LHSC->getAPInt(), RHSC->getAPInt(), IsSigned);
             if (!Factor.isIntN(1)) {
               SmallVector<SCEVUse, 2> NewOperands;
-              NewOperands.push_back(getConstant(LHSC->getAPInt().udiv(Factor)));
+              NewOperands.push_back(
+                  IsSigned ? getConstant(LHSC->getAPInt().sdiv(Factor))
+                           : getConstant(LHSC->getAPInt().udiv(Factor)));
               append_range(NewOperands, M->operands().drop_front());
               const SCEV *NewMul = getMulExpr(NewOperands);
-              return getUDivExpr(NewMul,
-                                 getConstant(RHSC->getAPInt().udiv(Factor)));
+              return getDivExpr(
+                  IsSigned, NewMul,
+                  IsSigned ? getConstant(RHSC->getAPInt().sdiv(Factor))
+                           : getConstant(RHSC->getAPInt().udiv(Factor)));
             }
           }
         }
       }
 
       // (A/B)/C --> A/(B*C) if safe and B*C can be folded.
-      if (const SCEVUDivExpr *OtherDiv = dyn_cast<SCEVUDivExpr>(LHS)) {
+      if (auto *OtherDiv = dyn_cast<SCEVDivExpr>(LHS)) {
         if (auto *DivisorConstant =
                 dyn_cast<SCEVConstant>(OtherDiv->getRHS())) {
           bool Overflow = false;
-          APInt NewRHS =
-              DivisorConstant->getAPInt().umul_ov(RHSC->getAPInt(), Overflow);
-          if (Overflow) {
+          APInt NewRHS = IsSigned ? DivisorConstant->getAPInt().smul_ov(
+                                        RHSC->getAPInt(), Overflow)
+                                  : DivisorConstant->getAPInt().umul_ov(
+                                        RHSC->getAPInt(), Overflow);
+          if (Overflow)
             return getConstant(RHSC->getType(), 0, false);
-          }
-          return getUDivExpr(OtherDiv->getLHS(), getConstant(NewRHS));
+          return getDivExpr(IsSigned, OtherDiv->getLHS(), getConstant(NewRHS));
         }
       }
 
       // (A+B)/C --> (A/C + B/C) if the add does not unsigned wrap and A/C and
       // B/C can be folded.
       if (const SCEVAddExpr *A = dyn_cast<SCEVAddExpr>(LHS)) {
-        if (A->hasNoUnsignedWrap()) {
+        if (IsSigned ? A->hasNoSignedWrap() : A->hasNoUnsignedWrap()) {
           SmallVector<SCEVUse, 4> Operands;
           for (unsigned i = 0, e = A->getNumOperands(); i != e; ++i) {
-            const SCEV *Op = getUDivExpr(A->getOperand(i), RHS);
-            if (isa<SCEVUDivExpr>(Op) ||
-                getMulExpr(Op, RHS) != A->getOperand(i))
+            const SCEV *Op = getDivExpr(IsSigned, A->getOperand(i), RHS);
+            if (isa<SCEVDivExpr>(Op) || getMulExpr(Op, RHS) != A->getOperand(i))
               break;
             Operands.push_back(Op);
           }
@@ -3593,9 +3626,11 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       const SCEV *A;
       if (match(LHS, m_scev_Add(m_scev_APInt(NMinusM),
                                 m_scev_Mul(m_scev_APInt(M), m_SCEV(A))))) {
-        if (N.isPowerOf2() && M->isPowerOf2() && M->ult(N) &&
-            *NMinusM == N - *M) {
-          return getUDivExpr(
+        if ((IsSigned ? N.isNegatedPowerOf2() : N.isPowerOf2()) &&
+            (IsSigned ? M->isNegatedPowerOf2() : M->isPowerOf2()) &&
+            M->ult(N) && *NMinusM == N - *M) {
+          return getDivExpr(
+              IsSigned,
               getAddExpr(getConstant(N - 1), getMulExpr(getConstant(*M), A)),
               RHS);
         }
@@ -3603,7 +3638,8 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
 
       // Fold if both operands are constant.
       if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS))
-        return getConstant(LHSC->getAPInt().udiv(RHSC->getAPInt()));
+        return getConstant(IsSigned ? LHSC->getAPInt().sdiv(RHSC->getAPInt())
+                                    : LHSC->getAPInt().udiv(RHSC->getAPInt()));
     }
   }
 
@@ -3615,9 +3651,9 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       NegC->isNegative() && !NegC->isMinSignedValue() && *C == -*NegC)
     return getZero(LHS->getType());
 
-  // (%a * %b)<nuw> / %b -> %a
+  // (%a * %b)<nuw or nsw> / %b -> %a
   const auto *Mul = dyn_cast<SCEVMulExpr>(LHS);
-  if (Mul && Mul->hasNoUnsignedWrap()) {
+  if (Mul && (IsSigned ? Mul->hasNoSignedWrap() : Mul->hasNoUnsignedWrap())) {
     for (int i = 0, e = Mul->getNumOperands(); i != e; ++i) {
       if (Mul->getOperand(i) == RHS) {
         SmallVector<SCEVUse, 2> Operands;
@@ -3629,13 +3665,24 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   }
 
   // TODO: Generalize to handle any common factors.
-  // udiv (mul nuw a, vscale), (mul nuw b, vscale) --> udiv a, b
+  // (mul nuw a, vscale)/(mul nuw b, vscale) --> a/b
   const SCEV *NewLHS, *NewRHS;
-  if (match(LHS, m_scev_c_NUWMul(m_SCEV(NewLHS), m_SCEVVScale())) &&
-      match(RHS, m_scev_c_NUWMul(m_SCEV(NewRHS), m_SCEVVScale())))
-    return getUDivExpr(NewLHS, NewRHS);
+  if (IsSigned
+          ? match(LHS, m_scev_c_NSWMul(m_SCEV(NewLHS), m_SCEVVScale())) &&
+                match(RHS, m_scev_c_NSWMul(m_SCEV(NewRHS), m_SCEVVScale()))
+          : match(LHS, m_scev_c_NUWMul(m_SCEV(NewLHS), m_SCEVVScale())) &&
+                match(RHS, m_scev_c_NUWMul(m_SCEV(NewRHS), m_SCEVVScale())))
+    return getDivExpr(IsSigned, NewLHS, NewRHS);
 
-  return getOrCreateUDivExpr(LHS, RHS);
+  return getOrCreateDivExpr(IsSigned, LHS, RHS);
+}
+
+const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
+  return getDivExpr(/*IsSigned=*/false, LHS, RHS);
+}
+
+const SCEV *ScalarEvolution::getSDivExpr(SCEVUse LHS, SCEVUse RHS) {
+  return getDivExpr(/*IsSigned=*/true, LHS, RHS);
 }
 
 /// Get a canonical unsigned division expression, or something simpler if
@@ -4062,6 +4109,8 @@ public:
 
   RetVal visitUDivExpr(const SCEVUDivExpr *Expr) { return Expr; }
 
+  RetVal visitSDivExpr(const SCEVSDivExpr *Expr) { return Expr; }
+
   RetVal visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
 
   RetVal visitSMaxExpr(const SCEVSMaxExpr *Expr) {
@@ -4102,6 +4151,7 @@ static bool scevUnconditionallyPropagatesPoisonFromOperands(SCEVTypes Kind) {
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
+  case scSDivExpr:
   case scAddRecExpr:
   case scUMaxExpr:
   case scSMaxExpr:
@@ -5246,6 +5296,7 @@ static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::UDiv:
+  case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::And:
   case Instruction::AShr:
@@ -6312,6 +6363,7 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S,
   case scPtrToAddr:
     return getConstantMultiple(cast<SCEVCastExpr>(S)->getOperand());
   case scUDivExpr:
+  case scSDivExpr:
   case scVScale:
     return APInt(BitWidth, 1);
   case scTruncate: {
@@ -6617,6 +6669,7 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
     case scAddExpr:
     case scMulExpr:
     case scUDivExpr:
+    case scSDivExpr:
     case scAddRecExpr:
     case scUMaxExpr:
     case scSMaxExpr:
@@ -6784,6 +6837,13 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     ConstantRange Y = getRangeRef(UDiv->getRHS(), SignHint, Depth + 1);
     return setRange(UDiv, SignHint,
                     ConservativeResult.intersectWith(X.udiv(Y), RangeType));
+  }
+  case scSDivExpr: {
+    const SCEVSDivExpr *SDiv = cast<SCEVSDivExpr>(S);
+    ConstantRange X = getRangeRef(SDiv->getLHS(), SignHint, Depth + 1);
+    ConstantRange Y = getRangeRef(SDiv->getRHS(), SignHint, Depth + 1);
+    return setRange(SDiv, SignHint,
+                    ConservativeResult.intersectWith(X.sdiv(Y), RangeType));
   }
   case scAddRecExpr: {
     const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(S);
@@ -7648,6 +7708,7 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     }
     case Instruction::Sub:
     case Instruction::UDiv:
+    case Instruction::SDiv:
     case Instruction::URem:
       break;
     case Instruction::AShr:
@@ -7689,7 +7750,6 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     }
     return getUnknown(V);
 
-  case Instruction::SDiv:
   case Instruction::SRem:
     Ops.push_back(U->getOperand(0));
     Ops.push_back(U->getOperand(1));
@@ -7930,6 +7990,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
       return getUDivExpr(LHS, RHS);
+    case Instruction::SDiv:
+      LHS = getSCEV(BO->LHS);
+      RHS = getSCEV(BO->RHS);
+      return getSDivExpr(LHS, RHS);
     case Instruction::URem:
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
@@ -8244,13 +8308,6 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
   case Instruction::IntToPtr:
     // Just don't deal with inttoptr casts.
     return getUnknown(V);
-
-  case Instruction::SDiv:
-    // If both operands are non-negative, this is just an udiv.
-    if (isKnownNonNegative(getSCEV(U->getOperand(0))) &&
-        isKnownNonNegative(getSCEV(U->getOperand(1))))
-      return getUDivExpr(getSCEV(U->getOperand(0)), getSCEV(U->getOperand(1)));
-    break;
 
   case Instruction::SRem:
     // If both operands are non-negative, this is just an urem.
@@ -10104,6 +10161,7 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
   case scSignExtend:
   case scZeroExtend:
   case scUDivExpr:
+  case scSDivExpr:
   case scSMaxExpr:
   case scUMaxExpr:
   case scSMinExpr:
@@ -10132,6 +10190,8 @@ const SCEV *ScalarEvolution::getWithOperands(const SCEV *S,
     return getMulExpr(NewOps, cast<SCEVMulExpr>(S)->getNoWrapFlags());
   case scUDivExpr:
     return getUDivExpr(NewOps[0], NewOps[1]);
+  case scSDivExpr:
+    return getSDivExpr(NewOps[0], NewOps[1]);
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
@@ -10208,6 +10268,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
+  case scSDivExpr:
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
@@ -13026,74 +13087,67 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
     // (LHS = LL + LR) && (LR >= 0) && (LL > RHS) => (LHS > RHS).
     if (IsSumGreaterThanRHS(LL, LR) || IsSumGreaterThanRHS(LR, LL))
       return true;
-  } else if (auto *LHSUnknownExpr = dyn_cast<SCEVUnknown>(LHS)) {
-    Value *LL, *LR;
-    // FIXME: Once we have SDiv implemented, we can get rid of this matching.
+  } else if (auto *LHSSDivExpr = dyn_cast<SCEVSDivExpr>(LHS)) {
+    SCEVUse LL = LHSSDivExpr->getOperand(0);
+    SCEVUse LR = LHSSDivExpr->getOperand(1);
 
-    using namespace llvm::PatternMatch;
+    // Rules for division.
+    // We are going to perform some comparisons with Denominator and its
+    // derivative expressions. In general case, creating a SCEV for it may
+    // lead to a complex analysis of the entire graph, and in particular it
+    // can request trip count recalculation for the same loop. This would
+    // cache as SCEVCouldNotCompute to avoid the infinite recursion. To avoid
+    // this, we only want to create SCEVs that are constants in this section.
+    // So we bail if Denominator is not a constant.
+    auto *Denominator = dyn_cast<SCEVConstant>(LR);
+    if (!Denominator)
+      return false;
 
-    if (match(LHSUnknownExpr->getValue(), m_SDiv(m_Value(LL), m_Value(LR)))) {
-      // Rules for division.
-      // We are going to perform some comparisons with Denominator and its
-      // derivative expressions. In general case, creating a SCEV for it may
-      // lead to a complex analysis of the entire graph, and in particular it
-      // can request trip count recalculation for the same loop. This would
-      // cache as SCEVCouldNotCompute to avoid the infinite recursion. To avoid
-      // this, we only want to create SCEVs that are constants in this section.
-      // So we bail if Denominator is not a constant.
-      if (!isa<ConstantInt>(LR))
-        return false;
+    // We want to make sure that LHS = FoundLHS / Denominator. If it is so,
+    // then a SCEV for the numerator already exists and matches with FoundLHS.
+    SCEVUse Numerator = LL;
+    if (Numerator->getType() != FoundLHS->getType())
+      return false;
 
-      auto *Denominator = cast<SCEVConstant>(getSCEV(LR));
+    // Make sure that the numerator matches with FoundLHS and the denominator
+    // is positive.
+    if (!HasSameValue(Numerator, FoundLHS) || !isKnownPositive(Denominator))
+      return false;
 
-      // We want to make sure that LHS = FoundLHS / Denominator. If it is so,
-      // then a SCEV for the numerator already exists and matches with FoundLHS.
-      auto *Numerator = getExistingSCEV(LL);
-      if (!Numerator || Numerator->getType() != FoundLHS->getType())
-        return false;
+    auto *DTy = Denominator->getType();
+    auto *FRHSTy = FoundRHS->getType();
+    if (DTy->isPointerTy() != FRHSTy->isPointerTy())
+      // One of types is a pointer and another one is not. We cannot extend
+      // them properly to a wider type, so let us just reject this case.
+      // TODO: Usage of getEffectiveSCEVType for DTy, FRHSTy etc should help
+      // to avoid this check.
+      return false;
 
-      // Make sure that the numerator matches with FoundLHS and the denominator
-      // is positive.
-      if (!HasSameValue(Numerator, FoundLHS) || !isKnownPositive(Denominator))
-        return false;
+    // Given that:
+    // FoundLHS > FoundRHS, LHS = FoundLHS / Denominator, Denominator > 0.
+    auto *WTy = getWiderType(DTy, FRHSTy);
+    auto *DenominatorExt = getNoopOrSignExtend(Denominator, WTy);
+    auto *FoundRHSExt = getNoopOrSignExtend(FoundRHS, WTy);
 
-      auto *DTy = Denominator->getType();
-      auto *FRHSTy = FoundRHS->getType();
-      if (DTy->isPointerTy() != FRHSTy->isPointerTy())
-        // One of types is a pointer and another one is not. We cannot extend
-        // them properly to a wider type, so let us just reject this case.
-        // TODO: Usage of getEffectiveSCEVType for DTy, FRHSTy etc should help
-        // to avoid this check.
-        return false;
+    // Try to prove the following rule:
+    // (FoundRHS > Denominator - 2) && (RHS <= 0) => (LHS > RHS).
+    // For example, given that FoundLHS > 2. It means that FoundLHS is at
+    // least 3. If we divide it by Denominator < 4, we will have at least 1.
+    auto *DenomMinusTwo = getMinusSCEV(DenominatorExt, getConstant(WTy, 2));
+    if (isKnownNonPositive(RHS) && IsSGTViaContext(FoundRHSExt, DenomMinusTwo))
+      return true;
 
-      // Given that:
-      // FoundLHS > FoundRHS, LHS = FoundLHS / Denominator, Denominator > 0.
-      auto *WTy = getWiderType(DTy, FRHSTy);
-      auto *DenominatorExt = getNoopOrSignExtend(Denominator, WTy);
-      auto *FoundRHSExt = getNoopOrSignExtend(FoundRHS, WTy);
-
-      // Try to prove the following rule:
-      // (FoundRHS > Denominator - 2) && (RHS <= 0) => (LHS > RHS).
-      // For example, given that FoundLHS > 2. It means that FoundLHS is at
-      // least 3. If we divide it by Denominator < 4, we will have at least 1.
-      auto *DenomMinusTwo = getMinusSCEV(DenominatorExt, getConstant(WTy, 2));
-      if (isKnownNonPositive(RHS) &&
-          IsSGTViaContext(FoundRHSExt, DenomMinusTwo))
-        return true;
-
-      // Try to prove the following rule:
-      // (FoundRHS > -1 - Denominator) && (RHS < 0) => (LHS > RHS).
-      // For example, given that FoundLHS > -3. Then FoundLHS is at least -2.
-      // If we divide it by Denominator > 2, then:
-      // 1. If FoundLHS is negative, then the result is 0.
-      // 2. If FoundLHS is non-negative, then the result is non-negative.
-      // Anyways, the result is non-negative.
-      auto *MinusOne = getMinusOne(WTy);
-      auto *NegDenomMinusOne = getMinusSCEV(MinusOne, DenominatorExt);
-      if (isKnownNegative(RHS) &&
-          IsSGTViaContext(FoundRHSExt, NegDenomMinusOne))
-        return true;
-    }
+    // Try to prove the following rule:
+    // (FoundRHS > -1 - Denominator) && (RHS < 0) => (LHS > RHS).
+    // For example, given that FoundLHS > -3. Then FoundLHS is at least -2.
+    // If we divide it by Denominator > 2, then:
+    // 1. If FoundLHS is negative, then the result is 0.
+    // 2. If FoundLHS is non-negative, then the result is non-negative.
+    // Anyways, the result is non-negative.
+    auto *MinusOne = getMinusOne(WTy);
+    auto *NegDenomMinusOne = getMinusSCEV(MinusOne, DenominatorExt);
+    if (isKnownNegative(RHS) && IsSGTViaContext(FoundRHSExt, NegDenomMinusOne))
+      return true;
   }
 
   // If our expression contained SCEVUnknown Phis, and we split it down and now
@@ -14487,6 +14541,7 @@ ScalarEvolution::computeLoopDisposition(const SCEV *S, const Loop *L) {
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
+  case scSDivExpr:
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
@@ -14577,6 +14632,7 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
+  case scSDivExpr:
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:

@@ -463,6 +463,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
+  case scSDivExpr:
   case scAddRecExpr:
   case scUMaxExpr:
   case scSMaxExpr:
@@ -729,20 +730,58 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
   const SCEV *RHSExpr = S->getRHS();
   Value *RHS = expand(RHSExpr);
   if (SafeUDivMode) {
-    bool GuaranteedNotPoison =
-        ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
-    if (!GuaranteedNotPoison)
+    if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr))
       RHS = Builder.CreateFreeze(RHS);
 
     // We need an umax if either RHSExpr is not known to be zero, or if it is
     // not guaranteed to be non-poison. In the later case, the frozen poison may
     // be 0.
-    if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
+    if (S->mayTriggerUB(SE))
       RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
                                     {RHS, ConstantInt::get(RHS->getType(), 1)});
   }
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
-                     /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
+                     /*IsSafeToHoist=*/!S->mayTriggerUB(SE));
+}
+
+Value *SCEVExpander::visitSDivExpr(SCEVUseT<const SCEVSDivExpr *> S) {
+  const SCEV *LHSExpr = S->getLHS();
+  const SCEV *RHSExpr = S->getRHS();
+  Value *LHS = expand(LHSExpr);
+  Value *RHS = expand(RHSExpr);
+  if (!ScalarEvolution::isGuaranteedNotToBePoison(LHSExpr))
+    LHS = Builder.CreateFreeze(LHS);
+  if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr))
+    RHS = Builder.CreateFreeze(RHS);
+
+  // Select RHS to avoid UB
+  if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr) ||
+      !SE.isKnownNonZero(RHSExpr)) {
+    Constant *Null = ConstantInt::getNullValue(LHS->getType());
+    Constant *One = ConstantInt::get(RHS->getType(), 1);
+    RHS = Builder.CreateSelect(Builder.CreateICmp(CmpInst::ICMP_EQ, RHS, Null),
+                               One, RHS);
+  }
+
+  // Select LHS to avoid UB
+  if (!ScalarEvolution::isGuaranteedNotToBePoison(LHSExpr) ||
+      (SE.getSignedRangeMin(LHSExpr).isMinSignedValue() &&
+       !SE.isKnownPredicate(
+           CmpInst::ICMP_NE, RHSExpr,
+           SE.getConstant(S->getType(), -1, /*isSigned=*/true)))) {
+    Constant *SMin = ConstantInt::get(
+        LHS->getType(),
+        APInt::getSignedMinValue(LHS->getType()->getIntegerBitWidth()));
+    Constant *AllOnes = ConstantInt::getAllOnesValue(RHS->getType());
+    Constant *Null = ConstantInt::getNullValue(LHS->getType());
+    Value *SMinCond = Builder.CreateLogicalAnd(
+        Builder.CreateICmp(CmpInst::ICMP_EQ, LHS, SMin),
+        Builder.CreateICmp(CmpInst::ICMP_EQ, RHS, AllOnes));
+    LHS = Builder.CreateSelect(SMinCond, Null, LHS);
+  }
+
+  return InsertBinop(Instruction::SDiv, LHS, RHS, SCEV::FlagAnyWrap,
+                     /*IsSafeToHoist=*/!S->mayTriggerUB(SE));
 }
 
 /// Determine if this is a well-behaved chain of instructions leading back to
@@ -1693,20 +1732,12 @@ Value *SCEVExpander::expand(SCEVUse S) {
 
   // We can move insertion point only if there is no div or rem operations
   // otherwise we are risky to move it over the check for zero denominator.
-  auto SafeToHoist = [](const SCEV *S) {
-    return !SCEVExprContains(S, [](const SCEV *S) {
-              if (const auto *D = dyn_cast<SCEVUDivExpr>(S)) {
-                if (const auto *SC = dyn_cast<SCEVConstant>(D->getRHS()))
-                  // Division by non-zero constants can be hoisted.
-                  return SC->getValue()->isZero();
-                // All other divisions should not be moved as they may be
-                // divisions by zero and should be kept within the
-                // conditions of the surrounding loops that guard their
-                // execution (see PR35406).
-                return true;
-              }
-              return false;
-            });
+  auto SafeToHoist = [this](const SCEV *S) {
+    return !SCEVExprContains(S, [this](const SCEV *S) {
+      const auto *D = dyn_cast<SCEVDivExpr>(S);
+      // TODO: Why is this RHS-constant check necessary?
+      return D && (!isa<SCEVConstant>(D->getRHS()) || D->mayTriggerUB(SE));
+    });
   };
   if (SafeToHoist(S)) {
     for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
@@ -2106,6 +2137,11 @@ template<typename T> static InstructionCost costAndCollectOperands(
     Cost = ArithCost(Opcode, 1);
     break;
   }
+  case scSDivExpr: {
+    unsigned Opcode = Instruction::SDiv;
+    Cost = ArithCost(Opcode, 1);
+    break;
+  }
   case scAddExpr:
     Cost = ArithCost(Instruction::Add, S->getNumOperands() - 1);
     break;
@@ -2230,7 +2266,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
         costAndCollectOperands<SCEVCastExpr>(WorkItem, TTI, CostKind, Worklist);
     return false; // Will answer upon next entry into this function.
   }
-  case scUDivExpr: {
+  case scUDivExpr:
+  case scSDivExpr: {
     // UDivExpr is very likely a UDiv that ScalarEvolution's HowFarToZero or
     // HowManyLessThans produced to compute a precise expression, rather than a
     // UDiv from the user's code. If we can't find a UDiv in the code with some
@@ -2244,7 +2281,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
       return false; // Consider it to be free.
 
     Cost +=
-        costAndCollectOperands<SCEVUDivExpr>(WorkItem, TTI, CostKind, Worklist);
+        costAndCollectOperands<SCEVDivExpr>(WorkItem, TTI, CostKind, Worklist);
     return false; // Will answer upon next entry into this function.
   }
   case scAddExpr:
@@ -2535,9 +2572,8 @@ struct SCEVFindUnsafe {
       : SE(SE), CanonicalMode(CanonicalMode) {}
 
   bool follow(const SCEV *S) {
-    if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      if (!SE.isKnownNonZero(D->getRHS()) ||
-          !SE.isGuaranteedNotToBePoison(D->getRHS())) {
+    if (auto *D = dyn_cast<SCEVDivExpr>(S)) {
+      if (D->mayTriggerUB(SE)) {
         IsUnsafe = true;
         return false;
       }

@@ -1091,20 +1091,46 @@ define i64 @multi_exit_4_exit_count_with_sdiv_by_value_in_latch(ptr %dst, i64 %N
 ; CHECK-LABEL: define i64 @multi_exit_4_exit_count_with_sdiv_by_value_in_latch(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 1, i64 [[N]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i64 42, [[TMP1]]
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP2]], i64 0)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 [[SMAX1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[UMIN]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i64 4, i64 [[TMP4]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i32 1, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i64 [[IV]], [[N]]
+; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[GEP]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER1:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV1]]
+; CHECK-NEXT:    store i32 1, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i64 [[IV1]], [[N]]
 ; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV1]], 1
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i64 42, [[N]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[IV]], [[D]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_HEADER]], label [[EXIT]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[IV1]], [[D]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_HEADER1]], label [[EXIT]], !llvm.loop [[LOOP29:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 1, [[LOOP_HEADER]] ], [ 0, [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 1, [[LOOP_HEADER1]] ], [ 0, [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -1152,7 +1178,7 @@ define i64 @multi_exit_4_exit_count_with_udiv_by_value_in_latch1(ptr %dst, i64 %
 ; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1169,7 +1195,7 @@ define i64 @multi_exit_4_exit_count_with_udiv_by_value_in_latch1(ptr %dst, i64 %
 ; CHECK-NEXT:    [[D:%.*]] = udiv i64 42, [[N]]
 ; CHECK-NEXT:    [[X:%.*]] = sub i64 100, [[D]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[IV]], [[D]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP29:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP31:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 1, [[LOOP_HEADER]] ], [ 0, [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
@@ -1263,7 +1289,7 @@ define i64 @multi_exit_count_with_udiv_by_value_in_latch_different_bounds_diviso
 ; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -1279,7 +1305,7 @@ define i64 @multi_exit_count_with_udiv_by_value_in_latch_different_bounds_diviso
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[D:%.*]] = udiv i64 42, [[M_1]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[IV]], [[D]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP31:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_HEADER]], label [[EXIT]], !llvm.loop [[LOOP33:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 1, [[LOOP_HEADER]] ], [ 0, [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
@@ -1341,4 +1367,6 @@ exit:
 ; CHECK: [[LOOP29]] = distinct !{[[LOOP29]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP31]] = distinct !{[[LOOP31]], [[META2]], [[META1]]}
+; CHECK: [[LOOP32]] = distinct !{[[LOOP32]], [[META1]], [[META2]]}
+; CHECK: [[LOOP33]] = distinct !{[[LOOP33]], [[META2]], [[META1]]}
 ;.

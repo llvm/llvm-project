@@ -782,8 +782,10 @@ public:
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
+  LLVM_ABI const SCEV *getDivExpr(bool IsSigned, SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getUDivExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI const SCEV *getSDivExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getURemExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
                                      SCEV::NoWrapFlags Flags);
@@ -2529,8 +2531,8 @@ private:
   const SCEV *getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops, const Loop *L,
                                     SCEV::NoWrapFlags Flags);
 
-  // Get UDiv expression already created or create a new one.
-  const SCEV *getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS);
+  // Get SDiv/UDiv expression already created or create a new one.
+  const SCEV *getOrCreateDivExpr(bool IsSigned, SCEVUse LHS, SCEVUse RHS);
 
   /// Return x if \p Val is f(x) where f is a 1-1 function.
   const SCEV *stripInjectiveFunctions(const SCEV *Val) const;
