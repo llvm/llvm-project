@@ -641,6 +641,13 @@ void Prescanner::SkipCComments() {
   }
 }
 
+void Prescanner::WarnCComment(const char *at) {
+  if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
+    Say(LanguageFeature::ClassicCComments, GetProvenance(at),
+        "nonstandard usage: C-style comment"_port_en_US);
+  }
+}
+
 void Prescanner::SkipSpaces() {
   while (IsSpaceOrTab(at_)) {
     NextChar();
@@ -656,12 +663,16 @@ const char *Prescanner::SkipWhiteSpace(const char *p) {
 }
 
 const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
-    const char *p, bool skipCComments) const {
+    const char *p, const char **cComment) const {
+  const char *firstCComment{nullptr};
   while (true) {
     if (int n{IsSpaceOrTab(p)}) {
       p += n;
-    } else if (skipCComments && IsCComment(p)) {
+    } else if (cComment && IsCComment(p)) {
       if (const char *after{SkipCComment(p)}) {
+        if (!firstCComment) {
+          firstCComment = p;
+        }
         p = after;
       } else {
         break;
@@ -681,6 +692,9 @@ const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
     } else {
       break;
     }
+  }
+  if (cComment) {
+    *cComment = firstCComment;
   }
   return p;
 }
@@ -743,10 +757,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     if (*at_ == '/' && IsCComment(at_)) {
       // Recognize and skip over classic C style /*comments*/ when
       // outside a character literal.
-      if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
-        Say(LanguageFeature::ClassicCComments, GetCurrentProvenance(),
-            "nonstandard usage: C-style comment"_port_en_US);
-      }
+      WarnCComment(at_);
       SkipCComments();
     }
     if (IsSpaceOrTab(at_)) {
@@ -1481,13 +1492,9 @@ constexpr bool IsDirective(const char *match, const char *dir) {
   return true;
 }
 
-const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
+const char *Prescanner::GetFreeFormContinuationLine(
+    bool ampersand, const char *p) {
   const char *lineStart{nextLine_};
-  const char *p{lineStart};
-  if (p >= limit_) {
-    return nullptr;
-  }
-  p = SkipWhiteSpaceIncludingEmptyMacros(p, /*skipCComments=*/true);
   if (InCompilerDirective()) {
     if (InConditionalLine()) {
       if (preprocessingOnly_) {
@@ -1571,6 +1578,21 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   } else {
     return nullptr;
   }
+}
+
+const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
+  const char *lineStart{nextLine_};
+  const char *p{lineStart};
+  if (p >= limit_) {
+    return nullptr;
+  }
+  const char *cComment;
+  p = SkipWhiteSpaceIncludingEmptyMacros(lineStart, &cComment);
+  p = GetFreeFormContinuationLine(ampersand, p);
+  if (p && cComment) {
+    WarnCComment(cComment);
+  }
+  return p;
 }
 
 bool Prescanner::FixedFormContinuation(bool atNewline) {
@@ -1719,7 +1741,7 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
 std::optional<Prescanner::LineClassification>
 Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
   if (const char *p{
-          SkipWhiteSpaceIncludingEmptyMacros(start, /*skipCComments=*/false)};
+          SkipWhiteSpaceIncludingEmptyMacros(start, /*cComment=*/nullptr)};
       p && *p == '!') {
     if (auto lnClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
       if (lnClass->kind == LineClassification::Kind::CompilerDirective) {
