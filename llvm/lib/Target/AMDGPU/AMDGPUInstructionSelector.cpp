@@ -2920,7 +2920,8 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
   // use an extract hi instruction for the upper 16 bits. We only need to check
   // the size of `In` as all defs are guaranteed to be the same type for
   // GUnmerge.
-  if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(In))) {
+  GUnmerge *Unmerge;
+  if (mi_match(In, MRI, m_GUnmerge(Unmerge))) {
     if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(1).getReg() == In &&
         MRI.getType(In).getSizeInBits() == 16) {
       Out = Unmerge->getSourceReg();
@@ -5368,10 +5369,9 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
     return {Stat.first, Mods};
   }
 
-  MachineInstr *MI = MRI.getVRegDef(Stat.first);
-
-  if (MI->getOpcode() != AMDGPU::G_BUILD_VECTOR || MI->getNumOperands() != 3 ||
-      (IsDOT && Subtarget->hasDOTOpSelHazard())) {
+  GBuildVector *MI;
+  if (!mi_match(Stat.first, MRI, m_GBuildVector(MI)) ||
+      MI->getNumOperands() != 3 || (IsDOT && Subtarget->hasDOTOpSelHazard())) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Stat.first, Mods};
   }
@@ -5589,7 +5589,8 @@ AMDGPUInstructionSelector::selectWMMAModsF32NegAbs(MachineOperand &Root) const {
   unsigned Mods = SISrcMods::OP_SEL_1;
   SmallVector<Register, 8> EltsF32;
 
-  if (GBuildVector *BV = dyn_cast<GBuildVector>(MRI->getVRegDef(Src))) {
+  GBuildVector *BV;
+  if (mi_match(Src, *MRI, m_GBuildVector(BV))) {
     assert(BV->getNumSources() > 0);
     // Based on first element decide which mod we match, neg or abs
     MachineInstr *ElF32 = MRI->getVRegDef(BV->getSourceReg(0));
@@ -5620,7 +5621,8 @@ AMDGPUInstructionSelector::selectWMMAModsF16Neg(MachineOperand &Root) const {
   unsigned Mods = SISrcMods::OP_SEL_1;
   SmallVector<Register, 8> EltsV2F16;
 
-  if (GConcatVectors *CV = dyn_cast<GConcatVectors>(MRI->getVRegDef(Src))) {
+  GConcatVectors *CV;
+  if (mi_match(Src, *MRI, m_GConcatVectors(CV))) {
     for (unsigned i = 0; i < CV->getNumSources(); ++i) {
       Register FNegSrc;
       if (!mi_match(CV->getSourceReg(i), *MRI, m_GFNeg(m_Reg(FNegSrc))))
@@ -5646,7 +5648,8 @@ AMDGPUInstructionSelector::selectWMMAModsF16NegAbs(MachineOperand &Root) const {
   unsigned Mods = SISrcMods::OP_SEL_1;
   SmallVector<Register, 8> EltsV2F16;
 
-  if (GConcatVectors *CV = dyn_cast<GConcatVectors>(MRI->getVRegDef(Src))) {
+  GConcatVectors *CV;
+  if (mi_match(Src, *MRI, m_GConcatVectors(CV))) {
     assert(CV->getNumSources() > 0);
     MachineInstr *ElV2F16 = MRI->getVRegDef(CV->getSourceReg(0));
     // Based on first element decide which mod we match, neg or abs
