@@ -1118,17 +1118,7 @@ getAPINotesObjectSelector(const CXXMethodDecl *Method) {
   api_notes::FunctionObjectSelector Selector;
   Selector.Const = Method->isConst();
   Selector.Volatile = Method->isVolatile();
-  switch (Method->getRefQualifier()) {
-  case RQ_None:
-    Selector.Ref = api_notes::FunctionObjectRefQualifier::None;
-    break;
-  case RQ_LValue:
-    Selector.Ref = api_notes::FunctionObjectRefQualifier::LValue;
-    break;
-  case RQ_RValue:
-    Selector.Ref = api_notes::FunctionObjectRefQualifier::RValue;
-    break;
-  }
+  Selector.Ref = Method->getRefQualifier();
   return Selector;
 }
 
@@ -1138,17 +1128,17 @@ static void getAPINotesObjectSelectorSubsets(
   enum ObjectSelectorField : unsigned {
     ConstField = 1u << 0,
     VolatileField = 1u << 1,
-    RefField = 1u << 2,
+    RefQualifierField = 1u << 2,
   };
 
   constexpr unsigned ObjectSelectorSubsetMasks[] = {
       ConstField,
       VolatileField,
-      RefField,
+      RefQualifierField,
       ConstField | VolatileField,
-      ConstField | RefField,
-      VolatileField | RefField,
-      ConstField | VolatileField | RefField,
+      ConstField | RefQualifierField,
+      VolatileField | RefQualifierField,
+      ConstField | VolatileField | RefQualifierField,
   };
 
   // Apply less-constrained object selectors before more-constrained ones so
@@ -1159,7 +1149,7 @@ static void getAPINotesObjectSelectorSubsets(
       Subset.Const = ObjectSelector.Const;
     if (Mask & VolatileField)
       Subset.Volatile = ObjectSelector.Volatile;
-    if (Mask & RefField)
+    if (Mask & RefQualifierField)
       Subset.Ref = ObjectSelector.Ref;
     Subsets.push_back(Subset);
   }
@@ -1562,15 +1552,14 @@ void APINotesSelectorDiagnosticReaderState::diagnoseUnused(
         continue;
     }
 
-    std::optional<ArrayRef<std::string>> ParameterRefs;
+    api_notes::FunctionSelector FunctionSelector;
     if (ParameterSpellings)
-      ParameterRefs = ArrayRef<std::string>(*ParameterSpellings);
+      FunctionSelector.Parameters = *ParameterSpellings;
+    FunctionSelector.Object = Selector.first.Key.objectSelector;
 
     S.Diag(SeenName->second.Loc, diag::warn_apinotes_message)
         << (llvm::Twine("API notes entry for '") + SeenName->second.Name +
-            "' has unmatched " +
-            api_notes::formatAPINotesFunctionSelector(
-                ParameterRefs, Selector.first.Key.objectSelector))
+            "' has unmatched " + FunctionSelector.format())
                .str();
   }
 }

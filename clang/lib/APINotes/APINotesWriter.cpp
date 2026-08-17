@@ -559,12 +559,12 @@ static uint8_t getFunctionTableKeyFlags(const FunctionTableKey &Key) {
   if (Key.objectSelector->Ref) {
     Flags |= FunctionKeyObjectRefPresent;
     switch (*Key.objectSelector->Ref) {
-    case FunctionObjectRefQualifier::None:
+    case RQ_None:
       break;
-    case FunctionObjectRefQualifier::LValue:
+    case RQ_LValue:
       Flags |= FunctionKeyObjectRefLValue;
       break;
-    case FunctionObjectRefQualifier::RValue:
+    case RQ_RValue:
       Flags |= FunctionKeyObjectRefRValue;
       break;
     }
