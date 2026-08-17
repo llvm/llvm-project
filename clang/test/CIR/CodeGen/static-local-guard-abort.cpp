@@ -54,3 +54,53 @@ void f() { static S s; }
 // NOTSS-NOT:     __cxa_guard_abort
 // NOTSS-NOT:     __cxa_guard_acquire
 // NOTSS:         ret void
+
+struct Temp {
+  Temp(int);
+  ~Temp();
+};
+
+struct Elem {
+  Elem(const Temp &);
+  ~Elem();
+};
+
+void g() { static Elem arr[] = {Temp(1), Temp(2), Temp(3)}; }
+
+// An array element constructor can throw part-way through, which stacks three
+// kinds of cleanup inside the guard. Outermost is the guard-abort scope; within
+// it the partial-array destroy, EH-only and bounded by the arrayinit.endOfInit
+// watermark so it destroys exactly the elements already constructed; and within
+// that a `cleanup all` per argument temporary, which is destroyed on the normal
+// path too. The __cxa_atexit that registers the whole array stays inside the
+// guard-abort scope, and only __cxa_guard_release is outside it.
+
+// CIR-LABEL: cir.func {{.*}}@_Z1gv
+// CIR:         %[[G:.*]] = cir.get_global @_ZGVZ1gvE3arr
+// CIR:         cir.call @__cxa_guard_acquire(%[[G]])
+// CIR:         cir.cleanup.scope {
+// CIR:           %[[END:.*]] = cir.alloca "arrayinit.endOfInit"
+// CIR:           cir.cleanup.scope {
+// CIR:             cir.call @_ZN4TempC1Ei
+// CIR:             cir.call @_ZN4ElemC1ERK4Temp
+// CIR:           } cleanup all {
+// CIR:             cir.call @_ZN4TempD1Ev({{.*}}) nothrow
+// CIR:           } cleanup eh {
+// CIR:             cir.load{{.*}} %[[END]]
+// CIR:             cir.call @_ZN4ElemD1Ev({{.*}}) nothrow
+// CIR:           cir.call @__cxa_atexit
+// CIR:         } cleanup eh {
+// CIR:           cir.call @__cxa_guard_abort(%[[G]]) nothrow
+// CIR:         cir.call @__cxa_guard_release(%[[G]])
+
+// LLVM-LABEL: define {{.*}}void @_Z1gv()
+// LLVM:         call i32 @__cxa_guard_acquire(ptr @_ZGVZ1gvE3arr)
+// LLVM:         invoke void @_ZN4ElemC1ERK4Temp
+// LLVM:         call void @_ZN4ElemD1Ev
+// LLVM:         call void @__cxa_guard_abort(ptr @_ZGVZ1gvE3arr)
+// LLVM:         resume { ptr, i32 }
+
+// NOEXC-LABEL: define {{.*}}void @_Z1gv()
+// NOEXC-NOT:     __cxa_guard_abort
+// NOEXC-NOT:     landingpad
+// NOEXC:         ret void
