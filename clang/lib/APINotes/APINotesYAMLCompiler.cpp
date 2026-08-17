@@ -373,12 +373,11 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
 
 namespace llvm {
 namespace yaml {
-template <>
-struct ScalarEnumerationTraits<api_notes::FunctionObjectRefQualifier> {
-  static void enumeration(IO &IO, api_notes::FunctionObjectRefQualifier &Ref) {
-    IO.enumCase(Ref, "none", api_notes::FunctionObjectRefQualifier::None);
-    IO.enumCase(Ref, "lvalue", api_notes::FunctionObjectRefQualifier::LValue);
-    IO.enumCase(Ref, "rvalue", api_notes::FunctionObjectRefQualifier::RValue);
+template <> struct ScalarEnumerationTraits<clang::RefQualifierKind> {
+  static void enumeration(IO &IO, clang::RefQualifierKind &Ref) {
+    IO.enumCase(Ref, "none", clang::RQ_None);
+    IO.enumCase(Ref, "lvalue", clang::RQ_LValue);
+    IO.enumCase(Ref, "rvalue", clang::RQ_RValue);
   }
 };
 
@@ -822,8 +821,7 @@ getFunctionSelectorDuplicateKey(llvm::StringRef Name,
   llvm::SmallString<64> Key;
   llvm::raw_svector_ostream OS(Key);
   appendDuplicateKeyPart(OS, Name);
-  std::string SelectorText =
-      api_notes::formatAPINotesFunctionSelector(Selector);
+  std::string SelectorText = Selector.format();
   appendDuplicateKeyPart(OS, SelectorText);
   return Key.str().str();
 }
@@ -1235,8 +1233,7 @@ public:
             getFunctionSelectorDuplicateKey(CXXMethod.Name, *WhereSelector);
         if (!KnownMethodSelectors.insert(DuplicateKey).second) {
           emitError(llvm::Twine("multiple API notes entries for C++ method '") +
-                    CXXMethod.Name + "' with " +
-                    api_notes::formatAPINotesFunctionSelector(*WhereSelector));
+                    CXXMethod.Name + "' with " + WhereSelector->format());
           continue;
         }
       }
@@ -1329,8 +1326,7 @@ public:
         if (!KnownFunctionSelectors.insert(DuplicateKey).second) {
           emitError(
               llvm::Twine("multiple API notes entries for global function '") +
-              Function.Name + "' with " +
-              api_notes::formatAPINotesFunctionSelector(*WhereSelector));
+              Function.Name + "' with " + WhereSelector->format());
           continue;
         }
       }
