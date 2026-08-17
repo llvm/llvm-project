@@ -738,15 +738,14 @@ struct F8E5M2TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
       h16 = arith::TruncFOp::create(b, f16Ty, operand, nullptr,
                                     op.getFastmathAttr());
 
-    Value isNan =
-        arith::CmpFOp::create(b, arith::CmpFPredicate::UNE, h16, h16);
+    Value isNan = arith::CmpFOp::create(b, arith::CmpFPredicate::UNE, h16, h16);
     Value h16Bits = arith::BitcastOp::create(b, i16Ty, h16);
     // Rounding bias constants for dropping the low 8 mantissa bits.
     Value c7F = createConst(op.getLoc(), i16Ty, 0x7f, rewriter);
     Value c8 = createConst(op.getLoc(), i16Ty, 8, rewriter);
     Value c1 = createConst(op.getLoc(), i16Ty, 1, rewriter);
-    Value bit8 = arith::AndIOp::create(
-        b, arith::ShRUIOp::create(b, h16Bits, c8), c1);
+    Value bit8 =
+        arith::AndIOp::create(b, arith::ShRUIOp::create(b, h16Bits, c8), c1);
     Value roundingBias = arith::AddIOp::create(b, bit8, c7F);
     Value biased = arith::AddIOp::create(b, h16Bits, roundingBias);
     Value biasedAndShifted = arith::ShRUIOp::create(b, biased, c8);
@@ -879,7 +878,8 @@ struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Value absBits = arith::AndIOp::create(b, f32Bits, cAbsMask);
     Value absF32 = arith::BitcastOp::create(b, f32Ty, absBits);
     // Clamp to the F8E4M3FN maximum magnitude (448) then scale by 2^-8.
-    Value cMax = createFloatConst(op.getLoc(), f32Ty, APFloat(448.0f), rewriter);
+    Value cMax =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(448.0f), rewriter);
     absF32 = arith::MinNumFOp::create(b, absF32, cMax);
     Value cInv256 =
         createFloatConst(op.getLoc(), f32Ty, APFloat(0.00390625f), rewriter);
@@ -906,8 +906,8 @@ struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     mag8 = arith::SelectOp::create(b, isOverflow, c7E8, mag8);
     // Re-apply the sign.
     Value c24 = createConst(op.getLoc(), i32Ty, 24, rewriter);
-    Value sign8 =
-        arith::TruncIOp::create(b, i8Ty, arith::ShRUIOp::create(b, signBits, c24));
+    Value sign8 = arith::TruncIOp::create(
+        b, i8Ty, arith::ShRUIOp::create(b, signBits, c24));
     Value res8 = arith::OrIOp::create(b, mag8, sign8);
     Value cNan8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
     Value res = arith::SelectOp::create(b, isNan, cNan8, res8);
@@ -1148,41 +1148,39 @@ struct ArithExpandOpsPass
           });
     }
 
-    target.addDynamicallyLegalOp<arith::ExtFOp>(
-      [=](arith::ExtFOp op) {
-        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-        Type outETy = getElementTypeOrSelf(op.getType());
-        bool legalTypes = true;
-        if (includeBf16)
-          legalTypes &= !(inETy.isBF16() && outETy.isF32());
-        if (includeF8E8M0)
-          legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
-        if (includeF4E2M1)
-          legalTypes &= !llvm::isa<Float4E2M1FNType>(inETy);
-        if (includeF8E5M2)
-          legalTypes &= !llvm::isa<Float8E5M2Type>(inETy);
-        if (includeF8E4M3FN)
-          legalTypes &= !llvm::isa<Float8E4M3FNType>(inETy);
-        return legalTypes;
-      });
+    target.addDynamicallyLegalOp<arith::ExtFOp>([=](arith::ExtFOp op) {
+      Type inETy = getElementTypeOrSelf(op.getOperand().getType());
+      Type outETy = getElementTypeOrSelf(op.getType());
+      bool legalTypes = true;
+      if (includeBf16)
+        legalTypes &= !(inETy.isBF16() && outETy.isF32());
+      if (includeF8E8M0)
+        legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
+      if (includeF4E2M1)
+        legalTypes &= !llvm::isa<Float4E2M1FNType>(inETy);
+      if (includeF8E5M2)
+        legalTypes &= !llvm::isa<Float8E5M2Type>(inETy);
+      if (includeF8E4M3FN)
+        legalTypes &= !llvm::isa<Float8E4M3FNType>(inETy);
+      return legalTypes;
+    });
 
-    target.addDynamicallyLegalOp<arith::TruncFOp>(
-      [=](arith::TruncFOp op)  {
-        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-        Type outETy = getElementTypeOrSelf(op.getType());
-        bool legalTypes = true;
-        if (includeBf16)
-          legalTypes &= !(inETy.isF32() && outETy.isBF16());
-        if (includeF8E8M0)
-          legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy));
-        if (includeF4E2M1)
-          legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
-        if (includeF8E5M2)
-          legalTypes &= !llvm::isa<Float8E5M2Type>(outETy);
-        if (includeF8E4M3FN)
-          legalTypes &= !llvm::isa<Float8E4M3FNType>(outETy);
-        return legalTypes;
-      });
+    target.addDynamicallyLegalOp<arith::TruncFOp>([=](arith::TruncFOp op) {
+      Type inETy = getElementTypeOrSelf(op.getOperand().getType());
+      Type outETy = getElementTypeOrSelf(op.getType());
+      bool legalTypes = true;
+      if (includeBf16)
+        legalTypes &= !(inETy.isF32() && outETy.isBF16());
+      if (includeF8E8M0)
+        legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy));
+      if (includeF4E2M1)
+        legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
+      if (includeF8E5M2)
+        legalTypes &= !llvm::isa<Float8E5M2Type>(outETy);
+      if (includeF8E4M3FN)
+        legalTypes &= !llvm::isa<Float8E4M3FNType>(outETy);
+      return legalTypes;
+    });
 
     // clang-format on
     if (failed(applyPartialConversion(getOperation(), target,
