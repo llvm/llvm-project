@@ -710,8 +710,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     }
 
     Args.push_back(emitHlslClamp(*this, E, 5));
-    return EmitIntrinsicCall(
-        CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(), Args, RetTy);
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(),
+                             Args, RetTy);
   }
   case Builtin::BI__builtin_hlsl_resource_sample_grad: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
@@ -989,8 +989,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Intrinsic::ID IntrinsicID =
         llvm::Intrinsic::spv_resource_counterhandlefromimplicitbinding;
     SmallVector<Value *> Args{MainHandle, OrderID, SpaceOp};
-    return EmitIntrinsicCall(
-        IntrinsicID, {HandleTy, MainHandle->getType()}, Args);
+    return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
+                             Args);
   }
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
     Value *IndexOp = EmitScalarExpr(E->getArg(0));
@@ -1509,10 +1509,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // create our function type.
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Value *OpIndex = EmitScalarExpr(E->getArg(1));
-    return EmitIntrinsicCall(
-        CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
-        {OpExpr->getType()}, ArrayRef{OpExpr, OpIndex},
-        "hlsl.wave.readlane");
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
+                             {OpExpr->getType()}, ArrayRef{OpExpr, OpIndex},
+                             "hlsl.wave.readlane");
   }
   case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));

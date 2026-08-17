@@ -4653,8 +4653,7 @@ public:
                                     const Twine &Name = "");
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                     ArrayRef<llvm::Value *> Args,
-                                    llvm::Type *RetTy,
-                                    const Twine &Name = "");
+                                    llvm::Type *RetTy, const Twine &Name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                           const Twine &name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
