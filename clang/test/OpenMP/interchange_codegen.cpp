@@ -124,7 +124,6 @@ extern "C" void foo10() {
 #endif /* HEADER */
 
 
-<<<<<<< HEAD
 // CHECK1-LABEL: define {{[^@]+}}@body
 // CHECK1-SAME: (...) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:

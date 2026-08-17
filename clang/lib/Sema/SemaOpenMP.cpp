@@ -182,7 +182,6 @@ private:
     LoopControlVariablesMapTy LCVMap;
     /// Track DecompositionDecls and their data-sharing attributes to detect
     /// conflicting clauses on bindings from the same decomposition.
-    llvm::SmallDenseMap<const DecompositionDecl *, DSAInfo, 4> DecompositionDSA;
     DefaultDataSharingAttributes DefaultAttr = DSA_unspecified;
     SourceLocation DefaultAttrLoc;
     DefaultDataSharingVCAttributes DefaultVCAttr = DSA_VC_all;
@@ -1591,19 +1590,6 @@ void DSAStackTy::addDSA(const ValueDecl *D, const Expr *E, OpenMPClauseKind A,
       Data.RefExpr.setPointerAndInt(PrivateCopy, IsLastprivate);
       Data.PrivateCopy = nullptr;
       Data.AppliedToPointee = AppliedToPointee;
-    }
-    // Track DecompositionDecls for binding conflict detection.
-    if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-      if (const auto *DD =
-              dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
-        DSAInfo &DDData = getTopOfStack().DecompositionDSA[DD];
-        if (DDData.Attributes == OMPC_unknown) {
-          // First binding from this decomposition.
-          DDData.Attributes = A;
-          DDData.RefExpr.setPointerAndInt(E, IsLastprivate);
-          DDData.Modifier = Modifier;
-        }
-      }
     }
   }
 }
