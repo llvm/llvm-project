@@ -1102,11 +1102,13 @@ __m128i test_mm512_mask_cvtepi32_epi8(__m128i src, __mmask16 k,
 
 __m128i test_mm512_maskz_cvtepi32_epi8(__mmask16 k, __m512i a) {
   // CIR-LABEL: _mm512_maskz_cvtepi32_epi8
+  // CIR: %[[ZERO:.*]] = cir.call @{{.*}}_mm_setzero_si128
+  // CIR: %[[ZERO_CAST:.*]] = cir.cast bitcast %[[ZERO]]
   // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} :
   // CIR-SAME: !cir.vector<16 x !s32i> -> !cir.vector<16 x !s8i>
   // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} :
   // CIR-SAME: !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.vec.ternary(%[[MASK]], %[[TRUNC]], {{.*}}) :
+  // CIR: cir.vec.ternary(%[[MASK]], %[[TRUNC]], %[[ZERO_CAST]]) :
   // CIR-SAME: !cir.vector<16 x !cir.int<s, 1>>,
   // CIR-SAME: !cir.vector<16 x !s8i>
   //
@@ -1155,11 +1157,13 @@ __m256i test_mm512_mask_cvtepi32_epi16(__m256i src, __mmask16 k, __m512i a) {
 
 __m256i test_mm512_maskz_cvtepi32_epi16(__mmask16 k, __m512i a) {
   // CIR-LABEL: _mm512_maskz_cvtepi32_epi16
+  // CIR: %[[ZERO:.*]] = cir.call @{{.*}}_mm256_setzero_si256
+  // CIR: %[[ZERO_CAST:.*]] = cir.cast bitcast %[[ZERO]]
   // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} :
   // CIR-SAME: !cir.vector<16 x !s32i> -> !cir.vector<16 x !s16i>
   // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} :
   // CIR-SAME: !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: cir.vec.ternary(%[[MASK]], %[[TRUNC]], {{.*}}) :
+  // CIR: cir.vec.ternary(%[[MASK]], %[[TRUNC]], %[[ZERO_CAST]]) :
   // CIR-SAME: !cir.vector<16 x !cir.int<s, 1>>,
   // CIR-SAME: !cir.vector<16 x !s16i>
   //
@@ -1208,11 +1212,13 @@ __m128i test_mm512_mask_cvtepi64_epi16(__m128i src, __mmask8 k, __m512i a) {
 
 __m128i test_mm512_maskz_cvtepi64_epi16(__mmask8 k, __m512i a) {
   // CIR-LABEL: _mm512_maskz_cvtepi64_epi16
+  // CIR: %[[ZERO:.*]] = cir.call @{{.*}}_mm_setzero_si128
+  // CIR: %[[ZERO_CAST:.*]] = cir.cast bitcast %[[ZERO]]
   // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} :
   // CIR-SAME: !cir.vector<8 x !s64i> -> !cir.vector<8 x !s16i>
   // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} :
   // CIR-SAME: !u8i -> !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: cir.vec.ternary(%[[MASK]], %[[TRUNC]], {{.*}}) :
+  // CIR: cir.vec.ternary(%[[MASK]], %[[TRUNC]], %[[ZERO_CAST]]) :
   // CIR-SAME: !cir.vector<8 x !cir.int<s, 1>>,
   // CIR-SAME: !cir.vector<8 x !s16i>
   //
