@@ -299,6 +299,27 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildConstant(DstOps[0], Csts[0]);
     return buildBuildVectorConstant(DstOps[0], Csts);
   }
+  case TargetOpcode::G_BITCAST: {
+    assert(SrcOps.size() == 1 && "Expected one source");
+    assert(DstOps.size() == 1 && "Expected one dest");
+
+    LLT SrcTy = SrcOps[0].getLLTTy(*getMRI());
+    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+
+    if (SrcTy.isVector() || DstTy.isVector())
+      break;
+    auto ConstantSrc = getAnyConstantVRegValWithLookThrough(
+        SrcOps[0].getReg(), *getMRI(), /*LookThroughInstrs=*/false);
+    if (!ConstantSrc.has_value())
+      break;
+
+    if (DstTy.isFloat()) {
+      return buildFConstant(
+          DstOps[0],
+          APFloat(llvm::getFltSemanticForLLT(DstTy), ConstantSrc->Value));
+    }
+    return buildConstant(DstOps[0], ConstantSrc->Value);
+  }
   }
   bool CanCopy = checkCopyToDefsPossible(DstOps);
   if (!canPerformCSEForOpc(Opc))

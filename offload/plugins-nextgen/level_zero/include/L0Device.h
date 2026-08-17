@@ -143,9 +143,6 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// MemAllocator for this device.
   MemAllocatorTy MemAllocator;
 
-  /// Cache of queues for this device.
-  L0QueueCacheTy QueueCache;
-
   DeviceArchTy computeArch() const;
 
   /// Scan the device's command queue groups, selecting the default compute
@@ -163,7 +160,7 @@ public:
              const std::string_view zeId, int32_t ComputeIndex)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
         L0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
-        ComputeIndex(ComputeIndex), QueueCache(*this) {
+        ComputeIndex(ComputeIndex) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     DeviceProperties.pNext = nullptr;
     ComputeProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
@@ -369,11 +366,14 @@ public:
 
   /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
-  createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false);
+  createImmCmdList(uint32_t Ordinal, uint32_t Index,
+                   ze_context_handle_t UserZeCtx, bool InOrder = false);
 
   /// Create an immediate command list for computing.
-  Expected<ze_command_list_handle_t> createImmCmdList(bool InOrder = false) {
-    return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
+  Expected<ze_command_list_handle_t>
+  createImmCmdList(ze_context_handle_t UserZeCtx, bool InOrder = false) {
+    return createImmCmdList(getComputeEngine(), getComputeIndex(), UserZeCtx,
+                            InOrder);
   }
 
   /// Release an immediate command list.
@@ -382,8 +382,9 @@ public:
     return Plugin::success();
   }
 
-  Expected<L0CmdListManagerTy *> getCmdListManager(bool InOrder = false) {
-    auto CmdListOrErr = createImmCmdList(InOrder);
+  Expected<L0CmdListManagerTy *>
+  getCmdListManager(ze_context_handle_t UserZeCtx, bool InOrder = false) {
+    auto CmdListOrErr = createImmCmdList(UserZeCtx, InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     return new L0CmdListManagerTy(*CmdListOrErr, L0Context);
@@ -468,9 +469,12 @@ public:
   bool supportsLargeMem() const { return L0Context.supportsLargeMem(); }
 
   /// Returns the Queue from an async info object, or creates a new one if
-  /// the async info does not have a queue yet.
-  Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
-  void releaseQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+  /// the async info does not have a queue yet. When \p UserCtx is null the
+  /// driver's default plugin-side context is used.
+  Expected<L0QueueTy *>
+  getOrCreateQueue(__tgt_async_info *AsyncInfo,
+                   LevelZeroPluginContextTy *UserCtx = nullptr);
+  void releaseQueue(L0QueueTy *Queue);
 
   // Allocation related routines.
 
@@ -547,7 +551,6 @@ public:
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Expected<bool>
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 

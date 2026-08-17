@@ -75,6 +75,9 @@ private:
     return nullptr;
   }
 
+  std::optional<std::pair<size_t, const RegisterInfo *>>
+  LookupChildWithName(llvm::StringRef name);
+
   // For ValueObject only
   ValueObjectRegisterSet(const ValueObjectRegisterSet &) = delete;
   const ValueObjectRegisterSet &

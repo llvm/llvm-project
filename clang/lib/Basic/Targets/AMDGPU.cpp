@@ -224,12 +224,16 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
+    Int64Type = SignedLong;
+    IntMaxType = SignedLong;
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
 
-  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"}) {
+  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts", "supports-wgp",
+                 "supports-wave32", "xnack-support", "sramecc-support",
+                 "xnack-on-off-modes"}) {
     if (GPUKind != llvm::AMDGPU::GK_NONE)
       ReadOnlyFeatures.insert(F);
   }

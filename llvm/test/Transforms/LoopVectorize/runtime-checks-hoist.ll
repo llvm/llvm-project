@@ -62,7 +62,7 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[FOUND_CONFLICT]], [[STRIDE_CHECK]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -180,7 +180,7 @@ define void @full_checks(ptr nocapture noundef %dst, ptr nocapture noundef reado
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -308,7 +308,7 @@ define void @full_checks_diff_strides(ptr nocapture noundef %dst, ptr nocapture 
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -424,7 +424,7 @@ define void @diff_checks_src_start_invariant(ptr nocapture noundef writeonly %ds
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP12]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -533,7 +533,7 @@ define void @full_checks_src_start_invariant(ptr nocapture noundef %dst, ptr noc
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -674,7 +674,7 @@ define void @triple_nested_loop_mixed_access(ptr nocapture noundef %dst, ptr noc
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -829,7 +829,7 @@ define void @uncomputable_outer_tc(ptr nocapture noundef %dst, ptr nocapture nou
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -988,7 +988,7 @@ define void @decreasing_inner_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP18]], [[STRIDE_CHECK2]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP17]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP17]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP17]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1151,7 +1151,7 @@ define void @decreasing_outer_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[STRIDE_CHECK4]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1303,7 +1303,7 @@ define void @unknown_inner_stride(ptr nocapture noundef %dst, ptr nocapture noun
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -1418,7 +1418,7 @@ define void @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec(ptr noca
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

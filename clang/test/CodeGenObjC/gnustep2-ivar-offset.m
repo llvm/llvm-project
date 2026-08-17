@@ -28,3 +28,22 @@
 // CHECK: @.objc_ivar_list = private global { i32, i64, [4 x { ptr, ptr, ptr, i32, i32 }] } { i32 4, i64 32,
 // Check that we emit 1 as the size of _Bool, not 0.
 // CHECK-SAME:  @__objc_ivar_offset_ANObject.boolIvar.B, i32 1, i32 4
+
+
+// The derived class reuses tail padding in the base class.
+// Its ivar is at offset 12, while the superclass instance size is 16, so the relative offset is -4.
+@interface Base {
+  long long a;
+  char b;
+}
+@end
+
+@interface Derived : Base {
+  int c;
+}
+@end
+
+@implementation Base @end
+@implementation Derived @end
+
+// CHECK: @__objc_ivar_offset_Derived.c.i = global i32 -4

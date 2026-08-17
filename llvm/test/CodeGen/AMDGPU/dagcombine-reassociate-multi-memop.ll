@@ -7,7 +7,7 @@
 
 @global_smem = external addrspace(3) global [0 x i8], align 16
 
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1), i16, i64, i32)
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1), i16, i64, i32)
 declare void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8), ptr addrspace(3) nocapture, i32, i32, i32, i32, i32)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
@@ -43,7 +43,7 @@ define amdgpu_kernel void @buffer_load_lds_reassociate_offsets(ptr addrspace(1) 
   %offset2 = add i32 %add1, 33
   %shl1 = shl i32 %offset1, 1
   %shl2 = shl i32 %offset2, 1
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) %ptr, i16 0, i64 2147483646, i32 159744)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %ptr, i16 0, i64 2147483646, i32 159744)
   %lds0 = getelementptr inbounds i8, ptr addrspace(3) @global_smem, i32 0
   %lds1 = getelementptr inbounds i8, ptr addrspace(3) @global_smem, i32 1056
   call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds0, i32 16, i32 %shl1, i32 0, i32 0, i32 0)

@@ -67,6 +67,10 @@ static cl::opt<bool> ForceTargetSupportsGatherScatterOps(
     cl::desc("Assume the target supports gather/scatter operations (used for "
              "testing)."));
 
+static cl::opt<float> ScalableEpilogueVFCostScaleFactor(
+    "scalable-epilogue-vf-cost-scale-factor", cl::init(2.0), cl::Hidden,
+    cl::desc("Scale the cost of scalable epilogue VFs by this factor."));
+
 /// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
 /// is passed, the message relates to that particular instruction.
 #ifndef NDEBUG
@@ -702,6 +706,23 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
         !B.Width.isScalar())
       return true;
 
+  // Favor fixed VFs for epilogue loops by scaling the costs of scalable VFs
+  // 'ScalableEpilogueVFCostScaleFactor' (default 2.0). This is intended to
+  // model that fixed VFs are more likely to be fully unrolled (or optimized
+  // out) post vectorization. TODO: Reconsider this restriction for predicated
+  // epilogues (once supported).
+  if (IsEpilogue && A.Width.isScalable() != B.Width.isScalable() &&
+      A.Cost.isValid() && B.Cost.isValid()) {
+    auto [FixedCost, ScalableCost] = std::make_pair(CostA, CostB);
+    if (B.Width.isFixed())
+      std::swap(FixedCost, ScalableCost);
+
+    ScalableCost *= ScalableEpilogueVFCostScaleFactor;
+
+    if (FixedCost <= ScalableCost)
+      return A.Width.isFixed();
+  }
+
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
   unsigned EstimatedWidthB = B.Width.getKnownMinValue();
@@ -722,7 +743,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // Assume vscale may be larger than 1 (or the value being tuned for),
   // so that scalable vectorization is slightly favorable over fixed-width
   // vectorization.
-  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost(IsEpilogue) &&
+  bool PreferScalable = !TTI.preferFixedOverScalableIfEqualCost() &&
                         A.Width.isScalable() && !B.Width.isScalable();
 
   auto CmpFn = [PreferScalable](const InstructionCost &LHS,

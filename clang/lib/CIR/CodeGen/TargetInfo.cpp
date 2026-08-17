@@ -45,6 +45,32 @@ bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
   return isEmptyRecordForLayout(context, fd->getType());
 }
 
+bool clang::CIRGen::isEmptyRecordForABI(const ASTContext &context, QualType t) {
+  const auto *rd = t->getAsRecordDecl();
+  if (!rd)
+    return false;
+  if (rd->hasFlexibleArrayMember())
+    return false;
+
+  if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
+    // A vtable pointer is neither a base nor a field, so clang's predicate
+    // calls a polymorphic class empty and leans on its callers rejecting one as
+    // non-trivially-copyable beforehand.  This answer is read off the record
+    // type without that precondition, so rule it out here instead.
+    if (cxxrd->isDynamicClass())
+      return false;
+
+    for (const auto &i : cxxrd->bases())
+      if (!isEmptyRecordForABI(context, i.getType()))
+        return false;
+  }
+
+  for (const auto *i : rd->fields())
+    if (!isEmptyFieldForABI(context, i))
+      return false;
+  return true;
+}
+
 bool clang::CIRGen::isEmptyFieldForABI(const ASTContext &context,
                                        const FieldDecl *fd) {
   if (fd->isUnnamedBitField())
@@ -73,32 +99,6 @@ bool clang::CIRGen::isEmptyFieldForABI(const ASTContext &context,
     return false;
 
   return isEmptyRecordForABI(context, ft);
-}
-
-bool clang::CIRGen::isEmptyRecordForABI(const ASTContext &context, QualType t) {
-  const auto *rd = t->getAsRecordDecl();
-  if (!rd)
-    return false;
-  if (rd->hasFlexibleArrayMember())
-    return false;
-
-  if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
-    // A vtable pointer is neither a base nor a field, so clang's predicate
-    // calls a polymorphic class empty and leans on its callers rejecting one as
-    // non-trivially-copyable beforehand.  This answer is recorded as metadata
-    // and read without that precondition, so rule it out here instead.
-    if (cxxrd->isDynamicClass())
-      return false;
-
-    for (const auto &i : cxxrd->bases())
-      if (!isEmptyRecordForABI(context, i.getType()))
-        return false;
-  }
-
-  for (const auto *i : rd->fields())
-    if (!isEmptyFieldForABI(context, i))
-      return false;
-  return true;
 }
 
 namespace {

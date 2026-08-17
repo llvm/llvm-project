@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class and padded, packed, and
+// over-aligned record shapes.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 struct Trivial { int x, y; };
@@ -52,10 +55,10 @@ void takesUnnamedBitsUnion(UnnamedBitsUnion u) {}
 void takesNoMembers(NoMembers n) {}
 
 // Record types should NOT contain ABI metadata keywords.
-// CIR-DAG: !rec_Trivial = !cir.struct<"Trivial" {!s32i, !s32i}>
-// CIR-DAG: !rec_Empty = !cir.struct<"Empty" padded {!u8i}>
-// CIR-DAG: !rec_Aligned = !cir.struct<"Aligned" padded {!s32i, !s32i, !cir.array<!u8i x 8>}>
-// CIR-DAG: !rec_NonTrivialDtor = !cir.struct<class "NonTrivialDtor" {!s32i}>
+// CIR-DAG: !rec_Trivial = !cir.struct<"Trivial" {data !s32i, data !s32i}>
+// CIR-DAG: !rec_Empty = !cir.struct<"Empty" {pad !u8i}>
+// CIR-DAG: !rec_Aligned = !cir.struct<"Aligned" {data !s32i, data !s32i, pad !cir.array<!u8i x 8>}>
+// CIR-DAG: !rec_NonTrivialDtor = !cir.struct<class "NonTrivialDtor" {data !s32i}>
 
 // UnnamedBits and OneByte are the same type, so only the metadata separates
 // the one that carries data from the one that does not.

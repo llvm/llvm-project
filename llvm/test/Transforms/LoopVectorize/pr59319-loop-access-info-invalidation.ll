@@ -11,7 +11,7 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = urem i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -49,15 +49,15 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH3]], label [[VECTOR_PH5:%.*]]
 ; CHECK:       vector.ph5:
-; CHECK-NEXT:    [[TMP8:%.*]] = urem i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[N_VEC6:%.*]] = sub i64 [[TMP3]], [[TMP8]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY7:%.*]]
-; CHECK:       vector.body8:
+; CHECK:       vector.body7:
 ; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ 0, [[VECTOR_PH5]] ], [ [[INDEX_NEXT9:%.*]], [[VECTOR_BODY7]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX8]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC6]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK10:%.*]], label [[VECTOR_BODY7]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       middle.block11:
+; CHECK:       middle.block10:
 ; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
 ; CHECK-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC6]]
 ; CHECK-NEXT:    br i1 [[CMP_N11]], label [[LOOP_3_LR_PH:%.*]], label [[SCALAR_PH3]]
@@ -69,7 +69,7 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[ARRAYIDX_I_I62:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[IDXPROM_I_I61]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK20:%.*]] = icmp ult i64 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK20]], label [[SCALAR_PH19:%.*]], label [[VECTOR_MEMCHECK13:%.*]]
-; CHECK:       vector.memcheck14:
+; CHECK:       vector.memcheck13:
 ; CHECK-NEXT:    [[SCEVGEP14:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw nsw i64 [[IDXPROM_I_I61]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[TMP10]], 4
@@ -78,20 +78,20 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[BOUND117:%.*]] = icmp ult ptr [[ARRAYIDX_I_I62]], [[SCEVGEP14]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT18:%.*]] = and i1 [[BOUND016]], [[BOUND117]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT18]], label [[SCALAR_PH19]], label [[VECTOR_PH21:%.*]]
-; CHECK:       vector.ph22:
-; CHECK-NEXT:    [[TMP12:%.*]] = urem i64 [[TMP3]], 4
+; CHECK:       vector.ph21:
+; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[N_VEC22:%.*]] = sub i64 [[TMP3]], [[TMP12]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY23:%.*]]
-; CHECK:       vector.body25:
+; CHECK:       vector.body23:
 ; CHECK-NEXT:    [[INDEX24:%.*]] = phi i64 [ 0, [[VECTOR_PH21]] ], [ [[INDEX_NEXT25:%.*]], [[VECTOR_BODY23]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT25]] = add nuw i64 [[INDEX24]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT25]], [[N_VEC22]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK26:%.*]], label [[VECTOR_BODY23]], !llvm.loop [[LOOP10:![0-9]+]]
-; CHECK:       middle.block28:
+; CHECK:       middle.block26:
 ; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[CMP_N27:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC22]]
 ; CHECK-NEXT:    br i1 [[CMP_N27]], label [[LOOP_CLEANUP:%.*]], label [[SCALAR_PH19]]
-; CHECK:       scalar.ph20:
+; CHECK:       scalar.ph19:
 ; CHECK-NEXT:    [[BC_RESUME_VAL28:%.*]] = phi i64 [ [[N_VEC22]], [[MIDDLE_BLOCK26]] ], [ 0, [[LOOP_3_LR_PH]] ], [ 0, [[VECTOR_MEMCHECK13]] ]
 ; CHECK-NEXT:    br label [[LOOP_3:%.*]]
 ; CHECK:       loop.2:

@@ -37,18 +37,16 @@ bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
 /// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
-/// isEmptyFieldForABI - Return true if the field is "empty" for argument
-/// passing.  An unnamed bit-field of any width qualifies, as does an empty
-/// record, though a C++ one only under [[no_unique_address]] and never through
-/// an array of them.  This differs from isEmptyFieldForLayout, which counts
-/// only a zero-width bit-field, because a narrower unnamed bit-field still
-/// occupies no ABI class even though it takes up layout space.
+/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is an
+/// unnamed bit-field or an (array of) empty record(s).  C++ record fields are
+/// never empty unless marked [[no_unique_address]], and that exception applies
+/// only to records, not arrays of records.
 bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
 
-/// isEmptyRecordForABI - Return true if a record contains only empty base
-/// classes and fields, and so contributes no data to argument passing.  What
-/// that means for a signature is the caller's to decide: an empty record small
-/// enough is dropped, but one past two eightbytes is still passed indirectly.
+/// isEmptyRecordForABI - Return true if a structure contains only empty base
+/// classes and fields.  Note that a structure with a flexible array member is
+/// not considered empty, and neither is a polymorphic class, whose vtable
+/// pointer is neither a base nor a field.
 bool isEmptyRecordForABI(const ASTContext &context, QualType t);
 
 class CIRGenFunction;
@@ -128,6 +126,24 @@ public:
   /// right thing when calling a function with no know signature.
   virtual bool isNoProtoCallVariadic(const FunctionNoProtoType *fnType) const;
 
+  /// Returns true if inlining the function call would produce incorrect code
+  /// for the current target and should be ignored (even with the always_inline
+  /// or flatten attributes).
+  ///
+  /// Note: This probably should be handled in LLVM. However, the LLVM
+  /// `alwaysinline` attribute currently means the inliner will ignore
+  /// mismatched attributes (which sometimes can generate invalid code). So,
+  /// this hook allows targets to avoid adding the LLVM `alwaysinline` attribute
+  /// based on C/C++ attributes or other target-specific reasons.
+  ///
+  /// See previous discussion here:
+  /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
+  virtual bool
+  wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
+                                      const FunctionDecl *Callee) const {
+    return false;
+  }
+
   /// Provides a convenient hook to handle extra target-specific attributes
   /// for the given global.
   /// In OG, the function receives an llvm::GlobalValue. However, functions
@@ -136,6 +152,12 @@ public:
   virtual void setTargetAttributes(const clang::Decl *decl,
                                    mlir::Operation *global,
                                    CIRGenModule &module) const {}
+
+  /// Get the CIR calling convention to use for a device kernel entry point
+  /// (e.g. an OpenCL/SYCL or CUDA/HIP kernel) on this target.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const {
+    return cir::CallingConv::C;
+  }
 
   virtual bool isScalarizableAsmOperand(CIRGenFunction &cgf,
                                         mlir::Type ty) const {
@@ -166,6 +188,9 @@ void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
                                        cir::FuncOp func, CIRGenModule &cgm);
 
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo>
+createAArch64TargetCIRGenInfo(CIRGenTypes &cgt);
 
 std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
 
