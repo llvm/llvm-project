@@ -32,15 +32,11 @@ constexpr bool test_order(std::strong_ordering expected) {
 template <class T, class U>
 constexpr bool eq = test_order<T, U>(std::strong_ordering::equal);
 template <class T, class U>
-constexpr bool ne =
-    std::type_order<T, U>()() != std::strong_ordering::equal &&
-    std::type_order<T, U>::value != std::strong_ordering::equal &&
-    std::type_order_v<T, U> != std::strong_ordering::equal &&
-    static_cast<std::strong_ordering>(std::type_order<T, U>()) != std::strong_ordering::equal;
-template <class T, class U>
 constexpr bool lt = test_order<T, U>(std::strong_ordering::less);
 template <class T, class U>
 constexpr bool gt = test_order<T, U>(std::strong_ordering::greater);
+template <class T, class U>
+constexpr bool ne = lt<T, U> || gt<T, U>;
 
 struct A {};
 struct B {};
