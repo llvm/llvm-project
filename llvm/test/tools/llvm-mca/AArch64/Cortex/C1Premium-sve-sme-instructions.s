@@ -11,8 +11,17 @@
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      4     0.50                        bfmlslb	z0.s, z1.h, z2.h
+# CHECK-NEXT:  1      4     0.50                        bfmlslt	z0.s, z1.h, z2.h
+# CHECK-NEXT:  1      2     0.50                        fclamp	z0.s, z1.s, z2.s
 # CHECK-NEXT:  1      4     0.50                        fdot	z0.s, z1.h, z2.h
 # CHECK-NEXT:  1      2     1.00                        psel	p0, p0, p0.b[w12, 0]
+# CHECK-NEXT:  1      2     0.50                        revd	z0.q, p0/m, z0.q
+# CHECK-NEXT:  1      2     0.50                        sclamp	z0.s, z1.s, z2.s
+# CHECK-NEXT:  1      2     0.50                        uclamp	z0.s, z1.s, z2.s
+# CHECK-NEXT:  1      3     0.50                        sdot	z0.s, z0.h, z0.h
+# CHECK-NEXT:  1      3     0.50                        udot	z0.s, z0.h, z0.h
+# CHECK-NEXT:  1      2     0.50                        sqcvtun	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  1      3     0.50                        sqrshrun	z0.h, { z0.s, z1.s }, #16
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - C1PUnitB
@@ -59,10 +68,19 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -     1.00   1.00
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -     5.50   5.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   bfmlslb	z0.s, z1.h, z2.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   bfmlslt	z0.s, z1.h, z2.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fclamp	z0.s, z1.s, z2.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fdot	z0.s, z1.h, z2.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -     psel	p0, p0, p0.b[w12, 0]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   revd	z0.q, p0/m, z0.q
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sclamp	z0.s, z1.s, z2.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uclamp	z0.s, z1.s, z2.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sdot	z0.s, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   udot	z0.s, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sqcvtun	z0.h, { z0.s, z1.s }
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   sqrshrun	z0.h, { z0.s, z1.s }, #16

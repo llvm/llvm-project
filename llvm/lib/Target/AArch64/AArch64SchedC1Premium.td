@@ -2481,7 +2481,7 @@ def : InstRW<[C1PWrite_2c_1V_1CMEVXALU],
 
 // Floating point multiply
 def : InstRW<[C1PWrite_3c_1V_1CMEVXMUL],
-             (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]", "^FMULX_ZPZZ_[HSD]",
+             (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]", "^FMULX_ZPZZ_[HSD]",
                         "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]", "^FMUL_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply accumulate
