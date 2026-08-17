@@ -8,4 +8,4 @@ void a(void) {
 
 // Check that we can generate code for this correctly. The matching input
 // constraint should not have an early clobber on it.
-// CHECK: call i64 asm sideeffect "mfcr $0", "=&{r0},{r0}"
+// CHECK: call i64 asm sideeffect "mfcr $0", "=&{r0},0"
