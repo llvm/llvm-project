@@ -160,6 +160,24 @@ class SymbolTargetOp(
     pass
 
 
+class RegionOp(
+    MemoryEffectsTest.Operation,
+    name="region",
+    traits=[ir.NoTerminatorTrait],
+):
+    result: ext.Result[Any]
+    body: ext.Region
+
+
+class RecursiveRegionOp(
+    MemoryEffectsTest.Operation,
+    name="recursive_region",
+    traits=[ir.NoTerminatorTrait, ir.RecursiveMemoryEffectsTrait],
+):
+    result: ext.Result[Any]
+    body: ext.Region
+
+
 def run_pass(source, pipeline):
     module = ir.Module.parse(source)
     PassManager.parse(pipeline).run(module.operation)
@@ -168,6 +186,13 @@ def run_pass(source, pipeline):
 
 with ir.Context(), ir.Location.unknown():
     MemoryEffectsTest.load()
+
+    # CHECK: recursive memory effects traits: False True
+    print(
+        "recursive memory effects traits:",
+        RegionOp.has_trait(ir.RecursiveMemoryEffectsTrait),
+        RecursiveRegionOp.has_trait(ir.RecursiveMemoryEffectsTrait),
+    )
 
     # CHECK: memory effect properties: True True True True
     print(
@@ -288,6 +313,41 @@ with ir.Context(), ir.Location.unknown():
         read_across_write.count('"memory_effects_test.read"'),
     )
 
+    recursive_cse = run_pass(
+        """
+        module {
+          func.func @test() -> (i32, i32, i32, i32) {
+            %0 = "memory_effects_test.region"() ({
+              "memory_effects_test.no_effect"() : () -> ()
+            }) : () -> i32
+            %1 = "memory_effects_test.region"() ({
+              "memory_effects_test.no_effect"() : () -> ()
+            }) : () -> i32
+            %2 = "memory_effects_test.recursive_region"() ({
+              "memory_effects_test.no_effect"() : () -> ()
+            }) : () -> i32
+            %3 = "memory_effects_test.recursive_region"() ({
+              "memory_effects_test.no_effect"() : () -> ()
+            }) : () -> i32
+            return %0, %1, %2, %3 : i32, i32, i32, i32
+          }
+        }
+        """,
+        "builtin.module(func.func(cse))",
+    )
+    # An op without RecursiveMemoryEffects has unknown effects and cannot be
+    # CSE'd. The trait makes the other op's empty nested effects visible.
+    # CHECK: CSE non-recursive region count: 2
+    # CHECK: CSE recursive region count: 1
+    print(
+        "CSE non-recursive region count:",
+        recursive_cse.count('"memory_effects_test.region"'),
+    )
+    print(
+        "CSE recursive region count:",
+        recursive_cse.count('"memory_effects_test.recursive_region"'),
+    )
+
     dead_code = run_pass(
         """
         module {
@@ -324,6 +384,60 @@ with ir.Context(), ir.Location.unknown():
     print(
         "DCE result allocate count:",
         dead_code.count('"memory_effects_test.allocate_result"'),
+    )
+
+    recursive_read_dce = run_pass(
+        """
+        module {
+          func.func @test() {
+            %0 = "memory_effects_test.region"() ({
+              "memory_effects_test.read_dead"() : () -> ()
+            }) : () -> i32
+            %1 = "memory_effects_test.recursive_region"() ({
+              "memory_effects_test.read_dead"() : () -> ()
+            }) : () -> i32
+            return
+          }
+        }
+        """,
+        "builtin.module(func.func(trivial-dce))",
+    )
+    # The non-recursive op has unknown effects and remains. The recursive op is
+    # removable because all nested effects are reads.
+    # CHECK: DCE non-recursive read region count: 1
+    # CHECK: DCE recursive read region count: 0
+    print(
+        "DCE non-recursive read region count:",
+        recursive_read_dce.count('"memory_effects_test.region"'),
+    )
+    print(
+        "DCE recursive read region count:",
+        recursive_read_dce.count('"memory_effects_test.recursive_region"'),
+    )
+
+    recursive_write_dce = run_pass(
+        """
+        module {
+          func.func @test() {
+            %0 = "memory_effects_test.recursive_region"() ({
+              "memory_effects_test.write_dead"() : () -> ()
+            }) : () -> i32
+            return
+          }
+        }
+        """,
+        "builtin.module(func.func(trivial-dce))",
+    )
+    # A nested Write remains observable through RecursiveMemoryEffects.
+    # CHECK: DCE recursive write region count: 1
+    # CHECK: DCE nested write count: 1
+    print(
+        "DCE recursive write region count:",
+        recursive_write_dce.count('"memory_effects_test.recursive_region"'),
+    )
+    print(
+        "DCE nested write count:",
+        recursive_write_dce.count('"memory_effects_test.write_dead"'),
     )
 
     target_variants = run_pass(

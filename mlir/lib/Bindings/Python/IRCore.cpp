@@ -2685,6 +2685,28 @@ void PyDynamicOpTraits::IsIsolatedFromAbove::bind(nb::module_ &m) {
       nb::arg("context").none() = nb::none());
 }
 
+bool PyDynamicOpTraits::RecursiveMemoryEffects::attach(const nb::object &opName,
+                                                       PyMlirContext &context) {
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitRecursiveMemoryEffectsCreate();
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTraits::RecursiveMemoryEffects::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTraits::RecursiveMemoryEffects, PyDynamicOpTrait> cls(
+      m, "RecursiveMemoryEffectsTrait");
+  cls.attr(typeIDAttr) =
+      PyTypeID(mlirDynamicOpTraitRecursiveMemoryEffectsGetTypeID());
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName,
+         DefaultingPyMlirContext context) {
+        return PyDynamicOpTraits::RecursiveMemoryEffects::attach(
+            opName, *context.get());
+      },
+      "Attach RecursiveMemoryEffects trait to the given operation name.",
+      nb::arg("cls"), nb::arg("op_name"),
+      nb::arg("context").none() = nb::none());
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
@@ -5320,6 +5342,7 @@ void populateIRCore(nb::module_ &m) {
   PyDynamicOpTraits::IsTerminator::bind(m);
   PyDynamicOpTraits::NoTerminator::bind(m);
   PyDynamicOpTraits::IsIsolatedFromAbove::bind(m);
+  PyDynamicOpTraits::RecursiveMemoryEffects::bind(m);
 
   // MLIRError exception.
   MLIRError::bind(m);
