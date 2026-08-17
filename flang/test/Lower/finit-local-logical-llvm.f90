@@ -4,7 +4,6 @@
 ! bitcasted integer address instead so the bit pattern is preserved.
 !
 ! RUN: %flang_fc1 -emit-llvm -finit-local=0xAA %s -o - | FileCheck --check-prefix=HEX %s
-! RUN: %flang_fc1 -emit-llvm -finit-local=nan  %s -o - | FileCheck --check-prefix=NAN %s
 ! RUN: %flang_fc1 -emit-llvm -finit-local=zero %s -o - | FileCheck --check-prefix=ZERO %s
 
 ! ---------------------------------------------------------------------------
@@ -19,9 +18,6 @@ end subroutine
 ! HEX:  store i8 -86,
 ! HEX-NOT: store i8 1,
 
-! NAN-LABEL: define {{.*}}@{{.*}}test_logical1{{.*}}(
-! NAN:  store i8 -86,
-! NAN-NOT: store i8 1,
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_logical1{{.*}}(
 ! ZERO: store i8 0,
@@ -38,9 +34,6 @@ end subroutine
 ! HEX:  store i32 -1431655766,
 ! HEX-NOT: store i32 1,
 
-! NAN-LABEL: define {{.*}}@{{.*}}test_logical4{{.*}}(
-! NAN:  store i32 -1431655766,
-! NAN-NOT: store i32 1,
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_logical4{{.*}}(
 ! ZERO: store i32 0,

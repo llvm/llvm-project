@@ -1788,7 +1788,7 @@ bool CompilerInvocation::createFromArgs(
   else
     invoc.loweringOpts.setInitGlobalZero(false);
 
-  // -finit-local=<zero|nan|snan|0x<hex>>  and  -finit-local-zero
+  // -finit-local=<zero|0x<hex>>  and  -finit-local-zero
   // (-finit-local-zero is an alias that the driver already expands to
   //  -finit-local=zero, so we only need to handle OPT_finit_local_EQ here.)
   if (const llvm::opt::Arg *a =
@@ -1796,10 +1796,6 @@ bool CompilerInvocation::createFromArgs(
     llvm::StringRef val = a->getValue();
     if (val == "zero") {
       invoc.loweringOpts.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
-    } else if (val == "nan") {
-      invoc.loweringOpts.setInitLocalMode(Fortran::lower::InitLocalKind::QNaN);
-    } else if (val == "snan") {
-      invoc.loweringOpts.setInitLocalMode(Fortran::lower::InitLocalKind::SNaN);
     } else if (val.starts_with("0x") || val.starts_with("0X")) {
       unsigned long long hexVal = 0;
       if (val.drop_front(2).getAsInteger(16, hexVal) || hexVal > 0xFF) {
