@@ -49,7 +49,7 @@ public:
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
     // here manually so they are properly freeing their resources.
-    for (auto RecordPair : Records) {
+    for (const auto &RecordPair : Records) {
       if (Record *R = RecordPair.second)
         R->~Record();
     }

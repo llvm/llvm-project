@@ -6798,7 +6798,8 @@ struct SCEVDbgValueBuilder {
     }
 
     for (const auto &Op : expr_ops()) {
-      if (Op.getOp() != dwarf::DW_OP_LLVM_arg) {
+      auto Arg = dyn_cast<DIExpression::ArgOp>(Op);
+      if (!Arg) {
         Op.appendToVector(DestExpr);
         continue;
       }
@@ -6806,7 +6807,7 @@ struct SCEVDbgValueBuilder {
       DestExpr.push_back(dwarf::DW_OP_LLVM_arg);
       // `DW_OP_LLVM_arg n` represents the nth LocationOp in this SCEV,
       // DestIndexMap[n] contains its new index in DestLocations.
-      uint64_t NewIndex = DestIndexMap[Op.getArg(0)];
+      uint64_t NewIndex = DestIndexMap[Arg.getIndex()];
       DestExpr.push_back(NewIndex);
     }
   }
@@ -7028,12 +7029,13 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
   }
   for (const auto &Op : DVIRec.Expr->expr_ops()) {
     // Most Ops needn't be updated.
-    if (Op.getOp() != dwarf::DW_OP_LLVM_arg) {
+    auto Arg = dyn_cast<DIExpression::ArgOp>(Op);
+    if (!Arg) {
       Op.appendToVector(NewExpr);
       continue;
     }
 
-    uint64_t LocationArgIndex = Op.getArg(0);
+    uint64_t LocationArgIndex = Arg.getIndex();
     SCEVDbgValueBuilder *DbgBuilder =
         DVIRec.RecoveryExprs[LocationArgIndex].get();
     // The location doesn't have s SCEVDbgValueBuilder, so LSR did not
@@ -7041,9 +7043,9 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
     // location index.
     if (!DbgBuilder) {
       NewExpr.push_back(dwarf::DW_OP_LLVM_arg);
-      assert(LocationOpIndexMap[Op.getArg(0)] != -1 &&
+      assert(LocationOpIndexMap[LocationArgIndex] != -1 &&
              "Expected a positive index for the location-op position.");
-      NewExpr.push_back(LocationOpIndexMap[Op.getArg(0)]);
+      NewExpr.push_back(LocationOpIndexMap[LocationArgIndex]);
       continue;
     }
     // The location has a recovery expression.

@@ -274,7 +274,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   faddl_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -290,7 +289,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   faddf128_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -618,6 +616,7 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceilf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -4775,7 +4774,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanpif16_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -4833,7 +4831,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   asinpif16_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -4915,7 +4912,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   acosbf16_test
-  NEED_MPFR
   SUITE
     libc-math-smoke-tests
   SRCS
@@ -5008,7 +5004,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanbf16_test
-  NEED_MPFR
   SUITE
     libc-math-smoke-tests
   SRCS
