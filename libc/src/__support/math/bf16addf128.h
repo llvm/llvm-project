@@ -9,24 +9,21 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_BF16ADDF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_BF16ADDF128_H
 
-#include "src/__support/macros/properties/types.h"
-
-#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
-
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE bfloat16 bf16addf128(float128 x, float128 y) {
+using LIBC_NAMESPACE::fputil::Float128;
+
+LIBC_INLINE bfloat16 bf16addf128(Float128 x, Float128 y) {
   return fputil::generic::add<bfloat16>(x, y);
 }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_BF16ADDF128_H

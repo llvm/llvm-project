@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AddTest.h"
+#include "src/__support/FPUtil/float128.h"
 
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/bf16addf128.h"
+
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 LIST_ADD_TESTS(bfloat16, float128, LIBC_NAMESPACE::bf16addf128)

@@ -6506,6 +6506,7 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.float128
     libc.src.math.bf16addf128
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os

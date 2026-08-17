@@ -4870,6 +4870,7 @@ add_entrypoint_object(
   HDRS
     ../bf16addf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.bf16addf128
 )
 

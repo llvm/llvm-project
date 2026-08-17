@@ -310,6 +310,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2l
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.bf16addf128
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel

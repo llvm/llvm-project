@@ -589,6 +589,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.bf16addf128
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
@@ -1118,7 +1119,6 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
 if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C++23 mixed bfloat16 and _Float128 entrypoints
-    libc.src.math.bf16addf128
     libc.src.math.bf16divf128
     libc.src.math.bf16fmaf128
     libc.src.math.bf16mulf128
