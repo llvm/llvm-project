@@ -839,16 +839,9 @@ def C1PWrite_4c_2V_CMEFPReduceMaxMinD
     : C1PSMEStreamingSchedWrite<C1PWrite_16c_1CMEVXALU_1CMEPERMF_2d3rc,
                                 C1PWrite_4c_2V>;
 
-def C1PWrite_2c_1V_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_2c_1V>;
-def C1PWrite_2c_1V_CMEPERMS : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEPERMS, C1PWrite_2c_1V>;
-def C1PWrite_2c_1V0_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVX0ALU, C1PWrite_2c_1V0>;
-def C1PWrite_2c_1V01_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_2c_1V01>;
-def C1PWrite_2c_1V0134_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_2c_1V>;
-def C1PWrite_3c_1V0134_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_3c_1V>;
-def C1PWrite_3c_1V1_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEPERMF_1rc, C1PWrite_3c_1V1>;
-def C1PWrite_4c_1V_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_4c_1V>;
-def C1PWrite_4c_1V0134_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_4c_1V>;
-def C1PWrite_4c_1V0134_1V_CME
+def C1PWrite_2c_1V0_1CMEVXALU : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVX0ALU, C1PWrite_2c_1V0>;
+def C1PWrite_2c_1V_1CMEVX0ALU : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVX0ALU, C1PWrite_2c_1V>;
+def C1PWrite_4c_1V_1V_CME
     : C1PSMEStreamingSchedWrite<C1PWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                                 C1PWrite_4c_2V>;
 def C1PWrite_4c_1V_1V0134_CME
@@ -868,24 +861,30 @@ def C1PWrite_6c_2V_1V0134_CME
 def C1PWrite_6c_3V_CME
     : C1PSMEStreamingSchedWrite<C1PWrite_16c_1CMEVXALU_1CMEPERMF_2d3rc,
                                 C1PWrite_6c_3V>;
-def C1PWrite_8c_1V1_4rc_1CME
+def C1PWrite_6c_4V_1CMEVXALU
+    : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU,
+                                C1PWrite_6c_4V>;
+def C1PWrite_6c_4V_1CMEVXMUL
+    : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXMUL,
+                                C1PWrite_6c_4V>;
+def C1PWrite_8c_1V1_4rc_1CMEMC
     : C1PSMEStreamingSchedWrite<C1PWrite_10c_1CMEMC_10rc, C1PWrite_8c_1V1_4rc>;
 def C1PWrite_8c_1V_3V0134_CME
     : C1PSMEStreamingSchedWrite<C1PWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                                 C1PWrite_8c_4V>;
-def C1PWrite_9c_1V1_2rc_1CME
+def C1PWrite_9c_1V1_2rc_1CMEMC
     : C1PSMEStreamingSchedWrite<C1PWrite_11c_1CMEMC_11rc, C1PWrite_9c_V1_2rc>;
-def C1PWrite_11c_1V0_4rc_1CME
+def C1PWrite_11c_1V0_4rc_1CMEMC
     : C1PSMEStreamingSchedWrite<C1PWrite_11c_1CMEMC_11rc, C1PWrite_11c_1V0_4rc>;
-def C1PWrite_11c_1V1_4rc_1CME
+def C1PWrite_11c_1V1_4rc_1CMEMC
     : C1PSMEStreamingSchedWrite<C1PWrite_12c_1CMEMC_12rc, C1PWrite_11c_1V1_4rc>;
-def C1PWrite_12c_1V0_8rc_1CME
+def C1PWrite_12c_1V0_8rc_1CMEMC
     : C1PSMEStreamingSchedWrite<C1PWrite_10c_1CMEMC_10rc, C1PWrite_12c_1V0_8rc>;
-def C1PWrite_12c_1V1_8rc_1CME
+def C1PWrite_12c_1V1_8rc_1CMEMC
     : C1PSMEStreamingSchedWrite<C1PWrite_10c_1CMEMC_10rc, C1PWrite_12c_1V1_8rc>;
-def C1PWrite_13c_1V0_2rc_1CME
+def C1PWrite_13c_1V0_2rc_1CMEMC
     : C1PSMEStreamingSchedWrite<C1PWrite_17c_1CMEMC_17rc, C1PWrite_13c_1V0_2rc>;
-def C1PWrite_13c_1V1_2rc_1CME
+def C1PWrite_13c_1V1_2rc_1CMEMC
     : C1PSMEStreamingSchedWrite<C1PWrite_25c_1CMEMC_25rc, C1PWrite_13c_1V1_2rc>;
 
 def C1PWrite_3c_1M0_CME : C1PSMEStreamingSchedWrite<C1PWrite_4c_1M0_1CMEVXALU, C1PWrite_3c_1M0>;
@@ -1292,7 +1291,7 @@ def : InstRW<[C1PWr_FMA_CME, ReadDefault, ReadDefault, C1PRd_FMA],
              (instregex "^FN?M(ADD|SUB)[HSD]rrr$")>;
 
 // FP round to integral
-def : InstRW<[C1PWrite_2c_1V0134_CME], (instregex "^FRINT[AIMNPXZ][HSD]r$",
+def : InstRW<[C1PWrite_2c_1V_1CMEVXALU], (instregex "^FRINT[AIMNPXZ][HSD]r$",
                                                      "^FRINT(32|64)[XZ][SD]r$")>;
 
 
@@ -1310,7 +1309,7 @@ def : InstRW<[C1PWrite_3c_1V01_1CMEVXALU],
 def : SchedAlias<WriteFCvt, C1PWrite_3c_1V01_1CMEVXALU>;
 
 // FP convert, from vec to vec reg
-def : InstRW<[C1PWrite_3c_1V0134_CME],
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU],
              (instrs FCVTSHr, FCVTDHr, FCVTHSr, FCVTDSr, FCVTHDr, FCVTSDr,
                      FCVTXNv1i64)>;
 
@@ -2401,7 +2400,7 @@ def : InstRW<[C1PWrite_2c_1V_1CMEPERM], (instregex "^(UZP|ZIP)[12]_ZZZ_[BHSDQ]")
 // -----------------------------------------------------------------------------
 
 // Floating point absolute value/difference
-def : InstRW<[C1PWrite_2c_1V], (instregex "^FAB[SD]_ZPmZ_[HSD]",
+def : InstRW<[C1PWrite_2c_1V_1CMEVXALU], (instregex "^FAB[SD]_ZPmZ_[HSD]",
                                          "^FABD_ZPZZ_[HSD]",
                                          "^FABS_ZPmZ_[HSD]")>;
 
@@ -2423,7 +2422,7 @@ def : InstRW<[C1PWrite_6c_1V0_6rc], (instrs FADDA_VPZ_S)>;
 def : InstRW<[C1PWrite_4c_2V], (instrs FADDA_VPZ_D)>;
 
 // Floating point compare
-def : InstRW<[C1PWrite_2c_1V0], (instregex "^FACG[ET]_PPzZZ_[HSD]",
+def : InstRW<[C1PWrite_2c_1V0_1CMEVXALU], (instregex "^FACG[ET]_PPzZZ_[HSD]",
                                           "^FCM(EQ|GE|GT|NE)_PPzZ[0Z]_[HSD]",
                                           "^FCM(LE|LT)_PPzZ0_[HSD]",
                                           "^FCMUO_PPzZZ_[HSD]")>;
@@ -2432,8 +2431,8 @@ def : InstRW<[C1PWrite_2c_1V0], (instregex "^FACG[ET]_PPzZZ_[HSD]",
 def : InstRW<[C1PWrite_3c_1V_1CMEVXMUL], (instregex "^FCADD_ZPmZ_[HSD]")>;
 
 // Floating point complex multiply add
-def : InstRW<[C1PWr_ZFCMA, ReadDefault, C1PRd_ZFCMA, C1PRd_ZFCMA], (instregex "^FCMLA_ZPmZZ_[HSD]")>;
-def : InstRW<[C1PWr_ZFCMA, C1PRd_ZFCMA, C1PRd_ZFCMA],              (instregex "^FCMLA_ZZZI_[HS]")>;
+def : InstRW<[C1PWr_ZFCMA_CME, ReadDefault, C1PRd_ZFCMA, C1PRd_ZFCMA], (instregex "^FCMLA_ZPmZZ_[HSD]")>;
+def : InstRW<[C1PWr_ZFCMA_CME, C1PRd_ZFCMA, C1PRd_ZFCMA],              (instregex "^FCMLA_ZZZI_[HS]")>;
 
 // Floating point convert, long or narrow (F16 to F32 or F32 to F16)
 def : InstRW<[C1PWrite_4c_1V], (instregex "^FCVT_ZPmZ_(HtoS|StoH)",
@@ -2447,39 +2446,28 @@ def : InstRW<[C1PWrite_3c_1V], (instregex "^FCVT_ZPmZ_(HtoD|StoD|DtoS|DtoH)",
                                            "^FCVTNT_ZPmZ_DtoS")>;
 
 // Floating point convert, round to odd
-def : InstRW<[C1PWrite_3c_1V], (instrs FCVTX_ZPmZ_DtoS, FCVTXNT_ZPmZ_DtoS)>;
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU], (instrs FCVTX_ZPmZ_DtoS, FCVTXNT_ZPmZ_DtoS)>;
 
-// Floating point base2 log, F16
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FLOGB_(ZPmZ|ZPZZ)_H")>;
+// Floating point base2 log, F16, F32, F64
+def : InstRW<[C1PWrite_3c_1V_1CMEVXMUL], (instregex "^FLOGB_(ZPmZ|ZPZZ)_[H|S|D]")>;
 
-// Floating point base2 log, F32
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FLOGB_(ZPmZ|ZPZZ)_S")>;
 
-// Floating point base2 log, F64
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FLOGB_(ZPmZ|ZPZZ)_D")>;
-
-// Floating point convert to integer, F16
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FCVTZ[SU]_ZPmZ_HtoH")>;
-
-// Floating point convert to integer, F32
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FCVTZ[SU]_ZPmZ_(HtoS|StoS)")>;
-
-// Floating point convert to integer, F64
-def : InstRW<[C1PWrite_3c_1V],
-             (instregex "^FCVTZ[SU]_ZPmZ_(HtoD|StoD|DtoS|DtoD)")>;
+// Floating point convert to integer, F16, F32, F64
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU], (instregex "^FCVTZ[SU]_ZPmZ_(HtoH|HtoS|StoS)",
+                                                    "^FCVTZ[SU]_ZPmZ_(HtoD|StoD|DtoS|DtoD)")>;
 
 // Floating point copy
 def : InstRW<[C1PWrite_2c_1V_1CMEPERM_1c], (instregex "^FCPY_ZPmI_[HSD]",
                                                      "^FDUP_ZI_[HSD]")>;
 
 // Floating point divide, F16
-def : InstRW<[C1PWrite_12c_1V0_8rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_H")>;
+def : InstRW<[C1PWrite_12c_1V0_8rc_1CMEMC], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_H")>;
 
 // Floating point divide, F32
-def : InstRW<[C1PWrite_11c_1V0_4rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
+def : InstRW<[C1PWrite_11c_1V0_4rc_1CMEMC], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
 
 // Floating point divide, F64
-def : InstRW<[C1PWrite_13c_1V0_2rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
+def : InstRW<[C1PWrite_13c_1V0_2rc_1CMEMC], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point min/max pairwise
 def : InstRW<[C1PWrite_2c_1V_1CMEVXALU], (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
@@ -2511,13 +2499,15 @@ def : InstRW<[C1PWr_ZFMAL_CME, C1PRd_ZFMAL, C1PRd_ZFMAL],
                         "^FMLAL(B|T|BB|TT|LB|LT|LBB|LTT|LBT|LTB)_(ZZZ|ZZZI)")>;
 
 // Floating point reciprocal estimate, F16
-def : InstRW<[C1PWrite_6c_4V], (instregex "^FR(ECP|SQRT)E_ZZ_H", "^FRECPX_ZPmZ_H")>;
+def : InstRW<[C1PWrite_6c_4V_1CMEVXMUL], (instregex "^FR(ECP|SQRT)E_ZZ_H")>;
+def : InstRW<[C1PWrite_6c_4V_1CMEVXALU], (instregex "^FRECPX_ZPmZ_H")>;
 
 // Floating point reciprocal estimate, F32
 def : InstRW<[C1PWrite_4c_2V_CMEFPReduceD], (instregex "^FR(ECP|SQRT)E_ZZ_S", "^FRECPX_ZPmZ_S")>;
 
 // Floating point reciprocal estimate, F64
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FR(ECP|SQRT)E_ZZ_D", "^FRECPX_ZPmZ_D")>;
+def : InstRW<[C1PWrite_3c_1V_1CMEVXMUL], (instregex "^FR(ECP|SQRT)E_ZZ_D")>;
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU], (instregex "^FRECPX_ZPmZ_D")>;
 
 // Floating point reciprocal step
 def : InstRW<[C1PWrite_4c_1V_1CMEVXMUL], (instregex "^F(RECPS|RSQRTS)_ZZZ_[HSD]")>;
@@ -2534,23 +2524,17 @@ def : InstRW<[C1PWrite_6c_3V_CMEFPReduceS],
 def : InstRW<[C1PWrite_4c_2V_CMEFPReduceD],
              (instregex "^(FADDV|FMAXNMV|FMAXV|FMINNMV|FMINV)_VPZ_D")>;
 
-// Floating point round to integral, F16
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FRINT[AIMNPXZ]_ZPmZ_H")>;
-
-// Floating point round to integral, F32
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FRINT[AIMNPXZ]_ZPmZ_S")>;
-
-// Floating point round to integral, F64
-def : InstRW<[C1PWrite_3c_1V], (instregex "^FRINT[AIMNPXZ]_ZPmZ_D")>;
+// Floating point round to integral, F16, F32, F64
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU], (instregex "^FRINT[AIMNPXZ]_ZPmZ_(H|S|D)")>;
 
 // Floating point square root, F16
-def : InstRW<[C1PWrite_12c_1V1_8rc], (instregex "^FSQRT_ZPmZ_H")>;
+def : InstRW<[C1PWrite_12c_1V1_8rc_1CMEMC], (instregex "^FSQRT_ZPmZ_H")>;
 
 // Floating point square root, F32
-def : InstRW<[C1PWrite_11c_1V1_4rc], (instregex "^FSQRT_ZPmZ_S")>;
+def : InstRW<[C1PWrite_11c_1V1_4rc_1CMEMC], (instregex "^FSQRT_ZPmZ_S")>;
 
 // Floating point square root, F64
-def : InstRW<[C1PWrite_13c_1V1_2rc], (instregex "^FSQRT_ZPmZ_D")>;
+def : InstRW<[C1PWrite_13c_1V1_2rc_1CMEMC], (instregex "^FSQRT_ZPmZ_D")>;
 
 // Floating point trigonometric exponentiation
 def : InstRW<[C1PWrite_3c_1V1], (instregex "^FEXPA_ZZ_[HSD]")>;
@@ -2566,7 +2550,7 @@ def : InstRW<[C1PWrite_3c_1V], (instregex "^FTS(MUL|SEL)_ZZZ_[HSD]")>;
 // -----------------------------------------------------------------------------
 
 // Convert, F32 to BF16
-def : InstRW<[C1PWrite_3c_1V], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 
 // Dot product
 def : InstRW<[C1PWr_ZBFDOT_CME, C1PRd_ZBFDOT, C1PRd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
