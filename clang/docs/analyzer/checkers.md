@@ -3198,6 +3198,73 @@ void test() {
 }
 ```
 
+(alpha-core-danglingptrderef)=
+
+#### alpha.core.DanglingPtrDeref (C++)
+
+Check for dereferences of pointers that refer to an object whose
+lifetime has already ended. Such a pointer is dangling. The checker
+reports it when it is dereferenced and when it is passed to a function.
+This includes a dereference in a return statement. A return statement that
+does not dereference the pointer does not lead to a report. Such a case is
+reported by the {ref}`core-StackAddressEscape` checker.
+
+Each object is reported at most once on an execution path. If the same dangling
+pointer is used several times then only the first use is reported.
+
+```cpp
+void test_deref() {
+  int *ptr = 0;
+  {
+    int num = 5;
+    ptr = &num;
+  } // note: 'num' is destroyed here
+  *ptr = 6; // warn: use of 'num' after its lifetime ended
+}
+
+int test_deref_in_return() {
+  int *ptr = 0;
+  {
+    int num = 5;
+    ptr = &num;
+  } // note: 'num' is destroyed here
+  return *ptr; // warn: use of 'num' after its lifetime ended
+}
+
+void test_in_scope() {
+  int num = 5;
+  int *ptr = &num;
+  {
+    *ptr = 6; // no warning, 'num' is still in scope
+  }
+}
+```
+
+The `-analyzer-config cfg-lifetime=true` option is a prerequisite for these
+reports. Without it the checker does not report anything and no error is emitted
+by the analyzer.
+
+**Limitations**
+
+If the analyzer cannot analyze the body of the called function, for example because
+its definition is not available in the given translation unit, then a dangling
+pointer passed to it is reported even if the function would never dereference
+it. This can lead to false positives.
+
+```cpp
+// The definition of the function is not available that is why the analyzer
+// assumes the pointer is used.
+int is_null(int *p);
+
+void argument_example() {
+  int *ptr = 0;
+  {
+    int num = 5;
+    ptr = &num;
+  }
+  is_null(ptr); // false positive: the pointer is compared, not dereferenced
+}
+```
 (alpha-core-dynamictypechecker)=
 
 #### alpha.core.DynamicTypeChecker (ObjC)
@@ -3300,73 +3367,6 @@ remove the const qualifier from the original declaration or use a mutable copy.
 
 ### alpha.cplusplus
 
-(alpha-cplusplus-danglingptrderef)=
-
-#### alpha.cplusplus.DanglingPtrDeref (C++)
-
-Check for dereferences of pointers that refer to an object whose
-lifetime has already ended. Such a pointer is dangling. The checker
-reports it when it is dereferenced and when it is passed to a function.
-This includes a dereference in a return statement. A return statement that
-does not dereference the pointer does not lead to a report. Such a case is
-reported by the {ref}`core-StackAddressEscape` checker.
-
-Each object is reported at most once on an execution path. If the same dangling
-pointer is used several times then only the first use is reported.
-
-```cpp
-void test_deref() {
-  int *ptr = 0;
-  {
-    int num = 5;
-    ptr = &num;
-  } // note: 'num' is destroyed here
-  *ptr = 6; // warn: use of 'num' after its lifetime ended
-}
-
-int test_deref_in_return() {
-  int *ptr = 0;
-  {
-    int num = 5;
-    ptr = &num;
-  } // note: 'num' is destroyed here
-  return *ptr; // warn: use of 'num' after its lifetime ended
-}
-
-void test_in_scope() {
-  int num = 5;
-  int *ptr = &num;
-  {
-    *ptr = 6; // no warning, 'num' is still in scope
-  }
-}
-```
-
-The `-analyzer-config cfg-lifetime=true` option is a prerequisite for these
-reports. Without it the checker does not report anything and no error is emitted
-by the analyzer.
-
-**Limitations**
-
-If the analyzer cannot analyze the body of the called function, for example because
-its definition is not available in the given translation unit, then a dangling
-pointer passed to it is reported even if the function would never dereference
-it. This can lead to false positives.
-
-```cpp
-// The definition of the function is not available that is why the analyzer
-// assumes the pointer is used.
-int is_null(int *p);
-
-void argument_example() {
-  int *ptr = 0;
-  {
-    int num = 5;
-    ptr = &num;
-  }
-  is_null(ptr); // false positive: the pointer is compared, not dereferenced
-}
-```
 (alpha-cplusplus-deletewithnonvirtualdtor)=
 
 #### alpha.cplusplus.DeleteWithNonVirtualDtor (C++)
