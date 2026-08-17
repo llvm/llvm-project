@@ -66,11 +66,10 @@ class TestSwiftResilience(TestBase):
         execute_command("cp " + self.getBuildArtifact("main." + exe_flavor) + " " + self.getBuildArtifact("main"))
         execute_command("ln -sf " + self.getBuildArtifact("main." + exe_flavor + ".dSYM") + " " + self.getBuildArtifact("main.dSYM"))
 
-        execute_command("cp " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib") + " " + self.getBuildArtifact("libmod.dylib"))
-        execute_command("ln -sf " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib.dSYM") + " " + self.getBuildArtifact("libmod.dylib.dSYM"))
-        execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".o") + " " + self.getBuildArtifact("mod.o"))
+        execute_command("cp " + self.getBuildArtifact("libmod." + mod_flavor + ".dylib") + " " + self.getBuildArtifact("libmod.dylib"))
+        execute_command("ln -sf " + self.getBuildArtifact("libmod." + mod_flavor + ".dylib.dSYM") + " " + self.getBuildArtifact("libmod.dylib.dSYM"))
 
-        execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".swiftinterface") + " " + self.getBuildArtifact("mod.swiftinterface"))
+        execute_command("ln -sf " + self.getBuildArtifact("mod." + mod_flavor + ".swiftinterface") + " " + self.getBuildArtifact("mod.swiftinterface"))
 
     def cleanupSymlinks(self):
         execute_command(
