@@ -1,4 +1,4 @@
-REQUIRES: system-windows, msvc
+REQUIRES: system-windows, msvc, msvc-32-bit
 RUN: mkdir -p %t.dir
 RUN: %build --compiler=msvc --arch=32 --nodefaultlib --output=%t.dir/SimpleTypesTest.cpp.typedefs.exe %S/Inputs/SimpleTypesTest.cpp
 RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols %t.dir/SimpleTypesTest.cpp.typedefs.exe | FileCheck %s

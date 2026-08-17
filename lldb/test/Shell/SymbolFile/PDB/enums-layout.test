@@ -1,4 +1,4 @@
-REQUIRES: system-windows, msvc
+REQUIRES: system-windows, msvc, msvc-32-bit
 RUN: mkdir -p %t.dir
 RUN: %build --compiler=msvc --arch=32 --nodefaultlib --output=%t.dir/SimpleTypesTest.cpp.enums.exe %S/Inputs/SimpleTypesTest.cpp
 RUN: lldb-test symbols %t.dir/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=ENUM %s

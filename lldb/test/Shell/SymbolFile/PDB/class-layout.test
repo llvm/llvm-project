@@ -1,4 +1,4 @@
-REQUIRES: target-windows, msvc
+REQUIRES: target-windows, msvc, msvc-32-bit
 RUN: mkdir -p %t.dir
 RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%t.dir/ClassLayoutTest.cpp.obj %S/Inputs/ClassLayoutTest.cpp
 RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%t.dir/ClassLayoutTest.cpp.exe %t.dir/ClassLayoutTest.cpp.obj
