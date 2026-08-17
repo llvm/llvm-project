@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #include <cassert>
@@ -2653,25 +2655,24 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
       TM.getTargetTriple(),
       static_cast<uint32_t>(getMemSemantics(I.getOrdering())), ScSem);
 
-  std::string FuncName = (Op == AtomicRMWInst::UIncWrap)
-                             ? "__translate_spirv_atomic_uinc_wrap"
-                             : "__translate_spirv_atomic_udec_wrap";
+  SmallString<64> FuncName(Op == AtomicRMWInst::UIncWrap
+                               ? "__translate_spirv_atomic_uinc_wrap"
+                               : "__translate_spirv_atomic_udec_wrap");
 
   Type *ValTy = I.getValOperand()->getType();
   Type *PtrTy = I.getPointerOperand()->getType();
   // Encode the address space and value type in the name for overload.
-  std::string TypeSuffix;
+  raw_svector_ostream OS(FuncName);
+  OS << "_p" << AS << "_";
   if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
-    TypeSuffix = "v" + std::to_string(VecTy->getNumElements());
-  TypeSuffix += "i" + std::to_string(ValTy->getScalarSizeInBits());
-  FuncName += "_p" + std::to_string(AS) + "_" + TypeSuffix;
+    OS << "v" << VecTy->getNumElements();
+  OS << "i" << ValTy->getScalarSizeInBits();
 
   Type *Int32Ty = B.getInt32Ty();
   SmallVector<Type *, 4> ArgTys = {PtrTy, Int32Ty, Int32Ty, ValTy};
   FunctionType *FT = FunctionType::get(ValTy, ArgTys, false);
   FunctionCallee FC = M->getOrInsertFunction(FuncName, FT);
-  if (auto *F = dyn_cast<Function>(FC.getCallee()))
-    F->setCallingConv(CallingConv::SPIR_FUNC);
+  cast<Function>(FC.getCallee())->setCallingConv(CallingConv::SPIR_FUNC);
 
   SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt32(Scope),
                                   B.getInt32(MemSem), I.getValOperand()};
