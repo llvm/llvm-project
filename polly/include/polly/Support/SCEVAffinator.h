@@ -122,6 +122,7 @@ private:
   PWACtx visitAddExpr(const llvm::SCEVAddExpr *E);
   PWACtx visitMulExpr(const llvm::SCEVMulExpr *E);
   PWACtx visitUDivExpr(const llvm::SCEVUDivExpr *E);
+  PWACtx visitSDivExpr(const llvm::SCEVSDivExpr *E);
   PWACtx visitAddRecExpr(const llvm::SCEVAddRecExpr *E);
   PWACtx visitSMaxExpr(const llvm::SCEVSMaxExpr *E);
   PWACtx visitSMinExpr(const llvm::SCEVSMinExpr *E);

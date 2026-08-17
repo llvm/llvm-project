@@ -4,6 +4,255 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+declare void @noundef(i8 noundef)
+
+define i8 @zero(i8 %x) {
+; CHECK-LABEL: 'zero'
+; CHECK-NEXT:  Classifying expressions for: @zero
+; CHECK-NEXT:    %div = sdiv i8 0, %x
+; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
+; CHECK-NEXT:  Determining loop execution counts for: @zero
+;
+  %div = sdiv i8 0, %x
+  ret i8 %div
+}
+
+define i8 @by_one(i8 %x) {
+; CHECK-LABEL: 'by_one'
+; CHECK-NEXT:  Classifying expressions for: @by_one
+; CHECK-NEXT:    %div = sdiv i8 %x, 1
+; CHECK-NEXT:    --> %x U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @by_one
+;
+  %div = sdiv i8 %x, 1
+  ret i8 %div
+}
+
+define i8 @by_allones_smin(i8 %x) {
+; CHECK-LABEL: 'by_allones_smin'
+; CHECK-NEXT:  Classifying expressions for: @by_allones_smin
+; CHECK-NEXT:    %div = sdiv i8 %x, -1
+; CHECK-NEXT:    --> (%x /s -1) U: [-127,-128) S: [-127,-128)
+; CHECK-NEXT:  Determining loop execution counts for: @by_allones_smin
+;
+  %div = sdiv i8 %x, -1
+  ret i8 %div
+}
+
+define i8 @by_allones_no_smin(i8 range(i8 -16, 0) %x) {
+; CHECK-LABEL: 'by_allones_no_smin'
+; CHECK-NEXT:  Classifying expressions for: @by_allones_no_smin
+; CHECK-NEXT:    %div = sdiv i8 %x, -1
+; CHECK-NEXT:    --> (-1 * %x)<nsw> U: [1,17) S: [1,17)
+; CHECK-NEXT:  Determining loop execution counts for: @by_allones_no_smin
+;
+  %div = sdiv i8 %x, -1
+  ret i8 %div
+}
+
+define i8 @mul_nsw_const_by_const1(i8 range(i8 -16, 0) %x) {
+; CHECK-LABEL: 'mul_nsw_const_by_const1'
+; CHECK-NEXT:  Classifying expressions for: @mul_nsw_const_by_const1
+; CHECK-NEXT:    %mul = mul i8 %x, -3
+; CHECK-NEXT:    --> (-3 * %x)<nsw> U: [3,49) S: [3,49)
+; CHECK-NEXT:    %div = sdiv i8 %mul, -3
+; CHECK-NEXT:    --> %x U: [-16,0) S: [-16,0)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_nsw_const_by_const1
+;
+  %mul = mul i8 %x, -3
+  %div = sdiv i8 %mul, -3
+  ret i8 %div
+}
+
+define i8 @mul_nsw_const_by_const2(i8 range(i8 -16, 0) %x) {
+; CHECK-LABEL: 'mul_nsw_const_by_const2'
+; CHECK-NEXT:  Classifying expressions for: @mul_nsw_const_by_const2
+; CHECK-NEXT:    %mul = mul i8 %x, -6
+; CHECK-NEXT:    --> (-6 * %x)<nsw> U: [6,97) S: [6,97)
+; CHECK-NEXT:    %div = sdiv i8 %mul, -3
+; CHECK-NEXT:    --> (2 * %x)<nsw> U: [-32,-1) S: [-32,-1)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_nsw_const_by_const2
+;
+  %mul = mul i8 %x, -6
+  %div = sdiv i8 %mul, -3
+  ret i8 %div
+}
+
+define i8 @mul_nsw_const_by_const_common_factor(i8 range(i8 -16, 0) %x) {
+; CHECK-LABEL: 'mul_nsw_const_by_const_common_factor'
+; CHECK-NEXT:  Classifying expressions for: @mul_nsw_const_by_const_common_factor
+; CHECK-NEXT:    %mul = mul i8 %x, -6
+; CHECK-NEXT:    --> (-6 * %x)<nsw> U: [6,97) S: [6,97)
+; CHECK-NEXT:    %div = sdiv i8 %mul, -4
+; CHECK-NEXT:    --> ((-3 * %x)<nsw> /s -2) U: [-24,0) S: [-24,0)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_nsw_const_by_const_common_factor
+;
+  %mul = mul i8 %x, -6
+  %div = sdiv i8 %mul, -4
+  ret i8 %div
+}
+
+define i8 @mul_nsw_const_by_const_no_common_factor(i8 range(i8 -16, 0) %x) {
+; CHECK-LABEL: 'mul_nsw_const_by_const_no_common_factor'
+; CHECK-NEXT:  Classifying expressions for: @mul_nsw_const_by_const_no_common_factor
+; CHECK-NEXT:    %mul = mul i8 %x, -7
+; CHECK-NEXT:    --> (-7 * %x)<nsw> U: [7,113) S: [7,113)
+; CHECK-NEXT:    %div = sdiv i8 %mul, -4
+; CHECK-NEXT:    --> ((-7 * %x)<nsw> /s -4) U: [-28,0) S: [-28,0)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_nsw_const_by_const_no_common_factor
+;
+  %mul = mul i8 %x, -7
+  %div = sdiv i8 %mul, -4
+  ret i8 %div
+}
+
+define i8 @mul_const_by_const_not_nsw(i8 %x) {
+; CHECK-LABEL: 'mul_const_by_const_not_nsw'
+; CHECK-NEXT:  Classifying expressions for: @mul_const_by_const_not_nsw
+; CHECK-NEXT:    %mul = mul i8 %x, -3
+; CHECK-NEXT:    --> (-3 * %x) U: full-set S: full-set
+; CHECK-NEXT:    %div = sdiv i8 %mul, -3
+; CHECK-NEXT:    --> ((-3 * %x) /s -3) U: [-42,43) S: [-42,43)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_const_by_const_not_nsw
+;
+  %mul = mul i8 %x, -3
+  %div = sdiv i8 %mul, -3
+  ret i8 %div
+}
+
+define i8 @mul_nsw_by_factor(i8 %x, i8 %y) {
+; CHECK-LABEL: 'mul_nsw_by_factor'
+; CHECK-NEXT:  Classifying expressions for: @mul_nsw_by_factor
+; CHECK-NEXT:    %mul = mul nsw i8 %x, %y
+; CHECK-NEXT:    --> (%x * %y)<nsw> U: full-set S: full-set
+; CHECK-NEXT:    %div = sdiv i8 %mul, %y
+; CHECK-NEXT:    --> %x U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @mul_nsw_by_factor
+;
+  %mul = mul nsw i8 %x, %y
+  call void @noundef(i8 %mul)
+  %div = sdiv i8 %mul, %y
+  ret i8 %div
+}
+
+define i8 @mul_by_factor_not_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: 'mul_by_factor_not_nsw'
+; CHECK-NEXT:  Classifying expressions for: @mul_by_factor_not_nsw
+; CHECK-NEXT:    %mul = mul i8 %x, %y
+; CHECK-NEXT:    --> (%x * %y) U: full-set S: full-set
+; CHECK-NEXT:    %div = sdiv i8 %mul, %y
+; CHECK-NEXT:    --> ((%x * %y) /s %y) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @mul_by_factor_not_nsw
+;
+  %mul = mul i8 %x, %y
+  %div = sdiv i8 %mul, %y
+  ret i8 %div
+}
+
+define i8 @div_div_fold(i8 %x) {
+; CHECK-LABEL: 'div_div_fold'
+; CHECK-NEXT:  Classifying expressions for: @div_div_fold
+; CHECK-NEXT:    %div = sdiv i8 %x, -3
+; CHECK-NEXT:    --> (%x /s -3) U: [-42,43) S: [-42,43)
+; CHECK-NEXT:    %div.2 = sdiv i8 %div, -5
+; CHECK-NEXT:    --> (%x /s 15) U: [-8,9) S: [-8,9)
+; CHECK-NEXT:  Determining loop execution counts for: @div_div_fold
+;
+  %div = sdiv i8 %x, -3
+  %div.2 = sdiv i8 %div, -5
+  ret i8 %div.2
+}
+
+define i8 @add_nsw_distribute_fold(i8 range(i8 -16, 0) %x) {
+; CHECK-LABEL: 'add_nsw_distribute_fold'
+; CHECK-NEXT:  Classifying expressions for: @add_nsw_distribute_fold
+; CHECK-NEXT:    %div = add i8 %x, -2
+; CHECK-NEXT:    --> (-2 + %x)<nsw> U: [-18,-2) S: [-18,-2)
+; CHECK-NEXT:    %div.2 = sdiv i8 %div, -1
+; CHECK-NEXT:    --> (2 + (-1 * %x)<nsw>)<nuw><nsw> U: [3,19) S: [3,19)
+; CHECK-NEXT:  Determining loop execution counts for: @add_nsw_distribute_fold
+;
+  %div = add i8 %x, -2
+  %div.2 = sdiv i8 %div, -1
+  ret i8 %div.2
+}
+
+define i8 @add_no_nsw_distribute_fold(i8 %x) {
+; CHECK-LABEL: 'add_no_nsw_distribute_fold'
+; CHECK-NEXT:  Classifying expressions for: @add_no_nsw_distribute_fold
+; CHECK-NEXT:    %div = add i8 %x, -2
+; CHECK-NEXT:    --> (-2 + %x) U: full-set S: full-set
+; CHECK-NEXT:    %div.2 = sdiv i8 %div, -1
+; CHECK-NEXT:    --> ((-2 + %x) /s -1) U: [-127,-128) S: [-127,-128)
+; CHECK-NEXT:  Determining loop execution counts for: @add_no_nsw_distribute_fold
+;
+  %div = add i8 %x, -2
+  %div.2 = sdiv i8 %div, -1
+  ret i8 %div.2
+}
+
+define i8 @mul_nsw_distribute_fold(i8 range(i8 -16, 0) %x) {
+; CHECK-LABEL: 'mul_nsw_distribute_fold'
+; CHECK-NEXT:  Classifying expressions for: @mul_nsw_distribute_fold
+; CHECK-NEXT:    %div = mul i8 %x, -2
+; CHECK-NEXT:    --> (-2 * %x)<nsw> U: [2,33) S: [2,33)
+; CHECK-NEXT:    %div.2 = sdiv i8 %div, -1
+; CHECK-NEXT:    --> (2 * %x)<nsw> U: [-32,-1) S: [-32,-1)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_nsw_distribute_fold
+;
+  %div = mul i8 %x, -2
+  %div.2 = sdiv i8 %div, -1
+  ret i8 %div.2
+}
+
+define i8 @mul_no_nsw_distribute_fold(i8 %x) {
+; CHECK-LABEL: 'mul_no_nsw_distribute_fold'
+; CHECK-NEXT:  Classifying expressions for: @mul_no_nsw_distribute_fold
+; CHECK-NEXT:    %div = mul i8 %x, -2
+; CHECK-NEXT:    --> (-2 * %x) U: [0,-1) S: [-128,127)
+; CHECK-NEXT:    %div.2 = sdiv i8 %div, -1
+; CHECK-NEXT:    --> ((-2 * %x) /s -1) U: [-127,-128) S: [-126,-128)
+; CHECK-NEXT:  Determining loop execution counts for: @mul_no_nsw_distribute_fold
+;
+  %div = mul i8 %x, -2
+  %div.2 = sdiv i8 %div, -1
+  ret i8 %div.2
+}
+
+define i8 @rndup_idiom(i8 %a) {
+; CHECK-LABEL: 'rndup_idiom'
+; CHECK-NEXT:  Classifying expressions for: @rndup_idiom
+; CHECK-NEXT:    %m.a = mul i8 -32, %a
+; CHECK-NEXT:    --> (-32 * %a) U: [0,-31) S: [-128,97)
+; CHECK-NEXT:    %add = add i8 24, %m.a
+; CHECK-NEXT:    --> (24 + (-32 * %a))<nuw><nsw> U: [24,-7) S: [-104,121)
+; CHECK-NEXT:    %div = sdiv i8 %add, -8
+; CHECK-NEXT:    --> ((-9 + (-32 * %a)) /s -8) U: [-15,17) S: [-15,17)
+; CHECK-NEXT:  Determining loop execution counts for: @rndup_idiom
+;
+  %m.a = mul i8 -32, %a
+  %add = add i8 24, %m.a
+  %div = sdiv i8 %add, -8
+  ret i8 %div
+}
+
+define i8 @smax_idiom(i8 range(i8 1, 128) %c, i8 %x) {
+; CHECK-LABEL: 'smax_idiom'
+; CHECK-NEXT:  Classifying expressions for: @smax_idiom
+; CHECK-NEXT:    %smax = call i8 @llvm.smax.i8(i8 63, i8 %x)
+; CHECK-NEXT:    --> (63 smax %x) U: [63,-128) S: [63,-128)
+; CHECK-NEXT:    %add = add i8 %smax, -63
+; CHECK-NEXT:    --> (-63 + (63 smax %x))<nsw> U: [0,65) S: [0,65)
+; CHECK-NEXT:    %div = sdiv i8 %add, %x
+; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
+; CHECK-NEXT:  Determining loop execution counts for: @smax_idiom
+;
+  %smax = call i8 @llvm.smax(i8 63, i8 %x)
+  %add = add i8 %smax, -63
+  %div = sdiv i8 %add, %x
+  ret i8 %div
+}
+
 define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-LABEL: '_Z4loopi'
 ; CHECK-NEXT:  Classifying expressions for: @_Z4loopi

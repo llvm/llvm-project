@@ -22,9 +22,9 @@ define i32 @sdiv(i32 %val, i32 %num) nounwind {
 ; CHECK-LABEL: 'sdiv'
 ; CHECK-NEXT:  Classifying expressions for: @sdiv
 ; CHECK-NEXT:    %tmp1 = sdiv i32 %val, %num
-; CHECK-NEXT:    --> %tmp1 U: full-set S: full-set
+; CHECK-NEXT:    --> (%val /s %num) U: full-set S: full-set
 ; CHECK-NEXT:    %tmp2 = mul i32 %tmp1, %num
-; CHECK-NEXT:    --> (%num * %tmp1) U: full-set S: full-set
+; CHECK-NEXT:    --> ((%val /s %num) * %num) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @sdiv
 ;
   %tmp1 = sdiv i32 %val, %num
