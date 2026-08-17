@@ -12,9 +12,7 @@
 
 #include "omptarget.h"
 
-#include "L0Defs.h"
 #include "L0Options.h"
-#include "L0Trace.h"
 
 namespace llvm::omp::target::plugin {
 

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=-xnack < %s | FileCheck --check-prefixes=ASM %s
-; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=-xnack --filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefixes=OBJ %s
-; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=-xnack --filetype=obj < %s | llvm-readelf --notes - | FileCheck --check-prefixes=ELF %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck --check-prefixes=ASM %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa --filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefixes=OBJ %s
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa --filetype=obj < %s | llvm-readelf --notes - | FileCheck --check-prefixes=ELF %s
 
 ; TODO: Update to check for granulated sgpr count directive once one is added.
 
@@ -25,5 +25,6 @@ entry:
 
 attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
+!1 = !{i32 1, !"amdgpu.xnack", i32 0}

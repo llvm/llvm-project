@@ -96,6 +96,7 @@ add_clang_library(clangDaemon STATIC
   IncludeFixer.cpp
   InlayHints.cpp
   JSONTransport.cpp
+  LSPBinder.cpp
   ModulesBuilder.cpp
   PathMapping.cpp
   ProjectModules.cpp
@@ -165,6 +166,7 @@ clang_target_link_libraries(clangDaemon
   clangBasic
   clangDependencyScanning
   clangDriver
+  clangEdit
   clangOptions
   clangFormat
   clangFrontend

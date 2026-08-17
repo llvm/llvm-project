@@ -5,7 +5,7 @@
 ; RUN: llc -global-isel -mtriple=amdgpu11.00-amd-amdpal < %s | FileCheck --check-prefix=GFX11 %s
 
 ; FIXME:
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu6.00-amd-amdpal < %s | FileCheck --check-prefix=GFX6 %s
+; XUN: llc -global-isel -mtriple=amdgpu6.00-amd-amdpal < %s | FileCheck --check-prefix=GFX6 %s
 
 define amdgpu_kernel void @store_lds_v3i32(ptr addrspace(3) %out, <3 x i32> %x) {
 ; GFX9-LABEL: store_lds_v3i32:

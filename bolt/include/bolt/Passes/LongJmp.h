@@ -14,6 +14,8 @@
 namespace llvm {
 namespace bolt {
 
+class BranchLivenessInfo;
+
 /// LongJmp is veneer-insertion pass originally written for AArch64 that
 /// compensates for its short-range branches, typically done during linking. We
 /// pull this pass inside BOLT because here we can do a better job at stub
@@ -73,8 +75,10 @@ class LongJmpPass : public BinaryFunctionPass {
 
   /// Relax all internal function branches including those between fragments.
   /// Assume that fragments are placed in different sections but are within
-  /// 128MB of each other.
-  void relaxLocalBranches(BinaryFunction &BF);
+  /// 128MB of each other. Return false and report an error if a branch cannot
+  /// be relaxed.
+  bool relaxLocalBranches(BinaryFunction &BF,
+                          const BranchLivenessInfo *BLI = nullptr);
 
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions

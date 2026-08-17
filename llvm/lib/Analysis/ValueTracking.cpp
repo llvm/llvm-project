@@ -5566,12 +5566,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
         break;
 
+      // The exponent is always a scalar, even when raising a vector to a power.
       const Value *Exp = II->getArgOperand(1);
-      Type *ExpTy = Exp->getType();
-      unsigned BitWidth = ExpTy->getScalarType()->getIntegerBitWidth();
+      unsigned BitWidth = Exp->getType()->getIntegerBitWidth();
       KnownBits ExponentKnownBits(BitWidth);
-      computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
-                       ExponentKnownBits, Q, Depth + 1);
+      computeKnownBits(Exp, APInt(1, 1), ExponentKnownBits, Q, Depth + 1);
 
       FPClassTest InterestedSrcs = fcNone;
       if (InterestedClasses & fcNan)
@@ -5725,6 +5724,45 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::amdgcn_trig_preop: {
       // Always returns a value [0, 1)
       Known.knownNot(fcNan | fcInf | fcNegative);
+      break;
+    }
+    case Intrinsic::convert_from_arbitrary_fp: {
+      auto *MD = cast<MetadataAsValue>(II->getArgOperand(1))->getMetadata();
+      StringRef FormatStr = cast<MDString>(MD)->getString();
+
+      const fltSemantics *SrcSemantics =
+          APFloat::getArbitraryFPSemantics(FormatStr);
+      if (!SrcSemantics)
+        break;
+
+      const fltSemantics DstSemantics =
+          II->getType()->getScalarType()->getFltSemantics();
+
+      if (!APFloat::semanticsHasNaN(*SrcSemantics))
+        Known.knownNot(fcNan);
+
+      // fcInf can only be cleared if the source format has no Inf encoding
+      // and the dst max exp can accommodate src max exp.
+      if (!APFloat::semanticsHasInf(*SrcSemantics) &&
+          APFloat::semanticsMaxExponent(*SrcSemantics) <=
+              APFloat::semanticsMaxExponent(DstSemantics))
+        Known.knownNot(fcInf);
+
+      // Check and clear all neg flags for formats that do not have signed
+      // representation.
+      if (!APFloat::semanticsHasSignedRepr(*SrcSemantics))
+        Known.knownNot(fcNegative);
+
+      // Check if format has no zero at all (Float8E8M0FNU), or no negative
+      // zero.
+      if (!APFloat::semanticsHasZero(*SrcSemantics))
+        Known.knownNot(fcZero);
+      else if (SrcSemantics->nanEncoding == fltNanEncoding::NegativeZero)
+        Known.knownNot(fcNegZero);
+
+      // If src lands normally in dest, the result can never be subnormal.
+      if (APFloat::isRepresentableAsNormalIn(*SrcSemantics, DstSemantics))
+        Known.knownNot(fcSubnormal);
       break;
     }
     default:
@@ -8925,8 +8963,17 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
 
   // Check if the constant operand can be safely incremented/decremented
   // without overflowing/underflowing.
-  auto ConstantIsOk = [WillIncrement, IsSigned](ConstantInt *C) {
-    return WillIncrement ? !C->isMaxValue(IsSigned) : !C->isMinValue(IsSigned);
+  auto ConstantIsOk = [Pred, WillIncrement, IsSigned](ConstantInt *C) {
+    if (WillIncrement ? C->isMaxValue(IsSigned) : C->isMinValue(IsSigned))
+      return false;
+
+    if (!Pred.hasSameSign())
+      return true;
+
+    // Crossing the corresponding boundary in the other ordering changes the
+    // sign bit, and therefore changes the poison domain.
+    return WillIncrement ? !C->isMaxValue(!IsSigned)
+                         : !C->isMinValue(!IsSigned);
   };
 
   Constant *SafeReplacementConstant = nullptr;
@@ -8974,7 +9021,8 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
     C = Constant::replaceUndefsWith(C, SafeReplacementConstant);
   }
 
-  CmpInst::Predicate NewPred = CmpInst::getFlippedStrictnessPredicate(Pred);
+  CmpPredicate NewPred(CmpInst::getFlippedStrictnessPredicate(Pred),
+                       Pred.hasSameSign());
 
   // Increment or decrement the constant.
   Constant *OneOrNegOne = ConstantInt::get(Type, WillIncrement ? 1 : -1, true);
@@ -8989,7 +9037,6 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
                                               Value *TrueVal, Value *FalseVal,
                                               Value *&LHS, Value *&RHS,
                                               unsigned Depth) {
-  bool HasMismatchedZeros = false;
   if (CmpInst::isFPPredicate(Pred)) {
     // IEEE-754 ignores the sign of 0.0 in comparisons. So if the select has one
     // 0.0 operand, set the compare's 0.0 operands to that same value for the
@@ -9004,14 +9051,10 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
       OutputZeroVal = FalseVal;
 
     if (OutputZeroVal) {
-      if (match(CmpLHS, m_AnyZeroFP()) && CmpLHS != OutputZeroVal) {
-        HasMismatchedZeros = true;
+      if (match(CmpLHS, m_AnyZeroFP()) && CmpLHS != OutputZeroVal)
         CmpLHS = OutputZeroVal;
-      }
-      if (match(CmpRHS, m_AnyZeroFP()) && CmpRHS != OutputZeroVal) {
-        HasMismatchedZeros = true;
+      if (match(CmpRHS, m_AnyZeroFP()) && CmpRHS != OutputZeroVal)
         CmpRHS = OutputZeroVal;
-      }
     }
   }
 
@@ -9023,15 +9066,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   //  minNum(0.0, -0.0)          // May return -0.0 or 0.0 (IEEE 754-2008 5.3.1)
   // Therefore, we behave conservatively and only proceed if at least one of the
   // operands is known to not be zero or if we don't care about signed zero.
-  switch (Pred) {
-  default: break;
-  case CmpInst::FCMP_OGT: case CmpInst::FCMP_OLT:
-  case CmpInst::FCMP_UGT: case CmpInst::FCMP_ULT:
-    if (!HasMismatchedZeros)
-      break;
-    [[fallthrough]];
-  case CmpInst::FCMP_OGE: case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_UGE: case CmpInst::FCMP_ULE:
+  if (CmpInst::isFPPredicate(Pred)) {
     if (!FMF.noSignedZeros() && !isKnownNonZero(CmpLHS) &&
         !isKnownNonZero(CmpRHS))
       return {SPF_UNKNOWN, SPNB_NA, false};
@@ -10735,6 +10770,14 @@ void llvm::findValuesAffectedByCondition(
             InsertAffected(X);
         }
       }
+
+      auto AddNuwSquareOperand = [&AddAffected](Value *Op) {
+        Value *SquareOp = nullptr;
+        if (match(Op, m_NUWMul(m_Value(SquareOp), m_Deferred(SquareOp))))
+          AddAffected(SquareOp);
+      };
+      AddNuwSquareOperand(A);
+      AddNuwSquareOperand(B);
 
       if (HasRHSC && match(A, m_Ctpop(m_Value(X))))
         AddAffected(X);

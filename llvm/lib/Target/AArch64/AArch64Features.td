@@ -828,6 +828,11 @@ def FeatureFuseFCmpFCSel : SubtargetFeature<
     "CPU can fuse FCMP and FCSEL operations",
     [], InlineIgnore>;
 
+def FeatureFuseFMinFMax : SubtargetFeature<
+    "fuse-fmin-fmax", "HasFuseFMinFMax", "true",
+    "CPU can fuse FMIN and FMAX operations",
+    [], InlineIgnore>;
+
 def FeatureAlignCmpCSelPairs : SubtargetFeature<
     "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
     "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs",
@@ -851,6 +856,11 @@ def FeatureFuseLiterals : SubtargetFeature<
 def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
    "fuse-addsub-2reg-const1", "HasFuseAddSub2RegAndConstOne", "true",
    "CPU fuses (a + b + 1) and (a - b - 1)",
+   [], InlineIgnore>;
+
+def FeatureFuseAppleSMECompute : SubtargetFeature<
+   "fuse-apple-sme-compute", "HasFuseAppleSMECompute", "true",
+   "CPU fuses SME compute operations",
    [], InlineIgnore>;
 
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<

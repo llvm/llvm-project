@@ -166,7 +166,7 @@ The ``add_new_check.py`` script will:
     register it in the module and in the build system;
   * create a lit test file in the ``test/clang-tidy/`` directory;
   * create a documentation file and include it into the
-    ``docs/clang-tidy/checks/list.rst``.
+    ``docs/clang-tidy/checks/list.md``.
 
 Let's look at the check class definition in more detail:
 
@@ -455,6 +455,12 @@ If your check relates to a published coding guideline (C++ Core Guidelines,
 SEI CERT, etc.) or style guide, provide links to the relevant guideline or
 style guide sections in your check documentation.
 
+Checks that directly reference MISRA or AUTOSAR guidelines are not accepted
+due to legal/license reasons; see
+`this Discourse thread <https://discourse.llvm.org/t/will-clang-frontend-plan-accept-misra-check-tools/84754>`_.
+Generic checks that happen to overlap with those guidelines are fine as long as
+they do not claim to implement or link to MISRA/AUTOSAR rules.
+
 Provide enough examples of the diagnostics and fix-its provided by the check so
 that a user can easily understand what will happen to their code when the check
 is run. If there are exceptions or limitations to your check, document them
@@ -465,25 +471,7 @@ Building the target ``docs-clang-tools-html`` will run the Sphinx documentation
 generator and create HTML documentation files in the
 ``tools/clang/tools/extra/docs/html`` directory in your build tree.
 Make sure that your check is correctly shown in the release notes and the list
-of checks. Make sure that the formatting and structure of your check's
-documentation look correct: there is no trailing whitespaces and lines are no
-longer than 80 characters.
-
-To validate your files, please use ``doc8`` as described below.
-
-Clang-Tidy uses `doc8 <https://pypi.org/project/doc8/>`_ to check ``.rst``
-files for formatting consistency. You can install ``doc8`` with ``pip``:
-
-.. code-block:: console
-
-  $ pip install doc8
-
-To run ``doc8`` on the modified documentations:
-
-.. code-block:: console
-
-  $ git diff --name-only HEAD -- clang-tools-extra/docs/clang-tidy/ | grep "\.rst$" | xargs -r doc8
-
+of checks, and that its documentation is formatted and structured correctly.
 
 Registering your Check
 ----------------------
@@ -666,13 +654,17 @@ Here's an example:
    // CHECK-FIXES-NOT: using a::C;$
 
 The ``-std`` flag controls which C or C++ standard(s) the test is compiled
-under. It accepts a comma-separated list of standards and supports an
-``-or-later`` suffix:
+under. It accepts a comma-separated list of standards and supports
+``-or-later`` and ``-or-earlier`` suffixes:
 
 - ``-std=c++17``: runs the test **only** with C++17.
 - ``-std=c++17-or-later``: runs the test once for each standard from C++17
   onwards (currently C++17, C++20, C++23, and C++26), in separate invocations.
   Use this when a check should work correctly on all modern standards.
+- ``-std=c++17-or-earlier``: runs the test once for each standard up to and
+  including C++17 (currently C++98, C++11, C++14, and C++17), in separate
+  invocations. Use this when a check should work correctly on all older
+  standards.
 - ``-std=c++14,c++17``: runs the test once with C++14 and once with C++17.
 
 When no ``-std`` is given, ``check_clang_tidy.py`` defaults to

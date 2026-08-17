@@ -101,15 +101,6 @@ static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
 void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "BPFPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
-  // targets that currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(BPFAsmPrinterBeginPass::name(),
-                            "bpf-asm-printer-begin");
-    PIC->addClassToPassName(BPFAsmPrinterPass::name(), "bpf-asmprinter");
-    PIC->addClassToPassName(BPFAsmPrinterEndPass::name(),
-                            "bpf-asm-printer-end");
-  }
 
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {

@@ -106,9 +106,10 @@ namespace BadSpecifiers {
     // defining-type-specifiers other than cv-qualifiers and 'auto'
     S [a] = s; // expected-error {{cannot be declared with type 'S'}}
     decltype(auto) [b] = s; // expected-error {{cannot be declared with type 'decltype(auto)'}}
-    auto ([c2]) = s; // cxx17-error {{structured binding declaration cannot be declared with parenthese}} \
-                     // post2b-error {{use of undeclared identifier 'c2'}} \
-                     // post2b-error {{expected body of lambda expression}} \
+
+    // FIXME: This diagnostic could be improved.
+    auto ([c2]) = s; // expected-error {{use of undeclared identifier 'c2'}} \
+                     // expected-error {{expected body of lambda expression}}
 
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}
@@ -152,6 +153,7 @@ namespace Template {
 }
 
 #define MYC C
+#define CLOSE_NO_INIT ] ;
 
 namespace Init {
   template<typename T> T f(T t) {
@@ -171,6 +173,8 @@ namespace Init {
     T t1 = t; // check that uninitialized structured binding declaration error works with templates and macros
     auto [t0, t2] MYC = {t, t1}; // expected-error{{structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list}} expected-error{{expected ';' at end of declaration}}
                                  // CHECK: :[[@LINE-1]]:19: error: structured binding declaration '[t0, t2]' requires an initializer; expected '=' or braced initializer list
+    auto [bad4 CLOSE_NO_INIT // expected-error {{structured binding declaration '[bad4]' requires an initializer; expected '=' or braced initializer list}}
+                             // CHECK: :[[@LINE-1]]:10: error: structured binding declaration '[bad4]' requires an initializer; expected '=' or braced initializer list
   }
 }
 

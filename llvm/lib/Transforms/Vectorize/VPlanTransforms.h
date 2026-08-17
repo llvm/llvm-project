@@ -39,7 +39,6 @@ class VPRecipeBuilder;
 struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
-LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
@@ -57,11 +56,26 @@ struct VPlanTransforms {
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    static DenseMap<std::pair<Function *, StringRef /* Pass */>, unsigned>
+        PassCounter;
+    Function *Fn = Plan.getScalarHeader()->getIRBasicBlock()->getParent();
+    // Computing these is expensive, so only do it if any VPlan printing has
+    // been requested.
+    unsigned Instance;
+    std::string NumberedPassName;
+
+    if (VPlanPrintBeforeAll || VPlanPrintAfterAll ||
+        !VPlanPrintBeforePasses.empty() || !VPlanPrintAfterPasses.empty()) {
+      Instance = ++PassCounter[{Fn, PassName}];
+
+      NumberedPassName = Instance == 1
+                             ? PassName.str()
+                             : (PassName + "@" + Twine(Instance)).str();
+    }
+
     auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
-      dbgs()
-          << "VPlan for loop in '"
-          << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
-          << "' " << BeforeOrAfterStr << " " << PassName << '\n';
+      dbgs() << "VPlan for loop in '" << Fn->getName() << "' "
+             << BeforeOrAfterStr << " " << NumberedPassName << '\n';
       if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
         Plan.getVectorLoopRegion()->print(dbgs());
       else
@@ -70,8 +84,8 @@ struct VPlanTransforms {
 
     auto MatchesPassListOption = [&](const cl::list<std::string> &ListOpt) {
       return (ListOpt.getNumOccurrences() > 0 &&
-              any_of(ListOpt, [PassName](StringRef Entry) {
-                return Regex(Entry).match(PassName);
+              any_of(ListOpt, [&](StringRef Entry) {
+                return Regex(Entry).match(NumberedPassName);
               }));
     };
 
@@ -227,10 +241,11 @@ struct VPlanTransforms {
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
-  /// to a wide recipe if needed.
-  LLVM_ABI_FOR_TEST static bool
-  tryToConvertVPInstructionsToVPRecipes(VPlan &Plan,
-                                        const TargetLibraryInfo &TLI);
+  /// to a wide recipe if needed. Uses \p PSE to detect contiguous memory
+  /// accesses w.r.t. the \p OuterLoop induction variable.
+  LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
+      VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
+      Loop *OuterLoop);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
   /// strict and non-strict min/max reductions used by FindLastIV reductions are
@@ -416,7 +431,8 @@ struct VPlanTransforms {
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
   static void optimizeInductionLiveOutUsers(VPlan &Plan,
-                                            PredicatedScalarEvolution &PSE);
+                                            PredicatedScalarEvolution &PSE,
+                                            const Loop *L);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
@@ -549,10 +565,11 @@ struct VPlanTransforms {
   /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
   /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
   /// spills for \p VF at unroll factor \p UF.
-  static void replaceWideCanonicalIVWithWideIV(
-      VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-      TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
-      unsigned UF, const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
+  static void
+  replaceWideCanonicalIVWithWideIV(VPlan &Plan, ScalarEvolution &SE,
+                                   const TargetTransformInfo &TTI,
+                                   TargetTransformInfo::TargetCostKind CostKind,
+                                   ElementCount VF, unsigned UF);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
@@ -569,7 +586,9 @@ struct VPlanTransforms {
   /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
   /// converting them to FindIV reductions, if their IV range excludes a
   /// suitable sentinel value. For expressions of IVs, the expression is sunk
-  /// to the middle block.
+  /// to the middle block. The decision is based on SCEV expressions for \p L,
+  /// so this must run before any transform that changes the plan's iteration
+  /// space relative to \p L.
   static void optimizeFindIVReductions(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L);
 

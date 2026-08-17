@@ -29,10 +29,15 @@ namespace llvm {
 /// Eytzinger (breadth-first) order.
 template <typename T> class EytzingerTableSpan {
 public:
+  using iterator = const T *;
+  using const_iterator = const T *;
+
   EytzingerTableSpan() = default;
   EytzingerTableSpan(const T *Data, size_t NumEntries)
       : Data(Data), NumEntries(NumEntries) {}
 
+  [[nodiscard]] iterator begin() const { return Data; }
+  [[nodiscard]] iterator end() const { return Data + NumEntries; }
   [[nodiscard]] const T *data() const { return Data; }
   [[nodiscard]] bool empty() const { return !Data || NumEntries == 0; }
   [[nodiscard]] size_t size() const { return NumEntries; }
@@ -121,6 +126,9 @@ template <typename T> class EytzingerTable {
   explicit EytzingerTable(std::vector<T> Buffer) : Storage(std::move(Buffer)) {}
 
 public:
+  using iterator = typename std::vector<T>::const_iterator;
+  using const_iterator = typename std::vector<T>::const_iterator;
+
   EytzingerTable() = default;
 
   /// Construct an Eytzinger search tree from a vector of keys by sorting,
@@ -160,6 +168,11 @@ public:
   }
 
   [[nodiscard]] bool isSorted() const { return asSpan().isSorted(); }
+
+  [[nodiscard]] iterator begin() { return Storage.begin(); }
+  [[nodiscard]] const_iterator begin() const { return Storage.begin(); }
+  [[nodiscard]] iterator end() { return Storage.end(); }
+  [[nodiscard]] const_iterator end() const { return Storage.end(); }
 
   [[nodiscard]] const T *data() const { return Storage.data(); }
   [[nodiscard]] size_t size() const { return Storage.size(); }

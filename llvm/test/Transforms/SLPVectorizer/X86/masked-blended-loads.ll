@@ -6,85 +6,10 @@ define <16 x i32> @test(ptr %a, ptr %b, <16 x i32> %c, <16 x i32> %d) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <16 x i32> [[C:%.*]], <16 x i32> [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <16 x i32> [[D]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    [[A_B:%.*]] = select i1 [[TMP1]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[A_B]], align 4
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <16 x i32> [[C]], i32 [[L0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i1> [[TMP0]], i64 1
-; CHECK-NEXT:    [[A_SINK_1:%.*]] = select i1 [[TMP2]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_1]], i64 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_1]], align 4
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <16 x i32> [[VECINS]], i32 [[L1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x i1> [[TMP0]], i64 2
-; CHECK-NEXT:    [[A_SINK_2:%.*]] = select i1 [[TMP3]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_2]], i64 8
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[GEP_2]], align 4
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <16 x i32> [[VECINS_1]], i32 [[L2]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i1> [[TMP0]], i64 3
-; CHECK-NEXT:    [[A_SINK_3:%.*]] = select i1 [[TMP4]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_3]], i64 12
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[GEP_3]], align 4
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <16 x i32> [[VECINS_2]], i32 [[L3]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x i1> [[TMP0]], i64 4
-; CHECK-NEXT:    [[A_SINK_4:%.*]] = select i1 [[TMP5]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_4]], i64 16
-; CHECK-NEXT:    [[L4:%.*]] = load i32, ptr [[GEP_4]], align 4
-; CHECK-NEXT:    [[VECINS_4:%.*]] = insertelement <16 x i32> [[VECINS_3]], i32 [[L4]], i64 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <16 x i1> [[TMP0]], i64 5
-; CHECK-NEXT:    [[A_SINK_5:%.*]] = select i1 [[TMP6]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_5]], i64 20
-; CHECK-NEXT:    [[L5:%.*]] = load i32, ptr [[GEP_5]], align 4
-; CHECK-NEXT:    [[VECINS_5:%.*]] = insertelement <16 x i32> [[VECINS_4]], i32 [[L5]], i64 5
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i1> [[TMP0]], i64 6
-; CHECK-NEXT:    [[A_SINK_6:%.*]] = select i1 [[TMP7]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_6]], i64 24
-; CHECK-NEXT:    [[L6:%.*]] = load i32, ptr [[GEP_6]], align 4
-; CHECK-NEXT:    [[VECINS_6:%.*]] = insertelement <16 x i32> [[VECINS_5]], i32 [[L6]], i64 6
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP0]], i64 7
-; CHECK-NEXT:    [[A_SINK_7:%.*]] = select i1 [[TMP8]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_7]], i64 28
-; CHECK-NEXT:    [[L7:%.*]] = load i32, ptr [[GEP_7]], align 4
-; CHECK-NEXT:    [[VECINS_7:%.*]] = insertelement <16 x i32> [[VECINS_6]], i32 [[L7]], i64 7
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[TMP0]], i64 8
-; CHECK-NEXT:    [[A_SINK_8:%.*]] = select i1 [[TMP9]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_8]], i64 32
-; CHECK-NEXT:    [[L8:%.*]] = load i32, ptr [[GEP_8]], align 4
-; CHECK-NEXT:    [[VECINS_8:%.*]] = insertelement <16 x i32> [[VECINS_7]], i32 [[L8]], i64 8
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP0]], i64 9
-; CHECK-NEXT:    [[A_SINK_9:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_9]], i64 36
-; CHECK-NEXT:    [[L9:%.*]] = load i32, ptr [[GEP_9]], align 4
-; CHECK-NEXT:    [[VECINS_9:%.*]] = insertelement <16 x i32> [[VECINS_8]], i32 [[L9]], i64 9
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i1> [[TMP0]], i64 10
-; CHECK-NEXT:    [[A_SINK_10:%.*]] = select i1 [[TMP11]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_10]], i64 40
-; CHECK-NEXT:    [[L10:%.*]] = load i32, ptr [[GEP_10]], align 4
-; CHECK-NEXT:    [[VECINS_10:%.*]] = insertelement <16 x i32> [[VECINS_9]], i32 [[L10]], i64 10
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x i1> [[TMP0]], i64 11
-; CHECK-NEXT:    [[A_SINK_11:%.*]] = select i1 [[TMP12]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_11]], i64 44
-; CHECK-NEXT:    [[L11:%.*]] = load i32, ptr [[GEP_11]], align 4
-; CHECK-NEXT:    [[VECINS_11:%.*]] = insertelement <16 x i32> [[VECINS_10]], i32 [[L11]], i64 11
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <16 x i1> [[TMP0]], i64 12
-; CHECK-NEXT:    [[A_SINK_12:%.*]] = select i1 [[TMP13]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_12:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_12]], i64 48
-; CHECK-NEXT:    [[L12:%.*]] = load i32, ptr [[GEP_12]], align 4
-; CHECK-NEXT:    [[VECINS_12:%.*]] = insertelement <16 x i32> [[VECINS_11]], i32 [[L12]], i64 12
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x i1> [[TMP0]], i64 13
-; CHECK-NEXT:    [[A_SINK_13:%.*]] = select i1 [[TMP14]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_13:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_13]], i64 52
-; CHECK-NEXT:    [[L13:%.*]] = load i32, ptr [[GEP_13]], align 4
-; CHECK-NEXT:    [[VECINS_13:%.*]] = insertelement <16 x i32> [[VECINS_12]], i32 [[L13]], i64 13
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x i1> [[TMP0]], i64 14
-; CHECK-NEXT:    [[A_SINK_14:%.*]] = select i1 [[TMP15]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_14:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_14]], i64 56
-; CHECK-NEXT:    [[L14:%.*]] = load i32, ptr [[GEP_14]], align 4
-; CHECK-NEXT:    [[VECINS_14:%.*]] = insertelement <16 x i32> [[VECINS_13]], i32 [[L14]], i64 14
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <16 x i1> [[TMP0]], i64 15
-; CHECK-NEXT:    [[A_SINK_15:%.*]] = select i1 [[TMP16]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[GEP_15:%.*]] = getelementptr inbounds i8, ptr [[A_SINK_15]], i64 60
-; CHECK-NEXT:    [[L15:%.*]] = load i32, ptr [[GEP_15]], align 4
-; CHECK-NEXT:    [[VECINS_15:%.*]] = insertelement <16 x i32> [[VECINS_14]], i32 [[L15]], i64 15
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <16 x i1> [[TMP0]], splat (i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 4 [[A]], <16 x i1> [[TMP0]], <16 x i32> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0(ptr align 4 [[B]], <16 x i1> [[TMP1]], <16 x i32> poison)
+; CHECK-NEXT:    [[VECINS_15:%.*]] = select <16 x i1> [[TMP0]], <16 x i32> [[TMP2]], <16 x i32> [[TMP3]]
 ; CHECK-NEXT:    ret <16 x i32> [[VECINS_15]]
 ;
 entry:
@@ -184,4 +109,170 @@ entry:
   %l15 = load i32, ptr %gep.15, align 4
   %vecins.15 = insertelement <16 x i32> %vecins.14, i32 %l15, i64 15
   ret <16 x i32> %vecins.15
+}
+
+define <8 x i32> @test_cmp_two_vectors(ptr %a, ptr %b, <8 x i32> %x, <8 x i32> %y) {
+; CHECK-LABEL: define <8 x i32> @test_cmp_two_vectors(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <8 x i32> [[X:%.*]], <8 x i32> [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt <8 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <8 x i1> [[TMP0]], splat (i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[A]], <8 x i1> [[TMP0]], <8 x i32> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[B]], <8 x i1> [[TMP1]], <8 x i32> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP0]], <8 x i32> [[TMP2]], <8 x i32> [[TMP3]]
+; CHECK-NEXT:    ret <8 x i32> [[TMP4]]
+;
+entry:
+  %x0 = extractelement <8 x i32> %x, i64 0
+  %y0 = extractelement <8 x i32> %y, i64 0
+  %c0 = icmp sgt i32 %x0, %y0
+  %p0 = select i1 %c0, ptr %a, ptr %b
+  %l0 = load i32, ptr %p0, align 4
+  %v0 = insertelement <8 x i32> poison, i32 %l0, i64 0
+  %x1 = extractelement <8 x i32> %x, i64 1
+  %y1 = extractelement <8 x i32> %y, i64 1
+  %c1 = icmp sgt i32 %x1, %y1
+  %s1 = select i1 %c1, ptr %a, ptr %b
+  %p1 = getelementptr inbounds i8, ptr %s1, i64 4
+  %l1 = load i32, ptr %p1, align 4
+  %v1 = insertelement <8 x i32> %v0, i32 %l1, i64 1
+  %x2 = extractelement <8 x i32> %x, i64 2
+  %y2 = extractelement <8 x i32> %y, i64 2
+  %c2 = icmp sgt i32 %x2, %y2
+  %s2 = select i1 %c2, ptr %a, ptr %b
+  %p2 = getelementptr inbounds i8, ptr %s2, i64 8
+  %l2 = load i32, ptr %p2, align 4
+  %v2 = insertelement <8 x i32> %v1, i32 %l2, i64 2
+  %x3 = extractelement <8 x i32> %x, i64 3
+  %y3 = extractelement <8 x i32> %y, i64 3
+  %c3 = icmp sgt i32 %x3, %y3
+  %s3 = select i1 %c3, ptr %a, ptr %b
+  %p3 = getelementptr inbounds i8, ptr %s3, i64 12
+  %l3 = load i32, ptr %p3, align 4
+  %v3 = insertelement <8 x i32> %v2, i32 %l3, i64 3
+  %x4 = extractelement <8 x i32> %x, i64 4
+  %y4 = extractelement <8 x i32> %y, i64 4
+  %c4 = icmp sgt i32 %x4, %y4
+  %s4 = select i1 %c4, ptr %a, ptr %b
+  %p4 = getelementptr inbounds i8, ptr %s4, i64 16
+  %l4 = load i32, ptr %p4, align 4
+  %v4 = insertelement <8 x i32> %v3, i32 %l4, i64 4
+  %x5 = extractelement <8 x i32> %x, i64 5
+  %y5 = extractelement <8 x i32> %y, i64 5
+  %c5 = icmp sgt i32 %x5, %y5
+  %s5 = select i1 %c5, ptr %a, ptr %b
+  %p5 = getelementptr inbounds i8, ptr %s5, i64 20
+  %l5 = load i32, ptr %p5, align 4
+  %v5 = insertelement <8 x i32> %v4, i32 %l5, i64 5
+  %x6 = extractelement <8 x i32> %x, i64 6
+  %y6 = extractelement <8 x i32> %y, i64 6
+  %c6 = icmp sgt i32 %x6, %y6
+  %s6 = select i1 %c6, ptr %a, ptr %b
+  %p6 = getelementptr inbounds i8, ptr %s6, i64 24
+  %l6 = load i32, ptr %p6, align 4
+  %v6 = insertelement <8 x i32> %v5, i32 %l6, i64 6
+  %x7 = extractelement <8 x i32> %x, i64 7
+  %y7 = extractelement <8 x i32> %y, i64 7
+  %c7 = icmp sgt i32 %x7, %y7
+  %s7 = select i1 %c7, ptr %a, ptr %b
+  %p7 = getelementptr inbounds i8, ptr %s7, i64 28
+  %l7 = load i32, ptr %p7, align 4
+  %v7 = insertelement <8 x i32> %v6, i32 %l7, i64 7
+  ret <8 x i32> %v7
+}
+
+define <8 x i32> @test_and_of_compares(ptr %a, ptr %b, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
+; CHECK-LABEL: define <8 x i32> @test_and_of_compares(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], <8 x i32> [[X:%.*]], <8 x i32> [[Y:%.*]], <8 x i32> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt <8 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <8 x i32> [[X]], [[Z]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <8 x i1> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[A]], <8 x i1> [[TMP2]], <8 x i32> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[B]], <8 x i1> [[TMP3]], <8 x i32> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP2]], <8 x i32> [[TMP4]], <8 x i32> [[TMP5]]
+; CHECK-NEXT:    ret <8 x i32> [[TMP6]]
+;
+entry:
+  %x0 = extractelement <8 x i32> %x, i64 0
+  %y0 = extractelement <8 x i32> %y, i64 0
+  %z0 = extractelement <8 x i32> %z, i64 0
+  %m0 = icmp sgt i32 %x0, %y0
+  %n0 = icmp slt i32 %x0, %z0
+  %c0 = and i1 %m0, %n0
+  %p0 = select i1 %c0, ptr %a, ptr %b
+  %l0 = load i32, ptr %p0, align 4
+  %v0 = insertelement <8 x i32> poison, i32 %l0, i64 0
+  %x1 = extractelement <8 x i32> %x, i64 1
+  %y1 = extractelement <8 x i32> %y, i64 1
+  %z1 = extractelement <8 x i32> %z, i64 1
+  %m1 = icmp sgt i32 %x1, %y1
+  %n1 = icmp slt i32 %x1, %z1
+  %c1 = and i1 %m1, %n1
+  %s1 = select i1 %c1, ptr %a, ptr %b
+  %p1 = getelementptr inbounds i8, ptr %s1, i64 4
+  %l1 = load i32, ptr %p1, align 4
+  %v1 = insertelement <8 x i32> %v0, i32 %l1, i64 1
+  %x2 = extractelement <8 x i32> %x, i64 2
+  %y2 = extractelement <8 x i32> %y, i64 2
+  %z2 = extractelement <8 x i32> %z, i64 2
+  %m2 = icmp sgt i32 %x2, %y2
+  %n2 = icmp slt i32 %x2, %z2
+  %c2 = and i1 %m2, %n2
+  %s2 = select i1 %c2, ptr %a, ptr %b
+  %p2 = getelementptr inbounds i8, ptr %s2, i64 8
+  %l2 = load i32, ptr %p2, align 4
+  %v2 = insertelement <8 x i32> %v1, i32 %l2, i64 2
+  %x3 = extractelement <8 x i32> %x, i64 3
+  %y3 = extractelement <8 x i32> %y, i64 3
+  %z3 = extractelement <8 x i32> %z, i64 3
+  %m3 = icmp sgt i32 %x3, %y3
+  %n3 = icmp slt i32 %x3, %z3
+  %c3 = and i1 %m3, %n3
+  %s3 = select i1 %c3, ptr %a, ptr %b
+  %p3 = getelementptr inbounds i8, ptr %s3, i64 12
+  %l3 = load i32, ptr %p3, align 4
+  %v3 = insertelement <8 x i32> %v2, i32 %l3, i64 3
+  %x4 = extractelement <8 x i32> %x, i64 4
+  %y4 = extractelement <8 x i32> %y, i64 4
+  %z4 = extractelement <8 x i32> %z, i64 4
+  %m4 = icmp sgt i32 %x4, %y4
+  %n4 = icmp slt i32 %x4, %z4
+  %c4 = and i1 %m4, %n4
+  %s4 = select i1 %c4, ptr %a, ptr %b
+  %p4 = getelementptr inbounds i8, ptr %s4, i64 16
+  %l4 = load i32, ptr %p4, align 4
+  %v4 = insertelement <8 x i32> %v3, i32 %l4, i64 4
+  %x5 = extractelement <8 x i32> %x, i64 5
+  %y5 = extractelement <8 x i32> %y, i64 5
+  %z5 = extractelement <8 x i32> %z, i64 5
+  %m5 = icmp sgt i32 %x5, %y5
+  %n5 = icmp slt i32 %x5, %z5
+  %c5 = and i1 %m5, %n5
+  %s5 = select i1 %c5, ptr %a, ptr %b
+  %p5 = getelementptr inbounds i8, ptr %s5, i64 20
+  %l5 = load i32, ptr %p5, align 4
+  %v5 = insertelement <8 x i32> %v4, i32 %l5, i64 5
+  %x6 = extractelement <8 x i32> %x, i64 6
+  %y6 = extractelement <8 x i32> %y, i64 6
+  %z6 = extractelement <8 x i32> %z, i64 6
+  %m6 = icmp sgt i32 %x6, %y6
+  %n6 = icmp slt i32 %x6, %z6
+  %c6 = and i1 %m6, %n6
+  %s6 = select i1 %c6, ptr %a, ptr %b
+  %p6 = getelementptr inbounds i8, ptr %s6, i64 24
+  %l6 = load i32, ptr %p6, align 4
+  %v6 = insertelement <8 x i32> %v5, i32 %l6, i64 6
+  %x7 = extractelement <8 x i32> %x, i64 7
+  %y7 = extractelement <8 x i32> %y, i64 7
+  %z7 = extractelement <8 x i32> %z, i64 7
+  %m7 = icmp sgt i32 %x7, %y7
+  %n7 = icmp slt i32 %x7, %z7
+  %c7 = and i1 %m7, %n7
+  %s7 = select i1 %c7, ptr %a, ptr %b
+  %p7 = getelementptr inbounds i8, ptr %s7, i64 28
+  %l7 = load i32, ptr %p7, align 4
+  %v7 = insertelement <8 x i32> %v6, i32 %l7, i64 7
+  ret <8 x i32> %v7
 }
