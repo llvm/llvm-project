@@ -590,6 +590,32 @@ _BitInt(128) f74(__uint128_t b, __uint128_t c, __uint128_t d, long e, _BitInt(12
   return a;
 }
 
+// check that a run of (u)int128_t bit-fields, which is lowered to an i128
+// access unit, is not passed as an i128 when only one eightbyte is INTEGER
+struct s75 {
+  __uint128_t : 124;
+  __uint128_t a : 4;
+};
+// CHECK-LABEL: define{{.*}} i64 @f75()
+struct s75 f75(void) {
+  return (struct s75){0};
+}
+// CHECK-LABEL: define{{.*}} void @f76(i64 %a.coerce)
+void f76(struct s75 a) {
+}
+
+struct s77 {
+  __uint128_t a : 4;
+  __uint128_t : 124;
+};
+// CHECK-LABEL: define{{.*}} i64 @f77()
+struct s77 f77(void) {
+  return (struct s77){0};
+}
+// CHECK-LABEL: define{{.*}} void @f78(i64 %a.coerce)
+void f78(struct s77 a) {
+}
+
 /// The synthesized __va_list_tag does not have file/line fields.
 // CHECK:      = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "__va_list_tag",
 // CHECK-NOT:  file:

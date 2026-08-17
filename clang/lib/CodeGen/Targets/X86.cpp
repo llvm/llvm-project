@@ -2628,12 +2628,10 @@ GetINTEGERTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
                                   SourceOffset);
   }
 
-  // if we have a 128-bit integer, we can pass it safely using an i128
-  // so we return that
-  if (IRType->isIntegerTy(128)) {
-    assert(IROffset == 0);
+  // A 128-bit integer can be passed safely as an i128, but only if it starts at
+  // this offset; otherwise it spans more than the eightbyte we're describing.
+  if (IRType->isIntegerTy(128) && IROffset == 0)
     return IRType;
-  }
 
   // Okay, we don't have any better idea of what to pass, so we pass this in an
   // integer register that isn't too big to fit the rest of the struct.
@@ -2739,10 +2737,13 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
         return ABIArgInfo::getExtend(RetTy);
     }
 
+    // An i128 covers both eightbytes, so it only describes the value if the
+    // high eightbyte is INTEGER too; otherwise it is bit-field storage whose
+    // high eightbyte holds no data.
     if (ResType->isIntegerTy(128)) {
-      // i128 are passed directly
-      assert(Hi == Integer);
-      return ABIArgInfo::getDirect(ResType);
+      if (Hi == Integer)
+        return ABIArgInfo::getDirect(ResType);
+      ResType = llvm::Type::getInt64Ty(getVMContext());
     }
     break;
 
@@ -2889,10 +2890,13 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
     }
 
+    // See the matching comment in classifyReturnType.
     if (ResType->isIntegerTy(128)) {
-      assert(Hi == Integer);
-      ++neededInt;
-      return ABIArgInfo::getDirect(ResType);
+      if (Hi == Integer) {
+        ++neededInt;
+        return ABIArgInfo::getDirect(ResType);
+      }
+      ResType = llvm::Type::getInt64Ty(getVMContext());
     }
     break;
 
