@@ -202,6 +202,7 @@ public:
   static constexpr int Corank() { return 0; }
 
   bool operator==(const Operation &that) const {
+    CHECK(kind() == that.kind());
     return operand_ == that.operand_;
   }
 
