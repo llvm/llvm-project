@@ -23,12 +23,17 @@ namespace Fortran::lower {
 
 /// Initialization mode for automatic (local) variables without explicit
 /// or default initialization, selected via -finit-local=.
+///
+/// Zero and Hex fill every storage byte including struct padding and
+/// CHARACTER storage.  QNaN and SNaN initialize each typed field
+/// individually; struct padding is not yet covered for those modes
+/// (TODO: use whole-struct memset once PR #159788 lands).
 enum class InitLocalKind {
   Off,  ///< No initialization (default)
-  Zero, ///< Fill with 0x00 bytes
-  Hex,  ///< Fill with a user-supplied byte pattern
-  QNaN, ///< Quiet NaN for FP; 0xAA byte-splat for non-FP types
-  SNaN, ///< Signalling NaN for FP; 0xAA byte-splat for non-FP types
+  Zero, ///< Fill with 0x00 bytes (all types, all storage including padding)
+  Hex,  ///< Fill with a user-supplied byte pattern (all types, all storage including padding)
+  QNaN, ///< Quiet NaN for FP fields; 0xAA byte-splat for non-FP fields (struct padding not yet covered)
+  SNaN, ///< Signalling NaN for FP fields; 0xAA byte-splat for non-FP fields (struct padding not yet covered)
 };
 
 class LoweringOptionsBase {
