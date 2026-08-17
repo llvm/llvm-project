@@ -2281,13 +2281,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSTORE, VT, Custom);
     }
 
-    // Histcnt is SVE2 only
-    if (Subtarget->hasSVE2()) {
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv4i32,
-                         Custom);
-      setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
-                         Custom);
+    setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv4i32,
+                       Custom);
+    setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
+                       Custom);
 
+    if (Subtarget->hasSVE2()) {
       static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
                                         ISD::PARTIAL_REDUCE_UMLA};
       // Must be lowered to SVE instructions.
@@ -34807,10 +34806,16 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   SDValue IntID = HG->getIntID();
 
   // The Intrinsic ID determines the type of update operation.
-  [[maybe_unused]] ConstantSDNode *CID = cast<ConstantSDNode>(IntID.getNode());
-  // Right now, we only support 'add' as an update.
-  assert(CID->getZExtValue() == Intrinsic::experimental_vector_histogram_add &&
-         "Unexpected histogram update operation");
+  ConstantSDNode *CID = cast<ConstantSDNode>(IntID.getNode());
+  Intrinsic::ID IID = static_cast<Intrinsic::ID>(CID->getZExtValue());
+
+  // HISTCNT is SVE2-only, so 'add' has no lowering without it.
+  if (IID == Intrinsic::experimental_vector_histogram_add &&
+      !Subtarget->hasSVE2())
+    return SDValue();
+
+  bool IsMinMax = IID == Intrinsic::experimental_vector_histogram_umin ||
+                  IID == Intrinsic::experimental_vector_histogram_umax;
 
   EVT IndexVT = Index.getValueType();
   LLVMContext &Ctx = *DAG.getContext();
@@ -34823,8 +34828,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
   SDValue PassThru = DAG.getSplatVector(IncSplatVT, DL, Zero);
-  SDValue IncSplat = DAG.getSplatVector(
-      IncSplatVT, DL, DAG.getAnyExtOrTrunc(Inc, DL, IncExtVT));
+  SDValue IncScalar = DAG.getAnyExtOrTrunc(Inc, DL, IncExtVT);
+  if (ExtTrunc && IsMinMax) {
+    IncScalar = DAG.getZeroExtendInReg(IncScalar, DL, HG->getMemoryVT());
+  }
+  SDValue IncSplat = DAG.getSplatVector(IncSplatVT, DL, IncScalar);
   SDValue Ops[] = {Chain, PassThru, Mask, Ptr, Index, Scale};
 
   MachineMemOperand *MMO = HG->getMemOperand();
@@ -34833,26 +34841,44 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
       MMO->getPointerInfo(), MachineMemOperand::MOLoad, MMO->getSize(),
       MMO->getAlign(), MMO->getAAInfo());
   ISD::MemIndexType IndexType = HG->getIndexType();
-  SDValue Gather = DAG.getMaskedGather(
-      DAG.getVTList(IncSplatVT, MVT::Other), MemVT, DL, Ops, GMMO, IndexType,
-      ExtTrunc ? ISD::EXTLOAD : ISD::NON_EXTLOAD);
+  ISD::LoadExtType ExtType = !ExtTrunc  ? ISD::NON_EXTLOAD
+                             : IsMinMax ? ISD::ZEXTLOAD
+                                        : ISD::EXTLOAD;
+  SDValue Gather =
+      DAG.getMaskedGather(DAG.getVTList(IncSplatVT, MVT::Other), MemVT, DL, Ops,
+                          GMMO, IndexType, ExtType);
 
   SDValue GChain = Gather.getValue(1);
 
-  // Perform the histcnt, multiply by inc, add to bucket data.
-  SDValue ID =
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_histcnt, DL, IncExtVT);
-  SDValue HistCnt =
-      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, IndexVT, ID, Mask, Index, Index);
-  SDValue Mul = DAG.getNode(ISD::MUL, DL, IncSplatVT, HistCnt, IncSplat);
-  SDValue Add = DAG.getNode(ISD::ADD, DL, IncSplatVT, Gather, Mul);
+  SDValue Update;
+  switch (IID) {
+  case Intrinsic::experimental_vector_histogram_add: {
+    // Perform the histcnt, multiply by inc, add to bucket data.
+    SDValue ID =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_histcnt, DL, IncExtVT);
+    SDValue HistCnt = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, IndexVT, ID,
+                                  Mask, Index, Index);
+    SDValue Mul = DAG.getNode(ISD::MUL, DL, IncSplatVT, HistCnt, IncSplat);
+    Update = DAG.getNode(ISD::ADD, DL, IncSplatVT, Gather, Mul);
+    break;
+  }
+  case Intrinsic::experimental_vector_histogram_umin:
+    Update = DAG.getNode(ISD::UMIN, DL, IncSplatVT, Gather, IncSplat);
+    break;
+  case Intrinsic::experimental_vector_histogram_umax:
+    Update = DAG.getNode(ISD::UMAX, DL, IncSplatVT, Gather, IncSplat);
+    break;
+  // TODO: uadd_sat needs a saturating multiply by the histcnt
+  default:
+    llvm_unreachable("Unexpected histogram update operation");
+  }
 
   // Create an MMO for the scatter, without load|store flags.
   MachineMemOperand *SMMO = DAG.getMachineFunction().getMachineMemOperand(
       MMO->getPointerInfo(), MachineMemOperand::MOStore, MMO->getSize(),
       MMO->getAlign(), MMO->getAAInfo());
 
-  SDValue ScatterOps[] = {GChain, Add, Mask, Ptr, Index, Scale};
+  SDValue ScatterOps[] = {GChain, Update, Mask, Ptr, Index, Scale};
   SDValue Scatter = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MemVT, DL,
                                          ScatterOps, SMMO, IndexType, ExtTrunc);
   return Scatter;

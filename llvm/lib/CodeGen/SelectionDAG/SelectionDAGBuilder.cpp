@@ -6607,7 +6607,9 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
                                                unsigned IntrinsicID) {
   // For now, we're only lowering an 'add' histogram.
   // We can add others later, e.g. saturating adds, min/max.
-  assert(IntrinsicID == Intrinsic::experimental_vector_histogram_add &&
+  assert((IntrinsicID == Intrinsic::experimental_vector_histogram_add ||
+          IntrinsicID == Intrinsic::experimental_vector_histogram_umin ||
+          IntrinsicID == Intrinsic::experimental_vector_histogram_umax) &&
          "Tried to lower unsupported histogram type");
   SDLoc sdl = getCurSDLoc();
   Value *Ptr = I.getOperand(0);
@@ -8604,7 +8606,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_convergence_loop:
     visitConvergenceControl(I, Intrinsic);
     return;
-  case Intrinsic::experimental_vector_histogram_add: {
+  case Intrinsic::experimental_vector_histogram_add:
+  case Intrinsic::experimental_vector_histogram_umin:
+  case Intrinsic::experimental_vector_histogram_umax: {
     visitVectorHistogram(I, Intrinsic);
     return;
   }
