@@ -56,6 +56,7 @@ tools = [
         ),
     ),
     ToolSubst("%llvm_src_root", config.llvm_src_root),
+    ToolSubst("%llvm_obj_root", config.llvm_obj_root),
     ToolSubst("%llvm_tools_dir", config.llvm_tools_dir),
 ]
 

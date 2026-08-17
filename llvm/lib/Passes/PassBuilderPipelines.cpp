@@ -200,9 +200,9 @@ static cl::opt<bool>
     TriggerCrash("opt-pipeline-trigger-crash", cl::init(false), cl::Hidden,
                  cl::desc("Trigger crash in optimization pipeline"));
 
-static cl::opt<bool> EnableGlobalAnalyses(
-    "enable-global-analyses", cl::init(true), cl::Hidden,
-    cl::desc("Enable inter-procedural analyses"));
+static cl::opt<bool>
+    EnableGlobalAnalyses("enable-global-analyses", cl::init(true), cl::Hidden,
+                         cl::desc("Enable inter-procedural analyses"));
 
 static cl::opt<bool> RunPartialInlining("enable-partial-inlining",
                                         cl::init(false), cl::Hidden,
@@ -330,21 +330,8 @@ extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions() {
-  LoopInterleaving = true;
-  LoopVectorization = true;
-  SLPVectorization = false;
-  LoopUnrolling = true;
-  LoopInterchange = EnableLoopInterchange;
-  LoopFusion = false;
-  ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
-  LicmMssaOptCap = SetLicmMssaOptCap;
-  LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
-  CallGraphProfile = true;
-  UnifiedLTO = false;
-  MergeFunctions = EnableMergeFunctions;
-  InlinerThreshold = -1;
-  EagerlyInvalidateAnalyses = EnableEagerlyInvalidateAnalyses;
-  DevirtualizeSpeculatively = EnableDevirtualizeSpeculatively;
+#define PIPELINE_TUNING_OPTION(Type, Name, Default, Kind) Name = Default;
+#include "llvm/Passes/PipelineTuningOptions.def"
 }
 
 namespace llvm {

@@ -12,16 +12,28 @@
 
 using namespace llvm;
 
-MCTargetOptions::MCTargetOptions()
-    : MCRelaxAll(false), MCNoExecStack(false), MCFatalWarnings(false),
-      MCNoWarn(false), MCNoDeprecatedWarn(false), MCNoTypeCheck(false),
-      MCSaveTempLabels(false), MCIncrementalLinkerCompatible(false),
-      FDPIC(false), ShowMCEncoding(false), ShowMCInst(false), AsmVerbose(false),
-      PreserveAsmComments(true), Dwarf64(false),
-      EmitDwarfUnwind(EmitDwarfUnwindType::Default),
-      MCUseDwarfDirectory(DefaultDwarfDirectory),
-      EmitCompactUnwindNonCanonical(false), EmitSFrameUnwind(false),
-      PPCUseFullRegisterNames(false), LargeEHEncoding(false) {}
+MCTargetOptions::MCTargetOptions() {
+#define MC_TARGET_OPTION_INIT_BITFIELD(Type, Name, Bits, Default)              \
+  Name = Default;
+#define MC_TARGET_OPTION_INIT_BOOL(Type, Name, Bits, Default)
+#define MC_TARGET_OPTION_INIT_ENUM(Type, Name, Bits, Default)
+#define MC_TARGET_OPTION_INIT_OPTIONAL_UINT(Type, Name, Bits, Default)
+#define MC_TARGET_OPTION_INIT_INT(Type, Name, Bits, Default)
+#define MC_TARGET_OPTION_INIT_PAIR(Type, Name, Bits, Default)
+#define MC_TARGET_OPTION_INIT_STRING(Type, Name, Bits, Default)
+#define MC_TARGET_OPTION_INIT_STRING_LIST(Type, Name, Bits, Default)
+#define MC_TARGET_OPTION(Type, Name, Bits, Default, Kind)                      \
+  MC_TARGET_OPTION_INIT_##Kind(Type, Name, Bits, Default)
+#include "llvm/MC/MCTargetOptions.def"
+#undef MC_TARGET_OPTION_INIT_BITFIELD
+#undef MC_TARGET_OPTION_INIT_BOOL
+#undef MC_TARGET_OPTION_INIT_ENUM
+#undef MC_TARGET_OPTION_INIT_OPTIONAL_UINT
+#undef MC_TARGET_OPTION_INIT_INT
+#undef MC_TARGET_OPTION_INIT_PAIR
+#undef MC_TARGET_OPTION_INIT_STRING
+#undef MC_TARGET_OPTION_INIT_STRING_LIST
+}
 
 std::pair<int, int> MCTargetOptions::parseBinutilsVersion(StringRef Version) {
   if (Version == "none")
@@ -32,9 +44,7 @@ std::pair<int, int> MCTargetOptions::parseBinutilsVersion(StringRef Version) {
   return Ret;
 }
 
-StringRef MCTargetOptions::getABIName() const {
-  return ABIName;
-}
+StringRef MCTargetOptions::getABIName() const { return ABIName; }
 
 StringRef MCTargetOptions::getAssemblyLanguage() const {
   return AssemblyLanguage;

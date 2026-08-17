@@ -105,7 +105,8 @@ public:
   LLVM_ABI void
   writeIndex(const ModuleSummaryIndex *Index,
              const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex,
-             const GVSummaryPtrSet *DecSummaries);
+             const GVSummaryPtrSet *DecSummaries,
+             const Module *ModuleMetadata = nullptr);
 };
 
 /// Write the specified module to the specified raw output stream.
@@ -152,10 +153,14 @@ LLVM_ABI void writeThinLinkBitcodeToFile(const Module &M, raw_ostream &Out,
 /// index for a distributed backend, provide the \p ModuleToSummariesForIndex
 /// map. \p DecSummaries specifies the set of summaries for which the
 /// corresponding value should be imported as a declaration (prototype).
+/// If \p ModuleMetadata is provided, its module-level metadata is emitted into
+/// the index module. The metadata must be self-contained and must not reference
+/// globals or functions from \p ModuleMetadata.
 LLVM_ABI void writeIndexToFile(
     const ModuleSummaryIndex &Index, raw_ostream &Out,
     const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex = nullptr,
-    const GVSummaryPtrSet *DecSummaries = nullptr);
+    const GVSummaryPtrSet *DecSummaries = nullptr,
+    const Module *ModuleMetadata = nullptr);
 
 /// If EmbedBitcode is set, save a copy of the llvm IR as data in the
 ///  __LLVM,__bitcode section (.llvmbc on non-MacOS).

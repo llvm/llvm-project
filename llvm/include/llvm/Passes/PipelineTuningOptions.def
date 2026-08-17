@@ -1,0 +1,70 @@
+//===-- PipelineTuningOptions.def - Pipeline tuning database ---*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the options stored in llvm::PipelineTuningOptions. Users
+// must define the PIPELINE_TUNING_OPTION macro before including this file.
+//
+// NOTE: NO INCLUDE GUARD DESIRED!
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef PIPELINE_TUNING_OPTION
+#error                                                                         \
+    "Define PIPELINE_TUNING_OPTION before including PipelineTuningOptions.def"
+#endif
+
+/// Enable loop interleaving, subject to the optimization level.
+PIPELINE_TUNING_OPTION(bool, LoopInterleaving, true, BOOL)
+
+/// Enable loop vectorization, subject to the optimization level.
+PIPELINE_TUNING_OPTION(bool, LoopVectorization, true, BOOL)
+
+/// Enable SLP vectorization, subject to the optimization level.
+PIPELINE_TUNING_OPTION(bool, SLPVectorization, false, BOOL)
+
+/// Enable loop unrolling.
+PIPELINE_TUNING_OPTION(bool, LoopUnrolling, true, BOOL)
+
+/// Enable loop interchange.
+PIPELINE_TUNING_OPTION(bool, LoopInterchange, EnableLoopInterchange, BOOL)
+
+/// Enable loop fusion.
+PIPELINE_TUNING_OPTION(bool, LoopFusion, false, BOOL)
+
+/// Forget all SCEV loops during loop unrolling.
+PIPELINE_TUNING_OPTION(bool, ForgetAllSCEVInLoopUnroll, ForgetSCEVInLoopUnroll,
+                       BOOL)
+
+/// Cap MemorySSA clobbering-access queries in LICM.
+PIPELINE_TUNING_OPTION(unsigned, LicmMssaOptCap, SetLicmMssaOptCap, U32)
+
+/// Disable LICM scalar promotion when the number of accesses is too large.
+PIPELINE_TUNING_OPTION(unsigned, LicmMssaNoAccForPromotionCap,
+                       SetLicmMssaNoAccForPromotionCap, U32)
+
+/// Enable call-graph profiling.
+PIPELINE_TUNING_OPTION(bool, CallGraphProfile, true, BOOL)
+
+/// Enable the unified LTO pipeline.
+PIPELINE_TUNING_OPTION(bool, UnifiedLTO, false, BOOL)
+
+/// Enable function merging.
+PIPELINE_TUNING_OPTION(bool, MergeFunctions, EnableMergeFunctions, BOOL)
+
+/// Override the default inliner threshold.
+PIPELINE_TUNING_OPTION(int, InlinerThreshold, -1, I32)
+
+/// Eagerly invalidate analyses to potentially reduce peak memory usage.
+PIPELINE_TUNING_OPTION(bool, EagerlyInvalidateAnalyses,
+                       EnableEagerlyInvalidateAnalyses, BOOL)
+
+/// Enable speculative devirtualization.
+PIPELINE_TUNING_OPTION(bool, DevirtualizeSpeculatively,
+                       EnableDevirtualizeSpeculatively, BOOL)
+
+#undef PIPELINE_TUNING_OPTION

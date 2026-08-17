@@ -13,6 +13,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,100 +39,47 @@ class StringRef;
 
 class MCTargetOptions {
 public:
-  enum AsmInstrumentation {
-    AsmInstrumentationNone,
-    AsmInstrumentationAddress
-  };
-
-  bool MCRelaxAll : 1;
-  bool MCNoExecStack : 1;
-  bool MCFatalWarnings : 1;
-  bool MCNoWarn : 1;
-  bool MCNoDeprecatedWarn : 1;
-  bool MCNoTypeCheck : 1;
-  bool MCSaveTempLabels : 1;
-  bool MCIncrementalLinkerCompatible : 1;
-  bool FDPIC : 1;
-  bool ShowMCEncoding : 1;
-  bool ShowMCInst : 1;
-  bool AsmVerbose : 1;
-
-  /// Preserve Comments in Assembly.
-  bool PreserveAsmComments : 1;
-
-  bool Dwarf64 : 1;
-
-  // Use CREL relocation format for ELF.
-  bool Crel = false;
-
-  bool ImplicitMapSyms = false;
-
-  // If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
-  // ELF.
-  bool X86RelaxRelocations = true;
-
-  bool X86Sse2Avx = false;
-
-  // Disable the integrated assembler.
-  bool DisableIntegratedAS = false;
-
-  // For ELF relocations, controls section symbol conversion.
-  RelocSectionSymType RelocSectionSym = RelocSectionSymType::All;
-
-  std::optional<unsigned> OutputAsmVariant;
-
-  EmitDwarfUnwindType EmitDwarfUnwind;
-
-  int DwarfVersion = 0;
-
-  /// If greater than 0, overrides the default MCAsmInfo binutils version.
-  std::pair<int, int> BinutilsVersion = {0, 0};
+  enum AsmInstrumentation { AsmInstrumentationNone, AsmInstrumentationAddress };
 
   enum DwarfDirectory {
-    // Force disable
+    // Force disable.
     DisableDwarfDirectory,
-    // Force enable, for assemblers that support
-    // `.file fileno directory filename' syntax
+    // Force enable for assemblers that support the
+    // `.file fileno directory filename' syntax.
     EnableDwarfDirectory,
-    // Default is based on the target
+    // Default is based on the target.
     DefaultDwarfDirectory
   };
-  DwarfDirectory MCUseDwarfDirectory;
 
-  // Whether to compress DWARF debug sections.
-  DebugCompressionType CompressDebugSections = DebugCompressionType::None;
-
-  std::string ABIName;
-  std::string AssemblyLanguage;
-  std::string SplitDwarfFile;
-  std::string AsSecureLogFile;
-
-  // Used for codeview debug info. These will be set as compiler path and commandline arguments in LF_BUILDINFO
-  std::string Argv0;
-  std::string CommandlineArgs;
-
-  /// Additional paths to search for `.include` directives when using the
-  /// integrated assembler.
-  std::vector<std::string> IASSearchPaths;
-
-  // InstPrinter options.
-  std::vector<std::string> InstPrinterOptions;
-
-  // Whether to emit compact-unwind for non-canonical personality
-  // functions on Darwins.
-  bool EmitCompactUnwindNonCanonical : 1;
-
-  // Whether to emit SFrame unwind sections.
-  bool EmitSFrameUnwind : 1;
-
-  // Whether or not to use full register names on PowerPC.
-  bool PPCUseFullRegisterNames : 1;
-
-  // Force 8-byte (sdata8) pointer encodings for ELF exception-handling.
-  // On x86_64 this affects the .eh_frame FDE CFI plus the personality, LSDA,
-  // and TType encodings; on AArch64/PPC64 only the FDE CFI encoding changes
-  // (personality/LSDA/TType already default to sdata8).
-  bool LargeEHEncoding = false;
+#define MC_TARGET_OPTION_TYPE(...) __VA_ARGS__
+#define MC_TARGET_OPTION_DECLARE_BITFIELD(Type, Name, Bits, Default)           \
+  MC_TARGET_OPTION_TYPE Type Name : Bits;
+#define MC_TARGET_OPTION_DECLARE_BOOL(Type, Name, Bits, Default)               \
+  MC_TARGET_OPTION_TYPE Type Name = Default;
+#define MC_TARGET_OPTION_DECLARE_ENUM(Type, Name, Bits, Default)               \
+  MC_TARGET_OPTION_TYPE Type Name = Default;
+#define MC_TARGET_OPTION_DECLARE_OPTIONAL_UINT(Type, Name, Bits, Default)      \
+  MC_TARGET_OPTION_TYPE Type Name = Default;
+#define MC_TARGET_OPTION_DECLARE_INT(Type, Name, Bits, Default)                \
+  MC_TARGET_OPTION_TYPE Type Name = Default;
+#define MC_TARGET_OPTION_DECLARE_PAIR(Type, Name, Bits, Default)               \
+  MC_TARGET_OPTION_TYPE Type Name = Default;
+#define MC_TARGET_OPTION_DECLARE_STRING(Type, Name, Bits, Default)             \
+  MC_TARGET_OPTION_TYPE Type Name = Default;
+#define MC_TARGET_OPTION_DECLARE_STRING_LIST(Type, Name, Bits, Default)        \
+  MC_TARGET_OPTION_TYPE Type Name = Default;
+#define MC_TARGET_OPTION(Type, Name, Bits, Default, Kind)                      \
+  MC_TARGET_OPTION_DECLARE_##Kind(Type, Name, Bits, Default)
+#include "llvm/MC/MCTargetOptions.def"
+#undef MC_TARGET_OPTION_TYPE
+#undef MC_TARGET_OPTION_DECLARE_BITFIELD
+#undef MC_TARGET_OPTION_DECLARE_BOOL
+#undef MC_TARGET_OPTION_DECLARE_ENUM
+#undef MC_TARGET_OPTION_DECLARE_OPTIONAL_UINT
+#undef MC_TARGET_OPTION_DECLARE_INT
+#undef MC_TARGET_OPTION_DECLARE_PAIR
+#undef MC_TARGET_OPTION_DECLARE_STRING
+#undef MC_TARGET_OPTION_DECLARE_STRING_LIST
 
   LLVM_ABI MCTargetOptions();
 

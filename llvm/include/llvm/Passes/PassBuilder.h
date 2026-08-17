@@ -44,65 +44,8 @@ public:
   /// can be set in the PassBuilder when using a LLVM as a library.
   LLVM_ABI PipelineTuningOptions();
 
-  /// Tuning option to set loop interleaving on/off, set based on opt level.
-  bool LoopInterleaving;
-
-  /// Tuning option to enable/disable loop vectorization, set based on opt
-  /// level.
-  bool LoopVectorization;
-
-  /// Tuning option to enable/disable slp loop vectorization, set based on opt
-  /// level.
-  bool SLPVectorization;
-
-  /// Tuning option to enable/disable loop unrolling. Its default value is true.
-  bool LoopUnrolling;
-
-  /// Tuning option to enable/disable loop interchange. Its default value is
-  /// false.
-  bool LoopInterchange;
-
-  /// Tuning option to enable/disable loop fusion. Its default value is false.
-  bool LoopFusion;
-
-  /// Tuning option to forget all SCEV loops in LoopUnroll. Its default value
-  /// is that of the flag: `-forget-scev-loop-unroll`.
-  bool ForgetAllSCEVInLoopUnroll;
-
-  /// Tuning option to cap the number of calls to retrive clobbering accesses in
-  /// MemorySSA, in LICM.
-  unsigned LicmMssaOptCap;
-
-  /// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
-  /// the number of access is too large.
-  unsigned LicmMssaNoAccForPromotionCap;
-
-  /// Tuning option to enable/disable call graph profile. Its default value is
-  /// that of the flag: `-enable-npm-call-graph-profile`.
-  bool CallGraphProfile;
-
-  // Add LTO pipeline tuning option to enable the unified LTO pipeline.
-  bool UnifiedLTO;
-
-  /// Tuning option to enable/disable function merging. Its default value is
-  /// false.
-  bool MergeFunctions;
-
-  /// Tuning option to override the default inliner threshold.
-  int InlinerThreshold;
-
-  // Experimental option to eagerly invalidate more analyses. This has the
-  // potential to decrease max memory usage in exchange for more compile time.
-  // This may affect codegen due to either passes using analyses only when
-  // cached, or invalidating and recalculating an analysis that was
-  // stale/imprecise but still valid. Currently this invalidates all function
-  // analyses after various module->function or cgscc->function adaptors in the
-  // default pipelines.
-  bool EagerlyInvalidateAnalyses;
-
-  // Tuning option to enable/disable speculative devirtualization.
-  // Its default value is false.
-  bool DevirtualizeSpeculatively;
+#define PIPELINE_TUNING_OPTION(Type, Name, Default, Kind) Type Name;
+#include "llvm/Passes/PipelineTuningOptions.def"
 };
 
 /// This class provides access to building LLVM's passes.
@@ -158,10 +101,10 @@ public:
 
   /// Registers all available CGSCC analysis passes.
   ///
-  /// This is an interface that can be used to populate a \c CGSCCAnalysisManager
-  /// with all registered CGSCC analyses. Callers can still manually register any
-  /// additional analyses. Callers can also pre-register analyses and this will
-  /// not override those.
+  /// This is an interface that can be used to populate a \c
+  /// CGSCCAnalysisManager with all registered CGSCC analyses. Callers can still
+  /// manually register any additional analyses. Callers can also pre-register
+  /// analyses and this will not override those.
   LLVM_ABI void registerCGSCCAnalyses(CGSCCAnalysisManager &CGAM);
 
   /// Registers all available function analysis passes.
@@ -1020,6 +963,6 @@ LLVM_ABI extern cl::opt<std::optional<PrintPipelinePassesFormat>, false,
 LLVM_ABI void printFormattedPipelinePasses(
     raw_ostream &OS, StringRef Pipeline,
     PrintPipelinePassesFormat Format = PrintPipelinePassesFormat::Text);
-}
+} // namespace llvm
 
 #endif
