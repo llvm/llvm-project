@@ -229,7 +229,7 @@ union U6 {
   EmptyBase eb2;
   int i;
 };
-// CIR-BEFORE-DAG: !rec_U6 = !cir.union<"U6" {data !rec_EmptyBase, data !rec_EmptyBase, data !s32i}>
+// CIR-BEFORE-DAG: !rec_U6 = !cir.union<"U6" {empty !rec_EmptyBase, empty !rec_EmptyBase, data !s32i}>
 int U6::* u6i = &U6::i;
 // CIR-BEFORE-DAG: cir.global external @u6i = #cir.data_member<[2]> : !cir.data_member<!s32i in !rec_U6>
 // CIR-AFTER-DAG: cir.global external @u6i = #cir.int<0> : !s64i
@@ -251,7 +251,7 @@ union U7 {
   [[no_unique_address]]
   EmptyBase eb2;
 };
-// CIR-BEFORE-DAG: !rec_U7 = !cir.union<"U7" {data !s32i, data !rec_EmptyBase, data !rec_EmptyBase}>
+// CIR-BEFORE-DAG: !rec_U7 = !cir.union<"U7" {data !s32i, empty !rec_EmptyBase, empty !rec_EmptyBase}>
 int U7::* u7i = &U7::i;
 // CIR-BEFORE-DAG: cir.global external @u7i = #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_U7>
 // CIR-AFTER-DAG: cir.global external @u7i = #cir.int<0> : !s64i

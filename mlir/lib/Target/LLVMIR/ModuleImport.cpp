@@ -196,12 +196,28 @@ Attribute ModuleImport::convertMetadataToAttrImpl(
       if (FlatSymbolRefAttr symbolRef = getMetadataGlobalValueSymbolRef(global))
         return MDGlobalValueAttr::get(context, symbolRef);
     }
-    auto *ci = dyn_cast<llvm::ConstantInt>(constant);
-    if (!ci)
-      return {};
-    auto intType = IntegerType::get(context, ci->getBitWidth());
-    return MDConstantAttr::get(context,
-                               IntegerAttr::get(intType, ci->getValue()));
+    if (auto *ci = dyn_cast<llvm::ConstantInt>(constant)) {
+      auto intType = IntegerType::get(context, ci->getBitWidth());
+      return MDConstantAttr::get(context,
+                                 IntegerAttr::get(intType, ci->getValue()));
+    }
+    if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant))
+      return MDNullAttr::get(context,
+                             nullPtr->getType()->getPointerAddressSpace());
+    if (auto *constExpr = dyn_cast<llvm::ConstantExpr>(constant)) {
+      // Only `addrspacecast` is modelled; other constant expressions have no
+      // metadata-attribute counterpart.
+      if (constExpr->getOpcode() != llvm::Instruction::AddrSpaceCast)
+        return {};
+      Attribute argAttr = convertMetadataToAttrImpl(
+          llvm::ConstantAsMetadata::get(constExpr->getOperand(0)), path,
+          attrMap);
+      if (!argAttr)
+        return {};
+      return MDAddrSpaceCastAttr::get(
+          context, argAttr, constExpr->getType()->getPointerAddressSpace());
+    }
+    return {};
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
     // Metadata attributes cannot preserve distinctness, so bail out.

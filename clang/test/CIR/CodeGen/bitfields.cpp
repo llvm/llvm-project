@@ -32,7 +32,7 @@ typedef struct {
 union U { int x : 3; };
 const U u = {5};
 // CIR-DAG: cir.global "private" {{.*}}@_ZL1u = #cir.const_record<{#cir.int<5> : !u8i}> : !rec_U
-// LLVM-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] undef }
+// LLVM-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] zeroinitializer }
 // OGCG-DAG: @_ZL1u = internal constant %union.U { i8 5, [3 x i8] undef }
 auto use() {
   return u;

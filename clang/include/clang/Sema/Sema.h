@@ -6402,7 +6402,15 @@ public:
                                      SourceLocation NameLoc,
                                      SourceLocation EllipsisLoc,
                                      const ParsedAttributesView &Attr,
-                                     MultiTemplateParamsArg TempParamLists);
+                                     MultiTemplateParamsArg TempParamLists,
+                                     TemplateIdAnnotation *TemplateId);
+
+  bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifierLoc NNSLoc,
+                            ArrayRef<TemplateParameterList *> TPLs,
+                            bool IsInstantiation);
+
+  bool DiagnosePackIndexingInFriendNNS(SourceLocation Loc,
+                                       NestedNameSpecifierLoc NNSLoc);
 
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
                                    SourceLocation DeclStart, Declarator &D,
@@ -12735,6 +12743,18 @@ public:
             return false;
           });
 
+  /// Perform [temp.friend] p5 template argument deduction for a dependent
+  /// friend declaration and a candidate class template specialization.
+  bool DeduceTemplateArguments(FriendTemplateDecl *FTD,
+                               ClassTemplateDecl *PatternCTD,
+                               ClassTemplateDecl *CandidateCTD,
+                               ArrayRef<TemplateParameterList *> TPLs,
+                               ArrayRef<TemplateArgument> PatternArgs,
+                               ArrayRef<TemplateArgument> CandidateArgs,
+                               SourceLocation Loc,
+                               TemplateSpecCandidateSet *FailedTSC,
+                               MultiLevelTemplateArgumentList &DeducedArgs);
+
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
   ///
@@ -12961,7 +12981,8 @@ public:
                                   llvm::SmallBitVector &Used);
 
   void MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
-                                  unsigned Depth, llvm::SmallBitVector &Used);
+                                  bool OnlyDeduced, unsigned Depth,
+                                  llvm::SmallBitVector &Used);
 
   void MarkUsedTemplateParameters(ArrayRef<TemplateArgumentLoc> TemplateArgs,
                                   unsigned Depth, llvm::SmallBitVector &Used);
@@ -13815,6 +13836,11 @@ public:
   TypeSourceInfo *SubstType(TypeLoc TL,
                             const MultiLevelTemplateArgumentList &TemplateArgs,
                             SourceLocation Loc, DeclarationName Entity);
+
+  TypeSourceInfo *
+  SubstFriendType(TypeSourceInfo *TSI,
+                  const MultiLevelTemplateArgumentList &TemplateArgs,
+                  SourceLocation Loc, DeclarationName Entity);
 
   /// A form of SubstType intended specifically for instantiating the
   /// type of a FunctionDecl.  Its purpose is solely to force the

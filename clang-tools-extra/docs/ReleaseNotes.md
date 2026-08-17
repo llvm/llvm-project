@@ -80,6 +80,8 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Code actions
 
+- clangd now applies clang-tidy fix-it post-processing before exposing fixes.
+
 #### Signature help
 
 #### Cross-references
