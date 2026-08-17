@@ -161,7 +161,7 @@ func.func @tensor_loops_first_two(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf3
   %0:2 = scf.for %i = %lb0 to %ub0 step %step0 iter_args(%arg2 = %arg0, %arg3 = %arg1) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
     %1:2 = scf.for %j = %lb1 to %ub1 step %step1 iter_args(%arg4 = %arg2, %arg5 = %arg3) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
       %2:2 = scf.for %k = %lb2 to %ub2 step %step2 iter_args(%arg6 = %arg5, %arg7 = %arg4) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
-        %3:2 = "use"(%arg3, %i, %j, %k) : (tensor<?x?xf32>, index, index, index) -> (tensor<?x?xf32>, tensor<?x?xf32>)
+        %3:2 = "use"(%arg6, %i, %j, %k) : (tensor<?x?xf32>, index, index, index) -> (tensor<?x?xf32>, tensor<?x?xf32>)
         scf.yield %3#0, %3#1 : tensor<?x?xf32>, tensor<?x?xf32>
       }
       scf.yield %2#0, %2#1 : tensor<?x?xf32>, tensor<?x?xf32>
@@ -204,7 +204,7 @@ func.func @tensor_loops_first_two_2(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?x
   %0:2 = scf.for %i = %lb0 to %ub0 step %step0 iter_args(%arg2 = %arg0, %arg3 = %arg1) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
     %1:2 = scf.for %j = %lb1 to %ub1 step %step1 iter_args(%arg4 = %arg2, %arg5 = %arg3) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
       %2:2 = scf.for %k = %lb2 to %ub2 step %step2 iter_args(%arg6 = %arg4, %arg7 = %arg5) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
-        %3:2 = "use"(%arg3, %i, %j, %k) : (tensor<?x?xf32>, index, index, index) -> (tensor<?x?xf32>, tensor<?x?xf32>)
+        %3:2 = "use"(%arg6, %i, %j, %k) : (tensor<?x?xf32>, index, index, index) -> (tensor<?x?xf32>, tensor<?x?xf32>)
         scf.yield %3#0, %3#1 : tensor<?x?xf32>, tensor<?x?xf32>
       }
       scf.yield %2#1, %2#0 : tensor<?x?xf32>, tensor<?x?xf32>

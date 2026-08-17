@@ -1006,6 +1006,23 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
       }
     }
   }
+
+  // Bail out if the region of an inner loop reads an iteration argument of an
+  // enclosing loop other than through its own iteration arguments. Coalescing
+  // maps the iteration arguments of every loop in the band onto the ones of the
+  // outermost loop, which turns such a read into a read of the value carried by
+  // the coalesced loop. That value is updated on every iteration, whereas the
+  // one the inner loop reads is fixed for a whole run of that loop.
+  for (unsigned i = 1, e = loops.size(); i < e; ++i) {
+    scf::ForOp innerLoop = loops[i];
+    for (BlockArgument iterArg : loops[i - 1].getRegionIterArgs()) {
+      if (llvm::any_of(iterArg.getUsers(), [&](Operation *user) {
+            return innerLoop->isProperAncestor(user);
+          }))
+        return failure();
+    }
+  }
+
   // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
   // allows the following code to assume upperBound is the number of iterations.
   for (auto loop : loops) {
