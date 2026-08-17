@@ -1527,7 +1527,9 @@ static void createAndEmbedModuleForDynamicDebugging(
     // the same source file compiled twice won't generate unique hashes.
     Hash.update(CGOpts.CmdArgs);
     for (auto *CU : M->debug_compile_units()) {
-      Hash.update(CU->getDirectory());
+      if (CU->getDirectory().size() > 0)
+        Hash.update(CU->getDirectory());
+
       Hash.update(CU->getFilename());
     }
 
