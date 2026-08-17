@@ -19,7 +19,7 @@ namespace math {
 using LIBC_NAMESPACE::fputil::Float128;
 
 LIBC_INLINE constexpr long long llroundf128(Float128 x) {
-  return fputil::round_to_signed_integer<float128, long long>(x);
+  return fputil::round_to_signed_integer<Float128, long long>(x);
 }
 
 } // namespace math
