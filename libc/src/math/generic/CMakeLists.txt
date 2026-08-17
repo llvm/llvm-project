@@ -928,6 +928,7 @@ add_entrypoint_object(
   HDRS
     ../llroundf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.llroundf128
 )
 

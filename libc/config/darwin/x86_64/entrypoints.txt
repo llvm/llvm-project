@@ -176,6 +176,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.llrintl
     #libc.src.math.llround
     #libc.src.math.llroundf
+    #libc.src.math.llroundf128
     #libc.src.math.llroundl
     #libc.src.math.lrint
     #libc.src.math.lrintf
