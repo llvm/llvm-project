@@ -635,6 +635,8 @@ void CodeGenAction::lowerHLFIRToFIR() {
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
     config.EnableOpenMPIsTargetDevice = true;
+  // Give plugins a chance to register passes at the extension points.
+  fir::invokePassPipelineConfigCallbacks(config);
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -752,6 +754,9 @@ void CodeGenAction::generateLLVMIR() {
   llvm::Triple pipelineTriple(invoc.getTargetOpts().triple);
   config.SkipConvertComplexPow = pipelineTriple.isAMDGCN();
   fir::registerDefaultInlinerPass(config);
+
+  // Give plugins a chance to register passes at the extension points.
+  fir::invokePassPipelineConfigCallbacks(config);
 
   if (auto vsr = getVScaleRange(ci)) {
     config.VScaleMin = vsr->first;

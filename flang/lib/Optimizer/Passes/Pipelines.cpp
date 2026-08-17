@@ -171,6 +171,23 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
       });
 }
 
+static std::vector<std::function<void(MLIRToLLVMPassPipelineConfig &)>> &
+getPassPipelineConfigCallbacks() {
+  static std::vector<std::function<void(MLIRToLLVMPassPipelineConfig &)>>
+      callbacks;
+  return callbacks;
+}
+
+void registerPassPipelineConfigCallback(
+    std::function<void(MLIRToLLVMPassPipelineConfig &)> callback) {
+  getPassPipelineConfigCallbacks().push_back(std::move(callback));
+}
+
+void invokePassPipelineConfigCallbacks(MLIRToLLVMPassPipelineConfig &config) {
+  for (auto &callback : getPassPipelineConfigCallbacks())
+    callback(config);
+}
+
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
 ///
