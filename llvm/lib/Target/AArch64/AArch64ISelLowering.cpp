@@ -34809,13 +34809,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   ConstantSDNode *CID = cast<ConstantSDNode>(IntID.getNode());
   Intrinsic::ID IID = static_cast<Intrinsic::ID>(CID->getZExtValue());
 
-  // HISTCNT is SVE2-only, so 'add' has no lowering without it.
-  if (IID == Intrinsic::experimental_vector_histogram_add &&
-      !Subtarget->hasSVE2())
-    return SDValue();
-
   bool IsMinMax = IID == Intrinsic::experimental_vector_histogram_umin ||
                   IID == Intrinsic::experimental_vector_histogram_umax;
+  // HISTCNT is SVE2-only, so only min/max can lower without SVE2.
+  if (!IsMinMax && !Subtarget->hasSVE2())
+    return SDValue();
 
   EVT IndexVT = Index.getValueType();
   LLVMContext &Ctx = *DAG.getContext();

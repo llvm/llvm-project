@@ -6605,8 +6605,7 @@ void SelectionDAGBuilder::visitConvergenceControl(const CallInst &I,
 
 void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
                                                unsigned IntrinsicID) {
-  // For now, we're only lowering an 'add' histogram.
-  // We can add others later, e.g. saturating adds, min/max.
+  // Supported lowering histogram: add, umin, umax
   assert((IntrinsicID == Intrinsic::experimental_vector_histogram_add ||
           IntrinsicID == Intrinsic::experimental_vector_histogram_umin ||
           IntrinsicID == Intrinsic::experimental_vector_histogram_umax) &&
