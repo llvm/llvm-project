@@ -106,16 +106,28 @@ CWrapperFunctionBuffer testRelease(const char *ArgData, size_t ArgSize) {
 }
 
 TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
-  auto SelfEPC = cantFail(SelfExecutorProcessControl::Create());
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
   SimpleAllocator SA;
 
-  EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  SAs.Allocator = ExecutorAddr::fromPtr(&SA);
-  SAs.Reserve = ExecutorAddr::fromPtr(&testReserve);
-  SAs.Initialize = ExecutorAddr::fromPtr(&testInitialize);
-  SAs.Release = ExecutorAddr::fromPtr(&testRelease);
+  // Register the test wrappers in the bootstrap JITDylib under the default
+  // SimpleNativeMemoryMap names so that Create resolves its proxies to them.
+  auto &SNs = rt::orc_rt_SimpleNativeMemoryMapSPSSymbols;
+  auto Exported = JITSymbolFlags::Exported;
+  cantFail(ES.getBootstrapJITDylib().define(absoluteSymbols({
+      {ES.intern(SNs.AllocatorName), {ExecutorAddr::fromPtr(&SA), Exported}},
+      {ES.intern(SNs.ReserveName),
+       {ExecutorAddr::fromPtr(&testReserve), Exported}},
+      {ES.intern(SNs.InitializeName),
+       {ExecutorAddr::fromPtr(&testInitialize), Exported}},
+      // Deinitialize is part of the interface but unused here; the release
+      // wrapper (same signature) stands in so the proxy resolves.
+      {ES.intern(SNs.DeinitializeName),
+       {ExecutorAddr::fromPtr(&testRelease), Exported}},
+      {ES.intern(SNs.ReleaseName),
+       {ExecutorAddr::fromPtr(&testRelease), Exported}},
+  })));
 
-  auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
+  auto MemMgr = cantFail(EPCGenericJITLinkMemoryManager::Create(ES));
   StringRef Hello = "hello";
   auto SSA = jitlink::SimpleSegmentAlloc::Create(
       *MemMgr, std::make_shared<SymbolStringPool>(),
@@ -138,7 +150,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   auto Err2 = MemMgr->deallocate(std::move(*FA));
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
 
-  cantFail(SelfEPC->disconnect());
+  cantFail(ES.endSession());
 }
 
 TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromSymbolNames) {

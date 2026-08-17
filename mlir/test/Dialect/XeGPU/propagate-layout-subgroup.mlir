@@ -279,8 +279,8 @@ gpu.module @test {
 
 // -----
 gpu.module @test {
-  // CHECK-LABEL: for_loop_misaligned_dpas_fail
-  gpu.func @for_loop_misaligned_dpas_fail(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
+  // CHECK-LABEL: for_loop_dpas_k_broadcast
+  gpu.func @for_loop_dpas_k_broadcast(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
     %cst = arith.constant dense<0.000000e+00> : vector<128x128xf32>
     %c128 = arith.constant 128 : index
     %c8192 = arith.constant 8192 : index
@@ -294,8 +294,7 @@ gpu.module @test {
       %5 = xegpu.load_nd %4[%block_id_x, %arg3]  : !xegpu.tensor_desc<128x128xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<128x128xf16>
       %6 = xegpu.create_nd_tdesc %arg1 : memref<8192x4096xf16> -> !xegpu.tensor_desc<128x128xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
       %7 = xegpu.load_nd %6[%arg3, %block_id_y]  : !xegpu.tensor_desc<128x128xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<128x128xf16>
-      // Couldn not find a layout whose sg_data would be aligned on the reduction dimension.
-      // CHECK: xegpu.dpas %{{.*}} {layout_cd = #xegpu.layout<sg_layout = [2, 4], sg_data = [64, 32]>} :
+      // CHECK: xegpu.dpas %{{.*}} {layout_a = #xegpu.layout<sg_layout = [2, 4], sg_data = [64, 128]>, layout_b = #xegpu.layout<sg_layout = [2, 4], sg_data = [128, 32]>, layout_cd = #xegpu.layout<sg_layout = [2, 4], sg_data = [64, 32]>} :
       %8 = xegpu.dpas %5, %7, %arg4 : vector<128x128xf16>, vector<128x128xf16>, vector<128x128xf32> -> vector<128x128xf32>
       scf.yield %8 : vector<128x128xf32>
     }
@@ -308,8 +307,8 @@ gpu.module @test {
 
 // -----
 gpu.module @test {
-  // CHECK-LABEL: dpas_fails
-  gpu.func @dpas_fails(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
+  // CHECK-LABEL: dpas_small_k_broadcast
+  gpu.func @dpas_small_k_broadcast(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
     %cst = arith.constant dense<0.000000e+00> : vector<32x64xf32>
     %c16 = arith.constant 16 : index
     %c8192 = arith.constant 8192 : index
@@ -319,10 +318,9 @@ gpu.module @test {
     %4 = xegpu.create_nd_tdesc %arg0 : memref<2048x8192xf16> -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
     %5 = xegpu.load_nd %4[%block_id_x, %c0]  : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<32x16xf16>
     %6 = xegpu.create_nd_tdesc %arg1 : memref<8192x4096xf16> -> !xegpu.tensor_desc<16x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
-    // CHECK: xegpu.load_nd %{{.*}}[%{{.*}}, %{{.*}}]  :
+    // CHECK: xegpu.load_nd %{{.*}}[%{{.*}}, %{{.*}}] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>}> :
     %7 = xegpu.load_nd %6[%c0, %block_id_y]  : !xegpu.tensor_desc<16x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<16x64xf16>
-    // We have 8 SGs, but currently attempt to use only the largest inst size, so the 32x16 A tile is too small -> fail propagation.
-    // CHECK: xegpu.dpas %{{.*}} {layout_cd = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>} :
+    // CHECK: xegpu.dpas %{{.*}} {layout_a = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>, layout_b = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>, layout_cd = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>} :
     %8 = xegpu.dpas %5, %7, %cst : vector<32x16xf16>, vector<16x64xf16>, vector<32x64xf32> -> vector<32x64xf32>
     %3 = xegpu.create_nd_tdesc %arg2 : memref<2048x4096xf32> -> !xegpu.tensor_desc<32x64xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
     // CHECK: xegpu.store_nd %{{.*}} <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>}> :
@@ -373,8 +371,7 @@ gpu.module @test {
     // CHECK-SAME: layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>
     %1 = xegpu.load_matrix %arg0[%c0, %c0] : !xegpu.mem_desc<32x128xf32>, index, index -> vector<32x128xf32>
     %2 = xegpu.convert_layout %1
-       <{input_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>,
-        target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
+       <{target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
        : vector<32x128xf32>
     gpu.return
   }
@@ -671,4 +668,39 @@ gpu.module @test {
     xegpu.store_nd %tr, %td_out[%c0, %c0, %c0] <{layout = #xegpu.layout<sg_layout = [2, 1, 2], sg_data = [1, 32, 16], order = [1, 2, 0]>}> : vector<2x32x32xf16>, !xegpu.tensor_desc<2x32x32xf16>
     gpu.return
   }
+}
+
+// -----
+// Forward layout fill: %sum is a loop-carried value whose only consumer is the
+// next iteration (via iter_arg %acc), so backward propagation from anchor ops
+// never reaches it. The local forward pass derives its layout from the operand
+// %acc (elementwise rule), and the scf.for's second result / yield inherit it.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @forward_fill_loop_carried(
+gpu.func @forward_fill_loop_carried(%arg0: memref<128x64xf16>, %arg1: memref<64x64xf16>, %arg2: memref<128x64xf32>) kernel attributes {known_block_size = array<i32: 128, 1, 1>} {
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c128 = arith.constant 128 : index
+  %cst = arith.constant dense<0.000000e+00> : vector<128x64xf32>
+  %cst_0 = arith.constant dense<0.000000e+00> : vector<128xf32>
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<128x64xf16> -> !xegpu.tensor_desc<128x64xf16>
+  %1 = xegpu.load_nd %0[%c0, %c0] <{layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>}> : !xegpu.tensor_desc<128x64xf16> -> vector<128x64xf16>
+  %2 = xegpu.create_nd_tdesc %arg1 : memref<64x64xf16> -> !xegpu.tensor_desc<64x64xf16>
+  %3 = xegpu.load_nd %2[%c0, %c0] <{layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [64, 64]>}> : !xegpu.tensor_desc<64x64xf16> -> vector<64x64xf16>
+  // CHECK: scf.for
+  %4:2 = scf.for %arg4 = %c0 to %c128 step %c64 iter_args(%acc0 = %cst, %acc = %cst_0) -> (vector<128x64xf32>, vector<128xf32>) {
+    %8 = xegpu.dpas %1, %3, %acc0 {layout_a = #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>, layout_b = #xegpu.layout<sg_layout = [1, 1], sg_data = [64, 64]>, layout_cd = #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>} : vector<128x64xf16>, vector<64x64xf16>, vector<128x64xf32> -> vector<128x64xf32>
+    %9 = vector.broadcast %acc : vector<128xf32> to vector<64x128xf32>
+    %10 = vector.transpose %9, [1, 0] : vector<64x128xf32> to vector<128x64xf32>
+    %11 = arith.mulf %8, %10 : vector<128x64xf32>
+    // The forward pass assigns %sum a layout inherited from %acc.
+    // CHECK: arith.addf
+    // CHECK-SAME: layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [1, 8], sg_data = [64, 16], order = [0, 1]>, dims = [0]>
+    %sum = arith.addf %acc, %acc : vector<128xf32>
+    scf.yield %11, %sum : vector<128x64xf32>, vector<128xf32>
+  }
+  %5 = xegpu.create_nd_tdesc %arg2 : memref<128x64xf32> -> !xegpu.tensor_desc<128x64xf32>
+  xegpu.store_nd %4#0, %5[%c0, %c0] <{layout = #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>}> : vector<128x64xf32>, !xegpu.tensor_desc<128x64xf32>
+  gpu.return
+}
 }

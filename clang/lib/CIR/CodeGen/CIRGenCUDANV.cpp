@@ -312,7 +312,7 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
   const CIRGenFunctionInfo &callInfo =
       cgm.getTypes().arrangeFunctionDeclaration(cudaLaunchKernelFD);
   cgf.emitCall(callInfo, CIRGenCallee::forDirect(cudaKernelLauncherFn),
-               ReturnValueSlot(), launchArgs);
+               ReturnValueSlot(), launchArgs, /*isMustTail=*/false);
 
   if (cgm.getASTContext().getTargetInfo().getCXXABI().isMicrosoft() &&
       !cgf.getLangOpts().HIP)

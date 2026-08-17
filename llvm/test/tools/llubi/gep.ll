@@ -90,6 +90,8 @@ define void @main() {
   %gep_nuw_valid4 = getelementptr nuw i32, ptr %alloc, i64 1073741821
   %gep_nuw_invalid4 = getelementptr nuw i32, ptr %alloc, i64 1073741822
 
+  %gep_splat_zero = getelementptr i8, ptr %alloc, <2 x i64> zeroinitializer
+
   ret void
 }
 ; CHECK: Entering function: main
@@ -142,5 +144,6 @@ define void @main() {
 ; CHECK-NEXT:   %gep_nuw_invalid3 = getelementptr nuw [2 x i16], ptr null, i32 1073741823, i32 2 => poison
 ; CHECK-NEXT:   %gep_nuw_valid4 = getelementptr nuw i32, ptr %alloc, i64 1073741821 => ptr 0xFFFFFFFC [alloc + 4294967284]
 ; CHECK-NEXT:   %gep_nuw_invalid4 = getelementptr nuw i32, ptr %alloc, i64 1073741822 => poison
+; CHECK-NEXT:   %gep_splat_zero = getelementptr i8, ptr %alloc, <2 x i64> zeroinitializer => { ptr 0x8 [alloc], ptr 0x8 [alloc] }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

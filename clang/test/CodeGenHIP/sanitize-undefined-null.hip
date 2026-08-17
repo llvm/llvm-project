@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -disable-llvm-passes -fcuda-is-device -fsanitize=null \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -emit-llvm -disable-llvm-passes -fcuda-is-device -fsanitize=null \
 // RUN:   -o - %s | FileCheck --enable-var-scope %s
 
 // Check there are no assertions when trying to sanitize when globals have non-0

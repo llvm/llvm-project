@@ -18,7 +18,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
   }
 
   // CHECK-LABEL: llvm.func @_QQmain()
-  // CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor 
+  // CHECK-COUNT-1: llvm.call @_FortranACUFAllocDescriptor
 
   fir.global linkonce @_QQclX3C737464696E3E00 constant : !fir.char<1,8> {
     %0 = fir.string_lit "<stdin>\00"(8) : !fir.char<1,8>
@@ -125,7 +125,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-4: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 
@@ -169,7 +169,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
-// CHECK-COUNT-3: llvm.call @_FortranACUFAllocDescriptor
+// CHECK-COUNT-2: llvm.call @_FortranACUFAllocDescriptor
 
 // -----
 

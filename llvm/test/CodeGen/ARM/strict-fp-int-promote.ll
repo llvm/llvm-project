@@ -10,66 +10,31 @@ declare float @llvm.experimental.constrained.uitofp.f32.i16(i16, metadata, metad
 define i32 @test(i32 %a, i16 %b) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    sxth r0, r1
-; CHECK-NEXT:    movw r1, #0
-; CHECK-NEXT:    movt r1, #17200
-; CHECK-NEXT:    str r1, [sp, #4]
-; CHECK-NEXT:    eor r2, r2, #-2147483648
-; CHECK-NEXT:    str r2, [sp]
-; CHECK-NEXT:    vldr d16, [sp]
-; CHECK-NEXT:    vldr d17, .LCPI0_0
-; CHECK-NEXT:    vsub.f64 d16, d16, d17
-; CHECK-NEXT:    vcvt.f32.f64 s0, d16
-; CHECK-NEXT:    str r1, [sp, #12]
-; CHECK-NEXT:    eor r0, r0, #-2147483648
-; CHECK-NEXT:    str r0, [sp, #8]
-; CHECK-NEXT:    vldr d16, [sp, #8]
-; CHECK-NEXT:    vsub.f64 d16, d16, d17
-; CHECK-NEXT:    vcvt.f32.f64 s2, d16
+; CHECK-NEXT:    mov r2, r1
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    sxth r0, r2
+; CHECK-NEXT:    vmov s0, r1
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvt.f32.s32 s2, s2
 ; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    movweq r0, #1
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 2147483648 @ double 4503601774854144
-; CHECK-NEXT:    .long 1127219200
 ;
 ; CHECK-O3-LABEL: test:
 ; CHECK-O3:       @ %bb.0: @ %entry
-; CHECK-O3-NEXT:    sub sp, sp, #16
 ; CHECK-O3-NEXT:    sxth r1, r1
-; CHECK-O3-NEXT:    movw r2, #0
-; CHECK-O3-NEXT:    movt r2, #17200
-; CHECK-O3-NEXT:    str r2, [sp, #4]
-; CHECK-O3-NEXT:    eor r0, r0, #-2147483648
-; CHECK-O3-NEXT:    str r0, [sp]
-; CHECK-O3-NEXT:    vldr d16, [sp]
-; CHECK-O3-NEXT:    vldr d17, .LCPI0_0
-; CHECK-O3-NEXT:    vsub.f64 d16, d16, d17
-; CHECK-O3-NEXT:    vcvt.f32.f64 s0, d16
-; CHECK-O3-NEXT:    str r2, [sp, #12]
-; CHECK-O3-NEXT:    eor r0, r1, #-2147483648
-; CHECK-O3-NEXT:    str r0, [sp, #8]
-; CHECK-O3-NEXT:    vldr d16, [sp, #8]
-; CHECK-O3-NEXT:    vsub.f64 d16, d16, d17
-; CHECK-O3-NEXT:    vcvt.f32.f64 s2, d16
+; CHECK-O3-NEXT:    vmov s0, r0
+; CHECK-O3-NEXT:    vcvt.f32.s32 s0, s0
+; CHECK-O3-NEXT:    vmov s2, r1
+; CHECK-O3-NEXT:    vcvt.f32.s32 s2, s2
 ; CHECK-O3-NEXT:    vcmp.f32 s0, s2
 ; CHECK-O3-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-O3-NEXT:    mov r0, #0
 ; CHECK-O3-NEXT:    movweq r0, #1
-; CHECK-O3-NEXT:    add sp, sp, #16
 ; CHECK-O3-NEXT:    bx lr
-; CHECK-O3-NEXT:    .p2align 3
-; CHECK-O3-NEXT:  @ %bb.1:
-; CHECK-O3-NEXT:  .LCPI0_0:
-; CHECK-O3-NEXT:    .long 2147483648 @ double 4503601774854144
-; CHECK-O3-NEXT:    .long 1127219200
 entry:
   %conv = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #1
   %conv1 = call float @llvm.experimental.constrained.sitofp.f32.i16(i16 %b, metadata !"round.tonearest", metadata !"fpexcept.strict") #1
@@ -81,72 +46,31 @@ entry:
 define i32 @test2(i32 %a, i16 %b) #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    uxth r0, r1
-; CHECK-NEXT:    movw r1, #0
-; CHECK-NEXT:    movt r1, #17200
-; CHECK-NEXT:    str r1, [sp, #4]
-; CHECK-NEXT:    eor r2, r2, #-2147483648
-; CHECK-NEXT:    str r2, [sp]
-; CHECK-NEXT:    vldr d16, [sp]
-; CHECK-NEXT:    vldr d17, .LCPI1_0
-; CHECK-NEXT:    vsub.f64 d16, d16, d17
-; CHECK-NEXT:    vcvt.f32.f64 s0, d16
-; CHECK-NEXT:    str r1, [sp, #12]
-; CHECK-NEXT:    str r0, [sp, #8]
-; CHECK-NEXT:    vldr d16, [sp, #8]
-; CHECK-NEXT:    vldr d17, .LCPI1_1
-; CHECK-NEXT:    vsub.f64 d16, d16, d17
-; CHECK-NEXT:    vcvt.f32.f64 s2, d16
+; CHECK-NEXT:    mov r2, r1
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    uxth r0, r2
+; CHECK-NEXT:    vmov s0, r1
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvt.f32.u32 s2, s2
 ; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    movweq r0, #1
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 2147483648 @ double 4503601774854144
-; CHECK-NEXT:    .long 1127219200
-; CHECK-NEXT:  .LCPI1_1:
-; CHECK-NEXT:    .long 0 @ double 4503599627370496
-; CHECK-NEXT:    .long 1127219200
 ;
 ; CHECK-O3-LABEL: test2:
 ; CHECK-O3:       @ %bb.0: @ %entry
-; CHECK-O3-NEXT:    sub sp, sp, #16
 ; CHECK-O3-NEXT:    uxth r1, r1
-; CHECK-O3-NEXT:    movw r2, #0
-; CHECK-O3-NEXT:    movt r2, #17200
-; CHECK-O3-NEXT:    str r2, [sp, #4]
-; CHECK-O3-NEXT:    eor r0, r0, #-2147483648
-; CHECK-O3-NEXT:    str r0, [sp]
-; CHECK-O3-NEXT:    vldr d16, [sp]
-; CHECK-O3-NEXT:    vldr d17, .LCPI1_0
-; CHECK-O3-NEXT:    vsub.f64 d16, d16, d17
-; CHECK-O3-NEXT:    vcvt.f32.f64 s0, d16
-; CHECK-O3-NEXT:    str r2, [sp, #12]
-; CHECK-O3-NEXT:    str r1, [sp, #8]
-; CHECK-O3-NEXT:    vldr d16, [sp, #8]
-; CHECK-O3-NEXT:    vldr d17, .LCPI1_1
-; CHECK-O3-NEXT:    vsub.f64 d16, d16, d17
-; CHECK-O3-NEXT:    vcvt.f32.f64 s2, d16
+; CHECK-O3-NEXT:    vmov s0, r0
+; CHECK-O3-NEXT:    vcvt.f32.s32 s0, s0
+; CHECK-O3-NEXT:    vmov s2, r1
+; CHECK-O3-NEXT:    vcvt.f32.u32 s2, s2
 ; CHECK-O3-NEXT:    vcmp.f32 s0, s2
 ; CHECK-O3-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-O3-NEXT:    mov r0, #0
 ; CHECK-O3-NEXT:    movweq r0, #1
-; CHECK-O3-NEXT:    add sp, sp, #16
 ; CHECK-O3-NEXT:    bx lr
-; CHECK-O3-NEXT:    .p2align 3
-; CHECK-O3-NEXT:  @ %bb.1:
-; CHECK-O3-NEXT:  .LCPI1_0:
-; CHECK-O3-NEXT:    .long 2147483648 @ double 4503601774854144
-; CHECK-O3-NEXT:    .long 1127219200
-; CHECK-O3-NEXT:  .LCPI1_1:
-; CHECK-O3-NEXT:    .long 0 @ double 4503599627370496
-; CHECK-O3-NEXT:    .long 1127219200
 entry:
   %conv = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #1
   %conv1 = call float @llvm.experimental.constrained.uitofp.f32.i16(i16 %b, metadata !"round.tonearest", metadata !"fpexcept.strict") #1

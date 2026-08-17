@@ -1511,13 +1511,13 @@ SDValue R600TargetLowering::LowerFormalArguments(
     Align Alignment = commonAlignment(Align(VT.getStoreSize()), PartOffset);
 
     MachinePointerInfo PtrInfo(AMDGPUAS::PARAM_I_ADDRESS);
-    SDValue Arg = DAG.getLoad(
-        ISD::UNINDEXED, Ext, VT, DL, Chain,
-        DAG.getConstant(PartOffset, DL, MVT::i32), DAG.getUNDEF(MVT::i32),
-        PtrInfo,
-        MemVT, Alignment, MachineMemOperand::MONonTemporal |
-                                        MachineMemOperand::MODereferenceable |
-                                        MachineMemOperand::MOInvariant);
+    SDValue Arg =
+        DAG.getLoad(ISD::UNINDEXED, Ext, VT, DL, Chain,
+                    DAG.getConstant(PartOffset, DL, MVT::i32),
+                    DAG.getPOISON(MVT::i32), PtrInfo, MemVT, Alignment,
+                    MachineMemOperand::MONonTemporal |
+                        MachineMemOperand::MODereferenceable |
+                        MachineMemOperand::MOInvariant);
 
     InVals.push_back(Arg);
   }

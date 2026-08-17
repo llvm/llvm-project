@@ -14,8 +14,8 @@ _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmultichar")
 #include <cstdlib>
 #include <cstring>
 
-#include <Unknwn.h>
-#include <Windows.h>
+#include <unknwn.h>
+#include <windows.h>
 struct _ThrowInfo;
 #include <eh.h>
 #include <ehdata.h>
@@ -141,7 +141,7 @@ void __copy_exception_object(void* __dest, const void* __src, const CatchableTyp
 #if _EH_RELATIVE_TYPEINFO
   const auto __copy_func = reinterpret_cast<void*>(__throw_image_base + __type->copyFunction);
 #else // _EH_RELATIVE_TYPEINFO
-  const auto __copy_func = __type->copyFunction;
+  const auto __copy_func = reinterpret_cast<void*>(__type->copyFunction);
 #endif // _EH_RELATIVE_TYPEINFO
 
   const auto __adjusted = __AdjustPointer(const_cast<void*>(__src), __type->thisDisplacement);
@@ -204,7 +204,8 @@ struct alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) __exception_ptr_normal final : 
           __call_member_function_0(__cpp_eh_record.params.pExceptionObject,
                                    reinterpret_cast<void*>(__throw_info->pmfnUnwind + __throw_image_base));
 #else // _EH_RELATIVE_TYPEINFO
-          __call_member_function_0(__cpp_eh_record.params.pExceptionObject, __throw_info->pmfnUnwind);
+          __call_member_function_0(__cpp_eh_record.params.pExceptionObject,
+                                   reinterpret_cast<void*>(__throw_info->pmfnUnwind));
 #endif // _EH_RELATIVE_TYPEINFO
         } else if (__type->properties & CT_IsWinRTHandle) {
           const auto* __unknown = *static_cast<IUnknown* const*>(__cpp_eh_record.params.pExceptionObject);

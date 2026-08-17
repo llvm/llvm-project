@@ -2293,10 +2293,8 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
         if (VarDecl *VD = dyn_cast<VarDecl>(DI)) {
           VarDeclSeen = true;
           if (VD->isLocalVarDecl() && !VD->hasLocalStorage())
-            Diag(DI->getLocation(),
-                 getLangOpts().C23
-                     ? diag::warn_c17_non_local_variable_decl_in_for
-                     : diag::ext_c23_non_local_variable_decl_in_for);
+            DiagCompat(DI->getLocation(),
+                       diag_compat::non_local_variable_decl_in_for);
         } else if (!NonVarSeen) {
           // Keep track of the first non-variable declaration we saw so that
           // we can diagnose if we don't see any variable declarations. This
@@ -2312,9 +2310,8 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
       // Diagnose if we saw a non-variable declaration but no variable
       // declarations.
       if (NonVarSeen && !VarDeclSeen)
-        Diag(NonVarSeen->getLocation(),
-             getLangOpts().C23 ? diag::warn_c17_non_variable_decl_in_for
-                               : diag::ext_c23_non_variable_decl_in_for);
+        DiagCompat(NonVarSeen->getLocation(),
+                   diag_compat::non_variable_decl_in_for);
     }
   }
 
@@ -4085,7 +4082,8 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   const AttrVec *Attrs = nullptr;
   bool isObjCMethod = false;
 
-  if (const FunctionDecl *FD = getCurFunctionDecl()) {
+  FunctionDecl *FD = getCurFunctionDecl();
+  if (FD) {
     FnRetType = FD->getReturnType();
     if (FD->hasAttrs())
       Attrs = &FD->getAttrs();
@@ -4143,11 +4141,11 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   // deduction.
   if (getLangOpts().CPlusPlus14) {
     if (AutoType *AT = FnRetType->getContainedAutoType()) {
-      FunctionDecl *FD = cast<FunctionDecl>(CurContext);
       // If we've already decided this function is invalid, e.g. because
       // we saw a `return` whose expression had an error, don't keep
       // trying to deduce its return type.
       // (Some return values may be needlessly wrapped in RecoveryExpr).
+      assert(FD);
       if (FD->isInvalidDecl() ||
           DeduceFunctionTypeFromReturnExpr(FD, ReturnLoc, RetValExp, AT)) {
         FD->setInvalidDecl();
@@ -4256,8 +4254,6 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     Result = ReturnStmt::Create(Context, ReturnLoc, RetValExp,
                                 /* NRVOCandidate=*/nullptr);
   } else if (!RetValExp && !HasDependentReturnType) {
-    FunctionDecl *FD = getCurFunctionDecl();
-
     if ((FD && FD->isInvalidDecl()) || FnRetType->containsErrors()) {
       // The intended return type might have been "void", so don't warn.
     } else if (getLangOpts().CPlusPlus11 && FD && FD->isConstexpr()) {

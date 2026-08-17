@@ -1488,8 +1488,8 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 14, @11, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
+; EG-NEXT:    ALU 9, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
@@ -1499,20 +1499,15 @@ define amdgpu_kernel void @v_udiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
 ; EG-NEXT:     UINT_TO_FLT * T0.X, T0.X,
-; EG-NEXT:     MUL_IEEE * T0.W, PS, T0.Z,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
-; EG-NEXT:     AND_INT T0.X, PV.W, literal.x,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
-; EG-NEXT:    255(3.573311e-43), 2(2.802597e-45)
+; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
+; EG-NEXT:     FLT_TO_UINT * T1.X, PV.W,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %den_ptr = getelementptr i8, ptr addrspace(1) %in, i8 1
   %num = load i8, ptr addrspace(1) %in
   %den = load i8, ptr addrspace(1) %den_ptr
@@ -1623,8 +1618,8 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 14, @11, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
+; EG-NEXT:    ALU 9, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
@@ -1634,20 +1629,15 @@ define amdgpu_kernel void @v_udiv_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
 ; EG-NEXT:     UINT_TO_FLT * T0.X, T0.X,
-; EG-NEXT:     MUL_IEEE * T0.W, PS, T0.Z,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
-; EG-NEXT:     AND_INT T0.X, PV.W, literal.x,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
-; EG-NEXT:    65535(9.183409e-41), 2(2.802597e-45)
+; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
+; EG-NEXT:     FLT_TO_UINT * T1.X, PV.W,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %den_ptr = getelementptr i16, ptr addrspace(1) %in, i16 1
   %num = load i16, ptr addrspace(1) %in
   %den = load i16, ptr addrspace(1) %den_ptr
@@ -2534,7 +2524,7 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; EG-NEXT:    TEX 0 @8
 ; EG-NEXT:    ALU 0, @13, KC0[], KC1[]
 ; EG-NEXT:    TEX 0 @10
-; EG-NEXT:    ALU 25, @14, KC0[], KC1[]
+; EG-NEXT:    ALU 18, @14, KC0[], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -2549,23 +2539,16 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; EG-NEXT:    ALU clause starting at 14:
 ; EG-NEXT:     BFE_INT * T0.W, T0.X, 0.0, literal.x,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     INT_TO_FLT * T0.X, PV.W,
 ; EG-NEXT:     BFE_INT T1.W, T1.X, 0.0, literal.x,
-; EG-NEXT:     RECIP_IEEE * T0.Y, PS,
+; EG-NEXT:     INT_TO_FLT * T0.X, PV.W,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     INT_TO_FLT * T0.Z, PV.W,
-; EG-NEXT:     MUL_IEEE * T2.W, PS, T0.Y,
-; EG-NEXT:     TRUNC T2.W, PV.W,
-; EG-NEXT:     XOR_INT * T0.W, T1.W, T0.W,
-; EG-NEXT:     ASHR T0.W, PS, literal.x,
-; EG-NEXT:     MULADD_IEEE * T1.W, -PV.W, T0.X, T0.Z,
-; EG-NEXT:    30(4.203895e-44), 0(0.000000e+00)
-; EG-NEXT:     TRUNC T0.Z, T2.W,
-; EG-NEXT:     SETGE T1.W, |PS|, |T0.X|,
-; EG-NEXT:     OR_INT * T0.W, PV.W, 1,
-; EG-NEXT:     CNDE T0.W, PV.W, 0.0, PS,
-; EG-NEXT:     FLT_TO_INT * T1.W, PV.Z,
-; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
+; EG-NEXT:     INT_TO_FLT * T0.Y, PV.W,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.X, T0.X,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
+; EG-NEXT:     TRUNC * T0.W, PV.W,
+; EG-NEXT:     TRUNC * T0.W, PV.W,
+; EG-NEXT:     FLT_TO_INT * T0.W, PV.W,
 ; EG-NEXT:     AND_INT T0.X, PV.W, literal.x,
 ; EG-NEXT:     MOV * T0.W, literal.x,
 ; EG-NEXT:    255(3.573311e-43), 0(0.000000e+00)

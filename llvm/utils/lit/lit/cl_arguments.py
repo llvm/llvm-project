@@ -281,6 +281,16 @@ def parse_args():
         type=os.path.abspath,
     )
     execution_group.add_argument(
+        "--pass-env",
+        dest="pass_env",
+        metavar="NAME",
+        help="Pass the named environment variable through to the test"
+        " environment (in addition to the built-in allow-list). May be"
+        " specified multiple times.",
+        action="append",
+        default=[],
+    )
+    execution_group.add_argument(
         "--vg", dest="useValgrind", help="Run tests under valgrind", action="store_true"
     )
     execution_group.add_argument(
@@ -323,6 +333,11 @@ def parse_args():
         "--time-trace-output",
         type=lit.reports.TimeTraceReport,
         help="Write Chrome tracing compatible JSON to the specified file",
+    )
+    execution_group.add_argument(
+        "--wtt-output",
+        type=lit.reports.WttReport,
+        help="Write a WTT (.wtl) log file for Windows test infrastructure consumption",
     )
     # This option only exists for the benefit of LLVM's Buildkite CI pipelines.
     # As soon as it is not needed, it should be removed. Its help text would be:
@@ -561,6 +576,7 @@ def parse_args():
                 opts.xunit_xml_output,
                 opts.resultdb_output,
                 opts.time_trace_output,
+                opts.wtt_output,
             ],
         )
     )

@@ -330,6 +330,10 @@ static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
     return NVVM::MMATypes::f64;
   if (elType.isF32())
     return NVVM::MMATypes::tf32;
+  if (elType.isF8E4M3FN())
+    return NVVM::MMATypes::e4m3;
+  if (elType.isF8E5M2())
+    return NVVM::MMATypes::e5m2;
   return failure();
 }
 

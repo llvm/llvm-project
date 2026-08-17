@@ -1125,6 +1125,9 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   TpiStream &tpi = m_index->tpi();
   ConstantSym constant(cvs.kind());
 
+  if (cvs.kind() != S_CONSTANT)
+    return nullptr;
+
   if (auto err =
           SymbolDeserializer::deserializeAs<ConstantSym>(cvs, constant)) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
@@ -1681,6 +1684,8 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   CompilandIndexItem *cii = m_index->compilands().GetCompiland(id.modi);
   CVSymbol sym = cii->m_debug_stream.readSymbolAtOffset(id.offset);
   CompUnitSP comp_unit = GetOrCreateCompileUnit(*cii);
+  if (sym.kind() != S_INLINESITE)
+    return;
 
   InlineSiteSym inline_site(static_cast<SymbolRecordKind>(sym.kind()));
   if (auto err =
@@ -2368,7 +2373,8 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
 
   if (is_constant) {
     CVSymbol sym = cii->m_debug_stream.readSymbolAtOffset(var_id.offset);
-    assert(sym.kind() == S_CONSTANT);
+    if (sym.kind() != S_CONSTANT)
+      return nullptr;
     ConstantSym constant(sym.kind());
     if (auto err =
             SymbolDeserializer::deserializeAs<ConstantSym>(sym, constant)) {
@@ -2838,6 +2844,9 @@ void SymbolFileNativePDB::BuildParentMap() {
     };
 
     CVType field_list_cvt = m_index->tpi().getType(tag.asTag().FieldList);
+    if (field_list_cvt.kind() != LF_FIELDLIST)
+      continue; // Invalid reference to a field list.
+
     ProcessTpiStream process(*m_index, *ti, tag, m_parent_types);
     FieldListRecord field_list;
     if (llvm::Error error = TypeDeserializer::deserializeAs<FieldListRecord>(

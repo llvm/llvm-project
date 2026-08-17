@@ -306,7 +306,7 @@ ELFSymbol::sectionIndexToString(elf_half shndx,
     const lldb_private::Section *section =
         section_list->GetSectionAtIndex(shndx).get();
     if (section)
-      return section->GetName().GetStringRef();
+      return section->GetName();
   } break;
   }
   return "";

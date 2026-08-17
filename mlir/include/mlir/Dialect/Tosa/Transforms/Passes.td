@@ -39,8 +39,7 @@ def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
 
   let dependentDialects = [
     "func::FuncDialect",
-    "tensor::TensorDialect",
-    "tosa::TosaDialect",
+    "tensor::TensorDialect"
   ];
 
   let options = [
@@ -214,8 +213,7 @@ def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   ];
 
   let dependentDialects = [
-    "func::FuncDialect",
-    "tosa::TosaDialect",
+    "func::FuncDialect"
   ];
 }
 
@@ -239,8 +237,7 @@ def TosaNarrowF64ToF32Pass : Pass<"tosa-narrow-f64-to-f32", "func::FuncOp"> {
   ];
 
   let dependentDialects = [
-    "func::FuncDialect",
-    "tosa::TosaDialect",
+    "func::FuncDialect"
   ];
 }
 

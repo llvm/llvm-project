@@ -60,7 +60,7 @@ static Error handleCustomErrorUP(std::unique_ptr<CustomError> CE) {
 
 static void handleCustomErrorUPVoid(std::unique_ptr<CustomError> CE) {}
 
-} // end anonymous namespace
+} // namespace
 
 // Test that a checked success value doesn't cause any issues.
 TEST(ErrorTest, CheckedSuccess) {
