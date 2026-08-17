@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Linux implementation of __llvm_libc_minor.
+/// Linux implementation of minor.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +24,7 @@ static_assert(sizeof(dev_t) == 8, "dev_t must be 64-bit");
 // of the major number and m represents 4 bytes of the minor number. We don't
 // support older systems with smaller dev_t types.
 
-LLVM_LIBC_FUNCTION(unsigned int, __llvm_libc_minor, (dev_t dev)) {
+LLVM_LIBC_FUNCTION(unsigned int, minor, (dev_t dev)) {
   return static_cast<unsigned int>(((dev >> 0) & 0x000000ff) |
                                    ((dev >> 12) & 0xffffff00));
 }

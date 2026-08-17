@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation header for __llvm_libc_makedev.
+/// Implementation header for makedev.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-dev_t __llvm_libc_makedev(unsigned int major, unsigned int minor);
+dev_t makedev(unsigned int major, unsigned int minor);
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -11,15 +11,15 @@ macros:
 enums: []
 objects: []
 functions:
-  - name: __llvm_libc_major
+  - name: major
     return_type: unsigned int
     arguments:
       - type: dev_t
-  - name: __llvm_libc_minor
+  - name: minor
     return_type: unsigned int
     arguments:
       - type: dev_t
-  - name: __llvm_libc_makedev
+  - name: makedev
     return_type: dev_t
     arguments:
       - type: unsigned int

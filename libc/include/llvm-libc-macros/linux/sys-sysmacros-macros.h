@@ -14,8 +14,8 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SYS_SYSMACROS_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SYS_SYSMACROS_MACROS_H
 
-#define major(dev) __llvm_libc_major(dev)
-#define minor(dev) __llvm_libc_minor(dev)
-#define makedev(maj, min) __llvm_libc_makedev(maj, min)
+#define major(dev) major(dev)
+#define minor(dev) minor(dev)
+#define makedev(maj, min) makedev(maj, min)
 
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_SYSMACROS_MACROS_H

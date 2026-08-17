@@ -1,5 +1,5 @@
 add_entrypoint_object(
-  __llvm_libc_makedev
+  makedev
   SRCS
     makedev.cpp
   HDRS
@@ -11,7 +11,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  __llvm_libc_major
+  major
   SRCS
     major.cpp
   HDRS
@@ -23,7 +23,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  __llvm_libc_minor
+  minor
   SRCS
     minor.cpp
   HDRS

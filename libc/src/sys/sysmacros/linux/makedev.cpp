@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Linux implementation of __llvm_libc_makedev.
+/// Linux implementation of makedev.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -24,8 +24,7 @@ static_assert(sizeof(dev_t) == 8, "dev_t must be 64-bit");
 // of the major number and m represents 4 bytes of the minor number. We don't
 // support older systems with smaller dev_t types.
 
-LLVM_LIBC_FUNCTION(dev_t, __llvm_libc_makedev,
-                   (unsigned int major, unsigned int minor)) {
+LLVM_LIBC_FUNCTION(dev_t, makedev, (unsigned int major, unsigned int minor)) {
   return (static_cast<dev_t>(major & 0x00000fff) << 8) |
          (static_cast<dev_t>(major & 0xfffff000) << 32) |
          (static_cast<dev_t>(minor & 0x000000ff) << 0) |

@@ -3,22 +3,22 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_entrypoint_object(
-  __llvm_libc_makedev
+  makedev
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.__llvm_libc_makedev
+    .${LIBC_TARGET_OS}.makedev
 )
 
 add_entrypoint_object(
-  __llvm_libc_major
+  major
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.__llvm_libc_major
+    .${LIBC_TARGET_OS}.major
 )
 
 add_entrypoint_object(
-  __llvm_libc_minor
+  minor
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.__llvm_libc_minor
+    .${LIBC_TARGET_OS}.minor
 )

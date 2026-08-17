@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation header for __llvm_libc_minor.
+/// Implementation header for minor.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-unsigned int __llvm_libc_minor(dev_t dev);
+unsigned int minor(dev_t dev);
 
 } // namespace LIBC_NAMESPACE_DECL
 

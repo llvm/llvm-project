@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation header for __llvm_libc_major.
+/// Implementation header for major.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-unsigned int __llvm_libc_major(dev_t dev);
+unsigned int major(dev_t dev);
 
 } // namespace LIBC_NAMESPACE_DECL
 
