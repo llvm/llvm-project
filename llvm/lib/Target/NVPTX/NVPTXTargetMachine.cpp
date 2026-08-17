@@ -120,6 +120,9 @@ NVPTXTargetMachine::~NVPTXTargetMachine() = default;
 
 namespace {
 
+/// NVPTXPassConfig mirrors the NewPM implementation in NVPTXCodeGenPassBuilder
+/// in NVPTXCodeGenPassBuilder.cpp; the two must be kept in sync until this path
+/// is removed.
 class NVPTXPassConfig : public TargetPassConfig {
 public:
   NVPTXPassConfig(NVPTXTargetMachine &TM, PassManagerBase &PM)
