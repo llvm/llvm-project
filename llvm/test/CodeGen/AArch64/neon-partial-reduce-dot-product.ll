@@ -1653,15 +1653,10 @@ define <2 x i64> @partial_reduce_sext_cmp_i8tov2i64(<2 x i64> %acc, <16 x i8> %a
 define <2 x i64> @partial_reduce_zext_cmp_i32tov2i64(<2 x i64> %acc, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-COMMON-LABEL: partial_reduce_zext_cmp_i32tov2i64:
 ; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    movi v3.4s, #1
 ; CHECK-COMMON-NEXT:    cmeq v1.4s, v1.4s, v2.4s
-; CHECK-COMMON-NEXT:    mov w8, #1 // =0x1
-; CHECK-COMMON-NEXT:    dup v2.2d, x8
-; CHECK-COMMON-NEXT:    ushll v3.2d, v1.2s, #0
-; CHECK-COMMON-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-COMMON-NEXT:    and v3.16b, v3.16b, v2.16b
-; CHECK-COMMON-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-COMMON-NEXT:    add v0.2d, v0.2d, v3.2d
-; CHECK-COMMON-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-COMMON-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-COMMON-NEXT:    uadalp v0.2d, v1.4s
 ; CHECK-COMMON-NEXT:    ret
   %cmp = icmp eq <4 x i32> %a, %b
   %ext = zext <4 x i1> %cmp to <4 x i64>

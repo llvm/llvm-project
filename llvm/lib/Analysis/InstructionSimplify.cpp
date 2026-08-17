@@ -4087,7 +4087,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // Otherwise the upper bits of LHS are all equal, while RHS has varying
         // bits there.  Use this to work out the result of the comparison.
         if (AnyEq->isNullValue()) {
-          switch (Pred) {
+          switch (Pred.getPreferredSignedPredicate()) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
           case ICmpInst::ICMP_EQ:

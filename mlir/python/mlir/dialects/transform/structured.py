@@ -610,11 +610,28 @@ class TileUsingForOp(TileUsingForOp):
             if packed_tile_sizes is not None
             else sum(v if v == 0 else 1 for v in static_sizes)
         )
-        (
-            dynamic_interchange,
-            packed_interchange,
-            static_interchange,
-        ) = _dispatch_mixed_values(interchange)
+        dynamic_interchange = []
+        packed_interchange = None
+        static_interchange = []
+        if isinstance(interchange, (Operation, Value, OpView)):
+            (
+                dynamic_interchange,
+                packed_interchange,
+                static_interchange,
+            ) = _dispatch_mixed_values(interchange)
+        elif (
+            isinstance(interchange, Sequence)
+            and not isinstance(interchange, (str, bytes))
+        ) or isinstance(interchange, (ArrayAttr, DenseI64ArrayAttr)):
+            (
+                dynamic_interchange,
+                static_interchange,
+                _,
+            ) = _dispatch_dynamic_index_list(interchange)
+        elif interchange is not None:
+            raise ValueError(
+                f"expected {interchange=} to be an MLIR object or sequence of mixed values"
+            )
 
         if isinstance(loop_types_or_target, (Operation, Value, OpView)):
             loop_types = [transform.AnyOpType.get()] * num_loops
