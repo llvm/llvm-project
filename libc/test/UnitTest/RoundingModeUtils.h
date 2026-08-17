@@ -31,6 +31,8 @@ template <RoundingMode R> struct ForceRoundingModeTest : ForceRoundingMode {
   ForceRoundingModeTest() : ForceRoundingMode(R) {}
 };
 
+int get_fe_rounding(RoundingMode mode);
+
 } // namespace testing
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

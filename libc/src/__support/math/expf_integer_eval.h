@@ -22,6 +22,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/check/exp_exceptions.h"
+#include <iostream>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -72,6 +73,15 @@ LIBC_INLINE float expf(float x, int rounding) {
                     x_val_abs <= 0x3300'0000U)) {
     // |x| <= 2^-25
     if (x_val_abs <= 0x3300'0000U) {
+      // TODO: define ifdef
+      // return 1.0f;
+
+      if (rounding == FE_UPWARD && !is_neg)
+        return 0x1.000002p0f;
+
+      if (rounding == FE_DOWNWARD && is_neg)
+        return 0x1.fffffep-1f;
+
       return 1.0f;
     }
 
@@ -93,21 +103,31 @@ LIBC_INLINE float expf(float x, int rounding) {
       return is_neg ? 0.0f : FPBits::inf().get_val();
     }
 
-    // Large finite positive --> overflow
+    // Large finite positive
     if (!is_neg) {
+      if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
+        return FPBits::max_normal().get_val();
+
       return FPBits::inf().get_val();
     }
 
     // x < log(2^-150) or NaN (NaN is already handled above)
     if (xbits.uintval() >= 0xc2cf'f1b5U) {
+      if (rounding == FE_UPWARD)
+        return FPBits::min_subnormal().get_val();
+
       return 0.0f;
     }
   }
+
+  std::cout << xbits.uintval() << std::endl;
 
   // Main calculations
 
   uint16_t x_e = xbits.get_biased_exponent();
   uint64_t x_u = xbits.get_mantissa();
+
+  std::cout << x_e << ' ' << x_u << std::endl;
 
   // Range reduction
   // The algorithm near the end of this function estimates 2^r,
@@ -128,6 +148,9 @@ LIBC_INLINE float expf(float x, int rounding) {
   } else if (x_e_unbiased < 0) {
     x_u >>= -x_e_unbiased;
   }
+
+  std::cout << x_e_unbiased << std::endl;
+  std::cout << x_u << std::endl;
 
   // LSB(x_u_frac) = 2^-55
   Frac64 x_u_frac(x_u);
@@ -170,43 +193,52 @@ LIBC_INLINE float expf(float x, int rounding) {
                               EXPF_COEFFS[5], EXPF_COEFFS[6], EXPF_COEFFS[7],
                               EXPF_COEFFS[8], EXPF_COEFFS[9], EXPF_COEFFS[10]);
 
-  // Dropping some last bits (won't need them as we're casting into 32-bit float
-  // anyway)
-  constexpr uint32_t DROP_BITS = 2;
-  if (LIBC_UNLIKELY(is_neg && d >= 0)) { // subnormal
-    // 1 + p
-    uint64_t full_val =
-        (uint64_t(1) << (64 - DROP_BITS)) | (p.val[0] >> DROP_BITS);
+  uint32_t shift_length = 40;
+  uint32_t leading_one = 0;
 
-// add rounding bit
-// skip for R0, RD
-#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-    if (LIBC_UNLIKELY(rounding != FE_TONEAREST))
-#endif
-      full_val += (uint64_t(1) << ((41 - DROP_BITS) + d));
+  if (is_neg && d >= 0) { // subnormal
+    e_y_unbiased = 0;
+    leading_one = 1 << (24 - d);
+    shift_length += d;
+  }
 
-    // RU
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-    if (LIBC_UNLIKELY(rounding == FE_UPWARD)) {
-      constexpr uint64_t ROUND_UP_MASK = (uint64_t(1) << DROP_BITS) - 1;
-      full_val += ROUND_UP_MASK;
-    }
-#endif
+  if (rounding == FE_TONEAREST) {
+    uint32_t result =
+        (static_cast<uint32_t>(p.val[0] >> shift_length) + 1 + leading_one);
+    result >>= 1;
+    result += e_y_unbiased;
 
-    // shift back to align to 32-bit float representation
-    uint32_t result = static_cast<uint32_t>(full_val >> ((42 - DROP_BITS) + d));
+    std::cout << e_y_unbiased << ' ' << shift_length << ' ' << result
+              << std::endl;
+    std::cout << p.val[0] << std::endl;
+    std::cout << l2y_r_frac.val[0] << std::endl;
+    std::cout << leading_one << std::endl;
+
+    return cpp::bit_cast<float>(result);
+  }
+#else
+  uint32_t result = (static_cast<uint32_t>(p.val[0] >> shift_length) + 1);
+  result >>= 1;
+  result += e_y_unbiased;
+
+  return cpp::bit_cast<float>(result);
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+  if (LIBC_UNLIKELY(rounding == FE_UPWARD)) {
+    uint64_t round_up_mask = (uint64_t(1) << (shift_length + 1)) - 1;
+    uint32_t should_round_up =
+        static_cast<uint32_t>((p.val[0] & round_up_mask) != 0);
+
+    uint32_t result = (static_cast<uint32_t>(p.val[0] >> (shift_length + 1)) +
+                       should_round_up + (leading_one >> 1));
+    result += e_y_unbiased;
 
     return cpp::bit_cast<float>(result);
   }
 
-  // RN 23 bits --> shift for the LSB to be 2^-24 --> +1, shift for another
-  // bit
-  // Can be rounded up
-  // + e_y_unbiased
-
-  uint32_t result = (static_cast<uint32_t>(p.val[0] >> 40) + 1);
-  result >>= 1;
-
+  uint32_t result = (static_cast<uint32_t>(p.val[0] >> (shift_length + 1)) +
+                     (leading_one >> 1));
   result += e_y_unbiased;
 
   return cpp::bit_cast<float>(result);

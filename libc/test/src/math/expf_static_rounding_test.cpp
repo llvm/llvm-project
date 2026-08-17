@@ -42,7 +42,7 @@ rounding_mode_to_fenv_rounding_mode(RoundingMode rounding) {
     return FE_TOWARDZERO;
   }
   return FE_TONEAREST; // Default case, should not happen
-};
+}
 
 TEST_F(LlvmLibcExpfStaticRoundingTest, SpecialNumbers) {
   for (auto rounding : ROUNDING_MODES) {

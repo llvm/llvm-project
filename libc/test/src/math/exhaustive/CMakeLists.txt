@@ -235,6 +235,7 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test_static_rounding
     libc.src.__support.math.expf
+    libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread

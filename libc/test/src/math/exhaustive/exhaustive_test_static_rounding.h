@@ -22,6 +22,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
+#include "test/UnitTest/TestLogger.h"
 
 #include <atomic>
 #include <iostream>
@@ -44,28 +45,16 @@ struct StaticallyRoundedUnaryOpChecker
   using RoundingMode = LIBC_NAMESPACE::fputil::testing::RoundingMode;
   using ForceRoundingMode = LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 
-  // TODO: dedupe
-  LIBC_INLINE int rounding_mode_to_fenv_rounding_mode(RoundingMode rounding) {
-    switch (rounding) {
-    case RoundingMode::Nearest:
-      return FE_TONEAREST;
-    case RoundingMode::Downward:
-      return FE_DOWNWARD;
-    case RoundingMode::Upward:
-      return FE_UPWARD;
-    case RoundingMode::TowardZero:
-      return FE_TOWARDZERO;
-    }
-    return FE_TONEAREST; // Default case, should not happen
-  };
-
   // Check in a range, return the number of failures.
   uint64_t check(StorageType start, StorageType stop, RoundingMode rounding) {
     ForceRoundingMode r(rounding);
     if (!r.success)
       return (stop > start);
 
-    const int fenv_rounding = rounding_mode_to_fenv_rounding_mode(rounding);
+    // ForceRoundingMode already checks for valid FE_* rounding mode
+    using LIBC_NAMESPACE::fputil::testing::get_fe_rounding;
+    using LIBC_NAMESPACE::testing::tlog;
+    const int fenv_rounding = get_fe_rounding(rounding);
 
     StorageType bits = start;
     uint64_t failed = 0;
@@ -77,8 +66,9 @@ struct StaticallyRoundedUnaryOpChecker
       failed += (!correct);
       // Uncomment to print out failed values.
       if (!correct) {
-        EXPECT_FP_EQ_ROUNDING_MODE(BaselineFunc(x), Func(x, fenv_rounding),
-                                   rounding);
+        tlog << xbits.uintval() << '\n';
+        // EXPECT_FP_EQ_ROUNDING_MODE(BaselineFunc(x), Func(x, fenv_rounding),
+        // rounding);
       }
     } while (bits++ < stop);
 

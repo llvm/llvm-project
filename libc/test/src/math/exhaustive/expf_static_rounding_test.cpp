@@ -1,16 +1,21 @@
-//===-- Exhaustive test for expf ------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the exhaustive tests for statically-rounded
+/// implementation of static_rounding::expf(x)
+///
+//===----------------------------------------------------------------------===//
 
 #include "exhaustive_test_static_rounding.h"
-// TODO: debug this? Why do we even need this at all?
-#undef LIBC_ERRNO_MODE
-#include "shared/static_rounding_math.h"
 #include "src/__support/math/expf.h"
+#include "src/__support/math/expf_integer_eval.h"
 
 using LlvmLibcStaticallyRoundedExpfExhaustiveTest =
     LlvmLibcStaticallyRoundedUnaryOpExhaustiveMathTest<

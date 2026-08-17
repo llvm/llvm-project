@@ -1419,6 +1419,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expf_static_rounding_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expf_static_rounding_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.math.expf
+    libc.src.__support.math.expf_integer_eval
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   expf16_test
   SUITE
     libc-math-smoke-tests
@@ -3571,9 +3584,9 @@ add_fp_unittest(
   SRCS
     rsqrtf_test.cpp
   DEPENDS
-    libc.hdr.errno_macros  
-    libc.hdr.fenv_macros  
-    libc.src.math.rsqrtf 
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.rsqrtf
 )
 
 add_fp_unittest(
@@ -3583,8 +3596,8 @@ add_fp_unittest(
   SRCS
     rsqrtf16_test.cpp
   DEPENDS
-    libc.hdr.errno_macros  
-    libc.hdr.fenv_macros 
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.rsqrtf16
 )
 
