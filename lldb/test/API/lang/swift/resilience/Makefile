@@ -3,8 +3,17 @@ all: libmod.a.dylib libmod.b.dylib main.a main.b
 
 include Makefile.rules
 
+# Both recipes below build into flavor-independent names (libmod.dylib,
+# mod.swiftinterface, main, ...) and rename the results per flavor afterwards,
+# so they are only correct when the directory does not already contain the
+# results of an earlier build or test run: `mv` descends into an existing
+# destination directory rather than replacing it, and writing to a leftover
+# symlink follows it instead of overwriting it. Clear both before building.
+
 libmod.%.dylib: mod.%.swift \
                 $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
+	$(call RM_RF,$@.dSYM libmod.dylib libmod.dylib.dSYM \
+	             mod.swiftinterface mod.$*.swiftinterface mod.swiftmodule)
 	$(call LN_SF,$<,mod.swift)
 	$(SWIFTC) $(SWIFTFLAGS) -emit-module -module-name mod mod.swift -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/libmod.$*.dylib -###
 	"$(MAKE)" MAKE_DSYM=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
@@ -19,6 +28,7 @@ libmod.%.dylib: mod.%.swift \
 	$(call RM,mod.swift)
 
 main.%: main.swift
+	$(call RM_RF,main.$*.dSYM main main.dSYM)
 	$(call LN_SF,libmod.$*.dylib,libmod.dylib)
 	$(call LN_SF,libmod.$*.dylib.dSYM,libmod.dylib.dSYM)
 	$(call LN_SF,mod.$*.swiftdoc,mod.swiftdoc)
