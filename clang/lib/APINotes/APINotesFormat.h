@@ -12,6 +12,7 @@
 #include "clang/APINotes/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/BitcodeConvenience.h"
 
@@ -29,10 +30,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 42; // 39 for BoundsSafety;
-                                   // 40 for UnsafeBufferUsageAttr
-                                   // 41 for FunctionTableKey parameters
-                                   // 42 for FunctionTableKey object selectors
+const uint16_t VERSION_MINOR = 42; // 42 for FunctionTableKey object selectors
 
 const uint8_t kSwiftConforms = 1;
 const uint8_t kSwiftDoesNotConform = 2;
@@ -379,10 +377,10 @@ constexpr uint8_t FunctionKeyObjectSelectorMask =
 constexpr unsigned FunctionTableKeyBaseLength =
     sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint16_t);
 
-template <typename GetIdentifierFn>
-std::optional<FunctionTableKey>
-getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
-                   GetIdentifierFn GetIdentifier) {
+inline std::optional<FunctionTableKey> getFunctionKeyImpl(
+    uint32_t ParentContextID, llvm::StringRef Name,
+    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
+        GetIdentifier) {
   std::optional<IdentifierID> NameID = GetIdentifier(Name);
   if (!NameID)
     return std::nullopt;
@@ -390,11 +388,11 @@ getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
   return FunctionTableKey(ParentContextID, *NameID);
 }
 
-template <typename GetIdentifierFn>
-std::optional<FunctionTableKey>
-getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
-                   FunctionObjectSelector ObjectSelector,
-                   GetIdentifierFn GetIdentifier) {
+inline std::optional<FunctionTableKey> getFunctionKeyImpl(
+    uint32_t ParentContextID, llvm::StringRef Name,
+    FunctionObjectSelector ObjectSelector,
+    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
+        GetIdentifier) {
   std::optional<IdentifierID> NameID = GetIdentifier(Name);
   if (!NameID)
     return std::nullopt;
@@ -404,11 +402,12 @@ getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
   return FunctionTableKey(ParentContextID, *NameID, std::move(Selector));
 }
 
-template <typename ParameterT, typename GetIdentifierFn>
-std::optional<FunctionTableKey>
-getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
-                   llvm::ArrayRef<ParameterT> Parameters,
-                   GetIdentifierFn GetIdentifier) {
+template <typename ParameterT>
+std::optional<FunctionTableKey> getFunctionKeyImpl(
+    uint32_t ParentContextID, llvm::StringRef Name,
+    llvm::ArrayRef<ParameterT> Parameters,
+    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
+        GetIdentifier) {
   std::optional<IdentifierID> NameID = GetIdentifier(Name);
   if (!NameID)
     return std::nullopt;
@@ -427,12 +426,13 @@ getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
   return FunctionTableKey(ParentContextID, *NameID, std::move(Selector));
 }
 
-template <typename ParameterT, typename GetIdentifierFn>
-std::optional<FunctionTableKey>
-getFunctionKeyImpl(uint32_t ParentContextID, llvm::StringRef Name,
-                   llvm::ArrayRef<ParameterT> Parameters,
-                   FunctionObjectSelector ObjectSelector,
-                   GetIdentifierFn GetIdentifier) {
+template <typename ParameterT>
+std::optional<FunctionTableKey> getFunctionKeyImpl(
+    uint32_t ParentContextID, llvm::StringRef Name,
+    llvm::ArrayRef<ParameterT> Parameters,
+    FunctionObjectSelector ObjectSelector,
+    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
+        GetIdentifier) {
   std::optional<IdentifierID> NameID = GetIdentifier(Name);
   if (!NameID)
     return std::nullopt;

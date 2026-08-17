@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_APINOTES_TYPES_H
 #define LLVM_CLANG_APINOTES_TYPES_H
 
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -1008,19 +1009,13 @@ struct Context {
 
 using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
 
-/// Describes the C++ implicit-object ref-qualifier portion of a method
-/// selector.
-enum class FunctionObjectRefQualifier : uint8_t {
-  None,
-  LValue,
-  RValue,
-};
-
 /// Describes optional constraints on a C++ method's implicit object parameter.
 struct FunctionObjectSelector {
   std::optional<bool> Const;
   std::optional<bool> Volatile;
-  std::optional<FunctionObjectRefQualifier> Ref;
+  std::optional<RefQualifierKind> Ref;
+
+  std::string format() const;
 };
 
 inline bool operator==(const FunctionObjectSelector &LHS,
@@ -1034,27 +1029,25 @@ inline bool operator!=(const FunctionObjectSelector &LHS,
   return !(LHS == RHS);
 }
 
-inline std::string formatAPINotesObjectSelector(FunctionObjectSelector Object) {
+inline std::string FunctionObjectSelector::format() const {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   llvm::SmallVector<std::string, 3> Parts;
 
-  if (Object.Const)
-    Parts.push_back(std::string("Const: ") +
-                    (*Object.Const ? "true" : "false"));
-  if (Object.Volatile)
-    Parts.push_back(std::string("Volatile: ") +
-                    (*Object.Volatile ? "true" : "false"));
-  if (Object.Ref) {
+  if (Const)
+    Parts.push_back(std::string("Const: ") + (*Const ? "true" : "false"));
+  if (Volatile)
+    Parts.push_back(std::string("Volatile: ") + (*Volatile ? "true" : "false"));
+  if (Ref) {
     std::string Ref = "Ref: ";
-    switch (*Object.Ref) {
-    case FunctionObjectRefQualifier::None:
+    switch (*this->Ref) {
+    case RQ_None:
       Ref += "none";
       break;
-    case FunctionObjectRefQualifier::LValue:
+    case RQ_LValue:
       Ref += "lvalue";
       break;
-    case FunctionObjectRefQualifier::RValue:
+    case RQ_RValue:
       Ref += "rvalue";
       break;
     }
@@ -1072,6 +1065,8 @@ inline std::string formatAPINotesObjectSelector(FunctionObjectSelector Object) {
 struct FunctionSelector {
   std::optional<llvm::SmallVector<std::string, 4>> Parameters;
   std::optional<FunctionObjectSelector> Object;
+
+  std::string format() const;
 };
 
 inline bool operator==(const FunctionSelector &LHS,
@@ -1098,18 +1093,17 @@ inline std::string formatAPINotesFunctionSelector(
       Result += " ";
     else
       Result = "Where.Object ";
-    Result += formatAPINotesObjectSelector(*Object);
+    Result += Object->format();
   }
 
   return Result;
 }
 
-inline std::string
-formatAPINotesFunctionSelector(const FunctionSelector &Selector) {
+inline std::string FunctionSelector::format() const {
   std::optional<llvm::ArrayRef<std::string>> Parameters;
-  if (Selector.Parameters)
-    Parameters = llvm::ArrayRef<std::string>(*Selector.Parameters);
-  return formatAPINotesFunctionSelector(Parameters, Selector.Object);
+  if (this->Parameters)
+    Parameters = llvm::ArrayRef<std::string>(*this->Parameters);
+  return formatAPINotesFunctionSelector(Parameters, Object);
 }
 
 struct FunctionTableSelectorKey {

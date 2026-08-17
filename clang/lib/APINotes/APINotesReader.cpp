@@ -95,11 +95,11 @@ static FunctionTableKey readFunctionTableKey(const uint8_t *Data,
           (FunctionKeyFlags & FunctionKeyObjectVolatileValue) != 0;
     if (FunctionKeyFlags & FunctionKeyObjectRefPresent) {
       if (FunctionKeyFlags & FunctionKeyObjectRefLValue)
-        Selector.Ref = FunctionObjectRefQualifier::LValue;
+        Selector.Ref = RQ_LValue;
       else if (FunctionKeyFlags & FunctionKeyObjectRefRValue)
-        Selector.Ref = FunctionObjectRefQualifier::RValue;
+        Selector.Ref = RQ_RValue;
       else
-        Selector.Ref = FunctionObjectRefQualifier::None;
+        Selector.Ref = RQ_None;
     }
     ObjectSelector = Selector;
   }
