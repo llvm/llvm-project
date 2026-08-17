@@ -119,9 +119,6 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #  ifndef _LIBCPP_WCHAR_H
 #    define _LIBCPP_WCHAR_H
 
-#    include <__mbstate_t.h> // provide mbstate_t
-#    include <stddef.h>      // provide size_t
-
 // Determine whether we have const-correct overloads for wcschr and friends.
 #    if defined(_WCHAR_H_CPLUSPLUS_98_CONFORMANCE_)
 #      define _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS 1

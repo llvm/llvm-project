@@ -595,7 +595,6 @@ set(files
   __math/rounding_functions.h
   __math/traits.h
   __math/trigonometric_functions.h
-  __mbstate_t.h
   __mdspan/aligned_accessor.h
   __mdspan/default_accessor.h
   __mdspan/extents.h
@@ -1381,7 +1380,6 @@ set(files
   __cxx03/__math/rounding_functions.h
   __cxx03/__math/traits.h
   __cxx03/__math/trigonometric_functions.h
-  __cxx03/__mbstate_t.h
   __cxx03/__memory/addressof.h
   __cxx03/__memory/align.h
   __cxx03/__memory/aligned_alloc.h
