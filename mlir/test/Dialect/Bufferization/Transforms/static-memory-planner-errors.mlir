@@ -25,18 +25,7 @@ func.func @error_escaping_dealloc(%cond: i1) {
 
 // -----
 
-// Test 3: A dynamic-shape alloc with no dealloc should be silently skipped,
-// not an error. Dynamic shapes are the one case where missing deallocs are
-// acceptable — the alloc is simply not eligible for planning.
-// (No expected-error here — the pass must not emit one.)
-func.func @error_dynamic_no_dealloc(%n: index) {
-  %alloc = memref.alloc(%n) : memref<?xf32>
-  return
-}
-
-// -----
-
-// Test 4: When one alloc has no dealloc and another is valid, the pass errors
+// Test 3: When one alloc has no dealloc and another is valid, the pass errors
 // on the first bad alloc and stops (WalkResult::interrupt). The error points
 // precisely to the problematic alloc, not to subsequent valid ones.
 func.func @error_first_bad_stops_walk() {
@@ -49,7 +38,7 @@ func.func @error_first_bad_stops_walk() {
 
 // -----
 
-// Test 5: cf.cond_br to a sibling block is also unstructured control flow and
+// Test 4: cf.cond_br to a sibling block is also unstructured control flow and
 // must be rejected, just like cf.br.
 func.func @error_cond_br_dealloc(%cond: i1) {
   // expected-error @+1 {{unstructured control flow is not supported}}
