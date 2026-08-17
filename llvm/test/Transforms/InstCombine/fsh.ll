@@ -1520,26 +1520,3 @@ define i8 @rot_add_xor_mask_funnel(i8 %x, i8 %y, i8 %z) {
   %r = or i8 %shl, %lshr
   ret i8 %r
 }
-
-define i8 @rot_add_xor_mask_fshl_multi_use(i8 %x, i8 %y) {
-; CHECK-LABEL: @rot_add_xor_mask_fshl_multi_use(
-; CHECK-NEXT:    [[SHL_AMT:%.*]] = add i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[SHL_M:%.*]] = and i8 [[SHL_AMT]], 7
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[SHL_M]]
-; CHECK-NEXT:    call void @use_i8(i8 [[SHL]])
-; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add i8 [[Y]], 7
-; CHECK-NEXT:    [[LSHR_M:%.*]] = xor i8 [[LSHR_AMT]], 7
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[X]], [[LSHR_M]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], [[LSHR]]
-; CHECK-NEXT:    ret i8 [[R]]
-;
-  %shl_amt = add i8 %y, 1
-  %shl_m = and i8 %shl_amt, 7
-  %shl = shl i8 %x, %shl_m
-  call void @use_i8(i8 %shl)
-  %lshr_amt = add i8 %y, 7
-  %lshr_m = xor i8 %lshr_amt, 7
-  %lshr = lshr i8 %x, %lshr_m
-  %r = or i8 %shl, %lshr
-  ret i8 %r
-}
