@@ -2,6 +2,7 @@
 
 import gc
 from mlir.ir import *
+from mlir.dialects import func
 
 
 def run(f):
@@ -93,3 +94,23 @@ def test_emit_error_diagnostics():
         print(f"emit_error_diagnostics=True:")
         print(f"e.error_diagnostics: {[str(diag) for diag in e.error_diagnostics]}")
         print(f"handler_diags: {handler_diags}")
+
+
+# CHECK-LABEL: TEST: test_multithreaded_native_verifier_diagnostics
+@run
+def test_multithreaded_native_verifier_diagnostics():
+    context = Context()
+    context.enable_multithreading(True)
+    with context, Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            func.FuncOp("first_native_invalid", ([], [])).add_entry_block()
+            func.FuncOp("second_native_invalid", ([], [])).add_entry_block()
+        try:
+            module.operation.verify()
+        except MLIRError as e:
+            assert str(e).count("empty block: expect at least a terminator") == 2
+            # CHECK: parallel native diagnostics captured
+            print("parallel native diagnostics captured")
+        else:
+            raise AssertionError("expected native verification to fail")

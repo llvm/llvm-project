@@ -1,7 +1,7 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
 from mlir.ir import *
-from mlir.dialects import arith
+from mlir.dialects import arith, func
 from mlir.dialects.ext import *
 from mlir.rewrite import *
 from mlir import ir
@@ -635,6 +635,74 @@ def testExtDialectWithRegion():
             # CHECK: Verification failed:
             # CHECK: result type mismatch
             print(e)
+
+
+# CHECK: TEST: testDynamicOpTraitMultithreadedVerification
+@run
+def testDynamicOpTraitMultithreadedVerification():
+    class TestParallelVerify(Dialect, name="ext_parallel_verify"):
+        pass
+
+    class ValidOp(TestParallelVerify.Operation, name="valid"):
+        def verify_invariants(self) -> bool:
+            return True
+
+    class InvalidOp(TestParallelVerify.Operation, name="invalid"):
+        def verify_invariants(self) -> bool:
+            self.location.emit_error("parallel Python verifier failed")
+            return False
+
+    def add_function(module, name, op_type, add_result=False):
+        i32 = IntegerType.get_signless(32)
+        with InsertionPoint(module.body):
+            result_types = [i32] if add_result else []
+            function = func.FuncOp(name, ([], result_types))
+            block = function.add_entry_block()
+        with InsertionPoint(block):
+            value = None
+            return_values = []
+            if add_result:
+                value = arith.constant(i32, 0)
+                return_values = [value]
+            op_type()
+            func.ReturnOp(return_values)
+        return function, value
+
+    context = Context()
+    context.enable_multithreading(True)
+    with context, Location.unknown():
+        TestParallelVerify.load()
+
+        module = Module.create()
+        first_function, value = add_function(
+            module, "first_valid", ValidOp, add_result=True
+        )
+        add_function(module, "second_valid", ValidOp, add_result=True)
+        assert module.operation.verify()
+        assert "ext_parallel_verify.valid" in str(module)
+        # AsmState construction implicitly verifies the parent operation.
+        AsmState(module.operation)
+        AsmState(value)
+        assert value.get_name()
+        assert "ext_parallel_verify.valid" in str(first_function.body.blocks[0])
+        assert "arith.constant" in str(value)
+        assert "arith.constant" in str(Value(value))
+        module.dump()
+        value.dump()
+        # CHECK: parallel verification succeeded
+        print("parallel verification succeeded")
+
+        module = Module.create()
+        add_function(module, "first_invalid", InvalidOp)
+        add_function(module, "second_invalid", InvalidOp)
+        try:
+            module.operation.verify()
+        except MLIRError as e:
+            assert "parallel Python verifier failed" in str(e)
+            # CHECK: parallel verification failure captured
+            print("parallel verification failure captured")
+        else:
+            raise AssertionError("expected parallel verification to fail")
 
 
 # CHECK: TEST: testIsIsolatedFromAboveTrait

@@ -177,6 +177,7 @@ struct PyPrintAccumulator {
 
   MlirStringCallback getCallback() {
     return [](MlirStringRef part, void *userData) {
+      nanobind::gil_scoped_acquire gil;
       PyPrintAccumulator *printAccum =
           static_cast<PyPrintAccumulator *>(userData);
       nanobind::str pyPart(part.data,
