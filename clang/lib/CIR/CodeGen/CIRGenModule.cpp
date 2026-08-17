@@ -144,6 +144,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
 
+  theModule->setAttr(
+      cir::CIRDialect::getDefaultTlsModelAttrName(),
+      cir::TLSModelAttr::get(&mlirContext, getDefaultCIRTLSModel()));
+
   if (langOpts.OpenMP) {
     mlir::omp::OffloadModuleOpts ompOpts(
         langOpts.OpenMPTargetDebug, langOpts.OpenMPTeamSubscription,
@@ -176,7 +180,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   // Set CUDA GPU binary handle.
   if (langOpts.CUDA) {
-    llvm::StringRef cudaBinaryName = codeGenOpts.CudaGpuBinaryFileName;
+    llvm::StringRef cudaBinaryName = codeGenOpts.OffloadBinaryToEmbedFile;
     if (!cudaBinaryName.empty()) {
       theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
                          cir::CUDABinaryHandleAttr::get(
@@ -307,6 +311,12 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
       theTargetCIRGenInfo = createX8664TargetCIRGenInfo(genTypes);
       return *theTargetCIRGenInfo;
     }
+  }
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be: {
+    theTargetCIRGenInfo = createAArch64TargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
   }
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
@@ -441,9 +451,13 @@ void CIRGenModule::emitDeferred() {
           fd->isDefined()) {
         // Functions with an invalid sycl_kernel_entry_point attribute are
         // ignored during device compilation.
-        if (!fd->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr())
-          errorNYI(fd->getSourceRange(),
-                   "SYCL kernel caller offload entry point");
+        if (!fd->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
+          // Generate and emit the SYCL kernel caller function.
+          emitSYCLKernelCaller(fd, getASTContext());
+          // Recurse to emit any symbols directly or indirectly referenced
+          // by the SYCL kernel caller function.
+          emitDeferred();
+        }
         // Do not emit the sycl_kernel_entry_point attributed function.
         continue;
       }
@@ -885,11 +899,11 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   }
 
   if (!targetCPU.empty()) {
-    attrs["cir.target-cpu"] = targetCPU.str();
+    attrs[cir::CIRDialect::getTargetCPUAttrName()] = targetCPU.str();
     addedAttr = true;
   }
   if (!tuneCPU.empty()) {
-    attrs["cir.tune-cpu"] = tuneCPU.str();
+    attrs[cir::CIRDialect::getTuneCPUAttrName()] = tuneCPU.str();
     addedAttr = true;
   }
   if (!features.empty() && setTargetFeatures) {
@@ -899,7 +913,8 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       return getTarget().isReadOnlyFeature(f.substr(1));
     });
     llvm::sort(features);
-    attrs["cir.target-features"] = llvm::join(features, ",");
+    attrs[cir::CIRDialect::getTargetFeaturesAttrName()] =
+        llvm::join(features, ",");
     addedAttr = true;
   }
   // TODO(cir): add metadata for AArch64 Function Multi Versioning.
@@ -921,9 +936,17 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
       if (auto func = dyn_cast<cir::FuncOp>(op)) {
         llvm::StringMap<std::string> attrs;
         if (getCPUAndFeaturesAttributes(gd, attrs)) {
-          // TODO(cir): Classic codegen removes the existing target-cpu,
-          // target-features, tune-cpu and fmv-features attributes here
-          // before adding the new ones.
+          // TODO(cir): Classic codegen also removes fmv-features here, which
+          // CIR does not emit yet.
+          //
+          // getCPUAndFeaturesAttributes reads the most recent declaration, so
+          // its result supersedes anything an earlier one wrote.  Clear first:
+          // setAttr alone would leave a name this call no longer produces.
+          for (llvm::StringRef name :
+               {cir::CIRDialect::getTargetCPUAttrName(),
+                cir::CIRDialect::getTuneCPUAttrName(),
+                cir::CIRDialect::getTargetFeaturesAttrName()})
+            func->removeAttr(name);
           for (const auto &[key, val] : attrs)
             func->setAttr(key, builder.getStringAttr(val));
         }
@@ -1856,7 +1879,7 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
   }
 
   // Create a new variable.
-  gv = createGlobalOp(loc, name, ty);
+  gv = createGlobalOp(loc, name, ty, /*isConstant=*/true);
 
   // Set up extra information and add to the module
   gv.setLinkageAttr(
@@ -2780,6 +2803,16 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
     }
   }
 
+  // In CUDA/HIP device compilation with -fgpu-rdc, the mangled name of a
+  // static device variable depends on whether the variable is referenced by
+  // a host or device host function. Therefore the mangled name cannot be
+  // cached.
+  if (!langOpts.CUDAIsDevice || !astContext.mayExternalize(gd.getDecl())) {
+    auto foundName = mangledDeclNames.find(canonicalGd);
+    if (foundName != mangledDeclNames.end())
+      return foundName->second;
+  }
+
   // Keep the first result in the case of a mangling collision.
   const auto *nd = cast<NamedDecl>(gd.getDecl());
   std::string mangledName = getMangledNameImpl(*this, gd, nd);
@@ -3070,24 +3103,24 @@ bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
   return true;
 }
 
-static cir::TLS_Model getCIRTLSModel(StringRef S) {
-  return llvm::StringSwitch<cir::TLS_Model>(S)
-      .Case("global-dynamic", cir::TLS_Model::GeneralDynamic)
-      .Case("local-dynamic", cir::TLS_Model::LocalDynamic)
-      .Case("initial-exec", cir::TLS_Model::InitialExec)
-      .Case("local-exec", cir::TLS_Model::LocalExec);
+static cir::TLSModel getCIRTLSModel(StringRef S) {
+  return llvm::StringSwitch<cir::TLSModel>(S)
+      .Case("global-dynamic", cir::TLSModel::GeneralDynamic)
+      .Case("local-dynamic", cir::TLSModel::LocalDynamic)
+      .Case("initial-exec", cir::TLSModel::InitialExec)
+      .Case("local-exec", cir::TLSModel::LocalExec);
 }
 
-cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
+cir::TLSModel CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
-    return cir::TLS_Model::GeneralDynamic;
+    return cir::TLSModel::GeneralDynamic;
   case CodeGenOptions::LocalDynamicTLSModel:
-    return cir::TLS_Model::LocalDynamic;
+    return cir::TLSModel::LocalDynamic;
   case CodeGenOptions::InitialExecTLSModel:
-    return cir::TLS_Model::InitialExec;
+    return cir::TLSModel::InitialExec;
   case CodeGenOptions::LocalExecTLSModel:
-    return cir::TLS_Model::LocalExec;
+    return cir::TLSModel::LocalExec;
   }
   llvm_unreachable("Invalid TLS model!");
 }
@@ -3096,7 +3129,7 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
                               bool isExtendingDecl) {
   assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
 
-  cir::TLS_Model tlm = getDefaultCIRTLSModel();
+  cir::TLSModel tlm = getDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
   if (const auto *attr = d.getAttr<TLSModelAttr>())
@@ -3107,7 +3140,7 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
 
   // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
   // info.
-  if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+  if (d.isStaticLocal())
     return;
 
   // If this function was called to set the TLS mode for a temporary whose

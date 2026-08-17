@@ -13,11 +13,8 @@
 #include "NVPTXTargetMachine.h"
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
-#include "NVPTXAllocaHoisting.h"
 #include "NVPTXAsmPrinter.h"
-#include "NVPTXAtomicLower.h"
 #include "NVPTXCtorDtorLowering.h"
-#include "NVPTXLowerAggrCopies.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
@@ -101,27 +98,27 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVVMReflectLegacyPassPass(PR);
   initializeNVVMIntrRangePass(PR);
   initializeGenericToNVVMLegacyPassPass(PR);
-  initializeNVPTXAllocaHoistingPass(PR);
+  initializeNVPTXAllocaHoistingLegacyPassPass(PR);
   initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
-  initializeNVPTXAtomicLowerPass(PR);
+  initializeNVPTXAtomicLowerLegacyPassPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
   initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
-  initializeNVPTXLowerAllocaPass(PR);
-  initializeNVPTXLowerUnreachablePass(PR);
+  initializeNVPTXLowerAllocaLegacyPassPass(PR);
+  initializeNVPTXLowerUnreachableLegacyPassPass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
-  initializeNVPTXLowerAggrCopiesPass(PR);
-  initializeNVPTXProxyRegErasurePass(PR);
+  initializeNVPTXLowerAggrCopiesLegacyPassPass(PR);
+  initializeNVPTXProxyRegErasureLegacyPassPass(PR);
   initializeNVPTXForwardParamsLegacyPassPass(PR);
-  initializeNVPTXAddressFolderPassPass(PR);
+  initializeNVPTXAddressFolderLegacyPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
-  initializeNVPTXPeepholePass(PR);
+  initializeNVPTXPeepholeLegacyPassPass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
   initializeNVPTXIRPeepholePass(PR);
-  initializeNVPTXPrologEpilogPassPass(PR);
+  initializeNVPTXPrologEpilogLegacyPassPass(PR);
 }
 
 NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
@@ -206,16 +203,6 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
-  // TODO: Move this into the base CodeGenPassBuilder once all targets that
-  // currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(NVPTXAsmPrinterBeginPass::name(),
-                            "nvptx-asm-printer-begin");
-    PIC->addClassToPassName(NVPTXAsmPrinterPass::name(), "nvptx-asm-printer");
-    PIC->addClassToPassName(NVPTXAsmPrinterEndPass::name(),
-                            "nvptx-asm-printer-end");
-  }
-
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         // We do not want to fold out calls to nvvm.reflect early if the user
@@ -282,11 +269,11 @@ void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // be eliminated by SROA.
   addPass(createSROAPass(/*PreserveCFG=*/true,
                          /*AggregateToVector=*/true));
-  addPass(createNVPTXLowerAllocaPass());
+  addPass(createNVPTXLowerAllocaLegacyPass());
   // TODO: Consider running InferAddressSpaces during opt, earlier in the
   // compilation flow.
   addPass(createInferAddressSpacesPass());
-  addPass(createNVPTXAtomicLowerPass());
+  addPass(createNVPTXAtomicLowerLegacyPass());
 }
 
 void NVPTXPassConfig::addStraightLineScalarOptimizationPasses() {
@@ -335,7 +322,7 @@ void NVPTXPassConfig::addIRPasses() {
   addPass(createNVVMReflectPass(ST.getSmVersion()));
 
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createNVPTXImageOptimizerPass());
+    addPass(createNVPTXImageOptimizerLegacyPass());
   addPass(createNVPTXAssignValidGlobalNamesLegacyPass());
   addPass(createGenericToNVVMLegacyPass());
 
@@ -353,7 +340,7 @@ void NVPTXPassConfig::addIRPasses() {
     addStraightLineScalarOptimizationPasses();
   } else {
     // Required for correct stack lowering
-    addPass(createNVPTXLowerAllocaPass());
+    addPass(createNVPTXLowerAllocaLegacyPass());
   }
 
   addPass(createAtomicExpandLegacyPass());
@@ -388,16 +375,16 @@ void NVPTXPassConfig::addIRPasses() {
     // Run LowerUnreachable to WAR a ptxas bug. See the commit description of
     // 1ee4d880e8760256c606fe55b7af85a4f70d006d for more details.
     const auto &Options = getNVPTXTargetMachine().Options;
-    addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
-                                            Options.NoTrapAfterNoreturn));
+    addPass(createNVPTXLowerUnreachableLegacyPass(Options.TrapUnreachable,
+                                                  Options.NoTrapAfterNoreturn));
   }
 }
 
 bool NVPTXPassConfig::addInstSelector() {
-  addPass(createLowerAggrCopies());
-  addPass(createAllocaHoisting());
+  addPass(createNVPTXLowerAggrCopiesLegacyPass());
+  addPass(createNVPTXAllocaHoistingLegacyPass());
   addPass(createNVPTXISelDag(getNVPTXTargetMachine(), getOptLevel()));
-  addPass(createNVPTXReplaceImageHandlesPass());
+  addPass(createNVPTXReplaceImageHandlesLegacyPass());
 
   return false;
 }
@@ -405,18 +392,18 @@ bool NVPTXPassConfig::addInstSelector() {
 void NVPTXPassConfig::addPreRegAlloc() {
   addPass(createNVPTXForwardParamsLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createNVPTXAddressFolderPass());
+    addPass(createNVPTXAddressFolderLegacyPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
-  addPass(createNVPTXProxyRegErasurePass());
+  addPass(createNVPTXProxyRegErasureLegacyPass());
 }
 
 void NVPTXPassConfig::addPostRegAlloc() {
-  addPass(createNVPTXPrologEpilogPass());
+  addPass(createNVPTXPrologEpilogLegacyPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     // NVPTXPrologEpilogPass calculates frame object offset and replace frame
     // index with VRFrame register. NVPTXPeephole need to be run after that and
     // will replace VRFrame with VRFrameLocal when possible.
-    addPass(createNVPTXPeephole());
+    addPass(createNVPTXPeepholeLegacyPass());
   }
 }
 

@@ -31,9 +31,8 @@ template <typename T> static constexpr bool needsCtor() {
                 std::is_same_v<T, Integral<32, false>> ||
                 std::is_same_v<T, Integral<64, true>> ||
                 std::is_same_v<T, Integral<64, false>> ||
-                std::is_same_v<T, Integral<64, false>> ||
-                std::is_same_v<T, IntegralAP<false>> ||
                 std::is_same_v<T, IntegralAP<true>> ||
+                std::is_same_v<T, IntegralAP<false>> ||
                 std::is_same_v<T, Floating> || std::is_same_v<T, Boolean>)
     return false;
 

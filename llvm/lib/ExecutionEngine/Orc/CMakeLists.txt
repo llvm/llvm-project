@@ -20,7 +20,10 @@ add_llvm_component_library(LLVMOrcJIT
   EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
   EPCGenericDylibManager.cpp
+  EPCGenericDylibManagerSPS.cpp
   EPCGenericJITLinkMemoryManager.cpp
+  EPCGenericJITLinkMemoryManagerSPS.cpp
+  EPCGenericMemoryAccessSPS.cpp
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp

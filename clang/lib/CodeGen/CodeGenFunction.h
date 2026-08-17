@@ -3971,7 +3971,10 @@ public:
   void EmitOMPFlushDirective(const OMPFlushDirective &S);
   void EmitOMPDepobjDirective(const OMPDepobjDirective &S);
   void EmitOMPScanDirective(const OMPScanDirective &S);
-  void EmitOMPOrderedDirective(const OMPOrderedDirective &S);
+  void
+  EmitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective &S);
+  void
+  EmitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective &S);
   void EmitOMPAtomicDirective(const OMPAtomicDirective &S);
   void EmitOMPTargetDirective(const OMPTargetDirective &S);
   void EmitOMPTargetDataDirective(const OMPTargetDataDirective &S);

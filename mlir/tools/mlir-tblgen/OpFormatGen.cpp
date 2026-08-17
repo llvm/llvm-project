@@ -20,6 +20,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
@@ -349,7 +350,10 @@ struct OperationFormat {
   };
 
   OperationFormat(const Operator &op, bool hasProperties)
-      : useProperties(hasProperties), opCppClassName(op.getCppClassName()) {
+      : useProperties(hasProperties),
+        useStrictPropertiesInAssemblyFormat(
+            op.getDialect().useStrictPropertiesInAssemblyFormat()),
+        opCppClassName(op.getCppClassName()) {
     operandTypes.resize(op.getNumOperands(), TypeResolution());
     resultTypes.resize(op.getNumResults(), TypeResolution());
 
@@ -358,6 +362,11 @@ struct OperationFormat {
     });
 
     hasSingleBlockTrait = op.getTrait("::mlir::OpTrait::SingleBlock");
+
+    for (const NamedAttribute &attr : op.getAttributes()) {
+      if (!attr.attr.isDerivedAttr())
+        inherentAttrNames.push_back(attr.name);
+    }
   }
 
   /// Generate the operation parser from this format.
@@ -407,11 +416,17 @@ struct OperationFormat {
   /// Indicate whether we need to use properties for the current operator.
   bool useProperties;
 
+  /// Indicate whether the dialect uses strict properties in assembly formats.
+  bool useStrictPropertiesInAssemblyFormat;
+
   /// Indicate whether prop-dict is used in the format
-  bool hasPropDict;
+  bool hasPropDict = false;
 
   /// The Operation class name
   StringRef opCppClassName;
+
+  /// The names of inherent attributes for this operation.
+  SmallVector<StringRef> inherentAttrNames;
 
   /// A map of buildable types to indices.
   llvm::MapVector<StringRef, int, StringMap<int>> buildableTypes;
@@ -432,13 +447,43 @@ struct OperationFormat {
 // Parser Gen
 //===----------------------------------------------------------------------===//
 
+/// Returns the Record to use when constructing an EnumInfo for the given
+/// attribute. For legacy EnumAttrInfo-based attributes, this is the attribute
+/// def itself (which extends both EnumInfo and Attr). For newer EnumAttr-based
+/// attributes (which extend AttrDef), this is the `enum` sub-field.
+static const llvm::Record *getEnumInfoRecord(const Attribute &attr) {
+  if (attr.isSubClassOf("EnumAttr"))
+    return attr.getDef().getValueAsDef("enum");
+  return &attr.getDef();
+}
+
 /// Returns true if we can format the given attribute as an enum in the
 /// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
   Attribute baseAttr = attr->attr.getBaseAttr();
   if (!baseAttr.isEnumAttr())
     return false;
-  EnumInfo enumInfo(&baseAttr.getDef());
+
+  // For newer EnumAttr-based attributes (which extend AttrDef), only apply
+  // enum keyword formatting when the attribute uses the default "$value"
+  // assembly format. If it has a custom format (e.g., `<` $value `>`), the
+  // attribute's own AttrDef parser/printer handles formatting — using the
+  // keyword path here would conflict with that custom format.
+  if (baseAttr.isSubClassOf("EnumAttr")) {
+    llvm::StringRef asmFmt =
+        baseAttr.getDef().getValueAsString("assemblyFormat");
+    if (asmFmt != "$value")
+      return false;
+  }
+
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+
+  // Unquoted bit enums may consist of multiple keywords separated by a comma
+  // or vertical bar. Their attribute parser handles this syntax, whereas the
+  // operation-level enum parser expects a single keyword or string.
+  if (baseAttr.isSubClassOf("EnumAttr") && enumInfo.isBitEnum() &&
+      !enumInfo.printBitEnumQuoted())
+    return false;
 
   // The attribute must have a valid underlying type and a constant builder.
   return !enumInfo.getUnderlyingType().empty() &&
@@ -1166,7 +1211,7 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx, bool parseAsOptional,
                               bool useProperties, StringRef opCppClassName) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  EnumInfo enumInfo(&baseAttr.getDef());
+  EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   // Generate the code for building an attribute for this enum.
@@ -1383,6 +1428,8 @@ if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, [&]() {{
   for (const NamedProperty &namedProperty : op.getProperties()) {
     if (fmt.usedProperties.contains(&namedProperty))
       continue;
+    if (fmt.inferredAttributes.contains(namedProperty.name))
+      continue;
 
     auto scope = body.scope("{\n", "}\n", /*indent=*/true);
 
@@ -1401,6 +1448,8 @@ if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, [&]() {{
   // Generate the setter for any attribute not parsed elsewhere.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     if (fmt.usedAttributes.contains(&namedAttr))
+      continue;
+    if (fmt.inferredAttributes.contains(namedAttr.name))
       continue;
 
     const Attribute &attr = namedAttr.attr;
@@ -1677,13 +1726,20 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
                   << (attrDict->isWithKeyword() ? "WithKeyword" : "")
                   << "(result.attributes))\n"
                   << "  return ::mlir::failure();\n";
-    if (useProperties) {
+    if (useProperties && !useStrictPropertiesInAssemblyFormat) {
       body << "if (failed(verifyInherentAttrs(result.name, result.attributes, "
               "[&]() {\n"
            << "    return parser.emitError(loc) << \"'\" << "
               "result.name.getStringRef() << \"' op \";\n"
            << "  })))\n"
            << "  return ::mlir::failure();\n";
+    } else if (useProperties) {
+      for (StringRef name : inherentAttrNames) {
+        body << "if (result.attributes.get(\"" << name << "\"))\n"
+             << "  return parser.emitError(loc, \"inherent attribute '" << name
+             << "' cannot be parsed from attr-dict when strict properties in "
+                "assembly format is enabled\");\n";
+      }
     }
     body.unindent() << "}\n";
     body.unindent();
@@ -2083,6 +2139,8 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
 
   for (const NamedProperty *namedProperty : fmt.usedProperties)
     body << "  elidedProps.push_back(\"" << namedProperty->name << "\");\n";
+  for (StringRef key : fmt.inferredAttributes.keys())
+    body << "  elidedProps.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *namedAttr : fmt.usedAttributes)
     body << "  elidedProps.push_back(\"" << namedAttr->name << "\");\n";
 
@@ -2133,7 +2191,7 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
 
   genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
 
-  for (const StringRef key : fmt.inferredAttributes.keys())
+  for (StringRef key : fmt.inferredAttributes.keys())
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)
     body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
@@ -2312,12 +2370,13 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                                MethodBody &body) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumInfo enumInfo(&baseAttr.getDef());
+  const EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
+  bool dereferenceGetter =
+      var->attr.isOptional() && !var->attr.hasDefaultValue();
 
   body << formatv(enumAttrBeginPrinterCode,
-                  (var->attr.isOptional() ? "*" : "") +
-                      op.getGetterName(var->name),
+                  (dereferenceGetter ? "*" : "") + op.getGetterName(var->name),
                   enumInfo.getSymbolToStringFnName());
 
   // Get a string containing all of the cases that can't be represented with a
@@ -2905,6 +2964,32 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       failed(verifyRegions(loc)) || failed(verifySuccessors(loc)) ||
       failed(verifyOIListElements(loc, elements)))
     return failure();
+
+  if (fmt.useProperties && fmt.useStrictPropertiesInAssemblyFormat &&
+      !hasPropDict) {
+    auto emitMissingError = [&](StringRef kind,
+                                StringRef name) -> LogicalResult {
+      return emitError(loc,
+                       llvm::Twine("strict properties in assembly format "
+                                   "requires prop-dict unless all inherent "
+                                   "attributes and properties are bound in "
+                                   "the custom assembly format; "
+                                   "missing ") +
+                           kind + " '" + name + "'");
+    };
+    for (const NamedAttribute &attr : op.getAttributes()) {
+      if (attr.attr.isDerivedAttr())
+        continue;
+      if (fmt.inferredAttributes.contains(attr.name))
+        continue;
+      if (!seenAttrs.count(&attr))
+        return emitMissingError("attribute", attr.name);
+    }
+    for (const NamedProperty &prop : op.getProperties()) {
+      if (!seenProperties.count(&prop))
+        return emitMissingError("property", prop.name);
+    }
+  }
 
   // Collect the set of used attributes in the format.
   fmt.usedAttributes = std::move(seenAttrs);

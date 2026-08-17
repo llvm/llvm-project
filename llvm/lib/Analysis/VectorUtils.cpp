@@ -171,6 +171,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
   case Intrinsic::experimental_vp_strided_load:
     return ScalarOpdIdx == 0 || ScalarOpdIdx == 1;
+  case Intrinsic::experimental_vp_strided_store:
+    return ScalarOpdIdx == 1 || ScalarOpdIdx == 2;
   case Intrinsic::loop_dependence_war_mask:
     return true;
   default:
@@ -213,6 +215,8 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
     return OpdIdx == -1 || OpdIdx == 1;
   case Intrinsic::experimental_vp_strided_load:
     return OpdIdx == -1 || OpdIdx == 0 || OpdIdx == 1;
+  case Intrinsic::experimental_vp_strided_store:
+    return OpdIdx == 0 || OpdIdx == 1 || OpdIdx == 2;
   default:
     return OpdIdx == -1;
   }
