@@ -19,18 +19,20 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; VPLANS-NEXT:  vector.ph:
 ; VPLANS-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = call i64 @llvm.vscale()
 ; VPLANS-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = shl nuw vp<[[VP3]]>, ir<2>
-; VPLANS-NEXT:    EMIT vp<%active.lane.mask.entry> = active lane mask ir<0>, vp<[[VP2]]>, ir<1>
+; VPLANS-NEXT:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, vp<[[VP2]]>, ir<1>
+; VPLANS-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; VPLANS-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast ir<%val>
 ; VPLANS-NEXT:  Successor(s): vector.body
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT:  vector.body:
 ; VPLANS-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; VPLANS-NEXT:    ACTIVE-LANE-MASK-PHI vp<[[VP6:%[0-9]+]]> = phi vp<%active.lane.mask.entry>, vp<%active.lane.mask.next>
+; VPLANS-NEXT:    ACTIVE-LANE-MASK-PHI vp<[[VP6:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
 ; VPLANS-NEXT:    CLONE ir<%gep> = getelementptr ir<%ptr>, vp<%index>
 ; VPLANS-NEXT:    WIDEN store ir<%gep>, vp<[[VP5]]>, vp<[[VP6]]>
 ; VPLANS-NEXT:    EMIT vp<%index.next> = add vp<%index>, vp<[[VP4]]>
-; VPLANS-NEXT:    EMIT vp<%active.lane.mask.next> = active lane mask vp<%index.next>, vp<[[VP2]]>, ir<1>
-; VPLANS-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = not vp<%active.lane.mask.next>
+; VPLANS-NEXT:    EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, vp<[[VP2]]>, ir<1>
+; VPLANS-NEXT:    EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
+; VPLANS-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = not vp<%extract.next.alm.part>
 ; VPLANS-NEXT:    EMIT branch-on-cond vp<[[VP7]]>
 ; VPLANS-NEXT:  Successor(s): middle.block, vector.body
 ; VPLANS-EMPTY:
@@ -81,4 +83,4 @@ while.end.loopexit:
 attributes #0 = { "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.predicate.enable"}

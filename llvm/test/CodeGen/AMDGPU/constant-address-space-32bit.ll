@@ -2543,14 +2543,13 @@ define amdgpu_vs <2 x bfloat> @load_v2bf16(ptr addrspace(6) inreg %p0, ptr addrs
 ; GFX9-NEXT:    v_add_f32_e32 v1, s1, v1
 ; GFX9-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; GFX9-NEXT:    v_add_u32_e32 v2, v2, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT:    v_add_u32_e32 v2, 0x7fff, v2
 ; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v1
 ; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0xffff
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-NEXT:    v_and_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    ; return to shader part epilog
   %gep1 = getelementptr inbounds <2 x bfloat>, ptr addrspace(6) %p1, i32 2
   %r0 = load <2 x bfloat>, ptr addrspace(6) %p0

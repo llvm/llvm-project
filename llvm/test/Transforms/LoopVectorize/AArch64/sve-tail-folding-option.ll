@@ -399,6 +399,6 @@ attributes #0 = { "target-features"="+sve" }
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}
 !3 = !{!"llvm.loop.interleave.count", i32 1}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.enable"}

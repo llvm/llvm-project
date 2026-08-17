@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target
+
 // RUN: split-file %s %t
 
 // RUN: llvm-mc -triple arm64-apple-macos %t/target-triple.s | FileCheck %t/target-triple.s

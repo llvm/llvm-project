@@ -1030,7 +1030,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.result.unused(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.result.unused'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Unable to find use of computed value in loop exit block
+; CHECK-NEXT:  Reason: Found stray incoming values in loop exit block
 ;
 entry:
   br label %loop
@@ -1883,6 +1883,57 @@ loop:
 
 exit:
   %ret = xor i16 %crc, %crc.next
+  ret i16 %ret
+}
+
+define i16 @not.crc.crc.phi.outside.user.nodata(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.crc.phi.outside.user.nodata'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Found stray incoming values in loop exit block
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 3
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:
+  %ret = xor i16 %crc, %crc.next
+  ret i16 %ret
+}
+
+define i16 @not.crc.iv.phi.outside.user(i16 %crc.init, i16 %data.init) {
+; CHECK-LABEL: 'not.crc.iv.phi.outside.user'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Found stray incoming values in loop exit block
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %data.init, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %data, %crc
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 3
+  %check.sb = icmp slt i16 %xor.crc.data, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %data.next = shl i16 %data, 1
+  %iv.next = add nuw nsw i16 %iv, 1
+  %exit.cond = icmp samesign ult i16 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:
+  %ret = xor i16 %iv, %crc.next
   ret i16 %ret
 }
 

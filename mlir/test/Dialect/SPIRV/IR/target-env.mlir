@@ -71,7 +71,7 @@ func.func @cmp_exchange_weak_unsupported_version(%ptr: !spirv.ptr<i32, Workgroup
 func.func @group_non_uniform_ballot_suitable_version(%predicate: i1) -> vector<4xi32> attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [GroupNonUniformBallot], []>, #spirv.resource_limits<>>
 } {
-  // CHECK: spirv.GroupNonUniformBallot <Workgroup>
+  // CHECK: spirv.GroupNonUniformBallot <Subgroup>
   %0 = "test.convert_to_group_non_uniform_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
   return %0: vector<4xi32>
 }

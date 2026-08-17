@@ -217,7 +217,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
 SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func) {
-    if (SourceRange NullRange = S.getRange(nullptr, {}); NullRange.isValid())
+    if (SourceRange NullRange = S.getRange({}); NullRange.isValid())
       return NullRange;
     return S.EvalLocation;
   }
@@ -227,7 +227,8 @@ SourceRange InterpFrame::getCallRange() const {
     if (!C->RetPC)
       continue;
     SourceRange CallRange =
-        S.getRange(C->Caller->Func, C->getRetOpPC() - sizeof(uintptr_t));
+        C->Caller->Func->getSource(C->getRetOpPC() - sizeof(uintptr_t))
+            .getRange();
     if (CallRange.isValid())
       return CallRange;
   }
@@ -277,6 +278,9 @@ static bool funcHasUsableBody(const Function *F) {
 }
 
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
+  if (!Func)
+    return S.getSource(PC);
+
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
   if (Func && !funcHasUsableBody(Func) && Caller)
@@ -284,7 +288,7 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
 
   // Similarly, if the resulting source location is invalid anyway,
   // point to the caller instead.
-  SourceInfo Result = S.getSource(Func, PC);
+  SourceInfo Result = Func->getSource(PC);
   if (Result.getLoc().isInvalid() && Caller)
     return Caller->getSource(getRetOpPC());
 
@@ -292,24 +296,32 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
+  if (!Func)
+    return S.getExpr(PC);
+
+  if (!funcHasUsableBody(Func) && Caller)
     return Caller->getExpr(getRetOpPC());
 
-  return S.getExpr(Func, PC);
+  return Func->getSource(PC).asExpr();
 }
 
 SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
+  if (!Func)
+    return S.getLocation(PC);
+  if (!funcHasUsableBody(Func) && Caller)
     return Caller->getLocation(getRetOpPC());
 
-  return S.getLocation(Func, PC);
+  return Func->getSource(PC).getLoc();
 }
 
 SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
+  if (!Func)
+    return S.getRange(PC);
+
+  if (!funcHasUsableBody(Func) && Caller)
     return Caller->getRange(getRetOpPC());
 
-  return S.getRange(Func, PC);
+  return Func->getSource(PC).getRange();
 }
 
 bool InterpFrame::isStdFunction() const {

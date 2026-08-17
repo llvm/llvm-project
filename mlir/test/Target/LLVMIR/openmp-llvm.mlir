@@ -2683,14 +2683,19 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel1 : f32)
   }
 
-  // Complex equality  →  bitcasted integer cmpxchg with consistent alignment
-  // CHECK: %[[EALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
-  // CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN]]
-  // CHECK: store { float, float } %[[EC]], ptr %[[EALLOCA]], align [[ALIGN]]
-  // CHECK: %[[EINT:.*]] = load i64, ptr %[[EALLOCA]], align [[ALIGN]]
+  // Complex equality  →  component-wise IEEE-754 fcmp, then a cmpxchg that
+  // swaps using x's loaded bit-pattern as the comparand (so -0.0/+0.0 and NaN
+  // follow the scalar float semantics rather than a raw bitwise compare).
+  // CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
   // CHECK: store { float, float } %[[DC]], ptr %[[DALLOCA]], align [[ALIGN]]
   // CHECK: %[[DINT:.*]] = load i64, ptr %[[DALLOCA]], align [[ALIGN]]
-  // CHECK: cmpxchg ptr %[[XC]], i64 %[[EINT]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
+  // CHECK: %[[XLOAD:.*]] = load atomic i64, ptr %[[XC]] monotonic, align [[ALIGN]]
+  // CHECK: %[[REEQ:.*]] = fcmp oeq float %[[REX:.*]], %[[REE:.*]]
+  // CHECK: %[[IMEQ:.*]] = fcmp oeq float %[[IMX:.*]], %[[IME:.*]]
+  // CHECK: %[[CEQ:.*]] = and i1 %[[REEQ]], %[[IMEQ]]
+  // CHECK: br i1 %[[CEQ]], label %[[CSWAP:[^,]+]], label %{{.*}}
+  // CHECK: [[CSWAP]]:
+  // CHECK: cmpxchg ptr %[[XC]], i64 %[[XLOAD]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
   omp.atomic.compare %xc : !llvm.ptr {
   ^bb0(%xval : !llvm.struct<(f32, f32)>):
     %re_x = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
@@ -2811,6 +2816,79 @@ llvm.func @omp_atomic_compare_weak(%x : !llvm.ptr, %e : i32, %d : i32) {
 
 // -----
 
+// CHECK-LABEL: @omp_atomic_compare_fail
+// CHECK-SAME: (ptr %[[X:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_fail(%x : !llvm.ptr, %e : i32, %d : i32) {
+  // The fail clause sets the cmpxchg failure ordering independently of the
+  // success ordering. Relaxed success + acquire failure.
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic acquire
+  omp.atomic.compare %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind acquire>}
+
+  // Seq_cst success + relaxed failure. The seq_cst success ordering still
+  // requires the flush on the new fail_memory_order code path.
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst monotonic
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
+  ^bb0(%xval : i32):
+    %cmp = llvm.icmp "eq" %xval, %e : i32
+    %sel = llvm.select %cmp, %d, %xval : i1, i32
+    omp.yield(%sel : i32)
+  } {fail_memory_order = #omp<memoryorderkind relaxed>}
+
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_complex_fail
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[E:.*]], ptr %[[D:.*]])
+// The complex (struct) compare path must honor the fail clause ordering too,
+// not just derive the failure ordering from the success ordering.
+llvm.func @omp_atomic_compare_complex_fail(%x: !llvm.ptr, %e: !llvm.ptr, %d: !llvm.ptr) {
+  %e0 = llvm.load %e : !llvm.ptr -> !llvm.struct<(f32, f32)>
+  // Relaxed success + acquire failure.
+  // CHECK: cmpxchg ptr %[[X]], i64 %{{.*}}, i64 %{{.*}} monotonic acquire
+  omp.atomic.compare memory_order(relaxed) %x : !llvm.ptr {
+  ^bb0(%xval: !llvm.struct<(f32, f32)>):
+    %xr = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
+    %er = llvm.extractvalue %e0[0] : !llvm.struct<(f32, f32)>
+    %cr = llvm.fcmp "oeq" %xr, %er : f32
+    %xi = llvm.extractvalue %xval[1] : !llvm.struct<(f32, f32)>
+    %ei = llvm.extractvalue %e0[1] : !llvm.struct<(f32, f32)>
+    %ci = llvm.fcmp "oeq" %xi, %ei : f32
+    %cmp = llvm.and %cr, %ci : i1
+    %dval = llvm.load %d : !llvm.ptr -> !llvm.struct<(f32, f32)>
+    %sel = llvm.select %cmp, %dval, %xval : i1, !llvm.struct<(f32, f32)>
+    omp.yield(%sel : !llvm.struct<(f32, f32)>)
+  } {fail_memory_order = #omp<memoryorderkind acquire>}
+
+  // Seq_cst success + relaxed failure still emits the flush on the complex path.
+  // CHECK: cmpxchg ptr %[[X]], i64 %{{.*}}, i64 %{{.*}} seq_cst monotonic
+  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
+  ^bb0(%xval: !llvm.struct<(f32, f32)>):
+    %xr = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
+    %er = llvm.extractvalue %e0[0] : !llvm.struct<(f32, f32)>
+    %cr = llvm.fcmp "oeq" %xr, %er : f32
+    %xi = llvm.extractvalue %xval[1] : !llvm.struct<(f32, f32)>
+    %ei = llvm.extractvalue %e0[1] : !llvm.struct<(f32, f32)>
+    %ci = llvm.fcmp "oeq" %xi, %ei : f32
+    %cmp = llvm.and %cr, %ci : i1
+    %dval = llvm.load %d : !llvm.ptr -> !llvm.struct<(f32, f32)>
+    %sel = llvm.select %cmp, %dval, %xval : i1, !llvm.struct<(f32, f32)>
+    omp.yield(%sel : !llvm.struct<(f32, f32)>)
+  } {fail_memory_order = #omp<memoryorderkind relaxed>}
+
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @omp_atomic_compare_float_neg_zero
 // CHECK-SAME: (ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]])
 // Verify NaN guard + ±0.0 handling.
@@ -2857,6 +2935,141 @@ llvm.func @omp_atomic_compare_float_neg_zero(%xf : !llvm.ptr, %ef : f32, %df : f
   llvm.return
 }
 
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_int_eq
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_int_eq(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality prefix compare+capture → cmpxchg + store old value
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_weak_int_eq
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_weak_int_eq(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality weak prefix compare+capture → cmpxchg + store old value
+  // CHECK: %[[RES:.*]] = cmpxchg weak ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    } {weak}
+  }
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_postfix
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_postfix(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Postfix compare+capture: v captures new value (d if swapped, old x if not)
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // CHECK: %[[NEWVAL:.*]] = select i1 %[[SUCCESS]], i32 %[[D]], i32 %[[OLD]]
+  // CHECK: store i32 %[[NEWVAL]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+  }
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_fail_only
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_fail_only(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Fail-only compare+capture: v is only written when comparison fails
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // CHECK: br i1 %[[SUCCESS]], label %[[EXIT:.*]], label %[[CONT:.*]]
+  // CHECK: [[CONT]]:
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  // CHECK: br label %[[EXIT2:.*]]
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+  } {fail_only}
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_real
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], float %[[E:.*]], float %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_real(%x : !llvm.ptr, %v : !llvm.ptr, %e : f32, %d : f32) {
+  // Real compare+capture: uses HandleFPNegZero multi-block path
+  // CHECK: %[[EBITS:.*]] = bitcast float %[[E]] to i32
+  // CHECK: %[[DBITS:.*]] = bitcast float %[[D]] to i32
+  // CHECK: %[[XI:.*]] = load atomic i32, ptr %[[X]] monotonic{{.*}}
+  // CHECK: %[[XFP:.*]] = bitcast i32 %[[XI]] to float
+  // Part 1: NaN check
+  // CHECK: %[[E_NAN:.*]] = fcmp uno float %[[E]], %[[E]]
+  // CHECK: %[[X_NAN:.*]] = fcmp uno float %[[XFP]], %[[XFP]]
+  // CHECK: %[[EITHER_NAN:.*]] = or i1 %[[E_NAN]], %[[X_NAN]]
+  // CHECK: br i1 %[[EITHER_NAN]], label %[[NAN:.*]], label %[[NOTNAN:.*]]
+  // CHECK: [[NAN]]:
+  // CHECK: br label %[[EXIT:.*]]
+  // Part 2: Both-zero check
+  // CHECK: [[NOTNAN]]:
+  // CHECK: %[[XISZERO:.*]] = fcmp oeq float %[[XFP]], 0.000000e+00
+  // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[E]], 0.000000e+00
+  // CHECK: %[[BOTHZERO:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+  // CHECK: br i1 %[[BOTHZERO]], label %[[ZERO:.*]], label %[[NORMAL:.*]]
+  // CHECK: [[ZERO]]:
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[XI]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+  // CHECK: br label %[[EXIT]]
+  // Part 3: Normal cmpxchg
+  // CHECK: [[NORMAL]]:
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[EBITS]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+  // CHECK: br label %[[EXIT]]
+  // Exit: select v = (success ? d : old_x)
+  // CHECK: [[EXIT]]:
+  // CHECK: %[[OLD:.*]] = phi i32 {{.*}}
+  // CHECK: %[[OK:.*]] = phi i1 {{.*}}
+  // CHECK: %[[OLDFP:.*]] = bitcast i32 %[[OLD]] to float
+  // CHECK: %[[VVAL:.*]] = select i1 %[[OK]], float %[[D]], float %[[OLDFP]]
+  // CHECK: store float %[[VVAL]], ptr %[[V]]{{.*}}
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : f32):
+      %cmp = llvm.fcmp "oeq" %xval, %e : f32
+      %sel = llvm.select %cmp, %d, %xval : i1, f32
+      omp.yield(%sel : f32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, f32
+  }
+  llvm.return
+}
 // -----
 
 // CHECK-LABEL: @omp_sections_empty

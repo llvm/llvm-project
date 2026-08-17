@@ -896,8 +896,8 @@ class GroupBuiltin<string name, Op operation> {
 def GroupBuiltins : GenericTable {
   let FilterClass = "GroupBuiltin";
   let Fields = ["Name", "Opcode", "GroupOperation", "IsElect", "IsAllOrAny",
-                "IsAllEqual", "IsBallot", "IsInverseBallot", "IsBallotBitExtract",
-                "IsBallotFindBit", "IsLogical", "NoGroupOperation", "HasBoolArg"];
+                "IsAllEqual", "IsInverseBallot", "IsBallotBitExtract",
+                "IsLogical", "NoGroupOperation", "HasBoolArg"];
 }
 
 // Function to lookup group builtins by their name and set.

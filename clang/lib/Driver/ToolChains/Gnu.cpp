@@ -510,6 +510,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         // FIXME: Does this really make sense for all GNU toolchains?
         WantPthread = true;
 
+      addLLVMOffloadingRuntime(C, CmdArgs, ToolChain, Args);
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
       // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so

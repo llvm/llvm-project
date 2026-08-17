@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -710,9 +711,6 @@ public:
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
-  void emitTargetMetadata(CodeGen::CodeGenModule &CGM,
-                          const llvm::MapVector<GlobalDecl, StringRef>
-                              &MangledDeclNames) const override;
 };
 
 class PPC64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -1038,26 +1036,6 @@ PPC64_SVR4_TargetCodeGenInfo::initDwarfEHRegSizeTable(
   llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
                                      /*IsAIX*/ false);
-}
-
-void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
-    CodeGen::CodeGenModule &CGM,
-    const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {
-  if (CGM.getTypes().isLongDoubleReferenced()) {
-    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-    const auto *flt = &CGM.getTarget().getLongDoubleFormat();
-    StringRef Type;
-    if (flt == &llvm::APFloat::PPCDoubleDouble())
-      Type = "ppc_fp128";
-    else if (flt == &llvm::APFloat::IEEEquad())
-      Type = "fp128";
-    else if (flt == &llvm::APFloat::IEEEdouble())
-      Type = "double";
-
-    if (!Type.empty())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "long-double-type",
-                                    llvm::MDString::get(Ctx, Type));
-  }
 }
 
 bool

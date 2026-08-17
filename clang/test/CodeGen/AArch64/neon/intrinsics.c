@@ -1749,7 +1749,7 @@ float64x2_t test_vmaxnmq_f64(float64x2_t v1, float64x2_t v2) {
 // LLVM-LABEL: @test_vsqrt_f32(
 // CIR-LABEL: @vsqrt_f32(
 float32x2_t test_vsqrt_f32(float32x2_t a) {
-// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+// CIR: cir.sqrt %{{.*}} : !cir.vector<2 x !cir.float>
 
 // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
@@ -1763,7 +1763,7 @@ float32x2_t test_vsqrt_f32(float32x2_t a) {
 // LLVM-LABEL: @test_vsqrtq_f32(
 // CIR-LABEL: @vsqrtq_f32(
 float32x4_t test_vsqrtq_f32(float32x4_t a) {
-// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+// CIR: cir.sqrt %{{.*}} : !cir.vector<4 x !cir.float>
 
 // LLVM-SAME: <4 x float> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
@@ -1777,7 +1777,7 @@ float32x4_t test_vsqrtq_f32(float32x4_t a) {
 // LLVM-LABEL: @test_vsqrt_f64(
 // CIR-LABEL: @vsqrt_f64(
 float64x1_t test_vsqrt_f64(float64x1_t a) {
-// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
+// CIR: cir.sqrt %{{.*}} : !cir.vector<1 x !cir.double>
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
@@ -1792,7 +1792,7 @@ float64x1_t test_vsqrt_f64(float64x1_t a) {
 // LLVM-LABEL: @test_vsqrtq_f64(
 // CIR-LABEL: @vsqrtq_f64(
 float64x2_t test_vsqrtq_f64(float64x2_t a) {
-// CIR: cir.call_llvm_intrinsic "sqrt" %{{.*}} : (!cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
+// CIR: cir.sqrt %{{.*}} : !cir.vector<2 x !cir.double>
 
 // LLVM-SAME: <2 x double> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
@@ -4634,6 +4634,50 @@ uint64_t test_vcvtd_u64_f64(float64_t a) {
   return (uint64_t)vcvtd_u64_f64(a);
 }
 
+// LLVM-LABEL: @test_vcvts_s32_f32
+// CIR-LABEL: @vcvts_s32_f32
+int32_t test_vcvts_s32_f32(float32_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat"
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_S32_F32_I:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[A]])
+// LLVM:    ret i32 [[VCVTS_S32_F32_I]]
+  return (int32_t)vcvts_s32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvts_s64_f32
+// CIR-LABEL: @vcvts_s64_f32
+int64_t test_vcvts_s64_f32(float32_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat"
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_S64_F32_I:%.*]] = call i64 @llvm.fptosi.sat.i64.f32(float [[A]])
+// LLVM:    ret i64 [[VCVTS_S64_F32_I]]
+  return (int64_t)vcvts_s64_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvts_u32_f32
+// CIR-LABEL: @vcvts_u32_f32
+uint32_t test_vcvts_u32_f32(float32_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_U32_F32_I:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[A]])
+// LLVM:    ret i32 [[VCVTS_U32_F32_I]]
+  return (uint32_t)vcvts_u32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvts_u64_f32
+// CIR-LABEL: @vcvts_u64_f32
+uint64_t test_vcvts_u64_f32(float32_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_U64_F32_I:%.*]] = call i64 @llvm.fptoui.sat.i64.f32(float [[A]])
+// LLVM:    ret i64 [[VCVTS_U64_F32_I]]
+  return (uint64_t)vcvts_u64_f32(a);
+}
+
 //===------------------------------------------------------===//
 // 2.1.3.2.3 Vector shift right and accumulate
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-right-and-accumulate
@@ -7251,7 +7295,6 @@ float64x2_t test_vrndnq_f64(float64x2_t a) {
 // LLVM-LABEL: @test_vrndns_f32(
 // CIR-LABEL: @vrndns_f32(
 float32_t test_vrndns_f32(float32_t a) {
-// CIR: cir.load {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: [[LOAD:%.*]] = cir.load {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: cir.roundeven [[LOAD]] : !cir.float
 

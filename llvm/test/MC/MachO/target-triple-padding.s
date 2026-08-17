@@ -1,3 +1,5 @@
+// REQUIRES: aarch64-registered-target
+
 // RUN: split-file %s %t
 
 // RUN: llvm-mc -triple arm64-ios-macabi %t/target-triple-always-has-nul.s -filetype=obj -o - \
