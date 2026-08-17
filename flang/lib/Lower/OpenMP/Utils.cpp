@@ -1392,9 +1392,8 @@ void collectEnclosingConstructTraits(
   std::reverse(constructTraits.begin(), constructTraits.end());
 }
 
-DeclareVariantResolution
-resolveDeclareVariant(const semantics::Symbol &base,
-                      AbstractConverter &converter) {
+DeclareVariantResolution resolveDeclareVariant(const semantics::Symbol &base,
+                                               AbstractConverter &converter) {
   DeclareVariantResolution result;
   const semantics::Symbol &ultimate{base.GetUltimate()};
 
@@ -1429,8 +1428,8 @@ resolveDeclareVariant(const semantics::Symbol &base,
     // parser/semantics otherwise accept; reject them before building the match
     // info (MakeVariantMatchInfo asserts none are present). This mirrors how
     // METADIRECTIVE lowering rejects the same features.
-    switch (semantics::omp::FindUnsupportedSelectorFeature(
-        *entry.matchSelector, semaCtx)) {
+    switch (semantics::omp::FindUnsupportedSelectorFeature(*entry.matchSelector,
+                                                           semaCtx)) {
     case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
       TODO(converter.getCurrentLocation(),
            "target_device selector in DECLARE VARIANT");
@@ -1510,8 +1509,8 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
                             AbstractConverter &converter) {
   DeclareVariantResolution resolution{resolveDeclareVariant(base, converter)};
   // Static fast path: return the single best variant when no run-time condition
-  // is involved. When a candidate carries a run-time condition, fall back to the
-  // base here; the call site lowers the choice as an if/else cascade.
+  // is involved. When a candidate carries a run-time condition, fall back to
+  // the base here; the call site lowers the choice as an if/else cascade.
   if (resolution.candidates.empty() || resolution.hasDynamicCondition)
     return nullptr;
   return resolution.candidates.front().variant;
