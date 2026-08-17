@@ -595,6 +595,10 @@ features cannot lower the translation-unit ABI level;
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
 
+- `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
+  `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
+  and `explicit` declaration specifiers.
+
 ### libclang
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
