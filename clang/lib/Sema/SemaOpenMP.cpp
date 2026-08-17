@@ -3771,6 +3771,15 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
                                     AStmt);
 }
 
+StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
+    SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<OpenMPClauseKind> ClauseKinds,
+    ArrayRef<OpenMPDirectiveKind> DirectiveKinds, Stmt *AssociatedStmt) {
+  // Stub for Phase 1 (Parser) testing.
+  // Sema will extract conditions from TraitInfos in Phase 2.
+  return AssociatedStmt;
+}
+
 OMPRequiresDecl *
 SemaOpenMP::CheckOMPRequiresDecl(SourceLocation Loc,
                                  ArrayRef<OMPClause *> ClauseList) {
