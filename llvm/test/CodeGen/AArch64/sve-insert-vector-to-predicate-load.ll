@@ -172,11 +172,9 @@ define <vscale x 16 x i1> @pred_load_neg5(ptr %addr, <vscale x 2 x i8> %passthru
 define <vscale x 16 x i1> @pred_load_v2i8_multiuse(ptr %addr) #0 {
 ; CHECK-LABEL: pred_load_v2i8_multiuse:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr h0, [x0]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ldr p0, [x0]
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    ret
   %load = load <2 x i8>, ptr %addr, align 4

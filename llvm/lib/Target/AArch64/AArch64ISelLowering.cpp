@@ -8911,11 +8911,16 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerTRUNCATE(Op, DAG);
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
-  case ISD::LOAD:
-    if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                     !Subtarget->isNeonAvailable()))
+  case ISD::LOAD: {
+    // Extending loads of v2i8 -> v2i32 are bettered lowered using SVE's
+    // extending load instructions as they otherwise require 2 instructions to
+    // promote to v2i32.
+    bool OverrideNeon = !Subtarget->isNeonAvailable() ||
+                        cast<LoadSDNode>(Op)->getMemoryVT() == MVT::v2i8;
+    if (useSVEForFixedLengthVectorVT(Op.getValueType(), OverrideNeon))
       return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
+  }
   case ISD::ADD:
   case ISD::AND:
   case ISD::SUB:
