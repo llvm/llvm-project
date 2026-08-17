@@ -90,42 +90,38 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
   }
 }
 
+static bool isStringChar(char C) { return isPrint(C) || C == '\t'; }
+
 static void strings(raw_ostream &OS, StringRef FileName,
                     sys::fs::file_t Handle) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
-  SmallString<DefaultMinLength> Prefix;
-  auto print = [&OS, FileName, &Prefix](unsigned Offset, StringRef L) {
-    if (Prefix.size() + L.size() >= static_cast<size_t>(MinLength)) {
-      if (PrintFileName)
-        OS << FileName << ": ";
-      switch (Radix) {
-      case none:
-        break;
-      case octal:
-        OS << format("%7o ", Offset);
-        break;
-      case hexadecimal:
-        OS << format("%7x ", Offset);
-        break;
-      case decimal:
-        OS << format("%7u ", Offset);
-        break;
-      }
-      OS << Prefix << L << '\n';
+  auto printHeader = [&OS, FileName](unsigned StringStart) {
+    if (PrintFileName)
+      OS << FileName << ": ";
+    switch (Radix) {
+    case none:
+      break;
+    case octal:
+      OS << format("%7o ", StringStart);
+      break;
+    case hexadecimal:
+      OS << format("%7x ", StringStart);
+      break;
+    case decimal:
+      OS << format("%7u ", StringStart);
+      break;
     }
-    Prefix.clear();
   };
 
+  // llvm-strings should be able to process a very large file on a
+  // memory-budgeted machine, so the file is read in chunks. To handle this, we
+  // read the file in chunk instead of copying the whole file into memory.
+  SmallString<DefaultMinLength> Candidate;
+  bool InString = false;
+  unsigned StringStart = 0, Offset = 0;
+
   Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
-  // Offset of the start of the current chunk within the file.
-  unsigned Offset = 0;
   while (true) {
-    /*
-     * llvm-strings should be able to process a very large file on a
-     * memory-budgeted machine. To handle this, we read the file in chunk
-     * instead of allocate a very large memory and copy the whole file to the
-     * memory.
-     */
     Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
         Handle, MutableArrayRef(Buffer.data(), Buffer.size()));
     if (!ReadBytesOrErr) {
@@ -137,25 +133,40 @@ static void strings(raw_ostream &OS, StringRef FileName,
     if (CurSize == 0)
       break;
 
-    const char *B = Buffer.data();
-    const char *E = B + CurSize;
-    const char *S = Prefix.empty() ? nullptr : B;
-    for (const char *P = B; P != E; ++P) {
-      if (isPrint(*P) || *P == '\t') {
-        if (!S)
-          S = P;
-      } else if (S) {
-        print(Offset + (S - B) - Prefix.size(), StringRef(S, P - S));
-        S = nullptr;
+    std::size_t I = 0;
+    while (I != CurSize) {
+      if (InString) {
+        std::size_t Start = I;
+        while (I != CurSize && isStringChar(Buffer[I]))
+          ++I;
+        OS << StringRef(Buffer.data() + Start, I - Start);
+        Offset += I - Start;
+        if (I != CurSize) {
+          OS << '\n';
+          InString = false;
+        }
+      } else if (isStringChar(Buffer[I])) {
+        if (Candidate.empty())
+          StringStart = Offset;
+        Candidate.push_back(Buffer[I]);
+        ++I;
+        ++Offset;
+        if (Candidate.size() >= static_cast<size_t>(MinLength)) {
+          printHeader(StringStart);
+          OS << Candidate;
+          Candidate.clear();
+          InString = true;
+        }
+      } else {
+        Candidate.clear();
+        ++I;
+        ++Offset;
       }
     }
-    if (S)
-      Prefix.append(S, E);
-    Offset += CurSize;
   }
 
-  if (!Prefix.empty())
-    print(Offset - Prefix.size(), StringRef());
+  if (InString)
+    OS << '\n';
 }
 
 int main(int argc, char **argv) {
@@ -213,7 +224,7 @@ int main(int argc, char **argv) {
       Expected<sys::fs::file_t> FDOrErr =
           sys::fs::openNativeFileForRead(File, sys::fs::OF_TextWithCRLF);
       if (!FDOrErr) {
-        errs() << File << ": " << FDOrErr.takeError() << '\n';
+        errs() << File << ": " << toString(FDOrErr.takeError()) << '\n';
         continue;
       }
       strings(llvm::outs(), File, *FDOrErr);
