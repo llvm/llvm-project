@@ -3472,9 +3472,7 @@ class DependentTemplateIdExpr final
   friend TrailingObjects;
 
   NestedNameSpecifierLoc QualifierLoc;
-
   DeclarationNameInfo NameInfo;
-
   TemplateName Name;
 
   DependentTemplateIdExpr(const ASTContext &Context,
@@ -3486,6 +3484,9 @@ class DependentTemplateIdExpr final
 
   DependentTemplateIdExpr(EmptyShell Empty, unsigned NumTemplateArgs);
 
+  // ASTTemplateKWAndArgsInfo expects to be allocated
+  // before the template arguments, and as such is a trailing object,
+  // even though it is always present.
   unsigned numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
     return 1;
   }
