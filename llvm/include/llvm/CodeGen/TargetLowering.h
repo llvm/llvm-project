@@ -2279,9 +2279,13 @@ public:
   /// require a more complex expansion.
   unsigned getMinCmpXchgSizeInBits() const { return MinCmpXchgSizeInBits; }
 
-  /// Whether the target supports unaligned atomic operations.
-  virtual bool supportsUnalignedAtomics(const Instruction *I) const {
-    return SupportsUnalignedAtomics;
+  /// Return true if the target can lower the atomic instruction \p I when it
+  /// has the given \p Alignment, for an access of \p SizeInBytes bytes. The
+  /// default implementation only allows naturally aligned atomics, unless
+  /// setSupportsUnalignedAtomics(true) was called.
+  virtual bool supportsAtomicAlignment(const Instruction *I, Align Alignment,
+                                       uint64_t SizeInBytes) const {
+    return SupportsUnalignedAtomics || Alignment.value() >= SizeInBytes;
   }
 
   /// Whether AtomicExpandPass should automatically insert fences and reduce
