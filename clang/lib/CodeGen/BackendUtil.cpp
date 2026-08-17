@@ -1527,7 +1527,9 @@ static void createAndEmbedModuleForDynamicDebugging(
     // the same source file compiled twice won't generate unique hashes.
     Hash.update(CGOpts.CmdArgs);
     for (auto *CU : M->debug_compile_units()) {
-      Hash.update(CU->getDirectory());
+      if (CU->getDirectory().size() > 0)
+        Hash.update(CU->getDirectory());
+
       Hash.update(CU->getFilename());
     }
 
@@ -1630,13 +1632,13 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
   }
 
   bool EnableDynamicDebugging = CGOpts.DynamicDebugging;
-  // Disable dyndbg if the target isn't available as we're compiling to the
-  // inner module to object regardless of other options. (This may change).
   if (EnableDynamicDebugging) {
+    // Disable dyndbg if the target isn't available as we're compiling to the
+    // inner module (unless we're discarding it for debugging/testing).
     std::string Error;
     const llvm::Target *TheTarget =
         TargetRegistry::lookupTarget(M->getTargetTriple(), Error);
-    if (!TheTarget) {
+    if (!TheTarget && !CGOpts.DiscardDynamicDebuggingDebugModule) {
       Diags.Report(diag::warn_dyndbg_unable_to_create_target) << Error;
       EnableDynamicDebugging = false;
     }

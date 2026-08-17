@@ -1711,6 +1711,9 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   PrimType ElemT = *S.getContext().classify(ElemType);
   unsigned NumElems = Arg.getNumElems();
 
+  if (!isIntegerType(ElemT))
+    return false;
+
   INT_TYPE_SWITCH_NO_BOOL(ElemT, {
     T Result = Arg.elem<T>(0);
     unsigned BitWidth = Result.bitWidth();

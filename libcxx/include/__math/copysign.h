@@ -29,7 +29,11 @@ copysign(float __x, float __y) _NOEXCEPT {
   return ::__builtin_copysignf(__x, __y);
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI double
+// This is a template to avoid conflicting with the C library's non-template `copysign(double, double)` overload
+// when both are visible in the same scope (e.g. after `using std::__math::copysign;` at global scope in <math.h>,
+// where the C library's own declaration for `double` is already present).
+template <class = int>
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI double
 copysign(double __x, double __y) _NOEXCEPT {
   return __builtin_copysign(__x, __y);
 }

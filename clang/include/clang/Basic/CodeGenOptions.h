@@ -400,9 +400,10 @@ public:
   /// Prefix to use for -save-dynamic-debugging-temps output.
   std::string SaveDynDbgTempsFilePrefix;
 
-  /// Name of file passed with -fcuda-include-gpubinary option to forward to
-  /// CUDA runtime back-end for incorporating them into host-side object file.
-  std::string CudaGpuBinaryFileName;
+  /// Name of file passed with -foffload-include-binary option to forward to
+  /// offloading runtime back-end for incorporating them into host-side object
+  /// file.
+  std::string OffloadBinaryToEmbedFile;
 
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.

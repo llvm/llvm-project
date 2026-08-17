@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang -cc1 %s -triple x86_64-unknown-unknown -debug-info-kind=constructor -fdynamic-debugging -o - \
 // RUN:    -emit-llvm --discard-dynamic-debugging-debug-module \
 // RUN: | FileCheck %s --check-prefix=X86

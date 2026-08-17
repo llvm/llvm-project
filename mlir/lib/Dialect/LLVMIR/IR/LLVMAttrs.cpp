@@ -598,3 +598,19 @@ ModFlagBehavior ModuleFlagAttr::getModuleFlagBehavior() const {
 StringAttr ModuleFlagAttr::getModuleFlagKey() const { return getKey(); }
 
 Attribute ModuleFlagAttr::getModuleFlagValue() const { return getValue(); }
+
+//===----------------------------------------------------------------------===//
+// MDAddrSpaceCastAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            Attribute arg, unsigned addressSpace) {
+  // `addrspacecast` operates on pointers, so the operand must be a metadata
+  // attribute that models a pointer-typed constant.
+  if (!isa<MDGlobalValueAttr, MDNullAttr, MDAddrSpaceCastAttr>(arg))
+    return emitError() << "expected #llvm.md_global_value, #llvm.md_null, or "
+                          "#llvm.md_addrspacecast operand, but got "
+                       << arg;
+  return success();
+}
