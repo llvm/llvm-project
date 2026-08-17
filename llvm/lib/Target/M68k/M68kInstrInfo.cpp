@@ -389,8 +389,9 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
     LLVM_DEBUG(dbgs() << NewMI << "\n");
     MIB->removeFromParent();
 
-  // Sign extention doesn't matter if we only use the bottom 8 bits
-  } else if (MVTSize == MVT::i8 || (!IsAddressReg && Imm >= -128 && Imm <= 127)) {
+    // Sign extention doesn't matter if we only use the bottom 8 bits
+  } else if (MVTSize == MVT::i8 ||
+             (!IsAddressReg && Imm >= -128 && Imm <= 127)) {
     LLVM_DEBUG(dbgs() << "MOVEQ\n");
 
     MIB->setDesc(get(M68k::MOVQ));
@@ -504,13 +505,11 @@ bool M68kInstrInfo::ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned,
     if (MVTSrc == MVT::i8) {
       unsigned SubDst = RI.getSubReg(Dst, M68k::MxSubRegIndex8Lo);
       BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOV8dd), SubDst).addReg(Src);
-    }
-    else { // i16
+    } else { // i16
       unsigned SubDst = RI.getSubReg(Dst, M68k::MxSubRegIndex16Lo);
       BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOV16dd), SubDst).addReg(Src);
     }
-  }
-  else {
+  } else {
 
     unsigned Move;
     if (MVTDst == MVT::i16)
@@ -568,7 +567,7 @@ bool M68kInstrInfo::ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
     LLVM_DEBUG(dbgs() << "Clear and LOAD" << '\n');
     buildClearRegister(Dst, MBB, I, DL);
 
-  // Extend after load
+    // Extend after load
   } else {
     I++;
     if (IsSigned) {
@@ -639,13 +638,14 @@ bool M68kInstrInfo::ExpandMOVEM(MachineInstrBuilder &MIB,
 }
 
 void M68kInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator Iter, DebugLoc &DL,
-                        bool AllowSideEffects) const {
+                                       MachineBasicBlock::iterator Iter,
+                                       DebugLoc &DL,
+                                       bool AllowSideEffects) const {
   // Clear an address register by subtracting it from itself.
   if (M68k::AR32RegClass.contains(Reg)) {
     BuildMI(MBB, Iter, DL, get(M68k::SUB32ar), Reg)
-      .addReg(Reg, RegState::Undef)
-      .addReg(Reg, RegState::Undef);
+        .addReg(Reg, RegState::Undef)
+        .addReg(Reg, RegState::Undef);
     return;
   }
 

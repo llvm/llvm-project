@@ -325,7 +325,7 @@ public:
 
   void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator Iter, DebugLoc &DL,
-                          bool AllowSideEffects=true) const override;
+                          bool AllowSideEffects = true) const override;
 
   /// Return a virtual register initialized with the global base register
   /// value. Output instructions required to initialize the register in the
