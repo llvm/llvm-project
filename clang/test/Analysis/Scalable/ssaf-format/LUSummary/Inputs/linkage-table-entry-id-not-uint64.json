@@ -10,7 +10,11 @@
     {
       "id": "not_a_number",
       "linkage": {
-        "type": "External"
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
       }
     }
   ],

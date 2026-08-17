@@ -29,6 +29,16 @@
 // RUN: diff %S/Outputs/lu-1+2.json %t/lu-1+2.json
 // RUN: rm %t/lu-1+2.json
 
+// --warn-on-multiple-definitions downgrades a multiple definition (rejected by
+// default, see linking-errors.test) to a warning and keeps the first
+// definition's data.
+// RUN: clang-ssaf-linker --warn-on-multiple-definitions %S/Inputs/tu-1.json \
+// RUN:   %S/Inputs/tu-redefines-shared-ext.json -o %t/lu-1.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MULTIPLE-DEF
+// MULTIPLE-DEF: warning: multiple definition of EntityName(c:@F@shared_ext#, , NestedBuildNamespace([BuildNamespace(LinkUnit, lu-1)])) in NestedBuildNamespace([BuildNamespace(CompilationUnit, tu3.cpp)])
+// RUN: diff %S/Outputs/lu-1.json %t/lu-1.json
+// RUN: rm %t/lu-1.json
+
 // Relative input path: cd to the test source directory so that
 // Inputs/tu-1.json is a valid relative path.
 // RUN: cd %S && clang-ssaf-linker Inputs/tu-1.json -o %t/lu-1.json

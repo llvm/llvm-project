@@ -1,0 +1,62 @@
+// Verifies the visibility merge, which is the rule where ELF and Mach-O take
+// opposite directions, and the hidden-blocks-cross-link-unit-resolution
+// behaviour that follows from it.
+//
+// Each fixture pairs two weak definitions of the same entity so that the merge
+// is exercised without triggering a multiple-definition error. Both bindings
+// are weak, so neither displaces the other and only the visibilities differ.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ELF merges to the MOST restrictive visibility: a hidden occurrence makes the
+// merged entity hidden even when the other is default, and even when the
+// hidden one is only a declaration (ELF doc §4 probe V1).
+// RUN: clang-ssaf-linker %S/Inputs/vis-lhs-elf.json %S/Inputs/vis-rhs-elf.json \
+// RUN:   -o %t/vis-elf.json
+// RUN: cat %t/vis-elf.json | FileCheck %s --check-prefix=ELF
+
+// The id_table is sorted by USR, fixing the ids:
+//   0 both_hidden   1 default_vs_hidden   2 hidden_vs_default
+//
+// All three end up hidden, and are therefore demoted to Internal.
+// ELF:      "linkage_table": [
+// ELF:      "id": 0,
+// ELF:      "linkage": {
+// ELF:      "type": "Internal",
+// ELF-NEXT: "visibility": "Hidden"
+// ELF:      "id": 1,
+// ELF:      "linkage": {
+// ELF:      "type": "Internal",
+// ELF-NEXT: "visibility": "Hidden"
+// ELF:      "id": 2,
+// ELF:      "linkage": {
+// ELF:      "type": "Internal",
+// ELF-NEXT: "visibility": "Hidden"
+
+// Mach-O merges to the LEAST restrictive: a symbol stays private only when
+// every copy is private (Mach-O doc §2 probes W1-W3).
+// RUN: clang-ssaf-linker %S/Inputs/vis-lhs-macho.json \
+// RUN:   %S/Inputs/vis-rhs-macho.json -o %t/vis-macho.json
+// RUN: cat %t/vis-macho.json | FileCheck %s --check-prefix=MACHO
+
+// The mixed pairs stay exported; only both_hidden (id 0) is demoted.
+// MACHO:      "linkage_table": [
+// MACHO:      "id": 0,
+// MACHO:      "linkage": {
+// MACHO:      "type": "Internal",
+// MACHO-NEXT: "visibility": "Hidden"
+// MACHO:      "id": 1,
+// MACHO:      "linkage": {
+// MACHO:      "type": "External",
+// MACHO-NEXT: "visibility": "Default"
+// MACHO:      "id": 2,
+// MACHO:      "linkage": {
+// MACHO:      "type": "External",
+// MACHO-NEXT: "visibility": "Default"
+
+// A hidden entity is demoted to Internal so that a later link stage cannot
+// resolve against it, but it keeps its name: every EntityId already patched
+// into the summary data refers to it.
+// RUN: cat %t/vis-elf.json | FileCheck %s --check-prefix=KEEPS-NAME
+// KEEPS-NAME: "usr": "c:@F@both_hidden"

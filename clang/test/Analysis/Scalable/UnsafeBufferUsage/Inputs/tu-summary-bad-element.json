@@ -34,13 +34,21 @@
     {
       "id": 0,
       "linkage": {
-        "type": "External"
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
       }
     },
     {
       "id": 2,
       "linkage": {
-        "type": "Internal"
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "Internal",
+        "visibility": "Default"
       }
     }
   ],

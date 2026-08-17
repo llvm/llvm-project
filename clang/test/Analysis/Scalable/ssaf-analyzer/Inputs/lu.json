@@ -101,19 +101,31 @@
     {
       "id": 0,
       "linkage": {
-        "type": "External"
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
       }
     },
     {
       "id": 1,
       "linkage": {
-        "type": "External"
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
       }
     },
     {
       "id": 2,
       "linkage": {
-        "type": "External"
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
       }
     }
   ],

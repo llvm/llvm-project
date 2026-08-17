@@ -9,7 +9,11 @@
   "linkage_table": [
     {
       "linkage": {
-        "type": "External"
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
       }
     }
   ],

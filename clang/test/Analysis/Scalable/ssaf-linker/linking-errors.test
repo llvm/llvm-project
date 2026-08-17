@@ -26,3 +26,8 @@
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-REF
 // INVALID-ID-REF:      clang-ssaf-linker: error: Linking summary '{{.*}}tu-invalid-entity-id-ref.json'
 // INVALID-ID-REF-NEXT: failed to patch EntityId: 'EntityId(99)' not found in entity resolution table
+
+// Two TUs defining the same external entity is a multiple definition error.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/tu-redefines-shared-ext.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MULTIPLE-DEF
+// MULTIPLE-DEF: LLVM ERROR: multiple definition of EntityName(c:@F@shared_ext#, , NestedBuildNamespace([BuildNamespace(LinkUnit, lu)])) in NestedBuildNamespace([BuildNamespace(CompilationUnit, tu3.cpp)])

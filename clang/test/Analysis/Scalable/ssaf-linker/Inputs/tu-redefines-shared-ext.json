@@ -1,0 +1,43 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "tu3.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@shared_ext#"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "binding": "Strong",
+        "coalescing": "None",
+        "definition": "Definition",
+        "type": "External",
+        "visibility": "Default"
+      }
+    }
+  ],
+  "data": [
+    {
+      "summary_name": "Analysis1",
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "call_count": 0,
+            "callees": []
+          }
+        }
+      ]
+    }
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
+}

@@ -90,6 +90,125 @@ entityLinkageTypeFromString(llvm::StringRef Str) {
   return std::nullopt;
 }
 
+//===----------------------------------------------------------------------===//
+// EntityBinding
+//===----------------------------------------------------------------------===//
+
+/// Returns the canonical string representation of \p B (e.g. "Strong",
+/// "Weak").
+inline llvm::StringRef entityBindingToString(EntityBinding B) {
+  switch (B) {
+  case EntityBinding::Strong:
+    return "Strong";
+  case EntityBinding::Weak:
+    return "Weak";
+  case EntityBinding::Common:
+    return "Common";
+  case EntityBinding::Undefined:
+    return "Undefined";
+  }
+  llvm_unreachable("Unhandled EntityBinding variant");
+}
+
+/// Parses a string produced by entityBindingToString(). Returns std::nullopt
+/// if \p Str does not match any known EntityBinding value.
+inline std::optional<EntityBinding>
+entityBindingFromString(llvm::StringRef Str) {
+  if (Str == "Strong")
+    return EntityBinding::Strong;
+  if (Str == "Weak")
+    return EntityBinding::Weak;
+  if (Str == "Common")
+    return EntityBinding::Common;
+  if (Str == "Undefined")
+    return EntityBinding::Undefined;
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
+// EntityCoalescing
+//===----------------------------------------------------------------------===//
+
+/// Returns the canonical string representation of \p C (e.g. "None", "ODR").
+inline llvm::StringRef entityCoalescingToString(EntityCoalescing C) {
+  switch (C) {
+  case EntityCoalescing::None:
+    return "None";
+  case EntityCoalescing::ODR:
+    return "ODR";
+  }
+  llvm_unreachable("Unhandled EntityCoalescing variant");
+}
+
+/// Parses a string produced by entityCoalescingToString(). Returns std::nullopt
+/// if \p Str does not match any known EntityCoalescing value.
+inline std::optional<EntityCoalescing>
+entityCoalescingFromString(llvm::StringRef Str) {
+  if (Str == "None")
+    return EntityCoalescing::None;
+  if (Str == "ODR")
+    return EntityCoalescing::ODR;
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
+// EntityVisibility
+//===----------------------------------------------------------------------===//
+
+/// Returns the canonical string representation of \p V (e.g. "Default",
+/// "Hidden", "Protected").
+inline llvm::StringRef entityVisibilityToString(EntityVisibility V) {
+  switch (V) {
+  case EntityVisibility::Default:
+    return "Default";
+  case EntityVisibility::Hidden:
+    return "Hidden";
+  case EntityVisibility::Protected:
+    return "Protected";
+  }
+  llvm_unreachable("Unhandled EntityVisibility variant");
+}
+
+/// Parses a string produced by entityVisibilityToString(). Returns std::nullopt
+/// if \p Str does not match any known EntityVisibility value.
+inline std::optional<EntityVisibility>
+entityVisibilityFromString(llvm::StringRef Str) {
+  if (Str == "Default")
+    return EntityVisibility::Default;
+  if (Str == "Hidden")
+    return EntityVisibility::Hidden;
+  if (Str == "Protected")
+    return EntityVisibility::Protected;
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
+// EntityDefinitionKind
+//===----------------------------------------------------------------------===//
+
+/// Returns the canonical string representation of \p DK (e.g. "Definition",
+/// "Declaration").
+inline llvm::StringRef entityDefinitionKindToString(EntityDefinitionKind DK) {
+  switch (DK) {
+  case EntityDefinitionKind::Definition:
+    return "Definition";
+  case EntityDefinitionKind::Declaration:
+    return "Declaration";
+  }
+  llvm_unreachable("Unhandled EntityDefinitionKind variant");
+}
+
+/// Parses a string produced by entityDefinitionKindToString(). Returns
+/// std::nullopt if \p Str does not match any known EntityDefinitionKind value.
+inline std::optional<EntityDefinitionKind>
+entityDefinitionKindFromString(llvm::StringRef Str) {
+  if (Str == "Definition")
+    return EntityDefinitionKind::Definition;
+  if (Str == "Declaration")
+    return EntityDefinitionKind::Declaration;
+  return std::nullopt;
+}
+
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_LIB_ScalableStaticAnalysis_CORE_MODELSTRINGCONVERSIONS_H

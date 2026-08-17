@@ -7,7 +7,7 @@
   "linkage_table": [
     {
       "id": "not_a_number",
-      "linkage": { "type": "External" }
+      "linkage": { "binding": "Strong", "coalescing": "None", "definition": "Definition", "type": "External", "visibility": "Default" }
     }
   ],
   "data": [],

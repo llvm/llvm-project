@@ -18,12 +18,16 @@ using namespace clang;
 using namespace ssaf;
 
 EntityId TUSummaryBuilder::addEntity(const EntityName &EN,
-                                     EntityLinkageType Linkage) {
+                                     EntityLinkage Linkage) {
   EntityId Id = Summary.IdTable.getId(EN);
-  [[maybe_unused]] EntityLinkageType Link =
-      Summary.LinkageTable.try_emplace(Id, Linkage).first->second.getLinkage();
-  // Even if we had in the past a linkage, that must bee the same as we set now.
-  assert(Link == Linkage);
+  [[maybe_unused]] const EntityLinkage &Existing =
+      Summary.LinkageTable.try_emplace(Id, Linkage).first->second;
+  // An entity's linkage type must be stable across its redeclarations within a
+  // TU. The other symbol properties (binding, visibility, definition kind) may
+  // legitimately differ between a declaration and a definition of the same
+  // entity; reconciling those is the linker's responsibility, so we keep the
+  // first occurrence here and only assert linkage-type stability.
+  assert(Existing.getLinkage() == Linkage.getLinkage());
   return Id;
 }
 

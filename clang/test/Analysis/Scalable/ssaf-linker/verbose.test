@@ -5,16 +5,19 @@
 
 // RUN: clang-ssaf-linker --verbose %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json 2>&1 \
 // RUN:           | FileCheck %s --match-full-lines
+// Every summary is read before the linker is constructed, because the link
+// unit's target triple comes from its inputs and selects the resolution rules.
 // CHECK:      note: - Linking started.
 // CHECK-NEXT: note:   - Validating input.
 // CHECK-NEXT: note:     - Validated output summary path '{{.*}}lu-1+2.json'.
 // CHECK-NEXT: note:     - Validated 2 input summary paths.
 // CHECK-NEXT: note:   - Linking input.
-// CHECK-NEXT: note:     - Constructing linker.
-// CHECK-NEXT: note:     - Linking summaries.
 // CHECK-NEXT: note:       - [1/2] Reading '{{.*}}tu-1.json'.
-// CHECK-NEXT: note:       - [1/2] Linking '{{.*}}tu-1.json'.
 // CHECK-NEXT: note:       - [2/2] Reading '{{.*}}tu-2.json'.
+// CHECK-NEXT: note:     - Constructing linker.
+// CHECK-NEXT: note:       - Link unit targets 'arm64-apple-macosx'.
+// CHECK-NEXT: note:     - Linking summaries.
+// CHECK-NEXT: note:       - [1/2] Linking '{{.*}}tu-1.json'.
 // CHECK-NEXT: note:       - [2/2] Linking '{{.*}}tu-2.json'.
 // CHECK-NEXT: note:     - Writing output summary to '{{.*}}lu-1+2.json'.
 // CHECK-NEXT: note: - Linking finished.

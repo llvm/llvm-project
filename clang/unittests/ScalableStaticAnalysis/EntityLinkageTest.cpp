@@ -12,8 +12,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
+using clang::ssaf::EntityBinding;
+using clang::ssaf::EntityCoalescing;
+using clang::ssaf::EntityDefinitionKind;
 using clang::ssaf::EntityLinkage;
 using clang::ssaf::EntityLinkageType;
+using clang::ssaf::EntityVisibility;
 
 namespace {
 
@@ -21,44 +25,68 @@ constexpr inline auto None = EntityLinkageType::None;
 constexpr inline auto Internal = EntityLinkageType::Internal;
 constexpr inline auto External = EntityLinkageType::External;
 
-TEST(EntityLinkageTest, Constructor) {
-  EntityLinkage NoneLinkage(None);
-  EntityLinkage InternalLinkage(Internal);
-  EntityLinkage ExternalLinkage(External);
+// Builds an EntityLinkage with the given linkage type and fixed defaults for
+// the remaining properties (an ordinary strong external definition).
+constexpr EntityLinkage mk(EntityLinkageType LT) {
+  return EntityLinkage(LT, EntityBinding::Strong, EntityCoalescing::None,
+                       EntityVisibility::Default,
+                       EntityDefinitionKind::Definition);
+}
 
-  EXPECT_EQ(NoneLinkage.getLinkage(), None);
-  EXPECT_EQ(InternalLinkage.getLinkage(), Internal);
-  EXPECT_EQ(ExternalLinkage.getLinkage(), External);
+TEST(EntityLinkageTest, Constructor) {
+  EntityLinkage L(External, EntityBinding::Weak, EntityCoalescing::ODR,
+                  EntityVisibility::Hidden, EntityDefinitionKind::Declaration);
+  EXPECT_EQ(L.getLinkage(), External);
 }
 
 TEST(EntityLinkageTest, CopyConstructor) {
-  EntityLinkage Original(External);
+  EntityLinkage Original = mk(External);
   EntityLinkage Copy = Original;
 
-  EXPECT_EQ(Copy.getLinkage(), External);
-  EXPECT_EQ(Copy.getLinkage(), Original.getLinkage());
+  EXPECT_EQ(Copy, Original);
 }
 
 TEST(EntityLinkageTest, AssignmentOperator) {
-  EntityLinkage Linkage1(None);
-  EntityLinkage Linkage2(External);
+  EntityLinkage Linkage1 = mk(None);
+  EntityLinkage Linkage2 = mk(External);
 
   Linkage1 = Linkage2;
 
-  EXPECT_EQ(Linkage1.getLinkage(), External);
-  EXPECT_EQ(Linkage1.getLinkage(), Linkage2.getLinkage());
+  EXPECT_EQ(Linkage1, Linkage2);
 }
 
 TEST(EntityLinkageTest, EqualityOperatorReflexive) {
-  EXPECT_EQ(EntityLinkage(None), EntityLinkage(None));
-  EXPECT_EQ(EntityLinkage(Internal), EntityLinkage(Internal));
-  EXPECT_EQ(EntityLinkage(External), EntityLinkage(External));
+  EXPECT_EQ(mk(None), mk(None));
+  EXPECT_EQ(mk(Internal), mk(Internal));
+  EXPECT_EQ(mk(External), mk(External));
 }
 
 TEST(EntityLinkageTest, EqualityOperatorDistinct) {
-  EXPECT_NE(EntityLinkage(None), EntityLinkage(Internal));
-  EXPECT_NE(EntityLinkage(None), EntityLinkage(External));
-  EXPECT_NE(EntityLinkage(Internal), EntityLinkage(External));
+  EXPECT_NE(mk(None), mk(Internal));
+  EXPECT_NE(mk(None), mk(External));
+  EXPECT_NE(mk(Internal), mk(External));
+}
+
+TEST(EntityLinkageTest, EqualityConsidersAllProperties) {
+  const EntityLinkage Base(External, EntityBinding::Strong,
+                           EntityCoalescing::None, EntityVisibility::Default,
+                           EntityDefinitionKind::Definition);
+  EXPECT_NE(Base,
+            EntityLinkage(External, EntityBinding::Weak, EntityCoalescing::None,
+                          EntityVisibility::Default,
+                          EntityDefinitionKind::Definition));
+  EXPECT_NE(Base,
+            EntityLinkage(External, EntityBinding::Strong,
+                          EntityCoalescing::ODR, EntityVisibility::Default,
+                          EntityDefinitionKind::Definition));
+  EXPECT_NE(Base,
+            EntityLinkage(External, EntityBinding::Strong,
+                          EntityCoalescing::None, EntityVisibility::Hidden,
+                          EntityDefinitionKind::Definition));
+  EXPECT_NE(Base,
+            EntityLinkage(External, EntityBinding::Strong,
+                          EntityCoalescing::None, EntityVisibility::Default,
+                          EntityDefinitionKind::Declaration));
 }
 
 TEST(EntityLinkageTypeTest, FormatProvider) {
@@ -88,30 +116,16 @@ TEST(EntityLinkageTypeTest, StreamOutputExternal) {
 }
 
 TEST(EntityLinkageTest, FormatProvider) {
-  EXPECT_EQ(llvm::formatv("{0}", EntityLinkage(None)).str(),
-            "EntityLinkage(None)");
-  EXPECT_EQ(llvm::formatv("{0}", EntityLinkage(Internal)).str(),
-            "EntityLinkage(Internal)");
-  EXPECT_EQ(llvm::formatv("{0}", EntityLinkage(External)).str(),
-            "EntityLinkage(External)");
+  EXPECT_EQ(llvm::formatv("{0}", mk(None)).str(),
+            "EntityLinkage(None, Strong, None, Default, Definition)");
 }
 
-TEST(EntityLinkageTest, StreamOutputNone) {
+TEST(EntityLinkageTest, StreamOutput) {
   std::string S;
-  llvm::raw_string_ostream(S) << EntityLinkage(None);
-  EXPECT_EQ(S, "EntityLinkage(None)");
-}
-
-TEST(EntityLinkageTest, StreamOutputInternal) {
-  std::string S;
-  llvm::raw_string_ostream(S) << EntityLinkage(Internal);
-  EXPECT_EQ(S, "EntityLinkage(Internal)");
-}
-
-TEST(EntityLinkageTest, StreamOutputExternal) {
-  std::string S;
-  llvm::raw_string_ostream(S) << EntityLinkage(External);
-  EXPECT_EQ(S, "EntityLinkage(External)");
+  llvm::raw_string_ostream(S) << EntityLinkage(
+      External, EntityBinding::Weak, EntityCoalescing::ODR,
+      EntityVisibility::Hidden, EntityDefinitionKind::Declaration);
+  EXPECT_EQ(S, "EntityLinkage(External, Weak, ODR, Hidden, Declaration)");
 }
 
 } // namespace

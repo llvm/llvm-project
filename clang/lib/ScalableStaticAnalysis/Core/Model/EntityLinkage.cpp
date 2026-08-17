@@ -13,7 +13,9 @@
 namespace clang::ssaf {
 
 bool EntityLinkage::operator==(const EntityLinkage &Other) const {
-  return Linkage == Other.Linkage;
+  return Linkage == Other.Linkage && Binding == Other.Binding &&
+         Coalescing == Other.Coalescing && Visibility == Other.Visibility &&
+         DefinitionKind == Other.DefinitionKind;
 }
 
 bool EntityLinkage::operator!=(const EntityLinkage &Other) const {
@@ -25,9 +27,29 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS << entityLinkageTypeToString(Linkage);
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, EntityBinding Binding) {
+  return OS << entityBindingToString(Binding);
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const EntityLinkage &Linkage) {
-  return OS << "EntityLinkage(" << Linkage.getLinkage() << ")";
+                              EntityCoalescing Coalescing) {
+  return OS << entityCoalescingToString(Coalescing);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              EntityVisibility Visibility) {
+  return OS << entityVisibilityToString(Visibility);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              EntityDefinitionKind DefinitionKind) {
+  return OS << entityDefinitionKindToString(DefinitionKind);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityLinkage &EL) {
+  return OS << "EntityLinkage(" << EL.Linkage << ", " << EL.Binding << ", "
+            << EL.Coalescing << ", " << EL.Visibility << ", "
+            << EL.DefinitionKind << ")";
 }
 
 } // namespace clang::ssaf

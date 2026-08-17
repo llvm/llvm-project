@@ -271,37 +271,61 @@
         {
           "id": 0,
           "linkage": {
-            "type": "External"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "External",
+            "visibility": "Default"
           }
         },
         {
           "id": 1,
           "linkage": {
-            "type": "Internal"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "Internal",
+            "visibility": "Default"
           }
         },
         {
           "id": 2,
           "linkage": {
-            "type": "None"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "None",
+            "visibility": "Default"
           }
         },
         {
           "id": 3,
           "linkage": {
-            "type": "External"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "External",
+            "visibility": "Default"
           }
         },
         {
           "id": 4,
           "linkage": {
-            "type": "Internal"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "Internal",
+            "visibility": "Default"
           }
         },
         {
           "id": 5,
           "linkage": {
-            "type": "None"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "None",
+            "visibility": "Default"
           }
         }
       ],
@@ -589,37 +613,61 @@
         {
           "id": 0,
           "linkage": {
-            "type": "External"
+            "binding": "Undefined",
+            "coalescing": "None",
+            "definition": "Declaration",
+            "type": "External",
+            "visibility": "Default"
           }
         },
         {
           "id": 1,
           "linkage": {
-            "type": "Internal"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "Internal",
+            "visibility": "Default"
           }
         },
         {
           "id": 2,
           "linkage": {
-            "type": "None"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "None",
+            "visibility": "Default"
           }
         },
         {
           "id": 3,
           "linkage": {
-            "type": "External"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "External",
+            "visibility": "Default"
           }
         },
         {
           "id": 4,
           "linkage": {
-            "type": "Internal"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "Internal",
+            "visibility": "Default"
           }
         },
         {
           "id": 5,
           "linkage": {
-            "type": "None"
+            "binding": "Strong",
+            "coalescing": "None",
+            "definition": "Definition",
+            "type": "None",
+            "visibility": "Default"
           }
         }
       ],

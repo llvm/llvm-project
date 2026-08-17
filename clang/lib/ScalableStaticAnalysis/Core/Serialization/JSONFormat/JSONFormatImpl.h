@@ -114,6 +114,18 @@ inline constexpr const char *InvalidBuildNamespaceKind =
 inline constexpr const char *InvalidEntityLinkageType =
     "invalid EntityLinkageType value '{0}' for field 'type'";
 
+inline constexpr const char *InvalidEntityBinding =
+    "invalid EntityBinding value '{0}' for field 'binding'";
+
+inline constexpr const char *InvalidEntityCoalescing =
+    "invalid EntityCoalescing value '{0}' for field 'coalescing'";
+
+inline constexpr const char *InvalidEntityVisibility =
+    "invalid EntityVisibility value '{0}' for field 'visibility'";
+
+inline constexpr const char *InvalidEntityDefinitionKind =
+    "invalid EntityDefinitionKind value '{0}' for field 'definition'";
+
 inline constexpr const char *FailedToDeserializeLinkageTableExtraId =
     "failed to deserialize LinkageTable: extra '{0}' not present in IdTable";
 
@@ -219,6 +231,23 @@ entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr);
 
 // Provided for consistency with respect to rest of the codebase.
 llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT);
+
+//----------------------------------------------------------------------------
+// EntityBinding / EntityCoalescing / EntityVisibility / EntityDefinitionKind
+//----------------------------------------------------------------------------
+
+llvm::Expected<EntityBinding> entityBindingFromJSON(llvm::StringRef Str);
+llvm::StringRef entityBindingToJSON(EntityBinding B);
+
+llvm::Expected<EntityCoalescing> entityCoalescingFromJSON(llvm::StringRef Str);
+llvm::StringRef entityCoalescingToJSON(EntityCoalescing C);
+
+llvm::Expected<EntityVisibility> entityVisibilityFromJSON(llvm::StringRef Str);
+llvm::StringRef entityVisibilityToJSON(EntityVisibility V);
+
+llvm::Expected<EntityDefinitionKind>
+entityDefinitionKindFromJSON(llvm::StringRef Str);
+llvm::StringRef entityDefinitionKindToJSON(EntityDefinitionKind DK);
 
 //----------------------------------------------------------------------------
 // TargetTriple helpers

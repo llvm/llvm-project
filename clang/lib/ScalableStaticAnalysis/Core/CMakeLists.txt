@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangScalableStaticAnalysisCore
   ASTEntityMapping.cpp
   EntityLinker/EntityLinker.cpp
+  EntityLinker/LinkageRules.cpp
   Model/BuildNamespace.cpp
   Model/EntityId.cpp
   Model/EntityIdTable.cpp

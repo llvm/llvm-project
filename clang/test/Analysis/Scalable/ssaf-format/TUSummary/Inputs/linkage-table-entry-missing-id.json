@@ -6,7 +6,7 @@
   "id_table": [],
   "linkage_table": [
     {
-      "linkage": { "type": "External" }
+      "linkage": { "binding": "Strong", "coalescing": "None", "definition": "Definition", "type": "External", "visibility": "Default" }
     }
   ],
   "data": [],

@@ -444,6 +444,67 @@ llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT) {
 }
 
 //----------------------------------------------------------------------------
+// EntityBinding / EntityVisibility / EntityDefinitionKind
+//----------------------------------------------------------------------------
+
+llvm::Expected<EntityBinding> entityBindingFromJSON(llvm::StringRef Str) {
+  auto Opt = entityBindingFromString(Str);
+  if (!Opt) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::InvalidEntityBinding, Str)
+        .build();
+  }
+  return *Opt;
+}
+
+llvm::StringRef entityBindingToJSON(EntityBinding B) {
+  return entityBindingToString(B);
+}
+
+llvm::Expected<EntityCoalescing> entityCoalescingFromJSON(llvm::StringRef Str) {
+  auto Opt = entityCoalescingFromString(Str);
+  if (!Opt) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::InvalidEntityCoalescing, Str)
+        .build();
+  }
+  return *Opt;
+}
+
+llvm::StringRef entityCoalescingToJSON(EntityCoalescing C) {
+  return entityCoalescingToString(C);
+}
+
+llvm::Expected<EntityVisibility> entityVisibilityFromJSON(llvm::StringRef Str) {
+  auto Opt = entityVisibilityFromString(Str);
+  if (!Opt) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::InvalidEntityVisibility, Str)
+        .build();
+  }
+  return *Opt;
+}
+
+llvm::StringRef entityVisibilityToJSON(EntityVisibility V) {
+  return entityVisibilityToString(V);
+}
+
+llvm::Expected<EntityDefinitionKind>
+entityDefinitionKindFromJSON(llvm::StringRef Str) {
+  auto Opt = entityDefinitionKindFromString(Str);
+  if (!Opt) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::InvalidEntityDefinitionKind, Str)
+        .build();
+  }
+  return *Opt;
+}
+
+llvm::StringRef entityDefinitionKindToJSON(EntityDefinitionKind DK) {
+  return entityDefinitionKindToString(DK);
+}
+
+//----------------------------------------------------------------------------
 // TargetTriple
 //----------------------------------------------------------------------------
 
@@ -464,27 +525,88 @@ llvm::Error validateNormalizedTargetTriple(llvm::StringRef Triple) {
 
 llvm::Expected<EntityLinkage>
 JSONFormat::entityLinkageFromJSON(const Object &EntityLinkageObject) const {
-  auto OptLinkageStr = EntityLinkageObject.getString("type");
-  if (!OptLinkageStr) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToReadObjectAtField,
-                                "EntityLinkageType", "type", "string")
-        .build();
-  }
+  auto ReadStr = [&](llvm::StringRef ObjLabel,
+                     llvm::StringRef Field) -> llvm::Expected<llvm::StringRef> {
+    auto OptStr = EntityLinkageObject.getString(Field);
+    if (!OptStr) {
+      return ErrorBuilder::create(std::errc::invalid_argument,
+                                  ErrorMessages::FailedToReadObjectAtField,
+                                  ObjLabel, Field, "string")
+          .build();
+    }
+    return *OptStr;
+  };
 
-  auto ExpectedLinkageType = entityLinkageTypeFromJSON(*OptLinkageStr);
+  auto TypeStr = ReadStr("EntityLinkageType", "type");
+  if (!TypeStr) {
+    return TypeStr.takeError();
+  }
+  auto ExpectedLinkageType = entityLinkageTypeFromJSON(*TypeStr);
   if (!ExpectedLinkageType) {
     return ErrorBuilder::wrap(ExpectedLinkageType.takeError())
         .context(ErrorMessages::ReadingFromField, "EntityLinkageType", "type")
         .build();
   }
 
-  return EntityLinkage(*ExpectedLinkageType);
+  auto BindingStr = ReadStr("EntityBinding", "binding");
+  if (!BindingStr) {
+    return BindingStr.takeError();
+  }
+  auto ExpectedBinding = entityBindingFromJSON(*BindingStr);
+  if (!ExpectedBinding) {
+    return ErrorBuilder::wrap(ExpectedBinding.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityBinding", "binding")
+        .build();
+  }
+
+  auto CoalescingStr = ReadStr("EntityCoalescing", "coalescing");
+  if (!CoalescingStr) {
+    return CoalescingStr.takeError();
+  }
+  auto ExpectedCoalescing = entityCoalescingFromJSON(*CoalescingStr);
+  if (!ExpectedCoalescing) {
+    return ErrorBuilder::wrap(ExpectedCoalescing.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityCoalescing",
+                 "coalescing")
+        .build();
+  }
+
+  auto VisibilityStr = ReadStr("EntityVisibility", "visibility");
+  if (!VisibilityStr) {
+    return VisibilityStr.takeError();
+  }
+  auto ExpectedVisibility = entityVisibilityFromJSON(*VisibilityStr);
+  if (!ExpectedVisibility) {
+    return ErrorBuilder::wrap(ExpectedVisibility.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityVisibility",
+                 "visibility")
+        .build();
+  }
+
+  auto DefinitionStr = ReadStr("EntityDefinitionKind", "definition");
+  if (!DefinitionStr) {
+    return DefinitionStr.takeError();
+  }
+  auto ExpectedDefinitionKind = entityDefinitionKindFromJSON(*DefinitionStr);
+  if (!ExpectedDefinitionKind) {
+    return ErrorBuilder::wrap(ExpectedDefinitionKind.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityDefinitionKind",
+                 "definition")
+        .build();
+  }
+
+  return EntityLinkage(*ExpectedLinkageType, *ExpectedBinding,
+                       *ExpectedCoalescing, *ExpectedVisibility,
+                       *ExpectedDefinitionKind);
 }
 
 Object JSONFormat::entityLinkageToJSON(const EntityLinkage &EL) const {
   Object Result;
   Result["type"] = entityLinkageTypeToJSON(getLinkage(EL));
+  Result["binding"] = entityBindingToJSON(getBinding(EL));
+  Result["coalescing"] = entityCoalescingToJSON(getCoalescing(EL));
+  Result["visibility"] = entityVisibilityToJSON(getVisibility(EL));
+  Result["definition"] = entityDefinitionKindToJSON(getDefinitionKind(EL));
   return Result;
 }
 

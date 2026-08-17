@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSIS_TESTFIXTURE_H
 #define LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSIS_TESTFIXTURE_H
 
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntityLinker.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchSharedLibrary.h"
@@ -31,6 +32,35 @@ namespace clang::ssaf {
 class TestFixture : public ::testing::Test {
 protected:
   static WPASuite makeWPASuite() { return WPASuite(); }
+
+  // EntityLinker's linkage reconciliation rules. They are private to the
+  // linker, which is their only caller in production code, and they consult
+  // the target's LinkageRules, so each takes the linker to apply them with.
+  static bool isConflictingDefinition(const EntityLinker &Linker,
+                                      const EntityLinkage &Current,
+                                      const EntityLinkage &Incoming) {
+    return Linker.isConflictingDefinition(Current, Incoming);
+  }
+
+  static bool incomingDataWins(const EntityLinker &Linker,
+                               const EntityLinkage &Current,
+                               const EntityLinkage &Incoming) {
+    return Linker.incomingDataWins(Current, Incoming);
+  }
+
+  static EntityLinkage mergeLinkage(const EntityLinker &Linker,
+                                    const EntityLinkage &Current,
+                                    const EntityLinkage &Incoming) {
+    return Linker.mergeLinkage(Current, Incoming);
+  }
+
+  /// A linker targeting \p Triple, for exercising the reconciliation rules of
+  /// a specific platform.
+  static EntityLinker makeLinkerFor(llvm::StringRef Triple) {
+    return EntityLinker(llvm::Triple(Triple),
+                        NestedBuildNamespace{BuildNamespace(
+                            BuildNamespaceKind::LinkUnit, "LU")});
+  }
 
 #define FIELD(CLASS, FIELD_NAME)                                               \
   static const auto &get##FIELD_NAME(const CLASS &X) { return X.FIELD_NAME; }  \
