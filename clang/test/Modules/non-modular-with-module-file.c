@@ -6,7 +6,7 @@
 
 // RUN: %clang_cc1 -E %t/tu.c -o %t/tu.ii -I %t -fmodule-map-file=%t/module.modulemap
 
-// RUN: FileCheck --input-file=%t/tu.ii %s -DPREFIX=%/t
+// RUN: FileCheck --input-file=%t/tu.ii %s -DPREFIX=%t
 
 // CHECK:      # 1 "[[PREFIX]]{{/|\\}}tu.c"
 // CHECK-NEXT: # 1 "<built-in>" 1
