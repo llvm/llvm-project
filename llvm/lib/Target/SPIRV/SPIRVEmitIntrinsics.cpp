@@ -987,10 +987,19 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
       Ty = SPIRV::getOriginalFunctionType(*Fn);
       GR->addDeducedElementType(I, Ty);
     } else {
-      Ty = deduceElementTypeByValueDeep(
-          Ref->getValueType(),
-          Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
-          UnknownElemTypeI8);
+      Value *Op = Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr;
+      if (isa_and_nonnull<Function>(Op) &&
+          TM.getSubtargetImpl()->canUseExtension(
+              SPIRV::Extension::SPV_INTEL_function_pointers)) {
+        if (Type *NestedTy =
+                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
+          Ty = getTypedPointerWrapper(
+              NestedTy, storageClassToAddressSpace(
+                            SPIRV::StorageClass::CodeSectionINTEL));
+      } else {
+        Ty = deduceElementTypeByValueDeep(Ref->getValueType(), Op, Visited,
+                                          UnknownElemTypeI8);
+      }
     }
   } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
     Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
