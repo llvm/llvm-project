@@ -5446,6 +5446,8 @@ TEST(Hover, HLSLRootSignature) {
   auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
   ASSERT_TRUE(H) << "Hover should have been returned for RootSignature!";
   EXPECT_EQ(H->Name, "RootSignature");
+  EXPECT_EQ(H->Definition.find("__hlsl_rootsig_decl"), std::string::npos)
+      << "Definition leaked internal identifier: " << H->Definition;
 }
 
 } // namespace
