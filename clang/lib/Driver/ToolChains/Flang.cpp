@@ -1244,6 +1244,13 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
                    options::OPT_fno_pseudo_probe_for_profiling, false))
     CmdArgs.push_back("-fpseudo-probe-for-profiling");
 
+  if (Arg *PGOGenerateArg = Args.getLastArg(
+          options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
+          options::OPT_fno_profile_generate)) {
+    if (!PGOGenerateArg->getOption().matches(options::OPT_fno_profile_generate))
+      PGOGenerateArg->render(Args, CmdArgs);
+  }
+
   addSplitMachineFunctionsArgs(TC.getDriver(), Args, CmdArgs, TC.getTriple());
 }
 
@@ -1377,9 +1384,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
   Args.AddLastArg(CmdArgs, options::OPT_w);
 
-  // recognise options: fprofile-generate -fprofile-use=
-  Args.addAllArgs(
-      CmdArgs, {options::OPT_fprofile_generate, options::OPT_fprofile_use_EQ});
+  // recognise options: -fprofile-use=
+  Args.addAllArgs(CmdArgs, {options::OPT_fprofile_use_EQ});
 
   addPGOAndCoverageFlags(TC, JA, Args, CmdArgs);
 

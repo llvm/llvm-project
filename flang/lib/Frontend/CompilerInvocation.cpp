@@ -498,8 +498,18 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.IsPIE = 1;
   }
 
-  if (args.hasArg(clang::options::OPT_fprofile_generate)) {
-    opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_fprofile_generate,
+                          clang::options::OPT_fprofile_generate_EQ,
+                          clang::options::OPT_fno_profile_generate)) {
+    if (!a->getOption().matches(clang::options::OPT_fno_profile_generate)) {
+      opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+      if (a->getOption().matches(clang::options::OPT_fprofile_generate_EQ)) {
+        llvm::SmallString<128> path(a->getValue());
+        llvm::sys::path::append(path, "default_%m.profraw");
+        opts.InstrProfileOutput = std::string(path);
+      }
+    }
   }
 
   if (auto A = args.getLastArg(clang::options::OPT_fprofile_use_EQ)) {
