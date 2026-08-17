@@ -5445,8 +5445,13 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                       TTI::TargetCostKind CostKind) const {
   Type *Src = MICA.getDataType();
 
-  if (useNeonVector(Src))
-    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+  if (useNeonVector(Src)) {
+    bool IsLegal = MICA.getID() == Intrinsic::masked_expandload
+                       ? isLegalMaskedExpandLoad(Src, MICA.getAlignment())
+                       : isLegalMaskedLoadStore(Src, MICA.getAlignment());
+    if (!IsLegal)
+      return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+  }
   auto LT = getTypeLegalizationCost(Src);
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
