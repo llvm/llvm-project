@@ -52,11 +52,27 @@ add_object_library(
 )
 
 add_header_library(
+  tlsf_table
+  HDRS
+    tlsf_table.h
+  DEPENDS
+    .block
+    .freelist
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.math_extras
+)
+
+add_header_library(
   freestore
   HDRS
     freestore.h
   DEPENDS
     .freetrie
+    .tlsf_table
 )
 
 libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
@@ -101,9 +117,11 @@ add_header_library(
     macros/properties/compiler.h
     macros/attributes.h
     macros/config.h
+    macros/hardening.h
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.bit
+    libc.src.__support.macros.hardening
 )
 
 add_header_library(
@@ -389,6 +407,8 @@ if(LIBC_COPT_USE_C_ASSERT OR NOT LLVM_LIBC_FULL_BUILD)
     libc_assert
     HDRS
       libc_assert.h
+    DEPENDS
+      libc.src.__support.macros.hardening
   )
 else()
   add_header_library(
@@ -399,6 +419,7 @@ else()
       .integer_to_string
       libc.src.__support.OSUtil.osutil
       libc.src.__support.macros.optimization
+      libc.src.__support.macros.hardening
   )
 endif()
 

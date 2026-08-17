@@ -14,7 +14,7 @@ define i32 @bounded_user_ic_exceeds_window(ptr %A, i32 %N) {
 ; IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 16
 ; IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4:       [[VECTOR_PH]]:
-; IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 16
+; IC4-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 15
 ; IC4-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4:       [[VECTOR_BODY]]:

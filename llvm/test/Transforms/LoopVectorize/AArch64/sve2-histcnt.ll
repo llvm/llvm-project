@@ -876,7 +876,7 @@ attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.interleave.count", i32 2}
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.predicate.enable"}
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.interleave.count", i32 1}
 !6 = !{!7}

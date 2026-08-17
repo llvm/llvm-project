@@ -192,6 +192,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.free
     libc.src.stdlib.malloc
 
+    # stdio.h entrypoints
+    libc.src.stdio.tmpfile
+
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
@@ -215,6 +218,51 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.setitimer
     libc.src.sys.time.getitimer
+
+    # unistd.h entrypoints
+    libc.src.unistd.alarm
+    libc.src.unistd.access
+    libc.src.unistd.chdir
+    libc.src.unistd.chown
+    libc.src.unistd.close
+    libc.src.unistd.dup
+    libc.src.unistd.dup2
+    libc.src.unistd.dup3
+    libc.src.unistd.execve
+    libc.src.unistd.faccessat
+    libc.src.unistd.fchdir
+    libc.src.unistd.fchown
+    libc.src.unistd.fsync
+    libc.src.unistd.ftruncate
+    libc.src.unistd.getcwd
+    libc.src.unistd.getentropy
+    libc.src.unistd.geteuid
+    libc.src.unistd.gethostname
+    libc.src.unistd.getpagesize
+    libc.src.unistd.getpid
+    libc.src.unistd.getppid
+    libc.src.unistd.getsid
+    libc.src.unistd.gettid
+    libc.src.unistd.getgid
+    libc.src.unistd.getuid
+    libc.src.unistd.isatty
+    libc.src.unistd.link
+    libc.src.unistd.linkat
+    libc.src.unistd.lseek
+    libc.src.unistd.pipe
+    libc.src.unistd.pipe2
+    libc.src.unistd.read
+    libc.src.unistd.readlink
+    libc.src.unistd.readlinkat
+    libc.src.unistd.rmdir
+    libc.src.unistd.setsid
+    libc.src.unistd.symlink
+    libc.src.unistd.symlinkat
+    libc.src.unistd.sysconf
+    libc.src.unistd.truncate
+    libc.src.unistd.unlink
+    libc.src.unistd.unlinkat
+    libc.src.unistd.write
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
@@ -317,6 +365,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceilf128
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf

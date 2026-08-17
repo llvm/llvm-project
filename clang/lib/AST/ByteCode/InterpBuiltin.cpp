@@ -202,7 +202,7 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
 
 // Strict double -> float conversion used for X86 PD2PS/cvtsd2ss intrinsics.
 // Reject NaN/Inf/Subnormal inputs and any lossy/inexact conversions.
-static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst,
+static bool convertDoubleToFloatStrict(const APFloat &Src, Floating &Dst,
                                        InterpState &S, const Expr *DiagExpr) {
   if (Src.isInfinity()) {
     if (S.diagnosing())
@@ -1710,6 +1710,9 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   assert(Call->getType() == ElemType);
   PrimType ElemT = *S.getContext().classify(ElemType);
   unsigned NumElems = Arg.getNumElems();
+
+  if (!isIntegerType(ElemT))
+    return false;
 
   INT_TYPE_SWITCH_NO_BOOL(ElemT, {
     T Result = Arg.elem<T>(0);

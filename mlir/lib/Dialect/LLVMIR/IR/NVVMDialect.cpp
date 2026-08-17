@@ -137,6 +137,7 @@ LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
   case TMAStoreMode::TILE:
     return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
   case TMAStoreMode::IM2COL:
+  case TMAStoreMode::IM2COL_W:
     return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
   case TMAStoreMode::TILE_SCATTER4:
     if (dims != 5)
@@ -236,6 +237,7 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
   case TMAStoreMode::TILE:
     return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
   case TMAStoreMode::IM2COL:
+  case TMAStoreMode::IM2COL_W:
     return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
   case TMAStoreMode::TILE_SCATTER4:
     return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
@@ -4384,24 +4386,27 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
   args.push_back(builder.getInt1(hasCacheHint));
 
-  const unsigned NI = llvm::Intrinsic::not_intrinsic;
-  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
-      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d},
-      {NI, NI, NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
-      {NI, NI, NI, NI, NI,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d}};
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  static constexpr ID IDTable[][6] = {
+      {NI, nvvm_cp_async_bulk_tensor_s2g_tile_1d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_2d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_3d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_4d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_5d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
+      {NI, NI, NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_w_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_5d}};
 
   static_assert(getMaxEnumValForTMAStoreMode() == std::size(IDTable) - 1,
                 "TMAStoreModes must match number of rows in IDTable");
   size_t mode = static_cast<size_t>(thisOp.getMode());
   size_t dim = thisOp.getCoordinates().size();
-  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  ID id = IDTable[mode][dim];
   if (id == llvm::Intrinsic::not_intrinsic)
     llvm_unreachable(
         "Invalid intrinsic for CpAsyncBulkTensorSharedCTAToGlobalOp.");
@@ -4436,7 +4441,11 @@ NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
        nvvm_cp_async_bulk_tensor_reduce_tile_5d},
       {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_3d,
        nvvm_cp_async_bulk_tensor_reduce_im2col_4d,
-       nvvm_cp_async_bulk_tensor_reduce_im2col_5d}};
+       nvvm_cp_async_bulk_tensor_reduce_im2col_5d},
+      {NI, NI, NI, NI, NI, NI}, // scatter4 not supported for reduce
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_w_3d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_w_4d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_w_5d}};
 
   size_t mode = static_cast<size_t>(thisOp.getMode());
   size_t dim = thisOp.getCoordinates().size();
@@ -5002,29 +5011,33 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
   return id;
 }
 
-#define TCGEN05_COMMIT_IMPL(cg, is_shared, mc)                                 \
-  is_shared ? llvm::Intrinsic::nvvm_tcgen05_commit##mc##_shared##_##cg         \
-            : llvm::Intrinsic::nvvm_tcgen05_commit##mc##_##cg
-
-#define GET_TCGEN05_COMMIT_ID(cta_group, is_shared, has_mc)                    \
-  has_mc ? TCGEN05_COMMIT_IMPL(cta_group, is_shared, _mc)                      \
-         : TCGEN05_COMMIT_IMPL(cta_group, is_shared, )
-
 llvm::Intrinsic::ID
 Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
                                        LLVM::ModuleTranslation &mt,
                                        llvm::SmallVector<llvm::Value *> &args) {
   auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
-  unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
-                    .getAddressSpace();
-  bool isShared = as == NVVMMemorySpace::Shared;
   bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
+  bool hasSmemARead = curOp.getSmemARead();
+  unsigned index = (static_cast<unsigned>(hasSmemARead) << 1) |
+                   static_cast<unsigned>(is2CTAMode);
 
-  llvm::Intrinsic::ID id =
-      is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
-                 : GET_TCGEN05_COMMIT_ID(cg1, isShared, hasMulticast);
+  using namespace llvm::Intrinsic;
+  static constexpr ID IDs[] = {
+      nvvm_tcgen05_commit_cg1,
+      nvvm_tcgen05_commit_cg2,
+      nvvm_tcgen05_commit_smem_a_read_cg1,
+      nvvm_tcgen05_commit_smem_a_read_cg2,
+  };
 
+  static constexpr ID multicastIDs[] = {
+      nvvm_tcgen05_commit_mc_cg1,
+      nvvm_tcgen05_commit_mc_cg2,
+      nvvm_tcgen05_commit_smem_a_read_mc_cg1,
+      nvvm_tcgen05_commit_smem_a_read_mc_cg2,
+  };
+
+  ID id = hasMulticast ? multicastIDs[index] : IDs[index];
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getAddr()));
   if (hasMulticast)
@@ -5695,6 +5708,9 @@ Tcgen05MMAOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
 
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
   return {ID, args};
 }
 
@@ -5880,6 +5896,9 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseOp::getIntrinsicIDAndArgs(
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
 
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
   return {ID, args};
 }
 
@@ -5914,6 +5933,8 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
       static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
 
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
@@ -6011,6 +6032,8 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
       static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
 
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
