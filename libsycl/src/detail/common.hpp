@@ -17,11 +17,15 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
+#include <cstddef>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-constexpr bool isPowerOf2(std::size_t n) { return (n & (n - 1)) == 0; }
+constexpr bool isPowerOf2(std::size_t n) {
+  return (n != 0) && ((n & (n - 1)) == 0);
+}
 
 } // namespace detail
 

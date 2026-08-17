@@ -139,9 +139,9 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
                     const device &syclDevice, const context &syclContext,
                     usm::alloc kind, const property_list &propList) {
 
-  if (alignment == 0 || !detail::isPowerOf2(alignment))
+  if (!detail::isPowerOf2(alignment))
     throw exception(sycl::make_error_code(sycl::errc::invalid),
-                    "Alignment must be a non-zero power of 2");
+                    "Alignment must be a power of 2");
 
   auto ContextDevices = syclContext.get_devices();
   if (std::none_of(ContextDevices.begin(), ContextDevices.end(),
