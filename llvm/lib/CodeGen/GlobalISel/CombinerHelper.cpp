@@ -1848,12 +1848,12 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   if (!MaybeImmVal)
     return false;
 
-  MachineInstr *Add2Def = MRI.getVRegDef(Add2);
-  if (!Add2Def || Add2Def->getOpcode() != TargetOpcode::G_PTR_ADD)
+  Register Base, Imm2;
+  uint32_t LHSPtrAddFlags;
+  if (!mi_match(Add2, MRI,
+                m_GPtrAdd(m_Reg(Base), m_Reg(Imm2), m_MIFlags(LHSPtrAddFlags))))
     return false;
 
-  Register Base = Add2Def->getOperand(1).getReg();
-  Register Imm2 = Add2Def->getOperand(2).getReg();
   auto MaybeImm2Val = getIConstantVRegValWithLookThrough(Imm2, MRI);
   if (!MaybeImm2Val)
     return false;
@@ -1892,7 +1892,6 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
   // largest signed integer that fits into the index type, which is the maximum
   // size of allocated objects according to the IR Language Reference.
   unsigned PtrAddFlags = MI.getFlags();
-  unsigned LHSPtrAddFlags = Add2Def->getFlags();
   bool IsNoUWrap = PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::NoUWrap;
   bool IsInBounds =
       PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::InBounds;
