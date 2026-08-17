@@ -71,6 +71,17 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
   if (const auto *CT = Ty->getAs<ComplexType>())
     return classifyComplexType(CT, /*IsRet=*/true);
 
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    uint64_t Size = getContext().getTypeSize(Ty);
+    if (VT->getElementType()->isRealFloatingType() || Size > 64)
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
+    llvm::Type *FloatTy = llvm::Type::getFloatTy(getVMContext());
+    llvm::Type *CoerceTy =
+        Size <= 32 ? FloatTy : llvm::StructType::get(FloatTy, FloatTy);
+    return ABIArgInfo::getDirect(CoerceTy);
+  }
+
   if (const auto *BT = Ty->getAs<BuiltinType>();
       BT && BT->getKind() == BuiltinType::LongDouble)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
