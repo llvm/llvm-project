@@ -14,7 +14,6 @@
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
 #include "NVPTXAsmPrinter.h"
-#include "NVPTXCtorDtorLowering.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "llvm/Analysis/KernelInfo.h"
