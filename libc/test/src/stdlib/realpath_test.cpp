@@ -224,9 +224,9 @@ public:
   [[nodiscard]] bool create_test_dir(const char *name, TestDir &dst) {
     CString test_dir = libc_make_test_file_path(".");
     char buf[PATH_MAX];
-    // Some test setups will have symlinks in their test directory.
-    // In order for tests to compute the an expected result, the path returned
-    // by create_test_dir needs to be canonical itself.
+    // Some test environments will have symlinks in their test directory.
+    // In order for tests to compute an expected canonical path,
+    // the path returned by create_test_dir needs to be canonical itself.
     char *test_dir_abspath = LIBC_NAMESPACE::realpath(test_dir, buf);
     if (libc_errno != 0)
       return false;
