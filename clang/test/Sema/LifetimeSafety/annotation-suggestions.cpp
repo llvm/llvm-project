@@ -700,3 +700,18 @@ S foo() {
   return S(create_up());
 }
 } // namespace GH193747
+
+namespace SuggestAroundMacro {
+#define ABSL_ATTR_THIS [[clang::annotate_type("a")]]
+#define ABSL_ATTR_DECL [[clang::annotate("a")]]
+struct S {
+    int x;
+    const int& getX() const ABSL_ATTR_THIS { return x; } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
+    
+    // Also test without macro
+    const int& getY() const { return x; } // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}} 
+};
+
+// Parameter test mapping to ABSL_ATTR_DECL
+const int& getParam(const int& p ABSL_ATTR_DECL) { return p; } // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}} expected-note {{param returned here}}
+} // namespace SuggestAroundMacro
