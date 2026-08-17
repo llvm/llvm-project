@@ -46,6 +46,13 @@ const SCEV *getSCEVExprForVPValue(const VPValue *V,
                                   PredicatedScalarEvolution &PSE,
                                   const Loop *L = nullptr);
 
+/// Get a stride expression, the AddRec's step found from \p Ptr divided by the
+/// alloc-size of \p AccessTy. Returns a tuple of the start SCEV expression, the
+/// stride SCEV expression, and the AddRec's wrap flags.
+std::optional<std::tuple<const SCEV *, const SCEV *, SCEVNoWrapFlags>>
+getStrideExpr(const VPValue *Ptr, PredicatedScalarEvolution &PSE, const Loop &L,
+              Type *AccessTy);
+
 /// Returns true if \p Addr is an address SCEV that can be passed to
 /// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
 /// affine AddRec (i.e. induction ), or an add expression of such operands or a
