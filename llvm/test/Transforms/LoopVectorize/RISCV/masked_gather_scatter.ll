@@ -40,13 +40,13 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[TMP13:%.*]] = getelementptr nuw i8, ptr [[TRIGGER]], i32 [[TMP6]]
 ; RV32-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i32(ptr align 4 [[TMP13]], i32 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]]
 ; RV32-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], splat (i32 100)
-; RV32-NEXT:    [[TMP20:%.*]] = shl i32 [[TMP12]], 8
-; RV32-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[B]], i32 [[TMP20]]
-; RV32-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i32(ptr align 8 [[TMP25]], i32 256, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]]
+; RV32-NEXT:    [[TMP9:%.*]] = shl nuw i32 [[TMP12]], 8
+; RV32-NEXT:    [[TMP7:%.*]] = getelementptr nuw i8, ptr [[B]], i32 [[TMP9]]
+; RV32-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i32(ptr align 8 [[TMP7]], i32 256, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]]
 ; RV32-NEXT:    [[TMP17:%.*]] = sitofp <vscale x 2 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 2 x double>
 ; RV32-NEXT:    [[TMP18:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_GATHER6]], [[TMP17]]
-; RV32-NEXT:    [[TMP11:%.*]] = shl i32 [[TMP12]], 7
-; RV32-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[A]], i32 [[TMP11]]
+; RV32-NEXT:    [[TMP11:%.*]] = shl nuw i32 [[TMP12]], 7
+; RV32-NEXT:    [[TMP15:%.*]] = getelementptr nuw i8, ptr [[A]], i32 [[TMP11]]
 ; RV32-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2f64.p0.i32(<vscale x 2 x double> [[TMP18]], ptr align 8 [[TMP15]], i32 128, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; RV32-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP10]] to i64
 ; RV32-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP8]], [[INDEX]]
@@ -104,14 +104,14 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[TRIGGER]], i64 [[TMP5]]
 ; RV64-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP6]], i64 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]]
 ; RV64-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], splat (i32 100)
-; RV64-NEXT:    [[TMP9:%.*]] = shl i64 [[INDEX]], 8
-; RV64-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
-; RV64-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP11]], i64 256, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]]
+; RV64-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[INDEX]], 8
+; RV64-NEXT:    [[TMP9:%.*]] = getelementptr nuw i8, ptr [[B]], i64 [[TMP7]]
+; RV64-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP9]], i64 256, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]]
 ; RV64-NEXT:    [[TMP17:%.*]] = sitofp <vscale x 2 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 2 x double>
 ; RV64-NEXT:    [[TMP18:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_GATHER6]], [[TMP17]]
-; RV64-NEXT:    [[TMP12:%.*]] = shl i64 [[INDEX]], 7
-; RV64-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP12]]
-; RV64-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2f64.p0.i64(<vscale x 2 x double> [[TMP18]], ptr align 8 [[TMP13]], i64 128, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
+; RV64-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[INDEX]], 7
+; RV64-NEXT:    [[TMP11:%.*]] = getelementptr nuw i8, ptr [[A]], i64 [[TMP12]]
+; RV64-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2f64.p0.i64(<vscale x 2 x double> [[TMP18]], ptr align 8 [[TMP11]], i64 128, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; RV64-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP10]] to i64
 ; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP8]], [[INDEX]]
 ; RV64-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]

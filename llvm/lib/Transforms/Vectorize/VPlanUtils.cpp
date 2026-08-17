@@ -339,6 +339,49 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   return PSE.getPredicatedSCEV(Expr);
 }
 
+std::optional<std::tuple<const SCEV *, const SCEV *, SCEVNoWrapFlags>>
+vputils::getStrideMultiple(const VPValue *Ptr, PredicatedScalarEvolution &PSE,
+                           const Loop &L, Type *AccessTy) {
+  assert(Ptr->getScalarType()->isPointerTy() && "Ptr must be pointer type");
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
+  if (isa<SCEVCouldNotCompute>(PtrSCEV))
+    return std::nullopt;
+  const SCEV *PointerBase = SE.getPointerBase(PtrSCEV);
+  const SCEV *StrideExpr = SE.removePointerBase(PtrSCEV);
+  const APInt *MultiplierC;
+  Type *StrideTy = StrideExpr->getType();
+  APInt One(StrideTy->getIntegerBitWidth(), 1);
+  if (!match(StrideExpr,
+             m_scev_Mul(m_scev_APInt(MultiplierC),
+                        m_scev_IntegralCastOrSelf(m_SCEV(StrideExpr)))))
+    MultiplierC = &One;
+  const SCEV *Start;
+  const SCEV *Step;
+  if (!match(StrideExpr, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
+                                             m_SpecificLoop(&L))))
+    return std::nullopt;
+  SCEVNoWrapFlags NWFlags = cast<SCEVAddRecExpr>(StrideExpr)->getNoWrapFlags();
+  TypeSize AllocSz = TypeSize::getFixed(1);
+  if (AccessTy) {
+    const DataLayout &DL = SE.getDataLayout();
+    AllocSz = DL.getTypeAllocSize(AccessTy);
+    if (AllocSz.isScalable())
+      return std::nullopt;
+    const APInt *StepC;
+    if (!match(Step, m_scev_APInt(StepC)) ||
+        StepC->sext(MultiplierC->getBitWidth()).srem(AllocSz) != 0)
+      return std::nullopt;
+    return std::make_tuple(
+        SE.getAddExpr(PointerBase, SE.getNoopOrSignExtend(Start, StrideTy)),
+        SE.getConstant(StepC->sext(MultiplierC->getBitWidth()).sdiv(AllocSz)),
+        NWFlags);
+  }
+  return std::make_tuple(
+      SE.getAddExpr(PointerBase, SE.getNoopOrSignExtend(Start, StrideTy)),
+      SE.getNoopOrSignExtend(Step, StrideTy), NWFlags);
+}
+
 bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
                                    const Loop *L) {
   // If address is an SCEVAddExpr, we require that all operands must be either
