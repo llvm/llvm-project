@@ -347,6 +347,24 @@ private:
   // of BlockRPONumber prior to accessing the contents of BlockRPONumber.
   bool InvalidBlockRPONumbers = true;
 
+  // A pair of instructions with the same value number to be hoisted and merged,
+  // together with their respective hoist barriers. A pair of insructions can be
+  // hoisted iff both their barriers (if not null) are hoisted as well. The
+  // `WeakVH` is used to track when the barrier instruction itself is hoisted.
+  struct HoistPair {
+    Instruction *ThenI = nullptr;
+    Instruction *ThenB = nullptr;
+    Instruction *ElseI = nullptr;
+    WeakVH ElseB = nullptr;
+  };
+
+  /// A mapping from value numbers to a pair of instructions. This map
+  /// stores pairs of instructions with the same value number, from two blocks
+  /// having a single common predecessor, for the duration of a single top level
+  /// iteration in `performHoist`.
+  using HoistMap = DenseMap<uint32_t, HoistPair>;
+  HoistMap HoistPairs;
+
   using LoadDepVect = SmallVector<NonLocalDepResult, 64>;
   using AvailValInBlkVect = SmallVector<AvailableValueInBlock, 64>;
   using UnavailBlkVect = SmallVector<BasicBlock *, 64>;
@@ -497,6 +515,14 @@ private:
   bool performScalarPRE(Instruction *I);
   bool performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
                                  BasicBlock *Curr, unsigned int ValNo);
+
+  void collectHoistCandidates(BasicBlock *BB);
+  void matchHoistCandidates(BasicBlock *BB);
+  void replaceInstruction(Instruction *I, Instruction *Repl);
+  std::pair<bool, bool> hoistPair(BasicBlock *DestBB, BasicBlock *ThenBB,
+                                  BasicBlock *ElseBB, Instruction *ThenI);
+  bool performHoist(Function &F);
+
   Value *findLeader(const BasicBlock *BB, uint32_t Num);
   void cleanupGlobalSets();
   void removeInstruction(Instruction *I);
