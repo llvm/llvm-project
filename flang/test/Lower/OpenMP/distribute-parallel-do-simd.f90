@@ -1,10 +1,10 @@
 ! This test checks lowering of OpenMP DISTRIBUTE PARALLEL DO SIMD composite
 ! constructs.
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
-! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
-! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,OPENMP52
-! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,OPENMP52
+! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK
 
 ! CHECK-LABEL: func.func @_QPdistribute_parallel_do_simd_num_threads(
 subroutine distribute_parallel_do_simd_num_threads()
@@ -13,8 +13,7 @@ subroutine distribute_parallel_do_simd_num_threads()
   ! CHECK:      omp.parallel num_threads({{.*}}) {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
+  ! CHECK-NEXT: omp.simd private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd num_threads(10)
   do index_ = 1, 10
@@ -31,8 +30,7 @@ subroutine distribute_parallel_do_simd_dist_schedule()
   ! CHECK:      omp.parallel  {
   ! CHECK:      omp.distribute dist_schedule_static dist_schedule_chunk_size({{.*}}) {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
+  ! CHECK-NEXT: omp.simd private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd dist_schedule(static, 4)
   do index_ = 1, 10
@@ -49,8 +47,7 @@ subroutine distribute_parallel_do_simd_schedule()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop schedule(static = {{.*}}) {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
+  ! CHECK-NEXT: omp.simd private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd schedule(static, 4)
   do index_ = 1, 10
@@ -67,8 +64,7 @@ subroutine distribute_parallel_do_simd_simdlen()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) simdlen(4) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) simdlen(4) {
+  ! CHECK-NEXT: omp.simd simdlen(4) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd simdlen(4)
   do index_ = 1, 10
@@ -92,10 +88,7 @@ subroutine distribute_parallel_do_simd_private()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear(%{{.*}}) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
-  ! DEFAULT-SAME:                  : !fir.ref<i64>) {
-  ! OPENMP52-NEXT: omp.simd linear(val(%{{.*}})) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
-  ! OPENMP52-SAME:                  : !fir.ref<i64>) {
+  ! CHECK-NEXT: omp.simd private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]], {{.*}}) {
   ! CHECK-NEXT: omp.loop_nest
   ! CHECK:      %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]
   !$omp distribute parallel do simd private(x)
@@ -120,29 +113,11 @@ integer :: i,j
 ! CHECK:                   omp.wsloop {
 ! CHECK:                     omp.simd private({{.*}}) {
 ! CHECK:                       omp.loop_nest (%[[I_IV:.*]], %[[J_IV:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) collapse(2) {
-! CHECK:                         %[[Y_MAX_PRIV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}y_max"}
-
-! CHECK:                         %[[I_UB:.*]] = fir.load %[[X_MAX_MAPPED]]#0 : !fir.ref<i32>
-! CHECK:                         %[[I_STEP:.*]] = arith.constant 1 : i32
-! CHECK:                         %[[J_UB:.*]] = fir.load %[[Y_MAX_PRIV]]#0 : !fir.ref<i32>
-! CHECK:                         %[[J_STEP:.*]] = arith.constant 1 : i32
-
-! CHECK:                         %[[VAL_55:.*]] = arith.addi %[[I_IV]], %[[I_STEP]] : i32
-! CHECK:                         %[[VAL_56:.*]] = arith.constant 0 : i32
-! CHECK:                         %[[VAL_57:.*]] = arith.cmpi slt, %[[I_STEP]], %[[VAL_56]] : i32
-! CHECK:                         %[[VAL_58:.*]] = arith.cmpi slt, %[[VAL_55]], %[[I_UB]] : i32
-! CHECK:                         %[[VAL_59:.*]] = arith.cmpi sgt, %[[VAL_55]], %[[I_UB]] : i32
-! CHECK:                         %[[VAL_60:.*]] = arith.select %[[VAL_57]], %[[VAL_58]], %[[VAL_59]] : i1
-
-! CHECK:                         %[[VAL_61:.*]] = arith.addi %[[J_IV]], %[[J_STEP]] : i32
-! CHECK:                         %[[VAL_62:.*]] = arith.constant 0 : i32
-! CHECK:                         %[[VAL_63:.*]] = arith.cmpi slt, %[[J_STEP]], %[[VAL_62]] : i32
-! CHECK:                         %[[VAL_64:.*]] = arith.cmpi slt, %[[VAL_61]], %[[J_UB]] : i32
-! CHECK:                         %[[VAL_65:.*]] = arith.cmpi sgt, %[[VAL_61]], %[[J_UB]] : i32
-! CHECK:                         %[[VAL_66:.*]] = arith.select %[[VAL_63]], %[[VAL_64]], %[[VAL_65]] : i1
-
-! CHECK:                         %[[LASTPRIV_CMP:.*]] = arith.andi %[[VAL_60]], %[[VAL_66]] : i1
-! CHECK:                         fir.if %[[LASTPRIV_CMP]] {
+! CHECK:                        %[[I_IV_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_cond_in_composite_constructEi"} {{.*}})
+! CHECK:                        %[[J_IV_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_cond_in_composite_constructEj"} {{.*}})
+! CHECK:                        hlfir.assign %[[I_IV]] to %[[I_IV_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK:                        hlfir.assign %[[J_IV]] to %[[J_IV_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK:                        omp.yield
 
 !$omp target teams distribute parallel do simd collapse(2) private(y_max)
   do i=x_min,x_max
