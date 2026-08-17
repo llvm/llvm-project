@@ -1,5 +1,4 @@
 //===------- VectorCombine.cpp - Optimize partial vector operations -------===//
-
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -2202,8 +2201,8 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     if (ScalarIdx.isUnsafe())
       return false;
 
-    auto GEPIndex = getScalarizedGEPIndexInfo(VecTy, UI->getIndexOperand(),
-                                              LI->getPointerOperandType(), *DL);
+    IntegerType *GEPIndex = getScalarizedGEPIndexInfo(
+        VecTy, UI->getIndexOperand(), LI->getPointerOperandType(), *DL);
     if (!GEPIndex) {
       ScalarIdx.discard();
       return false;
