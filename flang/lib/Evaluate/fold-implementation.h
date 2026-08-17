@@ -2309,8 +2309,8 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
           using IntType = typename T::Scalar::Word;
           auto intNumerator{folded->first.ToInteger()};
           isCanonicalNaNOrInf = intNumerator.flags == RealFlags{} &&
-              intNumerator.value >= IntType{-1, 16} &&
-              intNumerator.value <= IntType{1, 16};
+              intNumerator.value >= IntType{16, -1} &&
+              intNumerator.value <= IntType{16, 1};
         }
       }
       if (!isCanonicalNaNOrInf) {
