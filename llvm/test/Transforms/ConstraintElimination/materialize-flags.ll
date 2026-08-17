@@ -74,7 +74,7 @@ define i32 @sub_nuw_relational(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
@@ -101,7 +101,7 @@ define i32 @sub_nuw_transitive(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i32 [[B]], [[C]]
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[BB_2:.*]], label %[[EXIT]]
 ; CHECK:       [[BB_2]]:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A]], [[C]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[A]], [[C]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0

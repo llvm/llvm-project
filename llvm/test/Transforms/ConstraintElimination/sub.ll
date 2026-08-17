@@ -253,7 +253,7 @@ define i1 @sub_no_wrap_flags_ule(i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @use(i1 [[C_NEG]])
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ule i8 [[B]], [[A]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
