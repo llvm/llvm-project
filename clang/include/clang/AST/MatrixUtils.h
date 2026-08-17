@@ -18,15 +18,34 @@
 #include "clang/Basic/LangOptions.h"
 
 namespace clang {
+inline std::optional<HLSLMatrixLayoutType::LayoutKind>
+getHLSLMatrixLayout(QualType T) {
+  SplitQualType Cur = T.split();
+  while (Cur.Ty) {
+    if (const auto *LayoutTy = dyn_cast<HLSLMatrixLayoutType>(Cur.Ty))
+      return LayoutTy->getLayout();
+
+    if (const auto *ArrayTy = dyn_cast<ArrayType>(Cur.Ty)) {
+      Cur = ArrayTy->getElementType().split();
+      continue;
+    }
+
+    SplitQualType Desugared = Cur.getSingleStepDesugaredType();
+    if (Desugared == Cur)
+      return std::nullopt;
+    Cur = Desugared;
+  }
+  return std::nullopt;
+}
+
 /// Returns true if matrices of \p T should be laid out in row-major order.
 ///
-/// An explicit layout stored on the matrix type takes precedence over the
+/// In HLSL mode, explicit layout metadata takes precedence over the
 /// `-fmatrix-memory-layout=` default carried in \p LangOpts.
 inline bool isMatrixRowMajor(const LangOptions &LangOpts, QualType T) {
-  if (LangOpts.HLSL && !T.isNull())
-    if (const auto *MT = T->getAs<ConstantMatrixType>())
-      if (auto Layout = MT->getLayout())
-        return *Layout == MatrixType::LayoutKind::RowMajor;
+  if (LangOpts.HLSL)
+    if (auto Layout = getHLSLMatrixLayout(T))
+      return *Layout == HLSLMatrixLayoutType::LayoutKind::RowMajor;
   return LangOpts.getDefaultMatrixMemoryLayout() ==
          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
 }

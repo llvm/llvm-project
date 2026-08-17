@@ -7720,6 +7720,10 @@ void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocReader::VisitHLSLMatrixLayoutTypeLoc(HLSLMatrixLayoutTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocReader::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
   TL.setAttrLoc(readSourceLocation());
 }

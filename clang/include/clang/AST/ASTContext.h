@@ -296,6 +296,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable llvm::FoldingSet<HLSLMatrixLayoutType> HLSLMatrixLayoutTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
@@ -1867,17 +1868,14 @@ public:
   ///
   /// \pre \p ElementType must be a valid matrix element type (see
   /// MatrixType::isValidElementType).
-  QualType getConstantMatrixType(
-      QualType ElementType, unsigned NumRows, unsigned NumColumns,
-      std::optional<MatrixType::LayoutKind> Layout = std::nullopt) const;
+  QualType getConstantMatrixType(QualType ElementType, unsigned NumRows,
+                                 unsigned NumColumns) const;
 
   /// Return the unique reference to the matrix type of the specified element
   /// type and size
   QualType getDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,
                                        Expr *ColumnExpr,
                                        SourceLocation AttrLoc) const;
-  QualType getMatrixTypeWithLayout(QualType T,
-                                   MatrixType::LayoutKind Layout) const;
 
   QualType getDependentAddressSpaceType(QualType PointeeType,
                                         Expr *AddrSpaceExpr,
@@ -2013,6 +2011,10 @@ public:
 
   QualType getAttributedType(const Attr *attr, QualType modifiedType,
                              QualType equivalentType) const;
+
+  QualType
+  getHLSLMatrixLayoutType(QualType underlyingType,
+                          HLSLMatrixLayoutType::LayoutKind layout) const;
 
   QualType getAttributedType(NullabilityKind nullability, QualType modifiedType,
                              QualType equivalentType) const;

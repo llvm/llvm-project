@@ -3771,9 +3771,6 @@ void MicrosoftCXXNameMangler::mangleType(const ConstantMatrixType *T,
 
   Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumRows()));
   Extra.mangleIntegerLiteral(llvm::APSInt::getUnsigned(T->getNumColumns()));
-  if (std::optional<MatrixType::LayoutKind> Layout = T->getLayout())
-    Extra.mangleIntegerLiteral(
-        llvm::APSInt::getUnsigned(static_cast<unsigned>(*Layout) + 1));
 
   mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
 }

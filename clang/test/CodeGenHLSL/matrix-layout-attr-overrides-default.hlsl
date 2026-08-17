@@ -19,7 +19,7 @@
 export float subscript_rm(int row, int col, row_major float2x3 m) {
   return m[row][col];
 }
-// CHECK-LABEL: define {{.*}} float @_Z12subscript_rmiiu11matrix_typeILm2ELm3ELm1EfE
+// CHECK-LABEL: define {{.*}} float @_Z12subscript_rmiiu11matrix_typeILm2ELm3EfE
 // CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
 // CHECK: [[COL:%.*]] = load i32, ptr %col.addr
 // CHECK: [[OFFSET:%.*]] = mul i32 [[ROW]], 3
@@ -32,7 +32,7 @@ export float subscript_rm(int row, int col, row_major float2x3 m) {
 export float subscript_cm(int row, int col, column_major float2x3 m) {
   return m[row][col];
 }
-// CHECK-LABEL: define {{.*}} float @_Z12subscript_cmiiu11matrix_typeILm2ELm3ELm2EfE
+// CHECK-LABEL: define {{.*}} float @_Z12subscript_cmiiu11matrix_typeILm2ELm3EfE
 // CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
 // CHECK: [[COL:%.*]] = load i32, ptr %col.addr
 // CHECK: [[OFFSET:%.*]] = mul i32 [[COL]], 2
@@ -49,7 +49,7 @@ export float subscript_cm(int row, int col, column_major float2x3 m) {
 export float3 row_extract_rm(int row, row_major float2x3 m) {
   return m[row];
 }
-// CHECK-LABEL: define {{.*}} <3 x float> @_Z14row_extract_rmiu11matrix_typeILm2ELm3ELm1EfE
+// CHECK-LABEL: define {{.*}} <3 x float> @_Z14row_extract_rmiu11matrix_typeILm2ELm3EfE
 // CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
 // CHECK: [[ROW_OFFSET0:%.*]] = mul i32 [[ROW]], 3
 // CHECK: add i32 [[ROW_OFFSET0]], 0
@@ -64,7 +64,7 @@ export float3 row_extract_rm(int row, row_major float2x3 m) {
 export float3 row_extract_cm(int row, column_major float2x3 m) {
   return m[row];
 }
-// CHECK-LABEL: define {{.*}} <3 x float> @_Z14row_extract_cmiu11matrix_typeILm2ELm3ELm2EfE
+// CHECK-LABEL: define {{.*}} <3 x float> @_Z14row_extract_cmiu11matrix_typeILm2ELm3EfE
 // CHECK: [[ROW:%.*]] = load i32, ptr %row.addr
 // CHECK: add i32 0, [[ROW]]
 // CHECK: add i32 2, [[ROW]]
@@ -75,19 +75,15 @@ export float3 row_extract_cm(int row, column_major float2x3 m) {
 // before the column-major matrix.multiply intrinsic.
 // -----------------------------------------------------------------------------
 export float3 vec_mat_rm(float2 v, row_major float2x3 m) { return mul(v, m); }
-// CHECK-LABEL: define {{.*}} <3 x float> @_Z10vec_mat_rmDv2_fu11matrix_typeILm2ELm3ELm1EfE
-// COLMAJOR: [[T:%.*]] = shufflevector <6 x float> %{{.*}}, <6 x float> poison, <6 x i32> <i32 0, i32 3, i32 1, i32 4, i32 2, i32 5>
-// ROWMAJOR: [[S:%.*]] = shufflevector <6 x float> %{{.*}}, <6 x float> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-// ROWMAJOR: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[S]], i32 3, i32 2)
+// CHECK-LABEL: define {{.*}} <3 x float> @_Z10vec_mat_rmDv2_fu11matrix_typeILm2ELm3EfE
+// CHECK: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
 // CHECK: call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %{{.*}}, <6 x float> [[T]], i32 1, i32 2, i32 3)
 
 // Column-major operand: no transpose is inserted before matrix.multiply.
 export float3 vec_mat_cm(float2 v, column_major float2x3 m) { return mul(v, m); }
-// CHECK-LABEL: define {{.*}} <3 x float> @_Z10vec_mat_cmDv2_fu11matrix_typeILm2ELm3ELm2EfE
-// COLMAJOR: [[T:%.*]] = shufflevector <6 x float> %{{.*}}, <6 x float> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-// ROWMAJOR: [[S:%.*]] = shufflevector <6 x float> %{{.*}}, <6 x float> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-// ROWMAJOR: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[S]], i32 3, i32 2)
-// CHECK: call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %{{.*}}, <6 x float> [[T]], i32 1, i32 2, i32 3)
+// CHECK-LABEL: define {{.*}} <3 x float> @_Z10vec_mat_cmDv2_fu11matrix_typeILm2ELm3EfE
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: call {{.*}} <3 x float> @llvm.matrix.multiply.v3f32.v2f32.v6f32(<2 x float> %{{.*}}, <6 x float> %{{.*}}, i32 1, i32 2, i32 3)
 
 // -----------------------------------------------------------------------------
 // __builtin_hlsl_mul (matrix * matrix): mixed per-decl layouts cause a
@@ -98,29 +94,17 @@ export float3 vec_mat_cm(float2 v, column_major float2x3 m) { return mul(v, m); 
 export float2x2 mat_mat_rm_cm(row_major float2x3 a, column_major float3x2 b) { return mul(a, b); }
 // CHECK-LABEL: define {{.*}} <4 x float> @_Z13mat_mat_rm_cm
 // CHECK: [[AMat:%.*]] = load <6 x float>, ptr %a.addr, align 4
-// COLMAJOR: [[A:%.*]] = shufflevector <6 x float> [[AMat]], {{.*}} <i32 0, i32 3, i32 1, i32 4, i32 2, i32 5>
-// ROWMAJOR: [[A:%.*]] = shufflevector <6 x float> [[AMat]], {{.*}} <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 // CHECK: [[BMat:%.*]] = load <6 x float>, ptr %b.addr, align 4
-// COLMAJOR: [[B:%.*]] = shufflevector <6 x float> [[BMat]], {{.*}} <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-// COLMAJOR: call {{.*}} @llvm.matrix.multiply{{.*}}(<6 x float> [[A]], <6 x float> [[B]],
-// ROWMAJOR: [[B:%.*]] = shufflevector <6 x float> [[BMat]], {{.*}} <i32 0, i32 3, i32 1, i32 4, i32 2, i32 5>
-// ROWMAJOR: [[AT:%.*]] = call {{.*}} @llvm.matrix.transpose{{.*}}(<6 x float> [[A]], i32 3, i32 2)
-// ROWMAJOR: [[BT:%.*]] = call {{.*}} @llvm.matrix.transpose{{.*}}(<6 x float> [[B]], i32 2, i32 3)
-// ROWMAJOR: call {{.*}} @llvm.matrix.multiply{{.*}}(<6 x float> [[AT]], <6 x float> [[BT]],
+// CHECK: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[AMat]], i32 3, i32 2)
+// CHECK: call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> [[T]], <6 x float> [[BMat]], i32 2, i32 3, i32 2)
 
 // LHS column-major, RHS row-major: only RHS is transposed.
 export float2x2 mat_mat_cm_rm(column_major float2x3 a, row_major float3x2 b) { return mul(a, b); }
 // CHECK-LABEL: define {{.*}} <4 x float> @_Z13mat_mat_cm_rm
 // CHECK: [[AMat:%.*]] = load <6 x float>, ptr %a.addr, align 4
-// COLMAJOR: [[A:%.*]] = shufflevector <6 x float> [[AMat]], {{.*}} <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-// ROWMAJOR: [[A:%.*]] = shufflevector <6 x float> [[AMat]], {{.*}} <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
 // CHECK: [[BMat:%.*]] = load <6 x float>, ptr %b.addr, align 4
-// COLMAJOR: [[B:%.*]] = shufflevector <6 x float> [[BMat]], {{.*}} <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-// COLMAJOR: call {{.*}} @llvm.matrix.multiply{{.*}}(<6 x float> [[A]], <6 x float> [[B]],
-// ROWMAJOR: [[B:%.*]] = shufflevector <6 x float> [[BMat]], {{.*}} <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-// ROWMAJOR: [[AT:%.*]] = call {{.*}} @llvm.matrix.transpose{{.*}}(<6 x float> [[A]], i32 3, i32 2)
-// ROWMAJOR: [[BT:%.*]] = call {{.*}} @llvm.matrix.transpose{{.*}}(<6 x float> [[B]], i32 2, i32 3)
-// ROWMAJOR: call {{.*}} @llvm.matrix.multiply{{.*}}(<6 x float> [[AT]], <6 x float> [[BT]],
+// CHECK: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[BMat]], i32 2, i32 3)
+// CHECK: call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> [[AMat]], <6 x float> [[T]], i32 2, i32 3, i32 2)
 
 // Destination layout: the result is column-major, so no transpose is needed.
 export column_major float2x2 mat_mat_dst_cm(column_major float2x3 a, column_major float3x2 b) { return mul(a, b); }
@@ -137,46 +121,42 @@ export row_major float2x2 mat_mat_dst_rm(column_major float2x3 a, column_major f
 
 // Row-major source -> column-major destination: bits already transposed, no-op.
 export column_major float3x2 transpose_rm_to_cm(row_major float2x3 m) { return transpose(m); }
-// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_rm_to_cmu11matrix_typeILm2ELm3ELm1EfE
-// COLMAJOR: [[S:%.*]] = shufflevector <6 x float> %{{.*}}, {{.*}} <i32 0, i32 3, i32 1, i32 4, i32 2, i32 5>
-// COLMAJOR: call {{.*}} @llvm.matrix.transpose{{.*}}(<6 x float> [[S]], i32 2, i32 3)
-// ROWMAJOR-NOT: @llvm.matrix.transpose
-// ROWMAJOR: ret <6 x float>
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_rm_to_cmu11matrix_typeILm2ELm3EfE
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <6 x float>
 
 // Column-major source -> row-major destination: bits already transposed, no-op.
 export row_major float3x2 transpose_cm_to_rm(column_major float2x3 m) { return transpose(m); }
-// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_cm_to_rmu11matrix_typeILm2ELm3ELm2EfE
-// COLMAJOR-NOT: @llvm.matrix.transpose
-// COLMAJOR: ret <6 x float>
-// ROWMAJOR: [[S:%.*]] = shufflevector <6 x float> %{{.*}}, {{.*}} <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-// ROWMAJOR: call {{.*}} @llvm.matrix.transpose{{.*}}(<6 x float> [[S]], i32 3, i32 2)
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_cm_to_rmu11matrix_typeILm2ELm3EfE
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <6 x float>
 
 // Row-major source -> row-major destination: real transpose, dims swapped.
 export row_major float3x2 transpose_rm_to_rm(row_major float2x3 m) { return transpose(m); }
-// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_rm_to_rmu11matrix_typeILm2ELm3ELm1EfE
-// COLMAJOR-NOT: @llvm.matrix.transpose
-// ROWMAJOR: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_rm_to_rmu11matrix_typeILm2ELm3EfE
+// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
 
 // Column-major source -> column-major destination: real transpose, natural dims.
 export column_major float3x2 transpose_cm_to_cm(column_major float2x3 m) { return transpose(m); }
-// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_cm_to_cmu11matrix_typeILm2ELm3ELm2EfE
-// COLMAJOR: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
-// ROWMAJOR-NOT: @llvm.matrix.transpose
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_cm_to_cmu11matrix_typeILm2ELm3EfE
+// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
 
 // Default-layout return type: the TU `-fmatrix-memory-layout=` default 
 // flips between a real transpose and a no-op depending on the default.
 export float3x2 transpose_rm(row_major float2x3 m) { return transpose(m); }
-// CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_rmu11matrix_typeILm2ELm3ELm1EfE
-// COLMAJOR: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_rmu11matrix_typeILm2ELm3EfE
+// COLMAJOR-NOT: @llvm.matrix.transpose
+// COLMAJOR: ret <6 x float>
 // ROWMAJOR: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
 
 
 // column-major default: src/dst match -> real transpose, natural dims.
 // row-major default: src/dst differ -> bits already transposed, no-op.
 export float3x2 transpose_cm(column_major float2x3 m) { return transpose(m); }
-// CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_cmu11matrix_typeILm2ELm3ELm2EfE
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_cmu11matrix_typeILm2ELm3EfE
 // COLMAJOR: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
-// ROWMAJOR: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
+// ROWMAJOR-NOT: @llvm.matrix.transpose
+// ROWMAJOR: ret <6 x float>
 
 // -----------------------------------------------------------------------------
 // CK_HLSLMatrixTruncation: the shuffle mask that picks elements from the
@@ -190,12 +170,12 @@ typedef column_major float3x3 CM33;
 
 // Row-major source 3x2 -> row-major dest 2x2: flat row-major mask is {0,1,2,3}.
 export row_major float2x2 truncate_rm(row_major float3x2 m) { return (RM22)m; }
-// CHECK-LABEL: define {{.*}} <4 x float> @_Z11truncate_rmu11matrix_typeILm3ELm2ELm1EfE
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z11truncate_rmu11matrix_typeILm3ELm2EfE
 // CHECK: shufflevector <6 x float> %{{.*}}, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 
 // Column-major source 3x2 -> column-major dest 2x2: flat column-major mask is {0,1,3,4}.
 export column_major float2x2 truncate_cm(column_major float3x2 m) { return (CM22)m; }
-// CHECK-LABEL: define {{.*}} <4 x float> @_Z11truncate_cmu11matrix_typeILm3ELm2ELm2EfE
+// CHECK-LABEL: define {{.*}} <4 x float> @_Z11truncate_cmu11matrix_typeILm3ELm2EfE
 // CHECK: shufflevector <6 x float> %{{.*}}, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 4>
 
 // -----------------------------------------------------------------------------
@@ -212,7 +192,7 @@ export column_major float2x2 truncate_cm(column_major float3x2 m) { return (CM22
 //   (1,0)->mask[1]=4  (1,1)->mask[4]=5  (1,2)->mask[7]=6
 //   (2,0)->mask[2]=8  (2,1)->mask[5]=9  (2,2)->mask[8]=10
 export column_major float3x3 truncate_rm_to_cm(row_major float3x4 m) { return (CM33)m; }
-// CHECK-LABEL: define {{.*}} <9 x float> @_Z17truncate_rm_to_cmu11matrix_typeILm3ELm4ELm1EfE
+// CHECK-LABEL: define {{.*}} <9 x float> @_Z17truncate_rm_to_cmu11matrix_typeILm3ELm4EfE
 // CHECK: shufflevector <12 x float> %{{.*}}, <12 x float> poison, <9 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10>
 
 // Column-major src 3x4 -> row-major dst 3x3.
@@ -221,7 +201,7 @@ export column_major float3x3 truncate_rm_to_cm(row_major float3x4 m) { return (C
 //   (1,0)->mask[3]=1  (1,1)->mask[4]=4  (1,2)->mask[5]=7
 //   (2,0)->mask[6]=2  (2,1)->mask[7]=5  (2,2)->mask[8]=8
 export row_major float3x3 truncate_cm_to_rm(column_major float3x4 m) { return (RM33)m; }
-// CHECK-LABEL: define {{.*}} <9 x float> @_Z17truncate_cm_to_rmu11matrix_typeILm3ELm4ELm2EfE
+// CHECK-LABEL: define {{.*}} <9 x float> @_Z17truncate_cm_to_rmu11matrix_typeILm3ELm4EfE
 // CHECK: shufflevector <12 x float> %{{.*}}, <12 x float> poison, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
 
 // -----------------------------------------------------------------------------

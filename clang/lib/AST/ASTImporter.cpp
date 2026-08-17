@@ -2025,6 +2025,17 @@ ExpectedType clang::ASTNodeImporter::VisitBTFTagAttributedType(
                                                          ToWrappedType);
 }
 
+ExpectedType clang::ASTNodeImporter::VisitHLSLMatrixLayoutType(
+    const clang::HLSLMatrixLayoutType *T) {
+  Error Err = Error::success();
+  QualType ToUnderlyingType = importChecked(Err, T->getUnderlyingType());
+  if (Err)
+    return std::move(Err);
+
+  return Importer.getToContext().getHLSLMatrixLayoutType(ToUnderlyingType,
+                                                         T->getLayout());
+}
+
 ExpectedType clang::ASTNodeImporter::VisitOverflowBehaviorType(
     const clang::OverflowBehaviorType *T) {
   Error Err = Error::success();
@@ -2094,7 +2105,7 @@ ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
     return ToElementTypeOrErr.takeError();
 
   return Importer.getToContext().getConstantMatrixType(
-      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns(), T->getLayout());
+      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns());
 }
 
 ExpectedType clang::ASTNodeImporter::VisitDependentAddressSpaceType(

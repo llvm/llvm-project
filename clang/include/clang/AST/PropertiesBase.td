@@ -130,13 +130,6 @@ def LValuePathSerializationHelper :
     PropertyType<"APValue::LValuePathSerializationHelper"> {
   let BufferElementTypes = [ LValuePathEntry ];
 }
-def MatrixLayoutKind : EnumPropertyType<"MatrixType::LayoutKind"> {
-  let PackOptional =
-    "value.value_or(static_cast<MatrixType::LayoutKind>(2))";
-  let UnpackOptional =
-    "value == static_cast<MatrixType::LayoutKind>(2) ? std::nullopt : "
-    "std::optional<MatrixType::LayoutKind>(value)";
-}
 def NestedNameSpecifier : PropertyType<"NestedNameSpecifier">;
 def NestedNameSpecifierKind : EnumPropertyType<"NestedNameSpecifier::Kind">;
 def OverloadedOperatorKind : EnumPropertyType;

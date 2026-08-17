@@ -136,7 +136,8 @@ llvm::Type *HLSLBufferLayoutBuilder::layOutArray(const ConstantArrayType *AT) {
 llvm::Type *HLSLBufferLayoutBuilder::layOutMatrix(QualType Ty) {
   // ConvertTypeForMem already handles row/column-major layout and bool
   // promotion, producing [Count x <VecLen x EltTy>]. We just need to add
-  // cbuffer padding between the array elements.
+  // cbuffer padding between the array elements. Pass the sugared QualType so
+  // that the `row_major`/`column_major` orientation attribute is preserved.
   llvm::ArrayType *MemTy =
       cast<llvm::ArrayType>(CGM.getTypes().ConvertTypeForMem(Ty));
   return padArrayElements(MemTy->getElementType(), MemTy->getNumElements());

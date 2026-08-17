@@ -599,6 +599,10 @@ void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocWriter::VisitHLSLMatrixLayoutTypeLoc(HLSLMatrixLayoutTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocWriter::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
   addSourceLocation(TL.getAttrLoc());
 }

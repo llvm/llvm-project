@@ -44,33 +44,6 @@ column_major float4x4 Col2Row(row_major float4x4 M) {
 
 void bar(row_major float4x4 M, column_major float4x4 M2) {}
 
-void takes_default_layout(float2x2 M) {}
-
-float2x2 layout_conversions(row_major float2x2 RM,
-                            column_major float2x2 CM, bool SelectRM) {
-  takes_default_layout(RM);
-  takes_default_layout(CM);
-
-  float2x2 Result = RM;
-  Result = CM;
-  Result += RM;
-  Result -= CM;
-  Result *= RM;
-
-  float2x2 Sum = RM + CM;
-  float2x2 Difference = RM - CM;
-  float2x2 Product = RM * CM;
-  float2x2 MulProduct = mul(RM, CM);
-  return SelectRM ? RM : CM;
-}
-
-typedef float FLOAT;
-
-float2x2 common_matrix_element_sugar(row_major matrix<FLOAT, 2, 2> A,
-                                     row_major matrix<float, 2, 2> B) {
-  return A + B;
-}
-
 //Invalid: 
 // expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}
 void foo(column_major float4x4 mat, row_major int i) {}

@@ -1073,6 +1073,23 @@ public:
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 
+struct HLSLMatrixLayoutLocInfo {}; // Nothing.
+
+class HLSLMatrixLayoutTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, HLSLMatrixLayoutTypeLoc,
+                             HLSLMatrixLayoutType, HLSLMatrixLayoutLocInfo> {
+public:
+  TypeLoc getUnderlyingLoc() const { return getInnerTypeLoc(); }
+
+  SourceRange getLocalSourceRange() const { return {}; }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {}
+
+  unsigned getLocalDataSize() const { return 0; }
+
+  QualType getInnerType() const { return getTypePtr()->getUnderlyingType(); }
+};
+
 struct OverflowBehaviorLocInfo {
   SourceLocation AttrLoc;
 };

@@ -1170,6 +1170,9 @@ DEF_TRAVERSE_TYPE(LateParsedAttrType,
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(HLSLMatrixLayoutType,
+                  { TRY_TO(TraverseType(T->getUnderlyingType())); })
+
 DEF_TRAVERSE_TYPE(OverflowBehaviorType,
                   { TRY_TO(TraverseType(T->getUnderlyingType())); })
 
@@ -1530,6 +1533,9 @@ DEF_TRAVERSE_TYPELOC(LateParsedAttrType,
 
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
+
+DEF_TRAVERSE_TYPELOC(HLSLMatrixLayoutType,
+                     { TRY_TO(TraverseTypeLoc(TL.getUnderlyingLoc())); })
 
 DEF_TRAVERSE_TYPELOC(OverflowBehaviorType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })

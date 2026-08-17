@@ -85,6 +85,7 @@ def EnumType : TypeNode<TagType>;
 def InjectedClassNameType : TypeNode<TagType>, AlwaysDependent;
 def AttributedType : TypeNode<Type>, NeverCanonical;
 def BTFTagAttributedType : TypeNode<Type>, NeverCanonical;
+def HLSLMatrixLayoutType : TypeNode<Type>, NeverCanonical;
 def HLSLAttributedResourceType : TypeNode<Type>;
 def HLSLInlineSpirvType : TypeNode<Type>;
 def TemplateTypeParmType : TypeNode<Type>, AlwaysDependent;

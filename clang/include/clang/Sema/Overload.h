@@ -210,9 +210,6 @@ class Sema;
     /// HLSL matrix splat from scalar or boolean type.
     ICK_HLSL_Matrix_Splat,
 
-    /// HLSL conversion between matrix memory layouts.
-    ICK_HLSL_Matrix_Layout,
-
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
   };

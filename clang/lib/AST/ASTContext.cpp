@@ -4874,11 +4874,10 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
   return QualType(New, 0);
 }
 
-QualType ASTContext::getConstantMatrixType(
-    QualType ElementTy, unsigned NumRows, unsigned NumColumns,
-    std::optional<MatrixType::LayoutKind> Layout) const {
+QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
+                                           unsigned NumColumns) const {
   llvm::FoldingSetNodeID ID;
-  ConstantMatrixType::Profile(ID, ElementTy, NumRows, NumColumns, Layout,
+  ConstantMatrixType::Profile(ID, ElementTy, NumRows, NumColumns,
                               Type::ConstantMatrix);
 
   assert(MatrixType::isValidElementType(ElementTy, getLangOpts()) &&
@@ -4892,8 +4891,8 @@ QualType ASTContext::getConstantMatrixType(
 
   QualType Canonical;
   if (!ElementTy.isCanonical()) {
-    Canonical = getConstantMatrixType(getCanonicalType(ElementTy), NumRows,
-                                      NumColumns, Layout);
+    Canonical =
+        getConstantMatrixType(getCanonicalType(ElementTy), NumRows, NumColumns);
 
     ConstantMatrixType *NewIP = MatrixTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Matrix type shouldn't already exist in the map");
@@ -4901,7 +4900,7 @@ QualType ASTContext::getConstantMatrixType(
   }
 
   auto *New = new (*this, alignof(ConstantMatrixType))
-      ConstantMatrixType(ElementTy, NumRows, NumColumns, Canonical, Layout);
+      ConstantMatrixType(ElementTy, NumRows, NumColumns, Canonical);
   MatrixTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4946,37 +4945,6 @@ QualType ASTContext::getDependentSizedMatrixType(QualType ElementTy,
                                ColumnExpr, AttrLoc);
   Types.push_back(New);
   return QualType(New, 0);
-}
-
-QualType
-ASTContext::getMatrixTypeWithLayout(QualType T,
-                                    MatrixType::LayoutKind Layout) const {
-  Qualifiers Quals = T.getQualifiers();
-  const Type *Ty = T->getUnqualifiedDesugaredType();
-
-  if (const auto *MT = dyn_cast<ConstantMatrixType>(Ty))
-    return getQualifiedType(getConstantMatrixType(MT->getElementType(),
-                                                  MT->getNumRows(),
-                                                  MT->getNumColumns(), Layout),
-                            Quals);
-
-  // `row_major`/`column_major` are HLSL-only and only ever applied to a
-  // non-dependent type, so a ConstantArrayType (or its HLSL parameter-decayed
-  // ArrayParameterType subclass) is the only array kind that can wrap a
-  // matrix here: HLSL has no VLAs or incomplete data arrays, and dependent
-  // array bounds imply a dependent type, which is rejected before this point.
-  const auto *CAT = dyn_cast<ConstantArrayType>(Ty);
-  if (!CAT)
-    return T;
-
-  QualType Result = getConstantArrayType(
-      getMatrixTypeWithLayout(CAT->getElementType(), Layout), CAT->getSize(),
-      CAT->getSizeExpr(), CAT->getSizeModifier(),
-      CAT->getIndexTypeCVRQualifiers());
-  if (isa<ArrayParameterType>(CAT))
-    Result = getArrayParameterType(Result);
-
-  return getQualifiedType(Result, Quals);
 }
 
 QualType ASTContext::getDependentAddressSpaceType(QualType PointeeType,
@@ -5836,6 +5804,25 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
 QualType ASTContext::getAttributedType(const Attr *attr, QualType modifiedType,
                                        QualType equivalentType) const {
   return getAttributedType(attr->getKind(), modifiedType, equivalentType, attr);
+}
+
+QualType ASTContext::getHLSLMatrixLayoutType(
+    QualType UnderlyingType, HLSLMatrixLayoutType::LayoutKind Layout) const {
+  llvm::FoldingSetNodeID ID;
+  HLSLMatrixLayoutType::Profile(ID, UnderlyingType, Layout);
+
+  void *InsertPos = nullptr;
+  HLSLMatrixLayoutType *Ty =
+      HLSLMatrixLayoutTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Ty)
+    return QualType(Ty, 0);
+
+  QualType Canon = getCanonicalType(UnderlyingType);
+  Ty = new (*this, alignof(HLSLMatrixLayoutType))
+      HLSLMatrixLayoutType(Canon, UnderlyingType, Layout);
+  Types.push_back(Ty);
+  HLSLMatrixLayoutTypes.InsertNode(Ty, InsertPos);
+  return QualType(Ty, 0);
 }
 
 QualType ASTContext::getAttributedType(NullabilityKind nullability,
@@ -14637,10 +14624,8 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                *MY = cast<ConstantMatrixType>(Y);
     assert(MX->getNumRows() == MY->getNumRows());
     assert(MX->getNumColumns() == MY->getNumColumns());
-    assert(MX->getLayout() == MY->getLayout());
     return Ctx.getConstantMatrixType(getCommonElementType(Ctx, MX, MY),
-                                     MX->getNumRows(), MX->getNumColumns(),
-                                     MX->getLayout());
+                                     MX->getNumRows(), MX->getNumColumns());
   }
   case Type::DependentSizedMatrix: {
     const auto *MX = cast<DependentSizedMatrixType>(X),

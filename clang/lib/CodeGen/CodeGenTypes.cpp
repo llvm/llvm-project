@@ -102,6 +102,11 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
 /// But the size does need to be exactly right or else things like struct
 /// layout will break.
 llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
+  if (const auto *ArrayTy = dyn_cast<ConstantArrayType>(T.getTypePtr())) {
+    llvm::Type *ElementTy = ConvertTypeForMem(ArrayTy->getElementType());
+    return llvm::ArrayType::get(ElementTy, ArrayTy->getZExtSize());
+  }
+
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);

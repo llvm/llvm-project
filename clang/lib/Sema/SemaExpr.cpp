@@ -721,6 +721,11 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (T.hasQualifiers())
     T = T.getUnqualifiedType();
 
+  // Matrix layout describes the lvalue's memory representation. HLSL matrix
+  // prvalues use the canonical column-major register representation.
+  if (getLangOpts().HLSL && T->isConstantMatrixType())
+    T = Context.getCanonicalType(T);
+
   // Under the MS ABI, lock down the inheritance model now.
   if (T->isMemberPointerType() &&
       Context.getTargetInfo().getCXXABI().isMicrosoft())
@@ -13778,21 +13783,6 @@ QualType Sema::CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (Context.hasSameType(LHSType, RHSType))
     return Context.getCommonSugaredType(LHSType, RHSType);
-
-  if (const auto *LHSConstantMat = dyn_cast_or_null<ConstantMatrixType>(
-          LHSMatType)) {
-    const auto *RHSConstantMat =
-        dyn_cast_or_null<ConstantMatrixType>(RHSMatType);
-    if (RHSConstantMat &&
-        LHSConstantMat->getNumRows() == RHSConstantMat->getNumRows() &&
-        LHSConstantMat->getNumColumns() == RHSConstantMat->getNumColumns() &&
-        Context.hasSameUnqualifiedType(LHSConstantMat->getElementType(),
-                                       RHSConstantMat->getElementType())) {
-      RHS = tryConvertExprToType(RHS.get(), LHSType);
-      if (!RHS.isInvalid())
-        return LHSType;
-    }
-  }
 
   // Type conversion may change LHS/RHS. Keep copies to the original results, in
   // case we have to return InvalidOperands.

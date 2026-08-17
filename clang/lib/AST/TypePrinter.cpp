@@ -2175,6 +2175,16 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
   printAfter(T->getWrappedType(), OS);
 }
 
+void TypePrinter::printHLSLMatrixLayoutBefore(const HLSLMatrixLayoutType *T,
+                                              raw_ostream &OS) {
+  printBefore(T->getUnderlyingType(), OS);
+}
+
+void TypePrinter::printHLSLMatrixLayoutAfter(const HLSLMatrixLayoutType *T,
+                                             raw_ostream &OS) {
+  printAfter(T->getUnderlyingType(), OS);
+}
+
 void TypePrinter::printOverflowBehaviorBefore(const OverflowBehaviorType *T,
                                               raw_ostream &OS) {
   switch (T->getBehaviorKind()) {

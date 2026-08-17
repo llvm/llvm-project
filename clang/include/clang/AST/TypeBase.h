@@ -4449,16 +4449,9 @@ class MatrixType : public Type, public llvm::FoldingSetNode {
 protected:
   friend class ASTContext;
 
-public:
-  /// A matrix's explicit `row_major`/`column_major` orientation, if any was
-  /// spelled in source; absent means no explicit orientation was given.
-  enum class LayoutKind : uint8_t { RowMajor, ColumnMajor };
-
-private:
   /// The element type of the matrix.
   QualType ElementType;
 
-protected:
   MatrixType(QualType ElementTy, QualType CanonElementTy);
 
   MatrixType(TypeClass TypeClass, QualType ElementTy, QualType CanonElementTy,
@@ -4510,18 +4503,11 @@ protected:
   unsigned NumRows;
   unsigned NumColumns;
 
-  /// Only ConstantMatrixType has a layout; it isn't meaningful until the
-  /// matrix dimensions are concrete. Absent if no explicit orientation was
-  /// spelled in source.
-  std::optional<LayoutKind> Layout;
-
   ConstantMatrixType(QualType MatrixElementType, unsigned NRows,
-                     unsigned NColumns, QualType CanonElementType,
-                     std::optional<LayoutKind> Layout);
+                     unsigned NColumns, QualType CanonElementType);
 
   ConstantMatrixType(TypeClass typeClass, QualType MatrixType, unsigned NRows,
-                     unsigned NColumns, QualType CanonElementType,
-                     std::optional<LayoutKind> Layout);
+                     unsigned NColumns, QualType CanonElementType);
 
 public:
   /// Returns the number of rows in the matrix.
@@ -4529,8 +4515,6 @@ public:
 
   /// Returns the number of columns in the matrix.
   unsigned getNumColumns() const { return NumColumns; }
-
-  std::optional<LayoutKind> getLayout() const { return Layout; }
 
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
@@ -4577,17 +4561,16 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType(), getNumRows(), getNumColumns(), getLayout(),
+    Profile(ID, getElementType(), getNumRows(), getNumColumns(),
             getTypeClass());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ElementType,
                       unsigned NumRows, unsigned NumColumns,
-                      std::optional<LayoutKind> Layout, TypeClass TypeClass) {
+                      TypeClass TypeClass) {
     ID.AddPointer(ElementType.getAsOpaquePtr());
     ID.AddInteger(NumRows);
     ID.AddInteger(NumColumns);
-    ID.AddInteger(Layout ? llvm::to_underlying(*Layout) + 1 : 0);
     ID.AddInteger(TypeClass);
   }
 
@@ -6889,6 +6872,44 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == OverflowBehavior;
+  }
+};
+
+/// Semantic sugar recording the memory layout of an HLSL matrix while keeping
+/// the underlying matrix as the canonical value type.
+class HLSLMatrixLayoutType : public Type, public llvm::FoldingSetNode {
+public:
+  enum class LayoutKind : uint8_t { RowMajor, ColumnMajor };
+
+private:
+  friend class ASTContext;
+
+  QualType UnderlyingType;
+  LayoutKind Layout;
+
+  HLSLMatrixLayoutType(QualType Canon, QualType Underlying, LayoutKind Layout)
+      : Type(HLSLMatrixLayout, Canon, Underlying->getDependence()),
+        UnderlyingType(Underlying), Layout(Layout) {}
+
+public:
+  QualType getUnderlyingType() const { return UnderlyingType; }
+  LayoutKind getLayout() const { return Layout; }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return UnderlyingType; }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    Profile(ID, UnderlyingType, Layout);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Underlying,
+                      LayoutKind Layout) {
+    ID.AddPointer(Underlying.getAsOpaquePtr());
+    ID.AddInteger(static_cast<unsigned>(Layout));
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == HLSLMatrixLayout;
   }
 };
 

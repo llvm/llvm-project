@@ -5409,7 +5409,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
   case ICK_HLSL_Matrix_Splat:
-  case ICK_HLSL_Matrix_Layout:
     llvm_unreachable("Improper second standard conversion");
   }
 
@@ -5467,11 +5466,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                  .get();
       break;
     }
-    case ICK_HLSL_Matrix_Layout:
-      From = ImpCastExprToType(From, ToType, CK_HLSLMatrixTruncation,
-                               From->getValueKind())
-                 .get();
-      break;
     case ICK_Identity:
     default:
       llvm_unreachable("Improper element standard conversion");
@@ -6118,20 +6112,6 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     Diag(QuestionLoc, diag::err_wasm_table_conditional_expression)
         << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
     return QualType();
-  }
-
-  if (getLangOpts().HLSL) {
-    const auto *LMat = LTy->getAs<ConstantMatrixType>();
-    const auto *RMat = RTy->getAs<ConstantMatrixType>();
-    if (LMat && RMat && LMat->getNumRows() == RMat->getNumRows() &&
-        LMat->getNumColumns() == RMat->getNumColumns() &&
-        Context.hasSameUnqualifiedType(LMat->getElementType(),
-                                       RMat->getElementType())) {
-      RHS = tryConvertExprToType(RHS.get(), LTy);
-      if (RHS.isInvalid())
-        return QualType();
-      RTy = RHS.get()->getType();
-    }
   }
 
   // C++11 [expr.cond]p3

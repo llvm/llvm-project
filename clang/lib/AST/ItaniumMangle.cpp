@@ -4411,11 +4411,6 @@ void CXXNameMangler::mangleType(const ConstantMatrixType *T) {
   llvm::APSInt Columns(BitWidth);
   Columns = T->getNumColumns();
   mangleIntegerLiteral(ASTCtx.getSizeType(), Columns);
-  if (std::optional<MatrixType::LayoutKind> Layout = T->getLayout()) {
-    llvm::APSInt LayoutValue(BitWidth);
-    LayoutValue = static_cast<unsigned>(*Layout) + 1;
-    mangleIntegerLiteral(ASTCtx.getSizeType(), LayoutValue);
-  }
   mangleType(T->getElementType());
   Out << "E";
 }

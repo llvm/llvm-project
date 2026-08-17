@@ -3747,17 +3747,6 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
                           DeducedA.getAtomicUnqualifiedType()))
     return TemplateDeductionResult::Success;
 
-  if (S.getLangOpts().HLSL) {
-    const auto *AMatrix = A->getAs<ConstantMatrixType>();
-    const auto *DeducedMatrix = DeducedA->getAs<ConstantMatrixType>();
-    if (AMatrix && DeducedMatrix &&
-        AMatrix->getNumRows() == DeducedMatrix->getNumRows() &&
-        AMatrix->getNumColumns() == DeducedMatrix->getNumColumns() &&
-        Context.hasSameType(AMatrix->getElementType(),
-                            DeducedMatrix->getElementType()))
-      return TemplateDeductionResult::Success;
-  }
-
   // Strip off references on the argument types; they aren't needed for
   // the following checks.
   if (const ReferenceType *DeducedARef = DeducedA->getAs<ReferenceType>())

@@ -254,12 +254,9 @@ let Class = ConstantMatrixType in {
   def : Property<"numColumns", UInt32> {
     let Read = [{ node->getNumColumns() }];
   }
-  def : Property<"layout", Optional<MatrixLayoutKind>> {
-    let Read = [{ node->getLayout() }];
-  }
 
   def : Creator<[{
-    return ctx.getConstantMatrixType(elementType, numRows, numColumns, layout);
+    return ctx.getConstantMatrixType(elementType, numRows, numColumns);
   }]>;
 }
 
@@ -655,6 +652,21 @@ let Class = BTFTagAttributedType in {
 
   def : Creator<[{
     return ctx.getBTFTagAttributedType(attr, wrappedType);
+  }]>;
+}
+
+let Class = HLSLMatrixLayoutType in {
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->getUnderlyingType() }];
+  }
+  def : Property<"layout", UInt32> {
+    let Read = [{ static_cast<uint32_t>(node->getLayout()) }];
+  }
+
+  def : Creator<[{
+    return ctx.getHLSLMatrixLayoutType(
+        underlyingType,
+        static_cast<HLSLMatrixLayoutType::LayoutKind>(layout));
   }]>;
 }
 
