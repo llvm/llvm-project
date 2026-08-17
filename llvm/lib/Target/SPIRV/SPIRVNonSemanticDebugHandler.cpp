@@ -1193,6 +1193,11 @@ void SPIRVNonSemanticDebugHandler::beginInstruction(const MachineInstr *MI) {
   emitDebugLineForInstruction(MI);
 }
 
+static bool isMergeInstruction(unsigned Opcode) {
+  return Opcode == SPIRV::OpSelectionMerge || Opcode == SPIRV::OpLoopMerge ||
+         Opcode == SPIRV::OpLoopControlINTEL;
+}
+
 static bool isDebugLineTarget(const MachineInstr *MI,
                               SPIRV::ModuleAnalysisInfo &MAI) {
   if (MAI.getSkipEmission(MI))
@@ -1202,10 +1207,24 @@ static bool isDebugLineTarget(const MachineInstr *MI,
   case SPIRV::OpFunctionParameter:
   case SPIRV::OpFunctionEnd:
   case SPIRV::OpLabel:
+  case SPIRV::OpPhi:
     return false;
   default:
     return true;
   }
+}
+
+static const MachineInstr *
+findAdjacentEmittedInstruction(const MachineInstr *MI,
+                               SPIRV::ModuleAnalysisInfo &MAI, bool Forward) {
+  for (const MachineInstr *Adj = Forward ? MI->getNextNode()
+                                         : MI->getPrevNode();
+       Adj; Adj = Forward ? Adj->getNextNode() : Adj->getPrevNode()) {
+    if (MAI.getSkipEmission(Adj))
+      continue;
+    return Adj;
+  }
+  return nullptr;
 }
 
 void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
@@ -1220,6 +1239,20 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   // already been emitted in the module scope.
   if (!isDebugLineTarget(MI, MAI))
     return;
+
+  // DebugLine can be emitted before a merge instruction, but not after it
+  // (nothing may sit between the merge and its terminator). We can use either
+  // the merge's or the terminator's debug info; we emit the terminator's one.
+  const MachineInstr *Prev = findAdjacentEmittedInstruction(MI, MAI, false);
+  if (Prev && isMergeInstruction(Prev->getOpcode()))
+    return;
+
+  if (isMergeInstruction(MI->getOpcode())) {
+    // Use the terminator's debug info; when we reach it later, the check
+    // above skips it.
+    MI = findAdjacentEmittedInstruction(MI, MAI, true);
+    assert(MI && "Merge instruction must be followed by a terminator");
+  }
 
   // The range of DebugLine must be reset at each basic block boundary.
   if (LastLineMI && MI->getParent() != LastLineMI->getParent())
