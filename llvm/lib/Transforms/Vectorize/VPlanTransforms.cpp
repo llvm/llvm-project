@@ -5716,7 +5716,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
       // TODO: Transform reverse access into strided access with -1 stride.
-      // TODO: Transform gather/scatter with uniform address into strided access
       // with 0 stride.
       // TODO: Transform interleave access into multiple strided accesses.
       if (!MemR || MemR->isConsecutive())
@@ -5820,6 +5819,39 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!StoredValue)
         cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
       R.eraseFromParent();
+    }
+  }
+}
+
+void VPlanTransforms::lowerSafeUniformLoads(VPlan &Plan,
+                                            const TargetLibraryInfo &TLI) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+
+      auto *UniformGather = dyn_cast<VPWidenLoadRecipe>(&R);
+      if (!UniformGather ||
+          !vputils::isUniformAcrossVFsAndUFs(UniformGather->getAddr()))
+        continue;
+
+      auto &LI = cast<LoadInst>(UniformGather->getIngredient());
+      VPValue *Addr = UniformGather->getAddr();
+      Value *Underlying = Addr->getUnderlyingValue();
+      if (!Underlying ||
+          !isSafeToLoadUnconditionally(Underlying, LI.getType(), LI.getAlign(),
+                                       Plan.getDataLayout(), &LI,
+                                       /*AC=*/nullptr, /*DT=*/nullptr, &TLI))
+        continue;
+      DebugLoc DbgLoc = UniformGather->getDebugLoc();
+      auto *ScalarLoad =
+          new VPReplicateRecipe(&LI, {Addr}, /*IsSingleScalar=*/true,
+                                /*Mask=*/nullptr, {}, *UniformGather, DbgLoc);
+      ScalarLoad->insertBefore(UniformGather);
+      auto *Broadcast =
+          new VPInstruction(VPInstruction::Broadcast, {ScalarLoad});
+      Broadcast->insertBefore(UniformGather);
+      UniformGather->replaceAllUsesWith(Broadcast);
+      UniformGather->eraseFromParent();
     }
   }
 }
