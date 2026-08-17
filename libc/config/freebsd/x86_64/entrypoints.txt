@@ -127,6 +127,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.bf16addf128
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.copysign
@@ -638,7 +639,6 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
 
 if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
-    libc.src.math.bf16addf128
     libc.src.math.bf16divf128
     libc.src.math.bf16fmaf128
     libc.src.math.bf16mulf128

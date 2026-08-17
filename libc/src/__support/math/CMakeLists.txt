@@ -509,6 +509,7 @@ add_header_library(
     bf16addf128.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
