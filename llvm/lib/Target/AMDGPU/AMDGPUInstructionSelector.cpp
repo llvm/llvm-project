@@ -86,7 +86,7 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
     if (!Ty.isValid() || Ty.getSizeInBits() != 1)
       return false;
     // G_TRUNC s1 result is never vcc.
-    return MRI.getVRegDef(Reg)->getOpcode() != AMDGPU::G_TRUNC &&
+    return !mi_match(Reg, MRI, m_GTrunc(m_Reg())) &&
            RC->hasSuperClassEq(TRI.getBoolRC());
   }
 

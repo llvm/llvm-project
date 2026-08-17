@@ -9175,6 +9175,10 @@ SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Msk = Node->getOperand(1);
   unsigned BW = VT.getScalarSizeInBits();
 
+  // Just scalarize if scalar PEXT is legal
+  if (VT.isVector() && isOperationLegal(ISD::PEXT, VT.getVectorElementType()))
+    return DAG.UnrollVectorOp(Node);
+
   // Hacker's Delight §7-4: Compress, or Generalized Extract
   SDValue X = DAG.getNode(ISD::AND, DL, VT, Val, Msk);
   SDValue M = Msk;
@@ -9209,6 +9213,10 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Val = Node->getOperand(0);
   SDValue Msk = Node->getOperand(1);
   unsigned BW = VT.getScalarSizeInBits();
+
+  // Just scalarize if scalar PDEP is legal
+  if (VT.isVector() && isOperationLegal(ISD::PDEP, VT.getVectorElementType()))
+    return DAG.UnrollVectorOp(Node);
 
   // Hacker's Delight §7-5: Expand, or Generalized Insert.
   unsigned LogBW = Log2_32_Ceil(BW);
