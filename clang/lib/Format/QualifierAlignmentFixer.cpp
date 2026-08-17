@@ -652,7 +652,7 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
       // together by default unless the user has explicitly specified both in
       // the QualifierOrder. This allows users to override the default pairing
       // by listing both qualifiers in the order.
-      auto addPairedQualifier = [&](tok::TokenKind PairedToken,
+      auto AddPairedQualifier = [&](tok::TokenKind PairedToken,
                                     const std::string &PairedName) {
         if (!llvm::is_contained(Order, PairedName)) {
           Qualifiers.push_back(PairedToken);
@@ -664,13 +664,13 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
       };
 
       if (QualifierToken == tok::kw_unsigned)
-        addPairedQualifier(tok::kw_signed, "signed");
+        AddPairedQualifier(tok::kw_signed, "signed");
       else if (QualifierToken == tok::kw_signed)
-        addPairedQualifier(tok::kw_unsigned, "unsigned");
+        AddPairedQualifier(tok::kw_unsigned, "unsigned");
       else if (QualifierToken == tok::kw_long)
-        addPairedQualifier(tok::kw_short, "short");
+        AddPairedQualifier(tok::kw_short, "short");
       else if (QualifierToken == tok::kw_short)
-        addPairedQualifier(tok::kw_long, "long");
+        AddPairedQualifier(tok::kw_long, "long");
     }
 
     if (left) {
