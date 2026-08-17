@@ -7,6 +7,17 @@
 # RUN: llvm-bolt %t.exe --split-functions --split-strategy=all --split-eh \
 # RUN:         -o %t.bolt --print-split --print-only=main 2>&1 | FileCheck %s
 
+# RUN: %clangxx -fuse-ld=lld -no-pie %t.o -o %t.nopie.exe -Wl,-q
+# RUN: llvm-bolt %t.nopie.exe --split-functions --split-strategy=all --split-eh \
+# RUN:   --custom-allocation-vma=0x80000000 -o %t.nopie.bolt -v=2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CHECK-ABS
+# RUN: llvm-readelf -x .gcc_except_table %t.nopie.bolt | \
+# RUN:   FileCheck %s --check-prefix=CHECK-ABS-LSDA
+# RUN: %t.nopie.bolt
+
+# CHECK-ABS: falling back to generating absolute-address exception ranges for main
+# CHECK-ABS-LSDA: 03000000 00{{....}}03
+
 # CHECK: -------   HOT-COLD SPLIT POINT   -------
 # CHECK: .LFT0
 # CHECK: Landing Pads: .LBB0
