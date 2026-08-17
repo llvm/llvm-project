@@ -20,7 +20,7 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include <setjmp.h>
-#if HAVE_SIGNAL_H
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
 #include <signal.h>
 #endif
 
@@ -37,7 +37,7 @@ namespace testing {
 
 static thread_local bool caughtExcept;
 
-#if HAVE_SIGNAL_H
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
 
 static thread_local sigjmp_buf jumpBuffer;
 
@@ -46,17 +46,17 @@ static void sigfpeHandler([[maybe_unused]] int sig) {
   siglongjmp(jumpBuffer, -1);
 }
 
-#endif // HAVE_SIGNAL_H
+#endif // TARGET_SUPPORTS_SIGNAL_CATCHING
 
 FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
-#if HAVE_SIGNAL_H
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
   auto *oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
 #endif
 
   caughtExcept = false;
   fenv_t oldEnv;
   fputil::get_env(&oldEnv);
-#if HAVE_SIGNAL_H
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
   if (sigsetjmp(jumpBuffer, 1) == 0)
 #endif
     func->call();
@@ -64,7 +64,7 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
   // We restore the previous floating point environment after
   // the call to the function which can potentially raise SIGFPE.
   fputil::set_env(&oldEnv);
-#if HAVE_SIGNAL_H
+#if TARGET_SUPPORTS_SIGNAL_CATCHING
   signal(SIGFPE, oldSIGFPEHandler);
 #endif
   exceptionRaised = caughtExcept;

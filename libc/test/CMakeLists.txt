@@ -10,22 +10,6 @@ add_custom_target(libc-hermetic-tests-build)
 add_custom_target(libc-integration-tests-build)
 add_custom_target(libc_include_tests-build)
 
-# Check if tests can safely include signal.h. (FPExceptMatcher.cpp can
-# use it, but can also do without it.)
-if(NOT LLVM_LIBC_FULL_BUILD)
-  # In an overlay build of libc, assume signal.h is available: the host libc
-  # will provide it even if we don't.
-  add_compile_definitions(HAVE_SIGNAL_H)
-else()
-  # In a full build, signal.h only exists if we provide it ourselves.
-  # In a bare-metal full build we might not, so check which headers
-  # we're shipping.
-  list(FIND TARGET_PUBLIC_HEADERS libc.include.signal SIGNAL_H_idx)
-  if(SIGNAL_H_idx GREATER -1)
-    add_compile_definitions(HAVE_SIGNAL_H)
-  endif()
-endif()
-
 # Configure the site config file for lit
 configure_lit_site_cfg(
   ${LIBC_SOURCE_DIR}/test/lit.site.cfg.py.in
