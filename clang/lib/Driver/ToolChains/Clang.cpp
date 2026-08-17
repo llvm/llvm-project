@@ -2057,12 +2057,9 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
     return;
   if (!TuneCPU->empty()) {
     CmdArgs.push_back("-tune-cpu");
-    if (*TuneCPU == "native")
-      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
-    else
-      // TuneCPU might or might not be the original -mtune string, so we
-      // have to create a new copy here.
-      CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
+    // TuneCPU might or might not be the original -mtune string, so we
+    // have to create a new copy here.
+    CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
   }
 
   // Handle -mrvv-vector-bits=<bits>
@@ -8352,14 +8349,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // them in the host compilation depending on the target. If the host inputs
   // are not empty we use the new-driver scheme, otherwise use the old scheme.
   if ((IsCuda || IsHIP) && !UsesLLVMOffloading && CudaDeviceInput) {
-    CmdArgs.push_back("-fcuda-include-gpubinary");
+    CmdArgs.push_back("-foffload-include-binary");
     CmdArgs.push_back(CudaDeviceInput->getFilename());
   } else if (!HostOffloadingInputs.empty()) {
     if ((IsCuda || IsHIP) &&
         (!IsRDCMode || Args.hasArg(options::OPT_cuda_emit_nvcc_abi)) &&
         !UsesLLVMOffloading) {
       assert(HostOffloadingInputs.size() == 1 && "Only one input expected");
-      CmdArgs.push_back("-fcuda-include-gpubinary");
+      CmdArgs.push_back("-foffload-include-binary");
       CmdArgs.push_back(HostOffloadingInputs.front().getFilename());
     } else {
       for (const InputInfo Input : HostOffloadingInputs)

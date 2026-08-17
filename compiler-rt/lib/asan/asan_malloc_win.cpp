@@ -14,12 +14,14 @@
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_WINDOWS
-#include "asan_allocator.h"
-#include "asan_interceptors.h"
-#include "asan_internal.h"
-#include "asan_stack.h"
-#include "interception/interception.h"
-#include <stddef.h>
+#  include <stddef.h>
+
+#  include "asan_allocator.h"
+#  include "asan_interceptors.h"
+#  include "asan_internal.h"
+#  include "asan_stack.h"
+#  include "interception/interception.h"
+#  include "sanitizer_common/sanitizer_win_defs.h"
 
 // Intentionally not including windows.h here, to avoid the risk of
 // pulling in conflicting declarations of these functions. (With mingw-w64,

@@ -5,14 +5,10 @@ Test lldb-dap stackTrace request
 import os
 from typing import List, NamedTuple
 
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
-from lldbsuite.test.tools.lldb_dap.types import (
-    LaunchArgs,
-    StackFrame,
-    StackFrameFormat,
-)
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StackFrame, StackFrameFormat
 
 
 class _RecurseSource(NamedTuple):
