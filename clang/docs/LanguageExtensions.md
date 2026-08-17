@@ -3524,6 +3524,8 @@ for the implementation of various target-specific header files like
 
 ```c++
 __builtin_shufflevector(vec1, vec2, index1, index2, ...)
+
+Clang also accepts a single-vector form `__builtin_shufflevector(vec, index1, index2, ...)` that shuffles lanes within `vec` only.
 ```
 
 **Examples**:
