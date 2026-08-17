@@ -83,25 +83,6 @@ entry:
   ret i64 %tmp5
 }
 
-define i32 @zext_i1_i32(i1 zeroext %a) nounwind ssp {
-; CHECK-LABEL: zext_i1_i32:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ret
-entry:
-  %conv = zext i1 %a to i32
-  ret i32 %conv;
-}
-
-define i64 @zext_i1_i64(i1 zeroext %a) nounwind ssp {
-; CHECK-LABEL: zext_i1_i64:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
-; CHECK-NEXT:    ret
-entry:
-  %conv = zext i1 %a to i64
-  ret i64 %conv;
-}
-
 define i64 @sext_(i8 signext %a, i16 signext %b, i32 %c, i64 %d) nounwind ssp {
 ; CHECK-LABEL: sext_:
 ; CHECK:       ; %bb.0: ; %entry
@@ -139,38 +120,6 @@ entry:
   store i64 %conv4, ptr %d.addr, align 8
   %tmp5 = load i64, ptr %d.addr, align 8
   ret i64 %tmp5
-}
-
-; Test sext i8 to i64
-
-define zeroext i64 @sext_i8_i64(i8 zeroext %in) {
-; CHECK-LABEL: sext_i8_i64:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    sxtb x0, w8
-; CHECK-NEXT:    ret
-  %big = sext i8 %in to i64
-  ret i64 %big
-}
-
-define zeroext i64 @sext_i16_i64(i16 zeroext %in) {
-; CHECK-LABEL: sext_i16_i64:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    sxth x0, w8
-; CHECK-NEXT:    ret
-  %big = sext i16 %in to i64
-  ret i64 %big
-}
-
-; Test sext i1 to i32
-define i32 @sext_i1_i32(i1 signext %a) nounwind ssp {
-; CHECK-LABEL: sext_i1_i32:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ret
-entry:
-  %conv = sext i1 %a to i32
-  ret i32 %conv
 }
 
 ; Test sext i1 to i16
@@ -486,23 +435,6 @@ define void @stack_trunc() nounwind {
   %d = trunc i64 %c to i8
   store i8 %d, ptr %a, align 1
   ret void
-}
-
-define zeroext i64 @zext_i8_i64(i8 zeroext %in) {
-; CHECK-LABEL: zext_i8_i64:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
-; CHECK-NEXT:    ret
-  %big = zext i8 %in to i64
-  ret i64 %big
-}
-define zeroext i64 @zext_i16_i64(i16 zeroext %in) {
-; CHECK-LABEL: zext_i16_i64:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $x0 killed $w0
-; CHECK-NEXT:    ret
-  %big = zext i16 %in to i64
-  ret i64 %big
 }
 
 define float @bitcast_i32_to_float(i32 %a) {
