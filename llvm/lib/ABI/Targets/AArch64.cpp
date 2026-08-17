@@ -92,7 +92,34 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
 ArgInfo AArch64TargetInfo::classifyArgumentType(
     const Type *Ty, bool IsVariadicFn, bool IsNamedArg,
     unsigned CallingConvention, unsigned &NSRN, unsigned &NPRN) const {
-  reportNYI("Classify argument type");
+  // TODO: Handled variadic functins here when Windows Arm64 EC is supported.
+
+  if (Ty->isVector()) {
+    reportNYI("Vector argument type");
+    return ArgInfo::getDirect();
+  }
+
+  if (!passAsAggregateType(Ty)) {
+    if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
+      if (IntTy->isBitInt()) {
+        reportNYI("BitInt argument type");
+        return ArgInfo::getDirect();
+      }
+      if (isPromotableInteger(IntTy) && isDarwinPCS()) {
+        return ArgInfo::getExtend(IntTy);
+      }
+    }
+
+    // TODO: Legal vector types will update NSRN or NPRN.
+
+    if (Ty->isFloat())
+      NSRN = std::min(NSRN + 1, 8u);
+
+    // Everything not handled above is returned directly.
+    return ArgInfo::getDirect();
+  }
+
+  reportNYI("Aggregate argument type");
   return ArgInfo::getDirect();
 }
 
