@@ -309,3 +309,25 @@ func.func @two_consecutive_merge_points(%cond1: i1, %cond2: i1) -> i32 {
   // CHECK: return %[[RESULT]] : i32
   return %result : i32
 }
+
+// -----
+
+// A memref with a zero extent holds no elements and cannot be promoted: the
+// vector type mem2reg would build for whole-buffer promotion requires strictly
+// positive extents.
+
+// CHECK-LABEL: func.func @zero_extent_alloca
+func.func @zero_extent_alloca() {
+  // CHECK: memref.alloca() : memref<0xf32>
+  %alloca = memref.alloca() : memref<0xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @zero_extent_alloca_multi_dim
+func.func @zero_extent_alloca_multi_dim() {
+  // CHECK: memref.alloca() : memref<2x0x3xf32>
+  %alloca = memref.alloca() : memref<2x0x3xf32>
+  return
+}
