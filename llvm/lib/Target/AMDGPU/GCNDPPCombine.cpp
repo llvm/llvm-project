@@ -117,6 +117,34 @@ FunctionPass *llvm::createGCNDPPCombinePass() {
   return new GCNDPPCombineLegacy();
 }
 
+// Some opcodes use Src1 for DPP instead of Src0, because the sequencer
+// transforms them and reverse the order of their operands at runtime.
+//
+// Listed as target-independent pseudos; the per-subtarget MC opcodes
+// (V_SUBREV_NC_U32_e32_gfx11 and friends) are all reached through these.
+static bool isSrc1DPPRevOpcode(unsigned Opc) {
+  switch (Opc) {
+  // v_subrev_u32 (gfx9) / v_subrev_nc_u32 (gfx10+)
+  case AMDGPU::V_SUBREV_U32_e32:
+  case AMDGPU::V_SUBREV_U32_e64:
+  // v_subrev_co_u32
+  case AMDGPU::V_SUBREV_CO_U32_e32:
+  case AMDGPU::V_SUBREV_CO_U32_e64:
+  // v_subbrev_u32 (gfx9) / v_subrev_co_ci_u32 (gfx10+)
+  case AMDGPU::V_SUBBREV_U32_e32:
+  case AMDGPU::V_SUBBREV_U32_e64:
+  // v_subrev_f32
+  case AMDGPU::V_SUBREV_F32_e32:
+  case AMDGPU::V_SUBREV_F32_e64:
+  // v_subrev_f16
+  case AMDGPU::V_SUBREV_F16_e32:
+  case AMDGPU::V_SUBREV_F16_e64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
   unsigned Op = MI.getOpcode();
   if (!TII->isVOP3(Op)) {
@@ -743,6 +771,16 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
           dbgs()
           << "  " << OrigMI
           << "  failed: DPP register is used more than once per instruction\n");
+      break;
+    }
+
+    // We cannot fold int one of a group of "REV" sub instructions that
+    // use Src1 for DPP, as this changes the behavior. The user may be one
+    // of those instructions, or we might commute into it, so check both.
+    int FoldedOp =
+        (Use == Src0) ? static_cast<int>(OrigOp) : TII->commuteOpcode(OrigOp);
+    if (FoldedOp < 0 || isSrc1DPPRevOpcode(FoldedOp)) {
+      LLVM_DEBUG(dbgs() << "  failed: Can't fold DPP into Src1-DPP opcode\n");
       break;
     }
 
