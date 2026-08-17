@@ -6236,9 +6236,16 @@ defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
   BothFlags<[TargetSpecific], [ClangOption, CC1Option]>>;
 
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
-def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
-def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
-  HelpText<"Omit frame pointer setup for leaf functions">;
+def mno_omit_leaf_frame_pointer
+    : Flag<["-"], "mno-omit-leaf-frame-pointer">,
+      Group<m_Group>,
+      Visibility<[ClangOption, FlangOption]>,
+      HelpText<"Keep the frame pointer in leaf functions">;
+def momit_leaf_frame_pointer
+    : Flag<["-"], "momit-leaf-frame-pointer">,
+      Group<m_Group>,
+      Visibility<[ClangOption, FlangOption]>,
+      HelpText<"Omit frame pointer setup for leaf functions">;
 def mno_reserve_frame_pointer_reg : Flag<["-"], "mno-reserve-frame-pointer-reg">, Group<m_Group>;
 def mreserve_frame_pointer_reg : Flag<["-"], "mreserve-frame-pointer-reg">, Group<m_Group>,
   HelpText<"Reserve the frame pointer register even if the function doesn't have a frame">;
