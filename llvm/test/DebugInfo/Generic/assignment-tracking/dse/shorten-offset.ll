@@ -28,20 +28,24 @@
 ;; when offsets are encoded with both the address component of the dbg.assign
 ;; and the address modifying DIExpression.
 
-;; 'local' and 'local3' have both been adjusted to be 160 bits, so the bit
-;; ranges above are the written bytes clamped to the variable.
+;; The debug variables for 'local' and 'local3' are 20 bytes even though their
+;; allocas are 80 bytes. The range annotations stop at byte 20 when a write
+;; continues past the variable.
 
-;; shortenBeginWholeFragment takes the overwrite-begin path because the killing
-;; store starts before the dead one, at local + 4 against local + 8.
-;; shortenEndPartial takes the overwrite-end path, so the two cases cover both
-;; offsets shortenAssignment computes.
+;; shortenBeginWholeFragment checks the path where the later store starts before
+;; the store DSE shortens, so DSE removes bytes from the beginning.
+;; shortenEndPartial checks the path where the later store starts inside the
+;; store being shortened and DSE removes bytes from the end.
 
-;; DSE shortens the first store in shortenBeginWholeFragment from bytes [8, 80)
-;; of 'local' to [56, 80), so the dead bytes are [8, 56). The dbg.assign's
-;; address is %offset_4_bytes + 4, i.e. local + 8, so its fragment (64, 96)
-;; describes local bytes [8, 20), all of which the dead slice covers. There's
-;; no live part left to describe, so instead of inserting a fragment we unlink
-;; the dbg.assign from the store and kill its address.
+;; The first memset in shortenBeginWholeFragment writes 72 bytes starting at
+;; byte 8. The second memset overwrites its first 60 bytes. DSE removes the
+;; first 48 bytes, bytes 8 through 55, and keeps the final 24 bytes so the
+;; shortened memset remains 16-byte aligned.
+;;
+;; The dbg.assign record describes the 12 bytes of 'local' starting at byte 8.
+;; DW_OP_LLVM_fragment stores the starting bit followed by the size, so the
+;; CHECK expects (64, 96). DSE removes all 12 bytes, so make sure it unlinks the
+;; whole record and kills its address.
 
 ; CHECK: @_Z25shortenBeginWholeFragmentv
 ; CHECK:      #dbg_assign({{.*}}, ![[VAR:[0-9]+]], !DIExpression(), {{.*}}, ptr %local, !DIExpression(),
@@ -60,11 +64,15 @@
 ; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2:[0-9]+]], !DIExpression(), ![[ID2]], ptr %local2, !DIExpression(),
 ; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), ![[UniqueID2:[0-9]+]], ptr poison, !DIExpression(),
 
-;; DSE shortens the store in shortenEndPartial from bytes [8, 16) of 'local3'
-;; to [8, 12), so the dead bytes are [12, 16). The dbg.assign's address is
-;; %offset_4_bytes + 4, i.e. local3 + 8, where its fragment (64, 96) starts, so
-;; the dead bytes are variable bits [96, 128). Check we get an unlinked
-;; dbg.assign for (96, 32).
+;; The first memset in shortenEndPartial writes eight bytes starting at byte 8.
+;; The second memset overwrites its final four bytes, bytes 12 through 15, so
+;; DSE keeps the first four bytes and removes the final four.
+;;
+;; The dbg.assign record describes 12 bytes starting at byte 8. The four
+;; removed bytes start at byte 12 of 'local3', which is bit 96, and are 32 bits
+;; long. DW_OP_LLVM_fragment stores the starting bit followed by the size, so
+;; the CHECK expects (96, 32). Make sure the starting bit is 96 so that we know
+;; the fragment starts where the second memset starts.
 
 ; CHECK: @_Z17shortenEndPartialv
 ; CHECK:      #dbg_assign({{.*}}, ptr %local3, !DIExpression(),
@@ -107,12 +115,9 @@ entry:
   ret void, !dbg !45
 }
 
-;; The killing store starts after the dead one here, so this is the
-;; overwrite-end path, where the dead slice starts at the end of what survives
-;; rather than at the store's own address. The slice also covers only part of
-;; the dbg.assign's fragment, so we get a fragment for the dead part rather
-;; than a kill. The memset is align 4 so DSE doesn't round the removed tail
-;; away; at align 16 it declines to shorten at all.
+;; shortenEndPartial uses alignment 4 for the first memset so DSE can shorten it
+;; from eight bytes to four. With alignment 16 DSE leaves the memset alone, so
+;; the test would not check removing bytes from the end.
 define dso_local void @_Z17shortenEndPartialv() local_unnamed_addr #0 !dbg !46 {
 entry:
   %local3 = alloca [80 x i8], align 16, !DIAssignID !50
