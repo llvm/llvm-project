@@ -66,8 +66,9 @@ define amdgpu_ps void @s_buffer_load_i1(<4 x i32> inreg %desc, ptr addrspace(1) 
 ;
 ; GFX1250-LABEL: s_buffer_load_i1:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_and_b32 s0, s0, 1
@@ -135,8 +136,9 @@ define amdgpu_ps void @s_buffer_load_i4(<4 x i32> inreg %desc, ptr addrspace(1) 
 ;
 ; GFX1250-LABEL: s_buffer_load_i4:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_and_b32 s0, s0, 15
@@ -204,8 +206,9 @@ define amdgpu_ps void @s_buffer_load_v2i1(<4 x i32> inreg %desc, ptr addrspace(1
 ;
 ; GFX1250-LABEL: s_buffer_load_v2i1:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_buffer_load_b32 s0, s[0:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_and_b32 s0, s0, 3
@@ -305,8 +308,9 @@ define amdgpu_ps void @s_buffer_load_v3i16(<4 x i32> inreg %desc, ptr addrspace(
 ;
 ; GFX1250-LABEL: s_buffer_load_v3i16:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
@@ -407,8 +411,9 @@ define amdgpu_ps void @s_buffer_load_v6i8(<4 x i32> inreg %desc, ptr addrspace(1
 ;
 ; GFX1250-LABEL: s_buffer_load_v6i8:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1
@@ -485,8 +490,9 @@ define amdgpu_ps void @s_buffer_load_i128(<4 x i32> inreg %desc, ptr addrspace(1
 ;
 ; GFX1250-LABEL: s_buffer_load_i128:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_buffer_load_b128 s[0:3], s[0:3], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
@@ -547,8 +553,9 @@ define amdgpu_ps void @s_buffer_load_i1_divergent(<4 x i32> inreg %desc, i32 %in
 ;
 ; GFX1250-LABEL: s_buffer_load_i1_divergent:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, v1
@@ -604,8 +611,9 @@ define amdgpu_ps void @s_buffer_load_i128_divergent(<4 x i32> inreg %desc, i32 %
 ;
 ; GFX1250-LABEL: s_buffer_load_i128_divergent:
 ; GFX1250:       ; %bb.0: ; %main_body
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX1250-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen nv
