@@ -83,7 +83,7 @@ bool SPIRVCombinerHelper::matchFDivToNormalize(MachineInstr &MI) const {
   if (!all_of(cast<GShuffleVector>(ShuffleInstr)->getMask(),
               [](int M) { return M == 0; }))
     return false;
-    
+
   MachineInstr *InsertInstr =
       MRI.getVRegDef(ShuffleInstr->getOperand(1).getReg());
   if (!isSpvIntrinsic(*InsertInstr, Intrinsic::spv_insertelt))
