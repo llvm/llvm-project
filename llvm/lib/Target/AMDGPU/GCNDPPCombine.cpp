@@ -774,13 +774,15 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       break;
     }
 
-    // We cannot fold int one of a group of "REV" sub instructions that
-    // use Src1 for DPP, as this changes the behavior. The user may be one
-    // of those instructions, or we might commute into it, so check both.
+    // We have to be careful to prevent trying to fold into the first source
+    // operand of instructions that apply DPP to the second source operand.
+    // This could be directly, or when folding into an instruction that will
+    // get commuted into one.
     int FoldedOp =
         (Use == Src0) ? static_cast<int>(OrigOp) : TII->commuteOpcode(OrigOp);
     if (FoldedOp < 0 || isSrc1DPPRevOpcode(FoldedOp)) {
-      LLVM_DEBUG(dbgs() << "  failed: Can't fold DPP into Src1-DPP opcode\n");
+      LLVM_DEBUG(
+          dbgs() << "  failed: Use operand cannot have DPP applied to it\n");
       break;
     }
 
