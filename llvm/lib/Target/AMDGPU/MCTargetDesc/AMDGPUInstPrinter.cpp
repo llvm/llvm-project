@@ -364,20 +364,15 @@ static MCRegister getRegFromMIA(MCRegister Reg, unsigned OpNo,
   if (!(Enc & AMDGPU::HWEncoding::IS_VGPR))
     return Reg;
 
-  auto Ops = AMDGPU::getVGPRLoweringOperandTables(Desc);
-  if (!Ops.first)
-    return Reg;
-  unsigned Opc = Desc.getOpcode();
+  const AMDGPU::VGPRMSBOperandIndices OperandIndices =
+      AMDGPU::getVGPRMSBOperandIndices(Desc);
   unsigned I;
-  for (I = 0; I < 4; ++I) {
-    if (Ops.first[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
-        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
-      break;
-    if (Ops.second && Ops.second[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
-        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.second[I]) == OpNo)
+  for (I = 0; I != OperandIndices.size(); ++I) {
+    auto [XOperandIndex, YOperandIndex] = OperandIndices[I];
+    if (XOperandIndex == OpNo || YOperandIndex == OpNo)
       break;
   }
-  if (I == 4)
+  if (I == OperandIndices.size())
     return Reg;
   unsigned OpMSBs = (VgprMSBs >> (I * 2)) & 3;
   if (!OpMSBs)

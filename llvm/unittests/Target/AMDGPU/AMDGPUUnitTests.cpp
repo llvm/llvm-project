@@ -10,6 +10,7 @@
 #include "AMDGPUGenSubtargetInfo.inc"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
@@ -374,4 +375,52 @@ TEST_F(AMDGPUTestBase, TestGetNamedOperandIdx) {
           << "Opcode " << Opcode << " (" << MCII->getName(Opcode) << ')';
     }
   }
+}
+
+TEST_F(AMDGPUTestBase, TestGetVGPRMSBOperandIndices) {
+  std::unique_ptr<const GCNTargetMachine> TM =
+      createAMDGPUTargetMachine(Triple("amdgpu9.00-amd-"), "", "");
+  ASSERT_NE(TM, nullptr);
+  const MCInstrInfo *MCII = TM->getMCInstrInfo();
+
+  const MCInstrDesc &Move = MCII->get(AMDGPU::V_MOV_B32_e32);
+  const AMDGPU::VGPRMSBOperandIndices MoveIndices =
+      AMDGPU::getVGPRMSBOperandIndices(Move);
+  EXPECT_EQ(MoveIndices[0].first,
+            static_cast<unsigned>(AMDGPU::getNamedOperandIdx(
+                Move.getOpcode(), AMDGPU::OpName::src0)));
+  EXPECT_FALSE(MoveIndices[0].second);
+  EXPECT_FALSE(MoveIndices[1].first);
+  EXPECT_EQ(MoveIndices[3].first,
+            static_cast<unsigned>(AMDGPU::getNamedOperandIdx(
+                Move.getOpcode(), AMDGPU::OpName::vdst)));
+
+  const MCInstrDesc &FMAMK = MCII->get(AMDGPU::V_FMAMK_F32);
+  const AMDGPU::VGPRMSBOperandIndices FMAMKIndices =
+      AMDGPU::getVGPRMSBOperandIndices(FMAMK);
+  EXPECT_FALSE(FMAMKIndices[1].first);
+  EXPECT_EQ(FMAMKIndices[2].first,
+            static_cast<unsigned>(AMDGPU::getNamedOperandIdx(
+                FMAMK.getOpcode(), AMDGPU::OpName::src1)));
+
+  const MCInstrDesc &VOPD =
+      MCII->get(AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12);
+  const AMDGPU::VGPRMSBOperandIndices VOPDIndices =
+      AMDGPU::getVGPRMSBOperandIndices(VOPD);
+  EXPECT_EQ(VOPDIndices[0].first,
+            static_cast<unsigned>(AMDGPU::getNamedOperandIdx(
+                VOPD.getOpcode(), AMDGPU::OpName::src0X)));
+  EXPECT_EQ(VOPDIndices[0].second,
+            static_cast<unsigned>(AMDGPU::getNamedOperandIdx(
+                VOPD.getOpcode(), AMDGPU::OpName::src0Y)));
+}
+
+TEST_F(AMDGPUTestBase, TestIsHi16Reg) {
+  std::unique_ptr<const GCNTargetMachine> TM =
+      createAMDGPUTargetMachine(Triple("amdgpu9.00-amd-"), "", "");
+  ASSERT_NE(TM, nullptr);
+  const MCRegisterInfo &MRI = TM->getMCRegisterInfo();
+
+  EXPECT_TRUE(AMDGPU::isHi16Reg(AMDGPU::VGPR0_HI16, MRI));
+  EXPECT_FALSE(AMDGPU::isHi16Reg(AMDGPU::VGPR0_LO16, MRI));
 }

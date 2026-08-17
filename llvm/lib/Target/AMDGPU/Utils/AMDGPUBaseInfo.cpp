@@ -3658,6 +3658,27 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   return {};
 }
 
+VGPRMSBOperandIndices getVGPRMSBOperandIndices(const MCInstrDesc &Desc) {
+  auto [XOperandNames, YOperandNames] = getVGPRLoweringOperandTables(Desc);
+  auto GetOperandIndex = [&](const AMDGPU::OpName *OperandNames,
+                             unsigned Slot) -> std::optional<unsigned> {
+    if (!OperandNames ||
+        OperandNames[Slot] == AMDGPU::OpName::NUM_OPERAND_NAMES)
+      return std::nullopt;
+    int16_t OperandIndex =
+        getNamedOperandIdx(Desc.getOpcode(), OperandNames[Slot]);
+    if (OperandIndex < 0)
+      return std::nullopt;
+    return static_cast<unsigned>(OperandIndex);
+  };
+
+  VGPRMSBOperandIndices Indices;
+  for (unsigned Slot = 0; Slot != Indices.size(); ++Slot)
+    Indices[Slot] = {GetOperandIndex(XOperandNames, Slot),
+                     GetOperandIndex(YOperandNames, Slot)};
+  return Indices;
+}
+
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   const MCInstrDesc &Desc = MII.get(Opcode);
   if (SIInstrFlags::isSMRD(Desc))

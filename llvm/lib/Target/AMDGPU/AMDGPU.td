@@ -2521,6 +2521,7 @@ def FeatureISAVersion13_Generic: FeatureSet<
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
+  let ExportNamedOperandLookup = true;
   let guessInstructionProperties = 1;
 }
 

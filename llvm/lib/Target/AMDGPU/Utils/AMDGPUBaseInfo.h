@@ -18,6 +18,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <array>
 #include <functional>
@@ -83,20 +84,23 @@ unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion);
 /// \returns The default HSA code object version. This should only be used when
 /// we lack a more accurate CodeObjectVersion value (e.g. from the IR module
 /// flag or a .amdhsa_code_object_version directive)
-unsigned getDefaultAMDHSACodeObjectVersion();
+LLVM_ABI unsigned getDefaultAMDHSACodeObjectVersion();
 
 /// \returns ABIVersion suitable for use in ELF's e_ident[EI_ABIVERSION]. \param
 /// CodeObjectVersion is a value returned by getAMDHSACodeObjectVersion().
 uint8_t getELFABIVersion(const Triple &OS, unsigned CodeObjectVersion);
 
 /// \returns The offset of the multigrid_sync_arg argument from implicitarg_ptr
-unsigned getMultigridSyncArgImplicitArgPosition(unsigned COV);
+LLVM_ABI unsigned getMultigridSyncArgImplicitArgPosition(unsigned COV);
 
 /// \returns The offset of the hostcall pointer argument from implicitarg_ptr
-unsigned getHostcallImplicitArgPosition(unsigned COV);
+LLVM_ABI unsigned getHostcallImplicitArgPosition(unsigned COV);
 
-unsigned getDefaultQueueImplicitArgPosition(unsigned COV);
-unsigned getCompletionActionImplicitArgPosition(unsigned COV);
+/// \returns The offset of the default queue pointer from implicitarg_ptr
+LLVM_ABI unsigned getDefaultQueueImplicitArgPosition(unsigned COV);
+
+/// \returns The offset of the completion action pointer from implicitarg_ptr
+LLVM_ABI unsigned getCompletionActionImplicitArgPosition(unsigned COV);
 
 struct GcnBufferFormatInfo {
   unsigned Format;
@@ -619,8 +623,27 @@ LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI);
 
-LLVM_READONLY
-int32_t getMCOpcode(uint32_t Opcode, unsigned Gen);
+/// \returns The opcode for \p Opcode in the \p Gen SIEncodingFamily. Returns
+/// -1 if \p Opcode is already native and INSTRUCTION_LIST_END if it has no
+/// encoding in that family.
+LLVM_ABI LLVM_READONLY int32_t getMCOpcode(uint32_t Opcode, unsigned Gen);
+
+/// \returns The e64 form of \p Opcode, or -1 if no mapping exists.
+LLVM_ABI LLVM_READONLY int32_t getVOPe64(uint32_t Opcode);
+
+/// \returns The DPP form of an ordinary e32 \p Opcode, or -1 if no mapping
+/// exists.
+LLVM_ABI LLVM_READONLY int32_t getDPPOp32(uint32_t Opcode);
+
+/// \returns The DPP form of a VOP3 \p Opcode, or -1 if no mapping exists.
+LLVM_ABI LLVM_READONLY int32_t getDPPOp64(uint32_t Opcode);
+
+/// \returns The ordinary form of an SDWA \p Opcode, or -1 if no mapping exists.
+LLVM_ABI LLVM_READONLY int32_t getBasicFromSDWAOp(uint32_t Opcode);
+
+/// \returns VADDR form of a FLAT Global instruction given an \p Opcode
+/// of a SADDR form, or -1 if no mapping exists.
+LLVM_ABI LLVM_READONLY int32_t getGlobalVaddrOp(uint32_t Opcode);
 
 LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);
@@ -629,8 +652,8 @@ LLVM_READONLY
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3);
 
-LLVM_READONLY
-bool isVOPD(unsigned Opc);
+/// \returns true if \p Opc is a VOPD instruction.
+LLVM_ABI LLVM_READONLY bool isVOPD(unsigned Opc);
 
 LLVM_READNONE
 bool isMAC(unsigned Opc);
@@ -937,8 +960,10 @@ private:
 
 } // namespace VOPD
 
-LLVM_READONLY
-std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode);
+/// \returns the X and Y component opcodes for \p VOPDOpcode, which must
+/// identify a VOPD instruction.
+LLVM_ABI LLVM_READONLY std::pair<unsigned, unsigned>
+getVOPDComponents(unsigned VOPDOpcode);
 
 LLVM_READONLY
 // Get properties of 2 single VOP1/VOP2 instructions
@@ -1542,19 +1567,19 @@ bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 /// Is Reg - scalar register
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI);
 
-/// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
-bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
+/// \returns true if \p Reg denotes the high 16 bits of a 32-bit register.
+LLVM_ABI bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
 MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI);
 
-/// Convert hardware register \p Reg to a pseudo register
-LLVM_READNONE
-MCRegister mc2PseudoReg(MCRegister Reg);
+/// \returns the pseudo-register equivalent of \p Reg, or \p Reg if no mapping
+/// exists.
+LLVM_ABI LLVM_READNONE MCRegister mc2PseudoReg(MCRegister Reg);
 
-LLVM_READNONE
-bool isInlineValue(MCRegister Reg);
+/// \returns true if \p Reg is a named inline value.
+LLVM_ABI LLVM_READNONE bool isInlineValue(MCRegister Reg);
 
 /// Is this an AMDGPU specific source operand? These include registers,
 /// inline constants, literals and mandatory literals (KImm).
@@ -1580,7 +1605,7 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
 unsigned getRegBitWidth(unsigned RCID);
 
 /// Get the size in bits of a register from the register class \p RC.
-unsigned getRegBitWidth(const MCRegisterClass &RC);
+LLVM_ABI unsigned getRegBitWidth(const MCRegisterClass &RC);
 
 LLVM_READNONE
 inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
@@ -1796,6 +1821,17 @@ std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
 // maps, one for X and one for Y component.
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
 getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
+
+/// MC operand indices associated with the four two-bit S_SET_VGPR_MSB fields.
+/// Elements 0 through 3 correspond to src0, src1, src2, and dst. Each pair
+/// contains the X and Y component indices for one field. An index is absent
+/// when the instruction has no corresponding operand.
+using VGPRMSBOperandIndices =
+    std::array<std::pair<std::optional<unsigned>, std::optional<unsigned>>, 4>;
+
+/// \returns the S_SET_VGPR_MSB operand-index mapping for \p Desc.
+LLVM_ABI VGPRMSBOperandIndices
+getVGPRMSBOperandIndices(const MCInstrDesc &Desc);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);

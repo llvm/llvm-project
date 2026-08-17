@@ -1826,22 +1826,10 @@ bool execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
 namespace AMDGPU {
 
   LLVM_READONLY
-  int32_t getVOPe64(uint32_t Opcode);
-
-  LLVM_READONLY
   int32_t getVOPe32(uint32_t Opcode);
 
   LLVM_READONLY
   int32_t getSDWAOp(uint32_t Opcode);
-
-  LLVM_READONLY
-  int32_t getDPPOp32(uint32_t Opcode);
-
-  LLVM_READONLY
-  int32_t getDPPOp64(uint32_t Opcode);
-
-  LLVM_READONLY
-  int32_t getBasicFromSDWAOp(uint32_t Opcode);
 
   LLVM_READONLY
   int32_t getCommuteRev(uint32_t Opcode);
@@ -1865,11 +1853,6 @@ namespace AMDGPU {
   /// of a VADDR form.
   LLVM_READONLY
   int32_t getGlobalSaddrOp(uint32_t Opcode);
-
-  /// \returns VADDR form of a FLAT Global instruction given an \p Opcode
-  /// of a SADDR form.
-  LLVM_READONLY
-  int32_t getGlobalVaddrOp(uint32_t Opcode);
 
   LLVM_READONLY
   int32_t getVCMPXNoSDstOp(uint32_t Opcode);
