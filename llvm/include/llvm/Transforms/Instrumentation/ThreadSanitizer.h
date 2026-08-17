@@ -34,8 +34,7 @@ struct ThreadSanitizerOptions {
 class ThreadSanitizerPass : public RequiredPassInfoMixin<ThreadSanitizerPass> {
 public:
   LLVM_ABI
-  ThreadSanitizerPass(const ThreadSanitizerOptions &Options = {})
-      : Options(Options) {}
+  ThreadSanitizerPass(ThreadSanitizerOptions Options = {});
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 
 private:

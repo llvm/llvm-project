@@ -185,6 +185,16 @@ void insertModuleCtor(Module &M) {
 }
 }  // namespace
 
+ThreadSanitizerPass::ThreadSanitizerPass(ThreadSanitizerOptions Options)
+    : Options(Options) {
+  if (ClInstrumentMemoryAccesses.getNumOccurrences() > 0)
+    this->Options.InstrumentMemoryAccesses = ClInstrumentMemoryAccesses;
+  if (ClInstrumentAtomics.getNumOccurrences() > 0)
+    this->Options.InstrumentAtomics = ClInstrumentAtomics;
+  if (ClInstrumentMemIntrinsics.getNumOccurrences() > 0)
+    this->Options.InstrumentMemIntrinsics = ClInstrumentMemIntrinsics;
+}
+
 PreservedAnalyses ThreadSanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
   ThreadSanitizer TSan(Options);
@@ -551,21 +561,19 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // (e.g. variables that do not escape, etc).
 
   // Instrument memory accesses only if we want to report bugs in the function.
-  if (ClInstrumentMemoryAccesses && Options.InstrumentMemoryAccesses &&
-      SanitizeFunction)
+  if (Options.InstrumentMemoryAccesses && SanitizeFunction)
     for (const auto &II : AllLoadsAndStores) {
       Res |= instrumentLoadOrStore(II, DL);
     }
 
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
-  if (ClInstrumentAtomics && Options.InstrumentAtomics)
+  if (Options.InstrumentAtomics)
     for (auto *Inst : AtomicAccesses) {
       Res |= instrumentAtomic(Inst, DL);
     }
 
-  if (ClInstrumentMemIntrinsics && Options.InstrumentMemIntrinsics &&
-      SanitizeFunction)
+  if (Options.InstrumentMemIntrinsics && SanitizeFunction)
     for (auto *Inst : MemIntrinCalls) {
       Res |= instrumentMemIntrinsic(Inst);
     }
