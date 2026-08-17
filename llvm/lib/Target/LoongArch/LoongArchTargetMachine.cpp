@@ -38,6 +38,7 @@ LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchMemoryBarrierOptPass(*PR);
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
@@ -201,6 +202,8 @@ void LoongArchPassConfig::addPreEmitPass2() {
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.
   addPass(createLoongArchExpandAtomicPseudoPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createLoongArchMemoryBarrierOptPass());
 }
 
 void LoongArchPassConfig::addMachineSSAOptimization() {

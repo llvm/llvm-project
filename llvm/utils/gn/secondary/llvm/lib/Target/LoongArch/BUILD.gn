@@ -49,6 +49,7 @@ static_library("LLVMLoongArchCodeGen") {
     "LoongArchISelLowering.cpp",
     "LoongArchInstrInfo.cpp",
     "LoongArchMCInstLower.cpp",
+    "LoongArchMemoryBarrierOpt.cpp",
     "LoongArchMergeBaseOffset.cpp",
     "LoongArchOptWInstrs.cpp",
     "LoongArchRegisterInfo.cpp",
