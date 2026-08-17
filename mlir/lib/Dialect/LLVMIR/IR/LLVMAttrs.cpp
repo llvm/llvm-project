@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Path.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -217,6 +218,39 @@ LogicalResult DIDerivedTypeAttr::verify(
   if (extraData && !llvm::isa<DINodeAttr, IntegerAttr>(extraData))
     return emitError() << "extraData must be a DINodeAttr or an IntegerAttr";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DILocationAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DILocationAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       FileLineColLoc sourceLoc, DILocalScopeAttr scope) {
+  DIFileAttr scopeFile = findFileInScope(scope);
+  if (!scopeFile)
+    return success();
+
+  StringRef sourceName = sourceLoc.getFilename().getValue();
+  StringRef scopeName = scopeFile.getName().getValue();
+  StringRef scopeDir = scopeFile.getDirectory().getValue();
+
+  // Treat the "-" placeholder as the empty/no-source-info sentinel:
+  // `FileLineColRange::get(StringRef, ...)` substitutes "-" for an empty
+  // filename (see BuiltinLocationAttributes.td), so `loc("":0:0)` and the
+  // pass-generated `FileLineColLoc::get(ctx, "", ...)` both land here as "-".
+  if (sourceName.empty() || sourceName == "-" || scopeName.empty())
+    return success();
+
+  SmallString<128> rendered(scopeDir);
+  llvm::sys::path::append(rendered, scopeName);
+
+  if (sourceName == scopeName || sourceName == StringRef(rendered))
+    return success();
+
+  return emitError() << "DILocationAttr source filename '" << sourceName
+                     << "' is inconsistent with scope DIFile '" << rendered
+                     << "'";
 }
 
 //===----------------------------------------------------------------------===//
@@ -613,4 +647,40 @@ MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                           "#llvm.md_addrspacecast operand, but got "
                        << arg;
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Location helpers
+//===----------------------------------------------------------------------===//
+
+DISubprogramAttr LLVM::findSubprogramInLoc(Location loc) {
+  if (auto diLoc = loc->findInstanceOf<DILocationAttr>())
+    return dyn_cast<DISubprogramAttr>(diLoc.getScope());
+  if (auto spLoc = loc->findInstanceOf<FusedLocWith<DISubprogramAttr>>())
+    return spLoc.getMetadata();
+  return nullptr;
+}
+
+DIFileAttr LLVM::findFileInScope(DIScopeAttr scope) {
+  while (scope) {
+    if (auto file = dyn_cast<DIFileAttr>(scope))
+      return file;
+    DIFileAttr file =
+        TypeSwitch<DIScopeAttr, DIFileAttr>(scope)
+            .Case<DISubprogramAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
+                  DICompileUnitAttr, DIModuleAttr, DICommonBlockAttr,
+                  DICompositeTypeAttr, DIDerivedTypeAttr>(
+                [](auto s) { return s.getFile(); })
+            .Default(DIFileAttr{});
+    if (file)
+      return file;
+    scope =
+        TypeSwitch<DIScopeAttr, DIScopeAttr>(scope)
+            .Case<DISubprogramAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
+                  DIModuleAttr, DINamespaceAttr, DICommonBlockAttr,
+                  DICompositeTypeAttr, DIDerivedTypeAttr>(
+                [](auto s) -> DIScopeAttr { return s.getScope(); })
+            .Default(DIScopeAttr{});
+  }
+  return nullptr;
 }

@@ -5,8 +5,8 @@
 #di_subprogram = #llvm.di_subprogram<recId = distinct[2]<>>
 #loc1 = loc("test.f90":12:14)
 #loc2 = loc("test":4:3)
-#loc6 = loc(fused<#di_subprogram>[#loc1])
-#loc7 = loc(fused<#di_subprogram>[#loc2])
+#loc6 = #llvm.di_location<#loc1 in #di_subprogram>
+#loc7 = #llvm.di_location<#loc2 in #di_subprogram>
 #loop_annotation = #llvm.loop_annotation<disableNonforced = false, mustProgress = true, startLoc = #loc6, endLoc = #loc7, parallelAccesses = #access_group, #access_group1>
 module {
   llvm.func @imp_fn() {
