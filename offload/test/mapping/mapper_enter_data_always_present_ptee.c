@@ -2,31 +2,27 @@
 // "target enter data map(always, present, to : s)" clause instead of a
 // "target update to(present : s)" motion clause. Both invoke the mapper; this
 // checks present propagation to the pointee is consistent across the two paths.
-//
-// FIXME: this test currently run-fails at every version/bounds combination.
-// The mapper maps the struct member (s.y) with a combined entry whose size does
-// not match the member's own storage, so the map clause aborts with an
-// "explicit extension not allowed" error before the present modifier is ever
-// considered. This is fixed once the mapper emits attach-style maps for pointer
-// members (so the member and pointee occupy separate, correctly-sized entries).
-//
-// EXPECTED final state:
-//   inbounds, 5.2 and 6.0: run succeeds, prints "333 333".
-//   out-of-bounds (s.p[0:20] over the mapped x[0:10]):
-//     5.2: succeeds (present is not applied to the pointee before 6.0).
-//     6.0: run-fails; the failure should be the 'present' map-type-modifier
-//          check on s.p[0:20] (an accompanying "explicit extension" message is
-//          incidental -- for a map clause it is user error to map 20 elements
-//          when only 10 are present).
 
+// Inbounds: the pointee region is fully present; the run succeeds at every
+// OpenMP version.
 // RUN: %libomptarget-compile-generic -fopenmp-version=52
-// RUN: %libomptarget-run-fail-generic 2>&1 | %fcheck-generic
+// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: %libomptarget-compile-generic -fopenmp-version=60
-// RUN: %libomptarget-run-fail-generic 2>&1 | %fcheck-generic
+// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+
+// Out-of-bounds: s.p[0:20] extends beyond the mapped region x[0:10]. Because a
+// map clause performs an actual mapping, requesting 20 elements when only 10
+// are present is an error, so the run fails with an "explicit extension"
+// diagnostic at every version.
+// FIXME: at OpenMP 6.0 the present modifier is also propagated to the pointee,
+// so the failure should additionally report the 'present' map-type-modifier
+// check on s.p[0:20]. The extension diagnostic currently fires first.
 // RUN: %libomptarget-compile-generic -fopenmp-version=52 -DOUT_OF_BOUNDS
-// RUN: %libomptarget-run-fail-generic 2>&1 | %fcheck-generic
+// RUN: %libomptarget-run-fail-generic 2>&1 \
+// RUN: | %fcheck-generic --check-prefix=CHECK-OOB
 // RUN: %libomptarget-compile-generic -fopenmp-version=60 -DOUT_OF_BOUNDS
-// RUN: %libomptarget-run-fail-generic 2>&1 | %fcheck-generic
+// RUN: %libomptarget-run-fail-generic 2>&1 \
+// RUN: | %fcheck-generic --check-prefix=CHECK-OOB
 
 #include <stdio.h>
 
@@ -63,14 +59,12 @@ int main() {
 
   fprintf(stderr, "addr=%p, size=%zu\n", &s.p[0], 20 * sizeof(s.p[0]));
 
-  // FIXME: the map clause aborts here with an "explicit extension not allowed"
-  // error on the mapper's combined member entry, at every version. Fixed once
-  // the mapper uses attach-style maps for pointer members.
-  // CHECK: explicit extension not allowed
+  // CHECK-OOB: explicit extension not allowed
 #pragma omp target data map(from : s.y, x)
   {
     f1();
   }
 
+  // CHECK: 333 333
   printf("%d %d\n", x[0], s.y);
 }

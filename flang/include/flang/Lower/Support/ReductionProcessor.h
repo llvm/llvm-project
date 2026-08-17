@@ -13,7 +13,6 @@
 #ifndef FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 #define FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 
-#include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -22,7 +21,6 @@
 #include "flang/Semantics/type.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
-#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 namespace omp {
@@ -185,17 +183,9 @@ public:
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
       const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
-      llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
       semantics::SemanticsContext *semaCtx = nullptr,
       llvm::DenseMap<const semantics::Symbol *, mlir::Value>
           *reductionVarCache = nullptr);
-
-  /// Check if an expression is lowered as a Reduction object. This ensures
-  /// reductions such as Array Elements are properly represented, rather than
-  /// reducing the full array.
-  // TODO support more types of objects
-  // to avoid Reduction clauses being represented in FIR as full arrays.
-  static bool isExpressionLoweredAsReductionObject(const Object *object);
 };
 
 template <typename FloatOp, typename IntegerOp>

@@ -648,10 +648,9 @@ define i8 @convert_to_bitmask_8xi2(<8 x i2> %vec) {
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    movi.8b v1, #3
 ; CHECK-SD-NEXT:    adrp x8, lCPI13_0@PAGE
-; CHECK-SD-NEXT:    and.8b v0, v0, v1
+; CHECK-SD-NEXT:    cmtst.8b v0, v0, v1
 ; CHECK-SD-NEXT:    ldr d1, [x8, lCPI13_0@PAGEOFF]
-; CHECK-SD-NEXT:    cmeq.8b v0, v0, #0
-; CHECK-SD-NEXT:    bic.8b v0, v1, v0
+; CHECK-SD-NEXT:    and.8b v0, v0, v1
 ; CHECK-SD-NEXT:    addv.8b b0, v0
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -661,7 +660,8 @@ define i8 @convert_to_bitmask_8xi2(<8 x i2> %vec) {
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    movi.8b v1, #3
-; CHECK-GI-NEXT:    cmtst.8b v0, v0, v1
+; CHECK-GI-NEXT:    and.8b v0, v0, v1
+; CHECK-GI-NEXT:    cmtst.8b v0, v0, v0
 ; CHECK-GI-NEXT:    umov.b w8, v0[1]
 ; CHECK-GI-NEXT:    umov.b w9, v0[0]
 ; CHECK-GI-NEXT:    umov.b w10, v0[2]
@@ -813,7 +813,8 @@ define i4 @convert_legalized_illegal_element_size(<4 x i22> %vec) {
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    movi.4s v1, #63, msl #16
-; CHECK-GI-NEXT:    cmtst.4s v0, v0, v1
+; CHECK-GI-NEXT:    and.16b v0, v0, v1
+; CHECK-GI-NEXT:    cmtst.4s v0, v0, v0
 ; CHECK-GI-NEXT:    mov.s w8, v0[1]
 ; CHECK-GI-NEXT:    mov.s w9, v0[2]
 ; CHECK-GI-NEXT:    fmov w11, s0

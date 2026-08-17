@@ -136,15 +136,15 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   EMIT vp<[[RDX_START:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
-; CHECK-NEXT:   EMIT vp<%index.part.next> = VF * Part + ir<0>
-; CHECK-NEXT:   EMIT vp<%active.lane.mask.entry> = active lane mask vp<%index.part.next>, ir<%N>, ir<1>
+; CHECK-NEXT:   EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%N>, ir<1>
+; CHECK-NEXT:   EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[MASK:%[0-9]+]]> = phi vp<%active.lane.mask.entry>, vp<%active.lane.mask.next>
+; CHECK-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[MASK:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
 ; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi (add) vp<[[RDX_START]]>, vp<[[REDUCE:%[0-9]+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:     vp<[[STEPS:%[0-9]+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
@@ -155,9 +155,9 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<[[PTR_B]]>, vp<[[MASK]]>
 ; CHECK-NEXT:     EXPRESSION vp<[[REDUCE]]> = ir<%accum> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32), vp<[[MASK]]>)
 ; CHECK-NEXT:     EMIT vp<%index.next> = add vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[PART_IDX:%[0-9]+]]> = VF * Part + vp<%index.next>, vp<[[VF]]>
-; CHECK-NEXT:     EMIT vp<%active.lane.mask.next> = active lane mask vp<[[PART_IDX]]>, ir<%N>, ir<1>
-; CHECK-NEXT:     EMIT vp<[[NOT_MASK:%[0-9]+]]> = not vp<%active.lane.mask.next>
+; CHECK-NEXT:     EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<%N>, ir<1>
+; CHECK-NEXT:     EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
+; CHECK-NEXT:     EMIT vp<[[NOT_MASK:%[0-9]+]]> = not vp<%extract.next.alm.part>
 ; CHECK-NEXT:     EMIT branch-on-cond vp<[[NOT_MASK]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -282,5 +282,5 @@ exit:
 !0 = distinct !{!0, !2, !3}
 !1 = distinct !{!1, !2, !4}
 !2 = !{!"llvm.loop.interleave.count", i32 1}
-!3 = !{!"llvm.loop.vectorize.predicate.enable", i1 false}
-!4 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.predicate.disable"}
+!4 = !{!"llvm.loop.vectorize.predicate.enable"}

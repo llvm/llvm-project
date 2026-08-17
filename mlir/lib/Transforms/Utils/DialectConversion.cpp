@@ -3382,14 +3382,26 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
       rewriter.replaceOp(op, newMaterialization);
       return success();
     }
+    StringRef direction =
+        info.getMaterializationKind() == MaterializationKind::Target ? "target"
+                                                                     : "source";
+    InFlightDiagnostic diag =
+        op.emitError()
+        << "failed to legalize unresolved " << direction
+        << " materialization from (" << inputOperands.getTypes() << ") to ("
+        << op.getResultTypes()
+        << ") that remained live after conversion (no matching callback)";
+    diag.attachNote(op->getUsers().begin()->getLoc())
+        << "see existing live user here: " << *op->getUsers().begin();
+    return failure();
   }
 
-  InFlightDiagnostic diag = op->emitError()
-                            << "failed to legalize unresolved materialization "
-                               "from ("
-                            << inputOperands.getTypes() << ") to ("
-                            << op.getResultTypes()
-                            << ") that remained live after conversion";
+  InFlightDiagnostic diag =
+      op->emitError()
+      << "failed to legalize unresolved materialization "
+         "from ("
+      << inputOperands.getTypes() << ") to (" << op.getResultTypes()
+      << ") that remained live after conversion (no type converter specified)";
   diag.attachNote(op->getUsers().begin()->getLoc())
       << "see existing live user here: " << *op->getUsers().begin();
   return failure();

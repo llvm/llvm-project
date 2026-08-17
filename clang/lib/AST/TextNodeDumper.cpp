@@ -759,6 +759,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     }
     OS << ", Null=" << Value.isNullPointer()
        << ", Offset=" << Value.getLValueOffset().getQuantity()
+       << ", OnePastTheEnd=" << Value.isLValueOnePastTheEnd()
        << ", HasPath=" << Value.hasLValuePath();
     if (Value.hasLValuePath()) {
       OS << ", PathLength=" << Value.getLValuePath().size();
@@ -2247,7 +2248,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -3046,6 +3047,18 @@ void TextNodeDumper::VisitExplicitInstantiationDecl(
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
   if (TypeSourceInfo *T = D->getFriendType())
     dumpType(T->getType());
+  if (D->isPackExpansion())
+    OS << "...";
+}
+
+void TextNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+  if (D->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    VisitFriendDecl(D);
+    return;
+  }
+
+  dumpBareTemplateName(D->getFriendTemplateName());
   if (D->isPackExpansion())
     OS << "...";
 }

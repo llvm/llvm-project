@@ -1391,6 +1391,22 @@ func.func @dead_shift() {
 // CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
 // CHECK-NEXT: llvm.return
 
+// -----
+
+// Test that !fir.shift<N> flowing through the IR as a value (here, a
+// function argument) has a working type conversion to a struct of i64s,
+// matching !fir.shape<N> / !fir.shape_shift<N>.
+
+func.func @shift_value(%s: !fir.shift<1>) -> !fir.shift<1> {
+  return %s : !fir.shift<1>
+}
+
+// CHECK-LABEL: llvm.func @shift_value
+// CHECK-SAME:  (%[[ARG:.*]]: !llvm.struct<(i64)>) -> !llvm.struct<(i64)>
+// CHECK:       llvm.return %[[ARG]] : !llvm.struct<(i64)>
+
+// -----
+
 func.func @dead_shape() {
   %c0 = arith.constant 0 : index
   %0 = fir.shape %c0 : (index) -> !fir.shape<1>
