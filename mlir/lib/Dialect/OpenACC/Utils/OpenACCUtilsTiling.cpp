@@ -70,6 +70,8 @@ static mlir::acc::LoopOp createACCLoopFromOriginal(
       mlir::ArrayAttr{}, origLoop.getCacheOperands(),
       origLoop.getPrivateOperands(), origLoop.getFirstprivateOperands(),
       origLoop.getReductionOperands(), combinedAttr);
+  // Preserve discardable attributes such as loopAnnotation.
+  newLoop->setDiscardableAttrs(origLoop->getDiscardableAttrDictionary());
   return newLoop;
 }
 

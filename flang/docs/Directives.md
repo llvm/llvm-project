@@ -171,8 +171,9 @@ directives. Directives on loops are used to specify additional transformation to
 be performed by the compiler like enabling vectorisation, unrolling, interchange
 etc.
 
-Currently loop directives are not accepted in the presence of OpenMP or OpenACC
-constructs on the loop. This should be implemented as it is used in some
+Currently loop directives are accepted in the presence of OpenACC loop and
+combined constructs on the loop. Loop directives with OpenMP constructs on the
+loop are not yet accepted. This should be implemented as it is used in some
 applications.
 
 ### Array Expressions
