@@ -14,8 +14,8 @@
 #ifndef LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
-#include "llvm/ADT/APFloat.h"
 #include "clang/Basic/BuiltinTraits.h"
+#include "llvm/ADT/APFloat.h"
 #include <cstdint>
 #include <optional>
 

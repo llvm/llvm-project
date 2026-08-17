@@ -4551,7 +4551,8 @@ static bool interp__builtin_x86_comi(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
                                     const InterpFrame *Frame,
-                                    const CallExpr *Call, unsigned ID, uint64_t Predicate, bool IsScalar) {
+                                    const CallExpr *Call, unsigned ID,
+                                    uint64_t Predicate, bool IsScalar) {
   const Pointer &VectorB = S.Stk.pop<Pointer>();
   const Pointer &VectorA = S.Stk.pop<Pointer>();
   Pointer &Dst = S.Stk.peek<Pointer>();
