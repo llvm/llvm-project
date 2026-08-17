@@ -957,12 +957,8 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
   // one another, but only the top-level directive should cause a warning.
 }
 
-void OmpStructureChecker::CheckDirectiveInPureProcedure(
-    parser::CharBlock source, llvm::omp::Directive id) {
-  const Scope &scope{context_.FindScope(source)};
-  if (!FindPureProcedureContaining(scope)) {
-    return;
-  }
+void OmpStructureChecker::CheckDirectivePureSince(
+    parser::CharBlock source, llvm::omp::Directive id, const char *where) {
   unsigned version{context_.langOptions().OpenMPVersion};
   // A directive's "pure" property is version-specific: pureSince is the
   // OpenMP version at which the directive gained that property.
@@ -972,13 +968,47 @@ void OmpStructureChecker::CheckDirectiveInPureProcedure(
   }
   if (pureSince != 0x7FFFFFFF) {
     context_.Say(source,
-        "The OpenMP directive '%s' is not allowed in a PURE procedure in %s, %s"_err_en_US,
-        parser::omp::GetUpperName(id, version), ThisVersion(version),
+        "The OpenMP directive '%s' is not allowed in %s in %s, %s"_err_en_US,
+        parser::omp::GetUpperName(id, version), where, ThisVersion(version),
         TryVersion(pureSince));
   } else {
     context_.Say(source,
-        "The OpenMP directive '%s' is not allowed in a PURE procedure"_err_en_US,
-        parser::omp::GetUpperName(id, version));
+        "The OpenMP directive '%s' is not allowed in %s"_err_en_US,
+        parser::omp::GetUpperName(id, version), where);
+  }
+}
+
+void OmpStructureChecker::CheckDirectiveInPureProcedure(
+    parser::CharBlock source, llvm::omp::Directive id) {
+  const Scope &scope{context_.FindScope(source)};
+  if (!FindPureProcedureContaining(scope)) {
+    return;
+  }
+  CheckDirectivePureSince(source, id, "a PURE procedure");
+}
+
+void OmpStructureChecker::CheckDirectiveInDoConcurrent(
+    parser::CharBlock source, llvm::omp::Directive id) {
+  // Look for any enclosing DO CONCURRENT, not just the nearest DO, since a
+  // plain DO nested inside DO CONCURRENT is still part of its body.
+  for (const LoopOrConstruct &c : llvm::reverse(constructStack_)) {
+    auto *doConstruct{std::get_if<const parser::DoConstruct *>(&c)};
+    if (!doConstruct || !(*doConstruct)->IsDoConcurrent()) {
+      continue;
+    }
+    unsigned version{context_.langOptions().OpenMPVersion};
+    if (!IsDoConcurrentLegal(version)) {
+      // Prior to OpenMP 6.0, no OpenMP directive, regardless of its "pure"
+      // property, was allowed inside a DO CONCURRENT construct.
+      context_.Say(source,
+          "The OpenMP directive '%s' is not allowed inside a DO CONCURRENT construct"_err_en_US,
+          parser::omp::GetUpperName(id, version));
+    } else {
+      // Starting with OpenMP 6.0, directives that have the "pure" property
+      // are permitted inside a DO CONCURRENT construct.
+      CheckDirectivePureSince(source, id, "a DO CONCURRENT construct");
+    }
+    return;
   }
 }
 
@@ -1331,6 +1361,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   CheckDirectiveDeprecation(x);
   CheckDirectiveInPureProcedure(dirName.source, dirName.v);
+  CheckDirectiveInDoConcurrent(dirName.source, dirName.v);
 
   // Verify clauses
   common::visit(
@@ -1388,6 +1419,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
       llvm::iterator_range(std::list<parser::OmpClause>{}));
 
   CheckDirectiveInPureProcedure(dirName.source, dirName.v);
+  CheckDirectiveInDoConcurrent(dirName.source, dirName.v);
   EnterDirectiveNest(DeclarativeNest);
 }
 
