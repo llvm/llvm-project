@@ -798,4 +798,26 @@ def AggregatedOpInterface : OpInterface<"AggregatedOpInterface"> {
   ];
 }
 
+def ElementwiseOpInterface : OpInterface<"ElementwiseOpInterface"> {
+  let description = [{
+    Interface for operations that represent elementwise computations. This
+    includes both the generic `linalg.elementwise` op and its named
+    specializations a.k.a. linalg names ops (e.g. `linalg.add`, `linalg.exp`).
+
+    The interface exposes the kind of elementwise operation being performed,
+    allowing transforms to handle all elementwise ops uniformly.
+  }];
+  let cppNamespace = "::mlir::linalg";
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the kind of elementwise operation (e.g. add, exp, mul).
+      }],
+      /*retType=*/"::mlir::linalg::ElementwiseKind",
+      /*methodName=*/"getElementwiseKind",
+      /*args=*/(ins)
+    >
+  ];
+}
+
 #endif // LINALG_IR_LINALGINTERFACES

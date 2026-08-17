@@ -132,6 +132,28 @@ std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr);
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 
 //===----------------------------------------------------------------------===//
+// Shared utilities for named elementwise ops
+//===----------------------------------------------------------------------===//
+
+namespace mlir::linalg {
+
+/// Builds the body region for a named elementwise op based on the given kind.
+/// Dispatches actual building to one of build[UnaryFn,BinaryFn,TernaryFn].
+void buildElementwiseRegion(ImplicitLocOpBuilder &b, Block &block,
+                            ElementwiseKind kind,
+                            function_ref<InFlightDiagnostic()> emitError);
+
+/// RegionBuilderFn for all named elementwise ops, parameterized by kind.
+template <ElementwiseKind Kind>
+void elementwiseNamedOpRegionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
+    function_ref<InFlightDiagnostic()> emitError) {
+  buildElementwiseRegion(b, block, Kind, emitError);
+}
+
+} // namespace mlir::linalg
+
+//===----------------------------------------------------------------------===//
 // Linalg Dialect Operations
 //===----------------------------------------------------------------------===//
 
