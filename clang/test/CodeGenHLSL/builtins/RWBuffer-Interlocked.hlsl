@@ -6,8 +6,8 @@
 // RUN:   spirv-pc-vulkan1.3-compute %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
-// Regression coverage for free-function InterlockedAdd/InterlockedOr on a
-// typed resource subscript (RWBuffer<int>[i]). This exercises the
+// Regression coverage for free-function interlocked operations on a typed
+// resource subscript (RWBuffer<int>[i]). This exercises the
 // LangAS::hlsl_device branch of the dest-argument address-space check in
 // SemaHLSL and ensures the atomicrmw is emitted on the pointer returned by
 // resource.getpointer for a TypedBuffer (as opposed to the RawBuffer path
@@ -23,16 +23,21 @@ RWBuffer<int> Out : register(u0);
 // DXCHECK:  atomicrmw or ptr %[[PTR2]], i32 1 syncscope("device") monotonic
 // DXCHECK:  %[[PTR3:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
 // DXCHECK:  atomicrmw xor ptr %[[PTR3]], i32 1 syncscope("device") monotonic
+// DXCHECK:  %[[PTR4:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
+// DXCHECK:  atomicrmw min ptr %[[PTR4]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR1:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.{{Image|SignedImage}}", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: atomicrmw add ptr addrspace(11) %[[PTR1]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR2:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.{{Image|SignedImage}}", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: atomicrmw or ptr addrspace(11) %[[PTR2]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR3:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.{{Image|SignedImage}}", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: atomicrmw xor ptr addrspace(11) %[[PTR3]], i32 1 syncscope("device") monotonic
+// SPVCHECK: %[[PTR4:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.{{Image|SignedImage}}", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
+// SPVCHECK: atomicrmw min ptr addrspace(11) %[[PTR4]], i32 1 syncscope("device") monotonic
 [shader("compute")]
 [numthreads(1,1,1)]
 void main(uint3 id : SV_DispatchThreadID) {
   InterlockedAdd(Out[id.x], 1);
   InterlockedOr(Out[id.x], 1);
   InterlockedXor(Out[id.x], 1);
+  InterlockedMin(Out[id.x], 1);
 }
