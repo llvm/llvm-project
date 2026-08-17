@@ -392,6 +392,36 @@ func.func @clean_region_branch_op_remove_result(%arg0 : index, %arg1 : memref<i3
 
 // -----
 
+// The scf.if result is dead, but both branches have side-effecting ops, so
+// scf.if itself must be preserved. The dead result and the yielded values
+// that only fed that dead result (and any ub.poison value that replaces
+// them) must be removed by the `canonicalize` pass.
+//
+// CHECK-CANONICALIZE:       func.func @clean_region_branch_op_if_remove_result(%[[cond:.*]]: i1, %[[m:.*]]: memref<i32>) {
+// CHECK-CANONICALIZE-NEXT:    scf.if %[[cond]] {
+// CHECK-CANONICALIZE-NEXT:      %[[c1:.*]] = arith.constant 1
+// CHECK-CANONICALIZE-NEXT:      memref.store %[[c1]], %[[m]][]
+// CHECK-CANONICALIZE-NEXT:    } else {
+// CHECK-CANONICALIZE-NEXT:      %[[c2:.*]] = arith.constant 2
+// CHECK-CANONICALIZE-NEXT:      memref.store %[[c2]], %[[m]][]
+// CHECK-CANONICALIZE-NEXT:    }
+// CHECK-CANONICALIZE-NEXT:    return
+// CHECK-CANONICALIZE-NEXT:  }
+func.func @clean_region_branch_op_if_remove_result(%cond: i1, %m: memref<i32>) {
+  %r = scf.if %cond -> (i32) {
+    %c1 = arith.constant 1 : i32
+    memref.store %c1, %m[] : memref<i32>
+    scf.yield %c1 : i32
+  } else {
+    %c2 = arith.constant 2 : i32
+    memref.store %c2, %m[] : memref<i32>
+    scf.yield %c2 : i32
+  }
+  return
+}
+
+// -----
+
 // The simple ops which don't have memory effects or live results get removed.
 // %arg5 doesn't get removed from the @main even though it isn't live because
 // the signature of a public function is always left untouched.
