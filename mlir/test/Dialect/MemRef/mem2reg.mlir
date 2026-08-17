@@ -331,3 +331,18 @@ func.func @zero_extent_alloca_multi_dim() {
   %alloca = memref.alloca() : memref<2x0x3xf32>
   return
 }
+
+// -----
+
+// Same for the scalable path: the extent is `vector.vscale * 0`, a constant
+// zero, so the scalable vector type cannot be built either.
+
+// CHECK-LABEL: func.func @scalable_zero_extent_alloca
+func.func @scalable_zero_extent_alloca() {
+  %vscale = vector.vscale
+  %c0 = arith.constant 0 : index
+  %size = arith.muli %vscale, %c0 : index
+  // CHECK: memref.alloca(%{{.*}}) : memref<?xf32>
+  %alloca = memref.alloca(%size) : memref<?xf32>
+  return
+}
