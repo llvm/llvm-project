@@ -68,7 +68,6 @@ class TestSwiftResilience(TestBase):
 
         execute_command("cp " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib") + " " + self.getBuildArtifact("libmod.dylib"))
         execute_command("ln -sf " + self.getBuildArtifact("libmod." + exe_flavor + ".dylib.dSYM") + " " + self.getBuildArtifact("libmod.dylib.dSYM"))
-        execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".o") + " " + self.getBuildArtifact("mod.o"))
 
         execute_command("ln -sf " + self.getBuildArtifact("mod." + exe_flavor + ".swiftinterface") + " " + self.getBuildArtifact("mod.swiftinterface"))
 
