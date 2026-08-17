@@ -89,6 +89,7 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorInsertExtractStridedSliceTransforms(patterns);
     populateVectorRankReducingFMAPattern(patterns);
     populateVectorGatherLoweringPatterns(patterns);
+    populateVectorScatterLoweringPatterns(patterns);
     populateVectorFromElementsUnrollPatterns(patterns);
     populateVectorToElementsUnrollPatterns(patterns);
     if (armI8MM) {
