@@ -3417,7 +3417,7 @@ static Register scaleIndirectIdxReg(MachineRegisterInfo &MRI,
                                     MachineBasicBlock &BB, MachineInstr &I,
                                     const DebugLoc &DL, Register IdxReg,
                                     unsigned EltSize) {
-  if (EltSize <= 4)
+  if (EltSize == 4)
     return IdxReg;
 
   assert(isPowerOf2_32(EltSize) && "cannot scale index by a shift");
