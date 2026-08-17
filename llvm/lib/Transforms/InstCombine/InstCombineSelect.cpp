@@ -5379,11 +5379,21 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
                                            m_Specific(CondVal), m_Value())))) {
     auto *LoadInst = cast<IntrinsicInst>(TrueVal);
-    Instruction *In = Builder.CreateMaskedLoad(
-        TrueVal->getType(), MaskedLoadPtr,
-        LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
-    In->setAAMetadata(LoadInst->getAAMetadata());
-    return replaceInstUsesWith(SI, In);
+    // Keep the load at its original position to avoid crossing writes. The new
+    // passthrough must therefore be available there.
+    // TODO: Sink the load when the passthrough is unavailable but no
+    // intervening instruction can modify memory.
+    if (DT.dominates(FalseVal, LoadInst)) {
+      Builder.SetInsertPoint(LoadInst);
+      // SetInsertPoint() took the debug location from the old load, but the new
+      // load replaces the select, so restore the select's location.
+      Builder.SetCurrentDebugLocation(SI.getDebugLoc());
+      Instruction *In = Builder.CreateMaskedLoad(
+          TrueVal->getType(), MaskedLoadPtr,
+          LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
+      In->setAAMetadata(LoadInst->getAAMetadata());
+      return replaceInstUsesWith(SI, In);
+    }
   }
 
   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,

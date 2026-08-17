@@ -169,12 +169,11 @@ define <vscale x 4 x i32> @fold_sel_into_masked_load_drop_metadata(ptr %loc, <vs
   ret <vscale x 4 x i32> %sel
 }
 
-; FIXME: The replacement load is created at the select, below the aliasing
-; store, so it reads the stored value.
+; Keep the folded load before an intervening aliasing store.
 define <4 x float> @fold_sel_into_masked_load_aliasing_store(ptr %ptr, <4 x i1> %mask, <4 x float> %passthrough) {
 ; CHECK-LABEL: @fold_sel_into_masked_load_aliasing_store(
-; CHECK-NEXT:    store <4 x float> [[PASSTHROUGH:%.*]], ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[SEL:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr nonnull align 4 [[PTR]], <4 x i1> [[MASK:%.*]], <4 x float> [[PASSTHROUGH]])
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x float> [[PASSTHROUGH:%.*]])
+; CHECK-NEXT:    store <4 x float> [[PASSTHROUGH]], ptr [[PTR]], align 16
 ; CHECK-NEXT:    ret <4 x float> [[SEL]]
 ;
   %load = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %ptr, i32 4, <4 x i1> %mask, <4 x float> zeroinitializer)
@@ -183,12 +182,12 @@ define <4 x float> @fold_sel_into_masked_load_aliasing_store(ptr %ptr, <4 x i1> 
   ret <4 x float> %sel
 }
 
-; The fold currently creates the replacement load at the select, where the
-; passthrough is available.
+; Do not fold when the new passthrough is unavailable at the old load.
 define <4 x float> @neg_fold_sel_into_masked_load_passthrough_after_load(ptr %ptr, <4 x i1> %mask, <4 x float> %a) {
 ; CHECK-LABEL: @neg_fold_sel_into_masked_load_passthrough_after_load(
+; CHECK-NEXT:    [[LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x float> zeroinitializer)
 ; CHECK-NEXT:    [[PASSTHROUGH:%.*]] = fadd <4 x float> [[A:%.*]], [[A]]
-; CHECK-NEXT:    [[SEL:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x float> [[PASSTHROUGH]])
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[MASK]], <4 x float> [[LOAD]], <4 x float> [[PASSTHROUGH]]
 ; CHECK-NEXT:    ret <4 x float> [[SEL]]
 ;
   %load = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %ptr, i32 4, <4 x i1> %mask, <4 x float> zeroinitializer)
