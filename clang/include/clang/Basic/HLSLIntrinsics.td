@@ -1284,7 +1284,7 @@ The return value is the \a I parameter.
 }
 
 // Returns the normalized unit vector of the specified floating-point vector.
-def hlsl_normalize : HLSLOneArgDetail<"normalize", "normalize_impl"> {
+def hlsl_normalize : HLSLOneArgInlineBuiltin<"normalize"> {
   let Doc = [{
 \fn T normalize(T x)
 \brief Returns the normalized unit vector of the specified floating-point
@@ -1294,6 +1294,7 @@ vector.
 Normalize is based on the following formula: x / length(x).
 }];
   let ParamNames = ["x"];
+  let Body = "return x / __detail::length_impl(x);";
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }

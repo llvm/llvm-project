@@ -10,24 +10,6 @@
 ; CHECK-DAG: %[[#float_32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#vec4_float_32:]] = OpTypeVector %[[#float_32]] 4
 
-define noundef half @normalize_half(half noundef %a) {
-entry:
-  ; CHECK: %[[#]] = OpFunction %[[#float_16]] None %[[#]]
-  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_16]] %[[#op_ext_cl]] normalize %[[#arg0]]
-  %spv.normalize = call half @llvm.spv.normalize.f16(half %a)
-  ret half %spv.normalize
-}
-
-define noundef float @normalize_float(float noundef %a) {
-entry:
-  ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
-  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_cl]] normalize %[[#arg0]]
-  %spv.normalize = call float @llvm.spv.normalize.f32(float %a)
-  ret float %spv.normalize
-}
-
 define noundef <4 x half> @normalize_half4(<4 x half> noundef %a) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_float_16]] None %[[#]]
@@ -46,7 +28,17 @@ entry:
   ret <4 x float> %spv.normalize
 }
 
-declare half @llvm.spv.normalize.f16(half)
-declare float @llvm.spv.normalize.f32(float)
+define noundef <4 x float> @normalize_instcombine_float4(<4 x float> noundef %a) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_cl]] normalize %[[#arg0]]
+  %spv.length = call float @llvm.spv.length.f32(<4 x float> %a)
+  %splatinsert = insertelement <4 x float> poison, float %spv.length, i64 0
+  %splat = shufflevector <4 x float> %splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
+  %div = fdiv <4 x float> %a, %splat
+  ret <4 x float> %div
+}
+
 declare <4 x half> @llvm.spv.normalize.v4f16(<4 x half>)
 declare <4 x float> @llvm.spv.normalize.v4f32(<4 x float>)

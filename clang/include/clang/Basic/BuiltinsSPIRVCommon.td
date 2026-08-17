@@ -20,7 +20,6 @@ def subgroup_local_invocation_id : SPIRVBuiltin<"uint32_t()", [NoThrow, Const]>;
 
 def distance : SPIRVBuiltin<"void(...)", [NoThrow, Const]>;
 def length : SPIRVBuiltin<"void(...)", [NoThrow, Const]>;
-def normalize : SPIRVBuiltin<"void(...)", [NoThrow, Const, CustomTypeChecking]>;
 def smoothstep : SPIRVBuiltin<"void(...)", [NoThrow, Const, CustomTypeChecking]>;
 
 def group_barrier : SPIRVBuiltin<"void()", [NoThrow]>;

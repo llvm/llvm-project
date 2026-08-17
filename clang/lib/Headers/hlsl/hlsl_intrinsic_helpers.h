@@ -28,14 +28,6 @@ length_impl(vector<T, N> X) {
 #endif
 }
 
-template <typename T> constexpr T normalize_impl(T X) {
-#if (__has_builtin(__builtin_spirv_normalize))
-  return __builtin_spirv_normalize(X);
-#else
-  return X * rsqrt(dot(X, X));
-#endif
-}
-
 constexpr float dot2add_impl(half2 a, half2 b, float c) {
 #if (__has_builtin(__builtin_dx_dot2add))
   return __builtin_dx_dot2add(a, b, c);

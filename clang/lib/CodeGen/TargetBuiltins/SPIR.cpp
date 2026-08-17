@@ -45,14 +45,6 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_length,
         ArrayRef<Value *>{X}, nullptr, "spv.length");
   }
-  case SPIRV::BI__builtin_spirv_normalize: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "normalize operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(), Intrinsic::spv_normalize,
-        ArrayRef<Value *>{X}, nullptr, "spv.normalize");
-  }
   case SPIRV::BI__builtin_spirv_reflect: {
     Value *I = EmitScalarExpr(E->getArg(0));
     Value *N = EmitScalarExpr(E->getArg(1));

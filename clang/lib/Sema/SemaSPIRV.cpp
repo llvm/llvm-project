@@ -246,23 +246,6 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     TheCall->setType(RetTy);
     break;
   }
-  case SPIRV::BI__builtin_spirv_normalize: {
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    if (!ArgTyA->hasFloatingRepresentation()) {
-      SemaRef.Diag(A.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
-          << /* fp */ 1 << ArgTyA;
-      return true;
-    }
-
-    QualType RetTy = ArgTyA;
-    TheCall->setType(RetTy);
-    break;
-  }
   case SPIRV::BI__builtin_spirv_reflect: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
