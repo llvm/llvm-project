@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/VectorToXeGPU/VectorToXeGPU.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
@@ -546,6 +550,42 @@ private:
   }
 };
 
+struct TestXeGPUWholeBufferPromotion
+    : public PassWrapper<TestXeGPUWholeBufferPromotion,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUWholeBufferPromotion)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-whole-buffer-promotion";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the whole-buffer memref-to-vector promotion used by "
+           "convert-vector-to-xegpu in isolation";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<scf::SCFDialect>();
+    registry.insert<ub::UBDialect>();
+    xegpu::registerWholeBufferPromotionExternalModels(registry);
+  }
+
+  TestXeGPUWholeBufferPromotion() = default;
+  TestXeGPUWholeBufferPromotion(const TestXeGPUWholeBufferPromotion &pass)
+      : PassWrapper(pass) {}
+
+  Option<uint64_t> maxPromotedBufferBytes{
+      *this, "max-promoted-buffer-bytes",
+      llvm::cl::desc("Maximum size in bytes of a promoted whole-buffer alloc"),
+      llvm::cl::init(4096)};
+
+  void runOnOperation() override {
+    xegpu::promoteWholeBufferAllocs(getOperation(), maxPromotedBufferBytes);
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -559,6 +599,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
   PassRegistration<TestXeGPUArrayLengthOptimization>();
   PassRegistration<TestXeGPUCoalesceGatherScatter>();
+  PassRegistration<TestXeGPUWholeBufferPromotion>();
 }
 } // namespace test
 } // namespace mlir
