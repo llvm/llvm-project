@@ -4534,7 +4534,8 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_x86_comi(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
-                                     const CallExpr *Call, unsigned ID, uint64_t Predicate) {
+                                     const CallExpr *Call, unsigned ID,
+                                     uint64_t Predicate) {
   const Pointer &VectorB = S.Stk.pop<Pointer>();
   const Pointer &VectorA = S.Stk.pop<Pointer>();
 
