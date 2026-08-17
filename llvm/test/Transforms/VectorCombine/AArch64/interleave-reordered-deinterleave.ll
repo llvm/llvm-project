@@ -4,10 +4,7 @@
 define <8 x i16> @reverse_fields_interleave2(<8 x i16> %x) {
 ; CHECK-LABEL: define <8 x i16> @reverse_fields_interleave2(
 ; CHECK-SAME: <8 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i16>, <4 x i16> } @llvm.vector.deinterleave2.v8i16(<8 x i16> [[X]])
-; CHECK-NEXT:    [[D0:%.*]] = extractvalue { <4 x i16>, <4 x i16> } [[D]], 0
-; CHECK-NEXT:    [[D1:%.*]] = extractvalue { <4 x i16>, <4 x i16> } [[D]], 1
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <8 x i16> @llvm.vector.interleave2.v8i16(<4 x i16> [[D1]], <4 x i16> [[D0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = shufflevector <8 x i16> [[X]], <8 x i16> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 ; CHECK-NEXT:    ret <8 x i16> [[INTERLEAVE]]
 ;
   %d = call { <4 x i16>, <4 x i16> } @llvm.vector.deinterleave2(<8 x i16> %x)
@@ -20,11 +17,7 @@ define <8 x i16> @reverse_fields_interleave2(<8 x i16> %x) {
 define <12 x i16> @reverse_fields_interleave3(<12 x i16> %x) {
 ; CHECK-LABEL: define <12 x i16> @reverse_fields_interleave3(
 ; CHECK-SAME: <12 x i16> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.vector.deinterleave3.v12i16(<12 x i16> [[X]])
-; CHECK-NEXT:    [[D0:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16> } [[D]], 0
-; CHECK-NEXT:    [[D1:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16> } [[D]], 1
-; CHECK-NEXT:    [[D2:%.*]] = extractvalue { <4 x i16>, <4 x i16>, <4 x i16> } [[D]], 2
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <12 x i16> @llvm.vector.interleave3.v12i16(<4 x i16> [[D2]], <4 x i16> [[D1]], <4 x i16> [[D0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = shufflevector <12 x i16> [[X]], <12 x i16> poison, <12 x i32> <i32 2, i32 1, i32 0, i32 5, i32 4, i32 3, i32 8, i32 7, i32 6, i32 11, i32 10, i32 9>
 ; CHECK-NEXT:    ret <12 x i16> [[INTERLEAVE]]
 ;
   %d = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.vector.deinterleave3(<12 x i16> %x)
@@ -38,12 +31,7 @@ define <12 x i16> @reverse_fields_interleave3(<12 x i16> %x) {
 define <16 x i8> @reverse_fields_interleave4(<16 x i8> %x) {
 ; CHECK-LABEL: define <16 x i8> @reverse_fields_interleave4(
 ; CHECK-SAME: <16 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8> } @llvm.vector.deinterleave4.v16i8(<16 x i8> [[X]])
-; CHECK-NEXT:    [[D0:%.*]] = extractvalue { <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8> } [[D]], 0
-; CHECK-NEXT:    [[D1:%.*]] = extractvalue { <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8> } [[D]], 1
-; CHECK-NEXT:    [[D2:%.*]] = extractvalue { <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8> } [[D]], 2
-; CHECK-NEXT:    [[D3:%.*]] = extractvalue { <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8> } [[D]], 3
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <16 x i8> @llvm.vector.interleave4.v16i8(<4 x i8> [[D3]], <4 x i8> [[D2]], <4 x i8> [[D1]], <4 x i8> [[D0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = shufflevector <16 x i8> [[X]], <16 x i8> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
 ; CHECK-NEXT:    ret <16 x i8> [[INTERLEAVE]]
 ;
   %d = call { <4 x i8>, <4 x i8>, <4 x i8>, <4 x i8> } @llvm.vector.deinterleave4(<16 x i8> %x)
@@ -58,13 +46,7 @@ define <16 x i8> @reverse_fields_interleave4(<16 x i8> %x) {
 define <10 x i8> @reverse_fields_interleave5(<10 x i8> %x) {
 ; CHECK-LABEL: define <10 x i8> @reverse_fields_interleave5(
 ; CHECK-SAME: <10 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave5.v10i8(<10 x i8> [[X]])
-; CHECK-NEXT:    [[D0:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 0
-; CHECK-NEXT:    [[D1:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 1
-; CHECK-NEXT:    [[D2:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 2
-; CHECK-NEXT:    [[D3:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 3
-; CHECK-NEXT:    [[D4:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 4
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <10 x i8> @llvm.vector.interleave5.v10i8(<2 x i8> [[D4]], <2 x i8> [[D3]], <2 x i8> [[D2]], <2 x i8> [[D1]], <2 x i8> [[D0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = shufflevector <10 x i8> [[X]], <10 x i8> poison, <10 x i32> <i32 4, i32 3, i32 2, i32 1, i32 0, i32 9, i32 8, i32 7, i32 6, i32 5>
 ; CHECK-NEXT:    ret <10 x i8> [[INTERLEAVE]]
 ;
   %d = call { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave5(<10 x i8> %x)
@@ -80,14 +62,7 @@ define <10 x i8> @reverse_fields_interleave5(<10 x i8> %x) {
 define <12 x i8> @reverse_fields_interleave6(<12 x i8> %x) {
 ; CHECK-LABEL: define <12 x i8> @reverse_fields_interleave6(
 ; CHECK-SAME: <12 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave6.v12i8(<12 x i8> [[X]])
-; CHECK-NEXT:    [[D0:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 0
-; CHECK-NEXT:    [[D1:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 1
-; CHECK-NEXT:    [[D2:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 2
-; CHECK-NEXT:    [[D3:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 3
-; CHECK-NEXT:    [[D4:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 4
-; CHECK-NEXT:    [[D5:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 5
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <12 x i8> @llvm.vector.interleave6.v12i8(<2 x i8> [[D5]], <2 x i8> [[D4]], <2 x i8> [[D3]], <2 x i8> [[D2]], <2 x i8> [[D1]], <2 x i8> [[D0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = shufflevector <12 x i8> [[X]], <12 x i8> poison, <12 x i32> <i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6>
 ; CHECK-NEXT:    ret <12 x i8> [[INTERLEAVE]]
 ;
   %d = call { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave6(<12 x i8> %x)
@@ -104,15 +79,7 @@ define <12 x i8> @reverse_fields_interleave6(<12 x i8> %x) {
 define <14 x i8> @reverse_fields_interleave7(<14 x i8> %x) {
 ; CHECK-LABEL: define <14 x i8> @reverse_fields_interleave7(
 ; CHECK-SAME: <14 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave7.v14i8(<14 x i8> [[X]])
-; CHECK-NEXT:    [[D0:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 0
-; CHECK-NEXT:    [[D1:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 1
-; CHECK-NEXT:    [[D2:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 2
-; CHECK-NEXT:    [[D3:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 3
-; CHECK-NEXT:    [[D4:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 4
-; CHECK-NEXT:    [[D5:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 5
-; CHECK-NEXT:    [[D6:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 6
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <14 x i8> @llvm.vector.interleave7.v14i8(<2 x i8> [[D6]], <2 x i8> [[D5]], <2 x i8> [[D4]], <2 x i8> [[D3]], <2 x i8> [[D2]], <2 x i8> [[D1]], <2 x i8> [[D0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = shufflevector <14 x i8> [[X]], <14 x i8> poison, <14 x i32> <i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7>
 ; CHECK-NEXT:    ret <14 x i8> [[INTERLEAVE]]
 ;
   %d = call { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave7(<14 x i8> %x)
@@ -130,16 +97,7 @@ define <14 x i8> @reverse_fields_interleave7(<14 x i8> %x) {
 define <16 x i8> @reverse_fields_interleave8(<16 x i8> %x) {
 ; CHECK-LABEL: define <16 x i8> @reverse_fields_interleave8(
 ; CHECK-SAME: <16 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave8.v16i8(<16 x i8> [[X]])
-; CHECK-NEXT:    [[D0:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 0
-; CHECK-NEXT:    [[D1:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 1
-; CHECK-NEXT:    [[D2:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 2
-; CHECK-NEXT:    [[D3:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 3
-; CHECK-NEXT:    [[D4:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 4
-; CHECK-NEXT:    [[D5:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 5
-; CHECK-NEXT:    [[D6:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 6
-; CHECK-NEXT:    [[D7:%.*]] = extractvalue { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } [[D]], 7
-; CHECK-NEXT:    [[INTERLEAVE:%.*]] = call <16 x i8> @llvm.vector.interleave8.v16i8(<2 x i8> [[D7]], <2 x i8> [[D6]], <2 x i8> [[D5]], <2 x i8> [[D4]], <2 x i8> [[D3]], <2 x i8> [[D2]], <2 x i8> [[D1]], <2 x i8> [[D0]])
+; CHECK-NEXT:    [[INTERLEAVE:%.*]] = shufflevector <16 x i8> [[X]], <16 x i8> poison, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
 ; CHECK-NEXT:    ret <16 x i8> [[INTERLEAVE]]
 ;
   %d = call { <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8> } @llvm.vector.deinterleave8(<16 x i8> %x)
