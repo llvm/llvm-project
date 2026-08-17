@@ -149,11 +149,9 @@ ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
 lldb::ValueObjectSP
 ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
                                                bool can_create) {
-  if (auto maybe_child = LookupChildWithName(name)) {
-    ValueObject *valobj =
-        new ValueObjectRegister(*this, m_reg_ctx_sp, maybe_child->second);
-    return valobj->GetSP();
-  }
+  if (auto maybe_child = LookupChildWithName(name))
+    return (new ValueObjectRegister(*this, m_reg_ctx_sp, maybe_child->second))
+        ->GetSP();
 
   return {};
 }
