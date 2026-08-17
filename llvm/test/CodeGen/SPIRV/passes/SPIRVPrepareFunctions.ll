@@ -1,5 +1,7 @@
 ; RUN: opt -S -passes=spirv-prepare-functions -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
 
+@fp = global ptr addrspace(4) @callback
+
 ; @llvm.bswap.* is replaced with a call to a SPIR-V helper function whose
 ; body implements the byte-swap with shifts/masks/ors.
 define i32 @bswap_i32(i32 %x) {
@@ -71,3 +73,8 @@ declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
 declare i32 @llvm.bswap.i32(i32)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.fshr.i32(i32, i32, i32)
+
+; CHECK-LABEL: define i32 @callback(
+define { float, float } @callback({ float, float } %x) addrspace(4) {
+  ret { float, float } %x
+}
