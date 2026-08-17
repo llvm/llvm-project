@@ -1540,7 +1540,7 @@ add_header_library(
   HDRS
     fromfpf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -1597,7 +1597,7 @@ add_header_library(
   HDRS
     fromfpxf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -5763,7 +5763,7 @@ add_header_library(
   HDRS
     ufromfpf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -5820,7 +5820,7 @@ add_header_library(
   HDRS
     ufromfpxf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )

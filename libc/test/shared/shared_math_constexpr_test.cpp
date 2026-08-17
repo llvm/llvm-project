@@ -381,6 +381,15 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 //===----------------------------------------------------------------------===//
 
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::ufromfpxf128(Float128(0.0), 0, 32));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::ufromfpf128(Float128(0.0), 0, 32));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::fromfpxf128(Float128(0.0), 0, 32));
+
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::fromfpf128(Float128(0.0), 0, 32));
 
 //===----------------------------------------------------------------------===//
 //                       Native Float128 Tests
@@ -428,19 +437,10 @@ static_assert(float128(0.0) ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_numf128(float128(0.0),
                                                        float128(0.0)));
-
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::fromfpf128(float128(0.0), 0, 32));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::fromfpxf128(float128(0.0), 0, 32));
 static_assert(float128(-1.0) == [] {
   float128 getpayload_x = float128(0.0);
   return LIBC_NAMESPACE::shared::getpayloadf128(&getpayload_x);
 }());
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::ufromfpf128(float128(0.0), 0, 32));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::ufromfpxf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaximum_magf128(float128(0.0),
                                                        float128(0.0)));

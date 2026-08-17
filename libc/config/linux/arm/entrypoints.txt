@@ -441,9 +441,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.frexpl
     libc.src.math.fromfp
     libc.src.math.fromfpf
+    libc.src.math.fromfpf128
     libc.src.math.fromfpl
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
+    libc.src.math.fromfpxf128
     libc.src.math.fromfpxl
     libc.src.math.fsub
     libc.src.math.fsubl
@@ -554,9 +556,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
     libc.src.math.ufromfp
     libc.src.math.ufromfpf
+    libc.src.math.ufromfpf128
     libc.src.math.ufromfpl
     libc.src.math.ufromfpx
     libc.src.math.ufromfpxf
+    libc.src.math.ufromfpxf128
     libc.src.math.ufromfpxl
 )
 

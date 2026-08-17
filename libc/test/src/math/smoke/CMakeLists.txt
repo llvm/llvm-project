@@ -1781,6 +1781,7 @@ add_fp_unittest(
   HDRS
     FromfpTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.fromfpf128
 )
 
@@ -1854,6 +1855,7 @@ add_fp_unittest(
   HDRS
     FromfpxTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.fromfpxf128
 )
 
@@ -1928,6 +1930,7 @@ add_fp_unittest(
   HDRS
     UfromfpTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.ufromfpf128
 )
 
@@ -2001,6 +2004,7 @@ add_fp_unittest(
   HDRS
     UfromfpxTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.ufromfpxf128
 )
 
