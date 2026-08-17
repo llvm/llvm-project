@@ -800,6 +800,7 @@ private:
   const Function* TheFunction = nullptr;
   bool FunctionProcessed = false;
   bool ShouldInitializeAllMetadata;
+  bool ShouldInitializeMetadataThroughFunction = false;
 
   std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
       ProcessModuleHookFn;
@@ -853,9 +854,9 @@ public:
 
   /// Construct from a function, starting out in incorp state.
   ///
-  /// If \c ShouldInitializeAllMetadata, initializes all metadata in all
-  /// functions, giving correct numbering for metadata referenced only from
-  /// within a function (even if no functions have been initialized).
+  /// If \c ShouldInitializeAllMetadata, initializes metadata in module order
+  /// through this function, giving the same numbering for its metadata as a
+  /// module-level slot tracker.
   explicit SlotTracker(const Function *F,
                        bool ShouldInitializeAllMetadata = false);
 
@@ -957,9 +958,6 @@ private:
 
   /// Add all of the metadata from a function.
   void processFunctionMetadata(const Function &F);
-
-  /// Add all of the metadata from an instruction.
-  void processInstructionMetadata(const Instruction &I);
 
   /// Add all of the metadata from a DbgRecord.
   void processDbgRecordMetadata(const DbgRecord &DVR);
@@ -1063,7 +1061,8 @@ SlotTracker::SlotTracker(const Module *M, bool ShouldInitializeAllMetadata)
 // function provided to be added to the slot table.
 SlotTracker::SlotTracker(const Function *F, bool ShouldInitializeAllMetadata)
     : TheModule(F ? F->getParent() : nullptr), TheFunction(F),
-      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata) {}
+      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata),
+      ShouldInitializeMetadataThroughFunction(ShouldInitializeAllMetadata) {}
 
 SlotTracker::SlotTracker(const ModuleSummaryIndex *Index)
     : TheModule(nullptr), ShouldInitializeAllMetadata(false), TheIndex(Index) {}
@@ -1118,13 +1117,18 @@ void SlotTracker::processModule() {
       CreateMetadataSlot(N);
   }
 
+  bool ProcessFunctionMetadata = ShouldInitializeAllMetadata;
   for (const Function &F : *TheModule) {
     if (!F.hasName())
       // Add all the unnamed functions to the table.
       CreateModuleSlot(&F);
 
-    if (ShouldInitializeAllMetadata)
+    if (ProcessFunctionMetadata)
       processFunctionMetadata(F);
+
+    // Metadata in later functions cannot affect slots used by TheFunction.
+    if (ShouldInitializeMetadataThroughFunction && &F == TheFunction)
+      ProcessFunctionMetadata = false;
 
     // Add all the function attributes to the table.
     // FIXME: Add attributes of other objects?
@@ -1229,11 +1233,27 @@ void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
 
 void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   for (auto &BB : F) {
     for (auto &I : BB) {
       for (const DbgRecord &DR : I.getDbgRecordRange())
         processDbgRecordMetadata(DR);
-      processInstructionMetadata(I);
+
+      // Process metadata used directly by intrinsics.
+      if (const auto *CI = dyn_cast<CallInst>(&I))
+        if (Function *Callee = CI->getCalledFunction())
+          if (Callee->isIntrinsic())
+            for (auto &Op : I.operands())
+              if (auto *V = dyn_cast_or_null<MetadataAsValue>(Op))
+                if (auto *N = dyn_cast<MDNode>(V->getMetadata()))
+                  CreateMetadataSlot(N);
+
+      // Process metadata attached to this instruction.
+      if (!I.hasMetadata())
+        continue;
+      I.getAllMetadata(MDs);
+      for (auto &MD : MDs)
+        CreateMetadataSlot(MD.second);
     }
   }
 }
@@ -1265,23 +1285,6 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
   }
   if (DR.getDebugLoc())
     CreateMetadataSlot(DR.getDebugLoc().getAsMDNode());
-}
-
-void SlotTracker::processInstructionMetadata(const Instruction &I) {
-  // Process metadata used directly by intrinsics.
-  if (const auto *CI = dyn_cast<CallInst>(&I))
-    if (Function *F = CI->getCalledFunction())
-      if (F->isIntrinsic())
-        for (auto &Op : I.operands())
-          if (auto *V = dyn_cast_or_null<MetadataAsValue>(Op))
-            if (auto *N = dyn_cast<MDNode>(V->getMetadata()))
-              CreateMetadataSlot(N);
-
-  // Process metadata attached to this instruction.
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  I.getAllMetadata(MDs);
-  for (auto &MD : MDs)
-    CreateMetadataSlot(MD.second);
 }
 
 /// Clean up after incorporating a function. This is the only way to get out of
@@ -5262,10 +5265,18 @@ void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
+  if (const auto *F = dyn_cast<Function>(this)) {
+    formatted_raw_ostream OS(ROS);
+    SlotTracker SlotTable(F, /*ShouldInitializeAllMetadata=*/true);
+    AssemblyWriter W(OS, SlotTable, F->getParent(), nullptr, IsForDebug);
+    W.printFunction(F);
+    return;
+  }
+
   bool ShouldInitializeAllMetadata = false;
   if (auto *I = dyn_cast<Instruction>(this))
     ShouldInitializeAllMetadata = isReferencingMDNode(*I);
-  else if (isa<Function>(this) || isa<MetadataAsValue>(this))
+  else if (isa<MetadataAsValue>(this))
     ShouldInitializeAllMetadata = true;
 
   ModuleSlotTracker MST(getModuleFromVal(this), ShouldInitializeAllMetadata);
