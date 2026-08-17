@@ -34,6 +34,8 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
 
 // -----
 
+// A typed induction variable is recomputed in closed form from the canonical
+// induction variable, so it adds neither an iter_arg nor a loop result.
 // CHECK-LABEL: func.func @typed_loop(
 // CHECK-SAME: %[[LB:.*]]: i32, %[[UB:.*]]: i32, %[[STEP:.*]]: i32,
 // CHECK-SAME: %[[ADDR:.*]]: !fir.ref<i32>) {
@@ -45,14 +47,78 @@ func.func @simple_loop(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK: %[[TRIP:.*]] = arith.divsi %[[DISTANCE]], %[[STEP_IDX]] : index
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[C1:.*]] = arith.constant 1 : index
-// CHECK: scf.for %{{.*}} = %[[C0]] to %[[TRIP]] step %[[C1]] iter_args(%[[IV:.*]] = %[[LB]]) -> (i32) {
-// CHECK:   %[[NEXT:.*]] = arith.addi %[[IV]], %[[STEP]] overflow<nsw> : i32
+// CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[TRIP]] step %[[C1]] {
+// CHECK:   %[[I_TYPED:.*]] = fir.convert %[[I]] : (index) -> i32
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_TYPED]], %[[STEP]] : i32
+// CHECK:   %[[IV:.*]] = arith.addi %[[LB]], %[[SCALED]] : i32
 // CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
-// CHECK:   scf.yield %[[NEXT]] : i32
 // CHECK: }
+// CHECK-NOT: iter_args
 func.func @typed_loop(%lb: i32, %ub: i32, %step: i32,
                       %addr: !fir.ref<i32>) {
   fir.do_loop %iv = %lb to %ub step %step : i32 {
+    fir.store %iv to %addr : !fir.ref<i32>
+  }
+  return
+}
+
+// -----
+
+// Only the loop's own iter_args survive; the typed IV does not add one.
+// CHECK-LABEL: func.func @typed_loop_iter_args(
+// CHECK: %[[C0:.*]] = arith.constant 0 : i32
+// CHECK: %[[C1:.*]] = arith.constant 1 : i32
+// CHECK: %[[TRIP:.*]] = arith.divsi
+// CHECK: %[[C0_IDX:.*]] = arith.constant 0 : index
+// CHECK: %[[C1_IDX:.*]] = arith.constant 1 : index
+// CHECK: %[[RES:.*]] = scf.for %[[I:.*]] = %[[C0_IDX]] to %[[TRIP]] step %[[C1_IDX]] iter_args(%[[ACC:.*]] = %[[C0]]) -> (i32) {
+// CHECK:   %[[I_TYPED:.*]] = fir.convert %[[I]] : (index) -> i32
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_TYPED]], %[[C1]] : i32
+// CHECK:   %[[IV:.*]] = arith.addi %[[C1]], %[[SCALED]] : i32
+// CHECK:   %[[SUM:.*]] = arith.addi %[[ACC]], %[[IV]] : i32
+// CHECK:   scf.yield %[[SUM]] : i32
+// CHECK: }
+// CHECK: return %[[RES]] : i32
+func.func @typed_loop_iter_args(%addr: !fir.ref<i32>) -> i32 {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %r = fir.do_loop %iv = %c1_i32 to %c10_i32 step %c1_i32 iter_args(%acc = %c0_i32) -> (i32) : i32 {
+    %v = arith.addi %acc, %iv : i32
+    fir.result %v : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// A negative step is handled by the same closed form, so it does not need an
+// iter_arg either.
+// CHECK-LABEL: func.func @typed_loop_negative_step(
+// CHECK-SAME: %[[ADDR:.*]]: !fir.ref<i32>) {
+// CHECK: %[[C1:.*]] = arith.constant 1 : i32
+// CHECK: %[[C10:.*]] = arith.constant 10 : i32
+// CHECK: %[[CM1:.*]] = arith.constant -1 : i32
+// CHECK: %[[LB_IDX:.*]] = fir.convert %[[C10]] : (i32) -> index
+// CHECK: %[[UB_IDX:.*]] = fir.convert %[[C1]] : (i32) -> index
+// CHECK: %[[STEP_IDX:.*]] = fir.convert %[[CM1]] : (i32) -> index
+// CHECK: %[[DIFF:.*]] = arith.subi %[[UB_IDX]], %[[LB_IDX]] : index
+// CHECK: %[[DISTANCE:.*]] = arith.addi %[[DIFF]], %[[STEP_IDX]] : index
+// CHECK: %[[TRIP:.*]] = arith.divsi %[[DISTANCE]], %[[STEP_IDX]] : index
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1_IDX:.*]] = arith.constant 1 : index
+// CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[TRIP]] step %[[C1_IDX]] {
+// CHECK:   %[[I_TYPED:.*]] = fir.convert %[[I]] : (index) -> i32
+// CHECK:   %[[SCALED:.*]] = arith.muli %[[I_TYPED]], %[[CM1]] : i32
+// CHECK:   %[[IV:.*]] = arith.addi %[[C10]], %[[SCALED]] : i32
+// CHECK:   fir.store %[[IV]] to %[[ADDR]] : !fir.ref<i32>
+// CHECK: }
+// CHECK-NOT: iter_args
+func.func @typed_loop_negative_step(%addr: !fir.ref<i32>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %cm1_i32 = arith.constant -1 : i32
+  fir.do_loop %iv = %c10_i32 to %c1_i32 step %cm1_i32 : i32 {
     fir.store %iv to %addr : !fir.ref<i32>
   }
   return
