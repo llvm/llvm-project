@@ -1236,10 +1236,8 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   return LegalizeKind(TypeSplitVector, NVT);
 }
 
-static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
-                                          unsigned &NumIntermediates,
-                                          MVT &RegisterVT,
-                                          TargetLoweringBase *TLI) {
+unsigned TargetLoweringBase::getVectorTypeBreakdownMVT(
+    MVT VT, MVT &IntermediateVT, unsigned &NumIntermediates, MVT &RegisterVT) {
   // Figure out the right, legal destination reg to copy into.
   ElementCount EC = VT.getVectorElementCount();
   MVT EltTy = VT.getVectorElementType();
@@ -1264,7 +1262,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   // always end up with an EC that represent a scalar or a scalable
   // scalar.
   while (EC.getKnownMinValue() > 1 &&
-         !TLI->isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
+         !isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
     EC = EC.divideCoefficientBy(2);
     NumVectorRegs <<= 1;
   }
@@ -1272,7 +1270,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   NumIntermediates = NumVectorRegs;
 
   MVT NewVT = MVT::getVectorVT(EltTy, EC);
-  if (!TLI->isTypeLegal(NewVT))
+  if (!isTypeLegal(NewVT))
     NewVT = EltTy;
   IntermediateVT = NewVT;
 
@@ -1281,7 +1279,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   // Convert sizes such as i33 to i64.
   LaneSizeInBits = llvm::bit_ceil(LaneSizeInBits);
 
-  MVT DestVT = TLI->getRegisterType(NewVT);
+  MVT DestVT = getCachedRegisterType(NewVT);
   RegisterVT = DestVT;
   if (EVT(DestVT).bitsLT(NewVT))    // Value is expanded, e.g. i64 -> i16.
     return NumVectorRegs * (LaneSizeInBits / DestVT.getScalarSizeInBits());
@@ -1621,8 +1619,8 @@ void TargetLoweringBase::computeRegisterProperties(
       MVT IntermediateVT;
       MVT RegisterVT;
       unsigned NumIntermediates;
-      unsigned NumRegisters = getVectorTypeBreakdownMVT(VT, IntermediateVT,
-          NumIntermediates, RegisterVT, this);
+      unsigned NumRegisters = getVectorTypeBreakdownMVT(
+          VT, IntermediateVT, NumIntermediates, RegisterVT);
       NumRegistersForVT[i] = NumRegisters;
       assert(NumRegistersForVT[i] == NumRegisters &&
              "NumRegistersForVT size cannot represent NumRegisters!");

@@ -1862,12 +1862,6 @@ public:
   virtual Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const;
 
   /// Return the type of registers that this ValueType will eventually require.
-  MVT getRegisterType(MVT VT) const {
-    assert((unsigned)VT.SimpleTy < std::size(RegisterTypeForVT));
-    return RegisterTypeForVT[VT.SimpleTy];
-  }
-
-  /// Return the type of registers that this ValueType will eventually require.
   MVT getRegisterType(LLVMContext &Context, EVT VT) const {
     return getRegisterTypeImpl(Context, VT, /*ForCallingConv=*/false);
   }
@@ -3972,11 +3966,21 @@ private:
                                       MVT &RegisterVT,
                                       bool ForCallingConv) const;
 
+  unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
+                                     unsigned &NumIntermediates,
+                                     MVT &RegisterVT);
+
+  /// Return the type of registers that this ValueType will eventually require.
+  MVT getCachedRegisterType(MVT VT) const {
+    assert((unsigned)VT.SimpleTy < std::size(RegisterTypeForVT));
+    return RegisterTypeForVT[VT.SimpleTy];
+  }
+
   MVT getRegisterTypeImpl(LLVMContext &Context, EVT VT,
                           bool ForCallingConv) const {
     if (VT.isSimple() &&
         !shouldUseDynamicVectorTypeBreakdown(VT, ForCallingConv))
-      return getRegisterType(VT.getSimpleVT());
+      return getCachedRegisterType(VT.getSimpleVT());
     if (VT.isVector()) {
       EVT VT1;
       MVT RegisterVT;
@@ -5247,7 +5251,7 @@ public:
   /// necessary information.
   virtual EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                                        ISD::NodeType /*ExtendKind*/) const {
-    EVT MinVT = getRegisterType(MVT::i32);
+    EVT MinVT = getRegisterType(Context, MVT::i32);
     return VT.bitsLT(MinVT) ? MinVT : VT;
   }
 
