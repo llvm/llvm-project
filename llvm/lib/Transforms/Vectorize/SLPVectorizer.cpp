@@ -19300,13 +19300,15 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   constexpr unsigned PartLimit = 2;
   // Measure the narrowness by the width the tree is vectorized at.
   const TreeEntry *RootTE = VectorizableTree.front().get();
-  unsigned Sz = getVectorElementSize(RootTE->Scalars.front());
-  if (auto It = MinBWs.find(RootTE); It != MinBWs.end())
+  unsigned Sz;
+  if (auto It = MinBWs.find(RootTE); It != MinBWs.end()) {
     Sz = It->second.first;
-  else
+  } else {
     Sz = std::max<unsigned>(
-        Sz, DL->getTypeSizeInBits(
-                getValueType(RootTE->Scalars.front())->getScalarType()));
+        getVectorElementSize(RootTE->Scalars.front()),
+        DL->getTypeSizeInBits(
+            getValueType(RootTE->Scalars.front())->getScalarType()));
+  }
   const unsigned MinVF = getMinVF(Sz);
   if (Cost >= -SLPCostThreshold &&
       VectorizableTree.front()->Scalars.size() * PartLimit <= MinVF &&
