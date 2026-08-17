@@ -5908,6 +5908,8 @@ getNVVMTcgen05MMAKind(NVVM::Tcgen05MMAKind kind) {
   case NVVM::Tcgen05MMAKind::MXF8F6F4:
   case NVVM::Tcgen05MMAKind::MXF4:
   case NVVM::Tcgen05MMAKind::MXF4NVF4:
+    // Block-scale kinds are handled by the tcgen05.mma.block_scale
+    // lowering paths and are not valid for plain tcgen05.mma.
     llvm_unreachable("Unsupported tcgen05.mma kind");
   }
 }
