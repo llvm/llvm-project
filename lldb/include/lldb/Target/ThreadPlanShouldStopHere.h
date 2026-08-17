@@ -61,8 +61,8 @@ public:
     eStepInAvoidNoDebug = (1 << 1),
     eStepOutAvoidNoDebug = (1 << 2),
     eStepOutPastThunks = (1 << 3),
-    eStepPastLine0    = (1 << 4) // Only source level plans should handle
-                                 // step past line 0 - not trampoline handlers.
+    eStepPastLine0 = (1 << 4) // Only source level plans should handle
+                              // step past line 0 - not trampoline handlers.
   };
 
   // Constructors and Destructors

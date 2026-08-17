@@ -276,7 +276,6 @@ AppleThreadPlanStepThroughDirectDispatch ::
   // in the path of getting to the actual target, and if we need to do this,
   // then one of the plans that is using us will make that happen.
   GetFlags().Clear(ThreadPlanShouldStopHere::eStepPastLine0);
-
 }
 
 AppleThreadPlanStepThroughDirectDispatch::

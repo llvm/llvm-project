@@ -26,8 +26,8 @@
 using namespace lldb_private;
 using namespace lldb;
 
-uint32_t ThreadPlanStepOverRange::s_default_flag_values
-    = ThreadPlanShouldStopHere::eStepPastLine0;
+uint32_t ThreadPlanStepOverRange::s_default_flag_values =
+    ThreadPlanShouldStopHere::eStepPastLine0;
 
 // ThreadPlanStepOverRange: Step through a stack range, either stepping over or
 // into based on the value of \a type.
