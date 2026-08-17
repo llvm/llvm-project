@@ -16,19 +16,16 @@ define void @test1() #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %[[CATCH:.*]]] unwind to caller
 ; CHECK:       [[CATCH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null, i32 64, ptr null]
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[FOR_BODY]] ], [ [[INC:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x double> @llvm.floor.v16f64(<16 x double> splat (double 1.000000e+00)) [ "funclet"(token [[TMP1]]) ]
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[INDEX]], 16
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[CATCH]] ], [ [[INC:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[CALL:%.*]] = call double @floor(double 1.000000e+00) #[[ATTR1:[0-9]+]] [ "funclet"(token [[TMP1]]) ]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[TRY_CONT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[TRY_CONT]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    store double 1.000000e+00, ptr @sink, align 8
+; CHECK-NEXT:    [[CALL_LCSSA:%.*]] = phi double [ [[CALL]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    store double [[CALL_LCSSA]], ptr @sink, align 8
 ; CHECK-NEXT:    catchret from [[TMP1]] to label %[[TRY_CONT1:.*]]
 ; CHECK:       [[TRY_CONT1]]:
 ; CHECK-NEXT:    ret void

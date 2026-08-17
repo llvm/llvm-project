@@ -454,7 +454,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN10:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[A]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[UMIN10]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 24
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[B]], i64 1)
@@ -490,31 +490,31 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT8]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 31
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i64 4, i64 [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i64 32, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i64, ptr [[SRC_2]], align 8, !alias.scope [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp ne i64 [[TMP22]], 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[TMP23]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[TMP23]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[SRC_1]], i32 [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[TMP25]], i64 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP26]], align 8, !alias.scope [[META9:![0-9]+]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[TMP25]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i64>, ptr [[TMP26]], align 8, !alias.scope [[META9:![0-9]+]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP28:%.*]] = and <2 x i1> [[BROADCAST_SPLAT]], [[TMP27]]
-; CHECK-NEXT:    [[TMP29:%.*]] = zext <2 x i1> [[TMP28]] to <2 x i8>
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <2 x i8> [[TMP29]], i64 1
-; CHECK-NEXT:    store i8 [[TMP30]], ptr [[DST]], align 1, !alias.scope [[META12:![0-9]+]], !noalias [[META14:![0-9]+]]
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq <16 x i64> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP29:%.*]] = and <16 x i1> [[BROADCAST_SPLAT]], [[TMP28]]
+; CHECK-NEXT:    [[TMP30:%.*]] = zext <16 x i1> [[TMP29]] to <16 x i8>
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <16 x i8> [[TMP30]], i64 15
+; CHECK-NEXT:    store i8 [[TMP32]], ptr [[DST]], align 1, !alias.scope [[META12:![0-9]+]], !noalias [[META14:![0-9]+]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
