@@ -26,7 +26,7 @@ class TestSwiftDeploymentTarget(TestBase):
     @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
-    @skipIf(macos_version=["<", "11.1"])
+    @skipIf(macos_version=["<", "15.0"])
     @swiftTest
     def test_swift_deployment_target(self):
         self.build()
@@ -38,7 +38,7 @@ class TestSwiftDeploymentTarget(TestBase):
     @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
-    @skipIf(macos_version=["<", "11.1"])
+    @skipIf(macos_version=["<", "15.0"])
     @swiftTest
     def test_swift_deployment_target_dlopen(self):
         self.build()
@@ -52,7 +52,7 @@ class TestSwiftDeploymentTarget(TestBase):
     @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
-    @skipIf(macos_version=["<", "11.1"])
+    @skipIf(macos_version=["<", "15.0"])
     # FIXME: This config started failing in CI only after switching to
     # the query-based FindTypes API.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
@@ -67,13 +67,13 @@ class TestSwiftDeploymentTarget(TestBase):
         )
         self.expect("expression f", substrs=["i = 23"])
         self.filecheck_log(log, __file__)
-#       CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::SetTriple({{.*}}apple-macosx11.0.0
+#       CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::SetTriple({{.*}}apple-macosx14.0.0
 #       CHECK-NOT: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::RegisterSectionModules("a.out"){{.*}} AST Data blobs
 
     @requireNotEmbeddedSwift
     @skipUnlessDarwin  # This test uses macOS triples explicitly.
     @skipIfDarwinEmbedded
-    @skipIf(macos_version=["<", "11.1"])
+    @skipIf(macos_version=["<", "15.0"])
     @swiftTest
     def test_swift_precise_compiler_invocation_triple(self):
         """
@@ -89,9 +89,9 @@ class TestSwiftDeploymentTarget(TestBase):
         )
         self.expect(
             "image list -t libNewerTarget.dylib",
-            substrs=["-apple-macosx11.1.0"],
+            substrs=["-apple-macosx15.0.0"],
         )
         self.expect("expression self", substrs=["i = 23"])
         self.filecheck_log(log, __file__, "-check-prefix=CHECK-PRECISE")
-#       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::CreateInstance() -- Fully specified triple {{.*}}-apple-macosx11.1.0
-#       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::SetTriple("{{.*}}-apple-macosx11.1.0")
+#       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::CreateInstance() -- Fully specified triple {{.*}}-apple-macosx15.0.0
+#       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::SetTriple("{{.*}}-apple-macosx15.0.0")
