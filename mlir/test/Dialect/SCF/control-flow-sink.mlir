@@ -58,3 +58,62 @@ func.func @test_scf_if_double_sink(%arg0: i1, %arg1: i32) {
   }
   return
 }
+
+// -----
+
+func.func private @consume(i32) -> ()
+
+// CHECK-LABEL: @test_scf_for_single_iteration_sink
+// CHECK-SAME:  (%[[ARG0:.*]]: i32)
+// CHECK: scf.for
+// CHECK:   %[[V0:.*]] = arith.addi %[[ARG0]], %[[ARG0]]
+// CHECK:   call @consume(%[[V0]])
+func.func @test_scf_for_single_iteration_sink(%arg0: i32) {
+  %0 = arith.addi %arg0, %arg0 : i32
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 1 : index
+  %step = arith.constant 1 : index
+  scf.for %i = %lb to %ub step %step {
+    func.call @consume(%0) : (i32) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func private @consume(i32) -> ()
+
+// CHECK-LABEL: @test_scf_for_zero_iteration_sink
+// CHECK-SAME:  (%[[ARG0:.*]]: i32)
+// CHECK: scf.for
+// CHECK:   %[[V0:.*]] = arith.addi %[[ARG0]], %[[ARG0]]
+// CHECK:   call @consume(%[[V0]])
+func.func @test_scf_for_zero_iteration_sink(%arg0: i32) {
+  %0 = arith.addi %arg0, %arg0 : i32
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 0 : index
+  %step = arith.constant 1 : index
+  scf.for %i = %lb to %ub step %step {
+    func.call @consume(%0) : (i32) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func private @consume(i32) -> ()
+
+// CHECK-LABEL: @test_scf_for_unknown_trip_count_no_sink
+// CHECK-SAME:  (%[[ARG0:.*]]: i32, %[[UB:.*]]: index)
+// CHECK: %[[V0:.*]] = arith.addi %[[ARG0]], %[[ARG0]]
+// CHECK: scf.for
+// CHECK:   call @consume(%[[V0]])
+func.func @test_scf_for_unknown_trip_count_no_sink(%arg0: i32, %ub: index) {
+  %0 = arith.addi %arg0, %arg0 : i32
+  %lb = arith.constant 0 : index
+  %step = arith.constant 1 : index
+  scf.for %i = %lb to %ub step %step {
+    func.call @consume(%0) : (i32) -> ()
+  }
+  return
+}
