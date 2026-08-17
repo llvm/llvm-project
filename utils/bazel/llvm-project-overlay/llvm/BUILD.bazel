@@ -4454,7 +4454,7 @@ cc_library(
         "lib/ExecutionEngine/Orc/Shared/*.cpp",
     ]),
     hdrs = glob([
-        "include/llvm/ExecutionEngine/Orc/Shared/*.h",
+        "include/llvm/ExecutionEngine/Orc/Shared/**/*.h",
     ]) + [
         "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
     ],
