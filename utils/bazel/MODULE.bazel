@@ -13,6 +13,7 @@ bazel_dep(name = "apple_support", version = "2.6.1", repo_name = "build_bazel_ap
 bazel_dep(name = "protobuf", version = "35.0", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_android", version = "0.7.2")
 bazel_dep(name = "rules_cc", version = "0.2.19")
+bazel_dep(name = "rules_foreign_cc", version = "0.14.0")
 bazel_dep(name = "rules_python", version = "1.8.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 
@@ -32,10 +33,16 @@ bazel_dep(name = "vulkan_headers", version = "1.4.349")
 
 bazel_dep(name = "llvm", version = "0.8.5", dev_dependency = True)
 
+linux_uapi_extension = use_extension(":linux_uapi.bzl", "linux_uapi_extension")
+use_repo(
+    linux_uapi_extension,
+    "linux_uapi",
+    "linux_uapi_hermetic",
+)
+
 llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
 use_repo(
     llvm_repos_extension,
-    "linux_uapi",
     "llvm-raw",
     "pyyaml",
     "vulkan_sdk",
