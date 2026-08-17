@@ -265,3 +265,99 @@ entry:
   store float %val, ptr addrspace(10) @outF, align 4
   ret void
 }
+
+@outI16 = addrspace(10) global i16 zeroinitializer, align 2
+@outV2I16 = addrspace(10) global <2 x i16> zeroinitializer, align 4
+
+; i16 access uses byte-wise decomposition (2 bytes).
+
+define void @byteBufferStoreI16() {
+; CHECK-LABEL: define void @byteBufferStoreI16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8 42, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: store i8 0, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store i16 42, ptr addrspace(11) %ptr, align 2
+  ret void
+}
+
+define void @byteBufferLoadI16() {
+; CHECK-LABEL: define void @byteBufferLoadI16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: zext i8 {{.*}} to i16
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: store i16 {{.*}}, ptr addrspace(10) @outI16
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load i16, ptr addrspace(11) %ptr, align 2
+  store i16 %val, ptr addrspace(10) @outI16, align 2
+  ret void
+}
+
+; <2 x i16> vector access decomposes per element (4 bytes total).
+
+define void @byteBufferStoreV2I16() {
+; CHECK-LABEL: define void @byteBufferStoreV2I16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: trunc i16 {{.*}} to i8
+; CHECK: store i8 {{.*}}, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 3)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store <2 x i16> <i16 1, i16 2>, ptr addrspace(11) %ptr, align 4
+  ret void
+}
+
+define void @byteBufferLoadV2I16() {
+; CHECK-LABEL: define void @byteBufferLoadV2I16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load i8, ptr addrspace(11)
+; CHECK: zext i8 {{.*}} to i16
+; CHECK: call {{.*}}@llvm.spv.insertelt
+; CHECK: call void @llvm.spv.store.v2i16.p10
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %val = load <2 x i16>, ptr addrspace(11) %ptr, align 4
+  store <2 x i16> %val, ptr addrspace(10) @outV2I16, align 4
+  ret void
+}
+
+; Same base pointer, i32 then i16 typed accesses (distinct ptrcasts).
+
+define void @byteBufferMixedI32ThenI16Store() {
+; CHECK-LABEL: define void @byteBufferMixedI32ThenI16Store(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: store i8 1, ptr addrspace(11)
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 3)
+; CHECK: store i8 2, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  store i32 1, ptr addrspace(11) %ptr, align 4
+  store i16 2, ptr addrspace(11) %ptr, align 2
+  ret void
+}
+
+define void @byteBufferMixedLoadI32ThenI16() {
+; CHECK-LABEL: define void @byteBufferMixedLoadI32ThenI16(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: zext i8 {{.*}} to i32
+; CHECK: call ptr addrspace(11) @llvm.spv.resource.getpointer{{.*}} i32 1)
+; CHECK: zext i8 {{.*}} to i16
+; CHECK: shl i16
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, i32 0)
+  %i32val = load i32, ptr addrspace(11) %ptr, align 4
+  %i16val = load i16, ptr addrspace(11) %ptr, align 2
+  store i32 %i32val, ptr addrspace(10) @outI32, align 4
+  store i16 %i16val, ptr addrspace(10) @outI16, align 2
+  ret void
+}
