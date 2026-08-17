@@ -61,5 +61,6 @@ attributes(global) subroutine test_global_local()
   n = 42
 end subroutine
 ! CHECK-LABEL: func.func @{{.*}}test_global_local
+! CHECK: hlfir.declare {{.*}}"_QFtest_global_localEn"
 ! CHECK: fir.zero_bits i32
-! CHECK: fir.store
+! CHECK: fir.store {{.*}} : !fir.ref<i32>
