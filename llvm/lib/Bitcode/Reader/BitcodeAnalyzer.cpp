@@ -1004,4 +1004,3 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
       return Skipped.takeError();
   }
 }
-

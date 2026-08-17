@@ -118,6 +118,8 @@ enum CodeObjectVersionKind {
 
 class TargetOptions {
 public:
+  // When adding fields, update the structured binding and serialization in
+  // llvm/lib/LTO/TargetOptionsBitcode.cpp.
   TargetOptions()
       : NoTrappingFPMath(true), EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
