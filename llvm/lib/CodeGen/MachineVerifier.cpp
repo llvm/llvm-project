@@ -151,6 +151,8 @@ struct MachineVerifier {
   bool isFunctionSelected = false;
   bool isFunctionTracksDebugUserValues = false;
 
+  bool functionHasPHIs;
+
   using RegVector = SmallVector<Register, 16>;
   using RegMaskVector = SmallVector<const uint32_t *, 4>;
   using RegSet = DenseSet<Register>;
@@ -476,6 +478,13 @@ void MachineVerifier::verifyProperties(const MachineFunction &MF) {
     report("Function has NoVRegs property but there are VReg operands", &MF);
 }
 
+static bool hasPHIs(const MachineFunction &MF) {
+  return !MF.getProperties().hasNoPHIs() &&
+         any_of(MF, [](const MachineBasicBlock &MBB) {
+           return !MBB.phis().empty();
+         });
+}
+
 bool MachineVerifier::verify(const MachineFunction &MF) {
   this->MF = &MF;
   TM = &MF.getTarget();
@@ -496,6 +505,8 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
   isFunctionRegBankSelected = Props.hasRegBankSelected();
   isFunctionSelected = Props.hasSelected();
   isFunctionTracksDebugUserValues = Props.hasTracksDebugUserValues();
+
+  functionHasPHIs = hasPHIs(MF);
 
   if (PASS) {
     auto *LISWrapper = PASS->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
@@ -731,19 +742,12 @@ void MachineVerifier::visitMachineFunctionBefore() {
   }
 }
 
-static bool hasPHIs(const MachineFunction &MF) {
-  return !MF.getProperties().hasNoPHIs() &&
-         any_of(MF, [](const MachineBasicBlock &MBB) {
-           return !MBB.phis().empty();
-         });
-}
-
 void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
   FirstNonPHI = nullptr;
 
-  if (MRI->tracksLiveness() && hasPHIs(*MF)) {
+  if (MRI->tracksLiveness() && functionHasPHIs) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -2367,7 +2371,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
-    if (Def.isVirtual() && hasPHIs(*MF) &&
+    if (Def.isVirtual() && functionHasPHIs &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }
