@@ -474,6 +474,11 @@ features cannot lower the translation-unit ABI level;
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
 
+- `-Wimplicit-int-enum-cast` no longer warns about a conditional operator used
+  as the right operand of a comma operator when each branch of the conditional
+  is already of the target enumeration type. The branches are now checked
+  individually, as they are outside of a comma operator. (#GH185400)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
