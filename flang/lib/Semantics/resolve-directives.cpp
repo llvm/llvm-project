@@ -73,7 +73,8 @@ protected:
       return std::nullopt;
     }
 
-    std::optional<Symbol::Flag> FindExplicitDSAForMember(const Symbol &symbol) {
+    std::optional<Symbol::Flag> FindObjectWithDSAByUltimate(
+        const Symbol &symbol) {
       if (auto flag{FindSymbolWithDSA(symbol)}) {
         return flag;
       }
@@ -3335,20 +3336,19 @@ Symbol *OmpAttributeVisitor::DeclareOrMarkOtherAccessEntity(
   return &object;
 }
 
-static bool WithMultipleAppearancesOmpException(
-    const Symbol &symbol, Symbol::Flag flag) {
+static bool WithMultipleAppearancesOmpException(const Symbol &symbol,
+    Symbol::Flag flag, std::optional<Symbol::Flag> prevFlag = std::nullopt) {
+  if (prevFlag &&
+      ((flag == Symbol::Flag::OmpFirstPrivate &&
+           *prevFlag == Symbol::Flag::OmpLastPrivate) ||
+          (flag == Symbol::Flag::OmpLastPrivate &&
+              *prevFlag == Symbol::Flag::OmpFirstPrivate))) {
+    return true;
+  }
   return (flag == Symbol::Flag::OmpFirstPrivate &&
              symbol.test(Symbol::Flag::OmpLastPrivate)) ||
       (flag == Symbol::Flag::OmpLastPrivate &&
           symbol.test(Symbol::Flag::OmpFirstPrivate));
-}
-
-static bool IsFirstPrivateLastPrivatePair(
-    Symbol::Flag flag, Symbol::Flag prevFlag) {
-  return (flag == Symbol::Flag::OmpFirstPrivate &&
-             prevFlag == Symbol::Flag::OmpLastPrivate) ||
-      (flag == Symbol::Flag::OmpLastPrivate &&
-          prevFlag == Symbol::Flag::OmpFirstPrivate);
 }
 
 void OmpAttributeVisitor::CheckMultipleAppearances(
@@ -3367,17 +3367,11 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
     } else if (const auto *details{ultimate.detailsIf<CommonBlockDetails>()}) {
       for (const auto &object : details->objects()) {
         const Symbol &member{object->GetUltimate()};
-        if (HasDataSharingAttributeObject(member)) {
-          bool allowed{WithMultipleAppearancesOmpException(member, ompFlag)};
-          if (!allowed) {
-            if (auto prevFlag{GetContext().FindExplicitDSAForMember(member)}) {
-              allowed = IsFirstPrivateLastPrivatePair(ompFlag, *prevFlag);
-            }
-          }
-          if (!allowed) {
-            conflicts = true;
-            break;
-          }
+        if (HasDataSharingAttributeObject(member) &&
+            !WithMultipleAppearancesOmpException(member, ompFlag,
+                GetContext().FindObjectWithDSAByUltimate(member))) {
+          conflicts = true;
+          break;
         }
       }
     }
