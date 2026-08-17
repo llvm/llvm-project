@@ -42,25 +42,25 @@ entry:
 ;--- a.yaml
 ---
 HeapProfileRecords:
-  - GUID:            0xd29e2fe34de9ae40
+  - GUID:            _Z3bazv
     CallSites:
       - Frames:
-          - { Function: 0xd29e2fe34de9ae40, LineOffset: 1, Column: 10, IsInlineFrame: false }
-  - GUID:            0xf129122801e64264
+          - { Function: _Z3bazv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+  - GUID:            _Z3barv
     CallSites:
       - Frames:
-          - { Function: 0xf129122801e64264, LineOffset: 1, Column: 10, IsInlineFrame: false }
-  - GUID:            0xdb956436e78dd5fa
+          - { Function: _Z3barv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+  - GUID:            main
     AllocSites:
       - Callstack:
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 4, Column: 13, IsInlineFrame: false }
+          - { Function: main, LineOffset: 4, Column: 13, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       10
           TotalLifetime:   0
           TotalLifetimeAccessDensity: 20000
       - Callstack:
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 5, Column: 13, IsInlineFrame: false }
+          - { Function: main, LineOffset: 5, Column: 13, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       10
@@ -68,86 +68,86 @@ HeapProfileRecords:
           TotalLifetimeAccessDensity: 0
     CallSites:
       - Frames:
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 6, Column: 13, IsInlineFrame: false }
+          - { Function: main, LineOffset: 6, Column: 13, IsInlineFrame: false }
       - Frames:
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 7, Column: 13, IsInlineFrame: false }
+          - { Function: main, LineOffset: 7, Column: 13, IsInlineFrame: false }
       - Frames:
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 8, Column: 13, IsInlineFrame: false }
+          - { Function: main, LineOffset: 8, Column: 13, IsInlineFrame: false }
       - Frames:
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 9, Column: 13, IsInlineFrame: false }
+          - { Function: main, LineOffset: 9, Column: 13, IsInlineFrame: false }
       - Frames:
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 31, Column: 15, IsInlineFrame: false }
-  - GUID:            0x251b60c9a8c4382a
+          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
+  - GUID:            _Z7recursej
     CallSites:
       - Frames:
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 2, Column: 12, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
       - Frames:
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 3, Column: 10, IsInlineFrame: false }
-  - GUID:            0x7f8d88fcc70a347b
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+  - GUID:            _Z3foov
     AllocSites:
       - Callstack:
-          - { Function: 0x7f8d88fcc70a347b, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 6, Column: 13, IsInlineFrame: false }
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 6, Column: 13, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       10
           TotalLifetime:   0
           TotalLifetimeAccessDensity: 20000
       - Callstack:
-          - { Function: 0x7f8d88fcc70a347b, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 7, Column: 13, IsInlineFrame: false }
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 7, Column: 13, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       10
           TotalLifetime:   200000
           TotalLifetimeAccessDensity: 0
       - Callstack:
-          - { Function: 0x7f8d88fcc70a347b, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0xbfa73ad9b09bd18c, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0xf129122801e64264, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 8, Column: 13, IsInlineFrame: false }
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z3barv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 8, Column: 13, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       10
           TotalLifetime:   200000
           TotalLifetimeAccessDensity: 0
       - Callstack:
-          - { Function: 0x7f8d88fcc70a347b, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0xbfa73ad9b09bd18c, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0xd29e2fe34de9ae40, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 9, Column: 13, IsInlineFrame: false }
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z3bazv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 9, Column: 13, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       10
           TotalLifetime:   200000
           TotalLifetimeAccessDensity: 0
       - Callstack:
-          - { Function: 0x7f8d88fcc70a347b, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 2, Column: 12, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 31, Column: 15, IsInlineFrame: false }
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       10
           TotalLifetime:   200000
           TotalLifetimeAccessDensity: 0
       - Callstack:
-          - { Function: 0x7f8d88fcc70a347b, LineOffset: 1, Column: 10, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 2, Column: 12, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: 0x251b60c9a8c4382a, LineOffset: 3, Column: 10, IsInlineFrame: false }
-          - { Function: 0xdb956436e78dd5fa, LineOffset: 31, Column: 15, IsInlineFrame: false }
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 2, Column: 12, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: _Z7recursej, LineOffset: 3, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 31, Column: 15, IsInlineFrame: false }
         MemInfoBlock:
           AllocCount:      1
           TotalSize:       10
           TotalLifetime:   0
           TotalLifetimeAccessDensity: 20000
-  - GUID:            0xbfa73ad9b09bd18c
+  - GUID:            _Z4foo2v
     CallSites:
       - Frames:
-          - { Function: 0xbfa73ad9b09bd18c, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: _Z4foo2v, LineOffset: 1, Column: 10, IsInlineFrame: false }
 ...
