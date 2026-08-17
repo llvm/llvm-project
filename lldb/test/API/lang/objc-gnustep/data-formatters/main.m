@@ -31,6 +31,9 @@ int main(int argc, const char *argv[]) {
   @autoreleasepool {
     // Strings: each literal/operation lands in a different concrete class.
     NSString *tinyString = @"Hi";                            // GSTinyString
+    // A tiny string may hold any 7-bit character, including ones the
+    // summary has to escape rather than emit raw.
+    NSString *tinyQuoted = @"a\"b";                          // GSTinyString
     NSString *constantString = @"A constant string literal"; // NSConstantString
     NSString *unicodeConstant = @"Grüße, 世界"; // NSConstantString, UTF-16
     NSString *emptyString = @"";
@@ -89,6 +92,12 @@ int main(int argc, const char *argv[]) {
     Account *account = [[Account alloc] initWithOwner:@"Jane" balance:1234.5];
     id anonymous = account;
 
+    // Message sends to step into (through objc_msgSend): one into
+    // gnustep-base, one into this file.
+    NSUInteger fruitCount = [fruits count];        // step here: Foundation
+    NSString *accountText = [account description]; // step here: user class
+
+    NSLog(@"%@ %@", tinyQuoted, tinyQuoted);
     NSLog(@"%@ %@ %@ %@ %@ %@ %@", tinyString, constantString, unicodeConstant,
           emptyString, builtString, unicodeBuilt, mutableString);
     NSLog(@"%@ %@ %@ %@ %@ %@ %@ %@ %@", boolYes, smallInt, taggedInt,
@@ -96,8 +105,8 @@ int main(int argc, const char *argv[]) {
           heapDouble);
     NSLog(@"%@ %@ %@ %@ %@ %@ %@ %@ %@ %@", emptyArray, fruits, mutableArray,
           nested, emptyDict, person, mutableDict, colors, mutableSet, counted);
-    NSLog(@"%@ %@ %@ %@ %@ %@ %@", data, epoch, someDate, null, url, account,
-          anonymous);
+    NSLog(@"%@ %@ %@ %@ %@ %@ %@ %lu %@", data, epoch, someDate, null, url,
+          account, anonymous, (unsigned long)fruitCount, accountText);
     return nilObject != nil; // break here
   }
 }

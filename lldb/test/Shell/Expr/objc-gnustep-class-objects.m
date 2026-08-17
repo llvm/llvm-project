@@ -29,21 +29,20 @@ __attribute__((objc_root_class))
 }
 @end
 
-@interface Base : NSObject {
-  int base_ivar;
-}
+// (No ivars beyond the root class's: clang trips an assertion compiling
+// some GNUstep classes with ivars in +assertions builds, see
+// objc-gnustep-print.m.)
+@interface Base : NSObject
 @end
 @implementation Base
 @end
 
-@interface Derived : Base {
-  int derived_ivar;
-}
+@interface Derived : Base
 @end
 @implementation Derived
 @end
 
-// RUN: %lldb -b -o "b objc-gnustep-class-objects.m:54" -o "run" \
+// RUN: %lldb -b -o "b objc-gnustep-class-objects.m:53" -o "run" \
 // RUN:          -o "frame variable -d run-target -T object" \
 // RUN:          -o "frame variable -d run-target -T *object" \
 // RUN:          -o "frame variable -d run-target -T object->isa" \

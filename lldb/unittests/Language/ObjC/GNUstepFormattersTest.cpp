@@ -21,34 +21,76 @@ using namespace lldb_private::formatters;
 TEST(GNUstepFormattersTest, TinyStringDecodesClangEmittedLiteral) {
   // clang emits @"Hello" for the gnustep-2.x ABI as this constant
   // (CGObjCGNU.cpp: 7-bit characters from the top, 5-bit length, tag 4).
-  EXPECT_EQ(GNUstepDecodeTinyString(0x919766cde000002cULL), "Hello");
-  EXPECT_EQ(GNUstepDecodeTinyString(0x91a4000000000014ULL), "Hi");
-  EXPECT_EQ(GNUstepDecodeTinyString(0xc3c386cca000002cULL), "apple");
-  EXPECT_EQ(GNUstepDecodeTinyString(0xc587761dd8400034ULL), "banana");
+  EXPECT_EQ(GNUstepDecodeTinyString(0x919766cde000002cULL, /*pointer_size=*/8),
+            "Hello");
+  EXPECT_EQ(GNUstepDecodeTinyString(0x91a4000000000014ULL, /*pointer_size=*/8),
+            "Hi");
+  EXPECT_EQ(GNUstepDecodeTinyString(0xc3c386cca000002cULL, /*pointer_size=*/8),
+            "apple");
+  EXPECT_EQ(GNUstepDecodeTinyString(0xc587761dd8400034ULL, /*pointer_size=*/8),
+            "banana");
 }
 
 TEST(GNUstepFormattersTest, TinyStringEmptyAndLimits) {
   // Zero characters: just the tag.
-  EXPECT_EQ(GNUstepDecodeTinyString(0x4), "");
+  EXPECT_EQ(GNUstepDecodeTinyString(0x4, /*pointer_size=*/8), "");
   // Eight characters fill every slot; nine means eight plus a terminator.
   uint64_t eight = 4 | (8ULL << 3);
   for (int i = 0; i < 8; ++i)
     eight |= static_cast<uint64_t>('a' + i) << (57 - 7 * i);
-  EXPECT_EQ(GNUstepDecodeTinyString(eight), "abcdefgh");
+  EXPECT_EQ(GNUstepDecodeTinyString(eight, /*pointer_size=*/8), "abcdefgh");
   uint64_t nine = (eight & ~(0x1fULL << 3)) | (9ULL << 3);
-  EXPECT_EQ(GNUstepDecodeTinyString(nine), "abcdefgh");
+  EXPECT_EQ(GNUstepDecodeTinyString(nine, /*pointer_size=*/8), "abcdefgh");
   // Not a tiny string: wrong tag, or an impossible length.
-  EXPECT_FALSE(GNUstepDecodeTinyString(0x919766cde000002dULL).has_value());
-  EXPECT_FALSE(GNUstepDecodeTinyString(4 | (10ULL << 3)).has_value());
+  EXPECT_FALSE(
+      GNUstepDecodeTinyString(0x919766cde000002dULL, /*pointer_size=*/8)
+          .has_value());
+  EXPECT_FALSE(GNUstepDecodeTinyString(4 | (10ULL << 3), /*pointer_size=*/8)
+                   .has_value());
+}
+
+TEST(GNUstepFormattersTest, SmallObjectLayoutFollowsThePointerSize) {
+  // libobjc2 gives a 32-bit target a single tag bit, so NSSmallInt is the only
+  // small class it can express and the payload is shifted by one rather than
+  // three (class.h; GNUstepTaggedPointerVendor derives the same widths from
+  // the process and the two must agree).
+  EXPECT_EQ(GNUstepSmallObjectMask(8), 7u);
+  EXPECT_EQ(GNUstepSmallObjectMask(4), 1u);
+
+  // Same value, boxed for each data model.
+  EXPECT_EQ(GNUstepDecodeSmallInt((42ULL << 3) | 1, /*pointer_size=*/8), 42);
+  EXPECT_EQ(GNUstepDecodeSmallInt((42ULL << 1) | 1, /*pointer_size=*/4), 42);
+
+  // Negative payloads must sign-extend from the target's pointer width, not
+  // from 64 bits - a 32-bit -1 is 0xFFFFFFFF, which is positive if widened.
+  EXPECT_EQ(GNUstepDecodeSmallInt(0xFFFFFFFFULL, /*pointer_size=*/4), -1);
+  // -5 boxed for each data model, decoded back.
+  EXPECT_EQ(GNUstepDecodeSmallInt((static_cast<uint64_t>(-5LL) << 3) | 1,
+                                  /*pointer_size=*/8),
+            -5);
+  EXPECT_EQ(GNUstepDecodeSmallInt(
+                static_cast<uint32_t>(static_cast<uint64_t>(-5LL) << 1) | 1,
+                /*pointer_size=*/4),
+            -5);
+
+  // The wider layouts need more bits than a 32-bit pointer has, so a tiny
+  // string cannot be encoded there at all.
+  EXPECT_FALSE(
+      GNUstepDecodeTinyString(0x91a4000000000014ULL, /*pointer_size=*/4)
+          .has_value());
 }
 
 TEST(GNUstepFormattersTest, SmallIntIsArithmeticallyShifted) {
   // NSSmallInt: value << 3 | 1 (Source/NSNumber.m).
-  EXPECT_EQ(GNUstepDecodeSmallInt((42ULL << 3) | 1), 42);
-  EXPECT_EQ(GNUstepDecodeSmallInt(0x00000000000f1201ULL), 123456);
+  EXPECT_EQ(GNUstepDecodeSmallInt((42ULL << 3) | 1, /*pointer_size=*/8), 42);
+  EXPECT_EQ(GNUstepDecodeSmallInt(0x00000000000f1201ULL, /*pointer_size=*/8),
+            123456);
   // Negative values keep their sign through the shift.
-  EXPECT_EQ(GNUstepDecodeSmallInt(0xfffffffffffffce9ULL), -99);
-  EXPECT_EQ(GNUstepDecodeSmallInt((static_cast<uint64_t>(-1LL) << 3) | 1), -1);
+  EXPECT_EQ(GNUstepDecodeSmallInt(0xfffffffffffffce9ULL, /*pointer_size=*/8),
+            -99);
+  EXPECT_EQ(GNUstepDecodeSmallInt((static_cast<uint64_t>(-1LL) << 3) | 1,
+                                  /*pointer_size=*/8),
+            -1);
 }
 
 TEST(GNUstepFormattersTest, SmallDoublesRoundTrip) {
