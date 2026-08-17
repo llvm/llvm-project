@@ -7,13 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/real-value.h"
-#include "integer-value-impl.h"
 #include "real-value-impl.h"
-#include "flang/Common/idioms.h"
-#include "flang/Decimal/decimal.h"
-#include "flang/Evaluate/rounding-bits.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstring>
 #include <new>
 #include <string>
 
@@ -47,13 +42,29 @@ RealValue::RealValue(int kind, const Word &w) {
   new (this) RealValueImpl(kind, w);
 }
 
+RealValue::RealValue(int kind, double x) { new (this) RealValueImpl(kind, x); }
+
 RealValue RealValue::Zero(int kind) {
   return FromImpl(RealValueImpl::Zero(kind));
+}
+
+RealValue RealValue::NegativeZero(int kind) {
+  return FromImpl(RealValueImpl::NegativeZero(kind));
+}
+
+RealValue RealValue::Infinity(int kind, bool negative) {
+  return FromImpl(RealValueImpl::Infinity(kind, negative));
+}
+
+RealValue RealValue::SignalingNaN(int kind) {
+  return FromImpl(RealValueImpl::SignalingNaN(kind));
 }
 
 bool RealValue::IsMonostate() const { return impl().IsMonostate(); }
 
 int RealValue::kind() const { return impl().kind(); }
+
+void RealValue::print(llvm::raw_ostream &os) const { impl().print(os); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RealValue::dump() const { impl().dump(); }

@@ -46,6 +46,8 @@ bool IntegerValue::IsMonostate() const { return impl().IsMonostate(); }
 
 int IntegerValue::kind() const { return impl().kind(); }
 
+void IntegerValue::print(llvm::raw_ostream &os) const { impl().print(os); }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void IntegerValue::dump() const { impl().dump(); }
 #endif
@@ -106,10 +108,6 @@ bool IntegerValue::IsZero() const { return impl().IsZero(); }
 
 bool IntegerValue::IsNegative() const { return impl().IsNegative(); }
 
-Ordering IntegerValue::CompareToZeroSigned() const {
-  return impl().CompareToZeroSigned();
-}
-
 int IntegerValue::LEADZ() const { return impl().LEADZ(); }
 
 int IntegerValue::POPCNT() const { return impl().POPCNT(); }
@@ -119,6 +117,10 @@ bool IntegerValue::POPPAR() const { return impl().POPPAR(); }
 int IntegerValue::TRAILZ() const { return impl().TRAILZ(); }
 
 bool IntegerValue::BTEST(int pos) const { return impl().BTEST(pos); }
+
+Ordering IntegerValue::CompareToZeroSigned() const {
+  return impl().CompareToZeroSigned();
+}
 
 Ordering IntegerValue::CompareUnsigned(const IntegerValue &y) const {
   return impl().CompareUnsigned(y.impl());
@@ -131,6 +133,14 @@ Ordering IntegerValue::CompareSigned(const IntegerValue &y) const {
 std::uint64_t IntegerValue::ToUInt64() const { return impl().ToUInt64(); }
 
 std::int64_t IntegerValue::ToInt64() const { return impl().ToInt64(); }
+
+Fortran::common::uint128_t IntegerValue::ToUInt128() const {
+  return impl().ToUInt128();
+}
+
+Fortran::common::int128_t IntegerValue::ToInt128() const {
+  return impl().ToInt128();
+}
 
 IntegerValue IntegerValue::NOT() const { return FromImpl(impl().NOT()); }
 
@@ -281,12 +291,13 @@ void IntegerValue::StoreRawBytes(void *dst, size_t size, bool *changed) const {
 }
 
 void IntegerValue::ConstructFromIntegral(
-    int kind, std::uint64_t n, bool isSigned) {
-  if (isSigned) {
-    new (this) IntegerValueImpl(kind, static_cast<std::int64_t>(n));
-  } else {
-    new (this) IntegerValueImpl(kind, n);
-  }
+    int kind, std::uint64_t v, bool isSigned) {
+  new (this) IntegerValueImpl(kind, v, isSigned);
+}
+
+void IntegerValue::ConstructFromIntegral(
+    int kind, Fortran::common::uint128_t v) {
+  new (this) IntegerValueImpl(kind, v);
 }
 
 IntegerValue IntegerValue::FromImpl(const IntegerValueImpl &x) {

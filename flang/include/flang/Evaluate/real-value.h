@@ -12,6 +12,7 @@
 #include "flang/Evaluate/integer-value.h"
 #include "flang/Evaluate/object-sizes.h"
 #include "flang/Evaluate/target.h"
+#include "llvm/Support/Compiler.h"
 
 // Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
 // to leak out of <math.h>.
@@ -48,9 +49,25 @@ public:
   /// Interpret w as the raw bit pattern for the given runtime kind.
   RealValue(int kind, const Word &w);
 
+  /// Creates a floating-point value of a given kind from a host double,
+  /// rounded to the target kind's precision (per the default rounding mode).
+  /// Portable: does not assume that the host "double" shares any bit layout
+  /// with the target kind, only that <cmath>'s frexp()/ldexp() are available.
+  RealValue(int kind, double x);
+
   /// Creates a floating-point with value +0.0 of a given kind. In contrast, the
   /// default ctor creates a "monostate" that represents +0.0 of unknown kind.
   static RealValue Zero(int kind);
+
+  /// Creates a floating-point with value -0.0 of a given kind.
+  static RealValue NegativeZero(int kind);
+
+  static RealValue Infinity(int kind, bool negative = false);
+
+  /// A signaling NaN, as opposed to the quiet NaN returned by NotANumber().
+  static RealValue SignalingNaN(int kind);
+
+  void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -234,4 +251,14 @@ private:
 };
 
 } // namespace Fortran::evaluate::value
+
+namespace llvm {
+/// For pretty printing in GTest
+inline raw_ostream &operator<<(
+    raw_ostream &os, const Fortran::evaluate::value::RealValue &v) {
+  v.print(os);
+  return os;
+}
+} // namespace llvm
+
 #endif // FORTRAN_EVALUATE_REAL_VALUE_H_

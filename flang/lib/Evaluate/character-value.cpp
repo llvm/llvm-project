@@ -42,18 +42,17 @@ CharacterValue &CharacterValue::operator=(CharacterValue &&x) {
 }
 
 CharacterValue::CharacterValue(int kind, std::string s) {
-  CHECK(kind == 1);
-  new (this) CharacterValueImpl(std::move(s));
+  new (this) CharacterValueImpl(kind, std::move(s));
 }
 
 CharacterValue::CharacterValue(int kind, std::u16string s) {
   CHECK(kind == 2);
-  new (this) CharacterValueImpl(std::move(s));
+  new (this) CharacterValueImpl(kind, std::move(s));
 }
 
 CharacterValue::CharacterValue(int kind, std::u32string s) {
   CHECK(kind == 4);
-  new (this) CharacterValueImpl(std::move(s));
+  new (this) CharacterValueImpl(kind, std::move(s));
 }
 
 CharacterValue::CharacterValue(int kind, std::size_t n, char32_t c) {
@@ -68,6 +67,8 @@ CharacterValue CharacterValue::FromRawBytes(
     int kind, const void *raw, size_t byteSize) {
   return FromImpl(CharacterValueImpl::FromRawBytes(kind, raw, byteSize));
 }
+
+void CharacterValue::print(llvm::raw_ostream &os) const { impl().print(os); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CharacterValue::dump() const { impl().dump(); }
@@ -92,6 +93,8 @@ std::optional<std::u16string> CharacterValue::AsU16String() const {
 std::optional<std::u32string> CharacterValue::AsU32String() const {
   return impl().AsU32String();
 }
+
+std::string CharacterValue::ToStdString() const { return impl().ToStdString(); }
 
 Ordering CharacterValue::Compare(const CharacterValue &y) const {
   return impl().Compare(y.impl());
@@ -144,7 +147,10 @@ CharacterValue CharacterValue::substr(std::size_t pos, std::size_t len) const {
 }
 
 void CharacterValue::reserve(std::size_t n) { impl().reserve(n); }
-char32_t CharacterValue::operator[](std::size_t i) const { return impl()[i]; }
+
+char32_t CharacterValue::operator[](std::size_t i) const {
+  return impl().operator[](i);
+}
 
 CharacterValue CharacterValue::operator+(const CharacterValue &y) const {
   return FromImpl(impl() + y.impl());

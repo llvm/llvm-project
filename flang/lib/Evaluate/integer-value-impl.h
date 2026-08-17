@@ -57,11 +57,19 @@ public:
 
   static IntegerValueImpl Zero(int kind);
 
-  template <typename INT, typename = std::enable_if_t<std::is_integral_v<INT>>>
-  IntegerValueImpl(int kind, INT n) {
-    withWordProto(kind, [&](auto proto) {
-      using T = decltype(proto);
-      storage_ = T{n};
+  IntegerValueImpl(int kind, uint64_t v, bool isSigned) {
+    withWordProto(kind, [=](auto wordProto) {
+      using T = decltype(wordProto);
+      storage_ = isSigned ? T{static_cast<int64_t>(v)} : T{v};
+    });
+  }
+
+  IntegerValueImpl(int kind, Fortran::common::uint128_t v) {
+    withWordProto(kind, [=](auto wordProto) {
+      using T = decltype(wordProto);
+      std::uint64_t lo{static_cast<std::uint64_t>(v)};
+      std::uint64_t hi{static_cast<std::uint64_t>(v >> 64)};
+      storage_ = T{lo}.IOR(T{hi}.SHIFTL(64));
     });
   }
 
@@ -73,6 +81,8 @@ public:
 
   static IntegerValueImpl FromRawBytes(
       int kind, const void *raw, std::size_t expectedSize);
+
+  void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -118,6 +128,9 @@ public:
 
   std::uint64_t ToUInt64() const;
   std::int64_t ToInt64() const;
+
+  Fortran::common::uint128_t ToUInt128() const;
+  Fortran::common::int128_t ToInt128() const;
 
   // Signed/unsigned comparisons
   Ordering CompareSigned(const IntegerValueImpl &y) const;
@@ -305,4 +318,14 @@ struct IntegerValueImpl::PowerWithErrors {
 };
 
 } // namespace Fortran::evaluate::value
+
+namespace llvm {
+/// For pretty printing in GTest
+inline raw_ostream &operator<<(
+    raw_ostream &os, const Fortran::evaluate::value::IntegerValueImpl &v) {
+  v.print(os);
+  return os;
+}
+} // namespace llvm
+
 #endif // FORTRAN_EVALUATE_INTEGER_VALUE_IMPL_H_

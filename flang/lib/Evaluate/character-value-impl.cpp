@@ -30,7 +30,7 @@ CharacterValueImpl CharacterValueImpl::Zero(int kind) {
 }
 
 CharacterValueImpl CharacterValueImpl::FromRawBytes(
-    int kind, const void *raw, size_t byteSize) {
+    int kind, const void *raw, size_t size) {
   return withCharProto(kind, [kind, raw, size](auto charProto) {
     using CharT = decltype(charProto);
     CHECK(size % sizeof(CharT) == 0);
@@ -42,12 +42,16 @@ CharacterValueImpl CharacterValueImpl::FromRawBytes(
   });
 }
 
+void CharacterValueImpl::print(llvm::raw_ostream &os) const {
+  os << kind() << '_';
+  withStdString(
+      [&](const auto &s) { os << parser::QuoteCharacterLiteral(s, true); });
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CharacterValueImpl::dump() const {
-  llvm::errs() << kind() << '_';
-  withStdString([](const auto &s) {
-    llvm::errs() << parser::QuoteCharacterLiteral(s, true) << '\n';
-  });
+  print(llvm::errs());
+  llvm::errs() << '\n';
 }
 #endif
 
@@ -230,11 +234,12 @@ CharacterValueImpl &CharacterValueImpl::replace(
 CharacterValueImpl CharacterValueImpl::substr(std::size_t pos) const {
   return common::visit(
       [pos](const auto &s) -> CharacterValueImpl {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                          std::monostate>) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<StringT, std::monostate>) {
           llvm_unreachable("operation not supported on uninitialized value");
         } else {
-          return CharacterValueImpl{s.substr(pos)};
+          return CharacterValueImpl{
+              sizeof(typename StringT::value_type), s.substr(pos)};
         }
       },
       storage_);
@@ -244,11 +249,13 @@ CharacterValueImpl CharacterValueImpl::substr(
     std::size_t pos, std::size_t len) const {
   return common::visit(
       [pos, len](const auto &s) -> CharacterValueImpl {
+        using StringT = std::decay_t<decltype(s)>;
         if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
                           std::monostate>) {
           llvm_unreachable("operation not supported on uninitialized value");
         } else {
-          return CharacterValueImpl{s.substr(pos, len)};
+          return CharacterValueImpl{
+              sizeof(typename StringT::value_type), s.substr(pos, len)};
         }
       },
       storage_);
@@ -301,6 +308,25 @@ std::optional<std::u32string> CharacterValueImpl::AsU32String() const {
   }
 }
 
+std::string CharacterValueImpl::ToStdString() const {
+  return common::visit(
+      [](const auto &s) {
+        using StringT = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<StringT, std::monostate>) {
+          return std::string{};
+        } else if constexpr (std::is_same_v<StringT, std::string>) {
+          return s;
+        } else {
+          std::string result(s.size(), '\0');
+          for (auto [i, c] : llvm::enumerate(s)) {
+            result[i] = c;
+          }
+          return result;
+        }
+      },
+      storage_);
+}
+
 CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
   if (IsMonostate()) {
     return Zero(kind);
@@ -308,17 +334,18 @@ CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
 
   return withStdString([kind](const auto &s) -> CharacterValueImpl {
     return withCharProto(kind, [&s](auto ct) -> CharacterValueImpl {
-      using TO = std::basic_string<std::decay_t<decltype(ct)>>;
+      using CharT = std::decay_t<decltype(ct)>;
+      using StringT = std::basic_string<CharT>;
       // Fortran character conversion is well defined between distinct kinds
       // only when the actual characters are valid 7-bit ASCII.
-      TO str;
+      StringT str;
       for (auto iter{s.cbegin()}; iter != s.cend(); ++iter) {
         if (static_cast<std::uint64_t>(*iter) > 127) {
           return Zero(sizeof(ct));
         }
-        str.push_back(static_cast<typename TO::value_type>(*iter));
+        str.push_back(static_cast<CharT>(*iter));
       }
-      return CharacterValueImpl{str};
+      return CharacterValueImpl{sizeof(CharT), str};
     });
   });
 }
@@ -355,7 +382,9 @@ CharacterValueImpl CharacterValueImpl::operator+(
         if constexpr (std::is_same_v<std::decay_t<decltype(a)>,
                           std::decay_t<decltype(b)>> &&
             !std::is_same_v<std::decay_t<decltype(a)>, std::monostate>) {
-          return CharacterValueImpl{a + b};
+          using StringT = std::decay_t<decltype(a)>;
+          return CharacterValueImpl{
+              sizeof(typename StringT::value_type), a + b};
         } else {
           llvm_unreachable("operation not supported on uninitialized value or "
                            "values of different kinds");
@@ -470,10 +499,15 @@ std::size_t CharacterValueImpl::find_last_not_of(
 std::size_t CharacterValueImpl::find(const CharacterValueImpl &pattern) const {
   return common::visit(
       [](const auto &s, const auto &p) -> std::size_t {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
+        if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
                           std::monostate>) {
-          // Nothing to find in an empty string
-          return std::string::npos;
+          // Empty string always matches beginning
+          return 0;
+        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
+                                 std::monostate>) {
+          // Nothing to find in an empty string, unless the pattern is itself an
+          // empty string
+          return p.empty() ? 0 : std::string::npos;
         } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
                                  std::decay_t<decltype(p)>> &&
             !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
@@ -545,30 +579,33 @@ std::size_t CharacterValueImpl::find_last_of(
 }
 
 void CharacterValueImpl::StoreRawBytes(
-    void *dst, size_t size, bool *changed) const {
+    void *dst, std::size_t size, bool *changed) const {
   common::visit(
-      [&](const auto &s) {
-        if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
+      [&](const auto &word) {
+        if constexpr (std::is_same_v<std::decay_t<decltype(word)>,
                           std::monostate>) {
           CHECK(size == 0);
           // Nothing to store
         } else {
-          std::size_t payloadBytes{std::min(size,
-              s.size() *
-                  sizeof(typename std::decay_t<decltype(s)>::value_type))};
-          if (std::memcmp(dst, s.data(), payloadBytes) != 0 ||
-              (payloadBytes < size &&
-                  !std::all_of(
-                      static_cast<const char *>(dst) + payloadBytes,
-                      static_cast<const char *>(dst) + size,
-                      [](char x) { return x == 0; }))) {
-            std::memcpy(dst, s.data(), payloadBytes);
-            if (payloadBytes < size) {
-              std::memset(static_cast<char *>(dst) + payloadBytes, 0,
-                  size - payloadBytes);
-            }
-            if (changed)
+          using Character = std::decay_t<decltype(word)>;
+          using CharT = typename Character::value_type;
+          CHECK(size % sizeof(CharT) == 0);
+          if (size > 0) {
+            std::size_t payloadSize{
+                std::min(size, sizeof(CharT) * word.size())};
+            std::size_t padSize{size - payloadSize};
+
+            Character strWithPadding{word};
+            strWithPadding.append(
+                padSize / sizeof(CharT), static_cast<CharT>(' '));
+
+            if (changed) {
+              if (std::memcmp(dst, strWithPadding.data(), size) == 0) {
+                return;
+              }
               *changed = true;
+            }
+            std::memcpy(dst, strWithPadding.data(), size);
           }
         }
       },

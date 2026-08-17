@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_EVALUATE_CHAR_VALUE_H_
-#define FORTRAN_EVALUATE_CHAR_VALUE_H_
+#ifndef FORTRAN_EVALUATE_CHARACTER_VALUE_H_
+#define FORTRAN_EVALUATE_CHARACTER_VALUE_H_
 
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/object-sizes.h"
+#include "flang/Evaluate/type.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <iosfwd>
 #include <optional>
@@ -31,11 +33,6 @@ class CharacterValueImpl;
 /// The implementation is hidden from this header using a pImpl-like idiom.
 class CharacterValue {
 public:
-  /// A default-initialized CharacterValue is in a so-called "monostate"; it
-  /// represents an empty string, but its kind is not yet known. Not all
-  /// operations are supported in this state.
-  CharacterValue();
-
   // rule-of-five
   ~CharacterValue();
   CharacterValue(const CharacterValue &);
@@ -44,6 +41,12 @@ public:
   CharacterValue &operator=(CharacterValue &&);
 
   // ctors
+
+  /// A default-initialized CharacterValue is in a so-called "monostate"; it
+  /// represents an empty string, but its kind is not yet known. Not all
+  /// operations are supported in this state.
+  CharacterValue();
+
   explicit CharacterValue(int kind, std::string s);
   explicit CharacterValue(int kind, std::u16string s);
   explicit CharacterValue(int kind, std::u32string s);
@@ -53,8 +56,11 @@ public:
 
   // Named ctors
   static CharacterValue Zero(int kind);
+
   static CharacterValue FromRawBytes(
       int kind, const void *raw, size_t byteSize);
+
+  void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -75,7 +81,7 @@ public:
   std::size_t charSize() const { return kind(); }
 
   /// Number of bytes accessed by FromRawBytes/StoreRawBytes
-  size_t bytesStored() const { return length() * kind(); }
+  size_t bytesStored() const { return length() * charSize(); }
 
   // Casting to other representations
   std::optional<llvm::StringRef> AsStringRef() const;
@@ -87,6 +93,22 @@ public:
   }
   std::optional<std::u16string> AsU16String() const;
   std::optional<std::u32string> AsU32String() const;
+
+  /// Force conversion to Ascii even if this means loss of information
+  std::string ToStdString() const;
+
+  template <typename CharT, typename = std::void_t<std::basic_string<CharT>>>
+  std::optional<std::basic_string<CharT>> AsBasicString() const {
+    if constexpr (std::is_same_v<char, CharT>) {
+      return AsStdString();
+    } else if constexpr (std::is_same_v<char16_t, CharT>) {
+      return AsU16String();
+    } else if constexpr (std::is_same_v<char32_t, CharT>) {
+      return AsU32String();
+    } else {
+      static_assert(false, "Must be one of the supported character types");
+    }
+  }
 
   // Comparisons
   Ordering Compare(const CharacterValue &y) const;
@@ -163,7 +185,28 @@ public:
   void *at(size_t pos) { return &charData()[pos * charSize()]; }
   const void *at(size_t pos) const { return &charData()[pos * charSize()]; }
 
+  /// Writes a string of characters to \p dst. \o is the the number of bytes to
+  /// be written; must be a multiple of the size of a single character.  If \p s
+  /// is smaller that \p size, the rest of the memory is set to spaces. If \p s
+  /// is shorter than size, only the first characters are written.
+  /// If \p changes points to bool, it will be set to true if any bytes at \p
+  /// dst have changed.
   void StoreRawBytes(void *dst, size_t size, bool *changed = nullptr) const;
+
+  template <typename F>
+  static auto withCharProto(int kind, F &&f)
+      -> decltype(std::declval<F>()(std::declval<char>())) {
+    switch (kind) {
+    case 1:
+      return f(char{});
+    case 2:
+      return f(char16_t{});
+    case 4:
+      return f(char32_t{});
+    default:
+      llvm_unreachable("unsupported character kind/monostate");
+    }
+  }
 
   template <typename F> decltype(auto) withStdString(F &&f) const {
     switch (kind()) {
@@ -174,7 +217,7 @@ public:
     case 4:
       return f(*AsU32String());
     default:
-      llvm_unreachable("unsupported KIND");
+      llvm_unreachable("unsupported kind/monostate");
     }
   }
 
@@ -194,4 +237,14 @@ private:
 };
 
 } // namespace Fortran::evaluate::value
-#endif // FORTRAN_EVALUATE_CHAR_VALUE_H_
+
+namespace llvm {
+/// For pretty printing in GTest
+inline raw_ostream &operator<<(
+    raw_ostream &os, const Fortran::evaluate::value::CharacterValue &v) {
+  v.print(os);
+  return os;
+}
+} // namespace llvm
+
+#endif // FORTRAN_EVALUATE_CHARACTER_VALUE_H_

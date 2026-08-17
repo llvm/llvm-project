@@ -31,9 +31,14 @@ IntegerValueImpl IntegerValueImpl::FromRawBytes(
   });
 }
 
+void IntegerValueImpl::print(llvm::raw_ostream &os) const {
+  os << SignedDecimal() << '_' << kind();
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void IntegerValueImpl::dump() const {
-  llvm::errs() << SignedDecimal() << '_' << kind() << '\n';
+  print(llvm::errs());
+  llvm::errs() << '\n';
 }
 #endif
 
@@ -123,6 +128,25 @@ std::int64_t IntegerValueImpl::ToInt64() const {
     return 0;
   }
   return withWord([](const auto &x) { return x.ToInt64(); });
+}
+
+Fortran::common::uint128_t IntegerValueImpl::ToUInt128() const {
+  if (IsMonostate()) {
+    return 0;
+  }
+  return withWord([](const auto &x) {
+    return x.template ToUInt<Fortran::common::uint128_t>();
+  });
+}
+
+Fortran::common::int128_t IntegerValueImpl::ToInt128() const {
+  if (IsMonostate()) {
+    return 0;
+  }
+  return withWord([](const auto &x) {
+    return x.template ToSInt<Fortran::common::int128_t,
+        Fortran::common::uint128_t>();
+  });
 }
 
 Ordering IntegerValueImpl::CompareSigned(const IntegerValueImpl &y) const {

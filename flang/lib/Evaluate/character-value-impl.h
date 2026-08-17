@@ -32,23 +32,35 @@ public:
   CharacterValueImpl &operator=(CharacterValueImpl &&) = default;
 
   CharacterValueImpl() = default;
-  explicit CharacterValueImpl(std::string s) : storage_{std::move(s)} {}
-  explicit CharacterValueImpl(std::u16string s) : storage_{std::move(s)} {}
-  explicit CharacterValueImpl(std::u32string s) : storage_{std::move(s)} {}
+  explicit CharacterValueImpl(int kind, std::string s) {
+    withCharProto(kind, [&](auto c) {
+      using CharT = std::decay_t<decltype(c)>;
+      using StringT = std::basic_string<CharT>;
+      if (std::is_same_v<StringT, std::string>) {
+        storage_ = std::move(s);
+      } else {
+        StringT buf;
+        buf.resize(s.length());
+        for (auto [i, c] : llvm::enumerate(s)) {
+          buf[i] = c;
+        }
+        storage_ = std::move(buf);
+      }
+    });
 
-  CharacterValueImpl(int kind, std::string s)
-      : CharacterValueImpl{std::move(s)} {
-    CHECK(kind == 1);
+    CHECK(this->kind() == kind);
   }
 
-  CharacterValueImpl(int kind, std::u16string s)
-      : CharacterValueImpl{std::move(s)} {
+  explicit CharacterValueImpl(int kind, std::u16string s)
+      : storage_{std::move(s)} {
     CHECK(kind == 2);
+    CHECK(this->kind() == kind);
   }
 
-  CharacterValueImpl(int kind, std::u32string s)
-      : CharacterValueImpl{std::move(s)} {
+  explicit CharacterValueImpl(int kind, std::u32string s)
+      : storage_{std::move(s)} {
     CHECK(kind == 4);
+    CHECK(this->kind() == kind);
   }
 
   /// Fill constructors: create a string of n copies of the given character.
@@ -58,6 +70,8 @@ public:
 
   static CharacterValueImpl FromRawBytes(
       int kind, const void *raw, size_t byteSize);
+
+  void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -69,6 +83,8 @@ public:
   std::optional<std::string> AsStdString() const;
   std::optional<std::u16string> AsU16String() const;
   std::optional<std::u32string> AsU32String() const;
+
+  std::string ToStdString() const;
 
   bool IsMonostate() const { return storage_.index() == 0; }
   int kind() const {
@@ -172,7 +188,8 @@ public:
   std::size_t find_first_of(const CharacterValueImpl &set) const;
   std::size_t find_last_of(const CharacterValueImpl &set) const;
 
-  void StoreRawBytes(void *dst, size_t size, bool *changed) const;
+  void StoreRawBytes(
+      void *dst, std::size_t size, bool *changed = nullptr) const;
 
   // Compile-time dispatchers to current/specified kind
 
@@ -226,4 +243,14 @@ private:
 };
 
 } // namespace Fortran::evaluate::value
+
+namespace llvm {
+/// For pretty printing in GTest
+inline raw_ostream &operator<<(
+    raw_ostream &os, const Fortran::evaluate::value::CharacterValueImpl &v) {
+  v.print(os);
+  return os;
+}
+} // namespace llvm
+
 #endif // FORTRAN_EVALUATE_CHARACTER_VALUE_IMPL_H_

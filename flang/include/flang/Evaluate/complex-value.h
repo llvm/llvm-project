@@ -10,6 +10,7 @@
 #define FORTRAN_EVALUATE_COMPLEX_VALUE_H_
 
 #include "real-value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class raw_ostream;
@@ -58,6 +59,8 @@ public:
     RealValue zero{RealValue::Zero(kind)};
     return ComplexValue{zero, zero};
   }
+
+  void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -163,4 +166,14 @@ private:
 };
 
 } // namespace Fortran::evaluate::value
+
+namespace llvm {
+/// For pretty printing in GTest
+inline raw_ostream &operator<<(
+    raw_ostream &os, const Fortran::evaluate::value::ComplexValue &v) {
+  v.print(os);
+  return os;
+}
+} // namespace llvm
+
 #endif // FORTRAN_EVALUATE_COMPLEX_VALUE_H_

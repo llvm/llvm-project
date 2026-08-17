@@ -9,8 +9,11 @@
 #ifndef FORTRAN_EVALUATE_INTEGER_VALUE_H_
 #define FORTRAN_EVALUATE_INTEGER_VALUE_H_
 
+#include "flang/Common/uint128.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/object-sizes.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <type_traits>
 
@@ -52,16 +55,33 @@ public:
     CHECK(x.kind() == kind);
   }
 
-  template <typename INT, typename = std::enable_if_t<std::is_integral_v<INT>>>
-  IntegerValue(int kind, INT n) {
-    ConstructFromIntegral(
-        kind, static_cast<std::uint64_t>(n), std::is_signed_v<INT>);
+  // Fortran::common::int128_t/uint128_t are 128-bit values -- either the
+  // host's native __int128/unsigned __int128, or the portable
+  // Fortran::common::Int128<> fallback when there is no native type -- and
+  // are handled by the dedicated branch below rather than by the general
+  // integral case, since some standard libraries don't consider native
+  // __int128 types to satisfy std::is_integral_v, and the portable fallback
+  // is a class type that never does.
+  template <typename INT,
+      typename = std::enable_if_t<std::numeric_limits<INT>::is_integer>>
+  IntegerValue(int kind, INT v) {
+    if constexpr (sizeof(INT) > 8) {
+      static_assert(sizeof(INT) == 16);
+      ConstructFromIntegral(kind, static_cast<Fortran::common::uint128_t>(v));
+    } else if constexpr (std::is_signed_v<INT>) {
+      ConstructFromIntegral(
+          kind, static_cast<uint64_t>(static_cast<int64_t>(v)), true);
+    } else {
+      ConstructFromIntegral(kind, static_cast<uint64_t>(v), false);
+    }
   }
 
   /// Creates an integer with value 0 of a given kind. This is different from
   /// the default-ctor which creates a "monostate" that represents 0 of unknown
   /// kind.
   static IntegerValue Zero(int kind);
+
+  void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -157,6 +177,8 @@ public:
 
   Ordering CompareUnsigned(const IntegerValue &y) const;
 
+  Ordering CompareSigned(const IntegerValue &y) const;
+
   bool BGE(const IntegerValue &y) const {
     return CompareUnsigned(y) != Ordering::Less;
   }
@@ -166,13 +188,35 @@ public:
   bool BLE(const IntegerValue &y) const { return !BGT(y); }
   bool BLT(const IntegerValue &y) const { return !BGE(y); }
 
-  Ordering CompareSigned(const IntegerValue &y) const;
-
   std::uint64_t ToUInt64() const;
 
   std::int64_t ToInt64() const;
 
-  std::int64_t ToSInt() const { return ToInt64(); }
+  Fortran::common::uint128_t ToUInt128() const;
+
+  Fortran::common::int128_t ToInt128() const;
+
+  template <typename INT,
+      typename = std::enable_if_t<std::is_signed_v<INT> ||
+          std::is_same_v<INT, Fortran::common::int128_t>>>
+  INT ToSInt() const {
+    if constexpr (std::is_same_v<INT, Fortran::common::int128_t>) {
+      return ToInt128();
+    } else {
+      return ToInt64();
+    }
+  }
+
+  template <typename INT,
+      typename = std::enable_if_t<std::is_unsigned_v<INT> ||
+          std::is_same_v<INT, Fortran::common::uint128_t>>>
+  INT ToUInt() const {
+    if constexpr (std::is_same_v<INT, Fortran::common::uint128_t>) {
+      return ToUInt128();
+    } else {
+      return ToUInt64();
+    }
+  }
 
   /// Ones'-complement (i.e., C's ~)
   IntegerValue NOT() const;
@@ -273,6 +317,7 @@ public:
 
 private:
   void ConstructFromIntegral(int kind, std::uint64_t n, bool isSigned);
+  void ConstructFromIntegral(int kind, Fortran::common::uint128_t n);
 
   static IntegerValue FromImpl(const IntegerValueImpl &x);
   static IntegerValue FromImpl(IntegerValueImpl &&x);
@@ -315,4 +360,14 @@ struct IntegerValue::PowerWithErrors {
 };
 
 } // namespace Fortran::evaluate::value
+
+namespace llvm {
+/// For pretty printing in GTest
+inline raw_ostream &operator<<(
+    raw_ostream &os, const Fortran::evaluate::value::IntegerValue &v) {
+  v.print(os);
+  return os;
+}
+} // namespace llvm
+
 #endif // FORTRAN_EVALUATE_INTEGER_VALUE_H_

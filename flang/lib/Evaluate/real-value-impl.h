@@ -49,6 +49,8 @@ public:
   // Interpret w as the raw bit pattern of a value of the given runtime kind.
   RealValueImpl(int kind, const Word &w);
 
+  RealValueImpl(int kind, double x);
+
   static RealValueImpl Zero(int kind);
 
   template <typename T> static RealValueImpl FromWord(const T &r) {
@@ -68,6 +70,8 @@ public:
 
   static RealValueImpl FromRawBytes(
       int kind, const void *raw, std::size_t expectedSize);
+
+  void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -108,6 +112,9 @@ public:
   static RealValueImpl EPSILON(int kind);
   static RealValueImpl TINY(int kind);
   static RealValueImpl NotANumber(int kind);
+  static RealValueImpl SignalingNaN(int kind);
+  static RealValueImpl Infinity(int kind, bool negative = false);
+  static RealValueImpl NegativeZero(int kind);
 
   // Runtime kind / width accessors
   bool IsNegative() const;
@@ -249,18 +256,18 @@ public:
   }
 
 private:
-  template <typename INT>
-  static IntegerValue IntegerValueFromFixed(const INT &);
-
-  template <typename INT>
-  static INT FixedIntegerFromValue(const IntegerValue &);
-
-  template <typename R>
-  static ValueWithRealFlags<R> FromIntegerValue(
-      const IntegerValue &v, bool isUnsigned, Rounding rounding);
-
   Storage storage_;
 };
 
 } // namespace Fortran::evaluate::value
+
+namespace llvm {
+/// For pretty printing in GTest
+inline raw_ostream &operator<<(
+    raw_ostream &os, const Fortran::evaluate::value::RealValueImpl &v) {
+  v.print(os);
+  return os;
+}
+} // namespace llvm
+
 #endif // FORTRAN_EVALUATE_REAL_VALUE_IMPL_H_

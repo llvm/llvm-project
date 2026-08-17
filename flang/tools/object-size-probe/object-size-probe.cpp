@@ -27,8 +27,10 @@
 #include "character-value-impl.h"
 #include "integer-value-impl.h"
 #include "real-value-impl.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
@@ -37,22 +39,49 @@
 using Fortran::evaluate::value::CharacterValueImpl;
 using Fortran::evaluate::value::IntegerValueImpl;
 using Fortran::evaluate::value::RealValueImpl;
+using namespace llvm;
+
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+    cl::value_desc("filename"), cl::init("-"));
+
+static cl::opt<bool> WriteIfChanged(
+    "write-if-changed", cl::desc("Only write output if it changed"));
+
+static int reportError(const char *ProgName, Twine Msg) {
+  errs() << ProgName << ": " << Msg;
+  errs().flush();
+  return 1;
+}
+
+static int WriteOutput(
+    const char *argv0, StringRef Filename, StringRef Content) {
+  if (WriteIfChanged) {
+    // Only updates the real output file if there are any differences.
+    // This prevents recompilation of all the files depending on it if there
+    // aren't any.
+    if (auto ExistingOrErr = MemoryBuffer::getFile(Filename, /*IsText=*/true))
+      if (std::move(ExistingOrErr.get())->getBuffer() == Content)
+        return 0;
+  }
+  std::error_code EC;
+  ToolOutputFile OutFile(Filename, EC, sys::fs::OF_Text);
+  if (EC)
+    return reportError(
+        argv0, "error opening " + Filename + ": " + EC.message() + "\n");
+  OutFile.os() << Content;
+  OutFile.keep();
+
+  return 0;
+}
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
-    llvm::errs() << "usage: " << argv[0] << " <object-sizes-generated.h>\n";
-    return EXIT_FAILURE;
-  }
+  InitLLVM X(argc, argv);
+  cl::ParseCommandLineOptions(argc, argv);
 
-  std::error_code ec;
-  llvm::ToolOutputFile out(argv[1], ec, llvm::sys::fs::OF_Text);
-  if (ec) {
-    llvm::errs() << "object-size-probe: cannot open " << argv[1]
-                 << " for writing: " << ec.message() << '\n';
-    return EXIT_FAILURE;
-  }
+  SmallString<1024> Buffer;
+  raw_svector_ostream OS(Buffer);
 
-  out.os() << llvm::format(
+  OS << llvm::format(
       R"(
 //===-- object-sizes-generated.h --------------------------------*- C++ -*-===//
 //
@@ -94,6 +123,7 @@ inline constexpr std::size_t kCharacterObjectAlign{%zu};
       sizeof(RealValueImpl), alignof(RealValueImpl), sizeof(CharacterValueImpl),
       alignof(CharacterValueImpl));
 
-  out.keep();
+  WriteOutput("object-size-probe", OutputFilename, OS.str());
+
   return EXIT_SUCCESS;
 }

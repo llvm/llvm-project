@@ -22,11 +22,14 @@
 #include "api-attrs.h"
 #include "leading-zero-bit-count.h"
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 
 namespace Fortran::common {
 
 template <bool IS_SIGNED = false> class Int128 {
+  friend class std::numeric_limits<Int128>;
+
 public:
   constexpr Int128() {}
   // This means of definition provides some portability for
@@ -63,7 +66,24 @@ public:
   constexpr explicit operator bool() const { return low_ || high_; }
   constexpr explicit operator std::uint64_t() const { return low_; }
   constexpr explicit operator std::int64_t() const { return low_; }
-  constexpr explicit operator int() const { return static_cast<int>(low_); }
+  constexpr explicit operator std::uint32_t() const {
+    return static_cast<std::uint32_t>(low_);
+  }
+  constexpr explicit operator std::int32_t() const {
+    return static_cast<std::int32_t>(low_);
+  }
+  constexpr explicit operator std::uint16_t() const {
+    return static_cast<std::uint16_t>(low_);
+  }
+  constexpr explicit operator std::int16_t() const {
+    return static_cast<std::int16_t>(low_);
+  }
+  constexpr explicit operator std::uint8_t() const {
+    return static_cast<std::uint8_t>(low_);
+  }
+  constexpr explicit operator std::int8_t() const {
+    return static_cast<std::int8_t>(low_);
+  }
 
   constexpr std::uint64_t high() const { return high_; }
   constexpr std::uint64_t low() const { return low_; }
@@ -305,4 +325,90 @@ template <int BITS>
 using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
 
 } // namespace Fortran::common
+
+namespace std {
+
+template <> class numeric_limits<Fortran::common::UnsignedInt128> {
+public:
+  using T = Fortran::common::UnsignedInt128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{false};
+  static constexpr bool is_integer{true};
+  static constexpr bool is_exact{true};
+  static constexpr bool has_infinity{false};
+  static constexpr bool has_quiet_NaN{false};
+  static constexpr bool has_signaling_NaN{false};
+  static constexpr float_denorm_style has_denorm{denorm_absent};
+  static constexpr bool has_denorm_loss{false};
+  static constexpr float_round_style round_style{round_toward_zero};
+  static constexpr bool is_iec559{false};
+  static constexpr bool is_bounded{true};
+  static constexpr bool is_modulo{true};
+  static constexpr int digits{128};
+  static constexpr int digits10{38};
+  static constexpr int max_digits10{0};
+  static constexpr int radix{2};
+  static constexpr int min_exponent{0};
+  static constexpr int min_exponent10{0};
+  static constexpr int max_exponent{0};
+  static constexpr int max_exponent10{0};
+  static constexpr bool traps{true};
+  static constexpr bool tinyness_before{false};
+
+  static constexpr T min() { return T{0, 0}; }
+  static constexpr T max() { return T{UINT64_MAX, UINT64_MAX}; }
+  static constexpr T lowest() { return min(); }
+  static constexpr T epsilon() { return T{}; }
+  static constexpr T round_error() { return T{}; }
+  static constexpr T infinity() { return T{}; }
+  static constexpr T quiet_NaN() { return T{}; }
+  static constexpr T signaling_NaN() { return T{}; }
+  static constexpr T denorm_min() { return T{}; }
+};
+
+template <> class numeric_limits<Fortran::common::SignedInt128> {
+public:
+  using T = Fortran::common::SignedInt128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{true};
+  static constexpr bool is_integer{true};
+  static constexpr bool is_exact{true};
+  static constexpr bool has_infinity{false};
+  static constexpr bool has_quiet_NaN{false};
+  static constexpr bool has_signaling_NaN{false};
+  static constexpr float_denorm_style has_denorm{denorm_absent};
+  static constexpr bool has_denorm_loss{false};
+  static constexpr float_round_style round_style{round_toward_zero};
+  static constexpr bool is_iec559{false};
+  static constexpr bool is_bounded{true};
+  static constexpr bool is_modulo{true};
+  static constexpr int digits{127};
+  static constexpr int digits10{38};
+  static constexpr int max_digits10{0};
+  static constexpr int radix{2};
+  static constexpr int min_exponent{0};
+  static constexpr int min_exponent10{0};
+  static constexpr int max_exponent{0};
+  static constexpr int max_exponent10{0};
+  static constexpr bool traps{true};
+  static constexpr bool tinyness_before{false};
+
+  static constexpr T min() {
+    return T{static_cast<std::uint64_t>(INT64_MIN), 0};
+  }
+  static constexpr T max() {
+    return T{static_cast<std::uint64_t>(INT64_MAX), UINT64_MAX};
+  }
+  static constexpr T lowest() { return min(); }
+  static constexpr T epsilon() { return T{}; }
+  static constexpr T round_error() { return T{}; }
+  static constexpr T infinity() { return T{}; }
+  static constexpr T quiet_NaN() { return T{}; }
+  static constexpr T signaling_NaN() { return T{}; }
+  static constexpr T denorm_min() { return T{}; }
+};
+
+} // namespace std
 #endif

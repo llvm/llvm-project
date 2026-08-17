@@ -13,9 +13,12 @@
 
 namespace Fortran::evaluate::value {
 
+void ComplexValue::print(llvm::raw_ostream &os) const { AsFortran(os, kind()); }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ComplexValue::dump() const {
-  AsFortran(llvm::errs(), kind()) << '\n';
+  print(llvm::errs());
+  llvm::errs() << '\n';
 }
 #endif
 

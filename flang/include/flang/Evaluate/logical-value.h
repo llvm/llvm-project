@@ -10,6 +10,7 @@
 #define FORTRAN_EVALUATE_LOGICAL_VALUE_H_
 
 #include "integer-value.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace Fortran::evaluate::value {
@@ -47,6 +48,8 @@ public:
   /// to the default-ctor which creates a "monostate" that represents 'false' of
   /// a not-yet-known kind.
   static LogicalValue Zero(int kind) { return LogicalValue{kind, false}; }
+
+  void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -150,4 +153,14 @@ private:
 };
 
 } // namespace Fortran::evaluate::value
+
+namespace llvm {
+/// For pretty printing in GTest
+inline raw_ostream &operator<<(
+    raw_ostream &os, const Fortran::evaluate::value::LogicalValue &v) {
+  v.print(os);
+  return os;
+}
+} // namespace llvm
+
 #endif // FORTRAN_EVALUATE_LOGICAL_VALUE_H_

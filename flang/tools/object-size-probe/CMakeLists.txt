@@ -31,7 +31,7 @@ set(_object_sizes_h "${_object_sizes_dir}/object-sizes-generated.h")
 add_custom_command(
     OUTPUT "${_object_sizes_h}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${_object_sizes_dir}"
-    COMMAND "$<TARGET_FILE:flang-object-size-probe>" "${_object_sizes_h}"
+    COMMAND "$<TARGET_FILE:flang-object-size-probe>" "--write-if-changed" "-o" "${_object_sizes_h}"
     DEPENDS flang-object-size-probe
     COMMENT "Deducing IntegerValueImpl/RealValueImpl/CharacterValueImpl object size and alignment ($<CONFIG>)"
     VERBATIM)

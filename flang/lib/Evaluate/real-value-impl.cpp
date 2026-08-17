@@ -9,10 +9,12 @@
 #include "real-value-impl.h"
 #include "integer-value-impl.h"
 #include "flang/Common/idioms.h"
+#include "flang/Evaluate/integer-value.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Evaluate/real-value.h"
 #include "flang/Evaluate/rounding-bits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <cstring>
 #include <new>
 #include <string>
@@ -25,9 +27,43 @@ RealValueImpl::RealValueImpl(int kind, const Word &w) {
     if (w.IsMonostate()) {
       storage_ = R{};
     } else {
-      storage_ = R{FixedIntegerFromValue<typename R::Word>(w)};
+      storage_ =
+          R{IntegerValueImpl::CoerceUnsigned<typename R::Word>(w.impl())};
     }
   });
+}
+
+RealValueImpl::RealValueImpl(int kind, double x) {
+  if (x == 0.0) {
+    storage_ = std::signbit(x) ? RealValueImpl::NegativeZero(kind).storage_
+                               : RealValueImpl::Zero(kind).storage_;
+  } else if (std::isnan(x)) {
+    storage_ = RealValueImpl::NotANumber(kind).storage_;
+  } else if (std::isinf(x)) {
+    storage_ = RealValueImpl::Infinity(kind, x < 0).storage_;
+  } else {
+    const bool negative{x < 0};
+    int exp{0};
+    const double frac{std::frexp(std::fabs(x), &exp)}; // x == +/-frac * 2**exp
+    constexpr int fracBits{53}; // exact for any host "double" mantissa
+    const auto mantissa{static_cast<std::int64_t>(std::ldexp(frac, fracBits))};
+    // Materialize the value in a kind with ample exponent range (IEEE double)
+    // first: some target kinds (e.g. REAL(2), a 5-bit-exponent IEEE half) have
+    // far too little range to hold the unscaled 53-bit mantissa, and would
+    // spuriously overflow to infinity before SCALE() could bring it back down.
+    // Convert() then applies the target kind's own IEEE rounding/overflow
+    // semantics for the final narrowing (or widening).
+    constexpr int wideKind{8};
+    RealValueImpl magnitude{
+        RealValueImpl::FromInteger(wideKind, IntegerValue{8, mantissa}).value};
+    magnitude = magnitude.SCALE(IntegerValue{4, exp - fracBits}).value;
+    if (negative) {
+      magnitude = magnitude.SetSign(true);
+    }
+    storage_ = (kind == wideKind)
+        ? magnitude.storage_
+        : RealValueImpl::Convert(kind, magnitude).value.storage_;
+  }
 }
 
 RealValueImpl RealValueImpl::Zero(int kind) {
@@ -42,9 +78,14 @@ RealValueImpl RealValueImpl::FromRawBytes(
       kind, IntegerValue::FromRawBytes(kind, raw, expectedSize)};
 }
 
+void RealValueImpl::print(llvm::raw_ostream &os) const {
+  AsFortran(os, kind());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RealValueImpl::dump() const {
-  AsFortran(llvm::errs(), kind()) << '\n';
+  print(llvm::errs());
+  llvm::errs() << '\n';
 }
 #endif
 
@@ -130,6 +171,21 @@ RealValueImpl RealValueImpl::NotANumber(int kind) {
       kind, [](auto p) { return FromWord(decltype(p)::NotANumber()); });
 }
 
+RealValueImpl RealValueImpl::SignalingNaN(int kind) {
+  return withWordProto(
+      kind, [](auto p) { return FromWord(decltype(p)::SignalingNaN()); });
+}
+
+RealValueImpl RealValueImpl::Infinity(int kind, bool negative) {
+  return withWordProto(kind,
+      [negative](auto p) { return FromWord(decltype(p)::Infinity(negative)); });
+}
+
+RealValueImpl RealValueImpl::NegativeZero(int kind) {
+  return withWordProto(
+      kind, [](auto p) { return FromWord(decltype(p)::NegativeZero()); });
+}
+
 bool RealValueImpl::IsNegative() const {
   if (IsMonostate()) {
     return false;
@@ -198,8 +254,11 @@ IntegerValue RealValueImpl::RawBits() const {
     return {};
   }
 
-  return withWord(
-      [](const auto &v) { return IntegerValueFromFixed(v.RawBits()); });
+  return withWord([](const auto &v) {
+    IntegerValue result;
+    result.impl() = IntegerValueImpl::FromWord(v.RawBits());
+    return result;
+  });
 }
 
 Relation RealValueImpl::Compare(const RealValueImpl &y) const {
@@ -401,7 +460,7 @@ ValueWithRealFlags<IntegerValue> RealValueImpl::ToInteger(
       using W = decltype(target);
       auto r{v.template ToInteger<W>(mode)};
       ValueWithRealFlags<IntegerValue> result;
-      result.value = IntegerValueFromFixed(r.value);
+      result.value.impl() = IntegerValueImpl::FromWord(r.value);
       result.flags = r.flags;
       return result;
     }};
@@ -452,7 +511,10 @@ IntegerValue RealValueImpl::EXPONENT() const {
     llvm_unreachable("unsupported operation over uninitialized value");
   }
   return withWord([](const auto &v) -> IntegerValue {
-    return IntegerValueFromFixed(v.template EXPONENT<Integer<32>>());
+    IntegerValue result;
+    result.impl() =
+        IntegerValueImpl::FromWord(v.template EXPONENT<Integer<32>>());
+    return result;
   });
 }
 
@@ -463,7 +525,10 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::FromInteger(
   }
   return withWordProto(
       kind, [&](auto proto) -> ValueWithRealFlags<RealValueImpl> {
-        auto r{FromIntegerValue<decltype(proto)>(n, isUnsigned, rounding)};
+        using R = std::decay_t<decltype(proto)>;
+        auto r{n.impl().withWord([&](const auto &concrete) {
+          return R::FromInteger(concrete, isUnsigned, rounding);
+        })};
         return {FromWord(r.value), r.flags};
       });
 }
@@ -513,26 +578,6 @@ llvm::raw_ostream &RealValueImpl::AsFortran(
     return 0;
   });
   return o;
-}
-
-template <typename INT>
-IntegerValue RealValueImpl::IntegerValueFromFixed(const INT &n) {
-  IntegerValue result;
-  result.impl() = IntegerValueImpl::FromWord(n);
-  return result;
-}
-
-template <typename INT>
-INT RealValueImpl::FixedIntegerFromValue(const IntegerValue &v) {
-  return IntegerValueImpl::CoerceUnsigned<INT>(v.impl());
-}
-
-template <typename R>
-ValueWithRealFlags<R> RealValueImpl::FromIntegerValue(
-    const IntegerValue &n, bool isUnsigned, Rounding rounding) {
-  return n.impl().withWord([&](const auto &concrete) {
-    return R::FromInteger(concrete, isUnsigned, rounding);
-  });
 }
 
 } // namespace Fortran::evaluate::value

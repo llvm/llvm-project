@@ -62,10 +62,13 @@ inline constexpr std::size_t kRealObjectAlign{16};
 //               invariant to _LIBCPP_HARDENING_MODE
 //  * libstdc++: 40 bytes
 //               invariant to _GLIBCXX_ASSERTIONS or _GLIBCXX_DEBUG
-#if defined(_MSC_VER) && \
-    ((defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL >= 2) || \
-        (!defined(_ITERATOR_DEBUG_LEVEL) && defined(_DEBUG)))
+#if defined(_MSC_VER)
+#if ((defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL >= 2) || \
+    (!defined(_ITERATOR_DEBUG_LEVEL) && defined(_DEBUG)))
 inline constexpr std::size_t kCharacterObjectSize{48};
+#else
+inline constexpr std::size_t kCharacterObjectSize{40};
+#endif
 #elif defined(_LIBCPP_VERSION)
 inline constexpr std::size_t kCharacterObjectSize{32};
 #elif defined(__GLIBCXX__) || defined(__GLIBCPP__)
