@@ -1,8 +1,6 @@
 ;; Tests memprof when contains internal linkage function.
 
-;; Avoid failures on big-endian systems that can't read the profile properly
-; REQUIRES: x86_64-linux
-; RUN: split-file %s %t
+; RUN: rm -rf %t && split-file %s %t
 
 ; RUN: llvm-profdata merge %t/a.yaml -o %t/a.memprofdata
 ; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -S | FileCheck %s
