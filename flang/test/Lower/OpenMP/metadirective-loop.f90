@@ -645,6 +645,73 @@ subroutine test_block_nested_do(n, a)
   end block
 end subroutine
 
+! A selected block variant owns sequential-loop IVs in its body.
+! CHECK-LABEL: func.func @_QPtest_block_owned_iv(
+! CHECK:         omp.parallel {{.*}}private({{.*}}Ei_private_i32
+! CHECK:           %[[I:.*]]:2 = hlfir.declare
+! CHECK:           fir.do_loop
+! CHECK:             fir.store %{{.*}} to %[[I]]#0
+! CHECK:             %{{.*}} = fir.load %[[I]]#0 : !fir.ref<i32>
+! CHECK:         return
+subroutine test_block_owned_iv(n, a)
+  integer :: n, a(n), i
+  !$omp begin metadirective &
+  !$omp& when(implementation={vendor(llvm)}: parallel) &
+  !$omp& otherwise(nothing)
+  do i = 1, n
+    a(i) = i
+  end do
+  !$omp end metadirective
+end subroutine
+
+! A nested SIMD construct owns its associated loop IV. The selected outer
+! PARALLEL must not replace the IV's predetermined LINEAR attribute with
+! PRIVATE, but it must still privatize a sequential loop nested in the SIMD
+! region beyond its associated depth.
+! CHECK-LABEL: func.func @_QPtest_block_nested_simd_iv(
+! CHECK:         omp.parallel {
+! CHECK:           %[[J:.*]] = fir.alloca i32
+! CHECK:           hlfir.declare %[[J]]
+! CHECK:           omp.simd linear(val(
+! CHECK:             omp.loop_nest
+! CHECK:               fir.do_loop
+! CHECK:         return
+subroutine test_block_nested_simd_iv(n, a)
+  integer :: n, a(n, n), i, j
+  !$omp begin metadirective &
+  !$omp& when(implementation={vendor(llvm)}: parallel) &
+  !$omp& otherwise(nothing)
+  !$omp simd
+  do i = 1, n
+    do j = 1, n
+      a(j, i) = i + j
+    end do
+  end do
+  !$omp end simd
+  !$omp end metadirective
+end subroutine
+
+! A selected block variant must not privatize an enclosing worksharing loop's
+! predetermined iteration variable.
+! CHECK-LABEL: func.func @_QPtest_enclosing_do_iv(
+! CHECK:         omp.wsloop {{.*}}private({{.*}}Ei_private_i32
+! CHECK:           omp.loop_nest
+! CHECK:             %[[I:.*]]:2 = hlfir.declare
+! CHECK:             omp.parallel {
+! CHECK:               %{{.*}} = fir.load %[[I]]#0 : !fir.ref<i32>
+! CHECK:         return
+subroutine test_enclosing_do_iv(n, a)
+  integer :: n, a(n), i
+  !$omp do
+  do i = 1, n
+    !$omp begin metadirective &
+    !$omp& when(implementation={vendor(llvm)}: parallel) &
+    !$omp& otherwise(nothing)
+    a(i) = i
+    !$omp end metadirective
+  end do
+end subroutine
+
 ! A standalone metadirective's selected DO trait remains active while its
 ! sibling loop is traversed. The inner construct selector therefore chooses
 ! NOTHING, leaving the inner loop sequential.

@@ -120,12 +120,12 @@ emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
 // Code generation helper functions
 //===----------------------------------------------------------------------===//
 
-static void genOMPDispatch(lower::AbstractConverter &converter,
-                           lower::SymMap &symTable,
-                           semantics::SemanticsContext &semaCtx,
-                           lower::pft::Evaluation &eval, mlir::Location loc,
-                           const ConstructQueue &queue,
-                           ConstructQueue::const_iterator item);
+static void genOMPDispatch(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs = {});
 
 /// Return the directive that is immediately nested inside of the given
 /// \c parent evaluation, if it is its only non-end-statement nested evaluation
@@ -4663,7 +4663,8 @@ static mlir::omp::WsloopOp genStandaloneDo(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
-    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+    const ConstructQueue &queue, ConstructQueue::const_iterator item,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
   genWsloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
@@ -4671,7 +4672,9 @@ static mlir::omp::WsloopOp genStandaloneDo(
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable);
+                           enableDelayedPrivatization, symTable,
+                           /*isTargetPrivatization=*/false,
+                           metadirectiveLoopIVs);
   // Worksharing loops use the private-copy lowering for conditional lastprivate
   // (each list item gets an ordinary private copy + a reduction accumulator),
   // which is correct under any schedule including nonmonotonic.
@@ -4880,12 +4883,12 @@ static mlir::omp::ParallelOp genStandaloneParallel(
                        enableDelayedPrivatization ? &dsp.value() : nullptr);
 }
 
-static mlir::omp::SimdOp
-genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
-                  semantics::SemanticsContext &semaCtx,
-                  lower::pft::Evaluation &eval, mlir::Location loc,
-                  const ConstructQueue &queue,
-                  ConstructQueue::const_iterator item) {
+static mlir::omp::SimdOp genStandaloneSimd(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
   genSimdClauses(converter, semaCtx, item->clauses, loc, simdClauseOps,
@@ -4893,7 +4896,9 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable);
+                           enableDelayedPrivatization, symTable,
+                           /*isTargetPrivatization=*/false,
+                           metadirectiveLoopIVs);
   dsp.processStep1(&simdClauseOps);
 
   if (!dsp.getConditionalLastprivateSymbols().empty())
@@ -5227,7 +5232,8 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
-    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+    const ConstructQueue &queue, ConstructQueue::const_iterator item,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   assert(std::distance(item, queue.end()) == 2 && "Invalid leaf constructs");
   ConstructQueue::const_iterator doItem = item;
   ConstructQueue::const_iterator simdItem = std::next(doItem);
@@ -5272,7 +5278,9 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
 
   DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
                                    /*shouldCollectPreDeterminedSymbols=*/true,
-                                   /*useDelayedPrivatization=*/true, symTable);
+                                   /*useDelayedPrivatization=*/true, symTable,
+                                   /*isTargetPrivatization=*/false,
+                                   metadirectiveLoopIVs);
   simdItemDSP.processStep1(&simdClauseOps, simdItem->id);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
@@ -5330,7 +5338,8 @@ static bool genOMPCompositeDispatch(
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
     const ConstructQueue &queue, ConstructQueue::const_iterator item,
-    mlir::Operation *&newOp) {
+    mlir::Operation *&newOp,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   using llvm::omp::Directive;
   using lower::omp::matchLeafSequence;
 
@@ -5350,7 +5359,7 @@ static bool genOMPCompositeDispatch(
                                        eval, loc, queue, item);
   else if (matchLeafSequence(item, queue, Directive::OMPD_do_simd))
     newOp = genCompositeDoSimd(converter, symTable, stmtCtx, semaCtx, eval, loc,
-                               queue, item);
+                               queue, item, metadirectiveLoopIVs);
   else if (matchLeafSequence(item, queue, Directive::OMPD_taskloop_simd))
     newOp = genCompositeTaskloopSimd(converter, symTable, stmtCtx, semaCtx,
                                      eval, loc, queue, item);
@@ -5360,12 +5369,12 @@ static bool genOMPCompositeDispatch(
   return true;
 }
 
-static void genOMPDispatch(lower::AbstractConverter &converter,
-                           lower::SymMap &symTable,
-                           semantics::SemanticsContext &semaCtx,
-                           lower::pft::Evaluation &eval, mlir::Location loc,
-                           const ConstructQueue &queue,
-                           ConstructQueue::const_iterator item) {
+static void
+genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
+               semantics::SemanticsContext &semaCtx,
+               lower::pft::Evaluation &eval, mlir::Location loc,
+               const ConstructQueue &queue, ConstructQueue::const_iterator item,
+               llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   assert(item != queue.end());
 
   lower::StatementContext stmtCtx;
@@ -5386,7 +5395,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   if (loopLeaf) {
     symTable.pushScope();
     if (genOMPCompositeDispatch(converter, symTable, stmtCtx, semaCtx, eval,
-                                loc, queue, item, newOp)) {
+                                loc, queue, item, newOp,
+                                metadirectiveLoopIVs)) {
       symTable.popScope();
       finalizeStmtCtx();
       return;
@@ -5404,7 +5414,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_do:
     newOp = genStandaloneDo(converter, symTable, stmtCtx, semaCtx, eval, loc,
-                            queue, item);
+                            queue, item, metadirectiveLoopIVs);
     break;
   case llvm::omp::Directive::OMPD_loop:
     newOp = genLoopOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -5436,8 +5446,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     newOp = genSectionsOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_simd:
-    newOp =
-        genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue, item);
+    newOp = genStandaloneSimd(converter, symTable, semaCtx, eval, loc, queue,
+                              item, metadirectiveLoopIVs);
     break;
   case llvm::omp::Directive::OMPD_scope:
     newOp = genScopeOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -7005,17 +7015,98 @@ public:
 
   void setSymbolDSA(semantics::Symbol &sym, semantics::Symbol::Flag dsa) {
     if (!llvm::any_of(savedFlags,
-                      [&](const auto &entry) { return entry.first == &sym; }))
+                      [&](const auto &entry) { return entry.first == &sym; })) {
       savedFlags.emplace_back(&sym, sym.flags());
+      markedSymbols.push_back(&sym);
+    }
     using Symbol = semantics::Symbol;
     semantics::SetSymbolDSA(sym,
                             Symbol::Flags{Symbol::Flag::OmpPreDetermined, dsa});
   }
 
+  llvm::ArrayRef<const semantics::Symbol *> getMarkedSymbols() const {
+    return markedSymbols;
+  }
+
 private:
   llvm::SmallVector<std::pair<semantics::Symbol *, semantics::Symbol::Flags>, 4>
       savedFlags;
+  llvm::SmallVector<const semantics::Symbol *, 4> markedSymbols;
 };
+
+static bool ownsSequentialLoopIVs(llvm::omp::Directive directive,
+                                  unsigned version) {
+  return llvm::omp::allParallelSet.test(directive) ||
+         llvm::omp::taskGeneratingSet.test(directive) ||
+         (version >= 52 && llvm::omp::allTeamsSet.test(directive));
+}
+
+/// Mark sequential-loop IVs owned by the selected block variant, skipping
+/// nested constructs that establish a nearer owner. The guard restores the
+/// affected symbols after lowering.
+class MetadirectiveBlockIVMarker {
+public:
+  MetadirectiveBlockIVMarker(semantics::SemanticsContext &semaCtx,
+                            unsigned version, SymbolDSAGuard &dsaGuard)
+      : semaCtx(semaCtx), version(version), dsaGuard(dsaGuard) {}
+
+  template <typename T>
+  bool Pre(const T &) {
+    return true;
+  }
+  template <typename T>
+  void Post(const T &) {}
+
+  bool Pre(const parser::OpenMPConstruct &omp) {
+    llvm::omp::Directive directive = parser::omp::GetOmpDirectiveName(omp).v;
+    if (ownsSequentialLoopIVs(directive, version))
+      ++nestedOwnerDepth;
+    return true;
+  }
+
+  void Post(const parser::OpenMPConstruct &omp) {
+    llvm::omp::Directive directive = parser::omp::GetOmpDirectiveName(omp).v;
+    if (ownsSequentialLoopIVs(directive, version))
+      --nestedOwnerDepth;
+  }
+
+  bool Pre(const parser::OpenMPLoopConstruct &omp) {
+    if (auto loops = semantics::omp::CollectAffectedDoLoops(omp, version,
+                                                            &semaCtx))
+      for (const parser::DoConstruct *loop : *loops)
+        nestedAssociatedLoops.insert(loop);
+    return true;
+  }
+
+  bool Pre(const parser::DoConstruct &loop) {
+    if (nestedOwnerDepth != 0 || nestedAssociatedLoops.contains(&loop) ||
+        !loop.IsDoNormal())
+      return true;
+    const std::optional<parser::LoopControl> &control = loop.GetLoopControl();
+    if (!control)
+      return true;
+    const auto *bounds = std::get_if<parser::LoopControl::Bounds>(&control->u);
+    if (bounds && bounds->Name().thing.symbol)
+      dsaGuard.setSymbolDSA(*bounds->Name().thing.symbol,
+                            semantics::Symbol::Flag::OmpPrivate);
+    return true;
+  }
+
+private:
+  semantics::SemanticsContext &semaCtx;
+  unsigned version;
+  SymbolDSAGuard &dsaGuard;
+  llvm::SmallPtrSet<const parser::DoConstruct *, 4> nestedAssociatedLoops;
+  unsigned nestedOwnerDepth = 0;
+};
+
+static void markMetadirectiveBlockIVs(semantics::SemanticsContext &semaCtx,
+                                      lower::pft::Evaluation &eval,
+                                      unsigned version,
+                                      SymbolDSAGuard &dsaGuard) {
+  MetadirectiveBlockIVMarker marker(semaCtx, version, dsaGuard);
+  eval.visit([&](const auto &node) { parser::Walk(node, marker); });
+}
 
 enum class MetadirectiveLoopIVMarking {
   Marked,           // Induction variables marked (or there was nothing to do).
@@ -7286,7 +7377,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
         TODO(variantLoc, "ASSOCIATE name loop iteration variable in "
                          "loop-associated METADIRECTIVE variant");
       genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
-                     queue.begin());
+                     queue.begin(), dsaGuard.getMarkedSymbols());
       return;
     }
 
@@ -7297,6 +7388,12 @@ static void genMetadirective(lower::AbstractConverter &converter,
     if (hasLoopAssociatedCandidate && consumesBody)
       TODO(variantLoc,
            "METADIRECTIVE with both block- and loop-associated variants");
+
+    SymbolDSAGuard dsaGuard;
+    if (consumesBody && llvm::any_of(queue, [ompVersion](const auto &item) {
+          return ownsSequentialLoopIVs(item.id, ompVersion);
+        }))
+      markMetadirectiveBlockIVs(semaCtx, eval, ompVersion, dsaGuard);
 
     genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                    queue.begin());

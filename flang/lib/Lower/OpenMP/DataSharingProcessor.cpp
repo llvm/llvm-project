@@ -41,11 +41,14 @@ bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
   if (definition == symDefMap.end())
     return false;
 
-  // A metadirective does not introduce privatization itself, so symbols from
-  // its spliced evaluations are associated with a null construct.
+  // The selected variant is not an enclosing parse-tree construct, so its
+  // IVs map to a null construct. Admit only IVs owned by this variant because
+  // enclosing IVs can map to null too.
   if (isMetadirectiveEval(eval))
-    return definition->second ==
-           ConstructPtr(static_cast<const parser::OpenMPConstruct *>(nullptr));
+    return metadirectiveLoopIVs.contains(symbol) &&
+           definition->second ==
+               ConstructPtr(
+                   static_cast<const parser::OpenMPConstruct *>(nullptr));
 
   return eval.visit(common::visitors{
       [&](const parser::OpenMPConstruct &ompConstruct) {
@@ -76,12 +79,14 @@ DataSharingProcessor::DataSharingProcessor(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, lower::pft::Evaluation &eval,
     bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
-    lower::SymMap &symTable, bool isTargetPrivatization)
+    lower::SymMap &symTable, bool isTargetPrivatization,
+    llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs)
     : converter(converter), semaCtx(semaCtx),
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
       useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
-      isTargetPrivatization(isTargetPrivatization), visitor(semaCtx) {
+      isTargetPrivatization(isTargetPrivatization),
+      visitor(semaCtx, metadirectiveLoopIVs) {
   eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
