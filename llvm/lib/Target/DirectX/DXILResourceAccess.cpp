@@ -10,6 +10,7 @@
 #include "DirectX.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
@@ -731,7 +732,7 @@ static const std::array<Intrinsic::ID, 2> HandleIntrins = {
 static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
   SmallVector<Value *> Worklist = {Ptr};
   SmallVector<IntrinsicInst *> Handles;
-  SmallSetVector<Value *, 4> VisitedPhis;
+  SmallSet<Value *, 4> VisitedPhis;
 
   while (!Worklist.empty()) {
     Value *X = Worklist.pop_back_val();
@@ -740,10 +741,11 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
       return {}; // Early exit on store/load into non-resource
 
     if (auto *Phi = dyn_cast<PHINode>(X)) {
-      if (!VisitedPhis.insert(X))
+      if (VisitedPhis.contains(X))
         continue;
       for (Use &V : Phi->incoming_values())
         Worklist.push_back(V.get());
+      VisitedPhis.insert(Phi);
     } else if (auto *Select = dyn_cast<SelectInst>(X))
       for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
         Worklist.push_back(V);
