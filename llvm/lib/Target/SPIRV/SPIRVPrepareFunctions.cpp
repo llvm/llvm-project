@@ -630,6 +630,7 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   CloneFunctionInto(NewF, F, VMap, CloneFunctionChangeType::LocalChangesOnly,
                     Returns);
   NewF->takeName(F);
+  NewF->setComdat(F->getComdat());
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
@@ -639,11 +640,8 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
     if (CallInst *CI;
         (CI = dyn_cast<CallInst>(U)) && CI->getCalledFunction() == F)
       CI->mutateFunctionType(NewF->getFunctionType());
-    if (auto *C = dyn_cast<Constant>(U); C && !isa<GlobalValue>(C))
-      C->handleOperandChange(F, NewF);
-    else
-      U->replaceUsesOfWith(F, NewF);
   }
+  F->replaceAllUsesWith(NewF);
 
   // register the mutation
   if (RetType != F->getReturnType())

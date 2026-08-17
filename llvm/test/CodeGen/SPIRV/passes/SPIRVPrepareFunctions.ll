@@ -1,6 +1,7 @@
 ; RUN: opt -S -passes=spirv-prepare-functions -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
 
 @fp = global ptr addrspace(4) @callback
+; CHECK: @fp = global ptr addrspace(4) @callback
 
 ; @llvm.bswap.* is replaced with a call to a SPIR-V helper function whose
 ; body implements the byte-swap with shifts/masks/ors.
