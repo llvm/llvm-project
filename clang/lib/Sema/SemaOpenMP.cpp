@@ -9581,9 +9581,9 @@ static bool checkOpenMPIterationSpace(
     llvm::MutableArrayRef<LoopIterationSpace> ResultIterSpaces,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures,
     const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls,
-    llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars,
-    const OMPInvariantPredicateBoundAttr *IntraTileHint) {
+    llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars) {
   bool SupportsNonRectangular = !isOpenMPLoopTransformationDirective(DKind);
+
   // See the tile reinterpretation design note in ActOnOpenMPTileDirective.
   // If the loop carries the hint, analyze its rectangular form instead.
   //
@@ -9592,6 +9592,15 @@ static bool checkOpenMPIterationSpace(
   // loop; a loop transformation such as an enclosing 'tile' has nowhere to put
   // the overshoot guard, so for those the stored min-bounded form is analyzed
   // exactly as it is on a build without this hint.
+  // OpenMP [2.9.1, Canonical Loop Form]
+  //   for (init-expr; test-expr; incr-expr) structured-block
+  //   for (range-decl: range-expr) structured-block
+  if (auto *CanonLoop = dyn_cast_or_null<OMPCanonicalLoop>(S))
+    S = CanonLoop->getLoopStmt();
+  const OMPInvariantPredicateBoundAttr *IntraTileHint =
+      OMPLoopBasedDirective::getIntraTileHint(S);
+  if (IntraTileHint)
+    S = OMPLoopBasedDirective::ignoreIntraTileHint(S);
   Expr *TileRectCond = nullptr;
   Expr *TileBodyPredicate = nullptr;
   Expr *TileTripCount = nullptr;
@@ -9600,11 +9609,6 @@ static bool checkOpenMPIterationSpace(
     TileBodyPredicate = IntraTileHint->getPredicate();
     TileTripCount = IntraTileHint->getTileSize();
   }
-  // OpenMP [2.9.1, Canonical Loop Form]
-  //   for (init-expr; test-expr; incr-expr) structured-block
-  //   for (range-decl: range-expr) structured-block
-  if (auto *CanonLoop = dyn_cast_or_null<OMPCanonicalLoop>(S))
-    S = CanonLoop->getLoopStmt();
   auto *For = dyn_cast_or_null<ForStmt>(S);
   auto *CXXFor = dyn_cast_or_null<CXXForRangeStmt>(S);
   // Ranged for is supported only in OpenMP 5.0.
@@ -10150,15 +10154,12 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           [DKind, &SemaRef, &DSA, NumLoops, NestedLoopCount,
            CollapseLoopCountExpr, OrderedLoopCountExpr, &VarsWithImplicitDSA,
            &IterSpaces, &Captures, &CollapsedLoopVarDecls,
-           &CollapsedLoopInductionVars](
-              unsigned Cnt, Stmt *CurStmt,
-              const OMPInvariantPredicateBoundAttr *IntraTileHint) {
+           &CollapsedLoopInductionVars](unsigned Cnt, Stmt *CurStmt) {
             if (checkOpenMPIterationSpace(
                     DKind, CurStmt, SemaRef, DSA, Cnt, NestedLoopCount,
                     NumLoops, CollapseLoopCountExpr, OrderedLoopCountExpr,
                     VarsWithImplicitDSA, IterSpaces, Captures,
-                    CollapsedLoopVarDecls, CollapsedLoopInductionVars,
-                    IntraTileHint))
+                    CollapsedLoopVarDecls, CollapsedLoopInductionVars))
               return true;
             if (Cnt > 0 && Cnt >= NestedLoopCount &&
                 IterSpaces[Cnt].CounterVar) {
@@ -10191,7 +10192,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                 }
               }
             }
-          }))
+          },
+          /*UnwrapIntraTileHint=*/false))
     return 0;
 
   Built.clear(/*size=*/NestedLoopCount);

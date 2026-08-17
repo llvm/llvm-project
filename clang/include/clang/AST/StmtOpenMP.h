@@ -906,34 +906,19 @@ public:
   }
 
   /// Calls the specified callback function for all the loops in \p CurStmt,
-  /// from the outermost to the innermost. The callback is always passed a
-  /// ForStmt or CXXForRangeStmt; when that loop carries the intra-tile
-  /// reinterpretation hint, it is delivered as a separate argument instead of
-  /// wrapping the loop, so callers that only expect a loop cannot trip over it.
-  static bool
-  doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
-                unsigned NumLoops,
-                llvm::function_ref<bool(unsigned, Stmt *,
-                                        const OMPInvariantPredicateBoundAttr *)>
-                    Callback,
-                llvm::function_ref<void(OMPLoopTransformationDirective *)>
-                    OnTransformationCallback);
-
-  /// Calls the specified callback function for all the loops in \p CurStmt,
   /// from the outermost to the innermost.
+  ///
+  /// By default the callback receives a ForStmt or CXXForRangeStmt. Pass
+  /// \p UnwrapIntraTileHint as false to leave an intra-tile
+  /// OMPInvariantPredicateBoundAttr wrapper in place so the caller can read
+  /// the hint itself (see checkOpenMPIterationSpace).
   static bool
   doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
                 llvm::function_ref<bool(unsigned, Stmt *)> Callback,
                 llvm::function_ref<void(OMPLoopTransformationDirective *)>
-                    OnTransformationCallback) {
-    auto &&NewCallback = [Callback](unsigned Cnt, Stmt *Loop,
-                                    const OMPInvariantPredicateBoundAttr *) {
-      return Callback(Cnt, Loop);
-    };
-    return doForAllLoops(CurStmt, TryImperfectlyNestedLoops, NumLoops,
-                         NewCallback, OnTransformationCallback);
-  }
+                    OnTransformationCallback,
+                bool UnwrapIntraTileHint = true);
   static bool
   doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
