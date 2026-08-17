@@ -66,7 +66,10 @@ ret
 // CHECK-NEXT: addq %r14, %r11
 // CHECK-NEXT: jmpq *%r11
 
+// The rep prefix has no effect on ret and the return is fully replaced, so the
+// prefix is dropped.
 rep ret
+// CHECK-NOT:  rep
 // CHECK:      popq %r11
 // CHECK-NEXT: andl $-32, %r11d
 // CHECK-NEXT: addq %r14, %r11

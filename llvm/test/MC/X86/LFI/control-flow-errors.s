@@ -32,3 +32,12 @@ lret
 
 iretq
 // CHECK: error: unsupported return instruction
+
+// LFI only supports x86-64, so instructions in .code32 are rejected.
+.code32
+
+ret
+// CHECK: error: unsupported return instruction
+
+jmp *%eax
+// CHECK: error: unsupported indirect branch
