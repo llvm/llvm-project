@@ -144,7 +144,9 @@ public:
   std::string getKindAsStr() const;
   std::string getPrefixedName() const;
 
-  void complete(llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
+  /// \p padding is union-only.  A struct carries its padding as a member
+  /// marked pad.
+  void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
                 mlir::Type padding,
                 llvm::ArrayRef<RecordMemberKind> memberKinds);
   uint64_t getElementOffset(const mlir::DataLayout &dataLayout,

@@ -3122,7 +3122,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureTanhInsts, FeatureTensorCvtLutInsts, FeatureTransposeLoadF4F6Insts,
   FeatureVMemToLDSLoad, FeatureVmemPrefInsts, FeatureWMMA128bInsts,
   FeatureWMMA256bInsts, FeatureXF32Insts,
-  FeatureWavefrontSize32, FeatureWavefrontSize64
+  FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
+  FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32
   ];
 }
 

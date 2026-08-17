@@ -850,15 +850,26 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   mlir::Type llvmTy = converter->convertType(constRecord.getType());
   mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
-  llvmTy = adjustGlobalTypeForInit(llvmTy, constRecord, *converter, dataLayout);
+  llvm::SmallVector<unsigned> paddingAddedIndexes;
+  llvmTy = adjustGlobalTypeForInit(llvmTy, constRecord, *converter, dataLayout,
+                                   paddingAddedIndexes);
   const mlir::Location loc = parentOp->getLoc();
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
 
+  uint64_t insertIdx = 0;
+  auto paddingItr = paddingAddedIndexes.begin();
+
   // Iteratively lower each constant element of the record.
   for (auto [idx, elt] : llvm::enumerate(constRecord.getMembers())) {
+    if (paddingItr != paddingAddedIndexes.end() && *paddingItr == idx) {
+      ++insertIdx;
+      ++paddingItr;
+    }
+
     mlir::Value init = visit(elt);
-    result =
-        mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
+    result = mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init,
+                                               insertIdx);
+    ++insertIdx;
   }
 
   return result;

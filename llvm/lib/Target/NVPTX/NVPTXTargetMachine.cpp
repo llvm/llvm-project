@@ -14,7 +14,6 @@
 #include "NVPTX.h"
 #include "NVPTXAliasAnalysis.h"
 #include "NVPTXAsmPrinter.h"
-#include "NVPTXCtorDtorLowering.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"

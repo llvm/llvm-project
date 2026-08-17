@@ -1151,6 +1151,20 @@ void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
   attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
 }
 
+void JSONNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *FD) {
+  if (FD->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    VisitFriendDecl(FD);
+    return;
+  }
+
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+  FD->getFriendTemplateName().print(OS, PrintPolicy);
+  JOS.attribute("templateName", Str);
+  attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
+}
+
 void JSONNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
   VisitNamedDecl(D);
   JOS.attribute("type", createQualType(D->getType()));

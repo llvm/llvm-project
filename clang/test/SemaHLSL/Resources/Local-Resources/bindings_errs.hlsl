@@ -15,14 +15,8 @@ void conditional_initialization(uint idx) {
     Out[idx] = In[idx];
 }
 
-void branched_assignment(uint idx) {
-    RWStructuredBuffer<uint> Out = Out0; // expected-note {{variable 'Out' is declared here}}
-    if (cond) {
-        // expected-warning@+1 {{assignment of 'Out1' to local resource 'Out' is not to the same unique global resource}}
-        Out = Out1;
-    }
-    Out[idx] = In[idx];
-}
+// The plain `if (cond) { Out = Out1; }` reassignment is covered by the
+// dedicated branched_reassign_ambiguous.hlsl.
 
 void branched_assignment_with_array(uint idx) {
     RWStructuredBuffer<uint> Out = Out0; // expected-note {{variable 'Out' is declared here}}

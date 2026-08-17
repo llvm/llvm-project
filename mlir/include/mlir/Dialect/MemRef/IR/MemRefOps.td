@@ -2180,8 +2180,10 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     The offset, size and stride operands must be in-bounds with respect to the
     source memref. When possible, the static operation verifier will detect
     out-of-bounds subviews. Subviews that cannot be confirmed to be in-bounds
-    or out-of-bounds based on compile-time information are valid. However,
-    performing an out-of-bounds subview at runtime is undefined behavior.
+    or out-of-bounds based on compile-time information are valid. The
+    `-generate-runtime-verification` pass can insert runtime bound checks.
+    Otherwise, performing an out-of-bounds subview at runtime is undefined
+    behavior.
 
     Example 1:
 

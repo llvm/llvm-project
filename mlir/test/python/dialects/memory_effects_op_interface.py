@@ -13,81 +13,91 @@ class MemoryEffectsTest(ext.Dialect, name="memory_effects_test"):
 
 class NoEffectModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
-        pass
+    def get_effects(op):
+        return []
 
 
 class ReadModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
-        effects.append(
-            ir.MemoryEffect.Read,
-            op.op_operands[0],
-            parameters=ir.StringAttr.get("read parameter"),
-            stage=1,
-            effect_on_full_region=True,
-            resource=ir.SideEffectResource.Default,
-        )
+    def get_effects(op):
+        return [
+            ir.MemoryEffectInstance(
+                ir.MemoryEffect.Read,
+                op.op_operands[0],
+                parameters=ir.StringAttr.get("read parameter"),
+                stage=1,
+                effect_on_full_region=True,
+                resource=ir.SideEffectResource.Default,
+            )
+        ]
 
 
 class ReadDeadModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.Read)
+    def get_effects(op):
+        return [ir.MemoryEffectInstance(ir.MemoryEffect.Read)]
 
 
 class WriteModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.Write)
+    def get_effects(op):
+        return [ir.MemoryEffectInstance(ir.MemoryEffect.Write)]
 
 
 class FreeModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.Free)
+    def get_effects(op):
+        return [ir.MemoryEffectInstance(ir.MemoryEffect.Free)]
 
 
 class AllocateModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.Allocate)
+    def get_effects(op):
+        return [ir.MemoryEffectInstance(ir.MemoryEffect.Allocate)]
 
 
 class AllocateResultModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.Allocate, op.results[0])
+    def get_effects(op):
+        return [ir.MemoryEffectInstance(ir.MemoryEffect.Allocate, op.results[0])]
 
 
 class BlockArgumentTargetModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
-        effects.append(ir.MemoryEffect.Read, op.regions[0].blocks[0].arguments[0])
+    def get_effects(op):
+        return [
+            ir.MemoryEffectInstance(
+                ir.MemoryEffect.Read, op.regions[0].blocks[0].arguments[0]
+            )
+        ]
 
 
 class SymbolTargetModel(ir.MemoryEffectsOpInterface):
     @staticmethod
-    def get_effects(op, effects):
+    def get_effects(op):
         try:
-            effects.append(ir.MemoryEffect.Read, ir.StringAttr.get("not a symbol"))
+            ir.MemoryEffectInstance(
+                ir.MemoryEffect.Read, ir.StringAttr.get("not a symbol")
+            )
         except TypeError as error:
             print("invalid symbol target:", error)
         try:
-            effects.append(ir.MemoryEffect.Read, parameters=42)
+            ir.MemoryEffectInstance(ir.MemoryEffect.Read, parameters=42)
         except TypeError as error:
             print("invalid parameters:", error)
         try:
-            effects.append(ir.MemoryEffect.Read, 42)
+            ir.MemoryEffectInstance(ir.MemoryEffect.Read, 42)
         except TypeError as error:
             print("invalid target:", error)
-        effects.append(
-            ir.MemoryEffect.Read,
-            ir.FlatSymbolRefAttr.get("global"),
-            parameters=ir.StringAttr.get("symbol parameter"),
-            stage=2,
-            effect_on_full_region=True,
-        )
+        return [
+            ir.MemoryEffectInstance(
+                ir.MemoryEffect.Read,
+                ir.FlatSymbolRefAttr.get("global"),
+                parameters=ir.StringAttr.get("symbol parameter"),
+                stage=2,
+                effect_on_full_region=True,
+            )
+        ]
 
 
 class ReadOp(MemoryEffectsTest.Operation, name="read", traits=[ReadModel]):
@@ -167,10 +177,63 @@ with ir.Context(), ir.Location.unknown():
         isinstance(ir.MemoryEffect.Read, ir.MemoryEffect),
         isinstance(ir.MemoryEffect.Write, ir.MemoryEffect),
     )
+    # CHECK: memory effect equality: True True True True False False
+    print(
+        "memory effect equality:",
+        ir.MemoryEffect.Allocate == ir.MemoryEffect.Allocate,
+        ir.MemoryEffect.Free == ir.MemoryEffect.Free,
+        ir.MemoryEffect.Read == ir.MemoryEffect.Read,
+        ir.MemoryEffect.Write == ir.MemoryEffect.Write,
+        ir.MemoryEffect.Read == ir.MemoryEffect.Write,
+        ir.MemoryEffect.Read == 42,
+    )
     # CHECK: default resource property: True
     print(
         "default resource property:",
         isinstance(ir.SideEffectResource.Default, ir.SideEffectResource),
+    )
+
+    query_module = ir.Module.parse(
+        """
+        module {
+          func.func @test(%arg0: i32) -> i32 {
+            %0 = "memory_effects_test.read"(%arg0) : (i32) -> i32
+            return %0 : i32
+          }
+        }
+        """
+    )
+    read_op = query_module.body.operations[0].regions[0].blocks[0].operations[0]
+    read_effects = ir.MemoryEffectsOpInterface(read_op).get_effects()
+    read_effect = read_effects[0]
+    # CHECK: queried effects: True 1 True True 1 True True True
+    print(
+        "queried effects:",
+        isinstance(read_effects, list),
+        len(read_effects),
+        isinstance(read_effect, ir.MemoryEffectInstance),
+        read_effect.effect == ir.MemoryEffect.Read,
+        read_effect.stage,
+        read_effect.effect_on_full_region,
+        isinstance(read_effect.resource, ir.SideEffectResource),
+        read_effect.value == read_op.operands[0],
+    )
+    # CHECK: queried optional properties: "read parameter" True
+    print(
+        "queried optional properties:",
+        read_effect.parameters,
+        read_effect.symbol_ref is None,
+    )
+
+    symbol_effect = ir.MemoryEffectInstance(
+        ir.MemoryEffect.Read, ir.FlatSymbolRefAttr.get("global")
+    )
+    # CHECK: symbol effect properties: True True True
+    print(
+        "symbol effect properties:",
+        isinstance(symbol_effect.symbol_ref, ir.FlatSymbolRefAttr),
+        symbol_effect.value is None,
+        symbol_effect.parameters is None,
     )
 
     read_cse = run_pass(

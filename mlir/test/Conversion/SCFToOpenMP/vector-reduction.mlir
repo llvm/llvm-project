@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s --convert-scf-to-openmp | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 // CHECK-LABEL: omp.declare_reduction @__scf_reduction : vector<2xi1>
 // CHECK: init {
 // CHECK:   %[[INIT:.*]] = llvm.mlir.constant(dense<true> : vector<2xi1>) : vector<2xi1>

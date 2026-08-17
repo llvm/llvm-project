@@ -2810,7 +2810,7 @@ bool AMDGPUAsmParser::AddNextRegisterToList(MCRegister &Reg, unsigned &RegWidth,
 
   if (RegKind != RegKind1) {
     Error(Loc, "registers in a list must be of the same kind");
-    return MCRegister();
+    return false;
   }
 
   switch (RegKind) {

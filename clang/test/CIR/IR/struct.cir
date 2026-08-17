@@ -25,24 +25,26 @@
 // CHECK-DAG: !rec_S1 = !cir.struct<"S1" {data !s32i, data !s32i}>
 // CHECK-DAG: !rec_Sc = !cir.struct<"Sc" {data !u8i, data !u16i, data !u32i}>
 
-// Packed and padded structs
+// A packed struct, and a packed and unpacked pair with the same members
 !rec_P1 = !cir.struct<"P1" packed {data !s32i, data !s32i}>
-!rec_P2 = !cir.struct<"P2" padded {data !u8i, data !u16i, data !u32i}>
-!rec_P3 = !cir.struct<"P3" packed padded {data !u8i, data !u16i, data !u32i}>
+!rec_P2 = !cir.struct<"P2" {data !u8i, pad !u8i, data !u16i, data !u32i}>
+!rec_P3 = !cir.struct<"P3" packed {data !u8i, pad !u8i, data !u16i, data !u32i}>
 
 // Members marked pad or empty
 !rec_P4 = !cir.struct<"P4" {pad !u8i}>
 !rec_P5 = !cir.struct<"P5" {empty !u8i}>
 !rec_P6 = !cir.struct<"P6" {data !u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
-!rec_P7 = !cir.struct<"P7" packed padded {data !u8i, pad !u8i}>
+!rec_P7 = !cir.struct<"P7" packed {data !u8i, pad !u8i}>
+!rec_P8 = !cir.struct<"P8" {data !u16i, pad !u8i, pad !u8i}>
 
 // CHECK-DAG: !rec_P1 = !cir.struct<"P1" packed {data !s32i, data !s32i}>
-// CHECK-DAG: !rec_P2 = !cir.struct<"P2" padded {data !u8i, data !u16i, data !u32i}>
-// CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed padded {data !u8i, data !u16i, data !u32i}>
+// CHECK-DAG: !rec_P2 = !cir.struct<"P2" {data !u8i, pad !u8i, data !u16i, data !u32i}>
+// CHECK-DAG: !rec_P3 = !cir.struct<"P3" packed {data !u8i, pad !u8i, data !u16i, data !u32i}>
 // CHECK-DAG: !rec_P4 = !cir.struct<"P4" {pad !u8i}>
 // CHECK-DAG: !rec_P5 = !cir.struct<"P5" {empty !u8i}>
 // CHECK-DAG: !rec_P6 = !cir.struct<"P6" {data !u32i, empty !cir.array<!u8i x 3>, pad !u8i}>
-// CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed padded {data !u8i, pad !u8i}>
+// CHECK-DAG: !rec_P7 = !cir.struct<"P7" packed {data !u8i, pad !u8i}>
+// CHECK-DAG: !rec_P8 = !cir.struct<"P8" {data !u16i, pad !u8i, pad !u8i}>
 
 // Records with identical member types, spelled apart by their kinds.
 !rec_M1 = !cir.struct<"M1" {data !u8i, pad !u8i}>
@@ -124,7 +126,8 @@ module  {
                      %arg20: !rec_PadNode,
                      %arg21: !rec_P7,
                      %arg22: !rec_anon_u_empty,
-                     %arg23: !rec_anon_u_plain) {
+                     %arg23: !rec_anon_u_plain,
+                     %arg24: !rec_P8) {
     cir.return
   }
 

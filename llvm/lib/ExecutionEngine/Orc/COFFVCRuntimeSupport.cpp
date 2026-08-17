@@ -11,7 +11,9 @@
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/WindowsDriver/MSVCPaths.h"
 
@@ -126,9 +128,10 @@ Error COFFVCRuntimeBootstrapper::initializeStaticVCRuntime(JITDylib &JD) {
 
   CallInt32VoidProxy CallInt32Void;
   CallInt32Int32Proxy CallInt32Int32;
-  if (auto Err = buildProxies(
-          ES, proxyInit<sps::CallInt32VoidProxySpec>(&CallInt32Void),
-          proxyInit<sps::CallInt32Int32ProxySpec>(&CallInt32Int32)))
+  if (auto Err = lookupAndApply(
+          ES.getBootstrapJITDylib(),
+          {recordProxy<sps::CallInt32VoidProxySpec>(&CallInt32Void),
+           recordProxy<sps::CallInt32Int32ProxySpec>(&CallInt32Int32)}))
     return Err;
 
   auto R = CallInt32Int32(ES, jit_scrt_initialize, 0);

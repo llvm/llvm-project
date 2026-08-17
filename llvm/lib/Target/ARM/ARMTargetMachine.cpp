@@ -35,8 +35,12 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
@@ -203,8 +207,40 @@ ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
 MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
-  return ARMFunctionInfo::create<ARMFunctionInfo>(
-      Allocator, F, static_cast<const ARMSubtarget *>(STI));
+  const auto *ARMSTI = static_cast<const ARMSubtarget *>(STI);
+  bool FPRegsUnavailable = !ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only();
+  if (FPRegsUnavailable) {
+    const StringRef FPRegsUnavailableMsg =
+        ", but floating-point registers are unavailable";
+    const ARMTargetLowering *TLI = ARMSTI->getTargetLowering();
+
+    if (TLI->getEffectiveCallingConv(F.getCallingConv(), F.isVarArg()) ==
+        CallingConv::ARM_AAPCS_VFP) {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, Twine("calling convention is hard-float") + FPRegsUnavailableMsg,
+          DiagnosticLocation(F.getSubprogram())));
+    } else {
+      for (const Instruction &I : instructions(F)) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB || CB->isInlineAsm() ||
+            (CB->getCalledFunction() && CB->getCalledFunction()->isIntrinsic()))
+          continue;
+        if (TLI->getEffectiveCallingConv(CB->getCallingConv(),
+                                         CB->getFunctionType()->isVarArg()) ==
+            CallingConv::ARM_AAPCS_VFP) {
+          const Function *Callee = CB->getCalledFunction();
+          F.getContext().diagnose(DiagnosticInfoUnsupported(
+              F,
+              (Callee ? Twine("call to '") + Callee->getName() + "'"
+                      : Twine("indirect call")) +
+                  " expects a hard-float calling convention" +
+                  FPRegsUnavailableMsg,
+              CB->getDebugLoc()));
+        }
+      }
+    }
+  }
+  return ARMFunctionInfo::create<ARMFunctionInfo>(Allocator, F, ARMSTI);
 }
 
 const ARMSubtarget *

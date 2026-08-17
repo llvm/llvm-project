@@ -11066,6 +11066,7 @@ libc_math_function(
     additional_deps = [
         ":__support_cpp_bit",
         ":__support_math_ceilf128",
+        ":__support_fputil_float128",
     ],
 )
 

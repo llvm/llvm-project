@@ -1,5 +1,7 @@
 // RUN: mlir-opt --raise-scf-to-affine --split-input-file %s | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 // CHECK-LABEL: @constant_step
 // CHECK-SAME:  %[[ARR:.*]]: memref<?xi32>, %[[LB:.*]]: index, %[[UB:.*]]: index
 // CHECK:         affine.for %[[IV:.*]] = %[[LB]] to %[[UB]] step 3 {

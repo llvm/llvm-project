@@ -12,6 +12,7 @@ config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.python_executable = "@Python3_EXECUTABLE@"
 config.enable_assertions = @ENABLE_ASSERTIONS@
 config.expensive_checks = "@EXPENSIVE_CHECKS@"
+config.mlir_expensive_pattern_api_checks = @MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@
 config.native_target = "@LLVM_NATIVE_ARCH@"
 config.host_os = "@HOST_OS@"
 config.host_cc = "@HOST_CC@"

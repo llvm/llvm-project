@@ -2415,7 +2415,8 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input
+    Tosa_Tensor:$input,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$input_unsigned
   );
 
   let results = (outs

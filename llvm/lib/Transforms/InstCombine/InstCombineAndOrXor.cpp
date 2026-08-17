@@ -4996,14 +4996,18 @@ static Instruction *canonicalizeAbs(BinaryOperator &Xor,
 static bool canFreelyInvert(InstCombiner &IC, Value *Op,
                             Instruction *IgnoredUser) {
   auto *I = dyn_cast<Instruction>(Op);
-  return I && IC.isFreeToInvert(I, /*WillInvertAllUses=*/true) &&
+  return I && I->getInsertionPointAfterDef() &&
+         IC.isFreeToInvert(I, /*WillInvertAllUses=*/true) &&
          IC.canFreelyInvertAllUsersOf(I, IgnoredUser);
 }
 
 static Value *freelyInvert(InstCombinerImpl &IC, Value *Op,
                            Instruction *IgnoredUser) {
   auto *I = cast<Instruction>(Op);
-  IC.Builder.SetInsertPoint(*I->getInsertionPointAfterDef());
+  auto InsertPt = I->getInsertionPointAfterDef();
+  assert(InsertPt &&
+         "freelyInvert requires an instruction with a valid insertion point");
+  IC.Builder.SetInsertPoint(*InsertPt);
   Value *NotOp = IC.Builder.CreateNot(Op, Op->getName() + ".not");
   Op->replaceUsesWithIf(NotOp,
                         [NotOp](Use &U) { return U.getUser() != NotOp; });
@@ -5047,7 +5051,10 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
   Op0 = freelyInvert(*this, Op0, &I);
   Op1 = freelyInvert(*this, Op1, &I);
 
-  Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
+  auto InsertPt = I.getInsertionPointAfterDef();
+  assert(InsertPt && "sinkNotIntoLogicalOp requires an instruction with a "
+                     "valid insertion point");
+  Builder.SetInsertPoint(*InsertPt);
   Value *NewLogicOp;
   if (IsBinaryOp) {
     NewLogicOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");

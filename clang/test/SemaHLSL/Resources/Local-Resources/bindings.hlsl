@@ -11,19 +11,12 @@ cbuffer c {
     bool cond;
 };
 
-void no_initial_assignment(uint idx) {
-    RWStructuredBuffer<uint> Out;
-    if (cond) {
-        Out = Out1;
-    }
-    Out[idx] = In[idx];
-}
-
-void assignment_to_uninitialized(uint idx) {
-    RWStructuredBuffer<uint> Out;
-    Out = Out;
-    Out[idx] = In[idx];
-}
+// The uninitialized-use cases that were here (`no_initial_assignment` and
+// `assignment_to_uninitialized`) were removed rather than pinned with
+// expected-no-diagnostics: we ought to diagnose them, so asserting silence
+// would entrench a bug. Tracked by
+// https://github.com/llvm/llvm-project/issues/216193, which carries both
+// repros and should restore coverage here once we diagnose.
 
 void same_assignment(uint idx) {
     RWStructuredBuffer<uint> Out = Out1;

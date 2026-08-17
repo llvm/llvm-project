@@ -2883,3 +2883,71 @@ define <2 x i16> @test_pmulqr_v2i16(<2 x i16> %a, <2 x i16> %b) {
   %res = call <2 x i16> @llvm.riscv.pmulqr.v2i16(<2 x i16> %a, <2 x i16> %b)
   ret <2 x i16> %res
 }
+
+define <4 x i8> @test_pnclipp_v4i8(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pnclipp_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pnclipi.b a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pnclipp_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a1, 16
+; RV64-NEXT:    srli a3, a0, 16
+; RV64-NEXT:    ppaire.h a1, a1, a2
+; RV64-NEXT:    ppaire.h a0, a0, a3
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    pnclipp.b a0, a0, a0
+; RV64-NEXT:    ret
+  %r = call <4 x i8> @llvm.riscv.pnclipp.v4i8.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @test_pnclipup_v4i8(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_pnclipup_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pnclipiu.b a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pnclipup_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srli a2, a1, 16
+; RV64-NEXT:    srli a3, a0, 16
+; RV64-NEXT:    ppaire.h a1, a1, a2
+; RV64-NEXT:    ppaire.h a0, a0, a3
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    pnclipup.b a0, a0, a0
+; RV64-NEXT:    ret
+  %r = call <4 x i8> @llvm.riscv.pnclipup.v4i8.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <4 x i8> %r
+}
+
+define <2 x i16> @test_pnclipp_v2i16(i32 %a, i32 %b) {
+; RV32-LABEL: test_pnclipp_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pnclipi.h a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pnclipp_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    pnclipp.h a0, a0, a0
+; RV64-NEXT:    ret
+  %r = call <2 x i16> @llvm.riscv.pnclipp.v2i16.i32(i32 %a, i32 %b)
+  ret <2 x i16> %r
+}
+
+define <2 x i16> @test_pnclipup_v2i16(i32 %a, i32 %b) {
+; RV32-LABEL: test_pnclipup_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pnclipiu.h a0, a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pnclipup_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a0, a0, a1
+; RV64-NEXT:    pnclipup.h a0, a0, a0
+; RV64-NEXT:    ret
+  %r = call <2 x i16> @llvm.riscv.pnclipup.v2i16.i32(i32 %a, i32 %b)
+  ret <2 x i16> %r
+}

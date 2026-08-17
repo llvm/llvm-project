@@ -437,7 +437,7 @@ TEST(SessionTest, RedundantAsyncShutdown) {
   EXPECT_TRUE(RedundantCallbackRan);
 }
 
-TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
+TEST(SessionTest, ExpectedShutdownSequenceWithNoOutstandingKeepalives) {
   // Check that Session shutdown results in...
   // 1. Services being shut down.
   // 2. A call to OnShutdownComplete.
@@ -463,7 +463,7 @@ TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
   EXPECT_TRUE(SessionShutdownComplete);
 }
 
-TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
+TEST(SessionTest, OutstandingKeepalivesDelayShutdown) {
   QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
 
@@ -475,11 +475,11 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   ASSERT_FALSE(DetachOpIdx);
   ASSERT_FALSE(ShutdownOpIdx);
 
-  // Take a managed code call token. This should succeed.
-  auto Tok = TaskGroup::Token(S.managedCodeTokenSource());
+  // Take a keepalive. This should succeed.
+  auto Tok = TaskGroup::Token(S.keepaliveTokenSource());
   ASSERT_TRUE(Tok);
 
-  // We expect shutdown to wait for any active managed calls to complete.
+  // We expect shutdown to wait for any outstanding keepalives to be released.
   bool ShutdownComplete = false;
   S.shutdown([&]() { ShutdownComplete = true; });
 
@@ -488,9 +488,9 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
   EXPECT_FALSE(ShutdownOpIdx);
   EXPECT_FALSE(ShutdownComplete);
 
-  // The managed calls code group should have been closed. Assert that we
+  // The keepalive group should have been closed. Assert that we
   // can't get a new token.
-  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTokenSource()));
+  ASSERT_FALSE(TaskGroup::Token(S.keepaliveTokenSource()));
 
   Tok = TaskGroup::Token(); // Reset token.
 
@@ -501,15 +501,15 @@ TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
 
 static void managedVoidFunction(int *P) { *P = 42; }
 
-TEST(SessionTest, CallManagedCodeVoidFn) {
-  // Test calls to a void function while holding a ManagedCodeTaskGroup token.
+TEST(SessionTest, CallWithKeepaliveVoidFn) {
+  // Test calls to a void function while holding a KeepaliveTaskGroup token.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
     // Pre-shutdown we expect token acquisition to succeed and the function to
     // run.
     int X = 0;
-    bool CallSucceeded = S.callManagedCode(managedVoidFunction, &X);
+    bool CallSucceeded = S.callWithKeepalive(managedVoidFunction, &X);
 
     EXPECT_TRUE(CallSucceeded);
     EXPECT_EQ(X, 42U);
@@ -519,9 +519,9 @@ TEST(SessionTest, CallManagedCodeVoidFn) {
 
   {
     // Post-shutdown we expect token acquisition to fail, and
-    // callManagedCode to return false.
+    // callWithKeepalive to return false.
     int X = 0;
-    bool CallSucceeded = S.callManagedCode(managedVoidFunction, &X);
+    bool CallSucceeded = S.callWithKeepalive(managedVoidFunction, &X);
 
     EXPECT_FALSE(CallSucceeded);
   }
@@ -529,15 +529,15 @@ TEST(SessionTest, CallManagedCodeVoidFn) {
 
 static int managedNonVoidFunction(int N) { return N + 1; }
 
-TEST(SessionTest, CallManagedCodeNonVoidFn) {
-  // Test calls to a non-void function while holding a ManagedCodeTaskGroup
+TEST(SessionTest, CallWithKeepaliveNonVoidFn) {
+  // Test calls to a non-void function while holding a KeepaliveTaskGroup
   // token.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
     // Pre-shutdown we expect token acquisition to succeed, the function to be
     // run, and the result to be returned.
-    auto Result = S.callManagedCode(managedNonVoidFunction, 41);
+    auto Result = S.callWithKeepalive(managedNonVoidFunction, 41);
 
     EXPECT_TRUE(Result);
     EXPECT_EQ(*Result, 42U);
@@ -547,8 +547,8 @@ TEST(SessionTest, CallManagedCodeNonVoidFn) {
 
   {
     // Post-shutdown we expect token acquisition to fail, and
-    // callManagedCode to return std::nullopt.
-    auto Result = S.callManagedCode(managedNonVoidFunction, 41);
+    // callWithKeepalive to return std::nullopt.
+    auto Result = S.callWithKeepalive(managedNonVoidFunction, 41);
 
     EXPECT_EQ(Result, std::nullopt);
   }
@@ -558,8 +558,8 @@ static void managedAsyncFunction(move_only_function<void(int)> Return, int *P) {
   Return(++*P);
 }
 
-TEST(SessionTest, CallManagedCodeAsyncFn) {
-  // Test that calls to managed async functions via callManagedCode work.
+TEST(SessionTest, CallWithKeepaliveAsyncFn) {
+  // Test that calls to managed async functions via callWithKeepalive work.
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   {
@@ -567,7 +567,7 @@ TEST(SessionTest, CallManagedCodeAsyncFn) {
     // and Return callback to be run.
     int N = 41;
     std::optional<int> Result;
-    S.callManagedCode(managedAsyncFunction, [&](int N) { Result = N; }, &N);
+    S.callWithKeepalive(managedAsyncFunction, [&](int N) { Result = N; }, &N);
     EXPECT_TRUE(Result);
     EXPECT_EQ(*Result, 42U);
     EXPECT_EQ(N, 42U);
@@ -580,7 +580,7 @@ TEST(SessionTest, CallManagedCodeAsyncFn) {
     // with `std::nullopt` and the function should not be called.
     int N = 41;
     std::optional<int> Result;
-    S.callManagedCode(managedAsyncFunction, [&](int N) { Result = N; }, &N);
+    S.callWithKeepalive(managedAsyncFunction, [&](int N) { Result = N; }, &N);
     EXPECT_EQ(Result, std::nullopt);
     EXPECT_EQ(N, 41U);
   }
@@ -816,9 +816,9 @@ static void deferred_wrapper(orc_rt_SessionRef S,
 }
 
 TEST(ControllerAccessTest, WrapperCallTokenReleasedWhenFnReturns) {
-  // A managed-code token acquired for an incoming wrapper call must bracket
+  // A keepalive acquired for an incoming wrapper call must bracket
   // only the (synchronous) span of Fn's execution -- not the whole
-  // call/response chain -- per the "Managed code execution and shutdown"
+  // call/response chain -- per the "Keepalives and shutdown"
   // policy in docs/Design.md. Check this by having Fn defer its Return call
   // past its own return, then confirming that Session shutdown's drain phase
   // does not wait on that deferred call.
@@ -846,7 +846,7 @@ TEST(ControllerAccessTest, WrapperCallTokenReleasedWhenFnReturns) {
   ASSERT_TRUE(DeferredReturn);
   EXPECT_FALSE(GotResult);
 
-  // Fn has already returned, so its managed-code token should have been
+  // Fn has already returned, so its keepalive should have been
   // released even though the call is still logically outstanding. Shutdown's
   // drain phase should therefore complete without waiting on the deferred
   // Return call.

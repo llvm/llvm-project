@@ -382,8 +382,8 @@ static bool shouldIgnoreUnsupportedTargetFeature(const Arg &TargetFeatureArg,
   if (!T.isAMDGCN())
     return false;
   llvm::AMDGPU::GPUKind GPUKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
-  unsigned GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
-  if (GPUFeatures & llvm::AMDGPU::FEATURE_WGP)
+  if (llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+          llvm::AMDGPU::FEAT_SUPPORTS_WGP))
     return false;
   return TargetFeatureArg.getOption().matches(options::OPT_mno_cumode);
 }

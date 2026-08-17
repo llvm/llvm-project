@@ -50,6 +50,7 @@ add_orc_rt_unittest(CoreTests
   SimpleSymbolTableTest.cpp
   StandaloneMachOUnwindInfoRegistrarTest.cpp
   StringExtrasTest.cpp
+  StringPoolTest.cpp
   TaskGroupTest.cpp
   ThreadPoolRunnerTest.cpp
   WrapperFunctionBufferTest.cpp

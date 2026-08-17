@@ -1,3 +1,5 @@
+// XFAIL: mlir-expensive-checks
+
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
 // DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" \

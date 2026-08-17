@@ -272,8 +272,9 @@ public:
     for (auto &[Contributor, EPLs] : UnsafePtrs) {
       auto FilteredRange = llvm::make_filter_range(EPLs, HasNoTypeConstraint);
 
-      getResult().Reachables[Contributor].insert(FilteredRange.begin(),
-                                                 FilteredRange.end());
+      if (!FilteredRange.empty())
+        getResult().Reachables[Contributor].insert(FilteredRange.begin(),
+                                                   FilteredRange.end());
     }
     return llvm::Error::success();
   }

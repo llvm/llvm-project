@@ -9,7 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 
 namespace llvm::orc::sps {
 
@@ -18,18 +19,15 @@ createEPCGenericJITLinkMemoryManager(JITDylib &JD) {
   auto &ES = JD.getExecutionSession();
   EPCGenericJITLinkMemoryManager::Bindings B;
   // Instance is the executor-side allocator object -- a data symbol passed as
-  // the first argument to each call, not a wrapper to proxy.
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {{ES.intern(rt::sps_ci::SimpleNativeMemoryMapInstanceName),
-            &B.Instance}}))
-    return std::move(Err);
-  // The proxies resolve to the specs' default (SimpleNativeMemoryMap) names.
-  if (auto Err =
-          buildProxies(JD, proxyInit<MemMgrReserveProxySpec>(&B.Reserve),
-                       proxyInit<MemMgrInitializeProxySpec>(&B.Initialize),
-                       proxyInit<MemMgrDeinitializeProxySpec>(&B.Deinitialize),
-                       proxyInit<MemMgrReleaseProxySpec>(&B.Release)))
+  // the first argument to each call, not a wrapper to proxy. The proxies
+  // resolve to the specs' default (SimpleNativeMemoryMap) names.
+  if (auto Err = lookupAndApply(
+          JD, {recordAddr(rt::sps_ci::SimpleNativeMemoryMapInstanceName,
+                          &B.Instance),
+               recordProxy<MemMgrReserveProxySpec>(&B.Reserve),
+               recordProxy<MemMgrInitializeProxySpec>(&B.Initialize),
+               recordProxy<MemMgrDeinitializeProxySpec>(&B.Deinitialize),
+               recordProxy<MemMgrReleaseProxySpec>(&B.Release)}))
     return std::move(Err);
   return std::make_unique<EPCGenericJITLinkMemoryManager>(ES, std::move(B));
 }

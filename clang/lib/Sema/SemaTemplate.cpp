@@ -1977,14 +1977,9 @@ DeclResult Sema::CheckClassTemplate(
   if (SS.isNotEmpty() && !SS.isInvalid()) {
     SemanticContext = computeDeclContext(SS, true);
     if (!SemanticContext) {
-      // FIXME: Horrible, horrible hack! We can't currently represent this
-      // in the AST, and historically we have just ignored such friend
-      // class templates, so don't complain here.
-      Diag(NameLoc, TUK == TagUseKind::Friend
-                        ? diag::warn_template_qualified_friend_ignored
-                        : diag::err_template_qualified_declarator_no_match)
+      Diag(NameLoc, diag::err_template_qualified_declarator_no_match)
           << SS.getScopeRep() << SS.getRange();
-      return TUK != TagUseKind::Friend;
+      return true;
     }
 
     if (RequireCompleteDeclContext(SS, SemanticContext))
@@ -3052,6 +3047,8 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       TemplateName Name = TST->getTemplateName();
       if (TemplateDecl *Template = Name.getAsTemplateDecl()) {
         ExpectedTemplateParams = Template->getTemplateParameters();
+        NeedNonemptyTemplateHeader = true;
+      } else if (Name.getAsDependentTemplateName()) {
         NeedNonemptyTemplateHeader = true;
       } else if (Name.getAsDeducedTemplateName()) {
         // FIXME:  We actually could/should check the template arguments here
@@ -9581,6 +9578,15 @@ bool Sema::CheckDependentFunctionTemplateSpecialization(
 
   bool IsFriend = FD->getFriendObjectKind() != Decl::FOK_None;
   if (Previous.empty()) {
+    NestedNameSpecifier FriendQualifier = FD->getQualifier();
+    if (IsFriend && FriendQualifier.isDependent() &&
+        FriendQualifier.getKind() == NestedNameSpecifier::Kind::Type &&
+        FriendQualifier.getAsType()->getAs<TemplateSpecializationType>()) {
+      FD->setDependentTemplateSpecialization(
+          Context, Previous.asUnresolvedSet(), ExplicitTemplateArgs);
+      return false;
+    }
+
     Diag(FD->getLocation(), diag::err_dependent_function_template_spec_no_match)
         << IsFriend;
     for (auto &P : DiscardedCandidates)
@@ -11201,6 +11207,10 @@ TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   NestedNameSpecifier NNS = SS.getScopeRep();
   if (!NNS)
+    return true;
+
+  if (TUK == TagUseKind::Friend &&
+      DiagnosePackIndexingInFriendNNS(NameLoc, SS.getWithLocInContext(Context)))
     return true;
 
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);

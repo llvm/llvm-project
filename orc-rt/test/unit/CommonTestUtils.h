@@ -50,7 +50,7 @@ inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
 
 /// DispatchFn for tests that should never dispatch a task. Records a test
 /// failure on invocation, then runs the task inline so that any caller
-/// awaiting a result unblocks (rather than hanging) and the managed-code token
+/// awaiting a result unblocks (rather than hanging) and the keepalive token
 /// is released, even in -Asserts builds or when the dispatch arrives on a
 /// non-test thread.
 inline void noDispatch(orc_rt::Session::Task T) {

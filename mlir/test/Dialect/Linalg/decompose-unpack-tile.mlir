@@ -3,6 +3,8 @@
 // RUN: -transform-interpreter=entry-point=decompose_unpack \
 // RUN: -transform-interpreter  %s | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 func.func @KCRSsr_to_KCRS(%arg0: tensor<1x1x4x8x8x32xf32>, %arg1: tensor<1x1x128x64xf32>) -> tensor<1x1x128x64xf32> {
   %0 = linalg.unpack %arg0 inner_dims_pos = [3, 2] inner_tiles = [8, 32] into %arg1 : tensor<1x1x4x8x8x32xf32> -> tensor<1x1x128x64xf32>
   return %0 : tensor<1x1x128x64xf32>

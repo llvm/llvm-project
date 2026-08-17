@@ -3000,3 +3000,79 @@ uint16x2_t test_punzipe_u16x2(uint16x4_t a) { return __riscv_punzipe_u16x2(a); }
 // RV32:        pncvth.h
 // RV64:        pncvth.wh
 uint16x2_t test_punzipo_u16x2(uint16x4_t a) { return __riscv_punzipo_u16x2(a); }
+
+// CHECK-LABEL: test_pnclipp_i8x4:
+// RV32:        pnclipi.b
+// RV64:        pnclipp.b
+int8x4_t test_pnclipp_i8x4(int16x2_t a, int16x2_t b) {
+  return __riscv_pnclipp_i8x4(a, b);
+}
+
+// CHECK-LABEL: test_pnclipup_u8x4:
+// RV32:        pnclipiu.b
+// RV64:        pnclipup.b
+uint8x4_t test_pnclipup_u8x4(uint16x2_t a, uint16x2_t b) {
+  return __riscv_pnclipup_u8x4(a, b);
+}
+
+// CHECK-LABEL: test_pnclipp_i16x2:
+// RV32:        pnclipi.h
+// RV64:        pnclipp.h
+int16x2_t test_pnclipp_i16x2(int32_t a, int32_t b) {
+  return __riscv_pnclipp_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pnclipup_u16x2:
+// RV32:        pnclipiu.h
+// RV64:        pnclipup.h
+uint16x2_t test_pnclipup_u16x2(uint32_t a, uint32_t b) {
+  return __riscv_pnclipup_u16x2(a, b);
+}
+
+// CHECK-LABEL: test_pnclipp_i8x8:
+// RV32:        pnclipi.b
+// RV32:        pnclipi.b
+// RV64:        pnclipp.b
+int8x8_t test_pnclipp_i8x8(int16x4_t a, int16x4_t b) {
+  return __riscv_pnclipp_i8x8(a, b);
+}
+
+// CHECK-LABEL: test_pnclipup_u8x8:
+// RV32:        pnclipiu.b
+// RV32:        pnclipiu.b
+// RV64:        pnclipup.b
+uint8x8_t test_pnclipup_u8x8(uint16x4_t a, uint16x4_t b) {
+  return __riscv_pnclipup_u8x8(a, b);
+}
+
+// CHECK-LABEL: test_pnclipp_i16x4:
+// RV32:        pnclipi.h
+// RV32:        pnclipi.h
+// RV64:        pnclipp.h
+int16x4_t test_pnclipp_i16x4(int32x2_t a, int32x2_t b) {
+  return __riscv_pnclipp_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pnclipup_u16x4:
+// RV32:        pnclipiu.h
+// RV32:        pnclipiu.h
+// RV64:        pnclipup.h
+uint16x4_t test_pnclipup_u16x4(uint32x2_t a, uint32x2_t b) {
+  return __riscv_pnclipup_u16x4(a, b);
+}
+
+// CHECK-LABEL: test_pnclipp_i32x2:
+// RV32:        nclipi
+// RV32:        nclipi
+// RV64:        pnclipp.w
+int32x2_t test_pnclipp_i32x2(int64_t a, int64_t b) {
+  return __riscv_pnclipp_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pnclipup_u32x2:
+// RV32:        nclipiu
+// RV32:        nclipiu
+// RV64:        pnclipup.w
+uint32x2_t test_pnclipup_u32x2(uint64_t a, uint64_t b) {
+  return __riscv_pnclipup_u32x2(a, b);
+}

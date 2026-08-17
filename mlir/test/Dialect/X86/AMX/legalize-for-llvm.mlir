@@ -64,7 +64,7 @@ func.func @mulfp16(%arg0: memref<?x?xf16>, %arg1: memref<?x?xf32>) {
 // CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
-// CHECK: llvm.call_intrinsic "llvm.x86.tdpbf8ps.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdphf8ps.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @mulf8E4M3FN(%arg0: memref<?x?xf8E4M3FN>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index
@@ -80,7 +80,7 @@ func.func @mulf8E4M3FN(%arg0: memref<?x?xf8E4M3FN>, %arg1: memref<?x?xf32>) {
 // CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
-// CHECK: llvm.call_intrinsic "llvm.x86.tdpbhf8ps.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdphbf8ps.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @mulf8E4M3FNxf8E5M2(%arg0: memref<?x?xf8E5M2>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index
@@ -96,7 +96,7 @@ func.func @mulf8E4M3FNxf8E5M2(%arg0: memref<?x?xf8E5M2>, %arg1: memref<?x?xf32>)
 // CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
-// CHECK: llvm.call_intrinsic "llvm.x86.tdphbf8ps.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdpbhf8ps.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @mulf8E5M2xf8E4M3FN(%arg0: memref<?x?xf8E4M3FN>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index
@@ -112,7 +112,7 @@ func.func @mulf8E5M2xf8E4M3FN(%arg0: memref<?x?xf8E4M3FN>, %arg1: memref<?x?xf32
 // CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
-// CHECK: llvm.call_intrinsic "llvm.x86.tdphf8ps.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdpbf8ps.internal"
 // CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @mulf8E5M2(%arg0: memref<?x?xf8E5M2>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index

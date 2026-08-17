@@ -200,7 +200,7 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
       break;
     case State::Detached:
       Lock.unlock();
-      waitForManagedCodeTasksThenShutdown();
+      waitForKeepalivesThenShutdown();
       return;
     default:
       assert(false && "Illegal state");
@@ -329,13 +329,13 @@ void Session::completeDetach() {
     assert(TargetState == State::Shutdown);
   }
 
-  waitForManagedCodeTasksThenShutdown();
+  waitForKeepalivesThenShutdown();
 }
 
-void Session::waitForManagedCodeTasksThenShutdown() {
-  ORC_RT_LOG(Info, Session, "Session %p waiting for managed tasks", this);
-  ManagedCodeTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
-  ManagedCodeTaskGroup->close();
+void Session::waitForKeepalivesThenShutdown() {
+  ORC_RT_LOG(Info, Session, "Session %p waiting for keepalives", this);
+  KeepaliveTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
+  KeepaliveTaskGroup->close();
 }
 
 void Session::proceedToShutdown() {

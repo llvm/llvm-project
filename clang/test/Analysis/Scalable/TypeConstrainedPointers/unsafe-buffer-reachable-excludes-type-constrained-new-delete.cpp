@@ -22,8 +22,7 @@
 // RUN: sed -e 's|$NS|{{([^]]\|[[:space:]])+\\],}}|g' \
 // RUN:     -e 's|$WS|{{[[:space:]]+}}|g' \
 // RUN:     -e 's|$PTR_L1|{{[[:space:]]+\\},[[:space:]]+1[[:space:]]+\\]}}|g' \
-// RUN:     %s > %t/checks.txt
-// RUN: FileCheck %t/checks.txt --input-file=%t/wpa.json
+// RUN:     %s | FileCheck - --input-file=%t/wpa.json
 
 typedef __SIZE_TYPE__ size_t;
 

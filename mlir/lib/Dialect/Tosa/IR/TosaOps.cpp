@@ -5375,6 +5375,16 @@ LogicalResult CastOp::verify() {
   const bool inputIsBlockScaled = llvm::isa<BlockScaledType>(inputElementType);
   const bool outputIsBlockScaled =
       llvm::isa<BlockScaledType>(outputElementType);
+
+  const bool isUnsigned = this->getInputUnsigned();
+  const Type inputDataType = getStorageElementTypeOrSelf(inputType);
+
+  if (isUnsigned)
+    if (!inputDataType.isInteger() || inputDataType.isInteger(1))
+      return emitOpError()
+             << "attribute input_unsigned requires integer type inputs. Got: "
+             << inputDataType;
+
   if (!inputIsBlockScaled && !outputIsBlockScaled)
     return success();
 

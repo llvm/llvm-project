@@ -587,7 +587,7 @@ void AMDGPUSwLowerLDS::updateMallocSizeForDynamicLDS(
   assert(SwLDS && SwLDSMetadata);
   StructType *MetadataStructType =
       cast<StructType>(SwLDSMetadata->getValueType());
-  unsigned MaxAlignment = SwLDS->getAlignment();
+  unsigned MaxAlignment = SwLDS->getAlign().valueOrOne().value();
   Value *MaxAlignValue = IRB.getInt32(MaxAlignment);
   Value *MaxAlignValueMinusOne = IRB.getInt32(MaxAlignment - 1);
 

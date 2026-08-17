@@ -889,14 +889,15 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     ArrayRef<TemplateArgument> DeducedArgs) {
 
   llvm::SmallBitVector ReferencedTemplateParams(TemplateParamsList->size());
-  SemaRef.MarkUsedTemplateParameters(
-      DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
+  SemaRef.MarkUsedTemplateParameters(DeducedArgs, /*OnlyDeduced=*/false,
+                                     TemplateParamsList->getDepth(),
+                                     ReferencedTemplateParams);
 
   auto MarkDefaultArgs = [&](auto *Param) {
     if (!Param->hasDefaultArgument())
       return;
     SemaRef.MarkUsedTemplateParameters(
-        Param->getDefaultArgument().getArgument(),
+        Param->getDefaultArgument().getArgument(), /*OnlyDeduced=*/false,
         TemplateParamsList->getDepth(), ReferencedTemplateParams);
   };
 

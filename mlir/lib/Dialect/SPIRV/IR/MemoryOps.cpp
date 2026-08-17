@@ -352,6 +352,21 @@ LogicalResult AccessChainOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.InBoundsAccessChainOp
+//===----------------------------------------------------------------------===//
+
+void InBoundsAccessChainOp::build(OpBuilder &builder, OperationState &state,
+                                  Value basePtr, ValueRange indices) {
+  Type type = getElementPtrType(basePtr.getType(), indices, state.location);
+  assert(type && "Unable to deduce return type based on basePtr and indices");
+  build(builder, state, type, basePtr, indices);
+}
+
+LogicalResult InBoundsAccessChainOp::verify() {
+  return verifyAccessChain(*this, getIndices());
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.LoadOp
 //===----------------------------------------------------------------------===//
 

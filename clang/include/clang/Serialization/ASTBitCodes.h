@@ -2123,6 +2123,14 @@ enum CtorInitializerType {
   CTOR_INITIALIZER_INDIRECT_MEMBER
 };
 
+/// Kinds of friend payloads owned by FriendTemplateDecl.
+enum FriendTemplateDeclKind {
+  FTDK_Type = 0,
+  FTDK_Decl = 1,
+  FTDK_Template = 2,
+  FTDK_Dependent = 3,
+};
+
 /// Kinds of cleanup objects owned by ExprWithCleanups.
 enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
 

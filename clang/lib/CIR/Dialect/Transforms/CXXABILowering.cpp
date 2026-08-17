@@ -866,8 +866,8 @@ class CIRABITypeConverter : public mlir::TypeConverter {
       }
       auto s = mlir::cast<cir::StructType>(type);
       return cir::StructType::get(type.getContext(), converted,
-                                  type.getPacked(), type.getPadded(),
-                                  s.getIsClass(), s.getMemberKinds());
+                                  type.getPacked(), s.getIsClass(),
+                                  s.getMemberKinds());
     }
 
     assert(!type.isIncomplete() || type.getMembers().empty());
@@ -914,8 +914,8 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     if (auto u = mlir::dyn_cast<cir::UnionType>(type))
       if (mlir::Type pad = u.getPadding())
         loweredPadding = convertType(pad);
-    convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
-                           loweredPadding, type.getMemberKinds());
+    convertedType.complete(convertedMembers, type.getPacked(), loweredPadding,
+                           type.getMemberKinds());
     addConvertedRecordType(convertedType);
     return convertedType;
   }

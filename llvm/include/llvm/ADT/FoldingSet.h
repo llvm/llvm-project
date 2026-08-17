@@ -16,7 +16,6 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -46,7 +45,7 @@ namespace llvm {
 /// FoldingSetNode.  The node class must also define a Profile method used to
 /// establish the unique bits of data for the node.  The Profile method is
 /// passed a FoldingSetNodeID object which is used to gather the bits.  Just
-/// call one of the Add* functions defined in the FoldingSetBase::NodeID class.
+/// call one of the Add* functions defined in the FoldingSetNodeID class.
 /// NOTE: That the folding set does not own the nodes and it is the
 /// responsibility of the user to dispose of the nodes.
 ///
@@ -113,13 +112,9 @@ class StringRef;
 
 /// This class provides default implementations for FoldingSetTrait
 /// implementations.
-template<typename T> struct DefaultFoldingSetTrait {
-  static void Profile(const T &X, FoldingSetNodeID &ID) {
-    X.Profile(ID);
-  }
-  static void Profile(T &X, FoldingSetNodeID &ID) {
-    X.Profile(ID);
-  }
+template <typename T> struct DefaultFoldingSetTrait {
+  static void Profile(const T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
+  static void Profile(T &X, FoldingSetNodeID &ID) { X.Profile(ID); }
 
   // Equals - Test if the profile for X would match ID, using TempID
   // to compute a temporary ID if necessary. The default implementation
@@ -146,8 +141,7 @@ template <typename T, typename Enable = void>
 struct FoldingSetTrait : public DefaultFoldingSetTrait<T> {};
 
 /// Like DefaultFoldingSetTrait, but for ContextualFoldingSets.
-template<typename T, typename Ctx>
-struct DefaultContextualFoldingSetTrait {
+template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
   static void Profile(T &X, FoldingSetNodeID &ID, Ctx Context) {
     X.Profile(ID, Context);
   }
@@ -159,8 +153,8 @@ struct DefaultContextualFoldingSetTrait {
 };
 
 /// Like FoldingSetTrait, but for ContextualFoldingSets.
-template<typename T, typename Ctx> struct ContextualFoldingSetTrait
-  : public DefaultContextualFoldingSetTrait<T, Ctx> {};
+template <typename T, typename Ctx>
+struct ContextualFoldingSetTrait : DefaultContextualFoldingSetTrait<T, Ctx> {};
 
 //===--------------------------------------------------------------------===//
 /// This class describes a reference to an interned FoldingSetNodeID, which can
@@ -222,7 +216,7 @@ public:
   FoldingSetNodeID() = default;
 
   FoldingSetNodeID(FoldingSetNodeIDRef Ref)
-    : Bits(Ref.getData(), Ref.getData() + Ref.getSize()) {}
+      : Bits(Ref.getData(), Ref.getData() + Ref.getSize()) {}
 
   /// Add* - Add various data types to Bit data.
   void AddPointer(const void *Ptr) {
@@ -244,8 +238,9 @@ public:
   LLVM_ABI void AddString(StringRef String);
   LLVM_ABI void AddNodeID(const FoldingSetNodeID &ID);
 
-  template <typename T>
-  inline void Add(const T &x) { FoldingSetTrait<T>::Profile(x, *this); }
+  template <typename T> inline void Add(const T &x) {
+    FoldingSetTrait<T>::Profile(x, *this);
+  }
 
   /// Clear the accumulated profile, allowing this FoldingSetNodeID
   /// object to be used to compute a new profile.
@@ -269,7 +264,9 @@ public:
   LLVM_ABI bool operator==(const FoldingSetNodeIDRef RHS) const;
 
   bool operator!=(const FoldingSetNodeID &RHS) const { return !(*this == RHS); }
-  bool operator!=(const FoldingSetNodeIDRef RHS) const { return !(*this ==RHS);}
+  bool operator!=(const FoldingSetNodeIDRef RHS) const {
+    return !(*this == RHS);
+  }
 
   /// Used to compare the "ordering" of two nodes as defined by the
   /// profiled bits and their ordering defined by memcmp().
@@ -330,11 +327,11 @@ public:
   unsigned size() const { return NumNodes; }
 
   /// Returns true if there are no nodes in the folding set.
-  bool empty() const { return NumNodes == 0; }
+  [[nodiscard]] bool empty() const { return NumNodes == 0; }
 
   /// Returns the number of nodes permitted in the folding set
   /// before a rebucket operation is performed.
-  unsigned capacity() {
+  unsigned capacity() const {
     // We allow a load factor of up to 2.0,
     // so that means our capacity is NumBuckets * 2
     return NumBuckets * 2;
@@ -406,35 +403,29 @@ template <class T> class FoldingSetIterator;
 
 // Definitions of FoldingSetTrait and ContextualFoldingSetTrait functions, which
 // require the definition of FoldingSetNodeID.
-template<typename T>
-inline bool
-DefaultFoldingSetTrait<T>::Equals(T &X, const FoldingSetNodeID &ID,
-                                  unsigned /*IDHash*/,
-                                  FoldingSetNodeID &TempID) {
+template <typename T>
+inline bool DefaultFoldingSetTrait<T>::Equals(T &X, const FoldingSetNodeID &ID,
+                                              unsigned /*IDHash*/,
+                                              FoldingSetNodeID &TempID) {
   FoldingSetTrait<T>::Profile(X, TempID);
   return TempID == ID;
 }
-template<typename T>
+template <typename T>
 inline unsigned
 DefaultFoldingSetTrait<T>::ComputeHash(T &X, FoldingSetNodeID &TempID) {
   FoldingSetTrait<T>::Profile(X, TempID);
   return TempID.ComputeHash();
 }
-template<typename T, typename Ctx>
-inline bool
-DefaultContextualFoldingSetTrait<T, Ctx>::Equals(T &X,
-                                                 const FoldingSetNodeID &ID,
-                                                 unsigned /*IDHash*/,
-                                                 FoldingSetNodeID &TempID,
-                                                 Ctx Context) {
+template <typename T, typename Ctx>
+inline bool DefaultContextualFoldingSetTrait<T, Ctx>::Equals(
+    T &X, const FoldingSetNodeID &ID, unsigned /*IDHash*/,
+    FoldingSetNodeID &TempID, Ctx Context) {
   ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
   return TempID == ID;
 }
-template<typename T, typename Ctx>
-inline unsigned
-DefaultContextualFoldingSetTrait<T, Ctx>::ComputeHash(T &X,
-                                                      FoldingSetNodeID &TempID,
-                                                      Ctx Context) {
+template <typename T, typename Ctx>
+inline unsigned DefaultContextualFoldingSetTrait<T, Ctx>::ComputeHash(
+    T &X, FoldingSetNodeID &TempID, Ctx Context) {
   ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
   return TempID.ComputeHash();
 }
@@ -455,25 +446,23 @@ public:
   using iterator = FoldingSetIterator<T>;
 
   iterator begin() { return iterator(Buckets); }
-  iterator end() { return iterator(Buckets+NumBuckets); }
+  iterator end() { return iterator(Buckets + NumBuckets); }
 
   using const_iterator = FoldingSetIterator<const T>;
 
   const_iterator begin() const { return const_iterator(Buckets); }
-  const_iterator end() const { return const_iterator(Buckets+NumBuckets); }
+  const_iterator end() const { return const_iterator(Buckets + NumBuckets); }
 
   /// Increase the number of buckets such that adding the \p EltCount th node
   /// won't cause a rebucket operation. reserve is permitted to allocate more
   /// space than requested by EltCount.
   void reserve(unsigned EltCount) {
-    return FoldingSetBase::reserve(EltCount, Derived::getFoldingSetInfo());
+    FoldingSetBase::reserve(EltCount, Derived::getFoldingSetInfo());
   }
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
-  bool RemoveNode(T *N) {
-    return FoldingSetBase::RemoveNode(N);
-  }
+  bool RemoveNode(T *N) { return FoldingSetBase::RemoveNode(N); }
 
   /// If there is an existing simple Node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
@@ -514,8 +503,7 @@ public:
 /// moved-from state is not a valid state for anything other than
 /// move-assigning and destroying. This is primarily to enable movable APIs
 /// that incorporate these objects.
-template <class T>
-class FoldingSet : public FoldingSetImpl<FoldingSet<T>, T> {
+template <class T> class FoldingSet : public FoldingSetImpl<FoldingSet<T>, T> {
   using Super = FoldingSetImpl<FoldingSet, T>;
   using Node = typename Super::Node;
 
@@ -579,7 +567,7 @@ class ContextualFoldingSet
   Ctx Context;
 
   static const Ctx &getContext(const FoldingSetBase *Base) {
-    return static_cast<const ContextualFoldingSet*>(Base)->Context;
+    return static_cast<const ContextualFoldingSet *>(Base)->Context;
   }
 
   /// Each instantiatation of the FoldingSet needs to provide a way to convert
@@ -624,8 +612,7 @@ public:
 /// interface of FoldingSet but with deterministic iteration order based on the
 /// insertion order. T must be a subclass of FoldingSetNode and implement a
 /// Profile function.
-template <class T, class VectorT = SmallVector<T*, 8>>
-class FoldingSetVector {
+template <class T, class VectorT = SmallVector<T *, 8>> class FoldingSetVector {
   FoldingSet<T> Set;
   VectorT Vector;
 
@@ -635,15 +622,18 @@ public:
   using iterator = pointee_iterator<typename VectorT::iterator>;
 
   iterator begin() { return Vector.begin(); }
-  iterator end()   { return Vector.end(); }
+  iterator end() { return Vector.end(); }
 
   using const_iterator = pointee_iterator<typename VectorT::const_iterator>;
 
   const_iterator begin() const { return Vector.begin(); }
-  const_iterator end()   const { return Vector.end(); }
+  const_iterator end() const { return Vector.end(); }
 
   /// Remove all nodes from the folding set.
-  void clear() { Set.clear(); Vector.clear(); }
+  void clear() {
+    Set.clear();
+    Vector.clear();
+  }
 
   /// Look up the node specified by ID.  If it exists, return it.  If not,
   /// return the insertion token that will make insertion faster.
@@ -655,7 +645,8 @@ public:
   /// return it.  Otherwise, insert 'N' and return it instead.
   T *GetOrInsertNode(T *N) {
     T *Result = Set.GetOrInsertNode(N);
-    if (Result == N) Vector.push_back(N);
+    if (Result == N)
+      Vector.push_back(N);
     return Result;
   }
 
@@ -678,7 +669,7 @@ public:
   unsigned size() const { return Set.size(); }
 
   /// Returns true if there are no nodes in the folding set.
-  bool empty() const { return Set.empty(); }
+  [[nodiscard]] bool empty() const { return Set.empty(); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -705,33 +696,30 @@ template <class T> class FoldingSetIterator : public FoldingSetIteratorImpl {
 public:
   explicit FoldingSetIterator(void **Bucket) : FoldingSetIteratorImpl(Bucket) {}
 
-  T &operator*() const {
-    return *static_cast<T*>(NodePtr);
-  }
+  T &operator*() const { return *static_cast<T *>(NodePtr); }
 
-  T *operator->() const {
-    return static_cast<T*>(NodePtr);
-  }
+  T *operator->() const { return static_cast<T *>(NodePtr); }
 
-  inline FoldingSetIterator &operator++() {          // Preincrement
+  inline FoldingSetIterator &operator++() { // Preincrement
     advance();
     return *this;
   }
-  FoldingSetIterator operator++(int) {        // Postincrement
-    FoldingSetIterator tmp = *this; ++*this; return tmp;
+  FoldingSetIterator operator++(int) { // Postincrement
+    FoldingSetIterator tmp = *this;
+    ++*this;
+    return tmp;
   }
 };
 
 //===----------------------------------------------------------------------===//
 /// This template class is used to "wrap" arbitrary types in an enclosing object
 /// so that they can be inserted into FoldingSets.
-template <typename T>
-class FoldingSetNodeWrapper : public FoldingSetNode {
+template <typename T> class FoldingSetNodeWrapper : public FoldingSetNode {
   T data;
 
 public:
   template <typename... Ts>
-  explicit FoldingSetNodeWrapper(Ts &&... Args)
+  explicit FoldingSetNodeWrapper(Ts &&...Args)
       : data(std::forward<Ts>(Args)...) {}
 
   void Profile(FoldingSetNodeID &ID) { FoldingSetTrait<T>::Profile(data, ID); }
@@ -739,8 +727,8 @@ public:
   T &getValue() { return data; }
   const T &getValue() const { return data; }
 
-  operator T&() { return data; }
-  operator const T&() const { return data; }
+  operator T &() { return data; }
+  operator const T &() const { return data; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -762,15 +750,11 @@ public:
 //===----------------------------------------------------------------------===//
 // Partial specializations of FoldingSetTrait.
 
-template<typename T> struct FoldingSetTrait<T*> {
-  static inline void Profile(T *X, FoldingSetNodeID &ID) {
-    ID.AddPointer(X);
-  }
+template <typename T> struct FoldingSetTrait<T *> {
+  static inline void Profile(T *X, FoldingSetNodeID &ID) { ID.AddPointer(X); }
 };
-template <typename T1, typename T2>
-struct FoldingSetTrait<std::pair<T1, T2>> {
-  static inline void Profile(const std::pair<T1, T2> &P,
-                             FoldingSetNodeID &ID) {
+template <typename T1, typename T2> struct FoldingSetTrait<std::pair<T1, T2>> {
+  static inline void Profile(const std::pair<T1, T2> &P, FoldingSetNodeID &ID) {
     ID.Add(P.first);
     ID.Add(P.second);
   }
@@ -783,6 +767,6 @@ struct FoldingSetTrait<T, std::enable_if_t<std::is_enum<T>::value>> {
   }
 };
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif // LLVM_ADT_FOLDINGSET_H

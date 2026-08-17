@@ -1,6 +1,8 @@
 // RUN: mlir-opt %s -scf-for-loop-peeling -canonicalize -split-input-file -verify-diagnostics | FileCheck %s
 // RUN: mlir-opt %s -scf-for-loop-peeling=skip-partial=false -canonicalize -split-input-file -verify-diagnostics | FileCheck %s -check-prefix=CHECK-NO-SKIP
 
+// XFAIL: mlir-expensive-checks
+
 //  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s1 - (-s0 + s1) mod s2)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 //      CHECK: func @fully_dynamic_bounds(

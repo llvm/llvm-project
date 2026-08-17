@@ -1005,9 +1005,9 @@ def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
       } else if (elementType.isBF16()) {
         intr += "bf16";
       } else if (elementType.isF8E4M3FN() || elementType.isF8E5M2()) {
-        intr += elementType.isF8E4M3FN() ? "b" : "h";
+        intr += elementType.isF8E4M3FN() ? "h" : "b";
         if (elementType != elementTypeRhs)
-          intr += elementTypeRhs.isF8E4M3FN() ? "b" : "h";
+          intr += elementTypeRhs.isF8E4M3FN() ? "h" : "b";
         intr += "f8";
       }
 

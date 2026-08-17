@@ -32,6 +32,13 @@ FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
 void initializeAMDGPURegBankCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
+
+class AMDGPUGlobalISelDivergenceLoweringPass
+    : public RequiredPassInfoMixin<AMDGPUGlobalISelDivergenceLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 FunctionPass *createAMDGPURegBankSelectPass();
 FunctionPass *createAMDGPURegBankLegalizePass();
 
@@ -211,8 +218,8 @@ extern char &SILowerWWMCopiesLegacyID;
 void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
 extern char &SILowerI1CopiesLegacyID;
 
-void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
-extern char &AMDGPUGlobalISelDivergenceLoweringID;
+void initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUGlobalISelDivergenceLoweringLegacyID;
 
 void initializeAMDGPURegBankSelectPass(PassRegistry &);
 extern char &AMDGPURegBankSelectID;
