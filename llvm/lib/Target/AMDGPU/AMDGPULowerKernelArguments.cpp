@@ -222,7 +222,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
     return false;
 
   CallInst *KernArgSegment = Builder.CreateIntrinsicWithoutFolding(
-      Intrinsic::amdgcn_kernarg_segment_ptr, {}, nullptr,
+      Intrinsic::amdgcn_kernarg_segment_ptr, {},
       F.getName() + ".kernarg.segment");
   KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(

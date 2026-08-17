@@ -501,14 +501,14 @@ CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.start only applies to pointers.");
   return CreateIntrinsicWithoutFolding(Intrinsic::lifetime_start,
-                                       {Ptr->getType()}, {Ptr});
+                                       Ptr->getType(), Ptr);
 }
 
 CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.end only applies to pointers.");
-  return CreateIntrinsicWithoutFolding(Intrinsic::lifetime_end,
-                                       {Ptr->getType()}, {Ptr});
+  return CreateIntrinsicWithoutFolding(Intrinsic::lifetime_end, Ptr->getType(),
+                                       Ptr);
 }
 
 CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
@@ -521,11 +521,9 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
     assert(Size->getType() == getInt64Ty() &&
            "invariant.start requires the size to be an i64");
 
-  Value *Ops[] = {Size, Ptr};
   // Fill in the single overloaded type: memory object type.
-  Type *ObjectPtr[1] = {Ptr->getType()};
-  return CreateIntrinsicWithoutFolding(Intrinsic::invariant_start, ObjectPtr,
-                                       Ops);
+  return CreateIntrinsicWithoutFolding(Intrinsic::invariant_start,
+                                       Ptr->getType(), {Size, Ptr});
 }
 
 static MaybeAlign getAlign(Value *Ptr) {
@@ -540,7 +538,7 @@ CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
   assert(isa<GlobalValue>(Ptr) && cast<GlobalValue>(Ptr)->isThreadLocal() &&
          "threadlocal_address only applies to thread local variables.");
   CallInst *CI = CreateIntrinsicWithoutFolding(
-      llvm::Intrinsic::threadlocal_address, {Ptr->getType()}, {Ptr});
+      llvm::Intrinsic::threadlocal_address, Ptr->getType(), Ptr);
   if (MaybeAlign A = getAlign(Ptr)) {
     CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), *A));
     CI->addRetAttr(Attribute::getWithAlignment(CI->getContext(), *A));
@@ -552,20 +550,19 @@ CallInst *IRBuilderBase::CreateAssumption(Value *Cond) {
   assert(Cond->getType() == getInt1Ty() &&
          "an assumption condition must be of type i1");
   return CreateIntrinsicWithoutFolding(Intrinsic::assume, /*OverloadTypes=*/{},
-                                       {Cond});
+                                       Cond);
 }
 
 CallInst *
 IRBuilderBase::CreateAssumption(ArrayRef<OperandBundleDef> OpBundles) {
-  Value *Args[] = {ConstantInt::getTrue(getContext())};
-  return CreateIntrinsicWithoutFolding(
-      Intrinsic::assume, /*OverloadTypes=*/{}, Args,
-      /*FMFSource=*/nullptr, /*Name=*/"", OpBundles);
+  return CreateIntrinsicWithoutFolding(Intrinsic::assume, /*OverloadTypes=*/{},
+                                       ConstantInt::getTrue(getContext()),
+                                       /*Name=*/"", OpBundles);
 }
 
 Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
   return CreateIntrinsicWithoutFolding(
-      Intrinsic::experimental_noalias_scope_decl, {}, {Scope});
+      Intrinsic::experimental_noalias_scope_decl, {}, Scope);
 }
 
 /// Create a call to a Masked Load intrinsic.
@@ -620,7 +617,7 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
                                                ArrayRef<Value *> Ops,
                                                ArrayRef<Type *> OverloadedTypes,
                                                const Twine &Name) {
-  return CreateIntrinsicWithoutFolding(Id, OverloadedTypes, Ops, {}, Name);
+  return CreateIntrinsicWithoutFolding(Id, OverloadedTypes, Ops, Name);
 }
 
 /// Create a call to a Masked Gather intrinsic.
@@ -885,36 +882,30 @@ InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
 
 CallInst *IRBuilderBase::CreateGCResult(Instruction *Statepoint,
                                         Type *ResultType, const Twine &Name) {
-  Intrinsic::ID ID = Intrinsic::experimental_gc_result;
-  Type *Types[] = {ResultType};
-
-  Value *Args[] = {Statepoint};
-  return CreateIntrinsicWithoutFolding(ID, Types, Args, {}, Name);
+  return CreateIntrinsicWithoutFolding(Intrinsic::experimental_gc_result,
+                                       ResultType, Statepoint, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCRelocate(Instruction *Statepoint,
                                           int BaseOffset, int DerivedOffset,
                                           Type *ResultType, const Twine &Name) {
-  Type *Types[] = {ResultType};
-
   Value *Args[] = {Statepoint, getInt32(BaseOffset), getInt32(DerivedOffset)};
   return CreateIntrinsicWithoutFolding(Intrinsic::experimental_gc_relocate,
-                                       Types, Args, {}, Name);
+                                       ResultType, Args, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCGetPointerBase(Value *DerivedPtr,
                                                 const Twine &Name) {
   Type *PtrTy = DerivedPtr->getType();
   return CreateIntrinsicWithoutFolding(
-      Intrinsic::experimental_gc_get_pointer_base, PtrTy, DerivedPtr, {}, Name);
+      Intrinsic::experimental_gc_get_pointer_base, PtrTy, DerivedPtr, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,
                                                   const Twine &Name) {
   Type *PtrTy = DerivedPtr->getType();
   return CreateIntrinsicWithoutFolding(
-      Intrinsic::experimental_gc_get_pointer_offset, {PtrTy}, {DerivedPtr}, {},
-      Name);
+      Intrinsic::experimental_gc_get_pointer_offset, PtrTy, DerivedPtr, Name);
 }
 
 Value *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
@@ -998,8 +989,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
   Value *ExceptV = getConstrainedFPExcept(Except);
 
   FastMathFlags UseFMF = FMFSource.get(FMF);
-  CallInst *C = CreateIntrinsicWithoutFolding(
-      ID, {L->getType()}, {L, R, RoundingV, ExceptV}, nullptr, Name, {});
+  CallInst *C = CreateIntrinsicWithoutFolding(ID, L->getType(),
+                                              {L, R, RoundingV, ExceptV}, Name);
   setConstrainedFPCallAttr(C);
   setFPAttrs(C, FPMathTag, UseFMF);
   return C;
@@ -1015,11 +1006,10 @@ CallInst *IRBuilderBase::CreateConstrainedFPIntrinsic(
 
   FastMathFlags UseFMF = FMFSource.get(FMF);
 
-  llvm::SmallVector<Value *, 5> ExtArgs(Args);
+  SmallVector<Value *, 5> ExtArgs(Args);
   ExtArgs.push_back(RoundingV);
   ExtArgs.push_back(ExceptV);
-  CallInst *C =
-      CreateIntrinsicWithoutFolding(ID, Types, ExtArgs, nullptr, Name, {});
+  CallInst *C = CreateIntrinsicWithoutFolding(ID, Types, ExtArgs, Name);
   setConstrainedFPCallAttr(C);
   setFPAttrs(C, FPMathTag, UseFMF);
   return C;
@@ -1032,8 +1022,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPUnroundedBinOp(
   Value *ExceptV = getConstrainedFPExcept(Except);
 
   FastMathFlags UseFMF = FMFSource.get(FMF);
-  CallInst *C = CreateIntrinsicWithoutFolding(
-      ID, {L->getType()}, {L, R, ExceptV}, nullptr, Name, {});
+  CallInst *C =
+      CreateIntrinsicWithoutFolding(ID, L->getType(), {L, R, ExceptV}, Name);
   setConstrainedFPCallAttr(C);
   setFPAttrs(C, FPMathTag, UseFMF);
   return C;
@@ -1065,11 +1055,12 @@ CallInst *IRBuilderBase::CreateConstrainedFPCast(
   CallInst *C;
   if (Intrinsic::hasConstrainedFPRoundingModeOperand(ID)) {
     Value *RoundingV = getConstrainedFPRounding(Rounding);
-    C = CreateIntrinsicWithoutFolding(
-        ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV}, nullptr, Name, {});
-  } else
+    C = CreateIntrinsicWithoutFolding(ID, {DestTy, V->getType()},
+                                      {V, RoundingV, ExceptV}, Name);
+  } else {
     C = CreateIntrinsicWithoutFolding(ID, {DestTy, V->getType()}, {V, ExceptV},
-                                      nullptr, Name, {});
+                                      Name);
+  }
   setConstrainedFPCallAttr(C);
 
   if (isa<FPMathOperator>(C))
@@ -1101,7 +1092,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCmp(
   Value *ExceptV = getConstrainedFPExcept(Except);
 
   CallInst *C = CreateIntrinsicWithoutFolding(
-      ID, {L->getType()}, {L, R, PredicateV, ExceptV}, nullptr, Name, {});
+      ID, {L->getType()}, {L, R, PredicateV, ExceptV}, Name);
   setConstrainedFPCallAttr(C);
   return C;
 }
