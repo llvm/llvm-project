@@ -27,16 +27,13 @@ module attributes {
   cir.record_layouts = {
     UNoRegs = #cir.record_layout<
       arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
-      record_align = 4, is_empty = false>,
+      record_align = 4>,
     UBigOverAligned = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 32, is_empty = false>,
+      record_align = 32>,
     SOverAligned = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 32, is_empty = false>,
-    UEmpty = #cir.record_layout<
-      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 1, is_empty = true>},
+      record_align = 32>},
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
     #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,

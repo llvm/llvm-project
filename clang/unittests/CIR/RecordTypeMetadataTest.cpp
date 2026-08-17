@@ -33,8 +33,7 @@ protected:
 
 TEST_F(RecordLayoutAttrTest, CanPassInRegs) {
   auto attr =
-      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 4,
-                            /*is_empty=*/false);
+      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 4);
   EXPECT_EQ(attr.getArgPassingKind(), ArgPassingKind::CanPassInRegs);
   EXPECT_TRUE(attr.getHasTrivialDtor());
   EXPECT_EQ(attr.getRecordAlign(), 4u);
@@ -42,15 +41,14 @@ TEST_F(RecordLayoutAttrTest, CanPassInRegs) {
 
 TEST_F(RecordLayoutAttrTest, CannotPassInRegs) {
   auto attr = RecordLayoutAttr::get(&context, ArgPassingKind::CannotPassInRegs,
-                                    false, 4, /*is_empty=*/false);
+                                    false, 4);
   EXPECT_EQ(attr.getArgPassingKind(), ArgPassingKind::CannotPassInRegs);
   EXPECT_FALSE(attr.getHasTrivialDtor());
 }
 
 TEST_F(RecordLayoutAttrTest, CanNeverPassInRegs) {
   auto attr = RecordLayoutAttr::get(
-      &context, ArgPassingKind::CanNeverPassInRegs, false, 8,
-      /*is_empty=*/false);
+      &context, ArgPassingKind::CanNeverPassInRegs, false, 8);
   EXPECT_EQ(attr.getArgPassingKind(), ArgPassingKind::CanNeverPassInRegs);
   EXPECT_FALSE(attr.getHasTrivialDtor());
   EXPECT_EQ(attr.getRecordAlign(), 8u);
@@ -58,18 +56,8 @@ TEST_F(RecordLayoutAttrTest, CanNeverPassInRegs) {
 
 TEST_F(RecordLayoutAttrTest, HighAlignment) {
   auto attr =
-      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 32,
-                            /*is_empty=*/false);
+      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 32);
   EXPECT_EQ(attr.getRecordAlign(), 32u);
-}
-
-TEST_F(RecordLayoutAttrTest, IsEmpty) {
-  auto empty = RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
-                                     true, 1, /*is_empty=*/true);
-  EXPECT_TRUE(empty.getIsEmpty());
-  auto data = RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
-                                    true, 1, /*is_empty=*/false);
-  EXPECT_FALSE(data.getIsEmpty());
 }
 
 TEST_F(RecordLayoutAttrTest, RecordTypeUnchanged) {
@@ -87,8 +75,7 @@ TEST_F(RecordLayoutAttrTest, ModuleLevelLookup) {
   auto module = mlir::ModuleOp::create(loc);
 
   auto layoutAttr =
-      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 8,
-                            /*is_empty=*/false);
+      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 8);
 
   llvm::SmallVector<mlir::NamedAttribute> entries;
   entries.push_back(mlir::NamedAttribute(getName("TestRecord"), layoutAttr));
@@ -99,7 +86,6 @@ TEST_F(RecordLayoutAttrTest, ModuleLevelLookup) {
   EXPECT_EQ(result.getArgPassingKind(), ArgPassingKind::CanPassInRegs);
   EXPECT_TRUE(result.getHasTrivialDtor());
   EXPECT_EQ(result.getRecordAlign(), 8u);
-  EXPECT_FALSE(result.getIsEmpty());
 
   module->erase();
 }

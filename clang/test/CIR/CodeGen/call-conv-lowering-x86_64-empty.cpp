@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir \
-// RUN:   -clangir-enable-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN:   -fclangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir \
-// RUN:   -clangir-enable-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN:   -fclangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
@@ -20,6 +20,10 @@ struct OneByte { unsigned char c; };
 struct ArrOfEmpty { Empty a[2]; };
 struct HasEmpty { int x; Empty e; };
 struct EmptyFirst { Empty e; int x; };
+struct EmptySecond { long a; Empty e; };
+struct EmptySSE { double a; Empty e; };
+struct FloatEmpty { float a; Empty e; };
+struct FloatEmptyFirst { Empty e; float a; };
 struct alignas(32) Big32 {};
 union UBits { unsigned : 3; };
 union UNone {};
@@ -68,9 +72,8 @@ int takeNoUniqueOne(NoUniqueOne v, int k) { return k; }
 // CIR: cir.func {{.*}}@_Z15takeNoUniqueOne11NoUniqueOnei(%arg0: !s32i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z15takeNoUniqueOne11NoUniqueOnei(i32 noundef %{{[^,]+}})
 
-// A record holding only unnamed bit-fields carries no data either, though it
-// occupies layout space.  It lowers to the same CIR type as OneByte below, so
-// the record-layout metadata is what separates them.
+// Unnamed bit-field storage is marked empty rather than pad, so a record of
+// nothing but unnamed bit-fields carries no data either.
 int takeUnnamedBits(UnnamedBits v, int k) { return k; }
 
 // CIR: cir.func {{.*}}@_Z15takeUnnamedBits11UnnamedBitsi(%arg0: !s32i {{.*}}) -> (!s32i
@@ -104,6 +107,33 @@ int takeEmptyFirst(EmptyFirst v) { return v.x; }
 
 // CIR: cir.func {{.*}}@_Z14takeEmptyFirst10EmptyFirst(%arg0: !u64i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z14takeEmptyFirst10EmptyFirst(i64 %{{[^,]+}})
+
+// The empty member owns the second eightbyte alone, which classifies NoClass
+// and is dropped rather than merged into a register of its own.
+int takeEmptySecond(EmptySecond v) { return 0; }
+
+// CIR: cir.func {{.*}}@_Z15takeEmptySecond11EmptySecond(%arg0: !s64i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z15takeEmptySecond11EmptySecond(i64 %{{[^,]+}})
+
+// The same with an SSE eightbyte below it.
+double takeEmptySSE(EmptySSE v) { return v.a; }
+
+// CIR: cir.func {{.*}}@_Z12takeEmptySSE8EmptySSE(%arg0: !cir.double {{.*}}) -> (!cir.double
+// LLVM: define dso_local noundef double @_Z12takeEmptySSE8EmptySSE(double %{{[^,]+}})
+
+// Here the empty member shares eightbyte 0 with the float rather than owning
+// one, so NoClass has to survive a merge against SSE instead of standing alone.
+float takeFloatEmpty(FloatEmpty v) { return v.a; }
+
+// CIR: cir.func {{.*}}@_Z14takeFloatEmpty10FloatEmpty(%arg0: !cir.float {{.*}}) -> (!cir.float
+// LLVM: define dso_local noundef float @_Z14takeFloatEmpty10FloatEmpty(float %{{[^,]+}})
+
+// The empty member first pushes the float to offset 4, and the eightbyte
+// covering both coerces to double.
+float takeFloatEmptyFirst(FloatEmptyFirst v) { return v.a; }
+
+// CIR: cir.func {{.*}}@_Z19takeFloatEmptyFirst15FloatEmptyFirst(%arg0: !cir.double {{.*}}) -> (!cir.float
+// LLVM: define dso_local noundef float @_Z19takeFloatEmptyFirst15FloatEmptyFirst(double %{{[^,]+}})
 
 // Past two eightbytes SysV says memory whatever the content, so an empty class
 // this size is passed indirectly at its declared alignment.

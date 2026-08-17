@@ -11,7 +11,7 @@
 module attributes {
   cir.record_layouts = {NoRegs = #cir.record_layout<
     arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
-    record_align = 4, is_empty = false>},
+    record_align = 4>},
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,

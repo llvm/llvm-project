@@ -5,42 +5,44 @@
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!rec_E = !cir.struct<"E" padded {!u8i}>
-!rec_EBlob = !cir.struct<"EBlob" padded {!cir.array<!u8i x 3>}>
-!rec_NTCE = !cir.struct<"NTCE" padded {!u8i}>
-!rec_Byte = !cir.struct<"Byte" {!u8i}>
-!rec_HasEmpty = !cir.struct<"HasEmpty" {!s32i, !rec_E}>
-!rec_HasEmptyFirst = !cir.struct<"HasEmptyFirst" {!rec_E, !s32i}>
-!rec_EmptyMem = !cir.struct<"EmptyMem" {!rec_E}>
-!rec_Base2 = !cir.struct<"Base2" {!s32i}>
-!rec_D2 = !cir.struct<"D2" {!rec_EmptyMem, !rec_Base2}>
-!rec_EMed = !cir.struct<"EMed" padded {!cir.array<!u8i x 16>}>
-!rec_EBig = !cir.struct<"EBig" padded {!cir.array<!u8i x 32>}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+!rec_EBlob = !cir.struct<"EBlob" {pad !cir.array<!u8i x 3>}>
+!rec_NTCE = !cir.struct<"NTCE" {pad !u8i}>
+!rec_Byte = !cir.struct<"Byte" {data !u8i}>
+!rec_HasEmpty = !cir.struct<"HasEmpty" {data !s32i, data !rec_E}>
+!rec_HasEmptyFirst = !cir.struct<"HasEmptyFirst" {data !rec_E, data !s32i}>
+!rec_EmptyMem = !cir.struct<"EmptyMem" {data !rec_E}>
+!rec_Base2 = !cir.struct<"Base2" {data !s32i}>
+!rec_D2 = !cir.struct<"D2" {data !rec_EmptyMem, data !rec_Base2}>
+!rec_EMed = !cir.struct<"EMed" {pad !cir.array<!u8i x 16>}>
+!rec_EBig = !cir.struct<"EBig" {pad !cir.array<!u8i x 32>}>
+!rec_EBits = !cir.struct<"EBits" {empty !u8i}>
+!rec_MixPE = !cir.struct<"MixPE" {pad !u8i, empty !u8i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
   cir.record_layouts = {
     E = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 1, is_empty = true>,
+      record_align = 1>,
     EBlob = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 1, is_empty = true>,
+      record_align = 1>,
     EmptyMem = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 1, is_empty = false>,
+      record_align = 1>,
     Byte = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 1, is_empty = false>,
+      record_align = 1>,
     NTCE = #cir.record_layout<
       arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
-      record_align = 1, is_empty = true>,
+      record_align = 1>,
     EMed = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 16, is_empty = true>,
+      record_align = 16>,
     EBig = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
-      record_align = 32, is_empty = true>},
+      record_align = 32>},
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
@@ -55,6 +57,24 @@ module attributes {
   // CHECK: cir.func{{.*}} @take_empty() {
   // CHECK-NEXT: cir.return
   // LLVM: define void @take_empty()
+
+  // Unnamed bit-field storage is marked empty rather than pad, and a record of
+  // nothing else is dropped the same way.  This spelling does not set the pad
+  // flag, so before the marks it was passed as a register of data.
+  cir.func @take_empty_bits(%arg0: !rec_EBits, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty_bits(%arg0: !s32i) -> !s32i
+  // LLVM: define i32 @take_empty_bits(i32 %{{[^,)]+}})
+
+  // Emptiness is the absence of a data member, not the presence of a pad one.
+  cir.func @take_mixed_pad_empty(%arg0: !rec_MixPE, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_mixed_pad_empty(%arg0: !s32i) -> !s32i
+  // LLVM: define i32 @take_mixed_pad_empty(i32 %{{[^,)]+}})
 
   // Several [[no_unique_address]] members widen the padding past a byte.
   cir.func @take_empty_blob(%arg0: !rec_EBlob) -> !s32i {
