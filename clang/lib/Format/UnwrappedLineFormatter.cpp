@@ -983,13 +983,17 @@ private:
         if (!nextTwoLinesFitInto(I, Limit))
           return 0;
 
-        // Second, check that the next line does not contain any braces - if it
-        // does, readability declines when putting it into a single line.
+        // Second, check that the next line does not contain non-braced-init
+        // braces - if it does, readability declines when putting it into a
+        // single line.
         if (I[1]->Last->is(TT_LineComment))
           return 0;
         do {
-          if (Tok->isOneOf(tok::l_brace, tok::r_brace) &&
-              Tok->isNot(BK_BracedInit)) {
+          if (Tok->is(tok::l_brace) && Tok->isNot(BK_BracedInit))
+            return 0;
+          if (Tok->is(tok::r_brace) &&
+              (!Tok->MatchingParen ||
+               Tok->MatchingParen->isNot(BK_BracedInit))) {
             return 0;
           }
           Tok = Tok->Next;

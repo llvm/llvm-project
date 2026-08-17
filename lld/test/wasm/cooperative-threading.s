@@ -94,6 +94,28 @@ baz:
 # CHECK-NEXT:     - Minimum:         0x2
 # CHECK-NOT:       Shared
 
+# Ensure __init_stack_pointer, __init_tls_base, and __tls_size are all correct.
+# CHECK:      - Type:            GLOBAL
+# CHECK-NEXT:   Globals:
+# CHECK-NEXT:     - Index:           0
+# CHECK-NEXT:       Type:            I32
+# CHECK-NEXT:       Mutable:         false
+# CHECK-NEXT:       InitExpr:
+# CHECK-NEXT:         Opcode:          I32_CONST
+# CHECK-NEXT:         Value:           65536
+# CHECK-NEXT:     - Index:           1
+# CHECK-NEXT:       Type:            I32
+# CHECK-NEXT:       Mutable:         true
+# CHECK-NEXT:       InitExpr:
+# CHECK-NEXT:         Opcode:          I32_CONST
+# CHECK-NEXT:         Value:           65544
+# CHECK-NEXT:     - Index:           2
+# CHECK-NEXT:       Type:            I32
+# CHECK-NEXT:       Mutable:         false
+# CHECK-NEXT:       InitExpr:
+# CHECK-NEXT:         Opcode:          I32_CONST
+# CHECK-NEXT:         Value:           8
+
 # The function table is exported by default.
 # CHECK:      - Type:            EXPORT
 # CHECK:          - Name:            __indirect_function_table
@@ -137,8 +159,14 @@ baz:
 # CHECK-NEXT:        Name:            __tls_align
 
 # DIS-LABEL: <__wasm_init_memory>:
-# DIS:         memory.init     2, 0
-# DIS-NEXT:    end
+# DIS-EMPTY:
+# DIS-NEXT:      i32.const       65544
+# DIS-NEXT:      i32.const       65544
+# DIS-NEXT:      call    0
+# DIS-NEXT:      i32.const       0
+# DIS-NEXT:      i32.const       8
+# DIS-NEXT:      memory.init     2, 0
+# DIS-NEXT:      end
 
 # DIS-LABEL: <_start>:
 # DIS-EMPTY:
@@ -168,6 +196,35 @@ baz:
 # RUN: obj2yaml %t.so | FileCheck %s --check-prefix=PIC
 # RUN: llvm-objdump --disassemble-symbols=__wasm_init_memory --no-show-raw-insn --no-leading-addr %t.so | FileCheck %s --check-prefix=PIC-DIS
 
+# The stack pointer is imported under the libcall ABI name and
+# __wasm_set_tls_base is imported for TLS initialization.
+# PIC:       - Type:            IMPORT
+# PIC:           Field:           __init_stack_pointer
+# PIC-NEXT:      Kind:            GLOBAL
+# PIC-NEXT:      GlobalType:      I32
+# PIC-NEXT:      GlobalMutable:   false
+# PIC:           Field:           __memory_base
+# PIC:           Field:           __table_base
+# PIC:           Field:           __wasm_set_tls_base
+# PIC-NEXT:      Kind:            FUNCTION
+
+# The PIC `__init_tls_base` global (global 3) is mutable and initialized ot
+# 0 since its final value is calculated once `__memory_base` is provided.
+# PIC:       - Type:            GLOBAL
+# PIC-NEXT:    Globals:
+# PIC-NEXT:      - Index:           3
+# PIC-NEXT:        Type:            I32
+# PIC-NEXT:        Mutable:         true
+# PIC-NEXT:        InitExpr:
+# PIC-NEXT:          Opcode:          I32_CONST
+# PIC-NEXT:          Value:           0
+# PIC-NEXT:      - Index:           4
+# PIC-NEXT:        Type:            I32
+# PIC-NEXT:        Mutable:         false
+# PIC-NEXT:        InitExpr:
+# PIC-NEXT:          Opcode:          I32_CONST
+# PIC-NEXT:          Value:           8
+
 # In PIC mode the active .rodata and .data segments are combined into a single
 # active segment at __memory_base; the TLS segment remains passive.
 # PIC:       - Type:            DATACOUNT
@@ -185,15 +242,32 @@ baz:
 # PIC-NEXT:        Content:         '0100000002000000'
 # PIC-NEXT:  - Type:            CUSTOM
 
+# PIC:       GlobalNames:
+# PIC-NEXT:      - Index:           0
+# PIC-NEXT:        Name:            __init_stack_pointer
+# PIC-NEXT:      - Index:           1
+# PIC-NEXT:        Name:            __memory_base
+# PIC-NEXT:      - Index:           2
+# PIC-NEXT:        Name:            __table_base
+# PIC-NEXT:      - Index:           3
+# PIC-NEXT:        Name:            __init_tls_base
+# PIC-NEXT:      - Index:           4
+# PIC-NEXT:        Name:            __tls_size
+# PIC-NEXT:      - Index:           5
+# PIC-NEXT:        Name:            __tls_align
+
 # Memory initialization in PIC mode has a few responsibilities: it calculates
-# the TLS address and puts it in a local, `__wasm_set_tls_base` is called,
-# TLS is initialized, and then finally BSS is zero'd out.
+# the TLS address and puts it in a local, stores it into the __init_tls_base
+# global, `__wasm_set_tls_base` is called, TLS is initialized, and then finally
+# BSS is zero'd out.
 # PIC-DIS:      <__wasm_init_memory>:
 # PIC-DIS-NEXT:   .local i32
 # PIC-DIS-NEXT:   i32.const 8
-# PIC-DIS-NEXT:   global.get {{[0-9]+}}
+# PIC-DIS-NEXT:   global.get 1
 # PIC-DIS-NEXT:   i32.add
 # PIC-DIS-NEXT:   local.tee 0
+# PIC-DIS-NEXT:   local.get 0
+# PIC-DIS-NEXT:   global.set 3
 # PIC-DIS-NEXT:   call {{[0-9]+}}
 # PIC-DIS-NEXT:   local.get 0
 # PIC-DIS-NEXT:   i32.const 0

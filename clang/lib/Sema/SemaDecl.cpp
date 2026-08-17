@@ -3389,11 +3389,14 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     if (isa<UsedAttr>(I) || isa<RetainAttr>(I))
       continue;
 
-    if (isa<InferredNoReturnAttr>(I)) {
+    // Don't propagate inferred noreturn or conflicting inline attributes to
+    // explicit specializations.
+    if (isa<InferredNoReturnAttr>(I) || isa<AlwaysInlineAttr>(I) ||
+        isa<NoInlineAttr>(I)) {
       if (auto *FD = dyn_cast<FunctionDecl>(New);
           FD &&
           FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
-        continue; // Don't propagate inferred noreturn attributes to explicit
+        continue;
     }
 
     if (mergeDeclAttribute(*this, New, I, LocalAMK))
@@ -4191,13 +4194,13 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         } else {
           Diag(NewMethod->getLocation(),
                diag::err_definition_of_implicitly_declared_member)
-              << New << getSpecialMember(OldMethod);
+              << New << OldMethod->getSpecialMemberKind();
           return true;
         }
       } else if (OldMethod->getFirstDecl()->isExplicitlyDefaulted() && !isFriend) {
         Diag(NewMethod->getLocation(),
              diag::err_definition_of_explicitly_defaulted_member)
-            << getSpecialMember(OldMethod);
+            << OldMethod->getSpecialMemberKind();
         return true;
       }
     }
@@ -10916,9 +10919,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       if (isFriend) {
         // For friend function specializations, this is a dependent
         // specialization if its semantic context is dependent, its
-        // type is dependent, or if its template-id is dependent.
+        // qualifier is dependent, its type is dependent, or its template-id is
+        // dependent.
         isDependentSpecialization =
-            DC->isDependentContext() || NewFD->getType()->isDependentType() ||
+            DC->isDependentContext() || NewFD->getQualifier().isDependent() ||
+            NewFD->getType()->isDependentType() ||
             (HasExplicitTemplateArgs &&
              TemplateSpecializationType::
                  anyInstantiationDependentTemplateArguments(
@@ -12583,7 +12588,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       // struct B { struct Y { ~Y(); }; using X = Y; };
       // template struct A<B>;
       if (NewFD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None ||
-          !Destructor->getFunctionObjectParameterType()->isDependentType()) {
+          (!Destructor->getFunctionObjectParameterType()->isDependentType() &&
+           !Destructor->getDeclName().isDependentName())) {
         CanQualType ClassType =
             Context.getCanonicalTagType(Destructor->getParent());
 
