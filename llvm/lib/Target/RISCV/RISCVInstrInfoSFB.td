@@ -261,18 +261,9 @@ def PseudoCCLWU : SFBLoad;
 def PseudoCCLD : SFBLoad;
 }
 
-def ZibiCond : PatLeaf<(cond), [{
-  switch (N->get()) {
-  default:
-    return false;
-  case ISD::SETEQ:
-  case ISD::SETNE:
-    return true;
-  }
-}]>;
-
 // Zibi: select with immediate comparison folded into SFB.
-// imm5_zibi is defined in RISCVInstrInfoZibi.td (included before this file).
+// imm5_zibi and ZibiCond are defined in RISCVInstrInfoZibi.td (included before
+// this file).
 let Predicates = [HasStdExtZibi, HasShortForwardBranchIALU] in
 def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
           (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;
