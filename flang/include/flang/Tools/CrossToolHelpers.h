@@ -138,6 +138,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
     Reciprocals = opts.Reciprocals;
     PreferVectorWidth = opts.PreferVectorWidth;
     UseSampleProfile = !opts.SampleProfileFile.empty();
+    UniqueInternalLinkageNames = opts.UniqueInternalLinkageNames;
     DebugInfoForProfiling = opts.DebugInfoForProfiling;
     if (opts.InstrumentFunctions) {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
@@ -176,6 +177,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool EnableOpenMPIsTargetDevice =
       false; ///< Compiling for an OpenMP target device.
   bool UseSampleProfile = false; ///< Enable sample based profiling
+  bool UniqueInternalLinkageNames = false; ///< Append MD5 hash suffix to
+                                           ///< internal linkage symbol names.
   bool DebugInfoForProfiling = false; ///< Enable extra debugging info
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.

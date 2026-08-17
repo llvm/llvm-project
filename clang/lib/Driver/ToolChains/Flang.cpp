@@ -349,6 +349,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
                     options::OPT_fno_experimental_loop_fusion);
   Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
                   options::OPT_fno_fp_sum_reassociation);
+                  
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
+    options::OPT_fno_unique_internal_linkage_names);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
