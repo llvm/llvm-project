@@ -662,9 +662,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       mlir::Type elements[] = {resultType, paddingArray};
       cir::RecordMemberKind kinds[] = {cir::RecordMemberKind::Data,
                                        cir::RecordMemberKind::Pad};
-      resultType = cir::StructType::get(&getMLIRContext(), /*members=*/elements,
-                                        /*packed=*/false, /*padded=*/true,
-                                        /*is_class=*/false, kinds);
+      resultType =
+          cir::StructType::get(&getMLIRContext(), /*members=*/elements,
+                               /*packed=*/false, /*is_class=*/false, kinds);
     }
 
     break;

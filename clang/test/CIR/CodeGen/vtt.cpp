@@ -49,8 +49,8 @@ void D::y() {}
 // CIR-COMMON: !rec_A2Ebase = !cir.struct<"A.base" packed {data !cir.vptr, data !s32i}>
 // CIR-COMMON: !rec_B2Ebase = !cir.struct<"B.base" packed {data !cir.vptr, data !s32i}>
 // CIR-COMMON: !rec_C2Ebase = !cir.struct<"C.base" {data !cir.vptr, data !s64i}>
-// CIR-COMMON: !rec_A = !cir.struct<class "A" packed padded {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>}>
-// CIR-COMMON: !rec_B = !cir.struct<class "B" packed padded {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>, data !rec_A2Ebase, pad !cir.array<!u8i x 4>}>
+// CIR-COMMON: !rec_A = !cir.struct<class "A" packed {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-COMMON: !rec_B = !cir.struct<class "B" packed {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>, data !rec_A2Ebase, pad !cir.array<!u8i x 4>}>
 // CIR-COMMON: !rec_C = !cir.struct<class "C" {data !cir.vptr, data !s64i, data !rec_A2Ebase}>
 // CIR-COMMON: !rec_D = !cir.struct<class "D" {data !rec_B2Ebase, data !rec_C2Ebase, data !s64i, data !rec_A2Ebase}>
 
