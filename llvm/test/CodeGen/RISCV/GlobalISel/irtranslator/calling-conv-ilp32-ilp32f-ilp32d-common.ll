@@ -104,11 +104,28 @@ define i64 @callee_128i_indirect_reference_in_stack(i64 %x1, i64 %x2, i64 %x3, i
   ; RV32I-NEXT:   [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY6]](s32), [[COPY7]](s32)
   ; RV32I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.1, align 16)
-  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[LOAD]](p0) :: (load (s128), align 8)
+  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; RV32I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; RV32I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; RV32I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV4:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32)
   ; RV32I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
-  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[LOAD2]](p0) :: (load (s128), align 8)
-  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s128) = G_ADD [[LOAD1]], [[LOAD3]]
+  ; RV32I-NEXT:   [[LOAD5:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
+  ; RV32I-NEXT:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[LOAD5]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD4]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV5:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32)
+  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s128) = G_ADD [[MV4]], [[MV5]]
   ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[ADD]](s128)
   ; RV32I-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s64)
   ; RV32I-NEXT:   $x10 = COPY [[UV]](s32)
@@ -131,16 +148,38 @@ define i32 @callee_128i_indirect_refernce_in_stack( ) {
   ; ILP32-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; ILP32-NEXT:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
   ; ILP32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s32)
   ; ILP32-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
-  ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32-NEXT:   G_STORE [[C2]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
   ; ILP32-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s32)
-  ; ILP32-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 4)
+  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C5]](s32)
+  ; ILP32-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C6]](s32)
+  ; ILP32-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.0 + 12)
+  ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; ILP32-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s32)
+  ; ILP32-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 4)
+  ; ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C5]](s32)
+  ; ILP32-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C6]](s32)
+  ; ILP32-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32-NEXT:   $x10 = COPY [[UV]](s32)
   ; ILP32-NEXT:   $x11 = COPY [[UV1]](s32)
   ; ILP32-NEXT:   $x12 = COPY [[UV2]](s32)
@@ -169,16 +208,38 @@ define i32 @callee_128i_indirect_refernce_in_stack( ) {
   ; ILP32F-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; ILP32F-NEXT:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32F-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
   ; ILP32F-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s32)
   ; ILP32F-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
-  ; ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32F-NEXT:   G_STORE [[C2]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
   ; ILP32F-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s32)
-  ; ILP32F-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32F-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C5]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32F-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C6]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.0 + 12)
+  ; ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; ILP32F-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s32)
+  ; ILP32F-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C5]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C6]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32F-NEXT:   $x10 = COPY [[UV]](s32)
   ; ILP32F-NEXT:   $x11 = COPY [[UV1]](s32)
   ; ILP32F-NEXT:   $x12 = COPY [[UV2]](s32)
@@ -207,16 +268,38 @@ define i32 @callee_128i_indirect_refernce_in_stack( ) {
   ; ILP32D-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; ILP32D-NEXT:   [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[C]](s64)
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32D-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
   ; ILP32D-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s32)
   ; ILP32D-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 16)
-  ; ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32D-NEXT:   G_STORE [[C2]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
   ; ILP32D-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s32)
-  ; ILP32D-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32D-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C5]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32D-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C6]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.0 + 12)
+  ; ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
+  ; ILP32D-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s32)
+  ; ILP32D-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C5]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C6]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C2]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32D-NEXT:   $x10 = COPY [[UV]](s32)
   ; ILP32D-NEXT:   $x11 = COPY [[UV1]](s32)
   ; ILP32D-NEXT:   $x12 = COPY [[UV2]](s32)
@@ -277,8 +360,18 @@ define i64 @callee_128i_indirect_reference_in_stack_not_first(i64 %x0, i64 %x1, 
   ; RV32I-NEXT:   [[MV7:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD6]](s32), [[LOAD7]](s32)
   ; RV32I-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; RV32I-NEXT:   [[LOAD8:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX8]](p0) :: (load (p0) from %fixed-stack.0, align 16)
-  ; RV32I-NEXT:   [[LOAD9:%[0-9]+]]:_(s128) = G_LOAD [[LOAD8]](p0) :: (load (s128), align 8)
-  ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD9]](s128)
+  ; RV32I-NEXT:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[LOAD8]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; RV32I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD8]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; RV32I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD8]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; RV32I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD8]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV8:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32)
+  ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV8]](s128)
   ; RV32I-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s64)
   ; RV32I-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[UV1]](s32)
@@ -334,10 +427,20 @@ define i32 @caller_128i_indirect_reference_in_stack_not_first() {
   ; ILP32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C16]](s32)
   ; ILP32-NEXT:   G_STORE [[UV15]](s32), [[PTR_ADD7]](p0) :: (store (s32) into stack + 28)
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32-NEXT:   G_STORE [[C8]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
   ; ILP32-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   ; ILP32-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C17]](s32)
   ; ILP32-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD8]](p0) :: (store (p0) into stack + 32, align 16)
+  ; ILP32-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s32)
+  ; ILP32-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD9]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s32)
+  ; ILP32-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD10]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s32)
+  ; ILP32-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD11]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32-NEXT:   $x10 = COPY [[UV]](s32)
   ; ILP32-NEXT:   $x11 = COPY [[UV1]](s32)
   ; ILP32-NEXT:   $x12 = COPY [[UV2]](s32)
@@ -401,10 +504,20 @@ define i32 @caller_128i_indirect_reference_in_stack_not_first() {
   ; ILP32F-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C16]](s32)
   ; ILP32F-NEXT:   G_STORE [[UV15]](s32), [[PTR_ADD7]](p0) :: (store (s32) into stack + 28)
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32F-NEXT:   G_STORE [[C8]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
   ; ILP32F-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   ; ILP32F-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C17]](s32)
   ; ILP32F-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD8]](p0) :: (store (p0) into stack + 32, align 16)
+  ; ILP32F-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD9]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD10]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD11]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32F-NEXT:   $x10 = COPY [[UV]](s32)
   ; ILP32F-NEXT:   $x11 = COPY [[UV1]](s32)
   ; ILP32F-NEXT:   $x12 = COPY [[UV2]](s32)
@@ -468,10 +581,20 @@ define i32 @caller_128i_indirect_reference_in_stack_not_first() {
   ; ILP32D-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C16]](s32)
   ; ILP32D-NEXT:   G_STORE [[UV15]](s32), [[PTR_ADD7]](p0) :: (store (s32) into stack + 28)
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32D-NEXT:   G_STORE [[C8]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
   ; ILP32D-NEXT:   [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   ; ILP32D-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C17]](s32)
   ; ILP32D-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD8]](p0) :: (store (p0) into stack + 32, align 16)
+  ; ILP32D-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD9]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD10]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C8]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD11]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32D-NEXT:   $x10 = COPY [[UV]](s32)
   ; ILP32D-NEXT:   $x11 = COPY [[UV1]](s32)
   ; ILP32D-NEXT:   $x12 = COPY [[UV2]](s32)
@@ -500,11 +623,28 @@ define i64 @callee_128i_indirect_reference_in_regs(i128 %x, i128 %y ) {
   ; RV32I-NEXT:   liveins: $x10, $x11
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128), align 8)
+  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; RV32I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; RV32I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; RV32I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32)
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128), align 8)
-  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s128) = G_ADD [[LOAD]], [[LOAD1]]
-  ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD]](s128)
+  ; RV32I-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD4]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32)
+  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s128) = G_ADD [[MV]], [[MV1]]
+  ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV]](s128)
   ; RV32I-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s64)
   ; RV32I-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[UV1]](s32)
@@ -521,9 +661,32 @@ define i32 @caller_128i_indirect_reference_in_regs( ) {
   ; ILP32-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_CONSTANT i128 2
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
+  ; ILP32-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
@@ -541,9 +704,32 @@ define i32 @caller_128i_indirect_reference_in_regs( ) {
   ; ILP32F-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_CONSTANT i128 2
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32F-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32F-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32F-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32F-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
+  ; ILP32F-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
@@ -561,9 +747,32 @@ define i32 @caller_128i_indirect_reference_in_regs( ) {
   ; ILP32D-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_CONSTANT i128 2
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32D-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32D-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32D-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32D-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1, align 8)
+  ; ILP32D-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_128i_indirect_reference_in_regs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
@@ -586,11 +795,48 @@ define i64 @callee_256i_indirect_reference_in_regs(i256 %x, i256 %y ) {
   ; RV32I-NEXT:   liveins: $x10, $x11
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 8)
+  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; RV32I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; RV32I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; RV32I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; RV32I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C3]](s32)
+  ; RV32I-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+  ; RV32I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C4]](s32)
+  ; RV32I-NEXT:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD4]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+  ; RV32I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C5]](s32)
+  ; RV32I-NEXT:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
+  ; RV32I-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C6]](s32)
+  ; RV32I-NEXT:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD6]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32)
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[COPY1]](p0) :: (load (s256), align 8)
-  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s256) = G_ADD [[LOAD]], [[LOAD1]]
-  ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD]](s256)
+  ; RV32I-NEXT:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD7]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD8]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD9]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C3]](s32)
+  ; RV32I-NEXT:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD10]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C4]](s32)
+  ; RV32I-NEXT:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD11]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[PTR_ADD12:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C5]](s32)
+  ; RV32I-NEXT:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD12]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD13:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C6]](s32)
+  ; RV32I-NEXT:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD13]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV1:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
+  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s256) = G_ADD [[MV]], [[MV1]]
+  ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[MV]](s256)
   ; RV32I-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s64)
   ; RV32I-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[UV1]](s32)
@@ -607,9 +853,60 @@ define i32 @caller_256i_indirect_reference_in_regs( ) {
   ; ILP32-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
+  ; ILP32-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C5]](s32)
+  ; ILP32-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 128
+  ; ILP32-NEXT:   G_STORE [[EXTRACT4]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.0 + 16, align 8)
+  ; ILP32-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+  ; ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C6]](s32)
+  ; ILP32-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 160
+  ; ILP32-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.0 + 20)
+  ; ILP32-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+  ; ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C7]](s32)
+  ; ILP32-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 192
+  ; ILP32-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.0 + 24, align 8)
+  ; ILP32-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
+  ; ILP32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C8]](s32)
+  ; ILP32-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 224
+  ; ILP32-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.0 + 28)
   ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 8)
+  ; ILP32-NEXT:   [[EXTRACT8:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT8]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32-NEXT:   [[EXTRACT9:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT9]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32-NEXT:   [[EXTRACT10:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT10]](s32), [[PTR_ADD8]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32-NEXT:   [[EXTRACT11:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT11]](s32), [[PTR_ADD9]](p0) :: (store (s32) into %stack.1 + 12)
+  ; ILP32-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C5]](s32)
+  ; ILP32-NEXT:   [[EXTRACT12:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 128
+  ; ILP32-NEXT:   G_STORE [[EXTRACT12]](s32), [[PTR_ADD10]](p0) :: (store (s32) into %stack.1 + 16, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C6]](s32)
+  ; ILP32-NEXT:   [[EXTRACT13:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 160
+  ; ILP32-NEXT:   G_STORE [[EXTRACT13]](s32), [[PTR_ADD11]](p0) :: (store (s32) into %stack.1 + 20)
+  ; ILP32-NEXT:   [[PTR_ADD12:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C7]](s32)
+  ; ILP32-NEXT:   [[EXTRACT14:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 192
+  ; ILP32-NEXT:   G_STORE [[EXTRACT14]](s32), [[PTR_ADD12]](p0) :: (store (s32) into %stack.1 + 24, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD13:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C8]](s32)
+  ; ILP32-NEXT:   [[EXTRACT15:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 224
+  ; ILP32-NEXT:   G_STORE [[EXTRACT15]](s32), [[PTR_ADD13]](p0) :: (store (s32) into %stack.1 + 28)
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
@@ -627,9 +924,60 @@ define i32 @caller_256i_indirect_reference_in_regs( ) {
   ; ILP32F-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32F-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32F-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32F-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
+  ; ILP32F-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; ILP32F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C5]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 128
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT4]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.0 + 16, align 8)
+  ; ILP32F-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+  ; ILP32F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C6]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 160
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.0 + 20)
+  ; ILP32F-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+  ; ILP32F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C7]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 192
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.0 + 24, align 8)
+  ; ILP32F-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
+  ; ILP32F-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C8]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 224
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.0 + 28)
   ; ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32F-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 8)
+  ; ILP32F-NEXT:   [[EXTRACT8:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT8]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT9:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT9]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT10:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT10]](s32), [[PTR_ADD8]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT11:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT11]](s32), [[PTR_ADD9]](p0) :: (store (s32) into %stack.1 + 12)
+  ; ILP32F-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C5]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT12:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 128
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT12]](s32), [[PTR_ADD10]](p0) :: (store (s32) into %stack.1 + 16, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C6]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT13:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 160
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT13]](s32), [[PTR_ADD11]](p0) :: (store (s32) into %stack.1 + 20)
+  ; ILP32F-NEXT:   [[PTR_ADD12:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C7]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT14:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 192
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT14]](s32), [[PTR_ADD12]](p0) :: (store (s32) into %stack.1 + 24, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD13:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C8]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT15:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 224
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT15]](s32), [[PTR_ADD13]](p0) :: (store (s32) into %stack.1 + 28)
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
@@ -647,9 +995,60 @@ define i32 @caller_256i_indirect_reference_in_regs( ) {
   ; ILP32D-NEXT:   [[C1:%[0-9]+]]:_(s256) = G_CONSTANT i256 2
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32D-NEXT:   G_STORE [[C]](s256), [[FRAME_INDEX]](p0) :: (store (s256) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32D-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32D-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
+  ; ILP32D-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; ILP32D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C5]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 128
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT4]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.0 + 16, align 8)
+  ; ILP32D-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+  ; ILP32D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C6]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 160
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.0 + 20)
+  ; ILP32D-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+  ; ILP32D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C7]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 192
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.0 + 24, align 8)
+  ; ILP32D-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
+  ; ILP32D-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C8]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s256), 224
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.0 + 28)
   ; ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32D-NEXT:   G_STORE [[C1]](s256), [[FRAME_INDEX1]](p0) :: (store (s256) into %stack.1, align 8)
+  ; ILP32D-NEXT:   [[EXTRACT8:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT8]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT9:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT9]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD8:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT10:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT10]](s32), [[PTR_ADD8]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD9:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT11:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT11]](s32), [[PTR_ADD9]](p0) :: (store (s32) into %stack.1 + 12)
+  ; ILP32D-NEXT:   [[PTR_ADD10:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C5]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT12:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 128
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT12]](s32), [[PTR_ADD10]](p0) :: (store (s32) into %stack.1 + 16, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD11:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C6]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT13:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 160
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT13]](s32), [[PTR_ADD11]](p0) :: (store (s32) into %stack.1 + 20)
+  ; ILP32D-NEXT:   [[PTR_ADD12:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C7]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT14:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 192
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT14]](s32), [[PTR_ADD12]](p0) :: (store (s32) into %stack.1 + 24, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD13:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C8]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT15:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s256), 224
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT15]](s32), [[PTR_ADD13]](p0) :: (store (s32) into %stack.1 + 28)
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_256i_indirect_reference_in_regs, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10, implicit-def $x11
@@ -834,10 +1233,27 @@ define i32 @callee_large_scalars(i128 %a, fp128 %b) nounwind {
   ; RV32I-NEXT:   liveins: $x10, $x11
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128), align 8)
+  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; RV32I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; RV32I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; RV32I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32)
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128))
-  ; RV32I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s128), [[LOAD1]]
+  ; RV32I-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p0) :: (load (s32), align 16)
+  ; RV32I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD4]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32)
+  ; RV32I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[MV]](s128), [[MV1]]
   ; RV32I-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
   ; RV32I-NEXT:   $x10 = COPY [[ZEXT]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10
@@ -854,9 +1270,32 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
+  ; ILP32-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 16)
+  ; ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -871,9 +1310,32 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32F-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32F-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32F-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32F-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32F-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
+  ; ILP32F-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 16)
+  ; ILP32F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32F-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32F-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -888,9 +1350,32 @@ define i32 @caller_large_scalars() nounwind {
   ; ILP32D-NEXT:   [[C1:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32D-NEXT:   G_STORE [[C]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32D-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C3]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32D-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C4]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32D-NEXT:   G_STORE [[C1]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
+  ; ILP32D-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 16)
+  ; ILP32D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C3]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C4]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C1]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32D-NEXT:   $x10 = COPY [[FRAME_INDEX]](p0)
   ; ILP32D-NEXT:   $x11 = COPY [[FRAME_INDEX1]](p0)
   ; ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalars, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
@@ -919,13 +1404,30 @@ define i32 @callee_large_scalars_exhausted_regs(i32 %a, i32 %b, i32 %c, i32 %d, 
   ; RV32I-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
   ; RV32I-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
   ; RV32I-NEXT:   [[COPY7:%[0-9]+]]:_(p0) = COPY $x17
-  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY7]](p0) :: (load (s128), align 8)
+  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY7]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; RV32I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY7]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; RV32I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY7]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; RV32I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY7]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32)
   ; RV32I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.1, align 16)
+  ; RV32I-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.1, align 16)
   ; RV32I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
-  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[LOAD2]](p0) :: (load (s128))
-  ; RV32I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s128), [[LOAD3]]
+  ; RV32I-NEXT:   [[LOAD5:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
+  ; RV32I-NEXT:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[LOAD5]](p0) :: (load (s32), align 16)
+  ; RV32I-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C]](s32)
+  ; RV32I-NEXT:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD3]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C1]](s32)
+  ; RV32I-NEXT:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD4]](p0) :: (load (s32), align 8)
+  ; RV32I-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD5]], [[C2]](s32)
+  ; RV32I-NEXT:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32))
+  ; RV32I-NEXT:   [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32)
+  ; RV32I-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[MV]](s128), [[MV1]]
   ; RV32I-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP]](s1)
   ; RV32I-NEXT:   $x10 = COPY [[ZEXT]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10
@@ -950,16 +1452,38 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32-NEXT:   G_STORE [[C7]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s32)
+  ; ILP32-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s32)
+  ; ILP32-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32-NEXT:   [[C12:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s32)
+  ; ILP32-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; ILP32-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s32)
-  ; ILP32-NEXT:   G_STORE [[C8]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack, align 16)
+  ; ILP32-NEXT:   [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ILP32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s32)
+  ; ILP32-NEXT:   G_STORE [[C8]](s32), [[PTR_ADD3]](p0) :: (store (s32) into stack, align 16)
   ; ILP32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32-NEXT:   G_STORE [[C9]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
-  ; ILP32-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; ILP32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s32)
-  ; ILP32-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 4)
+  ; ILP32-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 0
+  ; ILP32-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 16)
+  ; ILP32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s32)
+  ; ILP32-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 4)
+  ; ILP32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C10]](s32)
+  ; ILP32-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 32
+  ; ILP32-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C11]](s32)
+  ; ILP32-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 64
+  ; ILP32-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C12]](s32)
+  ; ILP32-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 96
+  ; ILP32-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32-NEXT:   $x11 = COPY [[C1]](s32)
   ; ILP32-NEXT:   $x12 = COPY [[C2]](s32)
@@ -988,16 +1512,38 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32F-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32F-NEXT:   G_STORE [[C7]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32F-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32F-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32F-NEXT:   [[C12:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32F-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; ILP32F-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s32)
-  ; ILP32F-NEXT:   G_STORE [[C8]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack, align 16)
+  ; ILP32F-NEXT:   [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ILP32F-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s32)
+  ; ILP32F-NEXT:   G_STORE [[C8]](s32), [[PTR_ADD3]](p0) :: (store (s32) into stack, align 16)
   ; ILP32F-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32F-NEXT:   G_STORE [[C9]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
-  ; ILP32F-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; ILP32F-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s32)
-  ; ILP32F-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 4)
+  ; ILP32F-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 0
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 16)
+  ; ILP32F-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s32)
+  ; ILP32F-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C10]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 32
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32F-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C11]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 64
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32F-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C12]](s32)
+  ; ILP32F-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 96
+  ; ILP32F-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32F-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32F-NEXT:   $x11 = COPY [[C1]](s32)
   ; ILP32F-NEXT:   $x12 = COPY [[C2]](s32)
@@ -1026,16 +1572,38 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
   ; ILP32D-NEXT:   [[C9:%[0-9]+]]:_(s128) = G_FCONSTANT fp128 +inf
   ; ILP32D-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
-  ; ILP32D-NEXT:   G_STORE [[C7]](s128), [[FRAME_INDEX]](p0) :: (store (s128) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %stack.0, align 8)
+  ; ILP32D-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+  ; ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C10]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %stack.0 + 4)
+  ; ILP32D-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C11]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %stack.0 + 8, align 8)
+  ; ILP32D-NEXT:   [[C12:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
+  ; ILP32D-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C12]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[C7]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %stack.0 + 12)
   ; ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x2
-  ; ILP32D-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s32)
-  ; ILP32D-NEXT:   G_STORE [[C8]](s32), [[PTR_ADD]](p0) :: (store (s32) into stack, align 16)
+  ; ILP32D-NEXT:   [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; ILP32D-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C13]](s32)
+  ; ILP32D-NEXT:   G_STORE [[C8]](s32), [[PTR_ADD3]](p0) :: (store (s32) into stack, align 16)
   ; ILP32D-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1
-  ; ILP32D-NEXT:   G_STORE [[C9]](s128), [[FRAME_INDEX1]](p0) :: (store (s128) into %stack.1)
-  ; ILP32D-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; ILP32D-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C11]](s32)
-  ; ILP32D-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD1]](p0) :: (store (p0) into stack + 4)
+  ; ILP32D-NEXT:   [[EXTRACT4:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 0
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %stack.1, align 16)
+  ; ILP32D-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C10]](s32)
+  ; ILP32D-NEXT:   G_STORE [[FRAME_INDEX1]](p0), [[PTR_ADD4]](p0) :: (store (p0) into stack + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C10]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 32
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT5]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %stack.1 + 4)
+  ; ILP32D-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C11]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT6:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 64
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT6]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %stack.1 + 8, align 8)
+  ; ILP32D-NEXT:   [[PTR_ADD7:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C12]](s32)
+  ; ILP32D-NEXT:   [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[C9]](s128), 96
+  ; ILP32D-NEXT:   G_STORE [[EXTRACT7]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %stack.1 + 12)
   ; ILP32D-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32D-NEXT:   $x11 = COPY [[C1]](s32)
   ; ILP32D-NEXT:   $x12 = COPY [[C2]](s32)

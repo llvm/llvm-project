@@ -354,42 +354,42 @@ define i128 @lshr128(i128 %a, i128 %b) nounwind {
 define i128 @ashr128(i128 %a, i128 %b) nounwind {
 ; RV32I-LABEL: ashr128:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a2, 0(a2)
+; RV32I-NEXT:    lw a3, 0(a2)
 ; RV32I-NEXT:    lw a4, 8(a1)
-; RV32I-NEXT:    lw a3, 12(a1)
+; RV32I-NEXT:    lw a2, 12(a1)
 ; RV32I-NEXT:    li t0, 32
-; RV32I-NEXT:    neg t5, a2
-; RV32I-NEXT:    srl t2, a4, a2
-; RV32I-NEXT:    sll t6, a3, t5
-; RV32I-NEXT:    bltu a2, t0, .LBB7_2
+; RV32I-NEXT:    neg t5, a3
+; RV32I-NEXT:    srl t2, a4, a3
+; RV32I-NEXT:    sll t6, a2, t5
+; RV32I-NEXT:    bltu a3, t0, .LBB7_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sra a6, a3, a2
+; RV32I-NEXT:    sra a6, a2, a3
 ; RV32I-NEXT:    mv a5, a4
-; RV32I-NEXT:    bnez a2, .LBB7_3
+; RV32I-NEXT:    bnez a3, .LBB7_3
 ; RV32I-NEXT:    j .LBB7_4
 ; RV32I-NEXT:  .LBB7_2:
 ; RV32I-NEXT:    or a6, t2, t6
 ; RV32I-NEXT:    mv a5, a4
-; RV32I-NEXT:    beqz a2, .LBB7_4
+; RV32I-NEXT:    beqz a3, .LBB7_4
 ; RV32I-NEXT:  .LBB7_3:
 ; RV32I-NEXT:    mv a5, a6
 ; RV32I-NEXT:  .LBB7_4:
 ; RV32I-NEXT:    lw a6, 0(a1)
 ; RV32I-NEXT:    lw a1, 4(a1)
-; RV32I-NEXT:    bltu a2, t0, .LBB7_6
+; RV32I-NEXT:    bltu a3, t0, .LBB7_6
 ; RV32I-NEXT:  # %bb.5:
-; RV32I-NEXT:    srai a7, a3, 31
-; RV32I-NEXT:    srl t4, a1, a2
+; RV32I-NEXT:    srai a7, a2, 31
+; RV32I-NEXT:    srl t4, a1, a3
 ; RV32I-NEXT:    j .LBB7_7
 ; RV32I-NEXT:  .LBB7_6:
-; RV32I-NEXT:    srl t1, a6, a2
+; RV32I-NEXT:    srl t1, a6, a3
 ; RV32I-NEXT:    sll t3, a1, t5
-; RV32I-NEXT:    sra a7, a3, a2
+; RV32I-NEXT:    sra a7, a2, a3
 ; RV32I-NEXT:    or t4, t1, t3
 ; RV32I-NEXT:  .LBB7_7:
 ; RV32I-NEXT:    li t1, 64
 ; RV32I-NEXT:    mv t3, a6
-; RV32I-NEXT:    beqz a2, .LBB7_9
+; RV32I-NEXT:    beqz a3, .LBB7_9
 ; RV32I-NEXT:  # %bb.8:
 ; RV32I-NEXT:    mv t3, t4
 ; RV32I-NEXT:  .LBB7_9:
@@ -397,8 +397,8 @@ define i128 @ashr128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sub s0, t1, a2
-; RV32I-NEXT:    bltu a2, t0, .LBB7_12
+; RV32I-NEXT:    sub s0, t1, a3
+; RV32I-NEXT:    bltu a3, t0, .LBB7_12
 ; RV32I-NEXT:  # %bb.10:
 ; RV32I-NEXT:    li t4, 0
 ; RV32I-NEXT:    bgeu s0, t0, .LBB7_13
@@ -409,26 +409,26 @@ define i128 @ashr128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:    or s2, s1, t6
 ; RV32I-NEXT:    j .LBB7_14
 ; RV32I-NEXT:  .LBB7_12:
-; RV32I-NEXT:    srl t4, a1, a2
+; RV32I-NEXT:    srl t4, a1, a3
 ; RV32I-NEXT:    bltu s0, t0, .LBB7_11
 ; RV32I-NEXT:  .LBB7_13:
 ; RV32I-NEXT:    li t5, 0
 ; RV32I-NEXT:    sll s2, a4, s0
 ; RV32I-NEXT:  .LBB7_14:
-; RV32I-NEXT:    addi s1, a2, -64
-; RV32I-NEXT:    mv t6, a3
+; RV32I-NEXT:    addi s1, a3, -64
+; RV32I-NEXT:    mv t6, a2
 ; RV32I-NEXT:    beqz s0, .LBB7_16
 ; RV32I-NEXT:  # %bb.15:
 ; RV32I-NEXT:    mv t6, s2
 ; RV32I-NEXT:  .LBB7_16:
 ; RV32I-NEXT:    bltu s1, t0, .LBB7_18
 ; RV32I-NEXT:  # %bb.17:
-; RV32I-NEXT:    sra t2, a3, s1
+; RV32I-NEXT:    sra t2, a2, s1
 ; RV32I-NEXT:    bnez s1, .LBB7_19
 ; RV32I-NEXT:    j .LBB7_20
 ; RV32I-NEXT:  .LBB7_18:
 ; RV32I-NEXT:    neg s0, s1
-; RV32I-NEXT:    sll s0, a3, s0
+; RV32I-NEXT:    sll s0, a2, s0
 ; RV32I-NEXT:    or t2, t2, s0
 ; RV32I-NEXT:    beqz s1, .LBB7_20
 ; RV32I-NEXT:  .LBB7_19:
@@ -436,21 +436,21 @@ define i128 @ashr128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:  .LBB7_20:
 ; RV32I-NEXT:    bltu s1, t0, .LBB7_22
 ; RV32I-NEXT:  # %bb.21:
-; RV32I-NEXT:    srai t0, a3, 31
-; RV32I-NEXT:    bltu a2, t1, .LBB7_23
+; RV32I-NEXT:    srai t0, a2, 31
+; RV32I-NEXT:    bltu a3, t1, .LBB7_23
 ; RV32I-NEXT:    j .LBB7_24
 ; RV32I-NEXT:  .LBB7_22:
-; RV32I-NEXT:    sra t0, a3, a2
-; RV32I-NEXT:    bgeu a2, t1, .LBB7_24
+; RV32I-NEXT:    sra t0, a2, a3
+; RV32I-NEXT:    bgeu a3, t1, .LBB7_24
 ; RV32I-NEXT:  .LBB7_23:
 ; RV32I-NEXT:    or a4, t3, t5
 ; RV32I-NEXT:    or t0, t4, t6
 ; RV32I-NEXT:  .LBB7_24:
-; RV32I-NEXT:    bnez a2, .LBB7_28
+; RV32I-NEXT:    bnez a3, .LBB7_28
 ; RV32I-NEXT:  # %bb.25:
-; RV32I-NEXT:    bltu a2, t1, .LBB7_27
+; RV32I-NEXT:    bltu a3, t1, .LBB7_27
 ; RV32I-NEXT:  .LBB7_26:
-; RV32I-NEXT:    srai a5, a3, 31
+; RV32I-NEXT:    srai a5, a2, 31
 ; RV32I-NEXT:    mv a7, a5
 ; RV32I-NEXT:  .LBB7_27:
 ; RV32I-NEXT:    sw a6, 0(a0)
@@ -465,7 +465,7 @@ define i128 @ashr128(i128 %a, i128 %b) nounwind {
 ; RV32I-NEXT:  .LBB7_28:
 ; RV32I-NEXT:    mv a6, a4
 ; RV32I-NEXT:    mv a1, t0
-; RV32I-NEXT:    bgeu a2, t1, .LBB7_26
+; RV32I-NEXT:    bgeu a3, t1, .LBB7_26
 ; RV32I-NEXT:    j .LBB7_27
 ;
 ; RV64I-LABEL: ashr128:
