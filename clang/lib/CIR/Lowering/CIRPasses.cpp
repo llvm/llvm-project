@@ -108,8 +108,9 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
 
   // Complex multiplication and division synthesize calls to runtime helpers
   // such as __mulsc3 and __divsc3, so they must be expanded before
-  // CallConvLowering classifies calls.  The rest of the lowering-prepare work
-  // stays after it.
+  // CallConvLowering classifies calls.  A division in a global initializer is
+  // therefore coerced while still inside the global's initializer region,
+  // before LoweringPrepare turns that region into __cxx_global_var_init.
   pm.addPass(mlir::createComplexLoweringPass(&astContext));
 
   if (enableCallConvLowering) {

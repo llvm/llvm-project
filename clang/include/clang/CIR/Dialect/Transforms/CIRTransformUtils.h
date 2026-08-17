@@ -53,6 +53,17 @@ mlir::Block *replaceThrowWithTryThrow(cir::ThrowOp throwOp,
 void collectUnreachable(mlir::Operation *parent,
                         llvm::SmallVectorImpl<mlir::Operation *> &ops);
 
+/// Return a declaration of the runtime function \p name in \p mlirModule,
+/// creating a private declaration of type \p type if the module does not
+/// already have one. When a declaration already exists, \p type and
+/// \p linkage are ignored and the existing type is not checked against
+/// \p type. Returns a null FuncOp if \p name resolves to a symbol that is
+/// not a cir::FuncOp.
+cir::FuncOp buildRuntimeFunction(
+    mlir::OpBuilder &builder, mlir::ModuleOp mlirModule, llvm::StringRef name,
+    mlir::Location loc, cir::FuncType type,
+    cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
+
 } // namespace cir
 
 #endif // LLVM_CLANG_CIR_DIALECT_TRANSFORMS_CIRTRANSFORMUTILS_H

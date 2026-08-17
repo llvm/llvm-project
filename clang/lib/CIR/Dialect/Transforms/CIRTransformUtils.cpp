@@ -9,8 +9,29 @@
 #include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
+
+cir::FuncOp cir::buildRuntimeFunction(mlir::OpBuilder &builder,
+                                      mlir::ModuleOp mlirModule,
+                                      llvm::StringRef name, mlir::Location loc,
+                                      cir::FuncType type,
+                                      cir::GlobalLinkageKind linkage) {
+  auto f = mlir::dyn_cast_or_null<cir::FuncOp>(
+      mlir::SymbolTable::lookupNearestSymbolFrom(
+          mlirModule, mlir::StringAttr::get(mlirModule->getContext(), name)));
+  if (!f) {
+    f = cir::FuncOp::create(builder, loc, name, type);
+    f.setLinkageAttr(
+        cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+    mlir::SymbolTable::setSymbolVisibility(
+        f, mlir::SymbolTable::Visibility::Private);
+
+    assert(!cir::MissingFeatures::opFuncExtraAttrs());
+  }
+  return f;
+}
 
 void cir::collectUnreachable(mlir::Operation *parent,
                              llvm::SmallVectorImpl<mlir::Operation *> &ops) {

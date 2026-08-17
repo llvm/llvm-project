@@ -196,8 +196,9 @@ def ComplexLowering : Pass<"cir-complex-lowering", "mlir::ModuleOp"> {
     run never gets its return type coerced, which places the real and
     imaginary halves of the result in the wrong registers.
 
-    Only these two operations need the earlier position, so `cir.complex.conj`
-    and the complex casts are still expanded by `cir-lowering-prepare`.
+    Among the complex operations, only these two synthesize a call whose
+    return type has to be coerced, so `cir.complex.conj` and the complex casts
+    are still expanded by `cir-lowering-prepare`.
   }];
   let constructor = "mlir::createComplexLoweringPass()";
   let dependentDialects = ["cir::CIRDialect"];
