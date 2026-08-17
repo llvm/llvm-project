@@ -1,0 +1,127 @@
+// RUN: cir-opt --cir-to-llvm %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+!voidptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "riscv64-unknown-linux-gnu",
+                   cir.int_type_width = 32 : i32, cir.size_type_width = 64 : i32} {
+  cir.func @rejects_riscv64(%s: !voidptr, %p: !s32i, %n: !u64i) -> !voidptr {
+    // expected-error@+2 {{'cir.libc.memchr' op lowering is not supported for target 'riscv64-unknown-linux-gnu' with int width 32 and size_t width 64}}
+    // expected-error@+1 {{failed to legalize operation 'cir.libc.memchr'}}
+    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    cir.return %r : !voidptr
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!voidptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "i686-unknown-linux-gnu",
+                   cir.int_type_width = 32 : i32, cir.size_type_width = 32 : i32} {
+  cir.func @rejects_i686(%s: !voidptr, %p: !s32i, %n: !u32i) -> !voidptr {
+    // expected-error@+2 {{'cir.libc.memchr' op lowering is not supported for target 'i686-unknown-linux-gnu' with int width 32 and size_t width 32}}
+    // expected-error@+1 {{failed to legalize operation 'cir.libc.memchr'}}
+    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u32i
+    cir.return %r : !voidptr
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+!voidptr = !cir.ptr<!cir.void>
+
+// expected-error@+1 {{Module has no target triple}}
+module attributes {cir.int_type_width = 32 : i32, cir.size_type_width = 64 : i32} {
+  cir.func @rejects_missing_triple(%s: !voidptr, %p: !s32i, %n: !u64i) -> !voidptr {
+    // expected-error@+2 {{'cir.libc.memchr' op expects the module to record cir.triple}}
+    // expected-error@+1 {{failed to legalize operation 'cir.libc.memchr'}}
+    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    cir.return %r : !voidptr
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!voidptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu",
+                   cir.int_type_width = 32 : i32, cir.size_type_width = 32 : i32} {
+  cir.func @rejects_x86_64_with_size_t32(%s: !voidptr, %p: !s32i, %n: !u32i) -> !voidptr {
+    // expected-error@+2 {{'cir.libc.memchr' op lowering is not supported for target 'x86_64-unknown-linux-gnu' with int width 32 and size_t width 32}}
+    // expected-error@+1 {{failed to legalize operation 'cir.libc.memchr'}}
+    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u32i
+    cir.return %r : !voidptr
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+!voidptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "arm64_32-apple-watchos",
+                   cir.int_type_width = 32 : i32, cir.size_type_width = 64 : i32} {
+  cir.func @rejects_arm64_32_with_size_t64(%s: !voidptr, %p: !s32i, %n: !u64i) -> !voidptr {
+    // expected-error@+2 {{'cir.libc.memchr' op lowering is not supported for target 'arm64_32-apple-watchos' with int width 32 and size_t width 64}}
+    // expected-error@+1 {{failed to legalize operation 'cir.libc.memchr'}}
+    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    cir.return %r : !voidptr
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+!voidptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnux32",
+                   cir.int_type_width = 32 : i32, cir.size_type_width = 64 : i32} {
+  cir.func @rejects_x32_with_size_t64(%s: !voidptr, %p: !s32i, %n: !u64i) -> !voidptr {
+    // expected-error@+2 {{'cir.libc.memchr' op lowering is not supported for target 'x86_64-unknown-linux-gnux32' with int width 32 and size_t width 64}}
+    // expected-error@+1 {{failed to legalize operation 'cir.libc.memchr'}}
+    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u64i
+    cir.return %r : !voidptr
+  }
+}
+
+// -----
+
+!s16i = !cir.int<s, 16>
+!u64i = !cir.int<u, 64>
+!voidptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu",
+                   cir.int_type_width = 16 : i32, cir.size_type_width = 64 : i32} {
+  cir.func @rejects_x86_64_with_int16(%s: !voidptr, %p: !s16i, %n: !u64i) -> !voidptr {
+    // expected-error@+2 {{'cir.libc.memchr' op lowering is not supported for target 'x86_64-unknown-linux-gnu' with int width 16 and size_t width 64}}
+    // expected-error@+1 {{failed to legalize operation 'cir.libc.memchr'}}
+    %r = cir.libc.memchr(%s, %p, %n) : !s16i, !u64i
+    cir.return %r : !voidptr
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+!voidptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "aarch64-unknown-linux-gnu",
+                   cir.int_type_width = 32 : i32, cir.size_type_width = 32 : i32} {
+  cir.func @rejects_aarch64_with_size_t32(%s: !voidptr, %p: !s32i, %n: !u32i) -> !voidptr {
+    // expected-error@+2 {{'cir.libc.memchr' op lowering is not supported for target 'aarch64-unknown-linux-gnu' with int width 32 and size_t width 32}}
+    // expected-error@+1 {{failed to legalize operation 'cir.libc.memchr'}}
+    %r = cir.libc.memchr(%s, %p, %n) : !s32i, !u32i
+    cir.return %r : !voidptr
+  }
+}

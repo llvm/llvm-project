@@ -3,10 +3,11 @@
 !voidptr = !cir.ptr<!cir.void>
 !s32i = !cir.int<s, 32>
 !u64i = !cir.int<u, 64>
-module {
+module attributes {cir.int_type_width = 32 : i32,
+                   cir.size_type_width = 64 : i32} {
   cir.func @f(%src : !voidptr, %pattern : !s32i, %len : !u64i) -> !voidptr {
-    // CHECK: cir.libc.memchr
-    %ptr = cir.libc.memchr(%src, %pattern, %len)
+    // CHECK: cir.libc.memchr({{.*}}, {{.*}}, {{.*}}) : !s32i, !u64i
+    %ptr = cir.libc.memchr(%src, %pattern, %len) : !s32i, !u64i
     cir.return %ptr : !voidptr
   }
 }

@@ -117,13 +117,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
 
-  const unsigned charSize = astContext.getTargetInfo().getCharWidth();
+  const unsigned charSize = target.getCharWidth();
   uCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
 
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
-  const unsigned sizeTypeSize =
-      astContext.getTypeSize(astContext.getSignedSizeType());
-  SizeSizeInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
+  const unsigned sizeTypeSize = target.getTypeWidth(target.getSizeType());
+  SizeSizeInBytes = sizeTypeSize / charSize;
   // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
   uIntPtrTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
@@ -137,6 +136,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
+                     builder.getI32IntegerAttr(sizeTypeSize));
+  theModule->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
+                     builder.getI32IntegerAttr(target.getIntWidth()));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
