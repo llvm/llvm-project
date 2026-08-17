@@ -348,8 +348,8 @@ private:
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
-  void CheckDirectivePureSince(parser::CharBlock source,
-      llvm::omp::Directive id, const char *where);
+  void CheckDirectivePureSince(
+      parser::CharBlock source, llvm::omp::Directive id, const char *where);
   void CheckDirectiveInPureProcedure(
       parser::CharBlock source, llvm::omp::Directive id);
   void CheckDirectiveInDoConcurrent(
