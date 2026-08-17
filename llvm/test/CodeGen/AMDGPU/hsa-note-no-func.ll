@@ -25,13 +25,13 @@
 ; RUN: llc < %s -mtriple=amdgpu8.05--amdhsa | FileCheck --check-prefix=HSA-VI805 %s
 ; RUN: llc < %s -mtriple=amdgpu8.10--amdhsa | FileCheck --check-prefix=HSA-VI810 %s
 ; RUN: llc < %s -mtriple=amdgpu8.10--amdhsa | FileCheck --check-prefix=HSA-VI810 %s
-; RUN: llc < %s -mtriple=amdgpu9.00--amdhsa -mattr=-xnack | FileCheck --check-prefix=HSA-GFX900 %s
+; RUN: llc < %s -mtriple=amdgpu9.00--amdhsa --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX900 %s
 ; RUN: llc < %s -mtriple=amdgpu9.00--amdhsa | FileCheck --check-prefix=HSA-GFX901 %s
-; RUN: llc < %s -mtriple=amdgpu9.02--amdhsa -mattr=-xnack | FileCheck --check-prefix=HSA-GFX902 %s
+; RUN: llc < %s -mtriple=amdgpu9.02--amdhsa --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX902 %s
 ; RUN: llc < %s -mtriple=amdgpu9.02--amdhsa | FileCheck --check-prefix=HSA-GFX903 %s
-; RUN: llc < %s -mtriple=amdgpu9.04--amdhsa -mattr=-xnack | FileCheck --check-prefix=HSA-GFX904 %s
+; RUN: llc < %s -mtriple=amdgpu9.04--amdhsa --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX904 %s
 ; RUN: llc < %s -mtriple=amdgpu9.04--amdhsa | FileCheck --check-prefix=HSA-GFX905 %s
-; RUN: llc < %s -mtriple=amdgpu9.06--amdhsa -mattr=-xnack | FileCheck --check-prefix=HSA-GFX906 %s
+; RUN: llc < %s -mtriple=amdgpu9.06--amdhsa --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX906 %s
 ; RUN: llc < %s -mtriple=amdgpu9.06--amdhsa | FileCheck --check-prefix=HSA-GFX907 %s
 
 ; NONHSA-SI600: .amd_amdgpu_isa "amdgpu6.00-unknown-unknown-unknown-gfx600"

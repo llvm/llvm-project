@@ -82,6 +82,8 @@ enum DynamicClassInfoHelper {
   eDynamicClassInfoHelperGetRealizedClassList,
 };
 
+enum JITEngine { eJITEngineMCJIT, eJITEngineORC };
+
 class TargetExperimentalProperties : public Properties {
 public:
   TargetExperimentalProperties();
@@ -186,6 +188,8 @@ public:
   bool GetEnableNotifyAboutFixIts() const;
 
   FileSpec GetSaveJITObjectsDir() const;
+
+  JITEngine GetJITEngine() const;
 
   bool GetEnableSyntheticValue() const;
 
@@ -1560,9 +1564,7 @@ public:
   ///     if none can be found.
   llvm::Expected<lldb_private::Address> GetEntryPointAddress();
 
-  CompilerType GetRegisterType(const std::string &name,
-                               const lldb_private::RegisterFlags &flags,
-                               uint32_t byte_size);
+  CompilerType GetRegisterType(const RegisterInfo &reg_info);
 
   /// Sends a breakpoint notification event.
   void NotifyBreakpointChanged(Breakpoint &bp,

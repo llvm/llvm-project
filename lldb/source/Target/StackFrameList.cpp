@@ -105,7 +105,7 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
         LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
-                       "Frame provider reached end at index {0}: {1}", idx);
+                       "Frame provider reached end at index {1}: {0}", idx);
         SetAllFramesFetched();
         break;
       }
@@ -644,7 +644,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)
-      s.Printf("\n    Copying previous frame to current frame");
+      s.PutCString("\n    Copying previous frame to current frame");
 #endif
     }
     // We are done with the old stack frame list, we can release it now.

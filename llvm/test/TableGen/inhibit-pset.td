@@ -22,6 +22,14 @@ def X0 : Register <"x0">;
 // CHECK-NEXT:  return PressureLimitTable[Idx];
 // CHECK-NEXT:}
 
+// CHECK:      const TargetRegisterClass *TestTargetGenRegisterInfo::
+// CHECK-NEXT: getLargestRegClassForRegPressureSet(unsigned Idx) const {
+// CHECK-NEXT:  static const uint8_t PSetRegClassTable[] = {
+// CHECK-NEXT:    TestTarget::GPR32_AND_XR32RegClassID, // 0: GPR32
+// CHECK-NEXT:  };
+// CHECK-NEXT:  return getRegClass(PSetRegClassTable[Idx]);
+// CHECK-NEXT:}
+
 // CHECK:      static const int RCSetsTable[] = {
 // CHECK-NEXT:   /* 0 */ 0, -1,
 // CHECK-NEXT: };

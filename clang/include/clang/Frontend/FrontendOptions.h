@@ -138,9 +138,6 @@ enum ActionKind {
   /// Run one or more source code analyses.
   RunAnalysis,
 
-  /// Dump template instantiations
-  TemplightDump,
-
   /// Just lex, no output.
   RunPreprocessorOnly,
 
@@ -426,6 +423,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIREnableIdiomRecognizer : 1;
 
+  /// Run the Clang IR (CIR) calling-convention lowering pass.  A no-op on
+  /// targets whose calling convention is not yet implemented.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIRCallConvLowering : 1;
+
   /// Enable ClangIR library optimization.
   /// Set when -fclangir-lib-opt or -fclangir-lib-opt= was passed.
   LLVM_PREFERRED_TYPE(bool)
@@ -568,8 +570,8 @@ public:
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
         ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
-        ClangIRLibOptEnabled(false), TimeTraceGranularity(500),
-        TimeTraceVerbose(false) {}
+        ClangIRCallConvLowering(true), ClangIRLibOptEnabled(false),
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

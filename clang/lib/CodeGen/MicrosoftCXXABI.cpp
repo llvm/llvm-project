@@ -4229,8 +4229,12 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
       CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
   CGCallee Callee =
       CGCallee::forDirect(CalleePtr, GlobalDecl(CD, Ctor_Complete));
+  // Microsoft ABI constructors always use the default method calling
+  // convention (see SemaType.cpp adjustMemberFunctionCC), so no caller
+  // declaration is needed for SysV ABI selection.
   const CGFunctionInfo &CalleeInfo = CGM.getTypes().arrangeCXXConstructorCall(
-      Args, CD, Ctor_Complete, ExtraArgs.Prefix, ExtraArgs.Suffix);
+      Args, CD, Ctor_Complete, ExtraArgs.Prefix, ExtraArgs.Suffix,
+      /*ABIInfoFD=*/nullptr);
   CGF.EmitCall(CalleeInfo, Callee, ReturnValueSlot(), Args);
 
   Cleanups.ForceCleanup();

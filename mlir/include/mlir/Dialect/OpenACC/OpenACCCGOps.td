@@ -30,7 +30,7 @@ include "mlir/IR/CommonAttrConstraints.td"
 
 def OpenACC_ReductionInitOp
     : OpenACC_Op<"reduction_init",
-                 [SameOperandsAndResultType, RecursiveMemoryEffects,
+                 [AllTypesMatch<["var", "result"]>, RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                             ["getRegionInvocationBounds",
                                              "getSuccessorInputs"]>,
@@ -44,14 +44,31 @@ def OpenACC_ReductionInitOp
 
     The `var` operand is the original/shared reduction variable. The
     `reduction_operator` specifies the reduction kind (e.g. add, mul).
+
+    The optional `bounds` operands describe the element range of the reduction
+    variable (as `acc.bounds` ops) when it refers to an array section. They
+    carry the section's bound information.
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$var,
+                       Variadic<OpenACC_DataBoundsType>:$bounds,
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
   let results = (outs OpenACC_AnyPointerOrMappableType:$result);
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
-    $var $reductionOperator `:` type($result) $region attr-dict
+    $var (`bounds` `(` $bounds^ `)`)? $reductionOperator `:` type($result)
+    $region attr-dict
   }];
+  let builders = [
+    // Convenience builder for reductions without array-section bounds.
+    OpBuilder<(ins "::mlir::Value":$var,
+                   "::mlir::acc::ReductionOperatorAttr":$reductionOperator), [{
+      build($_builder, $_state, var, ::mlir::ValueRange{}, reductionOperator);
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$var,
+                   "::mlir::acc::ReductionOperator":$reductionOperator), [{
+      build($_builder, $_state, var, ::mlir::ValueRange{}, reductionOperator);
+    }]>,
+  ];
   let hasVerifier = 1;
 }
 

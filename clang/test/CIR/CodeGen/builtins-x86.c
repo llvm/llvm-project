@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports vector types.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -emit-llvm %s -o %t-ogcg.ll
 // RUN: FileCheck --input-file=%t-ogcg.ll %s -check-prefix=OGCG
@@ -289,3 +291,28 @@ void test_movntss(float *dest, v4f src) {
   // OGCG: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal 
   return __builtin_ia32_movntss(dest, src);
 }
+
+float test_fma_f32(float a, float b, float c) {
+  // CIR-LABEL: test_fma_f32 
+  // CIR: %[[R:.*]] = cir.fma %[[A:.*]], %[[B:.*]], %[[C:.*]] : !cir.float
+
+  // LLVM-LABEL: @test_fma_f32
+  // LLVM: %[[R:.*]] = call float @llvm.fma.f32(float %[[A:.*]], float %[[B:.*]], float %[[C:.*]])
+
+  // OGCG-LABEL: @test_fma_f32
+  // OGCG: %[[R:.*]] = call float @llvm.fma.f32(float %[[A:.*]], float %[[B:.*]], float %[[C:.*]])
+  return __builtin_fmaf(a, b, c);
+}
+
+double test_fma_f64(double a, double b, double c) {
+  // CIR-LABEL: test_fma_f64 
+  // CIR: %[[R:.*]] = cir.fma %[[A:.*]], %[[B:.*]], %[[C:.*]] : !cir.double
+
+  // LLVM-LABEL: @test_fma_f64
+  // LLVM: %[[R:.*]] = call double @llvm.fma.f64(double %[[A:.*]], double %[[B:.*]], double %[[C:.*]])
+
+  // OGCG-LABEL: @test_fma_f64
+  // OGCG: %[[R:.*]] = call double @llvm.fma.f64(double %[[A:.*]], double %[[B:.*]], double %[[C:.*]])
+  return __builtin_fma(a, b, c);
+}
+

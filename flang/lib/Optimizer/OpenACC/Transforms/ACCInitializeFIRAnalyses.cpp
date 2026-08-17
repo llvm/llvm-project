@@ -35,14 +35,18 @@ class ACCInitializeFIRAnalysesPass
     : public fir::acc::impl::ACCInitializeFIRAnalysesBase<
           ACCInitializeFIRAnalysesPass> {
 public:
+  using ACCInitializeFIRAnalysesBase::ACCInitializeFIRAnalysesBase;
+
   void runOnOperation() override {
     // Initialize OpenACCSupport with FIR-specific implementation.
     auto &openACCSupport = getAnalysis<mlir::acc::OpenACCSupport>();
     openACCSupport.setImplementation(fir::acc::FIROpenACCSupportAnalysis());
 
-    // Initialize AliasAnalysis with FIR-specific implementation.
-    auto &aliasAnalysis = getAnalysis<mlir::AliasAnalysis>();
-    aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis());
+    if (addFIRAliasAnalysis) {
+      // Initialize AliasAnalysis with FIR-specific implementation.
+      auto &aliasAnalysis = getAnalysis<mlir::AliasAnalysis>();
+      aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis());
+    }
 
     // Mark all analyses as preserved since this pass only initializes them
     markAllAnalysesPreserved();

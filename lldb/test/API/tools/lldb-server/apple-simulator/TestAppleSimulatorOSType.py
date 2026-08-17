@@ -53,9 +53,10 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Launch the executable in the simulator
         exe_path, matched_groups = lldbutil.launch_exe_in_apple_simulator(
+            self,
             deviceUDID,
             self.getBuildArtifact(exe_name),
-            ["print-pid", "sleep:10"],
+            ["print-pid", "sleep:600"],
             [r"PID: (.*)"],
             self.trace,
         )

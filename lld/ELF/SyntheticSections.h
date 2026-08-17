@@ -597,7 +597,7 @@ private:
 
 struct RelativeReloc {
   uint64_t getOffset() const {
-    return inputSec->getVA(inputSec->relocs()[relocIdx].offset);
+    return inputSec->getRelocVA(inputSec->relocs()[relocIdx].offset);
   }
 
   InputSectionBase *inputSec;
@@ -609,12 +609,16 @@ public:
   RelrBaseSection(Ctx &, unsigned concurrency, bool isAArch64Auth = false);
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
+  template <bool concurrent = false>
   void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
                         Symbol &sym, int64_t addend, RelType addendRelType,
-                        RelExpr expr, unsigned shard) {
+                        RelExpr expr, unsigned shard = 0) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
     isec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    relocsVec[shard].push_back({&isec, isec.relocs().size() - 1});
+    if constexpr (concurrent)
+      relocsVec[shard].push_back({&isec, isec.relocs().size() - 1});
+    else
+      relocs.push_back({&isec, isec.relocs().size() - 1});
   }
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -659,6 +663,8 @@ public:
   void finalizeContents() override;
   size_t getSize() const override { return getNumSymbols() * entsize; }
   void addSymbol(Symbol *sym);
+  void maybeAddSttFile();
+  void markGlobalPart() { firstGlobalIdx = symbols.size(); }
   unsigned getNumSymbols() const { return symbols.size() + 1; }
   size_t getSymbolIndex(const Symbol &sym);
   ArrayRef<SymbolTableEntry> getSymbols() const { return symbols; }
@@ -668,6 +674,14 @@ protected:
 
   // A vector of symbols and their string table offsets.
   SmallVector<SymbolTableEntry, 0> symbols;
+
+  // Synthetic STT_FILE with an empty name, added by maybeAddSttFile and placed
+  // by sortSymTabSymbols before all locals that cannot be attributed to a file.
+  Defined *synthSttFileSym = nullptr;
+
+  // symbols.size() before the global loop. Locals from here on are not
+  // file-attributable and move behind synthSttFileSym.
+  size_t firstGlobalIdx = 0;
 
   StringTableSection &strTabSec;
 
@@ -1226,6 +1240,7 @@ public:
   void writeTo(uint8_t *buf) override;
   InputSection *getTargetInputSection() const;
   bool assignOffsets();
+  void sortByDestination();
 
   // When true, round up reported size of section to 4 KiB. See comment
   // in addThunkSection() for more details.

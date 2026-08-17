@@ -25,8 +25,6 @@ declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
   ADD_TO_PARENT StandalonePythonSources
   SOURCES
     StandaloneExtensionNanobind.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIArith

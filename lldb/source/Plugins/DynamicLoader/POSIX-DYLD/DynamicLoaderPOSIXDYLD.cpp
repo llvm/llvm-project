@@ -997,6 +997,11 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
 
   ModuleSpec module_spec(process_info.GetExecutableFile(),
                          process_info.GetArchitecture());
+  // See if the process has UUID info for the executable. If this is a core
+  // file we really want the UUID in the module spec so we don't load a
+  // random executable with the same name from the current system and ignore
+  // the required UUID.
+  m_process->FindModuleUUID(module_spec);
   if (module_sp && module_sp->MatchesModuleSpec(module_spec))
     return;
 

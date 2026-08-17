@@ -12,9 +12,9 @@
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_mapper.h"
-#include "src/stdio/printf_core/vfprintf_internal.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/error_mapper.h"
+#include "src/__support/printf_core/vfprintf_internal.h"
 #include "src/stdio/stdout.h"
 
 #include "hdr/types/FILE.h"

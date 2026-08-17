@@ -32,7 +32,6 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
@@ -579,8 +578,25 @@ static void instantiateOMPDeclareVariantAttr(
     NeedDeviceAddrExprs.push_back(ER.get());
   }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
-    // When prefer_type is implemented for append_args handle them here too.
-    AppendArgs.emplace_back(II.IsTarget, II.IsTargetSync);
+    OMPInteropInfo Info(II.IsTarget, II.IsTargetSync);
+    Info.HasPreferAttrs = II.HasPreferAttrs;
+    for (const OMPInteropPref &P : II.Prefs) {
+      Expr *SubstFr = nullptr;
+      if (P.Fr) {
+        ExprResult ER = Subst(P.Fr);
+        if (ER.isInvalid())
+          continue;
+        SubstFr = ER.get();
+      }
+      llvm::SmallVector<Expr *, 2> SubstAttrs;
+      for (Expr *A : P.Attrs) {
+        ExprResult ER = Subst(A);
+        if (!ER.isInvalid())
+          SubstAttrs.push_back(ER.get());
+      }
+      Info.Prefs.emplace_back(SubstFr, std::move(SubstAttrs));
+    }
+    AppendArgs.push_back(Info);
   }
 
   S.OpenMP().ActOnOpenMPDeclareVariantDirective(
@@ -2539,6 +2555,8 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateDecl(VarTemplateDecl *D) {
   }
 
   Owner->addDecl(Inst);
+  SemaRef.InstantiateAttrsForDecl(TemplateArgs, D, Inst, LateAttrs,
+                                  StartingScope);
 
   if (!PrevVarTemplate) {
     // Queue up any out-of-line partial specializations of this member
@@ -3270,6 +3288,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
   DeclarationNameInfo NameInfo
     = SemaRef.SubstDeclarationNameInfo(D->getNameInfo(), TemplateArgs);
+
+  // Check if the substitution of template args failed
+  // leading to an empty DeclarationNameInfo.
+  if (!NameInfo.getName())
+    return nullptr;
 
   if (FunctionRewriteKind != RewriteKind::None)
     adjustForRewrite(FunctionRewriteKind, D, T, TInfo, NameInfo);
@@ -5465,10 +5488,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
       ActiveInst.Kind == ActiveInstType::DeducedTemplateArgumentSubstitution) {
     if (isa<FunctionTemplateDecl>(ActiveInst.Entity)) {
       SemaRef.CurrentSFINAEContext = nullptr;
-      atTemplateEnd(SemaRef.TemplateInstCallbacks, SemaRef, ActiveInst);
       ActiveInst.Kind = ActiveInstType::TemplateInstantiation;
       ActiveInst.Entity = New;
-      atTemplateBegin(SemaRef.TemplateInstCallbacks, SemaRef, ActiveInst);
     }
   }
 
@@ -5870,7 +5891,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // instantiated record instead.
     assert(PatternDecl->isDefaulted() &&
            "Special member needs to be defaulted");
-    auto PatternSM = getDefaultedFunctionKind(PatternDecl).asSpecialMember();
+    auto PatternSM = PatternDecl->getDefaultedFunctionKind().asSpecialMember();
     if (!(PatternSM == CXXSpecialMemberKind::CopyConstructor ||
           PatternSM == CXXSpecialMemberKind::CopyAssignment ||
           PatternSM == CXXSpecialMemberKind::MoveConstructor ||

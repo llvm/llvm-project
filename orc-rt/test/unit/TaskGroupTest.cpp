@@ -304,6 +304,56 @@ TEST(TaskGroupTest, TokenKeepsTaskGroupAlive) {
   EXPECT_TRUE(Completed);
 }
 
+TEST(TaskGroupTest, TokenFromTokenSource) {
+  bool Completed = false;
+  auto TG = TaskGroup::Create();
+  TG->addOnComplete([&]() { Completed = true; });
+
+  TaskGroup::TokenSource TS(TG);
+  {
+    TaskGroup::Token T(TS);
+    EXPECT_TRUE(T);
+    TG->close();
+    EXPECT_FALSE(Completed);
+  }
+  EXPECT_TRUE(Completed);
+}
+
+TEST(TaskGroupTest, TokenFromClosedGroupViaTokenSource) {
+  auto TG = TaskGroup::Create();
+  TaskGroup::TokenSource TS(TG);
+  TG->close();
+  TaskGroup::Token T(TS);
+  EXPECT_FALSE(T);
+}
+
+// The point of the strong handle: it keeps the group alive so a later
+// acquisition attempt is well-defined even after the original ref is gone.
+TEST(TaskGroupTest, TokenSourceKeepsTaskGroupAlive) {
+  bool Completed = false;
+  auto TG = TaskGroup::Create();
+  TG->addOnComplete([&]() { Completed = true; });
+
+  TaskGroup::TokenSource TS(TG);
+  TG->close();
+  TG.reset(); // Only TS holds the group now.
+
+  TaskGroup::Token T(TS); // Group still exists; acquire fails only b/c closed.
+  EXPECT_FALSE(T);
+  EXPECT_TRUE(Completed); // Nothing kept a token, so it completed.
+}
+
+// A TokenSource is not a Token: holding one must not defer completion.
+TEST(TaskGroupTest, TokenSourceDoesNotHoldToken) {
+  bool Completed = false;
+  auto TG = TaskGroup::Create();
+  TG->addOnComplete([&]() { Completed = true; });
+
+  TaskGroup::TokenSource TS(TG); // Alive across the close below.
+  TG->close();
+  EXPECT_TRUE(Completed); // Completes immediately; TS holds no token.
+}
+
 TEST(TaskGroupTest, ConcurrentTokens) {
   for (int Iter = 0; Iter < 100; ++Iter) {
     std::atomic<int> Count{0};

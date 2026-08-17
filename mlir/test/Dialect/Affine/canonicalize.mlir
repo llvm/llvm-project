@@ -2614,3 +2614,21 @@ func.func @split_delinearize_spanning_final_part_vector(
   %1:4 = affine.delinearize_index %0 into (2, 3, 8, 4) : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
   return %1#0, %1#1, %1#2, %1#3 : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
 }
+
+// -----
+
+// Composing an affine.apply into an access rebuilds the op; the alignment it
+// promised stays on it.
+
+// CHECK-LABEL: func @compose_into_access_keeps_alignment
+// CHECK-BOTTOM-UP-LABEL: func @compose_into_access_keeps_alignment
+func.func @compose_into_access_keeps_alignment(%memref: memref<100xi32>, %i: index) {
+  %idx = affine.apply affine_map<(d0) -> (d0 + 1)>(%i)
+  // CHECK: affine.load {{.*}} {alignment = 16 : i64}
+  // CHECK-BOTTOM-UP: affine.load {{.*}} {alignment = 16 : i64}
+  %val = affine.load %memref[%idx] { alignment = 16 } : memref<100xi32>
+  // CHECK: affine.store {{.*}} {alignment = 16 : i64}
+  // CHECK-BOTTOM-UP: affine.store {{.*}} {alignment = 16 : i64}
+  affine.store %val, %memref[%idx] { alignment = 16 } : memref<100xi32>
+  return
+}

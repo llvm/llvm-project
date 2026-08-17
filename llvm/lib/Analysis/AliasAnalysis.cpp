@@ -610,7 +610,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
     // it.
     if (AR == AliasResult::NoAlias) {
       // Synchronization effects may affect locations that do not alias.
-      if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
+      if (isStrongerThanMonotonic(CX->getMergedOrdering()))
         return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
     }

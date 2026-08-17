@@ -59,6 +59,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::log2f16(2.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::log2p1f16(1.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::logbf16(1.0f16));
+  EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::lgammaf16(1.0f16));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbf16(1.0f16));
 
   EXPECT_FP_EQ(0x1.921fb6p+0f16, LIBC_NAMESPACE::shared::acosf16(0.0f16));
@@ -575,7 +576,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllFloat128) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float128>;
@@ -750,7 +751,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 }
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
@@ -815,7 +816,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                                   bfloat16(0.0), bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::sqrtbf16(bfloat16(1.0)));
   // TODO: This test case just failed only when building with gcc-13 and only
-  //   for `ninja libc.test.shared.shared_math_test.__unit__.__NO_FMA_OPT
+  //   for `ninja libc.test.shared.shared_math_test.__NO_FMA_OPT
   //   Other gcc versions or other sub-targets work fine.
   //   https://github.com/llvm/llvm-project/issues/199332
   // #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE

@@ -334,42 +334,46 @@ struct MockPassInstrumentationCallbacks {
   MockPassInstrumentationCallbacks() {
     ON_CALL(*this, runBeforePass(_, _)).WillByDefault(Return(true));
   }
-  MOCK_METHOD2(runBeforePass, bool(StringRef PassID, llvm::Any));
-  MOCK_METHOD2(runBeforeSkippedPass, void(StringRef PassID, llvm::Any));
-  MOCK_METHOD2(runBeforeNonSkippedPass, void(StringRef PassID, llvm::Any));
-  MOCK_METHOD3(runAfterPass,
-               void(StringRef PassID, llvm::Any, const PreservedAnalyses &PA));
+  MOCK_METHOD2(runBeforePass, bool(StringRef PassID, const llvm::Any &));
+  MOCK_METHOD2(runBeforeSkippedPass, void(StringRef PassID, const llvm::Any &));
+  MOCK_METHOD2(runBeforeNonSkippedPass,
+               void(StringRef PassID, const llvm::Any &));
+  MOCK_METHOD3(runAfterPass, void(StringRef PassID, const llvm::Any &,
+                                  const PreservedAnalyses &PA));
   MOCK_METHOD2(runAfterPassInvalidated,
                void(StringRef PassID, const PreservedAnalyses &PA));
-  MOCK_METHOD2(runBeforeAnalysis, void(StringRef PassID, llvm::Any));
-  MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, llvm::Any));
+  MOCK_METHOD2(runBeforeAnalysis, void(StringRef PassID, const llvm::Any &));
+  MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, const llvm::Any &));
 
   void registerPassInstrumentation() {
     Callbacks.registerShouldRunOptionalPassCallback(
-        [this](StringRef P, llvm::Any IR) {
+        [this](StringRef P, const llvm::Any &IR) {
           return this->runBeforePass(P, IR);
         });
     Callbacks.registerBeforeSkippedPassCallback(
-        [this](StringRef P, llvm::Any IR) {
+        [this](StringRef P, const llvm::Any &IR) {
           this->runBeforeSkippedPass(P, IR);
         });
     Callbacks.registerBeforeNonSkippedPassCallback(
-        [this](StringRef P, llvm::Any IR) {
+        [this](StringRef P, const llvm::Any &IR) {
           this->runBeforeNonSkippedPass(P, IR);
         });
     Callbacks.registerAfterPassCallback(
-        [this](StringRef P, llvm::Any IR, const PreservedAnalyses &PA) {
+        [this](StringRef P, const llvm::Any &IR, const PreservedAnalyses &PA) {
           this->runAfterPass(P, IR, PA);
         });
     Callbacks.registerAfterPassInvalidatedCallback(
         [this](StringRef P, const PreservedAnalyses &PA) {
           this->runAfterPassInvalidated(P, PA);
         });
-    Callbacks.registerBeforeAnalysisCallback([this](StringRef P, llvm::Any IR) {
-      return this->runBeforeAnalysis(P, IR);
-    });
+    Callbacks.registerBeforeAnalysisCallback(
+        [this](StringRef P, const llvm::Any &IR) {
+          return this->runBeforeAnalysis(P, IR);
+        });
     Callbacks.registerAfterAnalysisCallback(
-        [this](StringRef P, llvm::Any IR) { this->runAfterAnalysis(P, IR); });
+        [this](StringRef P, const llvm::Any &IR) {
+          this->runAfterAnalysis(P, IR);
+        });
   }
 
   void ignoreNonMockPassInstrumentation(StringRef IRName) {

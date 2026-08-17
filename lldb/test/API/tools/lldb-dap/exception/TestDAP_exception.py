@@ -3,11 +3,11 @@ Test exception behavior in DAP with signal.
 """
 
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.decorators import skipIfNoSignals
+from lldbsuite.test.decorators import requireSignals
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-@skipIfNoSignals
+@requireSignals
 class TestDAP_exception(DAPTestCaseBase):
     def test_stopped_description(self):
         """

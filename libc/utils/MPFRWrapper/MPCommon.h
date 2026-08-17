@@ -212,6 +212,7 @@ public:
   MPFRNumber fmod(const MPFRNumber &b);
   MPFRNumber frexp(int &exp);
   MPFRNumber hypot(const MPFRNumber &b);
+  MPFRNumber lgamma() const;
   MPFRNumber log() const;
   MPFRNumber log2() const;
   MPFRNumber log2p1() const;

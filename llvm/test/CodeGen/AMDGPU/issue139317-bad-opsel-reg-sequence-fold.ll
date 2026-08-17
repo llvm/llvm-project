@@ -18,21 +18,21 @@ define amdgpu_kernel void @stepper_test_kernel_DType_I6A6AcB6A6AsA6A6A_68a5362b9
 ; GFX942-NEXT:    s_mov_b32 s9, 0x45004400
 ; GFX942-NEXT:    s_mov_b32 s10, 0x42004000
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:  .LBB0_2: ; %.lr.ph
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dwordx4 v[4:7], v2, s[2:3]
+; GFX942-NEXT:    global_load_dwordx4 v[2:5], v0, s[2:3]
 ; GFX942-NEXT:    s_add_u32 s4, s4, 8
 ; GFX942-NEXT:    s_addc_u32 s5, s5, 0
-; GFX942-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[0:1]
+; GFX942-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
+; GFX942-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[6:7]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_pk_add_f16 v7, v7, s8
-; GFX942-NEXT:    v_pk_add_f16 v6, v6, s9
-; GFX942-NEXT:    v_pk_add_f16 v5, v5, s10
-; GFX942-NEXT:    v_pk_add_f16 v4, v4, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
-; GFX942-NEXT:    global_store_dwordx4 v2, v[4:7], s[0:1]
+; GFX942-NEXT:    v_pk_add_f16 v5, v5, s8
+; GFX942-NEXT:    v_pk_add_f16 v4, v4, s9
+; GFX942-NEXT:    v_pk_add_f16 v3, v3, s10
+; GFX942-NEXT:    v_pk_add_f16 v2, v2, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
+; GFX942-NEXT:    global_store_dwordx4 v0, v[2:5], s[0:1]
 ; GFX942-NEXT:    s_add_u32 s0, s0, 16
 ; GFX942-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX942-NEXT:    s_add_u32 s2, s2, 16

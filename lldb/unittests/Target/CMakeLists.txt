@@ -9,7 +9,6 @@ add_lldb_unittest(TargetTests
   MemoryTagMapTest.cpp
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
-  RegisterFlagsTest.cpp
   RemoteAwarePlatformTest.cpp
   ScratchTypeSystemTest.cpp
   StackFrameRecognizerTest.cpp
@@ -23,6 +22,7 @@ add_lldb_unittest(TargetTests
       lldbHost
       lldbPluginObjectFileBreakpad
       lldbPluginObjectFileELF
+      lldbPluginObjectFileMachO
       lldbPluginPlatformLinux
       lldbPluginPlatformMacOSX
       lldbPluginPlatformAndroid
