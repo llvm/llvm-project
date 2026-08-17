@@ -2100,8 +2100,7 @@ void ASTStmtReader::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
   unsigned NumTemplateArgs = Record.readInt();
   assert(NumTemplateArgs == E->getNumTemplateArgs() &&
          "Wrong NumTemplateArgs!");
-  ReadTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
-                            E->getTrailingObjects<TemplateArgumentLoc>(),
+  ReadTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects(),
                             NumTemplateArgs);
   E->QualifierLoc = Record.readNestedNameSpecifierLoc();
   E->NameInfo = Record.readDeclarationNameInfo();

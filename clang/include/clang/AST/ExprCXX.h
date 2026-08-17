@@ -3465,7 +3465,6 @@ public:
 class DependentTemplateIdExpr final
     : public Expr,
       private llvm::TrailingObjects<DependentTemplateIdExpr,
-                                    ASTTemplateKWAndArgsInfo,
                                     TemplateArgumentLoc> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
@@ -3474,6 +3473,7 @@ class DependentTemplateIdExpr final
   NestedNameSpecifierLoc QualifierLoc;
   DeclarationNameInfo NameInfo;
   TemplateName Name;
+  ASTTemplateKWAndArgsInfo KWAndArgs;
 
   DependentTemplateIdExpr(const ASTContext &Context,
                           NestedNameSpecifierLoc QualifierLoc,
@@ -3483,13 +3483,6 @@ class DependentTemplateIdExpr final
                           const TemplateArgumentListInfo &TemplateArgs);
 
   DependentTemplateIdExpr(EmptyShell Empty, unsigned NumTemplateArgs);
-
-  // ASTTemplateKWAndArgsInfo expects to be allocated
-  // before the template arguments, and as such is a trailing object,
-  // even though it is always present.
-  unsigned numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
-    return 1;
-  }
 
 public:
   static DependentTemplateIdExpr *
@@ -3520,21 +3513,15 @@ public:
   }
 
   SourceLocation getTemplateKeywordLoc() const {
-    return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->TemplateKWLoc;
+    return KWAndArgs.TemplateKWLoc;
   }
-  SourceLocation getLAngleLoc() const {
-    return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->LAngleLoc;
-  }
-  SourceLocation getRAngleLoc() const {
-    return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->RAngleLoc;
-  }
+  SourceLocation getLAngleLoc() const { return KWAndArgs.LAngleLoc; }
+  SourceLocation getRAngleLoc() const { return KWAndArgs.RAngleLoc; }
 
-  unsigned getNumTemplateArgs() const {
-    return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
-  }
+  unsigned getNumTemplateArgs() const { return KWAndArgs.NumTemplateArgs; }
 
   ArrayRef<TemplateArgumentLoc> template_arguments() const {
-    return getTrailingObjects<TemplateArgumentLoc>(getNumTemplateArgs());
+    return getTrailingObjects(getNumTemplateArgs());
   }
 
   SourceLocation getBeginLoc() const {

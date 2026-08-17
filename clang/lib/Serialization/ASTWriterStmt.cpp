@@ -2113,8 +2113,7 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
 void ASTStmtWriter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
   VisitExpr(E);
   Record.push_back(E->getNumTemplateArgs());
-  AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
-                           E->getTrailingObjects<TemplateArgumentLoc>());
+  AddTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects());
   Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
   Record.AddDeclarationNameInfo(E->getNameInfo());
   Record.AddTemplateName(E->getTemplateName());

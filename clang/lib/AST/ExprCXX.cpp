@@ -408,16 +408,14 @@ DependentTemplateIdExpr::DependentTemplateIdExpr(
     : Expr(DependentTemplateIdExprClass, Context.DependentTy, VK_LValue,
            OK_Ordinary),
       QualifierLoc(QualifierLoc), NameInfo(NameInfo), Name(Name) {
-  getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-      TemplateKWLoc, TemplateArgs, getTrailingObjects<TemplateArgumentLoc>());
+  KWAndArgs.initializeFrom(TemplateKWLoc, TemplateArgs, getTrailingObjects());
   setDependence(computeDependence(this));
 }
 
 DependentTemplateIdExpr::DependentTemplateIdExpr(EmptyShell Empty,
                                                  unsigned NumTemplateArgs)
     : Expr(DependentTemplateIdExprClass, Empty) {
-  getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs =
-      NumTemplateArgs;
+  KWAndArgs.NumTemplateArgs = NumTemplateArgs;
 }
 
 DependentTemplateIdExpr *DependentTemplateIdExpr::Create(
@@ -425,8 +423,7 @@ DependentTemplateIdExpr *DependentTemplateIdExpr::Create(
     SourceLocation TemplateKWLoc, const DeclarationNameInfo &NameInfo,
     TemplateName Name, const TemplateArgumentListInfo &TemplateArgs) {
   void *Mem = Context.Allocate(
-      totalSizeToAlloc<ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          1, TemplateArgs.size()),
+      totalSizeToAlloc<TemplateArgumentLoc>(TemplateArgs.size()),
       alignof(DependentTemplateIdExpr));
   return new (Mem) DependentTemplateIdExpr(Context, QualifierLoc, TemplateKWLoc,
                                            NameInfo, Name, TemplateArgs);
@@ -435,10 +432,9 @@ DependentTemplateIdExpr *DependentTemplateIdExpr::Create(
 DependentTemplateIdExpr *
 DependentTemplateIdExpr::CreateEmpty(const ASTContext &Context,
                                      unsigned NumTemplateArgs) {
-  void *Mem = Context.Allocate(
-      totalSizeToAlloc<ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          1, NumTemplateArgs),
-      alignof(DependentTemplateIdExpr));
+  void *Mem =
+      Context.Allocate(totalSizeToAlloc<TemplateArgumentLoc>(NumTemplateArgs),
+                       alignof(DependentTemplateIdExpr));
   return new (Mem) DependentTemplateIdExpr(EmptyShell(), NumTemplateArgs);
 }
 
