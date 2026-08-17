@@ -6689,7 +6689,7 @@ QualType SemaHLSL::ActOnTemplateShorthand(TemplateDecl *Template,
     return QualType();
 
   TemplateParameterList *Params = Template->getTemplateParameters();
-  if (!Params || Params->size() != 1)
+  if (!Params)
     return QualType();
 
   if (!Template->isImplicit())

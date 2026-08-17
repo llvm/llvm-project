@@ -40,10 +40,16 @@ void entry() {
   // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:38:3, col:31>
   // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:24> col:24 Mat4x4d 'matrix<double, 4, 4>'
 
-  // Verify that the implicit arguments generate the correct type.
-  matrix<> ImpMat4x4;
+  // Verify that the default arguments generate the correct type.
+  matrix<> DefMat4x4;
 
   // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:44:3, col:21>
-  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:12> col:12 ImpMat4x4 'matrix<>':'matrix<float, 4, 4>'
+  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:12> col:12 DefMat4x4 'matrix<>':'matrix<float, 4, 4>'
+
+  // Verify that the implicit arguments generate the correct type.
+  matrix ImpMat4x4;
+
+  // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:50:3, col:19>
+  // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:10> col:10 ImpMat4x4 'hlsl::matrix<float, 4, 4>':'matrix<float, 4, 4>'
   return;
 }

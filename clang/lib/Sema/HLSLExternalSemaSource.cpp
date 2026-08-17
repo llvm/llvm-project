@@ -541,8 +541,10 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .completeDefinition();
   });
 
+  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Buffer")
-             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
@@ -689,7 +691,6 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
     setupSamplerType(Decl, *SemaPtr).completeDefinition();
   });
 
-  QualType Float4Ty = AST.getExtVectorType(AST.FloatTy, 4);
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2D")
              .addSimpleTemplateParams({"element_type"}, {Float4Ty},
                                       TypedBufferConcept)
@@ -710,8 +711,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   });
 
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2D")
-             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
-                                      TypedBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
@@ -750,8 +750,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   // RWTexture2DArray — same as RWTexture2D but IsArray=true
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2DArray")
-             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
-                                      TypedBufferConcept)
+             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
