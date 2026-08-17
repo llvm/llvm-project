@@ -11517,10 +11517,7 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
     // add   x0, x0, :tprel_lo12:a
     SDValue Var = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, ThreadBase,
-                                      Var,
-                                      DAG.getTargetConstant(0, DL, MVT::i32)),
-                   0);
+    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ThreadBase, Var);
   }
 
   case 24: {
@@ -11536,10 +11533,10 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
                                       HiVar,
                                       DAG.getTargetConstant(0, DL, MVT::i32)),
                    0);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr,
-                                      LoVar,
-                                      DAG.getTargetConstant(0, DL, MVT::i32)),
-                   0);
+    // Emit the low part as an ADDlow so that it can be folded into the
+    // addressing mode of a following load or store, turning the add into a
+    // :tprel_lo12_nc: relocation on the memory access itself.
+    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, Addr, LoVar);
   }
 
   case 32: {
@@ -29265,6 +29262,17 @@ static SDValue performSETCCCombine(SDNode *N,
       ISD::isConstantSplatVector(LHS.getNode(), SplatLHSVal) &&
       SplatLHSVal.isOne())
     return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, CmpVT), RHS, ISD::SETGE);
+
+  // Fold setcc(and(X, Y), 0, seteq) --> NOT(AArch64ISD::CMTST(X, Y)).
+  // SETNE will have been legalized to SETEQ by this point.
+  // The NOT folds away when the result feeds a BSP.
+  if (DCI.isAfterLegalizeDAG() && CmpVT.isFixedLengthVector() &&
+      Cond == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
+      isZerosVector(RHS.getNode())) {
+    SDValue CMTSTNode = DAG.getNode(AArch64ISD::CMTST, DL, CmpVT,
+                                    LHS.getOperand(0), LHS.getOperand(1));
+    return DAG.getNOT(DL, CMTSTNode, CmpVT);
+  }
 
   return SDValue();
 }
