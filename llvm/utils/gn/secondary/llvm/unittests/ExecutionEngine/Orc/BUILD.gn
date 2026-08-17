@@ -48,6 +48,7 @@ unittest("OrcJITTests") {
     "SharedMemoryMapperTest.cpp",
     "SimpleExecutorMemoryManagerTest.cpp",
     "SimplePackedSerializationTest.cpp",
+    "SymbolLookupSetTest.cpp",
     "SymbolStringPoolTest.cpp",
     "TaskDispatchTest.cpp",
     "ThreadSafeModuleTest.cpp",
