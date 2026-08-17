@@ -265,7 +265,8 @@ PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
   ModuleList::GetSharedModule(module_spec, bin_spec.module_sp, nullptr, nullptr,
                               /*invoke_locate_callback=*/true,
                               /*invoke_symbol_locators=*/false);
-  if (bin_spec.module_sp && bin_spec.module_sp->GetSymbolFile(/*can_create=*/true))
+  if (bin_spec.module_sp &&
+      bin_spec.module_sp->GetSymbolFile(/*can_create=*/true))
     return std::nullopt;
 
   SymbolLocator::Request request;
