@@ -59,8 +59,8 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
 
     # Pass pipeline to lower MLIR models to EmitC dialect
     # TODO: Simplify with builtin pipeline for translation.
-    # TODO: It isn't ideal to hardcode this pass pipeline here. It would be better to
-    # use the transform dialect.
+    # TODO: It isn't ideal to hardcode this pass pipeline here. It would be better to use the transform dialect.
+    # TODO: This pipeline is tested independently in . Make sure that tests and this CMake logic share the definition.
     set(mlir_passes
       "func.func(tosa-to-linalg-named,tosa-to-linalg,tosa-to-arith,tosa-to-tensor)"
       "symbol-privatize"
