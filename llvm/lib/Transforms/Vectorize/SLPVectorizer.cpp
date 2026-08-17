@@ -14425,18 +14425,15 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL);
 
   // The fmul may sit on either side of the add/sub. Look past operand 0 only
-  // for chains that do not allow reassociation. The gate is profitability, not
-  // correctness. A reassociative chain can be vectorized into a vector fmul
-  // feeding a reduction, which is usually better than the scalar fma chain
-  // this check protects. An fsub can only fold an fmul on its left, so stop at
-  // operand 0 there as well.
+  // for chains that allow reassociation. An fsub can only fold an fmul on its
+  // left, so stop at operand 0 there as well.
   bool AllowReassoc = all_of(VL, [&](Value *V) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I || S.isCopyableElement(I))
       return true;
     return match(I, m_AllowReassoc(m_Value()));
   });
-  bool OnlyFirstOperand = AllowReassoc || S.getOpcode() == Instruction::FSub;
+  bool OnlyFirstOperand = !AllowReassoc || S.getOpcode() == Instruction::FSub;
   unsigned NumCandidateOps =
       OnlyFirstOperand ? 1
                        : getNumberOfPotentiallyCommutativeOps(S.getMainOp());

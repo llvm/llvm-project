@@ -9,16 +9,19 @@ define double @fsub_fmul_2(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fsub_fmul_2(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
+; CHECK-NEXT:    [[Y8:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 8
 ; CHECK-NEXT:    [[Z8:%.*]] = getelementptr inbounds nuw i8, ptr [[Z]], i64 8
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
+; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
 ; CHECK-NEXT:    [[Z0:%.*]] = load double, ptr [[Z]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[X]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X8]], align 8
+; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y8]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul reassoc nsz contract double [[Y1]], [[X1]]
 ; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z8]], align 8
 ; CHECK-NEXT:    [[ZSUM:%.*]] = fadd reassoc nsz contract double [[Z0]], [[Z1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc nsz contract double [[TMP5]], [[ZSUM]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd reassoc nsz contract double [[SUB]], [[TMP4]]
 ; CHECK-NEXT:    ret double [[TMP6]]
 ;
@@ -46,25 +49,28 @@ define double @fsub_fmul_4(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    [[Y8:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 8
+; CHECK-NEXT:    [[X16:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 16
+; CHECK-NEXT:    [[Y16:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 16
 ; CHECK-NEXT:    [[X24:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 24
 ; CHECK-NEXT:    [[Y24:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 24
 ; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
 ; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X8]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y8]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[X3:%.*]] = load double, ptr [[X24]], align 8
-; CHECK-NEXT:    [[Y3:%.*]] = load double, ptr [[Y24]], align 8
+; CHECK-NEXT:    [[X3:%.*]] = load double, ptr [[X8]], align 8
+; CHECK-NEXT:    [[Y3:%.*]] = load double, ptr [[Y8]], align 8
 ; CHECK-NEXT:    [[MUL16:%.*]] = fmul reassoc nsz contract double [[Y3]], [[X3]]
+; CHECK-NEXT:    [[X2:%.*]] = load double, ptr [[X16]], align 8
+; CHECK-NEXT:    [[Y2:%.*]] = load double, ptr [[Y16]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul reassoc nsz contract double [[Y2]], [[X2]]
+; CHECK-NEXT:    [[X4:%.*]] = load double, ptr [[X24]], align 8
+; CHECK-NEXT:    [[Y4:%.*]] = load double, ptr [[Y24]], align 8
+; CHECK-NEXT:    [[MUL17:%.*]] = fmul reassoc nsz contract double [[Y4]], [[X4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr [[Z]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
-; CHECK-NEXT:    [[T1:%.*]] = fadd reassoc nsz contract double [[MUL]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
+; CHECK-NEXT:    [[T1:%.*]] = fadd reassoc nsz contract double [[MUL]], [[MUL16]]
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc nsz contract double [[T1]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
 ; CHECK-NEXT:    [[ADD13:%.*]] = fsub reassoc nsz contract double [[T3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz contract double [[ADD13]], [[MUL16]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz contract double [[ADD13]], [[MUL17]]
 ; CHECK-NEXT:    ret double [[TMP5]]
 ;
 entry:
