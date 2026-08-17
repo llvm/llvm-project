@@ -1168,6 +1168,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDataObjCCFStrings:
         case eSectionTypeGoSymtab:
         case eSectionTypeWasmName:
+        case eSectionTypeWasmGlobal:
           return AddressClass::eData;
 
         case eSectionTypeDebug:
