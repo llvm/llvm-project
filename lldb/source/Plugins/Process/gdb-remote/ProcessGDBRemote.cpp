@@ -5011,14 +5011,14 @@ ParseEnumEvalues(const XMLNode &enum_node) {
 }
 
 static void
-ParseEnums(XMLNode feature_node, RegisterTypeMap &register_types,
+ParseEnums(XMLNode feature_node, RegisterTypeMap &feature_register_types,
            std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   // The top level element is "<enum...".
   feature_node.ForEachChildElementWithName(
-      "enum",
-      [log, &register_types, &owned_register_types](const XMLNode &enum_node) {
+      "enum", [log, &feature_register_types,
+               &owned_register_types](const XMLNode &enum_node) {
         std::string id;
 
         enum_node.ForEachAttribute([&id](const llvm::StringRef &attr_name,
@@ -5049,8 +5049,15 @@ ParseEnums(XMLNode feature_node, RegisterTypeMap &register_types,
             auto enum_type =
                 std::make_unique<RegisterTypeEnum>(id, enumerators);
             const RegisterTypeEnum *enum_type_ptr = enum_type.get();
-            auto [it, inserted] = register_types.try_emplace(id, enum_type_ptr);
-            if (inserted || llvm::isa<RegisterTypeEnum>(it->second)) {
+            auto [it, inserted] =
+                feature_register_types.try_emplace(id, enum_type_ptr);
+            if (inserted) {
+              owned_register_types.push_back(std::move(enum_type));
+            } else if (llvm::isa<RegisterTypeEnum>(it->second)) {
+              // Preserve the existing behavior where the last valid enum with
+              // a repeated ID wins. All enums are parsed before flags, so no
+              // fields can reference the enum being replaced yet. The earlier
+              // object remains owned; only the feature lookup is updated.
               owned_register_types.push_back(std::move(enum_type));
               it->second = enum_type_ptr;
             } else {
@@ -5070,14 +5077,14 @@ ParseEnums(XMLNode feature_node, RegisterTypeMap &register_types,
 
 static std::vector<RegisterTypeFlags::Field>
 ParseFlagsFields(XMLNode flags_node, unsigned size,
-                 const RegisterTypeMap &register_types) {
+                 const RegisterTypeMap &feature_register_types) {
   Log *log(GetLog(GDBRLog::Process));
   const unsigned max_start_bit = size * 8 - 1;
 
   // Process the fields of this set of flags.
   std::vector<RegisterTypeFlags::Field> fields;
   flags_node.ForEachChildElementWithName("field", [&fields, max_start_bit, &log,
-                                                   &register_types](
+                                                   &feature_register_types](
                                                       const XMLNode
                                                           &field_node) {
     std::optional<llvm::StringRef> name;
@@ -5161,8 +5168,8 @@ ParseFlagsFields(XMLNode flags_node, unsigned size,
           // A field's type may be set to the name of an enum type.
           const RegisterTypeEnum *enum_type = nullptr;
           if (type && !type->empty()) {
-            auto found = register_types.find(*type);
-            if (found != register_types.end()) {
+            auto found = feature_register_types.find(*type);
+            if (found != feature_register_types.end()) {
               enum_type = llvm::dyn_cast<RegisterTypeEnum>(found->second);
 
               if (!enum_type) {
@@ -5211,13 +5218,13 @@ ParseFlagsFields(XMLNode flags_node, unsigned size,
 }
 
 void ParseFlags(
-    XMLNode feature_node, RegisterTypeMap &register_types,
+    XMLNode feature_node, RegisterTypeMap &feature_register_types,
     std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
   Log *log(GetLog(GDBRLog::Process));
 
   feature_node.ForEachChildElementWithName(
       "flags",
-      [&log, &register_types,
+      [&log, &feature_register_types,
        &owned_register_types](const XMLNode &flags_node) -> bool {
         LLDB_LOG(log, "ProcessGDBRemote::ParseFlags Found flags node \"{0}\"",
                  flags_node.GetAttributeValue("id").c_str());
@@ -5251,7 +5258,7 @@ void ParseFlags(
         if (id && size) {
           // Process the fields of this set of flags.
           std::vector<RegisterTypeFlags::Field> fields =
-              ParseFlagsFields(flags_node, *size, register_types);
+              ParseFlagsFields(flags_node, *size, feature_register_types);
           if (fields.size()) {
             // Sort so that the fields with the MSBs are first.
             std::sort(fields.rbegin(), fields.rend());
@@ -5264,7 +5271,7 @@ void ParseFlags(
 
             // If no fields overlap, use them.
             if (overlap == fields.end()) {
-              if (register_types.contains(*id)) {
+              if (feature_register_types.contains(*id)) {
                 // Type IDs must be unique within a feature. Keep the type that
                 // was already registered by the enum and flags parsing passes.
                 LLDB_LOG(
@@ -5276,7 +5283,7 @@ void ParseFlags(
               } else {
                 auto flags_type = std::make_unique<RegisterTypeFlags>(
                     id->str(), *size, std::move(fields));
-                register_types.try_emplace(*id, flags_type.get());
+                feature_register_types.try_emplace(*id, flags_type.get());
                 owned_register_types.push_back(std::move(flags_type));
               }
             } else {
@@ -5313,24 +5320,24 @@ bool ParseRegisters(
     return false;
 
   Log *log(GetLog(GDBRLog::Process));
-  RegisterTypeMap register_types;
+  RegisterTypeMap feature_register_types;
 
   // Enums first because they are referenced by fields in the flags.
-  ParseEnums(feature_node, register_types, owned_register_types);
-  for (const auto &register_type : register_types)
+  ParseEnums(feature_node, feature_register_types, owned_register_types);
+  for (const auto &register_type : feature_register_types)
     if (const auto *enum_type =
             llvm::dyn_cast<RegisterTypeEnum>(register_type.second))
       enum_type->DumpToLog(log);
 
-  ParseFlags(feature_node, register_types, owned_register_types);
-  for (const auto &register_type : register_types)
+  ParseFlags(feature_node, feature_register_types, owned_register_types);
+  for (const auto &register_type : feature_register_types)
     if (const auto *flags_type =
             llvm::dyn_cast<RegisterTypeFlags>(register_type.second))
       flags_type->DumpToLog(log);
 
   feature_node.ForEachChildElementWithName(
       "reg",
-      [&target_info, &registers, &register_types,
+      [&target_info, &registers, &feature_register_types,
        log](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
         std::string gdb_type;
@@ -5409,11 +5416,10 @@ bool ParseRegisters(
 
         if (!gdb_type.empty()) {
           // gdb_type could reference some flags type defined in XML.
-          auto it = register_types.find(gdb_type);
-          if (it != register_types.end()) {
-            const auto *flags_type =
-                llvm::dyn_cast<RegisterTypeFlags>(it->second);
-            if (flags_type) {
+          auto it = feature_register_types.find(gdb_type);
+          if (it != feature_register_types.end()) {
+            if (const auto *flags_type =
+                    llvm::dyn_cast<RegisterTypeFlags>(it->second)) {
               if (reg_info.byte_size == flags_type->GetSize())
                 reg_info.register_type = flags_type;
               else

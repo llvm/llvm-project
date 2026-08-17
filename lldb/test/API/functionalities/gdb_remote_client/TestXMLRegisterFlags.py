@@ -600,10 +600,8 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
             }
         )
 
-        self.expect(
-            "register read x0 cpsr",
-            substrs=["(field_a = enum_a)", "(field_b = enum_b)"],
-        )
+        self.expect("register read x0", substrs=["(field_a = enum_a)"])
+        self.expect("register read cpsr", substrs=["(field_b = enum_b)"])
         self.expect("register read pc", substrs=["("], matching=False)
 
     @skipIfXmlSupportMissing
