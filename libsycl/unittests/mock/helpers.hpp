@@ -94,7 +94,8 @@ public:
                ol_context_handle_t *Context));
   MOCK_METHOD(ol_result_t, olDestroyContext, (ol_context_handle_t Context));
   MOCK_METHOD(ol_result_t, olCreateQueue,
-              (ol_device_handle_t Device, ol_queue_handle_t *Queue));
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               ol_queue_handle_t *Queue));
   MOCK_METHOD(ol_result_t, olDestroyQueue, (ol_queue_handle_t Queue));
   MOCK_METHOD(ol_result_t, olSyncQueue, (ol_queue_handle_t Queue));
   MOCK_METHOD(ol_result_t, olDestroyEvent, (ol_event_handle_t Event));
@@ -128,6 +129,12 @@ public:
   MOCK_METHOD(ol_result_t, olGetMemInfo,
               (const void *Ptr, ol_mem_info_t PropName, size_t PropSize,
                void *PropValue));
+  MOCK_METHOD(ol_result_t, olMemAlloc,
+              (ol_device_handle_t Device, ol_alloc_type_t Type, size_t Size,
+               void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemAllocHost,
+              (ol_device_handle_t Device, size_t Size, void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemFree, (void *Address));
 
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =

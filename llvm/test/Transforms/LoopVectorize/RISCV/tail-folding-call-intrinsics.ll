@@ -1200,10 +1200,10 @@ define void @log10(ptr %a, ptr %b, i64 %N) {
 ;
 ; NO-VP-LABEL: define void @log10(
 ; NO-VP-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; NO-VP-NEXT:  [[SCALAR_PH:.*]]:
+; NO-VP-NEXT:  [[ENTRY:.*]]:
 ; NO-VP-NEXT:    br label %[[LOOP:.*]]
 ; NO-VP:       [[LOOP]]:
-; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
+; NO-VP-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
 ; NO-VP-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV1]]
 ; NO-VP-NEXT:    [[TMP0:%.*]] = load float, ptr [[GEP1]], align 4
 ; NO-VP-NEXT:    [[COND:%.*]] = tail call float @llvm.log10.f32(float [[TMP0]])

@@ -75,10 +75,9 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
 void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Parm = Result.Nodes.getNodeAs<ParmVarDecl>("Parm")) {
     if (const DeclContext *D = Parm->getParentFunctionOrMethod()) {
-      if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
-        if (M->isVirtual() || M->size_overridden_methods() != 0)
-          return;
-      }
+      if (const auto *M = dyn_cast<CXXMethodDecl>(D);
+          M && (M->isVirtual() || M->size_overridden_methods() != 0))
+        return;
     }
     addParm(Parm);
   } else if (const auto *Ctor =

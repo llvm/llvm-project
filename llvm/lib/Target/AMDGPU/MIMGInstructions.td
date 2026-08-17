@@ -80,8 +80,10 @@ def MIMGDim : GenericEnum {
 def MIMGDimInfoTable : GenericTable {
   let FilterClass = "AMDGPUDimProps";
   let CppTypeName = "MIMGDimInfo";
-  let Fields = ["Dim", "NumCoords", "NumGradients", "MSAA", "DA", "Encoding", "AsmSuffix"];
+  let Fields = ["Dim", "NonArrayDim", "NumCoords", "NumGradients", "MSAA", "DA",
+                "Encoding", "AsmSuffix"];
   string TypeOf_Dim = "MIMGDim";
+  string TypeOf_NonArrayDim = "MIMGDim";
 
   let PrimaryKey = ["Dim"];
   let PrimaryKeyName = "getMIMGDimInfo";

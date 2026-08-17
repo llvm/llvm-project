@@ -139,12 +139,12 @@ bool DeclFinderASTVisitor::VisitTypeLoc(TypeLoc TL) {
   // Check for base type conflicts. For example, when a struct is being
   // referenced in the body of the loop, the above getAsString() will return the
   // whole type (ex. "struct s"), but will be caught here.
-  if (const IdentifierInfo *Ident = QType.getBaseTypeIdentifier()) {
-    if (Ident->getName() == Name) {
-      Found = true;
-      return false;
-    }
+  if (const IdentifierInfo *Ident = QType.getBaseTypeIdentifier();
+      Ident && Ident->getName() == Name) {
+    Found = true;
+    return false;
   }
+
   return true;
 }
 
@@ -179,9 +179,9 @@ const Expr *digThroughConstructorsConversions(const Expr *E) {
   }
   // If this is a conversion (as iterators commonly convert into their const
   // iterator counterparts), dig through that as well.
-  if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E))
-    if (isa<CXXConversionDecl>(ME->getMethodDecl()))
-      return digThroughConstructorsConversions(ME->getImplicitObjectArgument());
+  if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+      ME && isa<CXXConversionDecl>(ME->getMethodDecl()))
+    return digThroughConstructorsConversions(ME->getImplicitObjectArgument());
   return E;
 }
 
@@ -289,10 +289,11 @@ static bool isIndexInSubscriptExpr(const ASTContext *Context,
                   Obj->IgnoreParenImpCasts()))
     return true;
 
-  if (const Expr *InnerObj = getDereferenceOperand(Obj->IgnoreParenImpCasts()))
-    if (PermitDeref && areSameExpr(Context, SourceExpr->IgnoreParenImpCasts(),
-                                   InnerObj->IgnoreParenImpCasts()))
-      return true;
+  if (const Expr *InnerObj = getDereferenceOperand(Obj->IgnoreParenImpCasts());
+      InnerObj && PermitDeref &&
+      areSameExpr(Context, SourceExpr->IgnoreParenImpCasts(),
+                  InnerObj->IgnoreParenImpCasts()))
+    return true;
 
   return false;
 }
@@ -536,21 +537,21 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
   const Expr *ResultExpr = Member;
   QualType ExprType;
   if (const auto *Call =
-          dyn_cast<CXXOperatorCallExpr>(Base->IgnoreParenImpCasts())) {
-    // If operator->() is a MemberExpr containing a CXXOperatorCallExpr, then
-    // the MemberExpr does not have the expression we want. We therefore catch
-    // that instance here.
-    // For example, if vector<Foo>::iterator defines operator->(), then the
-    // example `i->bar()` at the top of this function is a CXXMemberCallExpr
-    // referring to `i->` as the member function called. We want just `i`, so
-    // we take the argument to operator->() as the base object.
-    if (Call->getOperator() == OO_Arrow) {
-      assert(Call->getNumArgs() == 1 &&
-             "Operator-> takes more than one argument");
-      Obj = getDeclRef(Call->getArg(0));
-      ResultExpr = Obj;
-      ExprType = Call->getCallReturnType(*Context);
-    }
+          dyn_cast<CXXOperatorCallExpr>(Base->IgnoreParenImpCasts());
+      Call && Call->getOperator() == OO_Arrow)
+  // If operator->() is a MemberExpr containing a CXXOperatorCallExpr, then
+  // the MemberExpr does not have the expression we want. We therefore catch
+  // that instance here.
+  // For example, if vector<Foo>::iterator defines operator->(), then the
+  // example `i->bar()` at the top of this function is a CXXMemberCallExpr
+  // referring to `i->` as the member function called. We want just `i`, so
+  // we take the argument to operator->() as the base object.
+  {
+    assert(Call->getNumArgs() == 1 &&
+           "Operator-> takes more than one argument");
+    Obj = getDeclRef(Call->getArg(0));
+    ResultExpr = Obj;
+    ExprType = Call->getCallReturnType(*Context);
   }
 
   if (Obj && exprReferencesVariable(IndexVar, Obj)) {
@@ -600,13 +601,12 @@ bool ForLoopIndexUseVisitor::TraverseCXXMemberCallExpr(
   // this is restricted to pseudo-arrays by requiring a single, integer
   // argument.
   const IdentifierInfo *Ident = Member->getMemberDecl()->getIdentifier();
-  if (Ident && Ident->isStr("at") && MemberCall->getNumArgs() == 1) {
-    if (isIndexInSubscriptExpr(Context, MemberCall->getArg(0), IndexVar,
-                               Member->getBase(), ContainerExpr,
-                               ContainerNeedsDereference)) {
-      addUsage(Usage(MemberCall));
-      return true;
-    }
+  if (Ident && Ident->isStr("at") && MemberCall->getNumArgs() == 1 &&
+      isIndexInSubscriptExpr(Context, MemberCall->getArg(0), IndexVar,
+                             Member->getBase(), ContainerExpr,
+                             ContainerNeedsDereference)) {
+    addUsage(Usage(MemberCall));
+    return true;
   }
 
   if (containsExpr(Context, &DependentExprs, Member->getBase()))
@@ -828,12 +828,12 @@ bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
   // traversal so that we don't end up diagnosing the contained DeclRefExpr as
   // inconsistent usage. No need to record the usage here -- this is done in
   // TraverseLambdaCapture().
-  if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent)) {
+  if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent);
+      LE && S != LE->getBody())
     // Any child of a LambdaExpr that isn't the body is an initialization
     // expression.
-    if (S != LE->getBody())
-      return true;
-  }
+    return true;
+
   return traverseStmtImpl(S);
 }
 

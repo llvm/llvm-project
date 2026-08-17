@@ -407,6 +407,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
+  case TargetOpcode::G_VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = MI.getOperand(1).getCImm()->getValue();
+    Known = getVScaleRange(&F, BitWidth).multiply(Multiplier).toKnownBits();
+    break;
+  }
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
@@ -843,10 +849,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       return; // TODO: Handle vector->subelement unmerges
 
     // Figure out the result operand index
-    unsigned DstIdx = 0;
-    for (; DstIdx != NumOps - 1 && MI.getOperand(DstIdx).getReg() != R;
-         ++DstIdx)
-      ;
+    unsigned DstIdx = MI.findRegisterDefOperandIdx(R, nullptr);
 
     APInt SubDemandedElts = DemandedElts;
     if (SrcTy.isVector()) {
@@ -2416,6 +2419,23 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_ROTL:
+  case TargetOpcode::G_ROTR: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Tmp = computeNumSignBits(SrcReg, DemandedElts, Depth + 1);
+    auto MaybeAmt =
+        isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
+    FirstAnswer =
+        SignBitsOps::rot(Tmp, TyBits, MaybeAmt, Opcode == TargetOpcode::G_ROTR);
+    break;
+  }
+  case TargetOpcode::G_SAVGFLOOR:
+  case TargetOpcode::G_SAVGCEIL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    FirstAnswer = computeNumSignBitsMin(Src1, Src2, DemandedElts, Depth + 1);
+    break;
+  }
   case TargetOpcode::G_SREM: {
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero. The magnitude of the result should be less than or
@@ -2555,6 +2575,36 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return TyBits; // All bits are sign bits.
     if (BC == TargetLowering::ZeroOrOneBooleanContent)
       return TyBits - 1; // Every always-zero bit is a sign bit.
+    break;
+  }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    unsigned NumOps = MI.getNumOperands();
+    Register SrcReg = MI.getOperand(NumOps - 1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    if ((SrcTy.isVector() && SrcTy.getScalarType() != DstTy.getScalarType()) ||
+        (SrcTy.isScalar() && DstTy.isVector()))
+      break;
+
+    // Figure out the result operand index
+    unsigned DstIdx = MI.findRegisterDefOperandIdx(R, nullptr);
+
+    APInt SubDemandedElts = DemandedElts;
+    unsigned DstLanes = DstTy.isVector() ? DstTy.getNumElements() : 1;
+    if (SrcTy.isVector()) {
+      SubDemandedElts =
+          DemandedElts.zext(SrcTy.getNumElements()).shl(DstIdx * DstLanes);
+    }
+
+    unsigned SrcOpKnown =
+        computeNumSignBits(SrcReg, SubDemandedElts, Depth + 1);
+    if (SrcTy.isVector()) {
+      FirstAnswer = SrcOpKnown;
+    } else if (SrcOpKnown >= (MI.getNumOperands() - DstIdx - 2) * TyBits) {
+      FirstAnswer = SrcOpKnown >= (MI.getNumOperands() - DstIdx - 1) * TyBits
+                        ? TyBits
+                        : SrcOpKnown % TyBits;
+    }
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR: {

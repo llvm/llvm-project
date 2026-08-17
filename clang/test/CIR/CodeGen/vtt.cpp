@@ -46,17 +46,17 @@ void f(D *d) {}
 // Trigger vtable and VTT emission for D.
 void D::y() {}
 
-// CIR-COMMON: !rec_A2Ebase = !cir.struct<"A.base" packed {!cir.vptr, !s32i}>
-// CIR-COMMON: !rec_B2Ebase = !cir.struct<"B.base" packed {!cir.vptr, !s32i}>
-// CIR-COMMON: !rec_C2Ebase = !cir.struct<"C.base" {!cir.vptr, !s64i}>
-// CIR-COMMON: !rec_A = !cir.struct<class "A" packed padded {!cir.vptr, !s32i, !cir.array<!u8i x 4>}>
-// CIR-COMMON: !rec_B = !cir.struct<class "B" packed padded {!cir.vptr, !s32i, !cir.array<!u8i x 4>, !rec_A2Ebase, !cir.array<!u8i x 4>}>
-// CIR-COMMON: !rec_C = !cir.struct<class "C" {!cir.vptr, !s64i, !rec_A2Ebase}>
-// CIR-COMMON: !rec_D = !cir.struct<class "D" {!rec_B2Ebase, !rec_C2Ebase, !s64i, !rec_A2Ebase}>
+// CIR-COMMON: !rec_A2Ebase = !cir.struct<"A.base" packed {data !cir.vptr, data !s32i}>
+// CIR-COMMON: !rec_B2Ebase = !cir.struct<"B.base" packed {data !cir.vptr, data !s32i}>
+// CIR-COMMON: !rec_C2Ebase = !cir.struct<"C.base" {data !cir.vptr, data !s64i}>
+// CIR-COMMON: !rec_A = !cir.struct<class "A" packed padded {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-COMMON: !rec_B = !cir.struct<class "B" packed padded {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>, data !rec_A2Ebase, pad !cir.array<!u8i x 4>}>
+// CIR-COMMON: !rec_C = !cir.struct<class "C" {data !cir.vptr, data !s64i, data !rec_A2Ebase}>
+// CIR-COMMON: !rec_D = !cir.struct<class "D" {data !rec_B2Ebase, data !rec_C2Ebase, data !s64i, data !rec_A2Ebase}>
 
-// CIR-RTTI:   ![[REC_TYPE_INFO_VTABLE:.*]]= !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>, !u32i, !u32i, !cir.ptr<!u8i>, !s64i, !cir.ptr<!u8i>, !s64i}>
-// CIR-COMMON: ![[REC_D_VTABLE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 5>, !cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 4>}>
-// CIR-COMMON: ![[REC_B_OR_C_IN_D_VTABLE:.*]]= !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-RTTI:   ![[REC_TYPE_INFO_VTABLE:.*]]= !cir.struct<{data !cir.ptr<!u8i>, data !cir.ptr<!u8i>, data !u32i, data !u32i, data !cir.ptr<!u8i>, data !s64i, data !cir.ptr<!u8i>, data !s64i}>
+// CIR-COMMON: ![[REC_D_VTABLE:.*]] = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 5>, data !cir.array<!cir.ptr<!u8i> x 4>, data !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-COMMON: ![[REC_B_OR_C_IN_D_VTABLE:.*]]= !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 4>, data !cir.array<!cir.ptr<!u8i> x 4>}>
 
 // Vtable for D
 
@@ -85,7 +85,7 @@ void D::y() {}
 // CIR-COMMON-SAME:    ]> : !cir.array<!cir.ptr<!u8i> x 4>
 // CIR-COMMON-SAME: }> : ![[REC_D_VTABLE]] {alignment = 8 : i64}
 
-// LLVM-COMMON:       @_ZTV1D = global { [5 x ptr], [4 x ptr], [4 x ptr] } {
+// LLVM-COMMON:       @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
 // LLVM-NO-RTTI-SAME:   [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // LLVM-RTTI-SAME:      [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1D, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // LLVM-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN1C1xEv],
@@ -116,7 +116,7 @@ void D::y() {}
 // CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [1 : i32, 3 : i32]> : !cir.ptr<!u8i>
 // CIR-COMMON-SAME: ]> : !cir.array<!cir.ptr<!u8i> x 7> {alignment = 8 : i64}
 
-// LLVM-COMMON:      @_ZTT1D = global [7 x ptr] [
+// LLVM-COMMON:      @_ZTT1D = constant [7 x ptr] [
 // LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 24),
 // LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTC1D0_1B, i64 24),
 // LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTC1D0_1B, i64 56),
@@ -155,7 +155,7 @@ void D::y() {}
 // CIR-COMMON-SAME:    ]> : !cir.array<!cir.ptr<!u8i> x 4>
 // CIR-COMMON-SAME:    }> : ![[REC_B_OR_C_IN_D_VTABLE]]
 
-// LLVM-COMMON:       @_ZTC1D0_1B = global { [4 x ptr], [4 x ptr] } {
+// LLVM-COMMON:       @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
 // LLVM-NO-RTTI-SAME: [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv],
 // LLVM-RTTI-SAME:    [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1B, ptr @_ZN1B1wEv],
 // LLVM-NO-RTTI-SAME: [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr null, ptr @_ZN1A1vEv]
@@ -194,7 +194,7 @@ void D::y() {}
 // CIR-COMMON-SAME:  ]> : !cir.array<!cir.ptr<!u8i> x 4>}>
 // CIR-COMMON-SAME:  : ![[REC_B_OR_C_IN_D_VTABLE]]
 
-// LLVM-COMMON:       @_ZTC1D16_1C = global { [4 x ptr], [4 x ptr] } {
+// LLVM-COMMON:       @_ZTC1D16_1C = constant { [4 x ptr], [4 x ptr] } {
 // LLVM-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr null, ptr @_ZN1C1xEv],
 // LLVM-RTTI-SAME:      [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr @_ZTI1C, ptr @_ZN1C1xEv],
 // LLVM-NO-RTTI-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr null, ptr @_ZN1A1vEv]
@@ -211,7 +211,7 @@ void D::y() {}
 
 // RTTI class type info for D
 
-// CIR-RTTI:  cir.globa{{.*}} @_ZTVN10__cxxabiv121__vmi_class_type_infoE : !cir.ptr<!cir.ptr<!u8i>>
+// CIR-RTTI:  cir.global{{.*}} @_ZTVN10__cxxabiv121__vmi_class_type_infoE : !cir.ptr<!cir.ptr<!u8i>>
 
 // CIR-RTTI:  cir.global{{.*}} @_ZTS1D = #cir.const_array<"1D" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3>
 
@@ -227,7 +227,7 @@ void D::y() {}
 // CIR-RTTI: cir.global{{.*}} @_ZTV1A : !rec_anon_struct3
 
 // LLVM-RTTI: @_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global ptr
-// LLVM-RTTI: @_ZTS1D = global [3 x i8] c"1D\00", align 1
+// LLVM-RTTI: @_ZTS1D = constant [3 x i8] c"1D\00", align 1
 
 // LLVM-RTTI:      @_ZTI1D = constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64 } {
 // LLVM-RTTI-SAME:   ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 16),
@@ -488,7 +488,7 @@ D::D() {}
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
 // LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr {{.*}} %[[THIS_ARG:.*]]){{.*}} {
-// LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1A, i64 16), ptr %[[THIS]]

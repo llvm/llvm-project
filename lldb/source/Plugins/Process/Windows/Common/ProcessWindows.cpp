@@ -278,7 +278,7 @@ Status ProcessWindows::DoResume(RunDirection direction) {
     }
 
     ExceptionRecordSP active_exception =
-        m_session_data->m_debugger->GetActiveException().lock();
+        m_session_data->m_debugger->GetActiveException();
     if (active_exception) {
       // Resume the process and continue processing debug events.  Mask the
       // exception so that from the process's view, there is no indication that
@@ -337,9 +337,8 @@ void ProcessWindows::RefreshStateAfterStop() {
 
   m_thread_list.RefreshStateAfterStop();
 
-  std::weak_ptr<ExceptionRecord> exception_record =
+  ExceptionRecordSP active_exception =
       m_session_data->m_debugger->GetActiveException();
-  ExceptionRecordSP active_exception = exception_record.lock();
   if (!active_exception) {
     LLDB_LOG(log,
              "there is no active exception in process {0}.  Why is the "
@@ -901,7 +900,7 @@ std::optional<uint32_t> ProcessWindows::GetWatchpointSlotCount() {
 std::optional<DWORD> ProcessWindows::GetActiveExceptionCode() const {
   if (!m_session_data || !m_session_data->m_debugger)
     return std::nullopt;
-  auto exc = m_session_data->m_debugger->GetActiveException().lock();
+  auto exc = m_session_data->m_debugger->GetActiveException();
   if (!exc)
     return std::nullopt;
   return exc->GetExceptionValue();

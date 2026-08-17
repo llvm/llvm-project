@@ -1,9 +1,9 @@
 # About
 
-```{warning}
+:::{warning}
 If you are using a released version of LLVM, see [the download page]
 to find your documentation.
-```
+:::
 
 [the download page]: https://llvm.org/releases/
 
