@@ -1,7 +1,7 @@
 add_startup_object(
   tls
   SRC
-    tls.cpp
+  tls.cpp
   DEPENDS
     libc.config.app_h
     libc.hdr.sys_mman_macros
@@ -21,7 +21,7 @@ add_startup_object(
 add_startup_object(
   start
   SRC
-    start.cpp
+  start.cpp
   DEPENDS
     libc.config.app_h
     libc.src.__support.macros.attributes
@@ -35,7 +35,7 @@ add_startup_object(
 add_startup_object(
   irelative
   SRC
-    irelative.cpp
+  irelative.cpp
   DEPENDS
     libc.hdr.link_macros
     libc.hdr.elf_macros

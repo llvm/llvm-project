@@ -36,7 +36,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 5, i64 10, i64 15, i64 20, i64 25, i64 30, i64 35, i64 40, i64 45, i64 50, i64 55, i64 60, i64 65, i64 70, i64 75>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[DATA:%.*]], ptr [[D]], i64 0, i32 3, i64 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <80 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <80 x float> [[WIDE_VEC]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
@@ -65,7 +65,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCE:       [[VECTOR_BODY]]:
 ; FORCE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FORCE-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
+; FORCE-NEXT:    [[OFFSET_IDX:%.*]] = mul nuw i64 [[INDEX]], 5
 ; FORCE-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 5
 ; FORCE-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 10
 ; FORCE-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 15

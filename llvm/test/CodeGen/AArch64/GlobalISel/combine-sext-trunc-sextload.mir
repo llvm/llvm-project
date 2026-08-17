@@ -12,14 +12,14 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[SEXTLOAD]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (i16))
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[SEXTLOAD]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s64) = G_SEXTLOAD %0:_(p0) :: (load (s16))
-    %2:_(s32) = G_TRUNC %1:_(s64)
-    %3:_(s32) = G_SEXT_INREG %2:_(s32), 16
-    $w0 = COPY %3(s32)
+    %1:_(i64) = G_SEXTLOAD %0:_(p0) :: (load (i16))
+    %2:_(i32) = G_TRUNC %1:_(i64)
+    %3:_(i32) = G_SEXT_INREG %2:_(i32), 16
+    $w0 = COPY %3(i32)
 ...
 ---
 name:            test_combine_sext_of_sextload
@@ -32,13 +32,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i16))
+    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_SEXTLOAD %0:_(p0) :: (load (s16))
-    %2:_(s32) = COPY %1:_(s32)
-    %3:_(s32) = G_SEXT_INREG %2:_(s32), 16
-    $w0 = COPY %3(s32)
+    %1:_(i32) = G_SEXTLOAD %0:_(p0) :: (load (i16))
+    %2:_(i32) = COPY %1:_(i32)
+    %3:_(i32) = G_SEXT_INREG %2:_(i32), 16
+    $w0 = COPY %3(i32)
 ...
 ---
 name:            test_combine_sext_of_sextload_not_matching
@@ -52,11 +52,11 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i16))
+    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_SEXTLOAD %0:_(p0) :: (load (s16))
-    %2:_(s32) = COPY %1:_(s32)
-    %3:_(s32) = G_SEXT_INREG %2:_(s32), 24
-    $w0 = COPY %3(s32)
+    %1:_(i32) = G_SEXTLOAD %0:_(p0) :: (load (i16))
+    %2:_(i32) = COPY %1:_(i32)
+    %3:_(i32) = G_SEXT_INREG %2:_(i32), 24
+    $w0 = COPY %3(i32)
 ...

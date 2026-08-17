@@ -21,7 +21,6 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/OpenACC.h"
 #include "flang/Lower/OpenMP.h"
@@ -41,12 +40,7 @@ namespace Fortran {
 namespace lower {
 
 /// Create empty blocks for the current region.
-/// These blocks replace blocks parented to an enclosing region, or are
-/// created fresh when the enclosing region-level createEmptyBlocks skipped
-/// them (this happens for the body of a wrappable DO/IF nested inside a
-/// directive whose isUnstructured no longer propagates from the child; the
-/// top-level pass then treats the directive as structured and never
-/// recurses into the body).
+/// These blocks replace blocks parented to an enclosing region.
 template <typename... TerminatorOps>
 void createEmptyRegionBlocks(
     fir::FirOpBuilder &builder,
@@ -62,8 +56,6 @@ void createEmptyRegionBlocks(
         assert(mlir::isa<TerminatorOps...>(terminatorOp) &&
                "expected terminator op");
       }
-    } else if (eval.isNewBlock) {
-      eval.block = builder.createBlock(region);
     }
     if (!eval.isDirective() && eval.hasNestedEvaluations())
       createEmptyRegionBlocks<TerminatorOps...>(builder,

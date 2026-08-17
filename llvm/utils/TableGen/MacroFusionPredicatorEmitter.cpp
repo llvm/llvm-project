@@ -20,10 +20,15 @@
 // header file.
 //
 // Each predicator also maintains `Statistic`s that count how often the fusion
-// is matched, split into pre-RA and post-RA counters because both schedulers
-// run MacroFusion.
+// is matched. A fusion that runs in both scheduling stages keeps separate
+// pre-RA and post-RA counters, because both schedulers run MacroFusion.
 //
-// The generated predicator will be like:
+// A fusion can opt out of a scheduling stage via the `RunPreRA`/`RunPostRA`
+// fields. When a stage is disabled, the generated predicator returns `false`
+// early during that stage (detected via the `NoVRegs` machine function
+// property) and only keeps the counter for the stage it actually runs in.
+//
+// A fusion running in both stages will be like:
 //
 // ```
 // STATISTIC(NumNAMEPreRA, "Times NAME Triggered (pre-ra)");
@@ -31,13 +36,36 @@
 // bool isNAME(const TargetInstrInfo &TII,
 //             const TargetSubtargetInfo &STI,
 //             const MachineInstr *FirstMI,
-//             const MachineInstr &SecondMI) {
+//             const MachineInstr &SecondMI,
+//             const SDep *Dep) {
+//   if (isNonDataDep(Dep))
+//     return false;
 //   auto &MRI = SecondMI.getMF()->getRegInfo();
 //   /* Predicates */
 //   if (SecondMI.getMF()->getProperties().hasNoVRegs())
 //     ++NumNAMEPostRA;
 //   else
 //     ++NumNAMEPreRA;
+//   return true;
+// }
+// ```
+//
+// A fusion restricted to a single stage (e.g. pre-RA only) will be like:
+//
+// ```
+// STATISTIC(NumNAMEPreRA, "Times NAME Triggered (pre-ra)");
+// bool isNAME(const TargetInstrInfo &TII,
+//             const TargetSubtargetInfo &STI,
+//             const MachineInstr *FirstMI,
+//             const MachineInstr &SecondMI,
+//             const SDep *Dep) {
+//   if (isNonDataDep(Dep))
+//     return false;
+//   auto &MRI = SecondMI.getMF()->getRegInfo();
+//   if (SecondMI.getMF()->getProperties().hasNoVRegs())
+//     return false;
+//   /* Predicates */
+//   ++NumNAMEPreRA;
 //   return true;
 // }
 // ```
@@ -96,7 +124,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
   for (const Record *Fusion : Fusions)
     OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
        << "const TargetSubtargetInfo &, const MachineInstr *, "
-       << "const MachineInstr &);\n";
+       << "const MachineInstr &, const SDep *);\n";
 }
 
 void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
@@ -109,30 +137,64 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     std::vector<const Record *> Predicates =
         Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
+    bool RunPreRA = Fusion->getValueAsBit("RunPreRA");
+    bool RunPostRA = Fusion->getValueAsBit("RunPostRA");
+
+    if (!RunPreRA && !RunPostRA)
+      PrintFatalError(Fusion->getLoc(),
+                      "Fusion '" + Fusion->getName() +
+                          "' must run in at least one of the pre-RA and "
+                          "post-RA scheduling stages");
 
     // Emit the statistics that count how often this fusion is matched. The
-    // pre-RA and post-RA schedulers both run MacroFusion, so they are split
-    // into separate counters (distinguished below via the `NoVRegs` property)
-    // to avoid conflating the two.
-    OS << "STATISTIC(Num" << Fusion->getName() << "PreRA, \"Times "
-       << Fusion->getName() << " Triggered (pre-ra)\");\n";
-    OS << "STATISTIC(Num" << Fusion->getName() << "PostRA, \"Times "
-       << Fusion->getName() << " Triggered (post-ra)\");\n";
+    // pre-RA and post-RA schedulers both run MacroFusion, so a fusion that
+    // runs in both stages keeps separate counters (distinguished below via the
+    // `NoVRegs` property) to avoid conflating the two. A fusion that opts out
+    // of a stage only needs the counter for the stage it actually runs in.
+    if (RunPreRA)
+      OS << "STATISTIC(Num" << Fusion->getName() << "PreRA, \"Times "
+         << Fusion->getName() << " Triggered (pre-ra)\");\n";
+    if (RunPostRA)
+      OS << "STATISTIC(Num" << Fusion->getName() << "PostRA, \"Times "
+         << Fusion->getName() << " Triggered (post-ra)\");\n";
 
     OS << "bool is" << Fusion->getName() << "(\n";
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
     OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
     OS.indent(4) << "const MachineInstr *FirstMI,\n";
-    OS.indent(4) << "const MachineInstr &SecondMI) {\n";
+    OS.indent(4) << "const MachineInstr &SecondMI, const SDep *Dep) {\n";
+    OS.indent(2) << "if (isNonDataDep(Dep))\n";
+    OS.indent(4) << "return false;\n";
     OS.indent(2)
         << "[[maybe_unused]] auto &MRI = SecondMI.getMF()->getRegInfo();\n";
 
+    // If the fusion opts out of a scheduling stage, bail out early when we are
+    // running in that stage. The pre-RA scheduler still has virtual registers,
+    // while the post-RA scheduler runs after they have been allocated.
+    if (!RunPreRA) {
+      OS.indent(2) << "if (!SecondMI.getMF()->getProperties().hasNoVRegs())\n";
+      OS.indent(4) << "return false;\n";
+    }
+    if (!RunPostRA) {
+      OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
+      OS.indent(4) << "return false;\n";
+    }
+
     emitPredicates(Predicates, IsCommutable, PE, OS);
 
-    OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
-    OS.indent(4) << "++Num" << Fusion->getName() << "PostRA;\n";
-    OS.indent(2) << "else\n";
-    OS.indent(4) << "++Num" << Fusion->getName() << "PreRA;\n";
+    // Bump the statistic for the matched stage. When the fusion runs in both
+    // stages we still have to tell them apart at runtime; otherwise the guard
+    // above already established the stage, so a single counter suffices.
+    if (RunPreRA && RunPostRA) {
+      OS.indent(2) << "if (SecondMI.getMF()->getProperties().hasNoVRegs())\n";
+      OS.indent(4) << "++Num" << Fusion->getName() << "PostRA;\n";
+      OS.indent(2) << "else\n";
+      OS.indent(4) << "++Num" << Fusion->getName() << "PreRA;\n";
+    } else if (RunPreRA) {
+      OS.indent(2) << "++Num" << Fusion->getName() << "PreRA;\n";
+    } else {
+      OS.indent(2) << "++Num" << Fusion->getName() << "PostRA;\n";
+    }
 
     OS.indent(2) << "return true;\n";
     OS << "}\n";

@@ -427,6 +427,11 @@ public:
     PseudoProbeDecoder = Decoder;
   }
 
+  /// Release the pseudo probe decoder once probes have been updated, freeing
+  /// its (potentially large) address-to-probe maps before later, memory-heavy
+  /// phases such as debug info rewriting.
+  void resetPseudoProbeDecoder() { PseudoProbeDecoder.reset(); }
+
   /// Return BinaryFunction containing a given \p Address or nullptr if
   /// no registered function contains the \p Address.
   ///

@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj --macho-target-triple %t.o | FileCheck %s
+
+# CHECK:      TargetTriple {
+# CHECK-NEXT:   Cmd: LC_TARGET_TRIPLE
+# CHECK-NEXT:   Size: 40
+# CHECK-NEXT:   Triple: arm64-apple-macos27.0.0
+# CHECK-NEXT: }
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      40
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_TARGET_TRIPLE
+    cmdsize:         40
+    triple:          12
+    Content:         'arm64-apple-macos27.0.0'
+    ZeroPadBytes:    5
+...

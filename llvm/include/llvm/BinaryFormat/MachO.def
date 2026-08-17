@@ -78,6 +78,7 @@ HANDLE_LOAD_COMMAND(LC_DYLD_EXPORTS_TRIE, 0x80000033u, linkedit_data_command)
 HANDLE_LOAD_COMMAND(LC_DYLD_CHAINED_FIXUPS, 0x80000034u, linkedit_data_command)
 HANDLE_LOAD_COMMAND(LC_FILESET_ENTRY, 0x80000035u, fileset_entry_command)
 HANDLE_LOAD_COMMAND(LC_ATOM_INFO, 0x00000036u, linkedit_data_command)
+HANDLE_LOAD_COMMAND(LC_TARGET_TRIPLE, 0x00000039u, target_triple_command)
 
 #endif
 
@@ -110,6 +111,7 @@ LOAD_COMMAND_STRUCT(sub_library_command)
 LOAD_COMMAND_STRUCT(sub_umbrella_command)
 LOAD_COMMAND_STRUCT(symseg_command)
 LOAD_COMMAND_STRUCT(symtab_command)
+LOAD_COMMAND_STRUCT(target_triple_command)
 LOAD_COMMAND_STRUCT(thread_command)
 LOAD_COMMAND_STRUCT(twolevel_hints_command)
 LOAD_COMMAND_STRUCT(uuid_command)

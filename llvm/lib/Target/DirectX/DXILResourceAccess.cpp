@@ -13,7 +13,6 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -24,8 +23,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include <optional>
 
 #define DEBUG_TYPE "dxil-resource-access"
 
@@ -144,6 +145,58 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
   SI->replaceAllUsesWith(Inst);
 }
 
+/// Build a zero-initialized offset operand matching the shape of the given
+/// coordinate operand. Accesses through `operator[]` never have offsets.
+static Value *getNullOffsetsFor(IRBuilder<> &Builder, Value *Coords) {
+  Type *CoordTy = Coords->getType();
+  Type *OffsetTy;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
+    OffsetTy =
+        FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
+  else
+    OffsetTy = Builder.getInt32Ty();
+  return Constant::getNullValue(OffsetTy);
+}
+
+static void createTextureStore(IntrinsicInst *II, StoreInst *SI,
+                               dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = SI->getDataLayout();
+  IRBuilder<> Builder(SI);
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  Type *ScalarType = ContainedType->getScalarType();
+
+  Value *Handle = II->getOperand(0);
+  Value *Coords = II->getOperand(1);
+
+  Value *V = SI->getValueOperand();
+  if (V->getType() == ContainedType) {
+    // V is already the right type.
+    assert(SI->getPointerOperand() == II &&
+           "Store of whole element has mismatched address to store to");
+  } else if (V->getType() == ScalarType) {
+    // We're storing a scalar, so we need to load the current value and only
+    // replace the relevant part. For operator[] the mip level and the offsets
+    // are always zero; DXILOpLowering drops the mip level for UAVs.
+    Value *MipLevel = Builder.getInt32(0);
+    Value *Offsets = getNullOffsetsFor(Builder, Coords);
+    auto *Load = Builder.CreateIntrinsic(ContainedType,
+                                         Intrinsic::dx_resource_load_level,
+                                         {Handle, Coords, MipLevel, Offsets});
+
+    uint64_t AccessSize = DL.getTypeSizeInBits(ScalarType) / 8;
+    Value *Offset =
+        traverseGEPOffsets(DL, Builder, SI->getPointerOperand(), AccessSize);
+    V = Builder.CreateInsertElement(Load, V, Offset);
+  } else {
+    llvm_unreachable("Store to texture resource has invalid type");
+  }
+
+  auto *Inst = Builder.CreateIntrinsic(Builder.getVoidTy(),
+                                       Intrinsic::dx_resource_store_texture,
+                                       {Handle, Coords, V});
+  SI->replaceAllUsesWith(Inst);
+}
+
 static void emitRawStore(IRBuilder<> &Builder, Value *Buffer, Value *Index,
                          Value *Offset, Value *V, dxil::ResourceTypeInfo &RTI) {
   // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
@@ -208,6 +261,120 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
     return createRawStores(II, SI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
+  case dxil::ResourceKind::Texture3D:
+  case dxil::ResourceKind::Texture1DArray:
+  case dxil::ResourceKind::Texture2DArray:
+    return createTextureStore(II, SI, RTI);
+  case dxil::ResourceKind::Texture2DMS:
+  case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCube:
+  case dxil::ResourceKind::TextureCubeArray:
+  case dxil::ResourceKind::FeedbackTexture2D:
+  case dxil::ResourceKind::FeedbackTexture2DArray:
+    reportFatalUsageError(
+        "DXIL Store not implemented for this texture resource kind");
+    return;
+  case dxil::ResourceKind::CBuffer:
+  case dxil::ResourceKind::Sampler:
+  case dxil::ResourceKind::TBuffer:
+  case dxil::ResourceKind::RTAccelerationStructure:
+  case dxil::ResourceKind::Invalid:
+  case dxil::ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind for store");
+  }
+  llvm_unreachable("Unhandled case in switch");
+}
+
+static std::optional<dxil::AtomicBinOpCode>
+getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
+  switch (BinOp) {
+  case AtomicRMWInst::Add:
+    return dxil::AtomicBinOpCode::Add;
+  case AtomicRMWInst::And:
+    return dxil::AtomicBinOpCode::And;
+  case AtomicRMWInst::Or:
+    return dxil::AtomicBinOpCode::Or;
+  case AtomicRMWInst::Xor:
+    return dxil::AtomicBinOpCode::Xor;
+  case AtomicRMWInst::Min:
+    return dxil::AtomicBinOpCode::IMin;
+  case AtomicRMWInst::Max:
+    return dxil::AtomicBinOpCode::IMax;
+  case AtomicRMWInst::UMin:
+    return dxil::AtomicBinOpCode::UMin;
+  case AtomicRMWInst::UMax:
+    return dxil::AtomicBinOpCode::UMax;
+  case AtomicRMWInst::Xchg:
+    return dxil::AtomicBinOpCode::Exchange;
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::Nand:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat:
+  case AtomicRMWInst::BAD_BINOP:
+    return std::nullopt;
+  }
+  llvm_unreachable("Unhandled atomicrmw operation");
+}
+
+static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
+                              dxil::ResourceTypeInfo &RTI) {
+  std::optional<dxil::AtomicBinOpCode> BinOpCode =
+      getAtomicBinOpCode(AI->getOperation());
+  if (!BinOpCode) {
+    reportFatalUsageError("DXIL resource atomicrmw operation not implemented");
+    return;
+  }
+
+  const DataLayout &DL = AI->getDataLayout();
+  IRBuilder<> Builder(AI);
+  Value *Index = II->getOperand(1);
+
+  // The offset for the rawbuffer load/store/atomic ops is always in bytes.
+  uint64_t AccessSize = 1;
+  Value *Offset =
+      traverseGEPOffsets(DL, Builder, AI->getPointerOperand(), AccessSize);
+
+  // For non-struct buffers (RawBuffer or TypedBuffer), fold the byte offset
+  // into the index and mark the coord1 arg as poison — only StructuredBuffer
+  // atomics use both a struct index and a byte offset.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  Value *BinOp = Builder.getInt32(static_cast<uint32_t>(*BinOpCode));
+
+  // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
+  // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
+  // its `createTmpHandleCast` bookkeeping.
+  Value *Result = Builder.CreateIntrinsic(
+      AI->getType(), Intrinsic::dx_resource_atomic_binop,
+      {II->getOperand(0), BinOp, Index, Offset, AI->getValOperand()});
+
+  AI->replaceAllUsesWith(Result);
+}
+
+static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
+                                       dxil::ResourceTypeInfo &RTI) {
+  switch (RTI.getResourceKind()) {
+  case dxil::ResourceKind::TypedBuffer:
+  case dxil::ResourceKind::RawBuffer:
+  case dxil::ResourceKind::StructuredBuffer:
+    return createAtomicBinOp(II, AI, RTI);
+  case dxil::ResourceKind::Texture1D:
+  case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture3D:
   case dxil::ResourceKind::TextureCube:
@@ -217,15 +384,19 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    reportFatalUsageError("DXIL Store not implemented for texture resources");
+    reportFatalUsageError(
+        "DXIL atomicrmw not implemented for texture resources");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
   case dxil::ResourceKind::TBuffer:
+    reportFatalUsageError(
+        "DXIL atomicrmw not implemented for this resource type");
+    return;
   case dxil::ResourceKind::RTAccelerationStructure:
   case dxil::ResourceKind::Invalid:
   case dxil::ResourceKind::NumEntries:
-    llvm_unreachable("Invalid resource kind for store");
+    llvm_unreachable("Invalid resource kind for atomicrmw");
   }
   llvm_unreachable("Unhandled case in switch");
 }
@@ -273,14 +444,7 @@ static void createTextureLoad(IntrinsicInst *II, LoadInst *LI,
   Value *MipLevel = Builder.getInt32(0);
 
   // For operator[], offsets are zero.
-  Type *CoordTy = Coords->getType();
-  Type *OffsetTy;
-  if (auto *VecTy = dyn_cast<FixedVectorType>(CoordTy))
-    OffsetTy =
-        FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
-  else
-    OffsetTy = Builder.getInt32Ty();
-  Value *Offsets = Constant::getNullValue(OffsetTy);
+  Value *Offsets = getNullOffsetsFor(Builder, Coords);
 
   Value *V =
       Builder.CreateIntrinsic(ContainedType, Intrinsic::dx_resource_load_level,
@@ -550,6 +714,8 @@ static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
     return dyn_cast<Instruction>(LI->getPointerOperand());
   if (auto *SI = dyn_cast<StoreInst>(AI))
     return dyn_cast<Instruction>(SI->getPointerOperand());
+  if (auto *RMWI = dyn_cast<AtomicRMWInst>(AI))
+    return dyn_cast<Instruction>(RMWI->getPointerOperand());
 
   return nullptr;
 }
@@ -704,6 +870,8 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
          "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
 
   IRBuilder<> Builder(Ptr);
+  if (isa<PHINode>(Ptr))
+    Builder.SetInsertPoint(Ptr->getParent()->getFirstNonPHIIt());
   IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
   Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
   Builder.Insert(Handle);
@@ -786,6 +954,9 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
     } else if (auto *LI = dyn_cast<LoadInst>(U)) {
       createLoadIntrinsic(II, LI, RTI);
       DeadInsts.push_back(LI);
+    } else if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
+      createAtomicBinOpIntrinsic(II, AI, RTI);
+      DeadInsts.push_back(AI);
     } else
       llvm_unreachable("Unhandled instruction - pointer escaped?");
   }

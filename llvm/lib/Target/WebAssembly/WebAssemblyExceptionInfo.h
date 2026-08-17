@@ -16,7 +16,11 @@
 
 #include "WebAssembly.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 
@@ -120,7 +124,7 @@ public:
 
 raw_ostream &operator<<(raw_ostream &OS, const WebAssemblyException &WE);
 
-class WebAssemblyExceptionInfo final : public MachineFunctionPass {
+class WebAssemblyExceptionInfo {
   // Mapping of basic blocks to the innermost exception they occur in
   DenseMap<const MachineBasicBlock *, WebAssemblyException *> BBMap;
   std::vector<std::unique_ptr<WebAssemblyException>> TopLevelExceptions;
@@ -131,18 +135,16 @@ class WebAssemblyExceptionInfo final : public MachineFunctionPass {
   WebAssemblyException *getOutermostException(MachineBasicBlock *MBB) const;
 
 public:
-  static char ID;
-  WebAssemblyExceptionInfo() : MachineFunctionPass(ID) {}
-  ~WebAssemblyExceptionInfo() override { releaseMemory(); }
+  WebAssemblyExceptionInfo() {}
+  ~WebAssemblyExceptionInfo() { releaseMemory(); }
   WebAssemblyExceptionInfo(const WebAssemblyExceptionInfo &) = delete;
+  WebAssemblyExceptionInfo(WebAssemblyExceptionInfo &&) = default;
   WebAssemblyExceptionInfo &
   operator=(const WebAssemblyExceptionInfo &) = delete;
 
-  bool runOnMachineFunction(MachineFunction &) override;
-  void releaseMemory() override;
+  void releaseMemory();
   void recalculate(MachineFunction &MF, MachineDominatorTree &MDT,
                    const MachineDominanceFrontier &MDF);
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool empty() const { return TopLevelExceptions.empty(); }
 
@@ -166,7 +168,40 @@ public:
     TopLevelExceptions.push_back(std::move(WE));
   }
 
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
+  void print(raw_ostream &OS, const Module *M) const;
+
+  bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
+};
+
+class WebAssemblyExceptionInfoWrapperPass : public MachineFunctionPass {
+  WebAssemblyExceptionInfo WasmExceptionInfo;
+
+public:
+  static char ID;
+  WebAssemblyExceptionInfoWrapperPass() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void print(raw_ostream &OS, const Module *M = nullptr) const override {
+    WasmExceptionInfo.print(OS, M);
+  }
+  void releaseMemory() override { WasmExceptionInfo.releaseMemory(); }
+
+  WebAssemblyExceptionInfo &getWEI() { return WasmExceptionInfo; }
+  const WebAssemblyExceptionInfo &getWEI() const { return WasmExceptionInfo; }
+};
+
+class WebAssemblyExceptionAnalysis
+    : public AnalysisInfoMixin<WebAssemblyExceptionAnalysis> {
+  friend AnalysisInfoMixin<WebAssemblyExceptionAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = WebAssemblyExceptionInfo;
+
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm
