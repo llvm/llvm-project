@@ -24418,6 +24418,30 @@ static SDValue LowerIntVSETCC_AVX512(SDValue Op, const SDLoc &dl,
          "Cannot set masked compare for this operation");
 
   ISD::CondCode SetCCOpcode = cast<CondCodeSDNode>(CC)->get();
+  EVT OpVT = Op0.getValueType();
+  APInt C;
+
+  // Prefer a compare against zero over splat(±1), which becomes a
+  // constant-pool load. Analogous to TranslateX86CC for scalars.
+  if (SetCCOpcode == ISD::SETLT &&
+      ISD::isConstantSplatVector(Op1.getNode(), C) && C.isOne()) {
+    SetCCOpcode = ISD::SETLE;
+    Op1 = DAG.getConstant(0, dl, OpVT);
+  } else if (SetCCOpcode == ISD::SETGT &&
+             ISD::isConstantSplatVector(Op0.getNode(), C) && C.isOne()) {
+    SetCCOpcode = ISD::SETLE;
+    Op0 = Op1;
+    Op1 = DAG.getConstant(0, dl, OpVT);
+  } else if (SetCCOpcode == ISD::SETGT &&
+             ISD::isConstantSplatVector(Op1.getNode(), C) && C.isAllOnes()) {
+    SetCCOpcode = ISD::SETGE;
+    Op1 = DAG.getConstant(0, dl, OpVT);
+  } else if (SetCCOpcode == ISD::SETLT &&
+             ISD::isConstantSplatVector(Op0.getNode(), C) && C.isAllOnes()) {
+    SetCCOpcode = ISD::SETGE;
+    Op0 = Op1;
+    Op1 = DAG.getConstant(0, dl, OpVT);
+  }
 
   // Prefer SETGT over SETLT.
   if (SetCCOpcode == ISD::SETLT) {
@@ -58307,38 +58331,6 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
   return Bitcast;
 }
 
-/// AVX512 VPCMP encodes all integer condcodes. Prefer a compare against zero
-/// over the canonical slt/sgt vs splat(±1), which otherwise becomes a
-/// constant-pool load. Analogous to TranslateX86CC for scalars.
-static SDValue combineAVX512SetCCPreferZero(EVT VT, SDValue LHS, SDValue RHS,
-                                            ISD::CondCode CC, const SDLoc &DL,
-                                            SelectionDAG &DAG,
-                                            const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasAVX512() || !VT.isVectorOf(MVT::i1) ||
-      !LHS.getValueType().isInteger())
-    return SDValue();
-
-  EVT OpVT = LHS.getValueType();
-  APInt C;
-  // slt x, 1 / sgt 1, x -> sle x, 0
-  if ((CC == ISD::SETLT && ISD::isConstantSplatVector(RHS.getNode(), C) &&
-       C.isOne()) ||
-      (CC == ISD::SETGT && ISD::isConstantSplatVector(LHS.getNode(), C) &&
-       C.isOne())) {
-    SDValue X = CC == ISD::SETLT ? LHS : RHS;
-    return DAG.getSetCC(DL, VT, X, DAG.getConstant(0, DL, OpVT), ISD::SETLE);
-  }
-  // sgt x, -1 / slt -1, x -> sge x, 0
-  if ((CC == ISD::SETGT && ISD::isConstantSplatVector(RHS.getNode(), C) &&
-       C.isAllOnes()) ||
-      (CC == ISD::SETLT && ISD::isConstantSplatVector(LHS.getNode(), C) &&
-       C.isAllOnes())) {
-    SDValue X = CC == ISD::SETGT ? LHS : RHS;
-    return DAG.getSetCC(DL, VT, X, DAG.getConstant(0, DL, OpVT), ISD::SETGE);
-  }
-  return SDValue();
-}
-
 static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
@@ -58471,10 +58463,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   // use `PCMPGT` if the result is mean to stay in a vector (and if its going to
   // a mask, there are signed AVX512 comparisons).
   if (VT.isVector() && OpVT.isVector() && OpVT.isInteger()) {
-    if (SDValue V = combineAVX512SetCCPreferZero(VT, LHS, RHS, CC, DL, DAG,
-                                                 Subtarget))
-      return V;
-
     bool CanMakeSigned = false;
     if (ISD::isUnsignedIntSetCC(CC)) {
       KnownBits CmpKnown =
@@ -58493,8 +58481,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
     if (CanMakeSigned || ISD::isSignedIntSetCC(CC)) {
       // AVX512 can encode LE/GE against zero; do not turn that into LT/GT
       // vs ±1.
-      const bool KeepZeroCmp =
-          Subtarget.hasAVX512() && VT.isVectorOf(MVT::i1);
+      const bool KeepZeroCmp = Subtarget.hasAVX512() && VT.isVectorOf(MVT::i1);
       SDValue LHSOut = LHS;
       SDValue RHSOut = RHS;
       ISD::CondCode NewCC = CC;
@@ -58522,8 +58509,8 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         if (SDValue NewLHS = incDecVectorConstant(LHS, DAG, /*IsInc*/ false,
                                                   /*NSW*/ true))
           LHSOut = NewLHS;
-        else if (SDValue NewRHS = incDecVectorConstant(
-                     RHS, DAG, /*IsInc*/ true, /*NSW*/ true)) {
+        else if (SDValue NewRHS = incDecVectorConstant(RHS, DAG, /*IsInc*/ true,
+                                                       /*NSW*/ true)) {
           if (KeepZeroCmp && ISD::isConstantSplatVectorAllZeros(RHS.getNode()))
             break;
           RHSOut = NewRHS;
