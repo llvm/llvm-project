@@ -3074,9 +3074,13 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // This produces 1 vector iteration, and 1 scalar iteration with
       // no remainder. Later passes will eliminate the loop and leave
       // straight-line code as the both iteration counts are statically known.
+      //
+      // If a function is marked as minsize/optsize or OptForSize is set, do not
+      // allow this form of transformation as this will increase CodeSize.
       ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
       if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
-          ExactTC.getFixedValue() > 1) {
+          ExactTC.getFixedValue() > 1 && !TheFunction->hasOptSize() &&
+          !Config.OptForSize) {
         unsigned TC = ExactTC.getFixedValue();
         unsigned MaxFixedVF = MaxFactors.FixedVF.getFixedValue();
         if ((TC - 1) % EffectiveIC == 0) {
