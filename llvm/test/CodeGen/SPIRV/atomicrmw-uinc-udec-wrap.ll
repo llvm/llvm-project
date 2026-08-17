@@ -16,9 +16,7 @@
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Bool:]] = OpTypeBool
-; AMD targets enable every valid extension by default, SPV_KHR_untyped_pointers
-; among them, so an ordinary data pointer is untyped here and carries its
-; pointee per instruction instead.
+; AMD targets enable SPV_KHR_untyped_pointers by default, so pointers are untyped.
 ; CHECK-DAG: %[[#PointerType:]] = OpTypeUntypedPointerKHR CrossWorkgroup
 ; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 528
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42

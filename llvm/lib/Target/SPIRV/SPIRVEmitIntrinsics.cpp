@@ -2633,10 +2633,8 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   if (Op != AtomicRMWInst::UIncWrap && Op != AtomicRMWInst::UDecWrap)
     return &I;
 
-  // Carrying these across the SPIR-V boundary as a call to an imported helper
-  // is an AMD extension: there is no SPIR-V opcode for them, so a consumer has
-  // to recognize the helper by name to make sense of the module. Restrict it to
-  // AMD targets and let everyone else keep the generic expansion.
+  // No SPIR-V opcode exists for these, so lowering to an imported helper is an
+  // AMD extension. Other targets keep the generic expansion.
   if (!isAMDTarget(TM.getTargetTriple()))
     return &I;
 
@@ -2660,13 +2658,9 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   Type *ValTy = I.getValOperand()->getType();
   Type *PtrTy = I.getPointerOperand()->getType();
-  // Encode the address space and the value type in the name, the same way
-  // lowerLLVMIntrinsicName() does for spirv.llvm_memset_p1_i64. A module may
-  // need several mutually incompatible signatures, while SPIR-V resolves an
-  // imported function by its linkage name alone. The value may also be a fixed
-  // vector of integers, spelled the LLVM way: _p1_v2i32. Anything wider than
-  // the target's maximum atomic size never reaches here, because AtomicExpand
-  // rejects it first.
+  // Encode the address space and value type in the name (e.g. _p1_i32,
+  // _p1_v2i32), as lowerLLVMIntrinsicName() does, since SPIR-V resolves an
+  // imported function by its linkage name alone.
   std::string TypeSuffix;
   if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
     TypeSuffix = "v" + std::to_string(VecTy->getNumElements());
@@ -2684,11 +2678,8 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
                                   B.getInt32(MemSem), I.getValOperand()};
   CallInst *CI = B.CreateCall(FC, Args);
   CI->setCallingConv(CallingConv::SPIR_FUNC);
-  // Keep the metadata, as the other memory instructions lowered here do.
   // SPIRVCallLowering reads alias.scope/noalias off the call to build the
-  // aliasing decorations, and it runs after this pass, so dropping them here
-  // would silently lose them. insertSpirvDecorations() has already run for the
-  // atomicrmw and does not revisit the call, so nothing is encoded twice.
+  // aliasing decorations and runs after this pass, so preserve the metadata.
   CI->copyMetadata(I);
 
   replaceAllUsesWithAndErase(B, &I, CI);
