@@ -3346,7 +3346,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       C.getPointerType(PrivatesQTy).withConst().withRestrict(),
       ImplicitParamKind::Other);
   Args.push_back(TaskPrivatesArg);
-  llvm::SmallDenseMap<CanonicalDeclPtr<const VarDecl>, unsigned> PrivateVarsPos;
+  llvm::SmallDenseMap<const ValueDecl *, unsigned> PrivateVarsPos;
   unsigned Counter = 1;
   for (const Expr *E : Data.PrivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
@@ -3355,12 +3355,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const Decl *D = cast<DeclRefExpr>(E)->getDecl();
-    const VarDecl *VD;
-    if (const auto *BD = dyn_cast<BindingDecl>(D))
-      VD = cast<VarDecl>(BD->getDecomposedDecl());
-    else
-      VD = cast<VarDecl>(D);
+    const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
     PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
@@ -3371,12 +3366,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const Decl *D = cast<DeclRefExpr>(E)->getDecl();
-    const VarDecl *VD;
-    if (const auto *BD = dyn_cast<BindingDecl>(D))
-      VD = cast<VarDecl>(BD->getDecomposedDecl());
-    else
-      VD = cast<VarDecl>(D);
+    const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
     PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
@@ -3387,12 +3377,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withConst()
             .withRestrict(),
         ImplicitParamKind::Other));
-    const Decl *D = cast<DeclRefExpr>(E)->getDecl();
-    const VarDecl *VD;
-    if (const auto *BD = dyn_cast<BindingDecl>(D))
-      VD = cast<VarDecl>(BD->getDecomposedDecl());
-    else
-      VD = cast<VarDecl>(D);
+    const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
     PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
@@ -3440,17 +3425,11 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
   Counter = 0;
   for (const FieldDecl *Field : PrivatesQTyRD->fields()) {
     LValue FieldLVal = CGF.EmitLValueForField(Base, Field);
-    // For BindingDecls, lookup by the decomposed VarDecl.
-    // For VarDecls, lookup by the VarDecl from Original.
-    const VarDecl *LookupVD;
+    // Lookup by the original declaration (BindingDecl or VarDecl).
+    const ValueDecl *LookupVD;
     if (Privates[Counter].second.OriginalRef) {
-      const Decl *OrigDecl =
+      LookupVD =
           cast<DeclRefExpr>(Privates[Counter].second.OriginalRef)->getDecl();
-      if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
-        LookupVD = cast<VarDecl>(BD->getDecomposedDecl());
-      } else {
-        LookupVD = Privates[Counter].second.Original;
-      }
     } else {
       LookupVD = Privates[Counter].second.Original;
     }
