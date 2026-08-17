@@ -1,0 +1,584 @@
+# REQUIRES: asserts
+
+# RUN: llc -filetype=null %s -mtriple=aarch64-unknown -mattr=+fuse-movz-movk -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-a14 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+
+# RUN: llc -filetype=null %s -mtriple=aarch64-unknown -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -mattr=-fuse-movz-movk -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+
+---
+name: movzw0_movkw0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkw0
+    ; CHECK: SU(0): %0:gpr32 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr32 = MOVKWi %0:gpr32(tied-def 0), 2, 0
+    %0:gpr32 = MOVZWi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr32 = MOVKWi %0, 2, 0
+...
+
+---
+name: movzw0_movkw16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkw16
+    ; CHECK: SU(0): %0:gpr32 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr32 = MOVKWi %0:gpr32(tied-def 0), 2, 16
+    %0:gpr32 = MOVZWi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr32 = MOVKWi %0, 2, 16
+...
+
+---
+name: movzw0_movkx0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkx0
+    ; CHECK: SU(0): undef %0.sub_32:gpr64 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 0
+    undef %0.sub_32:gpr64 = MOVZWi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 0
+...
+
+---
+name: movzw0_movkx16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkx16
+    ; CHECK: SU(0): undef %0.sub_32:gpr64 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 16
+    undef %0.sub_32:gpr64 = MOVZWi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 16
+...
+
+---
+name: movzw0_movkx32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkx32
+    ; CHECK: SU(0): undef %0.sub_32:gpr64 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 32
+    undef %0.sub_32:gpr64 = MOVZWi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 32
+...
+
+---
+name: movzw0_movkx48
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkx48
+    ; CHECK: SU(0): undef %0.sub_32:gpr64 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 48
+    undef %0.sub_32:gpr64 = MOVZWi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 48
+...
+
+---
+name: movzw16_movkw0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkw0
+    ; CHECK: SU(0): %0:gpr32 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr32 = MOVKWi %0:gpr32(tied-def 0), 2, 0
+    %0:gpr32 = MOVZWi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr32 = MOVKWi %0, 2, 0
+...
+
+---
+name: movzw16_movkw16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkw16
+    ; CHECK: SU(0): %0:gpr32 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr32 = MOVKWi %0:gpr32(tied-def 0), 2, 16
+    %0:gpr32 = MOVZWi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr32 = MOVKWi %0, 2, 16
+...
+
+---
+name: movzw16_movkx0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkx0
+    ; CHECK: SU(0): undef %0.sub_32:gpr64 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 0
+    undef %0.sub_32:gpr64 = MOVZWi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 0
+...
+
+---
+name: movzw16_movkx16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkx16
+    ; CHECK: SU(0): undef %0.sub_32:gpr64 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 16
+    undef %0.sub_32:gpr64 = MOVZWi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 16
+...
+
+---
+name: movzw16_movkx32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkx32
+    ; CHECK: SU(0): undef %0.sub_32:gpr64 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 32
+    undef %0.sub_32:gpr64 = MOVZWi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 32
+...
+
+---
+name: movzw16_movkx48
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkx48
+    ; CHECK: SU(0): undef %0.sub_32:gpr64 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 48
+    undef %0.sub_32:gpr64 = MOVZWi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 48
+...
+
+---
+name: movzx0_movkw0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkw0
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0.sub_32:gpr64 = MOVKWi %0.sub_32:gpr64(tied-def 0), 2, 0
+    %0:gpr64 = MOVZXi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0.sub_32:gpr64 = MOVKWi %0.sub_32, 2, 0
+...
+
+---
+name: movzx0_movkw16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkw16
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0.sub_32:gpr64 = MOVKWi %0.sub_32:gpr64(tied-def 0), 2, 16
+    %0:gpr64 = MOVZXi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0.sub_32:gpr64 = MOVKWi %0.sub_32, 2, 16
+...
+
+---
+name: movzx0_movkx0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkx0
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 0
+    %0:gpr64 = MOVZXi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 0
+...
+
+---
+name: movzx0_movkx16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkx16
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 16
+    %0:gpr64 = MOVZXi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 16
+...
+
+---
+name: movzx0_movkx32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkx32
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 32
+    %0:gpr64 = MOVZXi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 32
+...
+
+---
+name: movzx0_movkx48
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkx48
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 48
+    %0:gpr64 = MOVZXi 1, 0
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 48
+...
+
+---
+name: movzx16_movkw0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkw0
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0.sub_32:gpr64 = MOVKWi %0.sub_32:gpr64(tied-def 0), 2, 0
+    %0:gpr64 = MOVZXi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0.sub_32:gpr64 = MOVKWi %0.sub_32, 2, 0
+...
+
+---
+name: movzx16_movkw16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkw16
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0.sub_32:gpr64 = MOVKWi %0.sub_32:gpr64(tied-def 0), 2, 16
+    %0:gpr64 = MOVZXi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0.sub_32:gpr64 = MOVKWi %0.sub_32, 2, 16
+...
+
+---
+name: movzx16_movkx0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkx0
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 0
+    %0:gpr64 = MOVZXi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 0
+...
+
+---
+name: movzx16_movkx16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkx16
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 16
+    %0:gpr64 = MOVZXi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 16
+...
+
+---
+name: movzx16_movkx32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkx32
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 32
+    %0:gpr64 = MOVZXi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 32
+...
+
+---
+name: movzx16_movkx48
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkx48
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 48
+    %0:gpr64 = MOVZXi 1, 16
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 48
+...
+
+---
+name: movzx32_movkw0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkw0
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0.sub_32:gpr64 = MOVKWi %0.sub_32:gpr64(tied-def 0), 2, 0
+    %0:gpr64 = MOVZXi 1, 32
+    %1:gpr32 = MOVZWi 9, 0
+    %0.sub_32:gpr64 = MOVKWi %0.sub_32, 2, 0
+...
+
+---
+name: movzx32_movkw16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkw16
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0.sub_32:gpr64 = MOVKWi %0.sub_32:gpr64(tied-def 0), 2, 16
+    %0:gpr64 = MOVZXi 1, 32
+    %1:gpr32 = MOVZWi 9, 0
+    %0.sub_32:gpr64 = MOVKWi %0.sub_32, 2, 16
+...
+
+---
+name: movzx32_movkx0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkx0
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 0
+    %0:gpr64 = MOVZXi 1, 32
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 0
+...
+
+---
+name: movzx32_movkx16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkx16
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 16
+    %0:gpr64 = MOVZXi 1, 32
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 16
+...
+
+---
+name: movzx32_movkx32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkx32
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 32
+    %0:gpr64 = MOVZXi 1, 32
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 32
+...
+
+---
+name: movzx32_movkx48
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkx48
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 48
+    %0:gpr64 = MOVZXi 1, 32
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 48
+...
+
+---
+name: movzx48_movkw0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkw0
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0.sub_32:gpr64 = MOVKWi %0.sub_32:gpr64(tied-def 0), 2, 0
+    %0:gpr64 = MOVZXi 1, 48
+    %1:gpr32 = MOVZWi 9, 0
+    %0.sub_32:gpr64 = MOVKWi %0.sub_32, 2, 0
+...
+
+---
+name: movzx48_movkw16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkw16
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0.sub_32:gpr64 = MOVKWi %0.sub_32:gpr64(tied-def 0), 2, 16
+    %0:gpr64 = MOVZXi 1, 48
+    %1:gpr32 = MOVZWi 9, 0
+    %0.sub_32:gpr64 = MOVKWi %0.sub_32, 2, 16
+...
+
+---
+name: movzx48_movkx0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkx0
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 0
+    %0:gpr64 = MOVZXi 1, 48
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 0
+...
+
+---
+name: movzx48_movkx16
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkx16
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 16
+    %0:gpr64 = MOVZXi 1, 48
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 16
+...
+
+---
+name: movzx48_movkx32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkx32
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 32
+    %0:gpr64 = MOVZXi 1, 48
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 32
+...
+
+---
+name: movzx48_movkx48
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkx48
+    ; CHECK: SU(0): %0:gpr64 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): dead %0:gpr64 = MOVKXi %0:gpr64(tied-def 0), 2, 48
+    %0:gpr64 = MOVZXi 1, 48
+    %1:gpr32 = MOVZWi 9, 0
+    %0:gpr64 = MOVKXi %0, 2, 48
+...

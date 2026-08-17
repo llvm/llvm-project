@@ -427,7 +427,7 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureFuseAddress,
                                     FeatureFuseArithmeticLogic,
                                     FeatureFuseCmpCSel,
-                                    FeatureFuseLiterals,
+                                    FeatureFuseMovzMovk,
                                     FeatureMaxInterleaveFactor4])>;
 
 def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",

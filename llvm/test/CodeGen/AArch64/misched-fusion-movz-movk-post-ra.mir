@@ -1,0 +1,1124 @@
+# REQUIRES: asserts
+
+# RUN: llc -filetype=null %s -mtriple=aarch64-linux-gnu -mattr=+fuse-movz-movk -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-a14 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+
+# RUN: llc -filetype=null %s -mtriple=aarch64-linux-gnu -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -filetype=null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -mattr=-fuse-movz-movk -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+
+---
+name: movzw0_movkw0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkw0_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $w0 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzw0_movkw0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzw0_movkw0_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $w1 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzw0_movkw16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkw16_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $w0 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzw0_movkw16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzw0_movkw16_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $w1 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzw0_movkx0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkx0_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $w0 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzw0_movkx0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzw0_movkx0_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $w1 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzw0_movkx16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkx16_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $w0 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzw0_movkx16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzw0_movkx16_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $w1 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzw0_movkx32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkx32_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $w0 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzw0_movkx32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzw0_movkx32_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $w1 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzw0_movkx48_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw0_movkx48_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $w0 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzw0_movkx48_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzw0_movkx48_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $w1 = MOVZWi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzw16_movkw0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkw0_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $w0 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzw16_movkw0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzw16_movkw0_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $w1 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzw16_movkw16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkw16_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $w0 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzw16_movkw16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzw16_movkw16_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $w1 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzw16_movkx0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkx0_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $w0 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzw16_movkx0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzw16_movkx0_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $w1 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzw16_movkx16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkx16_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $w0 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzw16_movkx16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzw16_movkx16_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $w1 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzw16_movkx32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkx32_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $w0 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzw16_movkx32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzw16_movkx32_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $w1 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzw16_movkx48_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzw16_movkx48_waw
+    ; CHECK: SU(0): $w0 = MOVZWi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $w0 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzw16_movkx48_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzw16_movkx48_nowaw
+    ; CHECK: SU(0): $w1 = MOVZWi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $w1 = MOVZWi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzx0_movkw0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkw0_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $x0 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzx0_movkw0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzx0_movkw0_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $x1 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzx0_movkw16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkw16_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $x0 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzx0_movkw16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzx0_movkw16_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $x1 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzx0_movkx0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkx0_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $x0 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzx0_movkx0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx0_movkx0_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $x1 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzx0_movkx16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkx16_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $x0 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzx0_movkx16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx0_movkx16_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $x1 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzx0_movkx32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkx32_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $x0 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzx0_movkx32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx0_movkx32_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $x1 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzx0_movkx48_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx0_movkx48_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 0
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $x0 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzx0_movkx48_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx0_movkx48_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 0
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $x1 = MOVZXi 1, 0
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzx16_movkw0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkw0_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $x0 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzx16_movkw0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzx16_movkw0_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $x1 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzx16_movkw16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkw16_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $x0 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzx16_movkw16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzx16_movkw16_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $x1 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzx16_movkx0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkx0_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $x0 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzx16_movkx0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx16_movkx0_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $x1 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzx16_movkx16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkx16_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $x0 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzx16_movkx16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx16_movkx16_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $x1 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzx16_movkx32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkx32_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $x0 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzx16_movkx32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx16_movkx32_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $x1 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzx16_movkx48_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx16_movkx48_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 16
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $x0 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzx16_movkx48_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx16_movkx48_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 16
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $x1 = MOVZXi 1, 16
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzx32_movkw0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkw0_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $x0 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzx32_movkw0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzx32_movkw0_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 32
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $x1 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzx32_movkw16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkw16_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $x0 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzx32_movkw16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzx32_movkw16_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 32
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $x1 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzx32_movkx0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkx0_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $x0 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzx32_movkx0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx32_movkx0_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 32
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $x1 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzx32_movkx16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkx16_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $x0 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzx32_movkx16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx32_movkx16_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 32
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $x1 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzx32_movkx32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkx32_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $x0 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzx32_movkx32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx32_movkx32_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 32
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $x1 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzx32_movkx48_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx32_movkx48_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 32
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $x0 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzx32_movkx48_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx32_movkx48_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 32
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $x1 = MOVZXi 1, 32
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzx48_movkw0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkw0_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $x0 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzx48_movkw0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzx48_movkw0_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 48
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 0
+    $x1 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 0
+...
+
+---
+name: movzx48_movkw16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkw16_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $x0 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzx48_movkw16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: movzx48_movkw16_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 48
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $w0 = MOVKWi $w0(tied-def 0), 2, 16
+    $x1 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $w0 = MOVKWi $w0, 2, 16
+...
+
+---
+name: movzx48_movkx0_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkx0_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $x0 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzx48_movkx0_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx48_movkx0_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 48
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 0
+    $x1 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 0
+...
+
+---
+name: movzx48_movkx16_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkx16_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $x0 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzx48_movkx16_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx48_movkx16_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 48
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 16
+    $x1 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 16
+...
+
+---
+name: movzx48_movkx32_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkx32_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $x0 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzx48_movkx32_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx48_movkx32_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 48
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 32
+    $x1 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 32
+...
+
+---
+name: movzx48_movkx48_waw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: movzx48_movkx48_waw
+    ; CHECK: SU(0): $x0 = MOVZXi 1, 48
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $x0 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...
+
+---
+name: movzx48_movkx48_nowaw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: movzx48_movkx48_nowaw
+    ; CHECK: SU(0): $x1 = MOVZXi 1, 48
+    ; CHECK-NOT: Cluster
+    ; CHECK: SU(2): $x0 = MOVKXi $x0(tied-def 0), 2, 48
+    $x1 = MOVZXi 1, 48
+    $w9 = MOVZWi 9, 0
+    $x0 = MOVKXi $x0, 2, 48
+...

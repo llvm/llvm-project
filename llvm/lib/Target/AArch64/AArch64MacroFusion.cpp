@@ -27,6 +27,7 @@ STATISTIC(NumFusedAES, "Number of AES fusions");
 STATISTIC(NumFusedCryptoEOR, "Number of crypto-EOR fusions");
 STATISTIC(NumFusedAdrpAdd, "Number of ADRP-ADD fusions");
 STATISTIC(NumFusedLiterals, "Number of literal-generation fusions");
+STATISTIC(NumFusedMovzMovk, "Number of MOVZ-MOVK fusions");
 STATISTIC(NumFusedAddress, "Number of address-generation load/store fusions");
 STATISTIC(NumFusedCmpCSel, "Number of compare-CSEL fusions");
 STATISTIC(NumFusedFCmpFCSel, "Number of FP-compare-FCSEL fusions");
@@ -223,33 +224,6 @@ static bool isAdrpAddPair(const MachineInstr *FirstMI,
   if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::ADRP) &&
       SecondMI.getOpcode() == AArch64::ADDXri)
     return true;
-  return false;
-}
-
-/// Literal generation.
-static bool isLiteralsPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
-  // Assume the 1st instr to be a wildcard if it is unspecified.
-  // 32 bit immediate.
-  if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZWi) &&
-      (SecondMI.getOpcode() == AArch64::MOVKWi &&
-       SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Lower half of 64 bit immediate.
-  if((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZXi) &&
-     (SecondMI.getOpcode() == AArch64::MOVKXi &&
-      SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Upper half of 64 bit immediate.
-  if ((FirstMI == nullptr ||
-       (FirstMI->getOpcode() == AArch64::MOVKXi &&
-        FirstMI->getOperand(3).getImm() == 32)) &&
-      (SecondMI.getOpcode() == AArch64::MOVKXi &&
-       SecondMI.getOperand(3).getImm() == 48))
-    return true;
-
   return false;
 }
 
@@ -670,6 +644,24 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
   return mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
 }
 
+// MOVZ + MOVK.
+static bool isMovzMovkPair(const MachineInstr *FirstMI,
+                           const MachineInstr &SecondMI,
+                           const TargetRegisterInfo *TRI,
+                           const AArch64Subtarget &ST) {
+  if (!ST.fusesMovzMovkPair(FirstMI, SecondMI))
+    return false;
+
+  // The opcode check above only establishes the shape of the pair. MOVZ+MOVK
+  // should be clustered only when both write the same register. Architecturally
+  // a RAW dependency between MOVZ and MOVK would already imply WAW, because
+  // both have a single register operand.
+  assert(
+      (FirstMI == nullptr || mayHaveWAWDependency(*FirstMI, SecondMI, TRI)) &&
+      "read-after-write should have implied write-after-write for MOVZ+MOVK");
+  return true;
+}
+
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
@@ -718,8 +710,12 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAdrpAdd;
     return true;
   }
-  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI)) {
+  if (ST.hasFuseLiterals() && ST.fusesMOVImmPair(FirstMI, SecondMI)) {
     ++NumFusedLiterals;
+    return true;
+  }
+  if (ST.hasFuseMovzMovk() && isMovzMovkPair(FirstMI, SecondMI, TRI, ST)) {
+    ++NumFusedMovzMovk;
     return true;
   }
   if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI)) {

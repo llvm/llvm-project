@@ -853,6 +853,11 @@ def FeatureFuseLiterals : SubtargetFeature<
     "CPU fuses literal generation operations",
     [], InlineIgnore>;
 
+def FeatureFuseMovzMovk : SubtargetFeature<
+    "fuse-movz-movk", "HasFuseMovzMovk", "true",
+    "CPU fuses MOVZ and MOVK operations",
+    [], InlineIgnore>;
+
 def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
    "fuse-addsub-2reg-const1", "HasFuseAddSub2RegAndConstOne", "true",
    "CPU fuses (a + b + 1) and (a - b - 1)",
