@@ -158,3 +158,6 @@ a7ba8dcad76476478100c228a31d9c48391b1e03
 
 # [NFC][clang] Split clang/lib/CodeGen/CGBuiltin.cpp into target-specific files (#132252)
 7f920e2e5f70b25c79adbc0b1005b1d1286d4681
+
+# [libc][NFC] Format all CMake files under libc/ (#213132)
+8969ae16e06587601fb80642a4036592e57c2473
