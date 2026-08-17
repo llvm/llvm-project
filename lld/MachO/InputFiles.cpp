@@ -1560,22 +1560,18 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       ehRelocator.makePcRel(lsdaAddrOff, lsdaIsec, target->p2WordSize);
     }
 
-    fdes[isec] = {funcLength, cie.personalitySymbol, lsdaIsec};
+    SmallVector<std::pair<uint32_t, uint8_t>> absifiedRanges;
+    if (config->icfLevel != ICFLevel::none) {
+      // "abs-ified" relocations can have data embedded in their section data.
+      // Record these offsets so ICF can fold these sections
+      absifiedRanges.emplace_back(funcAddrOff, cie.funcPtrSize);
+      absifiedRanges.emplace_back(cieOffOff, sizeof(uint32_t));
+      if (lsdaIsec)
+        absifiedRanges.emplace_back(lsdaAddrOff, cie.lsdaPtrSize);
+    }
+    fdes[isec] = {funcLength, cie.personalitySymbol, lsdaIsec, absifiedRanges};
     funcSym->originalUnwindEntry = isec;
     ehRelocator.commit();
-    if (config->icfLevel != ICFLevel::none) {
-      // Zero out "abs-ified" relocations so ICF can fold them
-      MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
-      assert(isec->getRelocAt(funcAddrOff));
-      memset(copy.data() + funcAddrOff, 0, cie.funcPtrSize);
-      assert(isec->getRelocAt(cieOffOff));
-      memset(copy.data() + cieOffOff, 0, sizeof(uint32_t));
-      if (lsdaIsec) {
-        assert(isec->getRelocAt(lsdaAddrOff));
-        memset(copy.data() + lsdaAddrOff, 0, cie.lsdaPtrSize);
-      }
-      isec->data = copy;
-    }
   }
 
   // __eh_frame is marked as S_ATTR_LIVE_SUPPORT in input files, because FDEs

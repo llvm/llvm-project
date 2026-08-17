@@ -615,9 +615,23 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
     if (isFoldable) {
       foldable.push_back(isec);
-      for (Defined *d : isec->symbols)
-        if (d->unwindEntry())
-          foldable.push_back(d->unwindEntry());
+      for (Defined *d : isec->symbols) {
+        if (auto *unwindIsec = d->unwindEntry()) {
+          foldable.push_back(unwindIsec);
+
+          auto *obj = dyn_cast_or_null<ObjFile>(unwindIsec->getFile());
+          if (!obj)
+            continue;
+          auto fdesIt = obj->fdes.find(unwindIsec);
+          if (fdesIt == obj->fdes.end() || fdesIt->second.absifiedRanges.empty())
+            continue;
+          // Zero out "abs-ified" relocation section data so we can fold them
+          MutableArrayRef<uint8_t> copy = unwindIsec->data.copy(bAlloc());
+          for (const auto &[offset, size] : fdesIt->second.absifiedRanges)
+            memset(copy.data() + offset, 0, size);
+          unwindIsec->data = copy;
+        }
+      }
 
       // Some sections have embedded addends that foil ICF's hashing / equality
       // checks. (We can ignore embedded addends when doing ICF because the same
