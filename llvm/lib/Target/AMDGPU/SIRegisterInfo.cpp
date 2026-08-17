@@ -4118,6 +4118,32 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
   std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
 
+  // Append AMDGPUVGPRMSBAffinity's same-MSB-group candidates after any
+  // case-specific hints, so the bias applies for every hint kind. These are
+  // soft preferences only; they never remove candidates from Order.
+  auto AppendMSBHints = [&]() {
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    if (!MFI->hasVGPRMSBAffinities())
+      return;
+    int MSB = MFI->getVGPRMSBAffinity(VirtReg);
+    if (MSB < 0)
+      return;
+    SmallDenseSet<MCPhysReg, 32> Existing(Hints.begin(), Hints.end());
+    // A soft bias needs only a few preferred regs; cap it.
+    constexpr unsigned SoftHintCap = 8;
+    unsigned Added = 0;
+    for (MCPhysReg PhysReg : Order) {
+      if (Added >= SoftHintCap)
+        break;
+      if (static_cast<int>(getHWRegIndex(PhysReg) >> 8) != MSB)
+        continue;
+      if (Existing.insert(PhysReg).second) {
+        Hints.push_back(PhysReg);
+        ++Added;
+      }
+    }
+  };
+
   switch (Hint.first) {
   case AMDGPURI::Size32: {
     Register Paired = Hint.second;
@@ -4136,6 +4162,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
       // isLo(Paired) is implicitly true here from the API of
       // getMatchingSuperReg.
       Hints.push_back(PairedPhys);
+    AppendMSBHints();
     return false;
   }
   case AMDGPURI::Size16: {
@@ -4165,11 +4192,17 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
           Hints.push_back(PhysReg);
       }
     }
+    AppendMSBHints();
     return false;
   }
-  default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+  default: {
+    // Keep the base hook's copy hints first, then append the MSB-group
+    // candidates.
+    bool Ret = TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                         MF, VRM);
+    AppendMSBHints();
+    return Ret;
+  }
   }
 }
 
