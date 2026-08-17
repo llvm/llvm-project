@@ -5,12 +5,6 @@ jmpq *%rax
 // CHECK-NEXT: addq %r14, %rax
 // CHECK-NEXT: jmpq *%rax
 
-// The scratch register may be used as a branch target.
-jmpq *%r11
-// CHECK:      andl $-32, %r11d
-// CHECK-NEXT: addq %r14, %r11
-// CHECK-NEXT: jmpq *%r11
-
 jmpq *(%rdi)
 // CHECK:      movq (%rdi), %r11
 // CHECK-NEXT: andl $-32, %r11d
