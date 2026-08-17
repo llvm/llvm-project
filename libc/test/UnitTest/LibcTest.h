@@ -526,6 +526,8 @@ CString libc_make_test_file_path_func(const char *file_name);
 // EXPECT_DEATH can appear in a test of any function, e.g. checking for a crash
 // if passing nullptr to the function. So it must be defined, even if it can't
 // do anything.
+#define EXPECT_EXITS(FUNC, EXIT)
+#define ASSERT_EXITS(FUNC, EXIT)
 #define EXPECT_DEATH(FUNC, SIG)
 #define ASSERT_DEATH(FUNC, SIG)
 

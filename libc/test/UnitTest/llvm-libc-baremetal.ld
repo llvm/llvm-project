@@ -80,6 +80,9 @@ SECTIONS {
 
   .data : ALIGN(8) {
     PROVIDE(__data_start = .);
+    /* Base of the small-data area. Targets with GP-relative small-data
+       addressing (e.g. Hexagon) load GP with this at startup. */
+    PROVIDE(_SDA_BASE_ = .);
     *(.data .data.* .gnu.linkonce.d.*)
     *(.sdata .sdata.* .gnu.linkonce.s.*)
     . = ALIGN(8);
