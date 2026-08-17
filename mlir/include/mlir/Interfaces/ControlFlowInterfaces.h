@@ -17,6 +17,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -330,11 +331,25 @@ Region *getEnclosingRepetitiveRegion(Operation *op);
 /// exists.
 Region *getEnclosingRepetitiveRegion(Value value);
 
+/// Callback that reports successor-input values (e.g. a region iter_arg and its
+/// corresponding op result) that are structurally coupled and must be added or
+/// removed together, by unioning them in `tiedInputs`. This is needed when
+/// `getSuccessorRegions` refines the control-flow graph and drops an edge that
+/// would otherwise tie them (e.g. a statically-single-trip `scf.for` drops its
+/// region->region back edge, so its iter_args and results are no longer tied
+/// through the yield operand). Any number of values may be tied together. Loop-
+/// like ops can implement this by unioning each iter_arg with its result
+/// (`getRegionIterArgs()` / `getLoopResults()`).
+using RegionBranchStructuralTieFn =
+    std::function<void(Operation *, llvm::EquivalenceClasses<Value> &)>;
+
 /// Populate canonicalization patterns that simplify successor operands/inputs
 /// of region branch operations. Only operations with the given name are
-/// matched.
+/// matched. `structuralTieFn` is optional; see `RegionBranchStructuralTieFn`.
 void populateRegionBranchOpInterfaceCanonicalizationPatterns(
-    RewritePatternSet &patterns, StringRef opName, PatternBenefit benefit = 1);
+    RewritePatternSet &patterns, StringRef opName,
+    RegionBranchStructuralTieFn structuralTieFn = nullptr,
+    PatternBenefit benefit = 1);
 
 /// Helper function for the region branch op inlining pattern that builds
 /// replacement values for non-successor-input values.

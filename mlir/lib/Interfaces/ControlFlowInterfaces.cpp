@@ -839,9 +839,12 @@ static llvm::EquivalenceClasses<Value> computeTiedSuccessorInputs(
 /// There are two sets: {{%r1}, {%r2}}. Each set has one value, so there each
 /// value can be removed independently of the other values.
 struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
-  RemoveDeadRegionBranchOpSuccessorInputs(MLIRContext *context, StringRef name,
-                                          PatternBenefit benefit = 1)
-      : RewritePattern(name, benefit, context) {}
+  RemoveDeadRegionBranchOpSuccessorInputs(
+      MLIRContext *context, StringRef name,
+      RegionBranchStructuralTieFn structuralTieFn = nullptr,
+      PatternBenefit benefit = 1)
+      : RewritePattern(name, benefit, context),
+        structuralTieFn(std::move(structuralTieFn)) {}
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
@@ -856,6 +859,14 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
     regionBranchOp.getSuccessorOperandInputMapping(operandToInputs);
     llvm::EquivalenceClasses<Value> tiedSuccessorInputs =
         computeTiedSuccessorInputs(operandToInputs);
+
+    // The mapping above is derived from `getSuccessorRegions`, which may refine
+    // the control-flow graph and drop structurally-required edges (e.g. the
+    // region->region back edge of a statically-single-trip loop). Let the
+    // caller union any structural ties the mapping missed, so that, e.g., a
+    // loop iter_arg is never removed without its corresponding op result.
+    if (structuralTieFn)
+      structuralTieFn(op, tiedSuccessorInputs);
 
     // Determine which values to remove and group them by block and operation.
     SmallVector<Value> valuesToRemove;
@@ -940,6 +951,8 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
 
     return success();
   }
+
+  RegionBranchStructuralTieFn structuralTieFn;
 };
 
 /// Return the "owner" of a value: the parent block for block arguments, the
@@ -1300,11 +1313,13 @@ struct InlineRegionBranchOp : public RewritePattern {
 } // namespace
 
 void mlir::populateRegionBranchOpInterfaceCanonicalizationPatterns(
-    RewritePatternSet &patterns, StringRef opName, PatternBenefit benefit) {
+    RewritePatternSet &patterns, StringRef opName,
+    RegionBranchStructuralTieFn structuralTieFn, PatternBenefit benefit) {
   patterns.add<MakeRegionBranchOpSuccessorInputsDead,
-               RemoveDuplicateSuccessorInputUses,
-               RemoveDeadRegionBranchOpSuccessorInputs>(patterns.getContext(),
-                                                        opName, benefit);
+               RemoveDuplicateSuccessorInputUses>(patterns.getContext(), opName,
+                                                  benefit);
+  patterns.add<RemoveDeadRegionBranchOpSuccessorInputs>(
+      patterns.getContext(), opName, std::move(structuralTieFn), benefit);
 }
 
 void mlir::populateRegionBranchOpInterfaceInliningPattern(

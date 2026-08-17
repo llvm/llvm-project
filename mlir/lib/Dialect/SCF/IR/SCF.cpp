@@ -1004,11 +1004,33 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
 };
 } // namespace
 
+/// Structural-tie callback for `RegionBranchOpInterface` canonicalization: a
+/// loop-like op's region iter_args and their corresponding op results are
+/// structurally coupled (same loop-carried slot, enforced by the op verifier)
+/// and must be added/removed together. The successor-operand/input mapping may
+/// not link them when `getSuccessorRegions` drops an edge for control-flow
+/// precision (e.g. a statically-single-trip `scf.for` drops its back edge), so
+/// union the coupling explicitly via `LoopLikeOpInterface`.
+static void addLoopLikeStructuralTies(Operation *op,
+                                      llvm::EquivalenceClasses<Value> &tied) {
+  auto loopOp = dyn_cast<LoopLikeOpInterface>(op);
+  if (!loopOp)
+    return;
+  std::optional<ResultRange> results = loopOp.getLoopResults();
+  if (!results)
+    return;
+  Block::BlockArgListType iterArgs = loopOp.getRegionIterArgs();
+  if (iterArgs.size() != results->size())
+    return;
+  for (auto [iterArg, result] : llvm::zip_equal(iterArgs, *results))
+    tied.unionSets(iterArg, result);
+}
+
 void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<ForOpTensorCastFolder>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
-      results, ForOp::getOperationName());
+      results, ForOp::getOperationName(), addLoopLikeStructuralTies);
   populateRegionBranchOpInterfaceInliningPattern(
       results, ForOp::getOperationName(),
       /*replBuilderFn=*/[](OpBuilder &builder, Location loc, Value value) {
