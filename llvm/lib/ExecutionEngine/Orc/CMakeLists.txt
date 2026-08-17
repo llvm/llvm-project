@@ -43,6 +43,7 @@ add_llvm_component_library(LLVMOrcJIT
   LinkGraphLayer.cpp
   LinkGraphLinkingLayer.cpp
   LoadLinkableFile.cpp
+  LookupAndApply.cpp
   LookupAndRecordAddrs.cpp
   LLJIT.cpp
   MachO.cpp
