@@ -3679,33 +3679,29 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
         Src = Lo;
       } else if (VecSize == 32) {
         Src = createVOP3PSrc32FromLo16(Lo, Src, CurDAG, Subtarget);
-      } else {
-        assert((Lo.getValueSizeInBits() == 32 && VecSize == 64) ||
-               (Lo.getValueSizeInBits() == 64 && VecSize == 128));
-
+      } else if (Lo.getValueSizeInBits() == 32 && VecSize == 64) {
         SDLoc SL(In);
         SDValue Undef = SDValue(
           CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, SL,
                                  Lo.getValueType()), 0);
         const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-        // <2 x 64> instructions do not have OPSEL and also replicate low 64
-        // bits of a scalar input into high 64 bits. Use VGPRs in this case.
-        // TODO: This fact can be exploited but we need to set proper OPSEL for
-        // codegen folding purposes. It will not affect a final instruction.
         auto RC = Lo->isDivergent() ? TRI->getVGPRClassForBitWidth(VecSize)
                                     : TRI->getSGPRClassForBitWidth(VecSize);
-        unsigned NumRegs = Lo.getValueSizeInBits() == 32 ? 1 : 2;
         const SDValue Ops[] = {
             CurDAG->getTargetConstant(RC->getID(), SL, MVT::i32), Lo,
-            CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, NumRegs), SL,
+            CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, 1), SL,
                                       MVT::i32),
-            (!HasOpSel && Lo->isDivergent()) ? Lo : Undef,
-            CurDAG->getTargetConstant(
-                TRI->getSubRegFromChannel(NumRegs, NumRegs), SL, MVT::i32)};
+            Undef,
+            CurDAG->getTargetConstant(TRI->getSubRegFromChannel(1, 1), SL,
+                                      MVT::i32)};
 
         Src = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, SL,
                                              Src.getValueType(), Ops), 0);
       }
+      // Check that both op_sel_0 and op_sel_1 are zero for 64-bit VOP3P
+      // instructions. A later pass will optimize the splat sgpr patterns to
+      // save registers.
+      assert(HasOpSel || !(Mods & (SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)));
       SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
       return true;
     }
