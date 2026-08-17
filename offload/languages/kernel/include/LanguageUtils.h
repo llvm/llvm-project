@@ -9,11 +9,9 @@
 #ifndef LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_LANGUAGE_UTILS_H
 #define LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_LANGUAGE_UTILS_H
 
-#ifndef LANGUAGE
-#error This file should be included, or used, with a LANGUAGE macro set.
-#endif
-
+#include "LanguageRuntime.h"
 #include "OffloadAPI.h"
+#include "State.h"
 
 /// Convert an ol_result_t to the active language's Error_t.
 static inline Error_t convertResult(ol_result_t Result) {
@@ -29,6 +27,13 @@ static inline Error_t convertResult(ol_result_t Result) {
   default:
     return ErrorUnknown;
   }
+}
+
+/// Set the last error for the current thread and return it.
+static inline Error_t setLastError(Error_t Error) {
+  // TODO: find a more efficient way to set last error
+  return static_cast<Error_t>(
+      llvm::offload::ThreadStateTy::setLastError(Error));
 }
 
 /// Convert a Stream_t to an ol_queue_handle_t.

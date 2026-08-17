@@ -1426,6 +1426,25 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
   return Die.addValue(DIEAlloc, Value)->sizeOf(OrigUnit.getFormParams());
 }
 
+/// Returns \p InputDIE's DW_AT_high_pc value \p HighPC, constrained so the code
+/// range it ends stays clear of the symbol the linker places next. \p IsLength
+/// tells whether high_pc is encoded as a length rather than an address, and
+/// \p PCOffset is the amount the range shifts by in the output.
+///
+/// A scope nested in a function inherits the overrun of the function, so it is
+/// constrained as well.
+static uint64_t constrainHighPC(const DWARFDie &InputDIE, uint64_t HighPC,
+                                bool IsLength, int64_t PCOffset,
+                                AddressesMap &Addresses) {
+  std::optional<uint64_t> LowPC =
+      dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc));
+  if (!LowPC)
+    return HighPC;
+  uint64_t Constrained = Addresses.constrainCodeRangeHighPC(
+      *LowPC, IsLength ? *LowPC + HighPC : HighPC, PCOffset);
+  return IsLength ? Constrained - *LowPC : Constrained;
+}
+
 unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     DIE &Die, const DWARFDie &InputDIE, AttributeSpec AttrSpec,
     unsigned AttrSize, const DWARFFormValue &Val, const CompileUnit &Unit,
@@ -1474,14 +1493,9 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     else
       return 0;
   } else {
-    // A nested scope inherits the range its parent function overran, so every
-    // range is constrained, not just the subprogram's own.
-    if (AttrSpec.Attr == dwarf::DW_AT_high_pc) {
-      if (std::optional<uint64_t> LowPC =
-              dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc)))
-        Addr = ObjFile.Addresses->constrainCodeRangeHighPC(*LowPC, *Addr,
-                                                           Info.PCOffset);
-    }
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc)
+      Addr = constrainHighPC(InputDIE, *Addr, /*IsLength=*/false, Info.PCOffset,
+                             *ObjFile.Addresses);
     *Addr += Info.PCOffset;
   }
 
@@ -1640,13 +1654,12 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
     return 0;
   }
 
-  if (AttrSpec.Attr == dwarf::DW_AT_high_pc) {
-    if (std::optional<uint64_t> LowPC =
-            dwarf::toAddress(InputDIE.find(dwarf::DW_AT_low_pc)))
-      Value = File.Addresses->constrainCodeRangeHighPC(*LowPC, *LowPC + Value,
-                                                       Info.PCOffset) -
-              *LowPC;
-  }
+  // A compile unit's high_pc comes from the unit's own linked range and spans
+  // every symbol in it.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
+      Die.getTag() != dwarf::DW_TAG_compile_unit)
+    Value = constrainHighPC(InputDIE, Value, /*IsLength=*/true, Info.PCOffset,
+                            *File.Addresses);
 
   DIE::value_iterator Patch =
       Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
