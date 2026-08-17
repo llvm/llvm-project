@@ -26,11 +26,12 @@ define void @global_table_load(ptr noalias %out, ptr noalias %cond, i64 %n) {
 ; FIXED-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX1]]
 ; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[TMP40]], <2 x i1> [[TMP1]], <2 x i32> poison)
 ; FIXED-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; FIXED-NEXT:    [[TMP3:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; FIXED-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP1]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
-; FIXED-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 <ptr getelementptr inbounds nuw (i8, ptr @exp_table, i64 4), ptr getelementptr inbounds nuw (i8, ptr @exp_table, i64 4)>, <2 x i1> [[TMP7]], <2 x i32> poison)
-; FIXED-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP1]], <2 x i1> [[TMP2]], <2 x i1> zeroinitializer
-; FIXED-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 <ptr getelementptr inbounds nuw (i8, ptr @log_table, i64 8), ptr getelementptr inbounds nuw (i8, ptr @log_table, i64 8)>, <2 x i1> [[TMP6]], <2 x i32> poison)
+; FIXED-NEXT:    [[TMP6:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @exp_table, i64 4), align 4
+; FIXED-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP6]], i64 0
+; FIXED-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT3]], <2 x i32> poison, <2 x i32> zeroinitializer
+; FIXED-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @log_table, i64 8), align 4
+; FIXED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
+; FIXED-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; FIXED-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[WIDE_MASKED_GATHER1]], <2 x i32> [[WIDE_MASKED_GATHER]]
 ; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX1]]
 ; FIXED-NEXT:    call void @llvm.masked.store.v2i32.p0(<2 x i32> [[PREDPHI]], ptr align 4 [[TMP4]], <2 x i1> [[TMP1]])
@@ -68,11 +69,12 @@ define void @global_table_load(ptr noalias %out, ptr noalias %cond, i64 %n) {
 ; SCALABLE-NEXT:    [[ARRAYIDX_COND:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[IV]]
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr align 4 [[ARRAYIDX_COND]], <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i32> poison)
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = icmp ne <vscale x 2 x i32> [[WIDE_LOAD]], zeroinitializer
-; SCALABLE-NEXT:    [[TMP5:%.*]] = xor <vscale x 2 x i1> [[TMP4]], splat (i1 true)
-; SCALABLE-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i1> zeroinitializer
-; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 shufflevector (<vscale x 2 x ptr> insertelement (<vscale x 2 x ptr> poison, ptr getelementptr inbounds nuw (i8, ptr @exp_table, i64 4), i64 0), <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i32> poison)
-; SCALABLE-NEXT:    [[TMP9:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i1> zeroinitializer
-; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 shufflevector (<vscale x 2 x ptr> insertelement (<vscale x 2 x ptr> poison, ptr getelementptr inbounds nuw (i8, ptr @log_table, i64 8), i64 0), <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i32> poison)
+; SCALABLE-NEXT:    [[TMP9:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @exp_table, i64 4), align 4
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP9]], i64 0
+; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT5]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    [[TMP8:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @log_table, i64 8), align 4
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP8]], i64 0
+; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i32> [[WIDE_MASKED_GATHER1]], <vscale x 2 x i32> [[WIDE_MASKED_GATHER]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[IV]]
 ; SCALABLE-NEXT:    call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[PREDPHI]], ptr align 4 [[TMP6]], <vscale x 2 x i1> [[TMP11]])
@@ -129,15 +131,15 @@ define void @deref_param_in_range(ptr noalias %out, ptr noalias %cond, ptr noali
 ; FIXED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; FIXED:       [[VECTOR_PH]]:
 ; FIXED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[TABLE]], i64 3
-; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP0]], i64 0
-; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FIXED:       [[VECTOR_BODY]]:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
 ; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; FIXED-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; FIXED-NEXT:    [[TMP6:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[BROADCAST_SPLAT]], <2 x i1> [[TMP2]], <2 x i32> poison)
+; FIXED-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
+; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
+; FIXED-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; FIXED-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[TMP6]], <2 x i32> zeroinitializer
 ; FIXED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX]]
 ; FIXED-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP11]], align 4
@@ -161,8 +163,6 @@ define void @deref_param_in_range(ptr noalias %out, ptr noalias %cond, ptr noali
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP2]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TABLE]], i64 3
-; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[TMP3]], i64 0
-; SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
 ; SCALABLE-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -174,8 +174,9 @@ define void @deref_param_in_range(ptr noalias %out, ptr noalias %cond, ptr noali
 ; SCALABLE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr align 4 [[TMP1]], <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i32> poison)
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = icmp ne <vscale x 2 x i32> [[WIDE_LOAD]], zeroinitializer
-; SCALABLE-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i1> zeroinitializer
-; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i32> poison)
+; SCALABLE-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP3]], align 4
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP8]], i64 0
+; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], <vscale x 2 x i32> zeroinitializer
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[PREDPHI]], ptr align 4 [[TMP6]], <vscale x 2 x i1> [[TMP11]])
@@ -318,6 +319,7 @@ exit:
 
 ; Uniform, dereferenceable(16) pointer parameter.
 ; Since %iv < 1024, The offset (bytes [0,4)) is inside the range.
+; TODO: Fold GEP offset to 0 using IV upper bound (< 1024).
 define void @deref_param_in_range_uniform_but_not_loop_invariant(ptr noalias %out, ptr noalias %cond, ptr noalias nonnull align 4 dereferenceable(16) %table) nofree vscale_range(4, 4) {
 ; FIXED-LABEL: define void @deref_param_in_range_uniform_but_not_loop_invariant(
 ; FIXED-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[COND:%.*]], ptr noalias nonnull align 4 dereferenceable(16) [[TABLE:%.*]]) #[[ATTR1:[0-9]+]] {
