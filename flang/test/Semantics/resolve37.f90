@@ -47,3 +47,8 @@ integer, parameter :: sok(*)=[1,2]/[1,2]
 !ERROR: Must be a constant value
 integer, parameter :: snok(*)=[1,2]/[1,0]
 end
+
+subroutine kind_selector_name_same_as_declared_entity(a, n)
+  !ERROR: Must be a constant value
+  integer(n()) n
+end
