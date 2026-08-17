@@ -1736,6 +1736,10 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (func.getUseSampleProfile())
     llvmFunc->addFnAttr("use-sample-profile");
 
+  if (auto disableTailCalls = func.getDisableTailCalls())
+    llvmFunc->addFnAttr("disable-tail-calls",
+                        llvm::toStringRef(*disableTailCalls));
+
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),

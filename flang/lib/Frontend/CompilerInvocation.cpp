@@ -377,6 +377,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_foptimize_sibling_calls,
+                          clang::options::OPT_fno_optimize_sibling_calls))
+    opts.DisableTailCalls =
+        a->getOption().matches(clang::options::OPT_fno_optimize_sibling_calls);
+
   // -fno-integrated-as: emit GNU Assembler compatible assembly.
   if (!args.hasFlag(clang::options::OPT_fintegrated_as,
                     clang::options::OPT_fno_integrated_as, true))

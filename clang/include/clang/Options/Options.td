@@ -4345,11 +4345,15 @@ def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[HelpHidden]>,
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">,
   Flags<[HelpHidden]>,
   HelpText<"Don't use the new driver for OpenMP offloading.">;
-def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Disable tail call optimization, keeping the call stack accurate">,
-  MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
-def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
+def fno_optimize_sibling_calls
+    : Flag<["-"], "fno-optimize-sibling-calls">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<
+          "Disable tail call optimization, keeping the call stack accurate">,
+      MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
+def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">,
+    Group<f_Group>, Visibility<[ClangOption, FlangOption, FC1Option]>;
 defm escaping_block_tail_calls : BoolFOption<"escaping-block-tail-calls",
   CodeGenOpts<"NoEscapingBlockTailCalls">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option]>,
