@@ -11,6 +11,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/DenseSet.h"
@@ -1248,7 +1249,7 @@ private:
       // wrap pass will fold this construct into a self-contained
       // scf.execute_region, in which case the parent sees only a single op.
       if (parentConstruct && eval.isUnstructured &&
-          !lower::pft::isWrappableConstruct(eval))
+          !lower::pft::isWrappableConstruct(eval, semanticsContext))
         parentConstruct->isUnstructured = true;
 
       // The successor of a branch starts a new block.
@@ -2503,11 +2504,23 @@ hasIncomingBranch(const Fortran::lower::pft::Evaluation &construct) {
 using DoConstructChain = llvm::SmallVector<const parser::DoConstruct *, 4>;
 
 /// Value of \p intExpr, or INT64_MAX if it isn't a compile-time constant.
+///
+/// This is used for the loop count of the OpenACC `collapse(N)` clause, which
+/// requires N to be a positive scalar integer constant expression. A constant
+/// too large to be represented in an int64_t would be truncated by ToInt64
+/// rather than reported, so a value that is not positive is treated like a
+/// non-constant one rather than being used. INT64_MAX makes every enclosing
+/// loop count as associated with the directive, which is the safe answer here
+/// because it only prevents wrapping.
+///
+/// OpenMP uses semantics::omp::GetAffectedNestDepthWithReason instead, which
+/// covers the loop transforming directives as well as the clauses.
 static int64_t
 constantValueOrMax(const parser::ScalarIntConstantExpr &intExpr) {
   if (const auto *expr = semantics::GetExpr(intExpr))
     if (auto v = evaluate::ToInt64(*expr))
-      return *v;
+      if (*v > 0)
+        return *v;
   return std::numeric_limits<int64_t>::max();
 }
 
@@ -2590,7 +2603,8 @@ static bool isAccLoopBody(const Fortran::lower::pft::Evaluation &eval) {
 }
 
 /// True if \p eval is a DoConstruct attached to an enclosing OpenMP loop.
-static bool isOmpLoopBody(const Fortran::lower::pft::Evaluation &eval) {
+static bool isOmpLoopBody(const Fortran::lower::pft::Evaluation &eval,
+                          const semantics::SemanticsContext &semaCtx) {
   DoConstructChain chain;
   const Fortran::lower::pft::Evaluation *p =
       collectEnclosingDoChain(eval, chain);
@@ -2605,22 +2619,17 @@ static bool isOmpLoopBody(const Fortran::lower::pft::Evaluation &eval) {
   if (!loop)
     return false;
 
-  // Both `collapse(N)` and `ordered(N)` associate N loops with the directive,
-  // so the associated loop count is the larger of the two.
-  int64_t n = 1;
-  for (const parser::OmpClause &c : loop->BeginDir().Clauses().v) {
-    if (const auto *cc = std::get_if<parser::OmpClause::Collapse>(&c.u))
-      n = std::max(n, constantValueOrMax(cc->v));
-    else if (const auto *oc = std::get_if<parser::OmpClause::Ordered>(&c.u))
-      if (oc->v)
-        n = std::max(n, constantValueOrMax(*oc->v));
-  }
+  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  auto [depth, _] =
+      semantics::omp::GetAffectedNestDepthWithReason(loop->BeginDir(), version);
+  int64_t n = depth.value.value_or(1);
 
   return isAssociatedLoop(chain, loop->GetNestedLoop(), n);
 }
 
 bool Fortran::lower::pft::isWrappableConstruct(
-    const Fortran::lower::pft::Evaluation &eval) {
+    const Fortran::lower::pft::Evaluation &eval,
+    const Fortran::semantics::SemanticsContext &semaCtx) {
   if (!wrapUnstructuredConstructsInExecuteRegion)
     return false;
 
@@ -2638,5 +2647,5 @@ bool Fortran::lower::pft::isWrappableConstruct(
   // code-gen when a DoConstruct is attached to such a directive. We might
   // extend wrapping to such unstructured loops later on if needed.
   return !hasUnwrappableInternals(eval) && !hasIncomingBranch(eval) &&
-         !isAccLoopBody(eval) && !isOmpLoopBody(eval);
+         !isAccLoopBody(eval) && !isOmpLoopBody(eval, semaCtx);
 }
