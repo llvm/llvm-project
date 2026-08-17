@@ -943,8 +943,8 @@ public:
   }
 
   void VisitBuiltinTypeOrderExpr(const BuiltinTypeOrderExpr *E) {
-    Visit(E->getLhsType());
-    Visit(E->getRhsType());
+    Visit(E->getLHSType());
+    Visit(E->getRHSType());
   }
 
   void VisitLambdaExpr(const LambdaExpr *Node) {

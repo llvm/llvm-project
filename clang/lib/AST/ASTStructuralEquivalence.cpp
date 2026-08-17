@@ -353,10 +353,10 @@ class StmtComparer {
 
   bool IsStmtEquivalent(const BuiltinTypeOrderExpr *E1,
                         const BuiltinTypeOrderExpr *E2) {
-    return IsStructurallyEquivalent(Context, E1->getLhsType(),
-                                    E2->getLhsType()) &&
-           IsStructurallyEquivalent(Context, E1->getRhsType(),
-                                    E2->getRhsType());
+    return IsStructurallyEquivalent(Context, E1->getLHSType(),
+                                    E2->getLHSType()) &&
+           IsStructurallyEquivalent(Context, E1->getRHSType(),
+                                    E2->getRHSType());
   }
 
   bool IsStmtEquivalent(const CXXDependentScopeMemberExpr *E1,

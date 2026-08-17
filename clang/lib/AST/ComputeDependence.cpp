@@ -944,7 +944,7 @@ ExprDependence clang::computeDependence(TypeTraitExpr *E) {
 
 ExprDependence clang::computeDependence(BuiltinTypeOrderExpr *E) {
   ExprDependence D = ExprDependence::None;
-  for (TypeSourceInfo *Arg : {E->getLhsTypeInfo(), E->getRhsTypeInfo()})
+  for (TypeSourceInfo *Arg : {E->getLHSTypeInfo(), E->getRHSTypeInfo()})
     D |= toExprDependenceAsWritten(Arg->getType()->getDependence()) &
          ~ExprDependence::Type;
   return D;

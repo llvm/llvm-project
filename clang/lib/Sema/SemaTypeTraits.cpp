@@ -1482,9 +1482,10 @@ static ComparisonCategoryResult EvaluateTypeOrder(Sema &S, QualType LHS,
   }
 
   int Result = LhsName.compare(RhsName);
-  return Result == 0  ? ComparisonCategoryResult::Equal
-         : Result > 0 ? ComparisonCategoryResult::Greater
-                      : ComparisonCategoryResult::Less;
+  if (Result == 0)
+    return ComparisonCategoryResult::Equal;
+  return Result > 0 ? ComparisonCategoryResult::Greater
+                    : ComparisonCategoryResult::Less;
 }
 
 ExprResult Sema::ActOnBuiltinTypeOrder(SourceLocation KWLoc, ParsedType LhsTy,

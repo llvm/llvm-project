@@ -2256,8 +2256,8 @@ void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 void ASTStmtWriter::VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
   VisitExpr(E);
   Record.AddSourceRange(E->getSourceRange());
-  Record.AddTypeSourceInfo(E->getLhsTypeInfo());
-  Record.AddTypeSourceInfo(E->getRhsTypeInfo());
+  Record.AddTypeSourceInfo(E->getLHSTypeInfo());
+  Record.AddTypeSourceInfo(E->getRHSTypeInfo());
   Code = serialization::EXPR_BUILTIN_TYPE_ORDER;
 }
 

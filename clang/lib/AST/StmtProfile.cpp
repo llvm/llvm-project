@@ -2322,8 +2322,8 @@ void StmtProfiler::VisitTypeTraitExpr(const TypeTraitExpr *S) {
 
 void StmtProfiler::VisitBuiltinTypeOrderExpr(const BuiltinTypeOrderExpr *S) {
   VisitExpr(S);
-  VisitType(S->getLhsType());
-  VisitType(S->getRhsType());
+  VisitType(S->getLHSType());
+  VisitType(S->getRHSType());
 }
 
 void StmtProfiler::VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *S) {

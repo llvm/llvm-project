@@ -2893,25 +2893,25 @@ class BuiltinTypeOrderExpr final : public Expr {
 
   SourceLocation Loc;
   SourceLocation RParenLoc;
-  TypeSourceInfo *Lhs;
-  TypeSourceInfo *Rhs;
+  TypeSourceInfo *LHS;
+  TypeSourceInfo *RHS;
 
 public:
   BuiltinTypeOrderExpr(QualType T, SourceLocation Loc, TypeSourceInfo *LHS,
                        TypeSourceInfo *RHS, SourceLocation RParenLoc)
       : Expr(BuiltinTypeOrderExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
-        RParenLoc(RParenLoc), Lhs(LHS), Rhs(RHS) {
+        RParenLoc(RParenLoc), LHS(LHS), RHS(RHS) {
     setDependence(computeDependence(this));
   }
 
   explicit BuiltinTypeOrderExpr(EmptyShell Empty)
       : Expr(BuiltinTypeOrderExprClass, Empty) {}
 
-  TypeSourceInfo *getLhsTypeInfo() const { return Lhs; }
-  TypeSourceInfo *getRhsTypeInfo() const { return Rhs; }
+  TypeSourceInfo *getLHSTypeInfo() const { return LHS; }
+  TypeSourceInfo *getRHSTypeInfo() const { return RHS; }
 
-  QualType getLhsType() const { return getLhsTypeInfo()->getType(); }
-  QualType getRhsType() const { return getRhsTypeInfo()->getType(); }
+  QualType getLHSType() const { return getLHSTypeInfo()->getType(); }
+  QualType getRHSType() const { return getRHSTypeInfo()->getType(); }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }

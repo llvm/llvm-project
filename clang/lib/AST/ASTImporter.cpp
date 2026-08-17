@@ -9254,8 +9254,8 @@ ASTNodeImporter::VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
   auto ToType = importChecked(Err, E->getType());
   auto ToBeginLoc = importChecked(Err, E->getBeginLoc());
   auto ToEndLoc = importChecked(Err, E->getEndLoc());
-  auto *ToLhs = importChecked(Err, E->getLhsTypeInfo());
-  auto *ToRhs = importChecked(Err, E->getRhsTypeInfo());
+  auto *ToLhs = importChecked(Err, E->getLHSTypeInfo());
+  auto *ToRhs = importChecked(Err, E->getRHSTypeInfo());
   if (Err)
     return std::move(Err);
 

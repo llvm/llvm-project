@@ -2241,8 +2241,8 @@ void ASTStmtReader::VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
   SourceRange Range = readSourceRange();
   E->Loc = Range.getBegin();
   E->RParenLoc = Range.getEnd();
-  E->Lhs = readTypeSourceInfo();
-  E->Rhs = readTypeSourceInfo();
+  E->LHS = readTypeSourceInfo();
+  E->RHS = readTypeSourceInfo();
 }
 
 void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {

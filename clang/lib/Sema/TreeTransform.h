@@ -15501,7 +15501,7 @@ ExprResult
 TreeTransform<Derived>::TransformBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
   SmallVector<TypeSourceInfo *, 2> Args;
   bool ArgChanged = false;
-  for (TypeSourceInfo *From : {E->getLhsTypeInfo(), E->getRhsTypeInfo()}) {
+  for (TypeSourceInfo *From : {E->getLHSTypeInfo(), E->getRHSTypeInfo()}) {
     TypeSourceInfo *To = getDerived().TransformType(From);
     if (!To)
       return ExprError();

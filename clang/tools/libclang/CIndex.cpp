@@ -3281,8 +3281,8 @@ void EnqueueVisitor::VisitTypeTraitExpr(const TypeTraitExpr *E) {
 }
 
 void EnqueueVisitor::VisitBuiltinTypeOrderExpr(const BuiltinTypeOrderExpr *E) {
-  AddTypeLoc(E->getRhsTypeInfo());
-  AddTypeLoc(E->getLhsTypeInfo());
+  AddTypeLoc(E->getRHSTypeInfo());
+  AddTypeLoc(E->getLHSTypeInfo());
 }
 
 void EnqueueVisitor::VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {

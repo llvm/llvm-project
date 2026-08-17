@@ -2716,9 +2716,9 @@ void StmtPrinter::VisitTypeTraitExpr(TypeTraitExpr *E) {
 
 void StmtPrinter::VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
   OS << "__builtin_type_order(";
-  E->getLhsType().print(OS, Policy);
+  E->getLHSType().print(OS, Policy);
   OS << ", ";
-  E->getRhsType().print(OS, Policy);
+  E->getRHSType().print(OS, Policy);
   OS << ')';
 }
 

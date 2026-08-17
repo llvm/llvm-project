@@ -39,8 +39,8 @@ class TypeTraitExpr {
 }
 class BuiltinTypeOrderExpr {
   code Code = [{
-    addData(S->getLhsType());
-    addData(S->getRhsType());
+    addData(S->getLHSType());
+    addData(S->getRHSType());
   }];
 }
 
