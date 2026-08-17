@@ -74,12 +74,12 @@ function(mlgo_lower_models models mlir_opt mlir_translate target_type
       "canonicalize"
       "memref-elide-reinterpret-cast"
       "convert-to-emitc"
-      "wrap-emitc-func-in-class{class-name-format=${class_name}}"
-      "mlgo-add-reflection-map{included-field-attrs=tf_saved_model.index_path}"
       "math-expand-ops{ops=rsqrt}"
-      "arith-expand"
+      "arith-expand{include-min-max-f=true include-min-max-i=true}"
       "convert-math-to-emitc"
       "convert-arith-to-emitc"
+      "wrap-emitc-func-in-class{class-name-format=${class_name}}"
+      "mlgo-add-reflection-map{included-field-attrs=tf_saved_model.index_path}"
     )
     string(JOIN "," pass_pipeline ${mlir_passes})
     set(pass_pipeline "builtin.module(${pass_pipeline})")
