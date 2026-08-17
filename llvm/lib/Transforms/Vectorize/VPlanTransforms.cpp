@@ -5728,9 +5728,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!StrideTup)
         continue;
       auto [Start, Stride, NW] = *StrideTup;
-      // TODO: Support non-constant loop invariant stride.
-      const APInt *StrideC;
-      if (!match(Stride, m_scev_APInt(StrideC)))
+      if (!PSE.getSE()->isLoopInvariant(Stride, &L))
         continue;
       bool HasNUW = any(NW & SCEV::FlagNUW);
 
@@ -5785,21 +5783,25 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                               .tryToExpand(Start);
       if (!StartVPV)
         StartVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Start);
-      VPValue *StrideInBytes = Plan.getConstantInt(*StrideC);
+      VPValue *StrideVPV =
+          VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc())
+              .tryToExpand(Stride);
+      if (!StrideVPV)
+        StrideVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Stride);
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
-      assert(IndexTy == StrideInBytes->getScalarType() &&
+      assert(IndexTy == StrideVPV->getScalarType() &&
              "Stride type from SCEV must match the index type");
       VPValue *CanIV = Builder.createScalarZExtOrTrunc(
           VectorLoop->getCanonicalIV(), IndexTy, DebugLoc::getUnknown());
       auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {CanIV, StrideInBytes}, {HasNUW, /*HasNSW=*/false});
+          Instruction::Mul, {CanIV, StrideVPV}, {HasNUW, /*HasNSW=*/false});
       GEPNoWrapFlags NWFlags =
           HasNUW ? GEPNoWrapFlags::noUnsignedWrap() : GEPNoWrapFlags::none();
       VPValue *BasePtr = Builder.createNoWrapPtrAdd(StartVPV, Offset, NWFlags);
 
       // Create a new vector pointer for strided access.
       VPValue *NewPtr = Builder.createVectorPointer(
-          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, NWFlags,
+          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideVPV, NWFlags,
           R.getDebugLoc());
 
       VPValue *Mask = MemR->getMask();
@@ -5808,7 +5810,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       SmallVector<VPValue *, 5> Ops;
       if (StoredValue)
         Ops.push_back(StoredValue);
-      Ops.append({NewPtr, StrideInBytes, Mask, I32VF});
+      Ops.append({NewPtr, StrideVPV, Mask, I32VF});
 
       auto *StridedR = Builder.createWidenMemIntrinsic(
           IntrinID, Ops,
