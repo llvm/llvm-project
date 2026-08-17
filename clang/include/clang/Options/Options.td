@@ -6718,12 +6718,12 @@ def print_diagnostic_options : Flag<["-", "--"], "print-diagnostic-options">,
   HelpText<"Print all of Clang's warning options">,
   Visibility<[ClangOption, CLOption]>;
 def private__bundle : Flag<["-"], "private_bundle">;
-def pthreads : Flag<["-"], "pthreads">;
 defm pthread : BoolOption<"", "pthread",
   LangOpts<"POSIXThreads">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Support POSIX threads in generated code">,
   NegFlag<SetFalse>,
   BothFlags<[], [ClangOption, CC1Option, FlangOption, FC1Option]>>;
+def : Flag<["-"], "pthreads">, Alias<pthread>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;
 def remap : Flag<["-"], "remap">;
