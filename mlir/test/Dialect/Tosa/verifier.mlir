@@ -6,6 +6,17 @@
 
 // -----
 
+func.func @test_resize_mxfp_requires_nearest_neighbor(%arg0: tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op requires NEAREST_NEIGHBOR mode for block scaled input}}
+  %0 = tosa.resize %arg0, %scale, %offset, %border { mode = BILINEAR } : (tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
 func.func @test_transpose_io_rank_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21x1xf32> {
   // expected-error@+1 {{'tosa.transpose' op expected input tensor rank to equal result tensor rank}}
   %0 = tosa.transpose %arg0 {perms = array<i32: 2, 1, 0>}: (tensor<13x21x3xf32>) -> tensor<3x13x21x1xf32>
@@ -120,7 +131,7 @@ func.func @test_large_constant_permutation() {
 // -----
 
 func.func @test_scalar_output_transpose(%arg0: tensor<*xf32>) -> tensor<f32> {
-  // expected-error@+1 {{'tosa.transpose' op result #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
+  // expected-error@+1 {{'tosa.transpose' op result #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<f32>'}}
   %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1>} : (tensor<*xf32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
@@ -187,7 +198,7 @@ func.func @test_slice_invalid_size() {
 func.func @test_scalar_slice(%arg0: tensor<f32>) -> tensor<f32> {
   %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
   %1 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  // expected-error@+1 {{'tosa.slice' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
+  // expected-error@+1 {{'tosa.slice' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<f32>'}}
   %2 = tosa.slice %arg0, %0, %1 : (tensor<f32>, !tosa.shape<0>, !tosa.shape<0>) -> tensor<f32>
   return %2 : tensor<f32>
 }
@@ -1593,7 +1604,7 @@ func.func @cast_from_block_scaled_incompatible_input_output_shape(%arg0: tensor<
 // -----
 
 func.func @cast_from_block_scaled_not_scalar(%arg0: tensor<f4E2M1FN>, %arg1: tensor<f8E8M0FNU>) -> tensor<f32> {
-  // expected-error@+1 {{'tosa.cast_from_block_scaled' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f4E2M1FN>'}}
+  // expected-error@+1 {{'tosa.cast_from_block_scaled' op operand #0 must be tosa-conformant tensor of at least rank 1 of micro-scaling format number values, but got 'tensor<f4E2M1FN>'}}
   %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<f4E2M1FN>, tensor<f8E8M0FNU>) -> tensor<f32>
   return %0 : tensor<f32>
 }
@@ -1641,7 +1652,7 @@ func.func @test_cast_to_block_scaled_incompatible_input_output_shape(%arg0: tens
 // -----
 
 func.func @test_cast_to_block_scaled_not_scalar(%arg0: tensor<f32>) -> (tensor<f4E2M1FN>, tensor<f8E8M0FNU>) {
-  // expected-error@+1 {{'tosa.cast_to_block_scaled' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
+  // expected-error@+1 {{'tosa.cast_to_block_scaled' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<f32>'}}
   %0:2 = tosa.cast_to_block_scaled %arg0 {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<f32>) -> (tensor<f4E2M1FN>, tensor<f8E8M0FNU>)
   return %0#0, %0#1 : tensor<f4E2M1FN>, tensor<f8E8M0FNU>
 }
@@ -1705,7 +1716,7 @@ func.func @test_cast_between_block_scaled(%arg0: tensor<4x32x!tosa.block_scaled<
 // -----
 
 func.func @test_block_scaled_cast_invalid_block_shape(%arg0: tensor<1x16x31x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x16x31xf32> {
-  // expected-error@+1 {{'tosa.cast' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<1x16x31x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>'}}
+  // expected-error@+1 {{'tosa.cast' op operand #0 must be tosa-conformant tensor of number values: last dimension of block scaled tensor type (31) must be divisible by block size (32), but got 'tensor<1x16x31x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>'}}
   %0 = tosa.cast %arg0 : (tensor<1x16x31x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x16x31xf32>
   return %0 : tensor<1x16x31xf32>
 }
@@ -1713,7 +1724,7 @@ func.func @test_block_scaled_cast_invalid_block_shape(%arg0: tensor<1x16x31x!tos
 // -----
 
 func.func @test_block_scaled_cast_scalar(%arg0: tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<f32> {
-  // expected-error@+1 {{'tosa.cast' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>'}}
+  // expected-error@+1 {{'tosa.cast' op operand #0 must be tosa-conformant tensor of number values: block scaled tensor type must have rank greater than zero, but got 'tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>'}}
   %0 = tosa.cast %arg0 : (tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<f32>
   return %0 : tensor<f32>
 }
@@ -1761,7 +1772,7 @@ func.func @test_dim_invalid_axis(%arg0: tensor<1x2x3xi32>) -> !tosa.shape<1> {
 // -----
 
 func.func @test_dim_scalar(%arg0: tensor<i32>) -> !tosa.shape<1> {
-  // expected-error@+1 {{'tosa.dim' op operand #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<i32>'}}
+  // expected-error@+1 {{'tosa.dim' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values, but got 'tensor<i32>'}}
   %0 = tosa.dim %arg0 {axis = 4 : i32} : (tensor<i32>) -> !tosa.shape<1>
   return %0 : !tosa.shape<1>
 }
@@ -2346,7 +2357,7 @@ func.func @test_block_scaled_const_scale_value_non_float_explicit_type() -> tens
 !mxint8_scale = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 2.0, 4.0}>
 
 func.func @test_block_scaled_const_invalid_num_scales() -> tensor<2x32x!mxint8> {
-  // expected-error@+1 {{'tosa.const' op block scaled attribute type is not valid, got 'tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.000000e+00, 2.000000e+00, 4.000000e+00}>>'}}
+  // expected-error@+1 {{'tosa.const' op attribute block scaled type is invalid: block scaled tensor type with scale values must have scale values for each block, expected 2, got 3}}
   %0 = "tosa.const"() <{values = dense<tensor<2x32x!mxint8_scale> : 0 : i8>}> : () -> tensor<2x32x!mxint8>
   return %0 : tensor<2x32x!mxint8>
 }
@@ -2354,7 +2365,7 @@ func.func @test_block_scaled_const_invalid_num_scales() -> tensor<2x32x!mxint8> 
 // -----
 
 func.func @test_block_scaled_const_invalid_num_scales_wide_inner_dim() -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>> {
-  // expected-error@+1 {{'tosa.const' op block scaled attribute type is not valid, got 'tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.000000e+00, 2.000000e+00}>>'}}
+  // expected-error@+1 {{'tosa.const' op attribute block scaled type is invalid: block scaled tensor type with scale values must have scale values for each block, expected 4, got 2}}
   %0 = "tosa.const"() <{values = dense<tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 2.0}>> : 0 : i8>}> : () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return %0 : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
 }
@@ -2362,7 +2373,7 @@ func.func @test_block_scaled_const_invalid_num_scales_wide_inner_dim() -> tensor
 // -----
 
 func.func @test_block_scaled_const_cast_scale_values_propagate() -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {2.0, 4.0}>> {
-  // expected-error@+1 {{'tosa.const' op result #0 must be tosa-conformant tensor of number values, but got 'tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {2.000000e+00, 4.000000e+00}>>'}}
+  // expected-error@+1 {{'tosa.const' op result #0 must be tosa-conformant tensor of number values: block scaled tensor type with scale values is not allowed, but got 'tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {2.000000e+00, 4.000000e+00}>>'}}
   %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {2.0, 4.0}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {2.0, 4.0}>>
   return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {2.0, 4.0}>>
 }

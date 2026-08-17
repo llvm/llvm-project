@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/Support/Error.h"
@@ -20,8 +21,8 @@ using namespace llvm::object;
 namespace {
 
 class TestDXContainerWriter : public MCDXContainerBaseWriter {
-  SmallVector<SmallString<8>> PartNames;
-  SmallVector<SmallString<32>> PartData;
+  SmallVector<StringRef> PartNames;
+  SmallVector<StringRef> PartData;
   SmallVector<MCDXContainerPart> Parts;
 
 protected:
@@ -30,7 +31,7 @@ protected:
 public:
   void addPart(StringRef Name, ArrayRef<uint8_t> Data) {
     PartNames.emplace_back(Name);
-    PartData.emplace_back(Data.begin(), Data.end());
+    PartData.emplace_back(llvm::toStringRef(Data));
     Parts.push_back({PartNames.back(), PartData.back()});
   }
 };

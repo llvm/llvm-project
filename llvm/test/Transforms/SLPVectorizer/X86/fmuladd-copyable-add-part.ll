@@ -5,19 +5,33 @@
 declare double @llvm.fmuladd.f64(double, double, double)
 
 define void @test_main_opcode(ptr %dst, ptr %srcA, ptr %srcB, ptr %srcC) {
-; CHECK-LABEL: define void @test_main_opcode(
-; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRCA:%.*]], ptr [[SRCB:%.*]], ptr [[SRCC:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[GEPC2:%.*]] = getelementptr double, ptr [[SRCC]], i32 2
-; CHECK-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i32 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[GEPC2]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]])
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[DST]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr [[D2]], align 8
-; CHECK-NEXT:    ret void
+; ENABLED-LABEL: define void @test_main_opcode(
+; ENABLED-SAME: ptr [[DST:%.*]], ptr [[SRCA:%.*]], ptr [[SRCB:%.*]], ptr [[SRCC:%.*]]) {
+; ENABLED-NEXT:  [[ENTRY:.*:]]
+; ENABLED-NEXT:    [[GEPC2:%.*]] = getelementptr double, ptr [[SRCC]], i32 2
+; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
+; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
+; ENABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
+; ENABLED-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
+; ENABLED-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i32 2
+; ENABLED-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[GEPC2]], align 8
+; ENABLED-NEXT:    store <2 x double> [[TMP3]], ptr [[DST]], align 8
+; ENABLED-NEXT:    store <2 x double> [[TMP4]], ptr [[D2]], align 8
+; ENABLED-NEXT:    ret void
+;
+; DISABLED-LABEL: define void @test_main_opcode(
+; DISABLED-SAME: ptr [[DST:%.*]], ptr [[SRCA:%.*]], ptr [[SRCB:%.*]], ptr [[SRCC:%.*]]) {
+; DISABLED-NEXT:  [[ENTRY:.*:]]
+; DISABLED-NEXT:    [[GEPC2:%.*]] = getelementptr double, ptr [[SRCC]], i32 2
+; DISABLED-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i32 2
+; DISABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[GEPC2]], align 8
+; DISABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
+; DISABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
+; DISABLED-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
+; DISABLED-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]])
+; DISABLED-NEXT:    store <2 x double> [[TMP4]], ptr [[DST]], align 8
+; DISABLED-NEXT:    store <2 x double> [[TMP0]], ptr [[D2]], align 8
+; DISABLED-NEXT:    ret void
 ;
 entry:
   %a0 = load double, ptr %srcA, align 8
@@ -46,36 +60,20 @@ entry:
 }
 
 define void @test_main_opcode_fadd_copyable(ptr %dst, ptr %srcA, ptr %srcB, ptr %srcC, double %p, double %q) {
-; ENABLED-LABEL: define void @test_main_opcode_fadd_copyable(
-; ENABLED-SAME: ptr [[DST:%.*]], ptr [[SRCA:%.*]], ptr [[SRCB:%.*]], ptr [[SRCC:%.*]], double [[P:%.*]], double [[Q:%.*]]) {
-; ENABLED-NEXT:  [[ENTRY:.*:]]
-; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
-; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
-; ENABLED-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-; ENABLED-NEXT:    store <2 x double> [[TMP3]], ptr [[DST]], align 8
-; ENABLED-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i32 2
-; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[P]], i64 0
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[Q]], i64 0
-; ENABLED-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
-; ENABLED-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP4]], [[TMP6]]
-; ENABLED-NEXT:    store <2 x double> [[TMP7]], ptr [[D2]], align 8
-; ENABLED-NEXT:    ret void
-;
-; DISABLED-LABEL: define void @test_main_opcode_fadd_copyable(
-; DISABLED-SAME: ptr [[DST:%.*]], ptr [[SRCA:%.*]], ptr [[SRCB:%.*]], ptr [[SRCC:%.*]], double [[P:%.*]], double [[Q:%.*]]) {
-; DISABLED-NEXT:  [[ENTRY:.*:]]
-; DISABLED-NEXT:    [[FADD:%.*]] = fadd double [[P]], [[Q]]
-; DISABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
-; DISABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
-; DISABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
-; DISABLED-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-; DISABLED-NEXT:    store <2 x double> [[TMP3]], ptr [[DST]], align 8
-; DISABLED-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i32 2
-; DISABLED-NEXT:    store double [[FADD]], ptr [[D2]], align 8
-; DISABLED-NEXT:    [[D3:%.*]] = getelementptr double, ptr [[DST]], i32 3
-; DISABLED-NEXT:    store double [[Q]], ptr [[D3]], align 8
-; DISABLED-NEXT:    ret void
+; CHECK-LABEL: define void @test_main_opcode_fadd_copyable(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRCA:%.*]], ptr [[SRCB:%.*]], ptr [[SRCC:%.*]], double [[P:%.*]], double [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[FADD:%.*]] = fadd double [[P]], [[Q]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRCA]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRCB]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[SRCC]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[D2:%.*]] = getelementptr double, ptr [[DST]], i32 2
+; CHECK-NEXT:    store double [[FADD]], ptr [[D2]], align 8
+; CHECK-NEXT:    [[D3:%.*]] = getelementptr double, ptr [[DST]], i32 3
+; CHECK-NEXT:    store double [[Q]], ptr [[D3]], align 8
+; CHECK-NEXT:    ret void
 ;
 entry:
   %a0 = load double, ptr %srcA, align 8
@@ -101,14 +99,25 @@ entry:
 }
 
 define void @test_two_lanes(ptr %dst, double %a0, double %b0, double %c0, double %x) {
-; CHECK-LABEL: define void @test_two_lanes(
-; CHECK-SAME: ptr [[DST:%.*]], double [[A0:%.*]], double [[B0:%.*]], double [[C0:%.*]], double [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FMA0:%.*]] = call double @llvm.fmuladd.f64(double [[A0]], double [[B0]], double [[C0]])
-; CHECK-NEXT:    store double [[FMA0]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[D1:%.*]] = getelementptr double, ptr [[DST]], i32 1
-; CHECK-NEXT:    store double [[X]], ptr [[D1]], align 8
-; CHECK-NEXT:    ret void
+; ENABLED-LABEL: define void @test_two_lanes(
+; ENABLED-SAME: ptr [[DST:%.*]], double [[A0:%.*]], double [[B0:%.*]], double [[C0:%.*]], double [[X:%.*]]) {
+; ENABLED-NEXT:  [[ENTRY:.*:]]
+; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[A0]], i64 0
+; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[B0]], i64 0
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C0]], i64 0
+; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[X]], i64 1
+; ENABLED-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP3]])
+; ENABLED-NEXT:    store <2 x double> [[TMP4]], ptr [[DST]], align 8
+; ENABLED-NEXT:    ret void
+;
+; DISABLED-LABEL: define void @test_two_lanes(
+; DISABLED-SAME: ptr [[DST:%.*]], double [[A0:%.*]], double [[B0:%.*]], double [[C0:%.*]], double [[X:%.*]]) {
+; DISABLED-NEXT:  [[ENTRY:.*:]]
+; DISABLED-NEXT:    [[FMA0:%.*]] = call double @llvm.fmuladd.f64(double [[A0]], double [[B0]], double [[C0]])
+; DISABLED-NEXT:    store double [[FMA0]], ptr [[DST]], align 8
+; DISABLED-NEXT:    [[D1:%.*]] = getelementptr double, ptr [[DST]], i32 1
+; DISABLED-NEXT:    store double [[X]], ptr [[D1]], align 8
+; DISABLED-NEXT:    ret void
 ;
 entry:
   %fma0 = call double @llvm.fmuladd.f64(double %a0, double %b0, double %c0)

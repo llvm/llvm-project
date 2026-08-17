@@ -522,6 +522,11 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     if (match(Op0, m_c_And(m_Neg(m_Value(X)), m_Deferred(X))))
       return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
+    // cttz(mul(X, OddC)) -> cttz(X)
+    if (match(Op0, m_Mul(m_Value(X),
+                         m_CheckedInt([](const APInt &C) { return C[0]; }))))
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
+
     // cttz(sext(x)) -> cttz(zext(x))
     if (match(Op0, m_OneUse(m_SExt(m_Value(X))))) {
       auto *Zext = IC.Builder.CreateZExt(X, II.getType());
@@ -1180,6 +1185,12 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   KnownFPClass Known =
       computeKnownFPClass(Src0, Mask, SQ.getWithInstruction(&II));
 
+  // If none of the tests which can return false are possible, fold to true.
+  // fp_class (nnan x), ~(qnan|snan) -> true
+  // fp_class (ninf x), ~(ninf|pinf) -> true
+  if (Known.isKnownAlways(Mask))
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
   // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
@@ -1188,12 +1199,6 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
         1, ConstantInt::get(Src1->getType(), Mask & Known.KnownFPClasses));
     return &II;
   }
-
-  // If none of the tests which can return false are possible, fold to true.
-  // fp_class (nnan x), ~(qnan|snan) -> true
-  // fp_class (ninf x), ~(ninf|pinf) -> true
-  if (Mask == Known.KnownFPClasses)
-    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
 
   return nullptr;
 }

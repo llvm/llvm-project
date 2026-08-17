@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ATOMIC_SUPPORT_GCC_H
 #define _LIBCPP___ATOMIC_SUPPORT_GCC_H
 
+#include <__atomic/clear_padding.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/to_gcc_order.h>
 #include <__config>
@@ -52,62 +53,69 @@ struct __cxx_atomic_base_impl {
   __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
   }
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp value) _NOEXCEPT : __a_value(value) {}
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT
+      : __a_value(std::__clear_padding_if_needed(__value)) {}
+
   _Tp __a_value;
 };
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_init(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val) {
+  std::__clear_padding_if_needed(__val);
   __cxx_atomic_assign_volatile(__a->__a_value, __val);
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_init(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val) {
+  std::__clear_padding_if_needed(__val);
   __a->__a_value = __val;
 }
 
 _LIBCPP_HIDE_FROM_ABI inline void __cxx_atomic_thread_fence(memory_order __order) {
-  __atomic_thread_fence(__to_gcc_order(__order));
+  __atomic_thread_fence(std::__to_gcc_order(__order));
 }
 
 _LIBCPP_HIDE_FROM_ABI inline void __cxx_atomic_signal_fence(memory_order __order) {
-  __atomic_signal_fence(__to_gcc_order(__order));
+  __atomic_signal_fence(std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_store(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
-  __atomic_store(std::addressof(__a->__a_value), std::addressof(__val), __to_gcc_order(__order));
+  std::__clear_padding_if_needed(__val);
+  __atomic_store(std::addressof(__a->__a_value), std::addressof(__val), std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_store(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
-  __atomic_store(std::addressof(__a->__a_value), std::addressof(__val), __to_gcc_order(__order));
+  std::__clear_padding_if_needed(__val);
+  __atomic_store(std::addressof(__a->__a_value), std::addressof(__val), std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_load(const volatile __cxx_atomic_base_impl<_Tp>* __a, memory_order __order) {
   _Tp __ret;
-  __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), __to_gcc_order(__order));
+  __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), std::__to_gcc_order(__order));
   return __ret;
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_load_inplace(const volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), __dst, __to_gcc_order(__order));
+  __atomic_load(std::addressof(__a->__a_value), __dst, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI void
 __cxx_atomic_load_inplace(const __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), __dst, __to_gcc_order(__order));
+  __atomic_load(std::addressof(__a->__a_value), __dst, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_load(const __cxx_atomic_base_impl<_Tp>* __a, memory_order __order) {
   _Tp __ret;
-  __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), __to_gcc_order(__order));
+  __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), std::__to_gcc_order(__order));
   return __ret;
 }
 
@@ -115,16 +123,18 @@ template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_exchange(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __value, memory_order __order) {
   _Tp __ret;
+  std::__clear_padding_if_needed(__value);
   __atomic_exchange(
-      std::addressof(__a->__a_value), std::addressof(__value), std::addressof(__ret), __to_gcc_order(__order));
+      std::addressof(__a->__a_value), std::addressof(__value), std::addressof(__ret), std::__to_gcc_order(__order));
   return __ret;
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp>* __a, _Tp __value, memory_order __order) {
   _Tp __ret;
+  std::__clear_padding_if_needed(__value);
   __atomic_exchange(
-      std::addressof(__a->__a_value), std::addressof(__value), std::addressof(__ret), __to_gcc_order(__order));
+      std::addressof(__a->__a_value), std::addressof(__value), std::addressof(__ret), std::__to_gcc_order(__order));
   return __ret;
 }
 
@@ -135,25 +145,31 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
     _Tp __value,
     memory_order __success,
     memory_order __failure) {
-  return __atomic_compare_exchange(
-      std::addressof(__a->__a_value),
-      __expected,
-      std::addressof(__value),
-      false,
-      __to_gcc_order(__success),
-      __to_gcc_failure_order(__failure));
+  return std::__atomic_cas_with_clear_padding(
+      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+        return __atomic_compare_exchange(
+            std::addressof(__a->__a_value),
+            __expected_or_copy,
+            std::addressof(__value_maybe_padding_cleared),
+            false,
+            std::__to_gcc_order(__success),
+            std::__to_gcc_failure_order(__failure));
+      });
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
     __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) {
-  return __atomic_compare_exchange(
-      std::addressof(__a->__a_value),
-      __expected,
-      std::addressof(__value),
-      false,
-      __to_gcc_order(__success),
-      __to_gcc_failure_order(__failure));
+  return std::__atomic_cas_with_clear_padding(
+      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+        return __atomic_compare_exchange(
+            std::addressof(__a->__a_value),
+            __expected_or_copy,
+            std::addressof(__value_maybe_padding_cleared),
+            false,
+            std::__to_gcc_order(__success),
+            std::__to_gcc_failure_order(__failure));
+      });
 }
 
 template <typename _Tp>
@@ -163,25 +179,31 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
     _Tp __value,
     memory_order __success,
     memory_order __failure) {
-  return __atomic_compare_exchange(
-      std::addressof(__a->__a_value),
-      __expected,
-      std::addressof(__value),
-      true,
-      __to_gcc_order(__success),
-      __to_gcc_failure_order(__failure));
+  return std::__atomic_cas_with_clear_padding(
+      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+        return __atomic_compare_exchange(
+            std::addressof(__a->__a_value),
+            __expected_or_copy,
+            std::addressof(__value_maybe_padding_cleared),
+            true,
+            std::__to_gcc_order(__success),
+            std::__to_gcc_failure_order(__failure));
+      });
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
     __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) {
-  return __atomic_compare_exchange(
-      std::addressof(__a->__a_value),
-      __expected,
-      std::addressof(__value),
-      true,
-      __to_gcc_order(__success),
-      __to_gcc_failure_order(__failure));
+  return std::__atomic_cas_with_clear_padding(
+      __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
+        return __atomic_compare_exchange(
+            std::addressof(__a->__a_value),
+            __expected_or_copy,
+            std::addressof(__value_maybe_padding_cleared),
+            true,
+            std::__to_gcc_order(__success),
+            std::__to_gcc_failure_order(__failure));
+      });
 }
 
 template <typename _Tp>
@@ -204,65 +226,69 @@ struct __skip_amt<_Tp[n]> {};
 template <typename _Tp, typename _Td>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_add(volatile __cxx_atomic_base_impl<_Tp>* __a, _Td __delta, memory_order __order) {
-  return __atomic_fetch_add(std::addressof(__a->__a_value), __delta * __skip_amt<_Tp>::value, __to_gcc_order(__order));
+  return __atomic_fetch_add(
+      std::addressof(__a->__a_value), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp, typename _Td>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_add(__cxx_atomic_base_impl<_Tp>* __a, _Td __delta, memory_order __order) {
-  return __atomic_fetch_add(std::addressof(__a->__a_value), __delta * __skip_amt<_Tp>::value, __to_gcc_order(__order));
+  return __atomic_fetch_add(
+      std::addressof(__a->__a_value), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp, typename _Td>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_sub(volatile __cxx_atomic_base_impl<_Tp>* __a, _Td __delta, memory_order __order) {
-  return __atomic_fetch_sub(std::addressof(__a->__a_value), __delta * __skip_amt<_Tp>::value, __to_gcc_order(__order));
+  return __atomic_fetch_sub(
+      std::addressof(__a->__a_value), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp, typename _Td>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_sub(__cxx_atomic_base_impl<_Tp>* __a, _Td __delta, memory_order __order) {
-  return __atomic_fetch_sub(std::addressof(__a->__a_value), __delta * __skip_amt<_Tp>::value, __to_gcc_order(__order));
+  return __atomic_fetch_sub(
+      std::addressof(__a->__a_value), __delta * __skip_amt<_Tp>::value, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_and(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  return __atomic_fetch_and(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+  return __atomic_fetch_and(std::addressof(__a->__a_value), __pattern, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_and(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  return __atomic_fetch_and(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+  return __atomic_fetch_and(std::addressof(__a->__a_value), __pattern, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_or(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  return __atomic_fetch_or(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+  return __atomic_fetch_or(std::addressof(__a->__a_value), __pattern, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_or(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  return __atomic_fetch_or(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+  return __atomic_fetch_or(std::addressof(__a->__a_value), __pattern, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_xor(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  return __atomic_fetch_xor(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+  return __atomic_fetch_xor(std::addressof(__a->__a_value), __pattern, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  return __atomic_fetch_xor(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+  return __atomic_fetch_xor(std::addressof(__a->__a_value), __pattern, std::__to_gcc_order(__order));
 }
 
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
 #if __has_builtin(__atomic_fetch_max)
-  return __atomic_fetch_max(std::addressof(__a->__a_value), __val, __to_gcc_order(__order));
+  return __atomic_fetch_max(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
 #else
   _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
@@ -276,7 +302,7 @@ __cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, mem
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
 #if __has_builtin(__atomic_fetch_max)
-  return __atomic_fetch_max(std::addressof(__a->__a_value), __val, __to_gcc_order(__order));
+  return __atomic_fetch_max(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
 #else
   _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
@@ -291,7 +317,7 @@ template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
 #if __has_builtin(__atomic_fetch_min)
-  return __atomic_fetch_min(std::addressof(__a->__a_value), __val, __to_gcc_order(__order));
+  return __atomic_fetch_min(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
 #else
   _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
@@ -305,7 +331,7 @@ __cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, mem
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) {
 #if __has_builtin(__atomic_fetch_min)
-  return __atomic_fetch_min(std::addressof(__a->__a_value), __val, __to_gcc_order(__order));
+  return __atomic_fetch_min(std::addressof(__a->__a_value), __val, std::__to_gcc_order(__order));
 #else
   _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;

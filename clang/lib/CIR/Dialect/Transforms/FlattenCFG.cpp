@@ -17,9 +17,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -525,7 +525,7 @@ public:
   // The condition test is sunk to the top of the scope body (a false
   // result becomes a cir.break out of the loop) and, for a for loop, the step
   // is appended to the end of the scope body. The loop's cleanup region becomes
-  // the a cir.cleanup.scope enclosing the body region.
+  // the cleanup region of a cir.cleanup.scope enclosing the new body.
   //
   // For example, a while loop:
   //
@@ -682,9 +682,9 @@ public:
     // exceptions that might be thrown from the step region. Rather than trying
     // to figure out all of the cleanup routing here, we sink the condition into
     // the body region, hoist the step region (if any) and create a new
-    // cir.cleanup.scope enclosing the body region. Subsequent passes of the
-    // greedy driver will flatten the cir.cleanup.scope and the loop reusing
-    // the normal handlers.
+    // cir.cleanup.scope enclosing the body region. A subsequent sweep of the
+    // pass will flatten the cir.cleanup.scope and the loop reusing the normal
+    // handlers.
     if (op.maybeGetCleanup())
       return rewriteLoopWithCleanup(op, rewriter);
 
@@ -2000,21 +2000,75 @@ void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
           patterns.getContext());
 }
 
+namespace {
+// An implementation of RewriterBase::Listener that determines whether the IR
+// has been modified since the last time it was 'reset'. At the moment, this is
+// the only use for something like this, but we might wish to move this
+// somewhere if someone else needs similar functionality in the future.
+class MLIRChangedListener final : public mlir::RewriterBase::Listener {
+  bool hasChanged = false;
+
+public:
+  void reset() { hasChanged = false; }
+
+  bool changed() const { return hasChanged; }
+
+  void notifyBlockErased(Block *) override { hasChanged = true; }
+  void notifyOperationModified(Operation *) override { hasChanged = true; }
+  void notifyOperationReplaced(Operation *, Operation *) override {
+    hasChanged = true;
+  }
+  void notifyOperationReplaced(Operation *, ValueRange) override {
+    hasChanged = true;
+  }
+  void notifyOperationErased(Operation *) override { hasChanged = true; }
+
+  // notifyPatternBegin, notifyPatternEnd, notifyMatchFailure all skipped, since
+  // they don't modify.
+  void notifyOperationInserted(Operation *,
+                               mlir::IRRewriter::InsertPoint) override {
+    hasChanged = true;
+  }
+  void notifyBlockInserted(Block *, Region *, Region::iterator) override {
+    hasChanged = true;
+  }
+};
+} // namespace
+
 void CIRFlattenCFGPass::runOnOperation() {
-  RewritePatternSet patterns(&getContext());
-  populateFlattenCFGPatterns(patterns);
+  RewritePatternSet patternList(&getContext());
+  populateFlattenCFGPatterns(patternList);
+  FrozenRewritePatternSet patterns(std::move(patternList));
 
-  // Collect operations to apply patterns.
-  llvm::SmallVector<Operation *, 16> ops;
-  getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, CleanupScopeOp,
-            TryOp>(op))
-      ops.push_back(op);
-  });
+  PatternApplicator applicator(patterns);
+  // We need _A_ cost model, and everything here is the same cost-model, so this
+  // is effectively a no-op, but necessary to use the PatternApplicator.
+  applicator.applyDefaultCostModel();
 
-  // Apply patterns.
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
-    signalPassFailure();
+  mlir::PatternRewriter rewriter(&getContext());
+  MLIRChangedListener changedListener;
+  rewriter.setListener(&changedListener);
+
+  do {
+    changedListener.reset();
+
+    // Collect flatten candidates post-order so an inner op is handled before
+    // its parent; op pointers stay valid across the block splits / region
+    // inlines the patterns perform (a pattern only erases the matched op and
+    // its descendants, which are visited first), so the list can be iterated
+    // directly.
+    llvm::SmallVector<Operation *, 16> ops;
+    getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
+      if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp,
+              CleanupScopeOp, TryOp>(op))
+        ops.push_back(op);
+    });
+
+    for (mlir::Operation *op : ops) {
+      rewriter.setInsertionPoint(op);
+      (void)applicator.matchAndRewrite(op, rewriter);
+    }
+  } while (changedListener.changed());
 }
 
 } // namespace

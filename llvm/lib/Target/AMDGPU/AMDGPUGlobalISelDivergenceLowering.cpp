@@ -261,7 +261,7 @@ bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
     Register MergedMask = MRI->createVirtualRegister(BoolS1);
     SSAUpdater.Initialize(MergedMask);
 
-    MachineBasicBlock *MBB = MRI->getVRegDef(Reg)->getParent();
+    MachineBasicBlock *MBB = MRI->getDefBlock(Reg);
     SSAUpdater.AddAvailableValue(MBB, MergedMask);
 
     for (auto Entry : CInfo.getEntries(Cycle)) {

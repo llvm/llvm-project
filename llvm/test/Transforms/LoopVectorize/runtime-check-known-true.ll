@@ -5,15 +5,14 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-LABEL: define void @test_runtime_check_known_false_after_construction(
 ; CHECK-SAME: ptr [[START_1:%.*]], ptr [[START_2:%.*]], ptr [[END:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[GEP_START_2:%.*]] = getelementptr i8, ptr [[START_2]], i64 8
 ; CHECK-NEXT:    [[START_1_INT:%.*]] = ptrtoint ptr [[START_1]] to i64
 ; CHECK-NEXT:    [[START_2_INT:%.*]] = ptrtoint ptr [[GEP_START_2]] to i64
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[START_1_INT]], [[START_2_INT]]
 ; CHECK-NEXT:    [[START_2_DIFF:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[DIFF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START_1_INT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP0]], [[START_1_INT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP12]], 2305843009213693951
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
@@ -27,7 +26,7 @@ define void @test_runtime_check_known_false_after_construction(ptr %start.1, ptr
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP4]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], -8
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP9]]

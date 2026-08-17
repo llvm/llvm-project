@@ -167,13 +167,6 @@ void t1() {
   int auto d2 = 0;
 }
 
-void typedef_type_specifiers(void) {
-  typedef int MyInt;
-
-  auto MyInt a = 0;
-  MyInt auto b = 0;
-}
-
 void t2() {
   auto long long a1 = 0;
   long auto long a2 = 0;

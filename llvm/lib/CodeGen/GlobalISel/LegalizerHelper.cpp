@@ -518,6 +518,13 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
 #undef RTLIBCASE
 }
 
+static bool hasSwiftErrorArg(MachineFunction &MF) {
+  const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
+  return TLI.supportSwiftError() &&
+         MF.getFunction().getAttributes().hasAttrSomewhere(
+             Attribute::SwiftError);
+}
+
 /// True if an instruction is in tail position in its caller. Intended for
 /// legalizing libcalls as tail calls when possible.
 static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
@@ -599,7 +606,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::createLibcall(
         (Result.Ty->isVoidTy() ||
          Result.Ty == MIRBuilder.getMF().getFunction().getReturnType()) &&
         isLibCallInTailPosition(Result, *MI, MIRBuilder.getTII(),
-                                *MIRBuilder.getMRI());
+                                *MIRBuilder.getMRI()) &&
+        // Lowering doesn't support tail calling inside a function with
+        // a swifterror argument yet.
+        !hasSwiftErrorArg(MIRBuilder.getMF());
 
   llvm::append_range(Info.OrigArgs, Args);
   if (!CLI.lowerCall(MIRBuilder, Info))
@@ -849,7 +859,10 @@ LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0);
   Info.IsTailCall =
       MI.getOperand(MI.getNumOperands() - 1).getImm() &&
-      isLibCallInTailPosition(Info.OrigRet, MI, MIRBuilder.getTII(), MRI);
+      isLibCallInTailPosition(Info.OrigRet, MI, MIRBuilder.getTII(), MRI) &&
+      // Lowering doesn't support tail calling inside a function with
+      // a swifterror argument yet.
+      !hasSwiftErrorArg(MIRBuilder.getMF());
 
   llvm::append_range(Info.OrigArgs, Args);
   if (!CLI.lowerCall(MIRBuilder, Info))
@@ -1136,19 +1149,21 @@ getFCMPLibcallDesc(const CmpInst::Predicate Pred, unsigned Size) {
     }                                                                          \
   } while (0)
 
+  // These use the three-way (-1/0/1) compare libcalls, whose result is tested
+  // against 0 with a signed integer predicate. Unordered (UO) is a boolean.
   switch (Pred) {
   case CmpInst::FCMP_OEQ:
-    RTLIBCASE_CMP(OEQ_F, CmpInst::ICMP_EQ);
+    RTLIBCASE_CMP(FCMP3_PRED_OEQ_F, CmpInst::ICMP_EQ);
   case CmpInst::FCMP_UNE:
-    RTLIBCASE_CMP(UNE_F, CmpInst::ICMP_NE);
+    RTLIBCASE_CMP(FCMP3_PRED_UNE_F, CmpInst::ICMP_NE);
   case CmpInst::FCMP_OGE:
-    RTLIBCASE_CMP(OGE_F, CmpInst::ICMP_SGE);
+    RTLIBCASE_CMP(FCMP3_PRED_OGE_F, CmpInst::ICMP_SGE);
   case CmpInst::FCMP_OLT:
-    RTLIBCASE_CMP(OLT_F, CmpInst::ICMP_SLT);
+    RTLIBCASE_CMP(FCMP3_PRED_OLT_F, CmpInst::ICMP_SLT);
   case CmpInst::FCMP_OLE:
-    RTLIBCASE_CMP(OLE_F, CmpInst::ICMP_SLE);
+    RTLIBCASE_CMP(FCMP3_PRED_OLE_F, CmpInst::ICMP_SLE);
   case CmpInst::FCMP_OGT:
-    RTLIBCASE_CMP(OGT_F, CmpInst::ICMP_SGT);
+    RTLIBCASE_CMP(FCMP3_PRED_OGT_F, CmpInst::ICMP_SGT);
   case CmpInst::FCMP_UNO:
     RTLIBCASE_CMP(UO_F, CmpInst::ICMP_NE);
   default:
@@ -2141,11 +2156,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
 Register LegalizerHelper::coerceToInteger(Register Val) {
   LLT Ty = MRI.getType(Val);
-  if (Ty.isScalar())
+  if (Ty.isScalar() && !Ty.isFloat())
     return Val;
 
   const DataLayout &DL = MIRBuilder.getDataLayout();
   LLT NewTy = LLT::integer(Ty.getSizeInBits());
+
+  if (Ty.isFloat())
+    return MIRBuilder.buildBitcast(NewTy, Val).getReg(0);
+
   if (Ty.isPointer()) {
     if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
       return Register();
@@ -2283,6 +2302,8 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
       MIRBuilder.buildTrunc(DstReg, ResultReg);
     else if (DstTy.isPointer())
       MIRBuilder.buildIntToPtr(DstReg, ResultReg);
+    else if (DstTy != WideTy)
+      MIRBuilder.buildBitcast(DstReg, ResultReg);
 
     MI.eraseFromParent();
     return Legalized;
@@ -2399,6 +2420,11 @@ LegalizerHelper::widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx,
     // Theres no unmerge type to target. Directly extract the bits from the
     // source type
     unsigned DstSize = DstTy.getSizeInBits();
+
+    if (SrcTy.isFloat()) {
+      SrcReg = coerceToInteger(SrcReg);
+      SrcTy = MRI.getType(SrcReg);
+    }
 
     MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
     for (int I = 1; I != NumDst; ++I) {
@@ -4861,7 +4887,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_FPTOSI_SAT:
     return lowerFPTOINT_SAT(MI);
   case G_FPEXT:
-    return lowerFPExtAndTruncMem(MI);
+    return lowerFPEXT(MI);
   case G_FPTRUNC:
     return lowerFPTRUNC(MI);
   case G_FPOWI:
@@ -4924,13 +4950,13 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     auto InsertionPointImm = MI.getOperand(3).getImm();
 
     LLT VectorTy = MRI.getType(Vector);
-    LLT SubvectorTy = MRI.getType(Subvector);
+    LLT DstTy = MRI.getType(Subvector);
     // If so, -> concat(subvector, extract(half of vector))
     // (Operands can be either way round depending on insertion point
-    if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2) {
+    if (VectorTy.getSizeInBits() == DstTy.getSizeInBits() * 2) {
       bool InsertInLowHalf = InsertionPointImm == 0;
       auto Extract = MIRBuilder.buildExtractSubvector(
-          SubvectorTy, Vector,
+          DstTy, Vector,
           (uint64_t)(InsertInLowHalf ? VectorTy.getNumElements() / 2 : 0));
 
       auto LowHalf = InsertInLowHalf ? Subvector : Extract.getReg(0);
@@ -4952,7 +4978,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       for (int i = 0; i < VectorTy.getNumElements(); i++) {
         // If this index is within bounds, put subvector's index into mask
         if (i >= InsertionPointImm &&
-            i < InsertionPointImm + SubvectorTy.getNumElements())
+            i < InsertionPointImm + DstTy.getNumElements())
           Mask.push_back(VectorTy.getNumElements() + i - InsertionPointImm);
         else
           Mask.push_back(i);
@@ -4964,6 +4990,34 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       MI.eraseFromParent();
       return Legalized;
     }
+  }
+  case G_EXTRACT_SUBVECTOR: {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    uint64_t ExtractionPointImm = MI.getOperand(2).getImm();
+
+    LLT SrcTy = MRI.getType(SrcReg);
+    LLT DstTy = MRI.getType(DstReg);
+
+    if (SrcTy.isScalable() || DstTy.isScalable())
+      return UnableToLegalize;
+
+    if (SrcTy.getScalarType() != DstTy.getScalarType())
+      return UnableToLegalize;
+
+    // extract_subvector = build_vector(extract_element, extract_element, ...)
+    SmallVector<Register> ExtractedElements;
+    for (uint64_t i = 0; i < DstTy.getNumElements(); i++) {
+      ExtractedElements.push_back(
+          MIRBuilder
+              .buildExtractVectorElementConstant(SrcTy.getScalarType(), SrcReg,
+                                                 ExtractionPointImm + i)
+              .getReg(0));
+    }
+
+    MIRBuilder.buildBuildVector(DstReg, ExtractedElements);
+    MI.eraseFromParent();
+    return Legalized;
   }
   case G_STACKSAVE:
     return lowerStackSave(MI);
@@ -5832,6 +5886,34 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     if (TypeIdx != 1) // TODO: This probably does work as expected already.
       return UnableToLegalize;
     return fewerElementsVectorMerge(MI, TypeIdx, NarrowTy);
+  case G_EXTRACT_SUBVECTOR: {
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    Register SrcReg = MI.getOperand(1).getReg();
+    uint64_t InsertionPointImm = MI.getOperand(2).getImm();
+
+    // If Dst > NarrowTy bits, then cannot legalize
+    if (DstTy.getSizeInBits() > NarrowTy.getSizeInBits())
+      return UnableToLegalize;
+
+    // If DstTy's size is not a multiple of NarrowTy's, then cannot legalize
+    if (!DstTy.getElementCount().isKnownMultipleOf(NarrowTy.getElementCount()))
+      return UnableToLegalize;
+
+    auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, SrcReg);
+    uint64_t RequiredSubvectorIndex =
+        InsertionPointImm / NarrowTy.getNumElements();
+    // If Dst and Narrow are both same size, convert to a copy
+    if (DstTy.getNumElements() == NarrowTy.getNumElements())
+      MIRBuilder.buildCopy(DstReg, Unmerge.getReg(RequiredSubvectorIndex));
+    else
+      MIRBuilder.buildExtractSubvector(
+          DstReg, Unmerge.getReg(RequiredSubvectorIndex),
+          InsertionPointImm % NarrowTy.getNumElements());
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case G_EXTRACT_VECTOR_ELT:
   case G_INSERT_VECTOR_ELT:
     return fewerElementsVectorExtractInsertVectorElt(MI, TypeIdx, NarrowTy);
@@ -6007,7 +6089,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
         SVOps.push_back(MIRBuilder
                             .buildExtractVectorElement(
                                 EltTy, Inputs[Input],
-                                MIRBuilder.buildConstant(LLT::scalar(32), Idx))
+                                MIRBuilder.buildConstant(LLT::integer(32), Idx))
                             .getReg(0));
       }
 
@@ -7711,7 +7793,7 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
     auto UnmergeSrc = B.buildUnmerge(NarrowTy, SrcReg);
     // cttz(Hi:Lo) -> Lo == 0 ? (cttz(Hi) + NarrowSize) : cttz(Lo)
     auto C_0 = B.buildConstant(NarrowTy, 0);
-    auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
+    auto LoIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::integer(1),
                                 UnmergeSrc.getReg(0), C_0);
     auto HiCTTZ = IsUndef ? B.buildCTTZ_ZERO_POISON(DstTy, UnmergeSrc.getReg(1))
                           : B.buildCTTZ(DstTy, UnmergeSrc.getReg(1));
@@ -8795,6 +8877,41 @@ LegalizerHelper::lowerFPExtAndTruncMem(MachineInstr &MI) {
   return Legalized;
 }
 
+// Expand a bf16 -> f32/f64 fpext with a shift and bitcast. This is based on the
+// SDAG ISD::BF16_TO_FP lowering.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPEXT_BF16(MachineInstr &MI) {
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(SrcTy.getScalarType().isBFloat16() &&
+         "expected a bf16 source for bf16 fpext lowering");
+
+  LLT I16Ty = SrcTy.changeElementType(LLT::integer(16));
+  LLT I32Ty = SrcTy.changeElementType(LLT::integer(32));
+  LLT F32Ty = SrcTy.changeElementType(LLT::float32());
+
+  auto SrcI =
+      MIRBuilder.buildAnyExt(I32Ty, MIRBuilder.buildBitcast(I16Ty, SrcReg));
+  auto Shl =
+      MIRBuilder.buildShl(I32Ty, SrcI, MIRBuilder.buildConstant(I32Ty, 16));
+
+  if (DstTy.getScalarType().isFloat32())
+    MIRBuilder.buildBitcast(DstReg, Shl);
+  else
+    MIRBuilder.buildFPExt(DstReg, MIRBuilder.buildBitcast(F32Ty, Shl));
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPEXT(MachineInstr &MI) {
+  auto [DstTy, SrcTy] = MI.getFirst2LLTs();
+  if (SrcTy.getScalarType().isBFloat16() &&
+      (DstTy.getScalarType().isFloat32() || DstTy.getScalarType().isFloat64()))
+    return lowerFPEXT_BF16(MI);
+
+  return lowerFPExtAndTruncMem(MI);
+}
+
 // f64 -> f16 conversion using round-to-nearest-even rounding mode.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
@@ -8954,6 +9071,65 @@ LegalizerHelper::lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI) {
   return Legalized;
 }
 
+// Round a wide fp value to ResultTy's element size, forcing inexact
+// results to the odd value so a subsequent narrowing round is correct. This
+// avoids double-rounding when narrowing e.g. f64 -> f32 -> bf16. See Boldo &
+// Melquiond, "When double rounding is odd" (2005).
+Register LegalizerHelper::lowerRoundInexactToOdd(LLT ResultTy, Register Op) {
+  LLT OperandTy = MRI.getType(Op);
+  if (OperandTy.getScalarType() == ResultTy.getScalarType())
+    return Op;
+
+  LLT ResultIntTy =
+      ResultTy.changeElementType(LLT::integer(ResultTy.getScalarSizeInBits()));
+  LLT ResultCCTy = ResultTy.changeElementType(LLT::integer(1));
+  LLT OperandCCTy = OperandTy.changeElementType(LLT::integer(1));
+
+  auto Narrow = MIRBuilder.buildFPTrunc(ResultTy, Op);
+  auto NarrowAsWide = MIRBuilder.buildFPExt(OperandTy, Narrow);
+
+  auto NarrowBits = MIRBuilder.buildBitcast(ResultIntTy, Narrow);
+  auto One = MIRBuilder.buildConstant(ResultIntTy, 1);
+  auto NegativeOne = MIRBuilder.buildConstant(ResultIntTy, -1);
+  auto Zero = MIRBuilder.buildConstant(ResultIntTy, 0);
+  auto And = MIRBuilder.buildAnd(ResultIntTy, NarrowBits, One);
+  // The result is already odd so we don't need to do anything.
+  auto AlreadyOdd =
+      MIRBuilder.buildICmp(CmpInst::ICMP_NE, ResultCCTy, And, Zero);
+
+  // We keep results which are exact, odd or NaN.
+  auto KeepNarrow =
+      MIRBuilder.buildFCmp(CmpInst::FCMP_UEQ, OperandCCTy, Op, NarrowAsWide);
+  KeepNarrow = MIRBuilder.buildOr(OperandCCTy, KeepNarrow, AlreadyOdd);
+  // We morally performed a round-down if AbsNarrow is smaller than AbsWide.
+  auto AbsWide = MIRBuilder.buildFAbs(OperandTy, Op);
+  auto AbsNarrowAsWide = MIRBuilder.buildFAbs(OperandTy, NarrowAsWide);
+  auto NarrowIsRd = MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, OperandCCTy,
+                                         AbsWide, AbsNarrowAsWide);
+  // If narrow is the rounded-down value, pick the rounded-up value as it will
+  // be odd; otherwise adjust down.
+  auto Adjust =
+      MIRBuilder.buildSelect(ResultIntTy, NarrowIsRd, One, NegativeOne);
+  auto Adjusted = MIRBuilder.buildAdd(ResultIntTy, NarrowBits, Adjust);
+  auto Res =
+      MIRBuilder.buildSelect(ResultIntTy, KeepNarrow, NarrowBits, Adjusted);
+  return MIRBuilder.buildBitcast(ResultTy, Res).getReg(0);
+}
+
+// f64 -> bf16 conversion, correcting for double rounding.
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFPTRUNC_F64_TO_BF16(MachineInstr &MI) {
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  assert(DstTy.getScalarType() == LLT::bfloat16() &&
+         SrcTy.getScalarType() == LLT::float64());
+
+  LLT F32Ty = SrcTy.changeElementType(LLT::float32());
+  Register OddF32 = lowerRoundInexactToOdd(F32Ty, SrcReg);
+  MIRBuilder.buildFPTrunc(DstReg, OddF32, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   auto [DstTy, SrcTy] = MI.getFirst2LLTs();
@@ -8962,6 +9138,9 @@ LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
 
   if (DstTy.getScalarType().isBFloat16() && SrcTy.getScalarType().isFloat32())
     return lowerFPTRUNC_F32_TO_BF16(MI);
+
+  if (DstTy.getScalarType().isBFloat16() && SrcTy.getScalarType().isFloat64())
+    return lowerFPTRUNC_F64_TO_BF16(MI);
 
   return lowerFPExtAndTruncMem(MI);
 }
@@ -9118,7 +9297,7 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
     auto ShiftAmt = MIRBuilder.buildConstant(Src0IntTy, Src0Size - Src1Size);
     auto Zext = MIRBuilder.buildZExt(Src0IntTy, Src1Int);
     auto Shift = MIRBuilder.buildShl(Src0IntTy, Zext, ShiftAmt);
-    And1 = MIRBuilder.buildAnd(Src0Ty, Shift, SignBitMask).getReg(0);
+    And1 = MIRBuilder.buildAnd(Src0IntTy, Shift, SignBitMask).getReg(0);
   } else {
     auto ShiftAmt = MIRBuilder.buildConstant(Src1IntTy, Src1Size - Src0Size);
     auto Shift = MIRBuilder.buildLShr(Src1IntTy, Src1Int, ShiftAmt);
@@ -9368,6 +9547,8 @@ LegalizerHelper::lowerMergeValues(MachineInstr &MI) {
     }
 
     MIRBuilder.buildIntToPtr(DstReg, ResultReg);
+  } else if (WideTy != DstTy) {
+    MIRBuilder.buildBitcast(DstReg, ResultReg);
   }
 
   MI.eraseFromParent();
@@ -9544,14 +9725,13 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
   MachinePointerInfo ValPtrInfo =
       MachinePointerInfo::getUnknownStack(*MI.getMF());
 
-  LLT IdxTy = LLT::scalar(32);
+  LLT IdxTy = LLT::integer(32);
   LLT ValTy = VecTy.getElementType();
   Align ValAlign = getStackTemporaryAlignment(ValTy);
 
   auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
 
-  bool HasPassthru =
-      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF;
+  bool HasPassthru = !mi_match(Passthru, MRI, m_GImplicitDef());
 
   if (HasPassthru)
     MIRBuilder.buildStore(Passthru, StackPtr, PtrInfo, VecAlign);
@@ -9566,7 +9746,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
   } else if (HasPassthru) {
     auto Popcount = MIRBuilder.buildZExt(MaskTy.changeElementSize(32), Mask);
     Popcount = MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_ADD,
-                                     {LLT::scalar(32)}, {Popcount});
+                                     {LLT::integer(32)}, {Popcount});
 
     Register LastElmtPtr =
         getVectorElementPointer(StackPtr, VecTy, Popcount.getReg(0));
@@ -9586,7 +9766,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
     LLT MaskITy = MaskTy.getElementType();
     auto MaskI = MIRBuilder.buildExtractVectorElement(MaskITy, Mask, Idx);
     if (MaskITy.getSizeInBits() > 1)
-      MaskI = MIRBuilder.buildTrunc(LLT::scalar(1), MaskI);
+      MaskI = MIRBuilder.buildTrunc(LLT::integer(1), MaskI);
 
     MaskI = MIRBuilder.buildZExt(IdxTy, MaskI);
     OutPos = MIRBuilder.buildAdd(IdxTy, OutPos, MaskI);
@@ -9595,7 +9775,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
       auto EndOfVector =
           MIRBuilder.buildConstant(IdxTy, VecTy.getNumElements() - 1);
       auto AllLanesSelected = MIRBuilder.buildICmp(
-          CmpInst::ICMP_UGT, LLT::scalar(1), OutPos, EndOfVector);
+          CmpInst::ICMP_UGT, LLT::integer(1), OutPos, EndOfVector);
       OutPos = MIRBuilder.buildInstr(TargetOpcode::G_UMIN, {IdxTy},
                                      {OutPos, EndOfVector});
       ElmtPtr = getVectorElementPointer(StackPtr, VecTy, OutPos.getReg(0));
@@ -10592,7 +10772,7 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerAbsToCNeg(MachineInstr &MI) {
   Register SrcReg = MI.getOperand(1).getReg();
   Register DestReg = MI.getOperand(0).getReg();
-  LLT Ty = MRI.getType(SrcReg), IType = LLT::scalar(1);
+  LLT Ty = MRI.getType(SrcReg), IType = LLT::integer(1);
   auto Zero = MIRBuilder.buildConstant(Ty, 0).getReg(0);
   auto Sub = MIRBuilder.buildSub(Ty, Zero, SrcReg).getReg(0);
   auto ICmp = MIRBuilder.buildICmp(CmpInst::ICMP_SGT, IType, SrcReg, Zero);
@@ -10876,9 +11056,10 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
   for (unsigned I = 0; I < MemOps.size(); I++) {
     LLT Ty = MemOps[I];
     unsigned TySize = Ty.getSizeInBytes();
+
     if (TySize > Size) {
-      // Issuing an unaligned load / store pair that overlaps with the previous
-      // pair. Adjust the offset accordingly.
+      // Issuing a load / store pair that overlaps with the previous pair.
+      // Adjust the offset accordingly.
       assert(I == MemOps.size() - 1 && I != 0);
       DstOff -= TySize - Size;
     }
@@ -10969,16 +11150,20 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   unsigned CurrOffset = 0;
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
-    // Issuing an unaligned load / store pair  that overlaps with the previous
-    // pair. Adjust the offset accordingly.
-    if (CopyTy.getSizeInBytes() > Size)
-      CurrOffset -= CopyTy.getSizeInBytes() - Size;
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a load / store pair that overlaps with the previous pair. Adjust
+    // the offset accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memcpy load/store spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
 
     // Construct MMOs for the accesses.
-    auto *LoadMMO =
-        MF.getMachineMemOperand(&SrcMMO, CurrOffset, CopyTy.getSizeInBytes());
-    auto *StoreMMO =
-        MF.getMachineMemOperand(&DstMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *LoadMMO = MF.getMachineMemOperand(&SrcMMO, CurrOffset, TySize);
+    auto *StoreMMO = MF.getMachineMemOperand(&DstMMO, CurrOffset, TySize);
 
     // Create the load.
     Register LoadPtr = Src;
@@ -10999,8 +11184,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
-    CurrOffset += CopyTy.getSizeInBytes();
-    Size -= CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
 
   MI.eraseFromParent();
@@ -11051,11 +11236,22 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   // Apart from that, this loop is pretty much doing the same thing as the
   // memcpy codegen function.
   unsigned CurrOffset = 0;
+  unsigned Size = KnownLen;
   SmallVector<Register, 16> LoadVals;
   for (auto CopyTy : MemOps) {
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a load that overlaps with the previous load. Adjust the offset
+    // accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memmove load spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
+
     // Construct MMO for the load.
-    auto *LoadMMO =
-        MF.getMachineMemOperand(&SrcMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *LoadMMO = MF.getMachineMemOperand(&SrcMMO, CurrOffset, TySize);
 
     // Create the load.
     Register LoadPtr = Src;
@@ -11066,15 +11262,27 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
       LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     LoadVals.push_back(MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO).getReg(0));
-    CurrOffset += CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
 
   CurrOffset = 0;
+  Size = KnownLen;
   for (unsigned I = 0; I < MemOps.size(); ++I) {
     LLT CopyTy = MemOps[I];
+    TypeSize TySize = CopyTy.getSizeInBytes();
+
+    // Issuing a store that overlaps with the previous store. Adjust the offset
+    // accordingly.
+    if (TySize > Size) {
+      unsigned Overlap = TySize - Size;
+      assert(Overlap < CurrOffset &&
+             "overlapping memmove store spans the whole region or more");
+      CurrOffset -= Overlap;
+    }
+
     // Now store the values loaded.
-    auto *StoreMMO =
-        MF.getMachineMemOperand(&DstMMO, CurrOffset, CopyTy.getSizeInBytes());
+    auto *StoreMMO = MF.getMachineMemOperand(&DstMMO, CurrOffset, TySize);
 
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
@@ -11084,7 +11292,8 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LoadVals[I], StorePtr, *StoreMMO);
-    CurrOffset += CopyTy.getSizeInBytes();
+    CurrOffset += TySize;
+    Size -= TySize;
   }
   MI.eraseFromParent();
   return Legalized;
