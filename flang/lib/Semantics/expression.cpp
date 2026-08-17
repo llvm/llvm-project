@@ -3273,7 +3273,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     }
   }
 
-  // Return the right resolution, if there is one. Non Elemental specifics
+  // Return the right resolution, if there is one. Non-elemental specifics
   // are preferred, then elementals, then explicit intrinsics, and lastly
   // structure constructors.
   if (nonElemental) {
