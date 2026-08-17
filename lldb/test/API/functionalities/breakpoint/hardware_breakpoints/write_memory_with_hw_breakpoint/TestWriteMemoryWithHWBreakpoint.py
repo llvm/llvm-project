@@ -45,4 +45,4 @@ class WriteMemoryWithHWBreakpoint(HardwareBreakpointTestBase):
         error = lldb.SBError()
 
         result = process.WriteMemory(address, data, error)
-        self.assertTrue(error.Success() and result == len(bytes))
+        self.assertTrue(error.Success() and result == len(data))
