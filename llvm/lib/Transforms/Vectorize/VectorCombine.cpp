@@ -1,4 +1,5 @@
 //===------- VectorCombine.cpp - Optimize partial vector operations -------===//
+
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -2012,8 +2013,7 @@ static IntegerType *getScalarizedGEPIndexInfo(VectorType *VecTy, Value *Idx,
 /// Materialize an index for a scalarized GEP after profitability is known.
 /// Vector element indices are unsigned, but GEP sign-extends narrow integer
 /// indices. Widen a narrow index explicitly so its unsigned value is retained.
-static Value *materializeScalarizedGEPIndex(Value *Idx,
-                                            IntegerType *GEPIndexTy,
+static Value *materializeScalarizedGEPIndex(Value *Idx, IntegerType *GEPIndexTy,
                                             IRBuilderBase &Builder) {
   unsigned SrcBits = Idx->getType()->getIntegerBitWidth();
   unsigned DstBits = GEPIndexTy->getBitWidth();
@@ -2225,13 +2225,11 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
                             Align(1), LI->getPointerAddressSpace(), CostKind);
     ScalarizedCost += TTI.getAddressComputationCost(LI->getPointerOperandType(),
                                                     nullptr, nullptr, CostKind);
-    if (!Index &&
-        UI->getIndexOperand()->getType()->getIntegerBitWidth() <
-            GEPIndex->getBitWidth())
-      ScalarizedCost +=
-          TTI.getCastInstrCost(Instruction::ZExt, GEPIndex,
-                               UI->getIndexOperand()->getType(),
-                               TTI::CastContextHint::None, CostKind);
+    if (!Index && UI->getIndexOperand()->getType()->getIntegerBitWidth() <
+                      GEPIndex->getBitWidth())
+      ScalarizedCost += TTI.getCastInstrCost(
+          Instruction::ZExt, GEPIndex, UI->getIndexOperand()->getType(),
+          TTI::CastContextHint::None, CostKind);
   }
 
   LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << *LI
