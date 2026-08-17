@@ -47,12 +47,19 @@ LLVM_ABI_FOR_TEST const SCEV *
 getSCEVExprForVPValue(const VPValue *V, PredicatedScalarEvolution &PSE,
                       const Loop *L = nullptr);
 
+/// Get a stride expression, the AddRec's step found from \p Ptr divided by the
+/// alloc-size of \p AccessTy. Returns a tuple of the start SCEV expression, the
+/// stride SCEV expression, and the AddRec's wrap flags.
+std::optional<std::tuple<const SCEV *, const SCEV *, SCEVFlags>>
+getStrideExpr(const VPValue *Ptr, PredicatedScalarEvolution &PSE, const Loop &L,
+              Type *AccessTy);
+
 /// If the pointer operand \p Addr of a memory access is an affine AddRec
 /// w.r.t. \p L with a constant stride, return the stride in units of
 /// \p AccessTy. Otherwise return std::nullopt.
-std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
-                                         PredicatedScalarEvolution &PSE,
-                                         const Loop *L);
+std::optional<APInt> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                       PredicatedScalarEvolution &PSE,
+                                       const Loop *L);
 
 /// Returns true if \p Addr is an address SCEV that can be passed to
 /// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an

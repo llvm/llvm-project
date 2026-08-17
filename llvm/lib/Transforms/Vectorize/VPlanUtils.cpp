@@ -19,7 +19,6 @@
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -365,17 +364,52 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   return PSE.getPredicatedSCEV(Expr);
 }
 
-std::optional<int64_t>
-vputils::getConstantStride(VPValue *Addr, Type *AccessTy,
-                           PredicatedScalarEvolution &PSE, const Loop *L) {
+std::optional<std::tuple<const SCEV *, const SCEV *, SCEVFlags>>
+vputils::getStrideExpr(const VPValue *Ptr, PredicatedScalarEvolution &PSE,
+                       const Loop &L, Type *AccessTy) {
+  assert(Ptr->getScalarType()->isPointerTy() && "Ptr must be pointer type");
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
+  if (!isa<SCEVAddRecExpr>(PtrSCEV))
+    return std::nullopt;
+  SCEVFlags NWFlags = cast<SCEVAddRecExpr>(PtrSCEV)->getNoWrapFlags();
+  const SCEV *PointerBase = SE.getPointerBase(PtrSCEV);
+  const SCEV *StrideExpr = SE.removePointerBase(PtrSCEV);
+  Type *StrideTy = StrideExpr->getType();
+  const SCEV *Start;
+  const SCEV *Step;
+  if (!match(StrideExpr, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
+                                             m_SpecificLoop(&L))))
+    return std::nullopt;
+  const SCEV *Base =
+      SE.getAddExpr(PointerBase, SE.getNoopOrSignExtend(Start, StrideTy));
+  const DataLayout &DL = SE.getDataLayout();
+  TypeSize AllocSz = DL.getTypeAllocSize(AccessTy);
+  if (AllocSz.isScalable())
+    return std::nullopt;
+  // TODO: ScalarEvolution doesn't have SRem/SDiv expressions yet, so we
+  // resort to matching APInt.
+  const APInt *StepC;
+  if (!match(Step, m_scev_APInt(StepC)) ||
+      StepC->sext(StrideTy->getIntegerBitWidth()).srem(AllocSz) != 0)
+    return std::nullopt;
+  return std::make_tuple(
+      Base,
+      SE.getConstant(StepC->sext(StrideTy->getIntegerBitWidth()).sdiv(AllocSz)),
+      NWFlags);
+}
+
+std::optional<APInt> vputils::getConstantStride(VPValue *Addr, Type *AccessTy,
+                                                PredicatedScalarEvolution &PSE,
+                                                const Loop *L) {
   assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
          "should not try to widen irregular types");
-  const SCEV *AddrSCEV = getSCEVExprForVPValue(Addr, PSE, L);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
-  if (!AddRec)
-    return {};
-
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
+  if (auto StrideExpr = getStrideExpr(Addr, PSE, *L, AccessTy)) {
+    const APInt *C;
+    if (match(std::get<1>(*StrideExpr), m_scev_APInt(C)))
+      return *C;
+  }
+  return {};
 }
 
 bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
