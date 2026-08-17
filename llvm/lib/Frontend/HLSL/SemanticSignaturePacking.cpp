@@ -227,8 +227,8 @@ getSemanticCategory(dxbc::PSV::SemanticKind SemanticKind,
     return SemanticCategory::NotPacked;
 
   // Semantics that are not yet supported by the frontend. As each semantic is
-  // added to the frontend, it should be moved out of this list and into the
-  // categorization above.
+  // added to the frontend and correctly gated in SemaHLSL, it should be moved
+  // out of this list and into the categorization above.
   case dxbc::PSV::SemanticKind::InstanceID:
   case dxbc::PSV::SemanticKind::ViewPortArrayIndex:
   case dxbc::PSV::SemanticKind::OutputControlPointID:
