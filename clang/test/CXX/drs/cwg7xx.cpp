@@ -99,42 +99,6 @@ static_assert(!is_volatile<void()volatile&>::value, "");
 #endif
 } // namespace cwg713
 
-namespace cwg717 { // cwg717: 3.3
-#if __cplusplus >= 201103L
-void f() {
-  thread_local extern int i;
-  thread_local extern int& j;
-
-  [] {
-    thread_local extern int k;
-    thread_local extern int& l;
-  }();
-}
-
-template <typename T>
-void g() {
-  thread_local extern T i;
-  thread_local extern T& j;
-
-  [] {
-    thread_local extern T k;
-    thread_local extern T& l;
-  }();
-}
-
-struct S {
-  thread_local static int i;
-  thread_local static int& j;
-};
-
-template <typename T>
-struct C {
-  thread_local static T i;
-  thread_local static T& j;
-};
-#endif
-} // namespace cwg717
-
 // cwg722 is in cwg722.cpp
 
 namespace cwg727 { // cwg727: partial
@@ -189,6 +153,15 @@ namespace cwg727 { // cwg727: partial
       // expected-error@-2 {{variable template partial specialization of 'N' not in class 'A' or an enclosing namespace}}
       //   expected-note@#cwg727-N {{explicitly specialized declaration is here}}
     };
+
+    template <class> struct E {
+      template <class> struct F {};
+    };
+    template <> template <class> struct E<void>::F {};
+    template <> template <class> struct E<char>::F {}; // #cwg727-EcharF
+    template <> template <class> struct E<char>::F {};
+    // expected-error@-1 {{redefinition of 'F'}}
+    //   expected-note@#cwg727-EcharF {{previous definition is here}}
   };
 
   template<> struct A::C<char>;

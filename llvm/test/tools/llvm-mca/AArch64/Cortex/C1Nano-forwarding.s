@@ -72,7 +72,7 @@ mla      v0.4h, v5.4h, v6.4h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    0.0       adrp	x0, #6553600
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       ldr	x0, [x0, #4096]
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        4     0.0    0.0    0.0       <total>
 
 # CHECK:      [1] Code Region - simd_mac_mla
 
@@ -103,7 +103,7 @@ mla      v0.4h, v5.4h, v6.4h
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    0.0       mla	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       mla	v0.4s, v3.4s, v4.4s
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        4     0.0    0.0    0.0       <total>
 
 # CHECK:      [2] Code Region - simd_mac_dot
 
@@ -137,7 +137,7 @@ mla      v0.4h, v5.4h, v6.4h
 # CHECK-NEXT: 0.     2     0.0    0.0    0.0       udot	v0.4s, v1.16b, v2.16b
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       udot	v0.4s, v3.16b, v4.16b
 # CHECK-NEXT: 2.     2     0.0    0.0    0.0       sdot	v0.4s, v5.16b, v6.16b
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        6     0.0    0.0    0.0       <total>
 
 # CHECK:      [3] Code Region - simd_mac_long
 
@@ -171,7 +171,7 @@ mla      v0.4h, v5.4h, v6.4h
 # CHECK-NEXT: 0.     2     0.0    0.0    0.0       umlal	v0.4s, v1.4h, v2.4h
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       smlal	v0.4s, v3.4h, v4.4h
 # CHECK-NEXT: 2.     2     0.0    0.0    0.0       umlsl	v0.4s, v5.4h, v6.4h
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        6     0.0    0.0    0.0       <total>
 
 # CHECK:      [4] Code Region - simd_mac_mixed
 
@@ -209,7 +209,7 @@ mla      v0.4h, v5.4h, v6.4h
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       mls	v0.4s, v3.4s, v4.4s
 # CHECK-NEXT: 2.     2     0.0    0.0    0.0       udot	v0.4s, v5.16b, v6.16b
 # CHECK-NEXT: 3.     2     0.0    0.0    0.0       umlal	v0.4s, v7.4h, v8.4h
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        8     0.0    0.0    0.0       <total>
 
 # CHECK:      [5] Code Region - simd_mac_mul_to_accum
 
@@ -247,7 +247,7 @@ mla      v0.4h, v5.4h, v6.4h
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       mla	v0.4s, v3.4s, v4.4s
 # CHECK-NEXT: 2.     2     0.0    0.0    0.0       smull	v1.4s, v5.4h, v6.4h
 # CHECK-NEXT: 3.     2     0.0    0.0    0.0       smlal	v1.4s, v7.4h, v8.4h
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        8     0.0    0.0    0.0       <total>
 
 # CHECK:      [6] Code Region - simd_mac_size_mismatch
 
@@ -282,4 +282,4 @@ mla      v0.4h, v5.4h, v6.4h
 # CHECK-NEXT: 0.     2     0.0    0.0    0.0       mul	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       mla	v0.2s, v3.2s, v4.2s
 # CHECK-NEXT: 2.     2     0.0    0.0    0.0       mla	v0.4h, v5.4h, v6.4h
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        6     0.0    0.0    0.0       <total>

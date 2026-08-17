@@ -13,6 +13,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm::abi;
 
@@ -139,14 +140,19 @@ IRTypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
   } else {
     uint64_t CurrentOffset = 0;
     for (const auto &Field : Fields) {
-      if (Field.OffsetInBits > CurrentOffset) {
-        if (llvm::Type *PaddingType =
-                createPaddingType(Field.OffsetInBits - CurrentOffset))
-          FieldTypes.push_back(PaddingType);
-        CurrentOffset = Field.OffsetInBits;
-      }
       assert(!Field.IsBitField && "bitfields should not reach IR type mapping");
       llvm::Type *FieldType = convertType(Field.FieldType);
+      if (Field.OffsetInBits > CurrentOffset) {
+        uint64_t AlignBits = DL.getABITypeAlign(FieldType).value() * 8;
+        uint64_t NaturalNextOffset =
+            AlignBits ? alignTo(CurrentOffset, AlignBits) : CurrentOffset;
+        if (NaturalNextOffset != Field.OffsetInBits) {
+          if (llvm::Type *PaddingType =
+                  createPaddingType(Field.OffsetInBits - CurrentOffset))
+            FieldTypes.push_back(PaddingType);
+        }
+        CurrentOffset = Field.OffsetInBits;
+      }
       FieldTypes.push_back(FieldType);
       CurrentOffset += Field.FieldType->getSizeInBits().getFixedValue();
     }

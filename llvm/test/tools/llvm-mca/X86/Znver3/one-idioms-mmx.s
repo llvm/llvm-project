@@ -105,7 +105,7 @@ paddd %mm0, %mm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpeqb	%mm0, %mm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddb	%mm0, %mm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [1] Code Region
 
@@ -196,7 +196,7 @@ paddd %mm0, %mm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpeqw	%mm0, %mm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddw	%mm0, %mm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [2] Code Region
 
@@ -287,4 +287,4 @@ paddd %mm0, %mm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       pcmpeqd	%mm0, %mm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       paddd	%mm0, %mm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>

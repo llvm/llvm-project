@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR double fabs(double x) {
+LIBC_INLINE constexpr double fabs(double x) {
 #ifdef __LIBC_MISC_MATH_BASIC_OPS_OPT
   return __builtin_fabs(x);
 #else

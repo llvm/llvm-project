@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
-# RUN:   -stop-after=prologepilog | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prolog-epilog \
+# RUN:   -stop-after=prolog-epilog | FileCheck %s
 # Check multiple epilogues, save_reg, save_reg_x.
 
 # CHECK-LABEL:   bb.0.entry:

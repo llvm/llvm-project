@@ -27,7 +27,7 @@ struct S {
 
 // LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_static_members.cpp, ptr null }]
 // LLVM: define internal void @__cxx_global_var_init()
-// LLVM:   call void @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN1S2hdE, ptr @__dso_handle)
+// LLVM:   call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN1S2hdE, ptr @__dso_handle)
 
 // FIXME(cir): OGCG has a guard variable for this case that we don't generate in CIR.
 //             This is needed because the variable linkonce_odr linkage.
@@ -67,10 +67,10 @@ struct Outer {
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[HD_CAST:.*]] = cir.cast bitcast %[[HD]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
 // CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[HD_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[HD_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 
 // LLVM: define internal void @__cxx_global_var_init.1()
-// LLVM:   call void @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN5Outer5Inner2hdE, ptr @__dso_handle)
+// LLVM:   call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN5Outer5Inner2hdE, ptr @__dso_handle)
 
 // OGCG: define internal void @__cxx_global_var_init.1() {{.*}} section ".text.startup" comdat($_ZN5Outer5Inner2hdE) {
 // OGCG:   %[[GUARD:.*]] = load atomic i8, ptr @_ZGVN5Outer5Inner2hdE acquire
@@ -87,8 +87,12 @@ struct Outer {
 // OGCG: [[INIT_END]]:
 
 
-// CIR: cir.func private @_GLOBAL__sub_I_static_members.cpp()
+// CIR: cir.func internal private @_GLOBAL__sub_I_static_members.cpp()
 // CIR:   cir.call @__cxx_global_var_init()
 
-// LLVM: define void @_GLOBAL__sub_I_static_members.cpp()
+// LLVM: define internal void @_GLOBAL__sub_I_static_members.cpp()
 // LLVM:   call void @__cxx_global_var_init()
+
+// Note: OGCG doesn't actually generate this function, and just adds these to
+// the `llvm.global_ctors` instead. It isn't clear whether that is meaningful
+// or important.

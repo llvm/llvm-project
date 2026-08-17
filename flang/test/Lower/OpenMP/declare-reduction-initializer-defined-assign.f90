@@ -41,7 +41,7 @@ subroutine test_defined_assign_init()
   !$omp end parallel do
 end subroutine
 
-!CHECK: omp.declare_reduction @add_t :
+!CHECK: omp.declare_reduction @_QQFtest_defined_assign_initadd_t_byref_rec__QMm_defined_assignTt :
 !CHECK-SAME: alloc {
 !CHECK:   %[[ALLOCA:.*]] = fir.alloca
 !CHECK:   omp.yield(%[[ALLOCA]] :

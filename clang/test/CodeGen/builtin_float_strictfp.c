@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-pc -ffp-exception-behavior=maytrap -o - %s | FileCheck %s --check-prefixes=CHECK,FP16
-// RUN: %clang_cc1 -emit-llvm -triple ppc64-be -ffp-exception-behavior=maytrap -o - %s | FileCheck %s --check-prefixes=CHECK,NOFP16
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-pc -ffp-exception-behavior=maytrap -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple ppc64-be -ffp-exception-behavior=maytrap -o - %s | FileCheck %s
 
 // test to ensure that these builtins don't do the variadic promotion of float->double.
 
@@ -11,8 +11,8 @@
 // CHECK-LABEL: @test_half
 void test_half(__fp16 *H, __fp16 *H2) {
   (void)__builtin_isgreater(*H, *H2);
-  // FP16: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
-  // FP16: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+  // CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
   // CHECK: call i1 @llvm.experimental.constrained.fcmp.f32(float %{{.*}}, float %{{.*}}, metadata !"ogt", metadata !"fpexcept.strict")
   // CHECK-NEXT: zext i1
   (void)__builtin_isinf(*H);
@@ -20,11 +20,11 @@ void test_half(__fp16 *H, __fp16 *H2) {
   // NOFP16-NEXT:  [[IHALF:%.*]]  = load i16, ptr [[LDADDR]], align 2
   // NOFP16-NEXT:  [[BITCAST:%.*]] = bitcast i16 [[IHALF]] to half
   // NOFP16-NEXT:  [[CONV:%.*]]   = call float @llvm.experimental.constrained.fpext.f32.f16(half [[BITCAST]], metadata !"fpexcept.strict")
-  // NOFP16-NEXT:  [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f32(float [[CONV]], i32 516)
+  // NOFP16-NEXT:  [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f32(float [[CONV]], /* (inf) */ i32 516)
   // NOFP16-NEXT:                   zext i1 [[RES1]] to i32
   // FP16:         [[LDADDR:%.*]] = load ptr, ptr %{{.*}}, align 8
   // FP16-NEXT:    [[HALF:%.*]]   = load half, ptr [[LDADDR]], align 2
-  // FP16-NEXT:    [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f16(half [[HALF]], i32 516)
+  // FP16-NEXT:    [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f16(half [[HALF]], /* (inf) */ i32 516)
   // FP16-NEXT:                     zext i1 [[RES1]] to i32
 }
 

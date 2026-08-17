@@ -303,12 +303,12 @@ private:
   GCNRegPressure RP;
 
   /// Target number of SGPRs.
-  unsigned MaxSGPRs;
+  unsigned MaxSGPRs = 0;
   /// Target number of ArchVGPRs and AGPRs.
-  unsigned MaxVGPRs;
+  unsigned MaxVGPRs = 0;
   /// Target number of overall VGPRs for subtargets with unified RFs. Always 0
   /// for subtargets with non-unified RFs.
-  unsigned MaxUnifiedVGPRs;
+  unsigned MaxUnifiedVGPRs = 0;
 
   GCNRPTarget(const GCNRegPressure &RP, const MachineFunction &MF)
       : MF(MF), UnifiedRF(MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()),

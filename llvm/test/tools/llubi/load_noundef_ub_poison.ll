@@ -11,6 +11,6 @@ define void @main() {
 ; CHECK-NEXT:   %p = alloca i32, align 4 => ptr 0x8 [p]
 ; CHECK-NEXT:   store i32 poison, ptr %p, align 4
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %res = load i32, ptr %p, align 4, !noundef !0 at @main
+; CHECK-NEXT: #0   %res = load i32, ptr %p, align 4, !noundef !0 at @main <stdin>:7
 ; CHECK-NEXT: Immediate UB detected: The value loaded contains undefined bits.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

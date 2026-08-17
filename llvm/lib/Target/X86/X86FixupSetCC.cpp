@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 
 using namespace llvm;
 
@@ -48,6 +49,11 @@ public:
   StringRef getPassName() const override { return "X86 Fixup SetCC"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 } // end anonymous namespace
 
@@ -92,12 +98,17 @@ static bool fixupSetCC(MachineFunction &MF) {
       if (!FlagsDefMI)
         continue;
 
+      // When ZU is available and not disabled by tuning, we rewrite to
+      // setzucc, which doesn't clobber eflags; otherwise we insert a MOV32r0
+      // (which does clobber eflags) before FlagsDefMI.
+      bool UseSetZUCC = ST->hasZU() && !ST->preferLegacySetCC();
+
       // We'd like to put something that clobbers eflags directly before
       // FlagsDefMI. This can't hurt anything after FlagsDefMI, because
       // it, itself, by definition, clobbers eflags. But it may happen that
       // FlagsDefMI also *uses* eflags, in which case the transformation is
       // invalid.
-      if (!ST->hasZU() &&
+      if (!UseSetZUCC &&
           FlagsDefMI->readsRegister(X86::EFLAGS, /*TRI=*/nullptr))
         continue;
 
@@ -117,12 +128,8 @@ static bool fixupSetCC(MachineFunction &MF) {
       // inserting the setcc/setzucc result into the low byte of the zeroed
       // register.
       Register ZeroReg = MRI->createVirtualRegister(RC);
-      if (ST->hasZU()) {
-        if (!ST->preferLegacySetCC())
-          assert((MI.getOpcode() == X86::SETZUCCr) &&
-                 "Expect setzucc instruction!");
-        else
-          MI.setDesc(TII->get(X86::SETZUCCr));
+      if (UseSetZUCC) {
+        MI.setDesc(TII->get(X86::SETZUCCr));
         BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
                 TII->get(TargetOpcode::IMPLICIT_DEF), ZeroReg);
       } else {

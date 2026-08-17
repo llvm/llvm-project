@@ -274,13 +274,16 @@ private:
       if (AS)
         Type += std::to_string(*AS);
     } else if (T.consume_back("const")) {
-      ParseType(T);
+      if (!T.empty())
+        ParseType(T);
       Type += "C";
     } else if (T.consume_back("volatile")) {
-      ParseType(T);
+      if (!T.empty())
+        ParseType(T);
       Type += "D";
     } else if (T.consume_back("restrict")) {
-      ParseType(T);
+      if (!T.empty())
+        ParseType(T);
       Type += "R";
     } else if (T.consume_back("&")) {
       // References may have an address space qualifier immediately before them.
@@ -359,6 +362,8 @@ private:
                                .Case("float", "f")
                                .Case("id", "G")
                                .Case("int", "i")
+                               .Case("int8_t", "Bi")
+                               .Case("int16_t", "Ti")
                                .Case("int32_t", "Zi")
                                .Case("int64_t", "Wi")
                                .Case("jmp_buf", "J")
@@ -372,6 +377,8 @@ private:
                                .Case("sigjmp_buf", "SJ")
                                .Case("size_t", "z")
                                .Case("ucontext_t", "K")
+                               .Case("uint8_t", "UBi")
+                               .Case("uint16_t", "UTi")
                                .Case("uint32_t", "UZi")
                                .Case("uint64_t", "UWi")
                                .Case("void", "v")

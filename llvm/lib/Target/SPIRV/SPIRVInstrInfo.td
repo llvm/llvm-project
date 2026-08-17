@@ -98,6 +98,10 @@ def OpNop: SimpleOp<"OpNop", 0>;
 def OpUndef: Op<1, (outs ID:$res), (ins TYPE:$type), "$res = OpUndef $type">;
 def OpSizeOf: Op<321, (outs ID:$res), (ins TYPE:$ty, ID:$ptr), "$res = OpSizeOf $ty $ptr">;
 
+//  - SPV_KHR_poison_freeze : Poison values and freeze
+def OpPoisonKHR: Op<5158, (outs ID:$res), (ins TYPE:$type), "$res = OpPoisonKHR $type">;
+def OpFreezeKHR: Op<5159, (outs ID:$res), (ins TYPE:$type, ID:$val), "$res = OpFreezeKHR $type $val">;
+
 //  - SPV_KHR_expect_assume : Expect assume instructions
 def OpAssumeTrueKHR: Op<5630, (outs), (ins ID:$cond), "OpAssumeTrueKHR $cond">;
 def OpExpectKHR: Op<5631, (outs ID:$res), (ins TYPE:$ty, ID:$val, ID:$expected), "$res = OpExpectKHR $ty $val $expected">;
@@ -245,7 +249,9 @@ def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_op
                   "$res = OpSpecConstantComposite $type">;
 def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
                   "OpSpecConstantCompositeContinuedINTEL">;
-def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ID:$o, variable_ops),
+// The first operand of the wrapped opcode is a type id when that opcode is one
+// of the untyped access chains, so it accepts both type and non-type ids.
+def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, SpecConstantOpOperands:$c, ANY:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
 // 3.42.8 Memory Instructions
@@ -284,6 +290,33 @@ def OpPtrNotEqual: Op<402, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
                   "$res = OpPtrNotEqual $resType $a $b">;
 def OpPtrDiff: Op<403, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
                   "$res = OpPtrDiff $resType $a $b">;
+
+// - SPV_KHR_untyped_pointers
+
+def OpTypeUntypedPointerKHR: Op<4417, (outs TYPE:$res), (ins StorageClass:$storage),
+                  "$res = OpTypeUntypedPointerKHR $storage">;
+def OpUntypedVariableKHR: Op<4418, (outs ID:$res),
+                  (ins TYPE:$type, StorageClass:$sc, TYPE:$dataType, variable_ops),
+                  "$res = OpUntypedVariableKHR $type $sc $dataType">;
+def OpUntypedAccessChainKHR: Op<4419, (outs ID:$res),
+                  (ins TYPE:$type, TYPE:$baseType, ID:$base, variable_ops),
+                  "$res = OpUntypedAccessChainKHR $type $baseType $base">;
+def OpUntypedInBoundsAccessChainKHR: Op<4420, (outs ID:$res),
+                  (ins TYPE:$type, TYPE:$baseType, ID:$base, variable_ops),
+                  "$res = OpUntypedInBoundsAccessChainKHR $type $baseType $base">;
+def OpUntypedPtrAccessChainKHR: Op<4423, (outs ID:$res),
+                  (ins TYPE:$type, TYPE:$baseType, ID:$base, ID:$element, variable_ops),
+                  "$res = OpUntypedPtrAccessChainKHR $type $baseType $base $element">;
+def OpUntypedInBoundsPtrAccessChainKHR: Op<4424, (outs ID:$res),
+                  (ins TYPE:$type, TYPE:$baseType, ID:$base, ID:$element, variable_ops),
+                  "$res = OpUntypedInBoundsPtrAccessChainKHR $type $baseType $base $element">;
+def OpUntypedPrefetchKHR: Op<4426, (outs),
+                  (ins ID:$pointer, ID:$numBytes, variable_ops),
+                  "OpUntypedPrefetchKHR $pointer $numBytes">;
+def OpUntypedGroupAsyncCopyKHR: Op<4434, (outs ID:$res),
+                  (ins TYPE:$ty, ID:$scope, ID:$dst, ID:$src, ID:$elemNumBytes,
+                   ID:$nelts, ID:$stride, ID:$event, variable_ops),
+                  "$res = OpUntypedGroupAsyncCopyKHR $ty $scope $dst $src $elemNumBytes $nelts $stride $event">;
 
 // - SPV_INTEL_variable_length_array
 

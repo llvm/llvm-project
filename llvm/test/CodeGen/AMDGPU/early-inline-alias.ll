@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -O1 -S -inline-threshold=1 %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-- -O1 -S -inline-threshold=1 %s | FileCheck %s
 
 ; CHECK: @add1alias = alias i32 (i32), ptr @add1
 ; CHECK: @add1alias2 = alias i32 (i32), ptr @add1

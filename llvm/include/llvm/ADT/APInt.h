@@ -147,15 +147,11 @@ public:
   /// \param bigVal a sequence of words to form the initial value of the APInt
   LLVM_ABI APInt(unsigned numBits, ArrayRef<uint64_t> bigVal);
 
-  /// Equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords)), but
-  /// deprecated because this constructor is prone to ambiguity with the
-  /// APInt(unsigned, uint64_t, bool) constructor.
-  ///
-  /// Once all uses of this constructor are migrated to other constructors,
-  /// consider marking this overload ""= delete" to prevent calls from being
-  /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
-  [[deprecated("Use other constructors of APInt")]]
-  LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
+  /// Was equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords))
+  /// historically, but is now deleted because this constructor is prone to
+  /// ambiguity with the APInt(unsigned, uint64_t, bool) constructor.
+  LLVM_ABI APInt(unsigned numBits, unsigned numWords,
+                 const uint64_t bigVal[]) = delete;
 
   /// Construct an APInt from a string representation.
   ///
@@ -952,6 +948,8 @@ public:
   /// equivalent to:
   ///   (this->zext(NewWidth) << NewLSB.getBitWidth()) | NewLSB.zext(NewWidth)
   APInt concat(const APInt &NewLSB) const {
+    if (getBitWidth() == 0)
+      return NewLSB;
     /// If the result will be small, then both the merged values are small.
     unsigned NewWidth = getBitWidth() + NewLSB.getBitWidth();
     if (NewWidth <= APINT_BITS_PER_WORD)
@@ -1809,8 +1807,8 @@ public:
     return logBase2();
   }
 
-  /// Compute the square root.
-  LLVM_ABI APInt sqrt() const;
+  /// Compute the floor of the square root of the unsigned value.
+  LLVM_ABI APInt sqrtFloor() const;
 
   /// Get the absolute value.  If *this is < 0 then return -(*this), otherwise
   /// *this.  Note that the "most negative" signed number (e.g. -128 for 8 bit
@@ -2489,6 +2487,26 @@ LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
 /// clmulh(a, b) = clmulr(a, b) >> 1
 LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 
+/// Perform a "compress" operation, also known as pext or bext.
+///
+/// Selects the bits from /p Val at the positions where /p Mask has a 1-bit,
+/// and packs them contiguously into the least significant bits of the result.
+///
+/// Examples:
+/// (1) pext(i8 0b1010'1010, i8 0b1100'1100) = 0b0000'1010
+/// (2) pext(i8 0b1111'1111, i8 0b1010'1010) = 0b0000'1111
+LLVM_ABI APInt pext(const APInt &Val, const APInt &Mask);
+
+/// Perform an "expand" operation, also known as pdep or bdep.
+///
+/// Places the least significant bits of /p Val at the positions where /p Mask
+/// has a 1-bit, and zeros the remaining bits.
+///
+/// Examples:
+/// (1) pdep(i8 0b0000'1010, i8 0b1100'1100) = 0b1000'1000
+/// (2) pdep(i8 0b0000'1111, i8 0b1010'1010) = 0b1010'1010
+LLVM_ABI APInt pdep(const APInt &Val, const APInt &Mask);
+
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in
@@ -2507,18 +2525,6 @@ LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
 
 /// Provide DenseMapInfo for APInt.
 template <> struct DenseMapInfo<APInt, void> {
-  static inline APInt getEmptyKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = ~0ULL;
-    return V;
-  }
-
-  static inline APInt getTombstoneKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = ~1ULL;
-    return V;
-  }
-
   LLVM_ABI static unsigned getHashValue(const APInt &Key);
 
   static bool isEqual(const APInt &LHS, const APInt &RHS) {

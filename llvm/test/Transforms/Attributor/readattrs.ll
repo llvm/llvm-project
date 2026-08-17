@@ -15,7 +15,7 @@ declare void @test1_1(ptr %x1_1, ptr readonly %y1_1, ...)
 ;.
 define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 ; CHECK-LABEL: define {{[^@]+}}@test1_2
-; CHECK-SAME: (ptr [[X1_2:%.*]], ptr nofree [[Y1_2:%.*]], ptr [[Z1_2:%.*]]) {
+; CHECK-SAME: (ptr [[X1_2:%.*]], ptr [[Y1_2:%.*]], ptr [[Z1_2:%.*]]) {
 ; CHECK-NEXT:    call void (ptr, ptr, ...) @test1_1(ptr [[X1_2]], ptr nofree readonly [[Y1_2]], ptr [[Z1_2]])
 ; CHECK-NEXT:    store i32 0, ptr @x, align 4
 ; CHECK-NEXT:    ret void
@@ -232,7 +232,7 @@ declare void @escape_readonly_ptr(ptr %addr, ptr readonly %ptr)
 ;
 define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 ; CHECK-LABEL: define {{[^@]+}}@unsound_readnone
-; CHECK-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr nofree [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; CHECK-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    call void @escape_readnone_ptr(ptr noundef nonnull align 8 dereferenceable(8) [[ADDR]], ptr noalias nofree readnone [[ESCAPED_THEN_WRITTEN]])
 ; CHECK-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -248,7 +248,7 @@ define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 
 define void @unsound_readonly(ptr %ignored, ptr %escaped_then_written) {
 ; CHECK-LABEL: define {{[^@]+}}@unsound_readonly
-; CHECK-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr nofree [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; CHECK-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    call void @escape_readonly_ptr(ptr noundef nonnull align 8 dereferenceable(8) [[ADDR]], ptr nofree readonly [[ESCAPED_THEN_WRITTEN]])
 ; CHECK-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -361,14 +361,14 @@ declare void @val_use(i8 %ptr) readonly nounwind
 define void @ptr_uses(ptr %ptr) {
 ; TUNIT: Function Attrs: nosync nounwind memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@ptr_uses
-; TUNIT-SAME: (ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR13]] {
+; TUNIT-SAME: (ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR13]] {
 ; TUNIT-NEXT:    [[CALL_PTR:%.*]] = call ptr @maybe_returned_ptr(ptr nofree readonly [[PTR]]) #[[ATTR13]]
 ; TUNIT-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(ptr readonly [[CALL_PTR]]) #[[ATTR13]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync nounwind memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@ptr_uses
-; CGSCC-SAME: (ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR14]] {
+; CGSCC-SAME: (ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR14]] {
 ; CGSCC-NEXT:    [[CALL_PTR:%.*]] = call ptr @maybe_returned_ptr(ptr nofree readonly [[PTR]]) #[[ATTR14]]
 ; CGSCC-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(ptr readonly [[CALL_PTR]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret void

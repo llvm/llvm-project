@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class CPPThisTestCase(TestBase):
     # rdar://problem/9962849
     @expectedFailureAll(

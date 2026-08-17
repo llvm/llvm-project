@@ -14,6 +14,43 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+AST_MATCHER_P(VarDecl, hasOwnInitializer, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
+  const Expr *Initializer = Node.getInit();
+  return Initializer != nullptr &&
+         InnerMatcher.matches(*Initializer, Finder, Builder);
+}
+} // namespace
+
+static bool wouldConflictWithExistingDecl(const FunctionDecl &Function,
+                                          unsigned ParamIndex) {
+  ASTContext &Context = Function.getASTContext();
+  const auto *Proto = Function.getType()->getAs<FunctionProtoType>();
+  if (!Proto)
+    return false;
+
+  // Simulate applying the fix-it to compare against existing overloads.
+  SmallVector<QualType> ParamTypes(Proto->getParamTypes());
+  ParamTypes[ParamIndex] = Context.getPointerType(
+      ParamTypes[ParamIndex]->getPointeeType().withConst());
+
+  return llvm::any_of(
+      Function.getParent()->lookup(Function.getDeclName()), [&](const Decl *D) {
+        if (const auto *Using = dyn_cast<UsingShadowDecl>(D))
+          D = Using->getTargetDecl();
+        const FunctionDecl *Overload = D->getAsFunction();
+        if (!Overload ||
+            Overload->getCanonicalDecl() == Function.getCanonicalDecl())
+          return false;
+
+        const QualType ConstParamFunctionType = Context.getFunctionType(
+            Overload->getReturnType(), ParamTypes, Proto->getExtProtoInfo());
+        return Context.hasSameFunctionTypeIgnoringExceptionSpec(
+            ConstParamFunctionType, Overload->getType());
+      });
+}
+
 void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   // Add parameters to Parameters.
   Finder->addMatcher(parmVarDecl().bind("Parm"), this);
@@ -32,16 +69,15 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
                  cxxUnresolvedConstructExpr()))
           .bind("Mark"),
       this);
-  Finder->addMatcher(varDecl(hasInitializer(anything())).bind("Mark"), this);
+  Finder->addMatcher(varDecl(hasOwnInitializer(anything())).bind("Mark"), this);
 }
 
 void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Parm = Result.Nodes.getNodeAs<ParmVarDecl>("Parm")) {
     if (const DeclContext *D = Parm->getParentFunctionOrMethod()) {
-      if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
-        if (M->isVirtual() || M->size_overridden_methods() != 0)
-          return;
-      }
+      if (const auto *M = dyn_cast<CXXMethodDecl>(D);
+          M && (M->isVirtual() || M->size_overridden_methods() != 0))
+        return;
     }
     addParm(Parm);
   } else if (const auto *Ctor =
@@ -148,7 +184,7 @@ void NonConstParameterCheck::addParm(const ParmVarDecl *Parm) {
 }
 
 void NonConstParameterCheck::setReferenced(const DeclRefExpr *Ref) {
-  auto It = Parameters.find(dyn_cast<ParmVarDecl>(Ref->getDecl()));
+  const auto It = Parameters.find(dyn_cast<ParmVarDecl>(Ref->getDecl()));
   if (It != Parameters.end())
     It->second.IsReferenced = true;
 }
@@ -176,6 +212,9 @@ void NonConstParameterCheck::diagnoseNonConstParameters() {
     if (!Function)
       continue;
     const unsigned Index = Par->getFunctionScopeIndex();
+    if (wouldConflictWithExistingDecl(*Function, Index))
+      continue;
+
     for (FunctionDecl *FnDecl : Function->redecls()) {
       if (FnDecl->getNumParams() <= Index)
         continue;
@@ -243,7 +282,7 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (const auto *Constr = dyn_cast<CXXConstructExpr>(E)) {
     for (const auto *Arg : Constr->arguments())
       if (const auto *M = dyn_cast<MaterializeTemporaryExpr>(Arg))
-        markCanNotBeConst(cast<Expr>(M->getSubExpr()), CanNotBeConst);
+        markCanNotBeConst(M->getSubExpr(), CanNotBeConst);
       else
         markCanNotBeConst(Arg, CanNotBeConst);
   } else if (const auto *CE = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
@@ -258,7 +297,7 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (CanNotBeConst) {
     // Referencing parameter.
     if (const auto *D = dyn_cast<DeclRefExpr>(E)) {
-      auto It = Parameters.find(dyn_cast<ParmVarDecl>(D->getDecl()));
+      const auto It = Parameters.find(dyn_cast<ParmVarDecl>(D->getDecl()));
       if (It != Parameters.end())
         It->second.CanBeConst = false;
     }

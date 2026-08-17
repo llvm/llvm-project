@@ -40,5 +40,7 @@
       "kind": "LinkUnit",
       "name": "test.exe"
     }
-  ]
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "type": "LUSummary"
 }

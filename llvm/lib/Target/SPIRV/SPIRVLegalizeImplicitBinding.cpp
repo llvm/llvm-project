@@ -16,6 +16,7 @@
 #include "SPIRVLegalizeImplicitBinding.h"
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -142,10 +143,9 @@ void SPIRVLegalizeImplicitBindingImpl::collectBindingInfo(Module &M) {
   InfoCollector.visit(M);
 
   // Sort the collected calls by their order ID.
-  std::sort(ImplicitBindingCalls.begin(), ImplicitBindingCalls.end(),
-            [](const CallInst *A, const CallInst *B) {
-              return getOrderId(A) < getOrderId(B);
-            });
+  llvm::sort(ImplicitBindingCalls, [](const CallInst *A, const CallInst *B) {
+    return getOrderId(A) < getOrderId(B);
+  });
 }
 
 void SPIRVLegalizeImplicitBindingImpl::verifyUniqueOrderIdPerResource(

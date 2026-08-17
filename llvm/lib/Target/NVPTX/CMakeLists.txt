@@ -12,6 +12,7 @@ tablegen(LLVM NVPTXGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(NVPTXCommonTableGen)
 
 set(NVPTXCodeGen_sources
+  NVPTXAddressFolder.cpp
   NVPTXAliasAnalysis.cpp
   NVPTXAllocaHoisting.cpp
   NVPTXAsmPrinter.cpp
@@ -34,8 +35,8 @@ set(NVPTXCodeGen_sources
   NVPTXMCExpr.cpp
   NVPTXMarkKernelPtrsGlobal.cpp
   NVPTXPeephole.cpp
-  NVPTXSetByValParamAlign.cpp
   NVPTXPrologEpilogPass.cpp
+  NVPTXPromoteParamAlign.cpp
   NVPTXProxyRegErasure.cpp
   NVPTXRegisterInfo.cpp
   NVPTXReplaceImageHandles.cpp

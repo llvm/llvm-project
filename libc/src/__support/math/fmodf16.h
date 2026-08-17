@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float16 fmodf16(float16 x, float16 y) {
+LIBC_INLINE constexpr float16 fmodf16(float16 x, float16 y) {
   return fputil::generic::FMod<float16, uint32_t>::eval(x, y);
 }
 

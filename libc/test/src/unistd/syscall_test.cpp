@@ -12,7 +12,7 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/fcntl_macros.h"
-#include <sys/stat.h>    // For S_* flags.
+#include "hdr/sys_stat_macros.h" // For S_* flags.
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>
 

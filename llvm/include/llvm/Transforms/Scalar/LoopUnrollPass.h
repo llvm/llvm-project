@@ -16,7 +16,7 @@
 
 namespace llvm {
 
-extern cl::opt<bool> ForgetSCEVInLoopUnroll;
+extern LLVM_ABI cl::opt<bool> ForgetSCEVInLoopUnroll;
 
 class Function;
 class Loop;
@@ -36,14 +36,20 @@ class LoopFullUnrollPass : public OptionalPassInfoMixin<LoopFullUnrollPass> {
   /// the internal SCEV records. For large loops, the former is faster.
   const bool ForgetSCEV;
 
+  /// If true, consider calls as inline candidates and defer unrolling so that
+  /// LTO post-link inlining can consider them first.
+  const bool PrepareForLTO;
+
 public:
   explicit LoopFullUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
-                              bool ForgetSCEV = false)
+                              bool ForgetSCEV = false,
+                              bool PrepareForLTO = false)
       : OptLevel(OptLevel), OnlyWhenForced(OnlyWhenForced),
-        ForgetSCEV(ForgetSCEV) {}
+        ForgetSCEV(ForgetSCEV), PrepareForLTO(PrepareForLTO) {}
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 /// A set of parameters used to control various transforms performed by the
@@ -76,6 +82,10 @@ struct LoopUnrollOptions {
   /// of the currently processed loops, which removes one entry at a time from
   /// the internal SCEV records. For large loops, the former is faster.
   const bool ForgetSCEV;
+
+  /// If true, consider calls as inline candidates and defer unrolling so that
+  /// LTO post-link inlining can consider them first.
+  bool PrepareForLTO = false;
 
   LoopUnrollOptions(int OptLevel = 2, bool OnlyWhenForced = false,
                     bool ForgetSCEV = false)
@@ -125,6 +135,11 @@ struct LoopUnrollOptions {
     FullUnrollMaxCount = O;
     return *this;
   }
+
+  LoopUnrollOptions &setPrepareForLTO(bool V) {
+    PrepareForLTO = V;
+    return *this;
+  }
 };
 
 /// Loop unroll pass that will support both full and partial unrolling.
@@ -139,9 +154,10 @@ public:
   explicit LoopUnrollPass(LoopUnrollOptions UnrollOpts = {})
       : UnrollOpts(UnrollOpts) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

@@ -12,17 +12,19 @@
 
 #include "CSKYMCAsmInfo.h"
 #include "MCTargetDesc/CSKYMCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 
 using namespace llvm;
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {
-    {CSKY::S_GOT, "GOT"},       {CSKY::S_GOTOFF, "GOTOFF"},
-    {CSKY::S_PLT, "PLT"},       {CSKY::S_TLSGD, "TLSGD"},
-    {CSKY::S_TLSLDM, "TLSLDM"}, {CSKY::S_TPOFF, "TPOFF"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"GOT"}, CSKY::S_GOT},       {{"GOTOFF"}, CSKY::S_GOTOFF},
+    {{"PLT"}, CSKY::S_PLT},       {{"TLSGD"}, CSKY::S_TLSGD},
+    {{"TLSLDM"}, CSKY::S_TLSLDM}, {{"TPOFF"}, CSKY::S_TPOFF},
 };
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 void CSKYMCAsmInfo::anchor() {}
 

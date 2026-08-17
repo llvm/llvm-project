@@ -58,6 +58,7 @@ class CanonicalLoopInfo;
 
 namespace clang {
 class ASTContext;
+class AsmConstraintsInfo;
 class CXXDestructorDecl;
 class CXXForRangeStmt;
 class CXXTryStmt;
@@ -259,6 +260,7 @@ class CodeGenFunction : public CodeGenTypeCache {
   void operator=(const CodeGenFunction &) = delete;
 
   friend class CGCXXABI;
+  friend class clang::AsmConstraintsInfo;
 
 public:
   /// A jump destination is an abstract label, branching to which may
@@ -621,6 +623,10 @@ public:
 
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
+
+  /// The mode string from the amdgpu_av attribute on the current statement,
+  /// or empty if the attribute is not present.
+  StringRef AMDGPUAvailableVisibleMode;
 
   /// HLSL Branch attribute.
   HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
@@ -2234,6 +2240,7 @@ public:
   const TargetCodeGenInfo &getTargetHooks() const {
     return CGM.getTargetCodeGenInfo();
   }
+  const FunctionDecl *getCurrentFunctionDecl() const;
 
   //===--------------------------------------------------------------------===//
   //                                  Cleanups
@@ -2960,10 +2967,11 @@ public:
   /// aggregate type.
   AggValueSlot CreateAggTemp(QualType T, const Twine &Name = "tmp",
                              RawAddress *Alloca = nullptr) {
+    RawAddress Addr = CreateMemTemp(T, Name, Alloca);
     return AggValueSlot::forAddr(
-        CreateMemTemp(T.getUnqualifiedType(), Name, Alloca), T.getQualifiers(),
-        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
-        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+        Addr, T.getQualifiers(), AggValueSlot::IsNotDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
   }
 
   /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
@@ -3007,6 +3015,11 @@ public:
   /// always the value of the expression, because a __builtin_ms_va_list is a
   /// pointer to a char.
   Address EmitMSVAListRef(const Expr *E);
+
+  /// Emit a "reference" to a __builtin_zos_va_list; this is always the
+  /// address of the expression, because a __builtin_zos_va_list is an
+  /// array of pointer to a char.
+  Address EmitZOSVAListRef(const Expr *E);
 
   /// EmitAnyExprToTemp - Similarly to EmitAnyExpr(), however, the result will
   /// always be accessible even if no aggregate location is provided.
@@ -3298,7 +3311,8 @@ public:
 
   void EmitDeleteCall(const FunctionDecl *DeleteFD, llvm::Value *Ptr,
                       QualType DeleteTy, llvm::Value *NumElements = nullptr,
-                      CharUnits CookieSize = CharUnits());
+                      CharUnits CookieSize = CharUnits(),
+                      llvm::Constant *CalleeOverride = nullptr);
 
   RValue EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
                                   const CallExpr *TheCallExpr, bool IsDelete);
@@ -3741,6 +3755,9 @@ public:
   void EmitCXXForRangeStmt(const CXXForRangeStmt &S,
                            ArrayRef<const Attr *> Attrs = {});
 
+  void
+  EmitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation &S);
+
   /// Controls insertion of cancellation exit blocks in worksharing constructs.
   class OMPCancelStackRAII {
     CodeGenFunction &CGF;
@@ -3954,7 +3971,10 @@ public:
   void EmitOMPFlushDirective(const OMPFlushDirective &S);
   void EmitOMPDepobjDirective(const OMPDepobjDirective &S);
   void EmitOMPScanDirective(const OMPScanDirective &S);
-  void EmitOMPOrderedDirective(const OMPOrderedDirective &S);
+  void
+  EmitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective &S);
+  void
+  EmitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective &S);
   void EmitOMPAtomicDirective(const OMPAtomicDirective &S);
   void EmitOMPTargetDirective(const OMPTargetDirective &S);
   void EmitOMPTargetDataDirective(const OMPTargetDataDirective &S);
@@ -4193,28 +4213,32 @@ public:
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its structured block, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getStructuredBlock());
+    if (S.getStructuredBlock())
+      EmitStmt(S.getStructuredBlock());
   }
 
   void EmitOpenACCLoopConstruct(const OpenACCLoopConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its loop, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getLoop());
+    if (S.getLoop())
+      EmitStmt(S.getLoop());
   }
 
   void EmitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its loop, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getLoop());
+    if (S.getLoop())
+      EmitStmt(S.getLoop());
   }
 
   void EmitOpenACCDataConstruct(const OpenACCDataConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its structured block, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getStructuredBlock());
+    if (S.getStructuredBlock())
+      EmitStmt(S.getStructuredBlock());
   }
 
   void EmitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &S) {
@@ -4231,7 +4255,8 @@ public:
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its structured block, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getStructuredBlock());
+    if (S.getStructuredBlock())
+      EmitStmt(S.getStructuredBlock());
   }
 
   void EmitOpenACCWaitConstruct(const OpenACCWaitConstruct &S) {
@@ -4263,7 +4288,8 @@ public:
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its associated stmt, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getAssociatedStmt());
+    if (S.getAssociatedStmt())
+      EmitStmt(S.getAssociatedStmt());
   }
   void EmitOpenACCCacheConstruct(const OpenACCCacheConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
@@ -4350,6 +4376,12 @@ public:
       llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
       llvm::SyncScope::ID SSID = llvm::SyncScope::System,
       const AtomicExpr *AE = nullptr);
+
+  /// Emit a fence instruction, applying relevant target-specific metadata when
+  /// applicable.
+  llvm::FenceInst *
+  emitAtomicFence(llvm::AtomicOrdering Order,
+                  llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
@@ -4658,6 +4690,9 @@ public:
                                                  llvm::Value *Discriminator);
   CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
                                         llvm::Value *StorageAddress,
+                                        llvm::ConstantInt *Discriminator);
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
+                                        llvm::Value *StorageAddress,
                                         GlobalDecl SchemaDecl,
                                         QualType SchemaType);
 
@@ -4874,7 +4909,6 @@ public:
   llvm::Value *EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
                                   llvm::Type *ReturnType,
                                   ArrayRef<llvm::Value *> Ops);
-  llvm::Value *EmitSVEAllTruePred(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar, llvm::Type *Ty);
   llvm::Value *EmitSVEReinterpret(llvm::Value *Val, llvm::Type *Ty);
@@ -4960,6 +4994,7 @@ public:
   llvm::Value *EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
                                           const CallExpr *E);
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitAVRBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
 
@@ -4971,6 +5006,9 @@ public:
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);
+  /// Attach the AMDGPU availability/visibility MMRA to \p Inst when the
+  /// amdgpu_av attribute is active on the current statement.
+  void AddAMDGPUAvailableVisibleMMRA(llvm::Instruction *Inst);
   void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
@@ -5445,11 +5483,11 @@ public:
   void maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
                                SourceLocation Loc);
 
-private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
+private:
   // Adds a convergence_ctrl token with |ParentToken| as parent convergence
   // instr to the call |Input|.
   llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
@@ -5496,86 +5534,6 @@ private:
   EmitAsmInputLValue(const TargetInfo::ConstraintInfo &Info, LValue InputValue,
                      QualType InputType, std::string &ConstraintStr,
                      SourceLocation Loc);
-
-  /// This structure holds the information gathered about the constraints for an
-  /// inline assembly statement. It helps in separating the constraint
-  /// processing from the code generation.
-  struct AsmConstraintsInfo {
-    // The output and input constraints.
-    SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos;
-    SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos;
-
-    // Constraint strings.
-    std::string Constraints;
-    std::string InOutConstraints;
-
-    // Keep track of out constraints for tied input operand.
-    std::vector<std::string> OutputConstraints;
-
-    // Keep track of argument types.
-    std::vector<llvm::Value *> Args;
-    std::vector<llvm::Type *> ArgTypes;
-    std::vector<llvm::Type *> ArgElemTypes;
-
-    // Keep track of result register constraints.
-    std::vector<LValue> ResultRegDests;
-    std::vector<QualType> ResultRegQualTys;
-    std::vector<llvm::Type *> ResultRegTypes;
-    std::vector<llvm::Type *> ResultTruncRegTypes;
-
-    llvm::BitVector ResultTypeRequiresCast;
-
-    // Keep track of in/out constraints.
-    std::vector<llvm::Value *> InOutArgs;
-    std::vector<llvm::Type *> InOutArgTypes;
-    std::vector<llvm::Type *> InOutArgElemTypes;
-
-    // Destination blocks for 'asm gotos'.
-    llvm::BasicBlock *DefaultDest = nullptr;
-    SmallVector<llvm::BasicBlock *, 3> IndirectDests;
-
-    std::vector<std::optional<std::pair<unsigned, unsigned>>> ResultBounds;
-
-    // An inline asm can be marked readonly if it meets the following
-    // conditions:
-    //
-    //   - it doesn't have any sideeffects
-    //   - it doesn't clobber memory
-    //   - it doesn't return a value by-reference
-    //
-    // It can be marked readnone if it doesn't have any input memory
-    // constraints in addition to meeting the conditions listed above.
-    bool ReadOnly = true;
-    bool ReadNone = true;
-
-    AsmConstraintsInfo(
-        SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-        SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos)
-        : OutputConstraintInfos(OutputConstraintInfos),
-          InputConstraintInfos(InputConstraintInfos) {}
-  };
-
-  void EmitAsmStmt(
-      const AsmStmt &S,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos);
-  void EmitAsmStores(const AsmStmt &S,
-                     const llvm::ArrayRef<llvm::Value *> RegResults,
-                     const AsmConstraintsInfo &AsmInfo);
-  void UpdateAsmCallInst(const AsmStmt &S, llvm::CallBase &Result,
-                         const AsmConstraintsInfo &AsmInfo, bool HasSideEffect,
-                         bool HasUnwindClobber, bool NoMerge, bool NoConvergent,
-                         std::vector<llvm::Value *> &RegResults);
-  bool GetOutputAndInputConstraints(
-      const AsmStmt &S,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &OutputConstraintInfos,
-      SmallVectorImpl<TargetInfo::ConstraintInfo> &InputConstraintInfos);
-  void HandleOutputConstraints(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
-  void HandleMSStyleAsmBlob(const AsmStmt &S, std::string &AsmString,
-                            AsmConstraintsInfo &AsmInfo);
-  void HandleInputConstraints(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
-  bool HandleLabels(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
-  bool HandleClobbers(const AsmStmt &S, AsmConstraintsInfo &AsmInfo);
 
   /// Attempts to statically evaluate the object size of E. If that
   /// fails, emits code to figure the size of E out for us. This is

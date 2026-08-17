@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float16 fminimum_magf16(float16 x, float16 y) {
+LIBC_INLINE constexpr float16 fminimum_magf16(float16 x, float16 y) {
   return fputil::fminimum_mag(x, y);
 }
 

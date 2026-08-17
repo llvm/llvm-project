@@ -215,11 +215,8 @@ void GlobalsAAResult::DeletionCallbackHandle::deleted() {
       // remove any AllocRelatedValues for it.
       if (GAR->IndirectGlobals.erase(GV)) {
         // Remove any entries in AllocsForIndirectGlobals for this global.
-        for (auto I = GAR->AllocsForIndirectGlobals.begin(),
-                  E = GAR->AllocsForIndirectGlobals.end();
-             I != E; ++I)
-          if (I->second == GV)
-            GAR->AllocsForIndirectGlobals.erase(I);
+        GAR->AllocsForIndirectGlobals.remove_if(
+            [GV](const auto &Entry) { return Entry.second == GV; });
       }
 
       // Scan the function info we have collected and remove this global
@@ -331,7 +328,8 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
       if (Readers)
         Readers->insert(LI->getParent()->getParent());
     } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-      if (V == SI->getOperand(1)) {
+      // Check the pointer operand use of the store.
+      if (&U == &SI->getOperandUse(1)) {
         if (Writers)
           Writers->insert(SI->getParent()->getParent());
       } else if (SI->getOperand(1) != OkayStoreDest) {

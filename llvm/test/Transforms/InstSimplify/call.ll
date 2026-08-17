@@ -488,11 +488,11 @@ define <8 x i32> @partial_masked_load() {
   ret <8 x i32> %masked.load
 }
 
-define <8 x i32> @masked_load_undef_mask(ptr %V) {
-; CHECK-LABEL: @masked_load_undef_mask(
+define <8 x i32> @masked_load_poison_mask(ptr %V) {
+; CHECK-LABEL: @masked_load_poison_mask(
 ; CHECK-NEXT:    ret <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
 ;
-  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %V, i32 4, <8 x i1> undef, <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>)
+  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %V, i32 4, <8 x i1> poison, <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>)
   ret <8 x i32> %masked.load
 }
 
@@ -588,6 +588,75 @@ define <2 x i8> @fshr_no_shift_modulo_bitwidth_splat(<2 x i8> %x, <2 x i8> %y) {
 ;
   %z = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> <i8 72, i8 72>)
   ret <2 x i8> %z
+}
+
+define i32 @fshl_identity(i32 %x) {
+; CHECK-LABEL: @fshl_identity(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %shr = lshr i32 %x, 24
+  %shl = shl i32 %x, 8
+  %r = call i32 @llvm.fshl.i32(i32 %shr, i32 %shl, i32 24)
+  ret i32 %r
+}
+
+define i32 @fshr_identity(i32 %x) {
+; CHECK-LABEL: @fshr_identity(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %shr = lshr i32 %x, 24
+  %shl = shl i32 %x, 8
+  %r = call i32 @llvm.fshr.i32(i32 %shr, i32 %shl, i32 8)
+  ret i32 %r
+}
+
+define i32 @fshl_identity_modulo(i32 %x) {
+; CHECK-LABEL: @fshl_identity_modulo(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %shr = lshr i32 %x, 8
+  %shl = shl i32 %x, 24
+  %r = call i32 @llvm.fshl.i32(i32 %shr, i32 %shl, i32 40)
+  ret i32 %r
+}
+
+define i32 @fshl_not_identity_wrong_shift(i32 %x) {
+; CHECK-LABEL: @fshl_not_identity_wrong_shift(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X]], 8
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[SHR]], i32 [[SHL]], i32 8)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 24
+  %shl = shl i32 %x, 8
+  %r = call i32 @llvm.fshl.i32(i32 %shr, i32 %shl, i32 8)
+  ret i32 %r
+}
+
+define i32 @fshl_not_identity_different_operands(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_not_identity_different_operands(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[Y:%.*]], 8
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[SHR]], i32 [[SHL]], i32 24)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 24
+  %shl = shl i32 %y, 8
+  %r = call i32 @llvm.fshl.i32(i32 %shr, i32 %shl, i32 24)
+  ret i32 %r
+}
+
+define i32 @fshl_not_identity_wrong_sum(i32 %x) {
+; CHECK-LABEL: @fshl_not_identity_wrong_sum(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 24
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X]], 4
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[SHR]], i32 [[SHL]], i32 24)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 %x, 24
+  %shl = shl i32 %x, 4
+  %r = call i32 @llvm.fshl.i32(i32 %shr, i32 %shl, i32 24)
+  ret i32 %r
 }
 
 ; If y is poison, eliminating the guard is not safe.

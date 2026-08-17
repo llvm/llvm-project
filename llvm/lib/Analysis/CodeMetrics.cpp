@@ -130,7 +130,6 @@ void CodeMetrics::analyzeBasicBlock(
     const BasicBlock *BB, const TargetTransformInfo &TTI,
     const SmallPtrSetImpl<const Value *> &EphValues, bool PrepareForLTO,
     const Loop *L) {
-  ++NumBlocks;
   InstructionCost NumInstsBeforeThisBB = NumInsts;
   for (const Instruction &I : *BB) {
     // Skip ephemeral values.
@@ -161,11 +160,14 @@ void CodeMetrics::analyzeBasicBlock(
 
         if (IsLoweredToCall)
           ++NumCalls;
-      } else {
+      } else if (!Call->isInlineAsm()) {
         // We don't want inline asm to count as a call - that would prevent loop
         // unrolling. The argument setup cost is still real, though.
-        if (!Call->isInlineAsm())
-          ++NumCalls;
+        ++NumCalls;
+        // When preparing for LTO, consider indirect calls as potential inline
+        // candidates since they may be resolved during post-link LTO
+        if (PrepareForLTO && !Call->isNoInline())
+          ++NumInlineCandidates;
       }
     }
 
@@ -231,5 +233,7 @@ void CodeMetrics::analyzeBasicBlock(
 
   // Remember NumInsts for this BB.
   InstructionCost NumInstsThisBB = NumInsts - NumInstsBeforeThisBB;
-  NumBBInsts[BB] = NumInstsThisBB;
+  if (NumBBInsts.size() <= BB->getNumber())
+    NumBBInsts.resize(BB->getParent()->getMaxBlockNumber());
+  NumBBInsts[BB->getNumber()] = NumInstsThisBB;
 }

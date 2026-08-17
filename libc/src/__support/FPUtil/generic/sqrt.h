@@ -41,8 +41,8 @@ template <> struct SpecialLongDouble<long double> {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 template <typename T>
-LIBC_INLINE void normalize(int &exponent,
-                           typename FPBits<T>::StorageType &mantissa) {
+LIBC_INLINE constexpr void
+normalize(int &exponent, typename FPBits<T>::StorageType &mantissa) {
   const int shift =
       cpp::countl_zero(mantissa) -
       (8 * static_cast<int>(sizeof(mantissa)) - 1 - FPBits<T>::FRACTION_LEN);
@@ -52,12 +52,14 @@ LIBC_INLINE void normalize(int &exponent,
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 template <>
-LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
+LIBC_INLINE constexpr void normalize<long double>(int &exponent,
+                                                  uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);
 }
 #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 template <>
-LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
+LIBC_INLINE constexpr void normalize<long double>(int &exponent,
+                                                  UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
   const int shift =
       hi_bits ? (cpp::countl_zero(hi_bits) - 15)
@@ -72,7 +74,7 @@ LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
 // Correctly rounded IEEE 754 SQRT for all rounding modes.
 // Shift-and-add algorithm.
 template <typename OutType, typename InType>
-LIBC_INLINE static constexpr cpp::enable_if_t<
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT static cpp::enable_if_t<
     cpp::is_floating_point_v<OutType> && cpp::is_floating_point_v<InType> &&
         sizeof(OutType) <= sizeof(InType),
     OutType>
@@ -92,7 +94,7 @@ sqrt(InType x) {
         DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::STORAGE_LEN))>;
 
     constexpr InStorageType ONE = InStorageType(1) << InFPBits::FRACTION_LEN;
-    LIBC_CONSTEXPR auto FLT_NAN = OutFPBits::quiet_nan().get_val();
+    LIBC_BIT_CAST_CONSTEXPR_VAR auto FLT_NAN = OutFPBits::quiet_nan().get_val();
 
     InFPBits bits(x);
 

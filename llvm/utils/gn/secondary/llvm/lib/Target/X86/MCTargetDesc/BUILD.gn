@@ -76,6 +76,7 @@ static_library("MCTargetDesc") {
     "X86IntelInstPrinter.cpp",
     "X86MCAsmInfo.cpp",
     "X86MCCodeEmitter.cpp",
+    "X86MCLFIRewriter.cpp",
     "X86MCTargetDesc.cpp",
     "X86MachObjectWriter.cpp",
     "X86MnemonicTables.cpp",

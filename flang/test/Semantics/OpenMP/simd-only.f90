@@ -235,9 +235,9 @@ end subroutine
 subroutine test_sections()
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPSectionsConstruct
   !$omp sections
-  ! CHECK-NOT: OpenMPConstruct -> OpenMPSectionConstruct
+  ! CHECK-NOT: OpenMPConstruct -> OmpSectionDirective
   !$omp section
-  ! CHECK-NOT: OpenMPConstruct -> OpenMPSectionConstruct
+  ! CHECK-NOT: OpenMPConstruct -> OmpSectionDirective
   !$omp section
   !$omp end sections
 end subroutine

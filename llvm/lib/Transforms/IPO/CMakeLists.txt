@@ -24,14 +24,13 @@ add_llvm_component_library(LLVMipo
   GlobalSplit.cpp
   HotColdSplitting.cpp
   IPO.cpp
-  IROutliner.cpp
   InferFunctionAttrs.cpp
   Inliner.cpp
   Instrumentor.cpp
+  InstrumentorUtils.cpp
   InstrumentorConfigFile.cpp
   InstrumentorStubPrinter.cpp
   Internalize.cpp
-  LoopExtractor.cpp
   LowerTypeTests.cpp
   MemProfContextDisambiguation.cpp
   MergeFunctions.cpp

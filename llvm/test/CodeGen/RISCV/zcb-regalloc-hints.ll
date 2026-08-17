@@ -4,8 +4,8 @@
 define i64 @c_not(i64 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: c_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    not a1, a1
 ; CHECK-NEXT:    li a0, 1234
+; CHECK-NEXT:    not a1, a1
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = xor i64 %y, -1
@@ -28,8 +28,8 @@ define i64 @c_mul(i64 %x, i64 %y, i64 %z, i64 %w) {
 define i64 @c_sext_b(i64 %x, i8 %y, i64 %z) {
 ; CHECK-LABEL: c_sext_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.b a1, a1
 ; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    sext.b a1, a1
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = sext i8 %y to i64
@@ -40,8 +40,8 @@ define i64 @c_sext_b(i64 %x, i8 %y, i64 %z) {
 define i64 @c_sext_h(i64 %x, i16 %y, i64 %z) {
 ; CHECK-LABEL: c_sext_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.h a1, a1
 ; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    sext.h a1, a1
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = sext i16 %y to i64
@@ -52,8 +52,8 @@ define i64 @c_sext_h(i64 %x, i16 %y, i64 %z) {
 define i64 @c_zext_b(i64 %x, i8 %y, i64 %z) {
 ; CHECK-LABEL: c_zext_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.b a1, a1
 ; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    zext.b a1, a1
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = zext i8 %y to i64
@@ -64,8 +64,8 @@ define i64 @c_zext_b(i64 %x, i8 %y, i64 %z) {
 define i64 @c_zext_h(i64 %x, i16 %y) {
 ; CHECK-LABEL: c_zext_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.h a1, a1
 ; CHECK-NEXT:    lui a0, 4096
+; CHECK-NEXT:    zext.h a1, a1
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = zext i16 %y to i64
@@ -76,8 +76,8 @@ define i64 @c_zext_h(i64 %x, i16 %y) {
 define i64 @c_zext_w(i64 %x, i32 %y) {
 ; CHECK-LABEL: c_zext_w:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.w a1, a1
 ; CHECK-NEXT:    li a0, 1234
+; CHECK-NEXT:    zext.w a1, a1
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = zext i32 %y to i64

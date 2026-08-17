@@ -1847,11 +1847,25 @@ llvm.mlir.alias external @y5 : i32 {
 
 // -----
 
+// expected-error@+1{{attribute 'nodes' failed to satisfy constraint: array of #llvm.md_node attributes}}
+llvm.named_metadata "not_node" [#llvm.md_string<"int">]
+
+// -----
+
 module {
   llvm.func @foo()
 
-  // expected-error@below {{only integer, string, and string-array values are currently supported for unknown key '"yolo"'}}
+  // expected-error@below {{only integer, integer-like dialect attributes, string, and string-array values are currently supported for unknown key '"yolo"'}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{expected module flag key 'amdgpu.buffer.oob.mode' to be unique for non-require flags}}
+  llvm.module_flags [#rocdl.buffer_oob_mode_flag<any>,
+                     #llvm.mlir.module_flag<max, "amdgpu.buffer.oob.mode",
+                                            #rocdl.buffer_oob_mode<strict>>]
 }
 
 // -----
@@ -1957,6 +1971,16 @@ llvm.mlir.global internal constant @bad_array_attr_simple_type() : !llvm.array<2
 
 // -----
 
+llvm.mlir.global internal constant @bad_ptr_array_attr_leaf() : !llvm.array<2 x ptr> {
+  // expected-error@below {{pointer array element at index 0 must be a flat symbol reference, zero, undef, or poison}}
+  %0 = llvm.mlir.constant([1 : i32, @s0]) : !llvm.array<2 x ptr>
+  llvm.return %0 : !llvm.array<2 x ptr>
+}
+
+llvm.mlir.global private constant @s0("a\00") {addr_space = 0 : i32} : !llvm.array<2 x i8>
+
+// -----
+
 llvm.func @inlineAsmMustTail(%arg0: i32, %arg1 : !llvm.ptr) {
   // expected-error@+1 {{op tail call kind 'musttail' is not supported}}
   %8 = llvm.inline_asm tail_call_kind = <musttail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
@@ -2022,6 +2046,30 @@ llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
 llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
   // expected-error@+1 {{op both src and dst should be vector types or both}}
   %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_truncf_2(%arg0: f16) {
+  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (f16) -> vector<8xi8>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_extf_1(%arg0: vector<8xi8>) {
+  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (vector<8xi8>) -> f16
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_extf_2(%arg0: i8) {
+  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (i8) -> vector<8xf16>
   llvm.return
 }
 
@@ -2122,4 +2170,47 @@ func.func @nvvm_read_sreg_clock64_wrong_type() {
   // expected-error@+1 {{'nvvm.read.ptx.sreg.clock64' op result #0 must be 64-bit signless integer, but got 'i32'}}
   %0 = nvvm.read.ptx.sreg.clock64 : i32
   return
+}
+
+// -----
+
+// expected-error@+1{{custom op 'llvm.mlir.alias' invalid value for thread_local}}
+llvm.mlir.alias private thread_local(invalid) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1{{expected ')'}}
+llvm.mlir.alias private thread_local(localexec, generaldynamic) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1{{custom op 'llvm.mlir.global' invalid value for thread_local}}
+llvm.mlir.global internal thread_local(invalid) constant @thread_local(42 : i32) : i32
+
+// -----
+
+// expected-error@+1{{expected ')'}}
+llvm.mlir.global internal thread_local(generaldynamic, localexec) constant @thread_local(42 : i32) : i32
+
+
+// -----
+
+llvm.func @md_addrspacecast_bad_operand() {
+  // expected-error@+1{{expected #llvm.md_global_value, #llvm.md_null, or #llvm.md_addrspacecast operand, but got #llvm.md_string<"not a pointer">}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_string<"not a pointer">, 0>
+  llvm.return
+}
+
+// -----
+
+llvm.func @md_addrspacecast_int_operand() {
+  // expected-error@+1{{expected #llvm.md_global_value, #llvm.md_null, or #llvm.md_addrspacecast operand, but got #llvm.md_const<42 : i32>}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_const<42 : i32>, 0>
+  llvm.return
 }

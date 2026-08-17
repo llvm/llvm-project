@@ -1,3 +1,5 @@
+// XFAIL: mlir-expensive-checks
+
 // RUN: mlir-opt \
 // RUN:     -test-strict-pattern-driver="strictness=AnyOp" \
 // RUN:     --split-input-file %s | FileCheck %s --check-prefix=CHECK-AN

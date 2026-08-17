@@ -2,9 +2,10 @@ executable("clang-ssaf-format") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/Basic",
-    "//clang/lib/ScalableStaticAnalysisFramework/Analyses",
-    "//clang/lib/ScalableStaticAnalysisFramework/Core",
-    "//clang/lib/ScalableStaticAnalysisFramework/Tool",
+    "//clang/lib/ScalableStaticAnalysis/Analyses",
+    "//clang/lib/ScalableStaticAnalysis/Core",
+    "//clang/lib/ScalableStaticAnalysis/SourceTransformation",
+    "//clang/lib/ScalableStaticAnalysis/Tool",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]

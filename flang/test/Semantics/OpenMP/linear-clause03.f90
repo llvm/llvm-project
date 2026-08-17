@@ -6,6 +6,7 @@ interface
   subroutine f(x, y)
     integer, allocatable :: x
     integer :: y
+    !WARNING: 'DECLARE SIMD' directive in an interface body has no effect [-Wopenmp-usage]
     !$omp declare simd(f) linear(ref(x) : 1) linear(uval(y))
   end
 end interface
@@ -19,6 +20,15 @@ subroutine g
   !$omp do ordered(1) linear(i)
   !BECAUSE: 'i' is an iteration variable of an affected loop
   do i = 1, 10
+  end do
+end
+
+subroutine h
+  integer :: x, i
+  !ERROR: 'linear-step' modifier cannot occur multiple times
+  !$omp do linear(x : 2, 2)
+  do i = 1, 10
+    x = x + 2
   end do
 end
 

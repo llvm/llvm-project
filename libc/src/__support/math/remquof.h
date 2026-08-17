@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float remquof(float x, float y, int *exp) {
+LIBC_INLINE constexpr float remquof(float x, float y, int *exp) {
   return fputil::remquo(x, y, *exp);
 }
 

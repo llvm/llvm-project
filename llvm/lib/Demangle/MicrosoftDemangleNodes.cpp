@@ -422,7 +422,7 @@ void FunctionSignatureNode::outputPost(OutputBuffer &OB,
     OB << "(";
     if (Params)
       Params->output(OB, Flags);
-    else
+    else if (!(Flags & OF_NoVoidParameter))
       OB << "void";
 
     if (IsVariadic) {
@@ -623,11 +623,12 @@ void VariableSymbolNode::output(OutputBuffer &OB, OutputFlags Flags) const {
   if (!(Flags & OF_NoMemberType) && IsStatic)
     OB << "static ";
 
-  if (!(Flags & OF_NoVariableType) && Type) {
+  if (!(Flags & OF_NoVariableType) && Type)
     Type->outputPre(OB, Flags);
+  if (shouldOutputName(Flags)) {
     outputSpaceIfNecessary(OB);
+    Name->output(OB, Flags);
   }
-  Name->output(OB, Flags);
   if (!(Flags & OF_NoVariableType) && Type)
     Type->outputPost(OB, Flags);
 }

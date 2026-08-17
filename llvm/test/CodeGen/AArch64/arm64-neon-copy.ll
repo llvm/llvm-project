@@ -4,8 +4,6 @@
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for test_bitcastv2f32tov1f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_bitcastv1f64tov2f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_concat_v1i32_undef
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_concat_diff_v1i32_v1i32
 
 define <16 x i8> @ins16bw(<16 x i8> %tmp1, i8 %tmp2) {
 ; CHECK-LABEL: ins16bw:
@@ -1650,15 +1648,24 @@ entry:
 }
 
 define <2 x i32> @test_concat_diff_v1i32_v1i32(i32 %a, i32 %b) {
-; CHECK-LABEL: test_concat_diff_v1i32_v1i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    sqabs s0, s0
-; CHECK-NEXT:    sqabs s1, s1
-; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_concat_diff_v1i32_v1i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s1, w1
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    sqabs s0, s0
+; CHECK-SD-NEXT:    sqabs s1, s1
+; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_concat_diff_v1i32_v1i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    sqabs s0, s0
+; CHECK-GI-NEXT:    sqabs s1, s1
+; CHECK-GI-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    ret
 entry:
   %c = tail call i32 @llvm.aarch64.neon.sqabs.i32(i32 %a)
   %d = insertelement <2 x i32> undef, i32 %c, i32 0

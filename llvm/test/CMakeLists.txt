@@ -140,7 +140,6 @@ set(LLVM_TEST_DEPENDS
   llvm-reduce
   llvm-remarkutil
   llvm-rtdyld
-  llvm-sim
   llvm-size
   llvm-split
   llvm-stress
@@ -185,6 +184,11 @@ endif()
 
 if (TARGET llvm-mt)
   list(APPEND LLVM_TEST_DEPENDS llvm-mt)
+endif ()
+
+# Only built when the AMDGPU target is enabled.
+if (TARGET llvm-calc-occupancy)
+  list(APPEND LLVM_TEST_DEPENDS llvm-calc-occupancy)
 endif ()
 
 if(LLVM_INCLUDE_EXAMPLES)
@@ -249,6 +253,10 @@ if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   list(APPEND LLVM_TEST_DEPENDS spirv-val)
   list(APPEND LLVM_TEST_DEPENDS spirv-as)
   list(APPEND LLVM_TEST_DEPENDS spirv-link)
+endif()
+
+if(LLVM_IR2VEC_TEST_PYTHON_BINDINGS)
+  list(APPEND LLVM_TEST_DEPENDS ir2vec)
 endif()
 
 add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS} UnitTests)

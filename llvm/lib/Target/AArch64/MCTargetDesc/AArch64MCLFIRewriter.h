@@ -13,16 +13,22 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCLFIREWRITER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCLFIREWRITER_H
 
+#include "AArch64AddressingModes.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
+#include <optional>
+
 namespace llvm {
 class MCContext;
+class MCExpr;
 class MCInst;
+class MCOperand;
 class MCStreamer;
 class MCSubtargetInfo;
+class MCSymbol;
 
 /// Rewrites AArch64 instructions for LFI sandboxing.
 ///
@@ -46,13 +52,38 @@ public:
   bool rewriteInst(const MCInst &Inst, MCStreamer &Out,
                    const MCSubtargetInfo &STI) override;
 
+  void onLabel(const MCSymbol *Symbol, MCStreamer &Out) override;
+  void finish(MCStreamer &Out) override;
+
 private:
   /// Recursion guard to prevent infinite loops when emitting instructions.
   bool Guard = false;
 
+  /// When set, an instruction has modified the link register but its guard
+  /// (`add x30, x27, w30, uxtw`) has not been emitted yet. The guard is
+  /// deferred until the next control-flow instruction so that pointer
+  /// authentication can run on the signed value before the mask overwrites the
+  /// upper bits of the pointer.
+  bool DeferredLRGuard = false;
+
+  /// Most recently seen MCSubtargetInfo.
+  const MCSubtargetInfo *LastSTI = nullptr;
+
+  /// Deferred `.tlsdesccall` symbol. The directive attaches a
+  /// R_AARCH64_TLSDESC_CALL relocation to the following BLR. Since LFI inserts
+  /// a guard before that BLR, the marker is deferred and re-emitted between
+  /// the guard and the branch so the relocation stays on the BLR.
+  const MCExpr *PendingTLSDescCall = nullptr;
+
+  /// Rewriter state for implementing the guard-elimination optimization, which
+  /// allows redundant add masks to be skipped. When it holds a value, x28 is
+  /// known to already hold the guarded value of that register.
+  std::optional<MCRegister> ActiveGuardReg;
+
   // Instruction classification. Returns the reserved register that may be
   // modified, or an invalid register if no reserved register is touched.
   MCRegister mayModifyReserved(const MCInst &Inst) const;
+  bool mayModifySP(const MCInst &Inst) const;
 
   // Instruction emission.
   void emitInst(const MCInst &Inst, MCStreamer &Out,
@@ -61,8 +92,18 @@ private:
                    const MCSubtargetInfo &STI);
   void emitBranch(unsigned Opcode, MCRegister Target, MCStreamer &Out,
                   const MCSubtargetInfo &STI);
+  void emitPendingTLSDescCall(MCStreamer &Out, const MCSubtargetInfo &STI);
   void emitMov(MCRegister Dest, MCRegister Src, MCStreamer &Out,
                const MCSubtargetInfo &STI);
+  void emitAddImm(MCRegister Dest, MCRegister Src, int64_t Imm, MCStreamer &Out,
+                  const MCSubtargetInfo &STI);
+  void emitAddReg(MCRegister Dest, MCRegister Src1, MCRegister Src2,
+                  unsigned Shift, MCStreamer &Out, const MCSubtargetInfo &STI);
+  void emitAddRegExtend(MCRegister Dest, MCRegister Src1, MCRegister Src2,
+                        AArch64_AM::ShiftExtendType ExtType, unsigned Shift,
+                        MCStreamer &Out, const MCSubtargetInfo &STI);
+  void emitMemRoW(unsigned Opcode, const MCOperand &DataOp, MCRegister BaseReg,
+                  MCStreamer &Out, const MCSubtargetInfo &STI);
 
   // Rewriting logic.
   void doRewriteInst(const MCInst &Inst, MCStreamer &Out,
@@ -74,9 +115,28 @@ private:
   void rewriteReturn(const MCInst &Inst, MCStreamer &Out,
                      const MCSubtargetInfo &STI);
 
+  // Memory access.
+  void rewriteLoadStore(const MCInst &Inst, MCStreamer &Out,
+                        const MCSubtargetInfo &STI);
+  void rewriteLoadStoreBase(const MCInst &Inst, MCStreamer &Out,
+                            const MCSubtargetInfo &STI);
+  bool rewriteLoadStoreRoW(const MCInst &Inst, MCStreamer &Out,
+                           const MCSubtargetInfo &STI);
+
+  // SP register modification.
+  void rewriteSPModification(const MCInst &Inst, MCStreamer &Out,
+                             const MCSubtargetInfo &STI);
+
   // Link register modification.
   void rewriteLRModification(const MCInst &Inst, MCStreamer &Out,
                              const MCSubtargetInfo &STI);
+
+  // PAC instructions.
+  void rewriteAuthenticatedReturn(const MCInst &Inst, MCStreamer &Out,
+                                  const MCSubtargetInfo &STI);
+  void rewriteAuthenticatedBranchOrCall(const MCInst &Inst,
+                                        unsigned BranchOpcode, MCStreamer &Out,
+                                        const MCSubtargetInfo &STI);
 
   // System instructions.
   void rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
@@ -85,7 +145,14 @@ private:
                      const MCSubtargetInfo &STI);
   void rewriteTPWrite(const MCInst &Inst, MCStreamer &Out,
                       const MCSubtargetInfo &STI);
+  void rewriteVASysOp(const MCInst &Inst, MCStreamer &Out,
+                      const MCSubtargetInfo &STI);
 };
+
+/// Returns true if \p Opcode is a pre- or post-indexed memory access that the
+/// LFI rewriter expands with a base-register update (i.e. an extra
+/// instruction beyond the guard + access pair).
+bool isLFIPrePostMemAccess(unsigned Opcode);
 
 } // namespace llvm
 

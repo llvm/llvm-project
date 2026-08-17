@@ -672,7 +672,7 @@ int main(int argc, char **argv) {
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, *STI, *Str, *Buffer, SrcMgr,
-                                    Ctx, MCOptions, HexBytes, NumBenchmarkRuns);
+                                    Ctx, HexBytes, NumBenchmarkRuns);
 
   // Keep output if no errors.
   if (Res == 0) {

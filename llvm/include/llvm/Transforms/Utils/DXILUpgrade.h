@@ -16,7 +16,7 @@ namespace llvm {
 /// Upgrade DXIL-style metadata into their LLVM representations
 class DXILUpgradePass : public OptionalPassInfoMixin<DXILUpgradePass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // namespace llvm

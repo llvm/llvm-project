@@ -103,24 +103,24 @@ end
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 ! CHECK: nvvm.barrier
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<and> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<and> %[[CONV]] -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<and> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<popc> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<popc> %[[CONV]] -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<popc> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<or> %c1{{.*}} -> i32
 ! CHECK: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[B:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[A]], %[[B]] : i32
 ! CHECK: %[[CONV:.*]] = fir.convert %[[CMP]] : (i1) -> i32
-! CHECK: %{{.*}} = nvvm.barrier #nvvm.reduction<or> %[[CONV]] -> i32
+! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<or> %[[CONV]] -> i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
 ! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
@@ -151,44 +151,44 @@ end
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
 
-! CHECK: %{{.*}} = fir.call @__nv_popc(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_popcll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_ffs(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_ffsll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_brev(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_brevll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i64
-! CHECK: %{{.*}} = fir.call @__nv_clz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_clzll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_fast_cosf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__ddiv_rn(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
-! CHECK: %{{.*}} = fir.call @__ddiv_rz(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
-! CHECK: %{{.*}} = fir.call @__ddiv_ru(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
-! CHECK: %{{.*}} = fir.call @__ddiv_rd(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_double2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_double2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_double2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_double2float_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_double2int_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_double2int_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_double2int_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_double2int_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_double2uint_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_double2uint_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_double2uint_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_double2uint_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_mul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_umul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> i32
-! CHECK: %{{.*}} = fir.call @__nv_fast_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ull2double_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ull2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ull2double_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ull2double_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_float2half_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f16
-! CHECK: %{{.*}} = fir.call @__nv_half2float(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f16) -> f32
-! CHECK: %{{.*}} = fir.call @__nv_ll2double_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ll2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ll2double_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
-! CHECK: %{{.*}} = fir.call @__nv_ll2double_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_popc(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_popcll(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_ffs(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_ffsll(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_brev(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_brevll(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_clz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_clzll(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_fast_cosf(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__ddiv_rn(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__ddiv_rz(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__ddiv_ru(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__ddiv_rd(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_double2float_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_double2float_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_double2float_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_double2float_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_double2int_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2int_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2int_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2int_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2uint_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2uint_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2uint_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_double2uint_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_mul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32, i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_umul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i32, i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_fast_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32, f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_float2half_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f32) -> f16
+! CHECK: %{{.*}} = fir.call @__nv_half2float(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (f16) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ll2double_rd(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ll2double_rn(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ll2double_ru(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ll2double_rz(%{{.*}}) proc_attrs<bind_c, intrinsic> fastmath<contract> : (i64) -> f64
 
 subroutine host1()
   integer, device :: a(32)
@@ -214,9 +214,9 @@ end
 ! CHECK: cuf.kernel
 ! CHECK: nvvm.barrier
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
-! CHECK: nvvm.barrier #nvvm.reduction<and> %c1{{.*}} -> i32
-! CHECK: nvvm.barrier #nvvm.reduction<popc> %c1{{.*}} -> i32
-! CHECK: nvvm.barrier #nvvm.reduction<or> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier.reduction #nvvm.reduction<and> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier.reduction #nvvm.reduction<popc> %c1{{.*}} -> i32
+! CHECK: nvvm.barrier.reduction #nvvm.reduction<or> %c1{{.*}} -> i32
 
 attributes(device) subroutine testMatch()
   integer :: a, ipred, mask, v32
@@ -311,7 +311,8 @@ end subroutine
 ! CHECK: %[[BCAST2:.*]] = llvm.bitcast %{{.*}} : f64 to i64
 ! CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %{{.*}}#0 : !fir.ref<f64> to !llvm.ptr
 ! CHECK: %[[ATOMIC:.*]] = llvm.cmpxchg %[[CAST]], %[[BCAST1]], %[[BCAST2]] acq_rel monotonic : !llvm.ptr, i64
-! CHECK: %[[RES:.*]] = llvm.extractvalue %[[ATOMIC]][1] : !llvm.struct<(i64, i1)> 
+! CHECK: %[[RES:.*]] = llvm.extractvalue %[[ATOMIC]][0] : !llvm.struct<(i64, i1)> 
+! CHECK: %{{.*}} = llvm.bitcast %[[RES]] : i64 to f64
 
 attributes(global) subroutine __ldXXi4(b)
   integer, device :: b(*)
@@ -499,10 +500,9 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtestatomiccasloop
 ! CHECK: %[[CMP_XCHG:.*]] = llvm.cmpxchg %15, %c0_i32, %c1_i32 acq_rel monotonic : !llvm.ptr, i32
-! CHECK: %[[CMP_XCHG_EV:.*]] = llvm.extractvalue %[[CMP_XCHG]][1] : !llvm.struct<(i32, i1)> 
-! CHECK: %[[CASTED_CMP_XCHG_EV:.*]] = fir.convert %[[CMP_XCHG_EV]] : (i1) -> i32
+! CHECK: %[[CMP_XCHG_EV:.*]] = llvm.extractvalue %[[CMP_XCHG]][0] : !llvm.struct<(i32, i1)> 
 ! CHECK: %{{.*}} = arith.constant 1 : i32
-! CHECK: %19 = arith.cmpi eq, %[[CASTED_CMP_XCHG_EV]], %{{.*}} : i32
+! CHECK: %{{.*}} = arith.cmpi eq, %[[CMP_XCHG_EV]], %{{.*}} : i32
 
 attributes(global) subroutine test_barrier_try_wait()
   integer :: istat

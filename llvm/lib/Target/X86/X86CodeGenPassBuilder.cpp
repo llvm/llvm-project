@@ -12,10 +12,10 @@
 
 #include "X86.h"
 #include "X86AsmPrinter.h"
-#include "X86ISelDAGToDAG.h"
 #include "X86TargetMachine.h"
 
 #include "llvm/CodeGen/AtomicExpand.h"
+#include "llvm/CodeGen/BreakFalseDeps.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
@@ -275,18 +275,9 @@ void X86CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
 
 } // namespace
 
-void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
-  // targets that currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(X86AsmPrinterBeginPass::name(),
-                            "x86-asm-printer-begin");
-    PIC->addClassToPassName(X86AsmPrinterPass::name(), "x86-asm-printer");
-    PIC->addClassToPassName(X86AsmPrinterEndPass::name(),
-                            "x86-asm-printer-end");
-  }
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(

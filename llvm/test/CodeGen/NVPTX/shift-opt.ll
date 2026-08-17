@@ -326,14 +326,18 @@ define i32 @test_guarded_i32_ult(i32 %x, i32 %shift) {
 define i64 @test_guarded_i64_ugt(i64 %x, i64 %shift) {
 ; CHECK-LABEL: test_guarded_i64_ugt(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ugt_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ugt_param_1];
-; CHECK-NEXT:    shr.u64 %rd2, %rd1, %r1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_guarded_i64_ugt_param_1];
+; CHECK-NEXT:    setp.gt.u64 %p1, %rd2, 63;
+; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
+; CHECK-NEXT:    shr.u64 %rd3, %rd1, %r1;
+; CHECK-NEXT:    selp.b64 %rd4, 0, %rd3, %p1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %cmp = icmp ugt i64 %shift, 63
   %shr = lshr i64 %x, %shift
@@ -345,14 +349,18 @@ define i64 @test_guarded_i64_ugt(i64 %x, i64 %shift) {
 define i64 @test_guarded_i64_ult(i64 %x, i64 %shift) {
 ; CHECK-LABEL: test_guarded_i64_ult(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ult_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ult_param_1];
-; CHECK-NEXT:    shr.u64 %rd2, %rd1, %r1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_guarded_i64_ult_param_1];
+; CHECK-NEXT:    setp.lt.u64 %p1, %rd2, 64;
+; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
+; CHECK-NEXT:    shr.u64 %rd3, %rd1, %r1;
+; CHECK-NEXT:    selp.b64 %rd4, %rd3, 0, %p1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %cmp = icmp ult i64 %shift, 64
   %shr = lshr i64 %x, %shift
@@ -494,14 +502,18 @@ define i32 @test_guarded_i32_ult_shl(i32 %x, i32 %shift) {
 define i64 @test_guarded_i64_ugt_shl(i64 %x, i64 %shift) {
 ; CHECK-LABEL: test_guarded_i64_ugt_shl(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ugt_shl_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ugt_shl_param_1];
-; CHECK-NEXT:    shl.b64 %rd2, %rd1, %r1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_guarded_i64_ugt_shl_param_1];
+; CHECK-NEXT:    setp.gt.u64 %p1, %rd2, 63;
+; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
+; CHECK-NEXT:    shl.b64 %rd3, %rd1, %r1;
+; CHECK-NEXT:    selp.b64 %rd4, 0, %rd3, %p1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %cmp = icmp ugt i64 %shift, 63
   %shl = shl i64 %x, %shift
@@ -513,14 +525,18 @@ define i64 @test_guarded_i64_ugt_shl(i64 %x, i64 %shift) {
 define i64 @test_guarded_i64_ult_shl(i64 %x, i64 %shift) {
 ; CHECK-LABEL: test_guarded_i64_ult_shl(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_ult_shl_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_ult_shl_param_1];
-; CHECK-NEXT:    shl.b64 %rd2, %rd1, %r1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_guarded_i64_ult_shl_param_1];
+; CHECK-NEXT:    setp.lt.u64 %p1, %rd2, 64;
+; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
+; CHECK-NEXT:    shl.b64 %rd3, %rd1, %r1;
+; CHECK-NEXT:    selp.b64 %rd4, %rd3, 0, %p1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %cmp = icmp ult i64 %shift, 64
   %shl = shl i64 %x, %shift
@@ -547,6 +563,29 @@ define i64 @test_guarded_i64_ult_shl_different_shift(i64 %x, i64 %shift1, i64 %s
 ; CHECK-NEXT:    ret;
   %cmp = icmp ult i64 %shift1, 64
   %shl = shl i64 %x, %shift2
+  %sel = select i1 %cmp, i64 %shl, i64 0
+  ret i64 %sel
+}
+
+; The shift amount is zext'd from i32, so its high 32 bits are known zero and
+; the guard's icmp agrees with the narrowed clamp amount: the combine SHOULD
+; fire, lowering to a bare clamp shift with no setp/selp guard.
+; (select (ult zext(s), 64), (shl x, zext(s)), 0) --> clamp shl
+define i64 @test_guarded_i64_shl_ult_zext_amt(i64 %x, i32 %s) {
+; CHECK-LABEL: test_guarded_i64_shl_ult_zext_amt(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_guarded_i64_shl_ult_zext_amt_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_guarded_i64_shl_ult_zext_amt_param_1];
+; CHECK-NEXT:    shl.b64 %rd2, %rd1, %r1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ret;
+  %shift = zext i32 %s to i64
+  %cmp = icmp ult i64 %shift, 64
+  %shl = shl i64 %x, %shift
   %sel = select i1 %cmp, i64 %shl, i64 0
   ret i64 %sel
 }

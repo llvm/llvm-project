@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_OPENACC_ANALYSIS_FIROPENACCSUPPORTANALYSIS_H
 #define FORTRAN_OPTIMIZER_OPENACC_ANALYSIS_FIROPENACCSUPPORTANALYSIS_H
 
+#include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
@@ -50,6 +51,10 @@ public:
                         mlir::Operation **definingOpPtr);
 
   bool isValidValueUse(mlir::Value v, mlir::Region &region);
+
+  std::optional<mlir::acc::TypeSizeAndAlignment>
+  getTypeSizeAndAlignment(mlir::Type ty, mlir::ModuleOp module,
+                          mlir::acc::OpenACCSupport &support);
 };
 
 } // namespace acc

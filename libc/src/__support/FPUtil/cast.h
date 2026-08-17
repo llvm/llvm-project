@@ -31,7 +31,9 @@ cast(InType x) {
     return x;
   } else {
     if constexpr (cpp::is_same_v<OutType, bfloat16> ||
-                  cpp::is_same_v<InType, bfloat16>
+                  cpp::is_same_v<InType, bfloat16> ||
+                  cpp::is_same_v<OutType, Float128> ||
+                  cpp::is_same_v<InType, Float128>
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
                   || cpp::is_same_v<OutType, float16> ||
                   cpp::is_same_v<InType, float16>
@@ -51,9 +53,8 @@ cast(InType x) {
         }
 
         InStorageType x_mant = x_bits.get_mantissa();
-        if constexpr (InFPBits::FRACTION_LEN > OutFPBits::FRACTION_LEN) {
+        if (InFPBits::FRACTION_LEN > OutFPBits::FRACTION_LEN)
           x_mant >>= InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
-        }
         return OutFPBits::quiet_nan(x_bits.sign(),
                                     static_cast<OutStorageType>(x_mant))
             .get_val();

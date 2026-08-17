@@ -859,6 +859,9 @@ HANDLE_TARGET_OPCODE(G_BSWAP)
 /// Generic bit reverse.
 HANDLE_TARGET_OPCODE(G_BITREVERSE)
 
+// Generic carry-less multiply instruction.
+HANDLE_TARGET_OPCODE(G_CLMUL)
+
 /// Floating point ceil.
 HANDLE_TARGET_OPCODE(G_FCEIL)
 
@@ -955,6 +958,9 @@ HANDLE_TARGET_OPCODE(G_MEMMOVE)
 /// llvm.memset intrinsic
 HANDLE_TARGET_OPCODE(G_MEMSET)
 HANDLE_TARGET_OPCODE(G_BZERO)
+
+/// llvm.memset.inline intrinsic
+HANDLE_TARGET_OPCODE(G_MEMSET_INLINE)
 
 /// llvm.trap, llvm.debugtrap and llvm.ubsantrap intrinsics
 HANDLE_TARGET_OPCODE(G_TRAP)

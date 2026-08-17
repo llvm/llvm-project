@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -227,35 +228,6 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
     MIB.add(MO);
 
   MI.eraseFromParent();
-}
-
-void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineFunction &MF = *MBB->getParent();
-  const Register Reg64 = MI->getOperand(0).getReg();
-  const Register Reg32 = RI.getSubReg(Reg64, SystemZ::subreg_l32);
-
-  // EAR can only load the low subregister so us a shift for %a0 to produce
-  // the GR containing %a0 and %a1.
-
-  // ear <reg>, %a0
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A0)
-    .addReg(Reg64, RegState::ImplicitDefine);
-
-  // sllg <reg>, <reg>, 32
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::SLLG), Reg64)
-    .addReg(Reg64)
-    .addReg(0)
-    .addImm(32);
-
-  // ear <reg>, %a1
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A1);
-
-  // lg <reg>, 40(<reg>)
-  MI->setDesc(get(SystemZ::LG));
-  MachineInstrBuilder(MF, MI).addReg(Reg64).addImm(40).addReg(0);
 }
 
 // Emit a zero-extending move from 32-bit GPR SrcReg to 32-bit GPR
@@ -1620,6 +1592,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   if ((RegMemOpcode == SystemZ::SDB || RegMemOpcode == SystemZ::SEB) &&
       FoldAsLoadDefReg != RHS.getReg())
     return nullptr;
+  if (!MRI->isSSA() && DstReg != RegMO.getReg())
+    return nullptr;
 
   MachineOperand &Base = LoadMI.getOperand(1);
   MachineOperand &Disp = LoadMI.getOperand(2);
@@ -1808,13 +1782,71 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     splitAdjDynAlloc(MI);
     return true;
 
-  case TargetOpcode::LOAD_STACK_GUARD:
-    expandLoadStackGuard(&MI);
+  case SystemZ::MOV_STACKGUARD:
+    expandStackGuardPseudo(MI, SystemZ::MVC);
+    return true;
+
+  case SystemZ::CMP_STACKGUARD:
+    expandStackGuardPseudo(MI, SystemZ::CLC);
     return true;
 
   default:
     return false;
   }
+}
+
+void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
+                                              unsigned Opcode) const {
+  MachineBasicBlock &MBB = *(MI.getParent());
+  const MachineFunction &MF = *(MBB.getParent());
+  const auto DL = MI.getDebugLoc();
+  const Module *M = MF.getFunction().getParent();
+  StringRef GuardType = M->getStackProtectorGuard();
+  unsigned int Offset = 0;
+
+  Register AddrReg = MI.getOperand(0).getReg();
+
+  assert(
+      AddrReg != MI.getOperand(1).getReg() &&
+      "Scratch register for stack guard address blocked by operand register.");
+
+  // Emit an appropriate pseudo for the guard type, which loads the address of
+  // said guard into the scratch register AddrReg.
+  if (GuardType.empty() || (GuardType == "tls")) {
+    if (STI.isTargetzOS()) {
+      enum { OFFSET_PSALAA = 0x4B8 };
+      enum { OFFSET_CEELAA_STACK_GUARD = 0x98 };
+      // Load LAA
+      // LLGT <reg>,1208
+      BuildMI(MBB, MI, MI.getDebugLoc(), get(SystemZ::LLGT), AddrReg)
+          .addReg(0)
+          .addImm(OFFSET_PSALAA)
+          .addReg(0);
+      Offset = OFFSET_CEELAA_STACK_GUARD;
+    } else {
+      // Emit a load of the TLS block's address
+      BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
+      // Record the appropriate stack guard offset (40 in the tls case).
+      Offset = 40;
+    }
+  } else if (GuardType == "global") {
+    // Emit a load of the global stack guard's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
+  } else {
+    report_fatal_error(Twine("unknown stack protector type \"") + GuardType +
+                       "\".");
+  }
+
+  // Construct the appropriate move or compare instruction using the
+  // scratch register.
+  BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(Opcode))
+      .addReg(MI.getOperand(1).getReg())
+      .addImm(MI.getOperand(2).getImm())
+      .addImm(8)
+      .addReg(AddrReg)
+      .addImm(Offset);
+
+  MI.removeFromParent();
 }
 
 unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
@@ -1835,6 +1867,12 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
   if (MI.getOpcode() == TargetOpcode::BUNDLE)
     return getInstBundleSize(MI);
+  if (MI.getOpcode() == SystemZ::LOAD_TLS_BLOCK_ADDR)
+    // ear (4), sllg (6), ear (4) = 14 bytes
+    return 14;
+  if (MI.getOpcode() == SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR)
+    // Both larl and lgrl are 6 bytes long.
+    return 6;
 
   return MI.getDesc().getSize();
 }
@@ -2398,10 +2436,20 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace SystemZII;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_GOT, "systemz-got"},
+      {MO_INDNTPOFF, "systemz-indntpoff"},
       {MO_ADA_DATA_SYMBOL_ADDR, "systemz-ada-datasymboladdr"},
       {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
       {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
   return ArrayRef(TargetFlags);
+}
+
+bool SystemZInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                            const MachineBasicBlock *MBB,
+                                            const MachineFunction &MF) const {
+  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
+    return true;
+  return MI.getOpcode() == SystemZ::FENCE;
 }
 
 MCInst SystemZInstrInfo::getNop() const {

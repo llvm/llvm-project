@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__type_traits/datasizeof.h>
+#include <__cxx03/__type_traits/datasizeof.h>
 #include <cstdint>
 #include <type_traits>
 

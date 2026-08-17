@@ -1972,14 +1972,12 @@ entry:
   ret ppc_fp128 %conv
 }
 
-define i1 @ppcq_to_s1(ppc_fp128 %a) {
+define i1 @ppcq_to_s1(ppc_fp128 %a) #0 {
 ; PC64LE-LABEL: ppcq_to_s1:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -32(1)
 ; PC64LE-NEXT:    std 0, 48(1)
-; PC64LE-NEXT:    .cfi_def_cfa_offset 32
-; PC64LE-NEXT:    .cfi_offset lr, 16
 ; PC64LE-NEXT:    bl __gcc_qtou
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -1992,8 +1990,6 @@ define i1 @ppcq_to_s1(ppc_fp128 %a) {
 ; PC64LE9-NEXT:    mflr 0
 ; PC64LE9-NEXT:    stdu 1, -32(1)
 ; PC64LE9-NEXT:    std 0, 48(1)
-; PC64LE9-NEXT:    .cfi_def_cfa_offset 32
-; PC64LE9-NEXT:    .cfi_offset lr, 16
 ; PC64LE9-NEXT:    bl __gcc_qtou
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -2006,8 +2002,6 @@ define i1 @ppcq_to_s1(ppc_fp128 %a) {
 ; PC64-NEXT:    mflr 0
 ; PC64-NEXT:    stdu 1, -112(1)
 ; PC64-NEXT:    std 0, 128(1)
-; PC64-NEXT:    .cfi_def_cfa_offset 112
-; PC64-NEXT:    .cfi_offset lr, 16
 ; PC64-NEXT:    bl __gcc_qtou
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112
@@ -2019,14 +2013,12 @@ entry:
   ret i1 %conv
 }
 
-define i1 @ppcq_to_u1(ppc_fp128 %a) {
+define i1 @ppcq_to_u1(ppc_fp128 %a) #0 {
 ; PC64LE-LABEL: ppcq_to_u1:
 ; PC64LE:       # %bb.0: # %entry
 ; PC64LE-NEXT:    mflr 0
 ; PC64LE-NEXT:    stdu 1, -32(1)
 ; PC64LE-NEXT:    std 0, 48(1)
-; PC64LE-NEXT:    .cfi_def_cfa_offset 32
-; PC64LE-NEXT:    .cfi_offset lr, 16
 ; PC64LE-NEXT:    bl __fixunstfsi
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    addi 1, 1, 32
@@ -2039,8 +2031,6 @@ define i1 @ppcq_to_u1(ppc_fp128 %a) {
 ; PC64LE9-NEXT:    mflr 0
 ; PC64LE9-NEXT:    stdu 1, -32(1)
 ; PC64LE9-NEXT:    std 0, 48(1)
-; PC64LE9-NEXT:    .cfi_def_cfa_offset 32
-; PC64LE9-NEXT:    .cfi_offset lr, 16
 ; PC64LE9-NEXT:    bl __fixunstfsi
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    addi 1, 1, 32
@@ -2053,8 +2043,6 @@ define i1 @ppcq_to_u1(ppc_fp128 %a) {
 ; PC64-NEXT:    mflr 0
 ; PC64-NEXT:    stdu 1, -112(1)
 ; PC64-NEXT:    std 0, 128(1)
-; PC64-NEXT:    .cfi_def_cfa_offset 112
-; PC64-NEXT:    .cfi_offset lr, 16
 ; PC64-NEXT:    bl __fixunstfsi
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    addi 1, 1, 112

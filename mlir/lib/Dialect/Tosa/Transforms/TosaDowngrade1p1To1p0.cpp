@@ -16,6 +16,8 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -57,10 +59,11 @@ public:
     const Type i8Type = rewriter.getI8Type();
     const Type intermediateType = cast<TensorType>(outputType).clone(i8Type);
 
-    auto inner =
-        tosa::CastOp::create(rewriter, op.getLoc(), intermediateType, input);
-    auto outer = tosa::CastOp::create(rewriter, op.getLoc(), outputType,
-                                      inner.getOutput());
+    auto inner = tosa::CastOp::create(rewriter, op.getLoc(), intermediateType,
+                                      input, /*input_unsigned*/ false);
+    auto outer =
+        tosa::CastOp::create(rewriter, op.getLoc(), outputType,
+                             inner.getOutput(), /*input_unsigned*/ false);
     rewriter.replaceOp(op, outer.getOutput());
     return success();
   }
@@ -89,12 +92,13 @@ public:
     const Type valuesI8Type = cast<TensorType>(valuesType).clone(i8Type);
     const Type resultI8Type = cast<TensorType>(resultType).clone(i8Type);
 
-    auto valuesToI8 =
-        tosa::CastOp::create(rewriter, op.getLoc(), valuesI8Type, values);
+    auto valuesToI8 = tosa::CastOp::create(rewriter, op.getLoc(), valuesI8Type,
+                                           values, /*input_unsigned*/ false);
     auto gatherI8 = tosa::GatherOp::create(rewriter, op.getLoc(), resultI8Type,
                                            valuesToI8.getOutput(), indices);
-    auto i8ToBool = tosa::CastOp::create(rewriter, op.getLoc(), resultType,
-                                         gatherI8.getOutput());
+    auto i8ToBool =
+        tosa::CastOp::create(rewriter, op.getLoc(), resultType,
+                             gatherI8.getOutput(), /*input_unsigned*/ false);
     rewriter.replaceOp(op, i8ToBool.getOutput());
     return success();
   }
@@ -127,15 +131,97 @@ public:
     const Type resultI8Type = cast<TensorType>(resultType).clone(i8Type);
 
     auto valuesInToI8 =
-        tosa::CastOp::create(rewriter, op.getLoc(), valuesInI8Type, valuesIn);
-    auto inputToI8 =
-        tosa::CastOp::create(rewriter, op.getLoc(), inputI8Type, input);
+        tosa::CastOp::create(rewriter, op.getLoc(), valuesInI8Type, valuesIn,
+                             /*input_unsigned*/ false);
+    auto inputToI8 = tosa::CastOp::create(rewriter, op.getLoc(), inputI8Type,
+                                          input, /*input_unsigned*/ false);
     auto scatterI8 = tosa::ScatterOp::create(
         rewriter, op.getLoc(), resultI8Type, valuesInToI8.getOutput(), indices,
         inputToI8.getOutput());
     auto i8ToBool = tosa::CastOp::create(rewriter, op.getLoc(), resultType,
-                                         scatterI8.getValuesOut());
+                                         scatterI8.getValuesOut(),
+                                         /*input_unsigned*/ false);
     rewriter.replaceOp(op, i8ToBool.getOutput());
+    return success();
+  }
+};
+
+static LogicalResult isMatMulTTypeCompatibleForDowngrade(tosa::MatMulTOp op) {
+  const Type aElementType = getStorageElementTypeOrSelf(op.getA().getType());
+  const Type bElementType = getStorageElementTypeOrSelf(op.getB().getType());
+  const Type outputElementType =
+      getStorageElementTypeOrSelf(op.getOutput().getType());
+
+  if (aElementType != bElementType)
+    return failure();
+
+  if (isa<BlockScaledType>(aElementType) || isa<BlockScaledType>(bElementType))
+    return failure();
+
+  if ((aElementType.isF16() && outputElementType.isF16()) ||
+      (aElementType.isF16() && outputElementType.isF32()) ||
+      (aElementType.isF32() && outputElementType.isF32()) ||
+      (aElementType.isBF16() && outputElementType.isF32()) ||
+      (aElementType.isInteger(8) && outputElementType.isInteger(32)) ||
+      (aElementType.isInteger(16) && outputElementType.isInteger(48)) ||
+      (isa<Float8E5M2Type>(aElementType) && outputElementType.isF16()) ||
+      (isa<Float8E4M3FNType>(aElementType) && outputElementType.isF16()))
+    return success();
+
+  return failure();
+}
+
+class MatMulTRewrite : public OpRewritePattern<tosa::MatMulTOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::MatMulTOp op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(isMatMulTTypeCompatibleForDowngrade(op)))
+      return rewriter.notifyMatchFailure(
+          op, "expected 1.0-compatible matmul_t element types");
+
+    const Type aType = op.getA().getType();
+    const Type bType = op.getB().getType();
+    const ShapeAdaptor aShape(aType);
+    const ShapeAdaptor bShape(bType);
+    if (!aShape.hasRank() || !bShape.hasRank())
+      return rewriter.notifyMatchFailure(op, "expected ranked A and B tensors");
+
+    const int64_t dSize = bShape.getDimSize(0);
+    const int64_t nSize = aShape.getDimSize(0);
+
+    // To convert broadcasting behaviour to TOSA 1.0, we're required to tile the
+    // input. TOSA 1.0 does not support shape expressions, so the batch size
+    // must be known at compile time.
+    if (ShapedType::isDynamic(dSize) ||
+        (dSize == 1 && ShapedType::isDynamic(nSize)))
+      return rewriter.notifyMatchFailure(
+          op, "expected known batch size for broadcast");
+
+    const int64_t wSize = bShape.getDimSize(1);
+    const int64_t cSize = bShape.getDimSize(2);
+    const Location loc = op.getLoc();
+    const RankedTensorType transposedBType =
+        cast<RankedTensorType>(bType).clone({dSize, cSize, wSize});
+    auto transpose =
+        tosa::TransposeOp::create(rewriter, loc, transposedBType, op.getB(),
+                                  rewriter.getDenseI32ArrayAttr({0, 2, 1}));
+    Value matMulB = transpose.getOutput();
+
+    // Matmul does not support broadcasting, so tile b if required
+    if (dSize == 1 && nSize != 1) {
+      const RankedTensorType tiledBType =
+          cast<RankedTensorType>(bType).clone({nSize, cSize, wSize});
+      const Value multiples = getTosaConstShape(rewriter, loc, {nSize, 1, 1});
+      auto tile =
+          tosa::TileOp::create(rewriter, loc, tiledBType, matMulB, multiples);
+      matMulB = tile.getOutput();
+    }
+
+    auto matmul = tosa::MatMulOp::create(rewriter, loc, op.getType(), op.getA(),
+                                         matMulB, op.getAZp(), op.getBZp());
+    rewriter.replaceOp(op, matmul.getOutput());
     return success();
   }
 };
@@ -150,8 +236,8 @@ struct TosaDowngrade1p1To1p0Pass
     func::FuncOp func = getOperation();
 
     RewritePatternSet patterns(&context);
-    patterns.add<BoolFp32CastRewrite, BoolGatherRewrite, BoolScatterRewrite>(
-        &context);
+    patterns.add<BoolFp32CastRewrite, BoolGatherRewrite, BoolScatterRewrite,
+                 MatMulTRewrite>(&context);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
     if (failed(applyPatternsGreedily(func, frozenPatterns)))

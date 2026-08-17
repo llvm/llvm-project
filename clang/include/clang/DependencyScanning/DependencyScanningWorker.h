@@ -9,10 +9,10 @@
 #ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGWORKER_H
 #define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGWORKER_H
 
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Frontend/PCHContainerOperations.h"
@@ -20,6 +20,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -27,14 +28,13 @@ namespace clang {
 
 class DependencyOutputOptions;
 
-namespace tooling {
-class CompilerInstanceWithContext;
-}
-
 namespace dependencies {
 
 class DependencyConsumer;
 class DependencyScanningWorkerFilesystem;
+
+std::unique_ptr<DiagnosticOptions>
+createScanningDiagOptions(ArrayRef<std::string> CommandLine);
 
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
@@ -52,12 +52,8 @@ public:
   ~DependencyScanningWorker();
 
   /// Run the dependency scanning tool for all given frontend command-lines,
-  /// and report the discovered dependencies to the provided consumer.
-  ///
-  /// OverlayFS should be based on the Worker's dependency scanning file-system
-  /// and can be used to provide any input specified on the command-line as
-  /// in-memory file. If no overlay file-system is provided, the Worker's
-  /// dependency scanning file-system is used instead.
+  /// and report the discovered dependencies to the provided consumer. The
+  /// \c OverlayFS will be used to call \c makeEffectiveVFS().
   ///
   /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
@@ -65,14 +61,43 @@ public:
       StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
       DiagnosticConsumer &DiagConsumer,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
-  llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
+  /// By-name scanning over a single cc1 command line. Builds a scanning session
+  /// local to this call, then pulls module names from \p getNextName until it
+  /// returns std::nullopt. Results flow to \p DepConsumer (per-name status via
+  /// finishQuery); diagnostics flow to \p DiagConsumer.
+  /// \returns false if session setup failed, true otherwise.
+  bool computeDependenciesByName(
+      StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+      DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+      llvm::function_ref<std::optional<std::string>()> getNextName,
+      DependencyConsumer &DepConsumer);
+
+  /// Creates the effective VFS that will be used for the scan.
+  ///
+  /// If provided, OverlayFS will be overlaid on top of the Worker's dependency
+  /// scanning file-system and can be used to provide any input specified on the
+  /// command-line as in-memory file. If no overlay file-system is provided, the
+  /// Worker's dependency scanning file-system is used directly.
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> makeEffectiveVFS(
+      StringRef WorkingDirectory,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr) const;
 
   /// Returns the worker tracing VFS, if it was requested via the service.
   llvm::vfs::TracingFileSystem *getTracingVFS() const {
     return TracingFS.get();
   }
+
+  // MaxNumOfByNameQueries is the upper limit of the number of names the by-name
+  // scanning API (computeDependenciesByName) can drain per call. At the time of
+  // this commit, the estimated number of total unique importable names is
+  // around 3000 from Apple's SDKs. We usually import them in parallel, so it is
+  // unlikely that all names are scanned by the same worker. Therefore the 64k
+  // (20x our estimate) size is sufficient to hold the unique source locations
+  // to report diagnostics per worker.
+  static const int32_t MaxNumOfByNameQueries = 1 << 16;
 
 private:
   /// The parent dependency scanning service.
@@ -84,7 +109,7 @@ private:
   /// The tracing VFS overlaid on top of the base VFS.
   IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
 
-  friend tooling::CompilerInstanceWithContext;
+  friend class CompilerInstanceWithContext;
 };
 } // end namespace dependencies
 } // end namespace clang

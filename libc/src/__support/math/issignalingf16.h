@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR int issignalingf16(float16 x) {
+LIBC_INLINE constexpr int issignalingf16(float16 x) {
   return fputil::issignaling_impl(x);
 }
 

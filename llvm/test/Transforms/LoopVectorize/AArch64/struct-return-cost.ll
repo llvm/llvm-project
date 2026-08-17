@@ -11,7 +11,7 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
 ;
-; CHECK-COST: Cost of 10 for VF 2: WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>) (using library function: fixed_vec_foo)
+; CHECK-COST: Cost of 10 for VF 2: WIDEN-CALL ir<%call> = call @foo(ir<%in_val>) (using library function: fixed_vec_foo)
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
@@ -136,7 +136,7 @@ exit:
 ; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 ;
-; CHECK-COST: Cost of 10 for VF vscale x 8: WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>, ir<true>) (using library function: scalable_vec_masked_foo)
+; CHECK-COST: Cost of 10 for VF vscale x 8: WIDEN-CALL ir<%call> = call @foo(ir<%in_val>, ir<true>) (using library function: scalable_vec_masked_foo)
 ; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 
@@ -146,7 +146,6 @@ define void @struct_return_scalable(ptr noalias %in, ptr noalias writeonly %out_
 ; CHECK:  [[VECTOR_PH1:.*:]]
 ; CHECK:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_BODY1:.*:]]
 ; CHECK:    [[TMP12:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<vscale x 8 x half> [[WIDE_LOAD:%.*]], <vscale x 8 x i1> splat (i1 true))
 ; CHECK:    [[TMP13:%.*]] = call { <vscale x 8 x half>, <vscale x 8 x half> } @scalable_vec_masked_foo(<vscale x 8 x half> [[WIDE_LOAD1:%.*]], <vscale x 8 x i1> splat (i1 true))

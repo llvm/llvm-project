@@ -35,7 +35,7 @@ use omp_lib
     !$omp end taskgroup
   !$omp end parallel
 
-  !ERROR: PRIVATE clause is not allowed on the TASKGROUP directive
+  !ERROR: PRIVATE clause is not allowed on TASKGROUP directive
   !$omp taskgroup private(abc)
   !$omp end taskgroup
 

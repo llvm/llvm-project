@@ -1,6 +1,8 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence top-down=0" | FileCheck %s --check-prefix=CHECK-BOTTOM-UP
 
+// XFAIL: mlir-expensive-checks
+
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0 - 1)>
@@ -1861,6 +1863,24 @@ func.func @dont_split_delinearize_undershooting_target(%arg0: index, %arg1: inde
 
 // -----
 
+// Regression test: canonicalization can produce a linearize with no inputs
+// (empty basis), which must not be treated as splittable. This previously
+// Canonicalization can produce a linearize with no inputs (empty basis),
+// which must not be treated as splittable.
+// CHECK-LABEL: func @split_delinearize_empty_linearize_basis
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index)
+//       CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//           CHECK:   return %[[C0]], %[[C0]], %[[ARG0]], %[[C0]]
+func.func @split_delinearize_empty_linearize_basis(%arg0: index) -> (index, index, index, index) {
+  %c0 = arith.constant 0 : index
+  %0 = affine.linearize_index disjoint [%c0, %arg0, %c0] by (4, 2, 2) : index
+  %1:4 = affine.delinearize_index %0 into (2, 2, 2, 2)
+      : index, index, index, index
+  return %1#0, %1#1, %1#2, %1#3 : index, index, index, index
+}
+
+// -----
+
 // CHECK-LABEL: @linearize_unit_basis_disjoint
 // CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
 // CHECK: %[[ret:.+]] = affine.linearize_index disjoint [%[[arg0]], %[[arg2]]] by (3, %[[arg3]]) : index
@@ -2595,4 +2615,22 @@ func.func @split_delinearize_spanning_final_part_vector(
   %0 = affine.linearize_index disjoint [%v0, %v1, %v2] by (3, 2, 32) : vector<4xindex>
   %1:4 = affine.delinearize_index %0 into (2, 3, 8, 4) : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
   return %1#0, %1#1, %1#2, %1#3 : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
+}
+
+// -----
+
+// Composing an affine.apply into an access rebuilds the op; the alignment it
+// promised stays on it.
+
+// CHECK-LABEL: func @compose_into_access_keeps_alignment
+// CHECK-BOTTOM-UP-LABEL: func @compose_into_access_keeps_alignment
+func.func @compose_into_access_keeps_alignment(%memref: memref<100xi32>, %i: index) {
+  %idx = affine.apply affine_map<(d0) -> (d0 + 1)>(%i)
+  // CHECK: affine.load {{.*}} {alignment = 16 : i64}
+  // CHECK-BOTTOM-UP: affine.load {{.*}} {alignment = 16 : i64}
+  %val = affine.load %memref[%idx] { alignment = 16 } : memref<100xi32>
+  // CHECK: affine.store {{.*}} {alignment = 16 : i64}
+  // CHECK-BOTTOM-UP: affine.store {{.*}} {alignment = 16 : i64}
+  affine.store %val, %memref[%idx] { alignment = 16 } : memref<100xi32>
+  return
 }

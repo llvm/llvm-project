@@ -22,7 +22,8 @@ main:
 
 # Test optimization of transforming "call *foo@GOTPCREL(%rip)" to "addr call foo"
 # We need check both the target address and the instruction opcodes
-# jitlink-check: decode_operand(test_call_gotpcrelx, 0)[31:0] = extern_in_range32
+# jitlink-check: decode_operand(test_call_gotpcrelx, 0) = \
+# jitlink-check:     extern_in_range32 - next_pc(test_call_gotpcrelx)
 # jitlink-check: *{1}test_call_gotpcrelx = 0x67
 # jitlink-check: *{1}test_call_gotpcrelx+1 = 0xe8
         .globl test_call_gotpcrelx
@@ -36,7 +37,8 @@ test_call_gotpcrelx:
 
 # Test optimization of transforming "jmp *foo@GOTPCREL(%rip)" to "jmp foo ; nop"
 # We need check both the target address and the instruction opcodes
-# jitlink-check: decode_operand(test_call_gotpcrelx, 0)[31:0] = extern_in_range32
+# jitlink-check: decode_operand(test_jmp_gotpcrelx, 0) = \
+# jitlink-check:     extern_in_range32 - next_pc(test_jmp_gotpcrelx)
 # jitlink-check: *{1}test_jmp_gotpcrelx = 0xe9
 # jitlink-check: *{1}test_jmp_gotpcrelx+5 = 0x90
         .globl test_jmp_gotpcrelx

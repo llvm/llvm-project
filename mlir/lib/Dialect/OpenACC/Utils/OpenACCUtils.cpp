@@ -25,7 +25,7 @@ mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
       .getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp>();
 }
 
-mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+mlir::Value mlir::acc::getACCOperandForBlockArg(mlir::Value v) {
   auto barg = mlir::dyn_cast<mlir::BlockArgument>(v);
   if (!barg)
     return nullptr;
@@ -33,10 +33,15 @@ mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
   mlir::Block *block = barg.getOwner();
   auto computeReg =
       mlir::dyn_cast<mlir::acc::ComputeRegionOp>(block->getParentOp());
-  if (!computeReg || block != computeReg.getBody())
+  if (!computeReg)
     return nullptr;
+  assert(block == computeReg.getBody() &&
+         "block must be the body of acc.compute_region");
+  return computeReg.getOperand(barg);
+}
 
-  mlir::Value orig = computeReg.getOperand(barg);
+mlir::Operation *mlir::acc::getACCDataClauseOpForBlockArg(mlir::Value v) {
+  mlir::Value orig = getACCOperandForBlockArg(v);
   if (!orig)
     return nullptr;
   mlir::Operation *def = orig.getDefiningOp();
@@ -99,6 +104,10 @@ mlir::acc::VariableTypeCategory mlir::acc::getTypeCategory(mlir::Value var) {
         cast<TypedValue<mlir::acc::PointerLikeType>>(var),
         pointerLikeTy.getElementType());
   return typeCategory;
+}
+
+llvm::StringLiteral mlir::acc::getVarNamePlaceholder() {
+  return llvm::StringLiteral("<acc.varname.placeholder>");
 }
 
 std::string mlir::acc::getVariableName(mlir::Value v) {
@@ -211,9 +220,10 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
-    // If this symbol is actually an acc routine - then it is expected for it
-    // to be offloaded - therefore it is valid.
-    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+    // If this symbol is actually an acc routine or a specialized acc routine -
+    // then it is expected for it to be offloaded - therefore it is valid.
+    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()) ||
+        func->hasAttr(mlir::acc::getSpecializedRoutineAttrName()))
       return true;
 
     // If this symbol is a call to an LLVM intrinsic, then it is likely valid.

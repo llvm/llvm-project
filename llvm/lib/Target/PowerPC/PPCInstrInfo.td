@@ -722,7 +722,7 @@ def PPCbcdus     : SDNode<"PPCISD::BCDUSHIFT", SDT_PPCBcdUShift, []>;
 // information.
 def nzFPImmAsi32 : PatLeaf<(fpimm), [{
   APFloat APFloatOfN = N->getValueAPF();
-  return convertToNonDenormSingle(APFloatOfN) && !N->isExactlyValue(+0.0);
+  return convertToNonDenormSingle(APFloatOfN) && !N->isPosZero();
 }]>;
 
 // A floating point immediate that is exactly an integer (for example 3.0, -5.0)
@@ -736,8 +736,8 @@ def nzFPImmExactInti5 : PatLeaf<(fpimm), [{
 }]>;
 
 // Floating point zero immediates (positive and negative)
-def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
-def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm0 : PatLeaf<(fpimm), [{ return N->isPosZero(); }]>;
+def fpimm0neg : PatLeaf<(fpimm), [{return N->isNegZero();}]>;
 
 def getFPAs5BitExactInt : SDNodeXForm<fpimm, [{
   APFloat FloatValue = N->getValueAPF();
@@ -761,7 +761,7 @@ def getFPAs32BitInt : SDNodeXForm<fpimm, [{
 // precision before exploiting with XXSPLTI32DX.
 def nzFPImmAsi64 : PatLeaf<(fpimm), [{
   APFloat APFloatOfN = N->getValueAPF();
-  return !N->isExactlyValue(+0.0) && !checkConvertToNonDenormSingle(APFloatOfN);
+  return !N->isPosZero() && !checkConvertToNonDenormSingle(APFloatOfN);
 }]>;
 
 // Get the Hi bits of a 64 bit immediate.
@@ -2151,7 +2151,6 @@ let Defs = [R8, R9, R10], Uses = [R9, R10] in
 def LWAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
     (outs gprc:$dst),
     (ins ptr_rc_nor0:$ptr),
-    "#LWAT_CSNE_PSEUDO",
     [(set i32:$dst, (int_ppc_amo_lwat_csne ptr_rc_nor0:$ptr, R9, R10))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
@@ -5152,8 +5151,9 @@ def RLWNMbm : PPCAsmPseudo<"rlwnm $rA, $rS, $n, $b",
 def RLWNMbm_rec : PPCAsmPseudo<"rlwnm. $rA, $rS, $n, $b",
                            (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
 def PPCLdFixedAddr :
-  PPCPostRAExpPseudo<(outs gprc:$rT), (ins i32imm:$imm), "#FA_LOAD",
-                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))]>;
+  PPCPostRAExpPseudo<(outs gprc:$rT), (ins i32imm:$imm),
+                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))],
+                     "#FA_LOAD">;
 
 // These generic branch instruction forms are used for the assembler parser only.
 // Defs and Uses are conservative, since we don't know the BO value.
@@ -5588,7 +5588,7 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
 }
 
 let Defs = [CR7], Itinerary = IIC_LdStSync in
-def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
+def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr)>;
 
 // Now both high word and low word are reversed, next
 // swap the high word and low word.

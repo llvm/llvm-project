@@ -99,6 +99,9 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
     return eCallbackReturnContinue;
 
   CompileUnit *cu = context.comp_unit;
+  if (!cu)
+    return eCallbackReturnContinue;
+
   FileSpec cu_file_spec = cu->GetPrimaryFile();
   std::vector<uint32_t> line_matches;
   context.target_sp->GetSourceManager().FindLinesMatchingRegex(
