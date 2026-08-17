@@ -7357,10 +7357,37 @@ SDValue DAGTypeLegalizer::adjustMaskToType(SDValue Mask, EVT ToMaskVT) {
 
 // Adjust both operands to a common intermediate mask type, picking a scalar
 // width that minimizes extend/truncate overhead given the final target ToVT.
-EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, SDValue &Op1, EVT ToVT) {
+EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, bool IsOpLenient0,
+                                     SDValue &Op1, bool IsOpLenient1,
+                                     EVT ToVT) {
   assert(Op0.getValueType().getVectorNumElements() ==
              Op1.getValueType().getVectorNumElements() &&
          "unifyMaskTypes only handles scalar width differences");
+
+  // If only one of the operands lenient type-wise, we can simply
+  // adjust its type to the other operand's type assuming that this
+  // adjustment can be folded away.
+  //
+  // NOTE: We essentially rely on the fact that further optimizations
+  //       do spot redundant casts in "lenient" cases. If at some
+  //       point we decide that we want to do better here, we can
+  //       postpone converting lenient sub-trees right away and postpone
+  //       it to the moment when we know the best fitting integer type
+  //       to materialize them, and do it there.
+  if (IsOpLenient0 != IsOpLenient1) {
+    SDValue *LenientOp, *NonLenientOp;
+    if (IsOpLenient0) {
+      LenientOp = &Op0;
+      NonLenientOp = &Op1;
+    } else {
+      LenientOp = &Op1;
+      NonLenientOp = &Op0;
+    }
+    EVT OpVT = NonLenientOp->getValueType();
+    *LenientOp = adjustMaskToType(*LenientOp, OpVT);
+    return OpVT;
+  }
+
   unsigned Bits0 = Op0.getValueType().getScalarSizeInBits();
   unsigned Bits1 = Op1.getValueType().getScalarSizeInBits();
   unsigned NarrowBits = std::min(Bits0, Bits1);
@@ -7377,101 +7404,151 @@ EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, SDValue &Op1, EVT ToVT) {
   return OpVT;
 }
 
-SDValue DAGTypeLegalizer::convertMaskTree(SDValue V, EVT ToVT, unsigned Depth) {
-  if (Depth >= DAG.MaxRecursionDepth)
-    return SDValue();
+std::pair<SDValue, bool>
+DAGTypeLegalizer::convertMaskTreeImpl(SDValue V, EVT ToVT, unsigned Depth) {
+  // The main idea is to recursively traverse VSELECT's mask that needs
+  // widening to see if we can avoid unnecessary casts. The problem usually
+  // stems from a simple fact that SETCC might naturally produce results
+  // not in i1 (as we model it in LLVM IR) and we can continue using that
+  // type until we have to switch it up. Another important aspect is that
+  // "all ones" and "all zeros" constants can be materialized at any type,
+  // so we can try to utilize that to keep SETCC results at their natural
+  // types as much as possible.
+  //
+  // The algorithm traverses the mask-producing tree of operations that
+  // retain "mask-vector"-ness of the input (i.e. it remains a vector of
+  // -1s and 0s).
+  //
+  // SETCC1   SETCC2   CONST1   SETCC3   CONST2   CONST3
+  //   |       /        |        /        |        /
+  //   |      /         |       /         |       /
+  //   |_____/          |______/          |______/
+  //   | * choose the   | * choose SETCC3 | * keep it as final type
+  //   |   most fitting |   type          |   but consider it subject to
+  //   |   type         |                /    change
+  //   |                |               /
+  //   |                |______________/
+  //   |                | * choose SETCC3 type
+  //   |               /
+  //   |              /
+  //   |_____________/
+  //   | * choose the most fitting type
+  //   |   and then cast to the final desired type
+  //   |
+  //   VSELECT
+  //
+  if (Depth >= DAG.MaxRecursionDepth ||
+      // Bail out when encounter the vector element count mismatch.
+      // It potentially can be just an assertion, but we deliberately try to
+      // be overly conservative here.
+      V.getValueType().getVectorNumElements() != ToVT.getVectorNumElements())
+    return {};
 
-  SDValue Result = [&]() -> SDValue {
-    unsigned Opcode = V.getOpcode();
+  unsigned Opcode = V.getOpcode();
 
-    // Base case: SETCC produces the mask at its natural type.
-    if (isSETCCOp(Opcode)) {
-      EVT MaskVT = getSetCCResultType(getSETCCOperandType(V));
-      return convertMask(V, MaskVT, MaskVT);
+  // Base case: SETCC produces the mask at its natural type.
+  if (isSETCCOp(Opcode)) {
+    EVT MaskVT = getSetCCResultType(getSETCCOperandType(V));
+    return {convertMask(V, MaskVT, MaskVT), /*IsTypeLenient=*/false};
+  }
+
+  // Base case: all-zeros or all-ones BUILD_VECTOR. Type-lenient since these are
+  // invariant under sign-extend/truncate.
+  if (ISD::isBuildVectorAllZeros(V.getNode()))
+    return {DAG.getConstant(0, SDLoc(V), ToVT), /*IsTypeLenient=*/true};
+  if (ISD::isBuildVectorAllOnes(V.getNode()))
+    return {DAG.getAllOnesConstant(SDLoc(V), ToVT), /*IsTypeLenient=*/true};
+
+  SDLoc DL(V);
+
+  // Logical operations (AND/OR/XOR): try picking the best fitting width out
+  // of children's element widths.
+  if (isLogicalMaskOp(Opcode)) {
+    auto [Op0, IsLenientOp0] =
+        convertMaskTreeImpl(V.getOperand(0), ToVT, Depth + 1);
+    if (!Op0)
+      return {};
+    auto [Op1, IsLenientOp1] =
+        convertMaskTreeImpl(V.getOperand(1), ToVT, Depth + 1);
+    if (!Op1)
+      return {};
+    EVT OpVT = unifyMaskTypes(Op0, IsLenientOp0, Op1, IsLenientOp1, ToVT);
+    return {DAG.getNode(Opcode, DL, OpVT, Op0, Op1),
+            IsLenientOp0 && IsLenientOp1};
+  }
+
+  // FREEZE: widen the operand and re-wrap.
+  if (Opcode == ISD::FREEZE) {
+    auto [Inner, IsTypeLenient] =
+        convertMaskTreeImpl(V.getOperand(0), ToVT, Depth + 1);
+    if (!Inner)
+      return {};
+    return {DAG.getNode(ISD::FREEZE, DL, Inner.getValueType(), Inner),
+            IsTypeLenient};
+  }
+
+  // Vector shuffle: try inferring the best fitting width from operands.
+  if (Opcode == ISD::VECTOR_SHUFFLE) {
+    auto *Shuf = cast<ShuffleVectorSDNode>(V);
+    auto [Op0, IsLenientOp0] =
+        convertMaskTreeImpl(V.getOperand(0), ToVT, Depth + 1);
+    if (!Op0)
+      return {};
+    if (V.getOperand(1).isUndef()) {
+      EVT OpVT = Op0.getValueType();
+      return {DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT),
+                                   Shuf->getMask()),
+              IsLenientOp0};
     }
+    auto [Op1, IsLenientOp1] =
+        convertMaskTreeImpl(V.getOperand(1), ToVT, Depth + 1);
+    if (!Op1)
+      return {};
+    EVT OpVT = unifyMaskTypes(Op0, IsLenientOp0, Op1, IsLenientOp1, ToVT);
+    return {DAG.getVectorShuffle(OpVT, DL, Op0, Op1, Shuf->getMask()),
+            IsLenientOp0 && IsLenientOp1};
+  }
 
-    // Base case: all-zeros or all-ones BUILD_VECTOR. Use ToVT directly since
-    // these are invariant under sign-extend/truncate.
-    if (ISD::isBuildVectorAllZeros(V.getNode()))
-      return DAG.getConstant(0, SDLoc(V), ToVT);
-    if (ISD::isBuildVectorAllOnes(V.getNode()))
-      return DAG.getAllOnesConstant(SDLoc(V), ToVT);
+  // SELECT/VSELECT: try inferring the best fitting width from operands.
+  if (Opcode == ISD::SELECT || Opcode == ISD::VSELECT) {
+    auto [Op1, IsLenientOp1] =
+        convertMaskTreeImpl(V.getOperand(1), ToVT, Depth + 1);
+    if (!Op1)
+      return {};
+    auto [Op2, IsLenientOp2] =
+        convertMaskTreeImpl(V.getOperand(2), ToVT, Depth + 1);
+    if (!Op2)
+      return {};
+    EVT OpVT = unifyMaskTypes(Op1, IsLenientOp1, Op2, IsLenientOp2, ToVT);
 
-    SDLoc DL(V);
+    // We deliberately skip traversing/modifying VSELECT's mask because
+    //
+    //   a. We only change bitwidth of the operands and it shouldn't affect
+    //      condition on its own.
+    //
+    //   b. This VSELECT's mask can be widened in an independent traversal
+    //      if needed.
+    SDValue Cond = V.getOperand(0);
+    return {DAG.getNode(Opcode, DL, OpVT, Cond, Op1, Op2),
+            IsLenientOp1 && IsLenientOp2};
+  }
 
-    // Logical operations (AND/OR/XOR): try picking the best fitting width out
-    // of children's element widths.
-    if (isLogicalMaskOp(Opcode)) {
-      SDValue Op0 = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
-      if (!Op0)
-        return SDValue();
-      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
-      if (!Op1)
-        return SDValue();
-      EVT OpVT = unifyMaskTypes(Op0, Op1, ToVT);
-      return DAG.getNode(Opcode, DL, OpVT, Op0, Op1);
-    }
+  return {};
+}
 
-    // FREEZE: widen the operand and re-wrap.
-    if (Opcode == ISD::FREEZE) {
-      SDValue Inner = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
-      if (!Inner)
-        return SDValue();
-      return DAG.getNode(ISD::FREEZE, DL, Inner.getValueType(), Inner);
-    }
-
-    // Vector shuffle: try inferring the best fitting width from operands.
-    if (Opcode == ISD::VECTOR_SHUFFLE) {
-      // Bail out when the number of elements is different, we can't
-      // simply reuse shuffle mask in this case.
-      if (V.getValueType().getVectorNumElements() !=
-          ToVT.getVectorNumElements())
-        return SDValue();
-
-      auto *Shuf = cast<ShuffleVectorSDNode>(V);
-      SDValue Op0 = convertMaskTree(V.getOperand(0), ToVT, Depth + 1);
-      if (!Op0)
-        return SDValue();
-      if (V.getOperand(1).isUndef()) {
-        EVT OpVT = Op0.getValueType();
-        return DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT),
-                                    Shuf->getMask());
-      }
-      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
-      if (!Op1)
-        return SDValue();
-      EVT OpVT = unifyMaskTypes(Op0, Op1, ToVT);
-      return DAG.getVectorShuffle(OpVT, DL, Op0, Op1, Shuf->getMask());
-    }
-
-    // SELECT/VSELECT: try inferring the best fitting width from operands.
-    if (Opcode == ISD::SELECT || Opcode == ISD::VSELECT) {
-      SDValue Op1 = convertMaskTree(V.getOperand(1), ToVT, Depth + 1);
-      if (!Op1)
-        return SDValue();
-      SDValue Op2 = convertMaskTree(V.getOperand(2), ToVT, Depth + 1);
-      if (!Op2)
-        return SDValue();
-      EVT OpVT = unifyMaskTypes(Op1, Op2, ToVT);
-
-      SDValue Cond = V.getOperand(0);
-      if (Opcode == ISD::VSELECT) {
-        Cond = convertMaskTree(Cond, ToVT, Depth + 1);
-        if (!Cond)
-          return SDValue();
-        Cond = adjustMaskToType(Cond, OpVT);
-      }
-      return DAG.getNode(Opcode, DL, OpVT, Cond, Op1, Op2);
-    }
-
-    return SDValue();
-  }();
-
+SDValue DAGTypeLegalizer::convertMaskTree(SDValue V, EVT ToVT) {
+  // In general, we are converting from <N x i1> into <M x iW>.
+  // This would mean that during the tree traversal we need to pay
+  // attention to both bitwidth and element count, which can be error-prone.
+  //
+  // Instead, we split the task in two, we first widen the type of the tree
+  // and then change the element count.
+  EVT MaskTreeVT = ToVT.changeVectorElementCount(
+      *DAG.getContext(), V.getValueType().getVectorElementCount());
+  auto [Result, _] = convertMaskTreeImpl(V, MaskTreeVT);
   if (!Result)
-    return SDValue();
-  if (Depth == 0)
-    Result = adjustMaskToType(Result, ToVT);
-  return Result;
+    return Result;
+  return adjustMaskToType(Result, ToVT);
 }
 
 // This method tries to handle some special cases for the vselect mask

@@ -1192,7 +1192,12 @@ private:
 
   /// Pick an intermediate VT and adjust both operands to it, minimizing
   /// extend/truncate overhead given the final target ToVT.
-  EVT unifyMaskTypes(SDValue &Op0, SDValue &Op1, EVT ToVT);
+  ///
+  /// IsOpLenient flags retain information on whether the corresponding
+  /// Op can be cheaply materialized to whatever type. If one of the
+  /// operands lenient, we force cast it to match other operand's type.
+  EVT unifyMaskTypes(SDValue &Op0, bool IsOpLenient0, SDValue &Op1,
+                     bool IsOpLenient1, EVT ToVT);
 
   /// Return a mask of vector type MaskVT to replace InMask. Also adjust
   /// MaskVT to ToMaskVT if needed with vector extension or truncation.
@@ -1202,7 +1207,13 @@ private:
   /// mask-preserving operations down to SETCC leaves. Avoids redundant
   /// extend/truncate chains that arise when each node is converted
   /// independently. Returns SDValue() if the tree cannot be converted.
-  SDValue convertMaskTree(SDValue V, EVT ToVT, unsigned Depth = 0);
+  SDValue convertMaskTree(SDValue V, EVT ToVT);
+
+  /// Recursive implementation of convertMaskTree.
+  /// In addition to the value returns a boolean flag signifying whether the
+  /// tree can be materialized with any type.
+  std::pair<SDValue, bool> convertMaskTreeImpl(SDValue V, EVT ToVT,
+                                               unsigned Depth = 0);
 
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp
