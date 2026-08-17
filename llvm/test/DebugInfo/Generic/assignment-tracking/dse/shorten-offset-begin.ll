@@ -23,16 +23,19 @@
 ;; renumbered the metadata. The remaining non-debug instructions keep clang's
 ;; order and operands, and the assignment offsets are unchanged.
 
-;; 'local' is 640 bits and starts at the alloca, so variable bit N is alloca
-;; byte N/8 throughout, which is what makes the arithmetic readable.
+;; 'local' fills its 80-byte alloca, so an offset into the alloca is also an
+;; offset into the variable.
 ;;
-;; The first memset covers bytes [8, 80) and the second covers [4, 68), so DSE
-;; shortens the first to [68, 80). The dead slice is [8, 68), or variable bits
-;; [64, 544), which gives fragment (64, 480). Counting the same eight-byte
-;; offset again gives (128, 480). Both fit inside the record's original
-;; (64, 576) fragment, so only the offset exposes the bug. shorten-offset.ll
-;; covers the cases where the extra offset clips the fragment or moves the
-;; slice past it.
+;; Check that the dead fragment describes exactly what DSE removes from the
+;; first memset. That memset writes 72 bytes starting eight bytes into 'local'.
+;; The second memset overwrites the first 60 of those bytes (bytes 8 through
+;; 67), so DSE keeps the final 12 bytes, starting at byte 68. The removed part
+;; starts at bit 64 of the variable and is 480 bits long.
+;;
+;; DW_OP_LLVM_fragment stores the starting bit followed by the size, so the
+;; CHECK expects (64, 480). Make sure the starting bit is 64 so that we know
+;; the dead range begins at byte 8 of 'local', where the overwritten part
+;; starts.
 
 ; CHECK: @shortenBeginPartial
 ; CHECK:      #dbg_assign({{.*}}, ![[VAR:[0-9]+]], !DIExpression(), {{.*}}, ptr %local, !DIExpression(),
