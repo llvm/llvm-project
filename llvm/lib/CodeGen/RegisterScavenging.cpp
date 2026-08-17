@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -520,7 +521,10 @@ public:
     // Let's hope that calling those outside of PrologEpilogueInserter works
     // well enough to initialize the scavenger with some emergency spillslots
     // for the target.
+    RegisterClassInfo RCI;
+    RCI.runOnMachineFunction(MF);
     BitVector SavedRegs;
+    TFL.processFunctionBeforeCalleeSaves(MF, &RS, &RCI);
     TFL.determineCalleeSaves(MF, SavedRegs, &RS);
     TFL.processFunctionBeforeFrameFinalized(MF, &RS);
 

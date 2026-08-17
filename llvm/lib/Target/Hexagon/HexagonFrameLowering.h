@@ -82,6 +82,9 @@ public:
                                 MachineBasicBlock::iterator I) const override;
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
       RegScavenger *RS = nullptr) const override;
+  void processFunctionBeforeCalleeSaves(
+      MachineFunction &MF, RegScavenger *RS = nullptr,
+      const RegisterClassInfo *RCI = nullptr) const override;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
       RegScavenger *RS) const override;
 
@@ -177,7 +180,7 @@ private:
                        const TargetRegisterClass *RC,
                        const RegisterClassInfo &RCI) const;
   void optimizeSpillSlots(MachineFunction &MF,
-      SmallVectorImpl<Register> &VRegs) const;
+      SmallVectorImpl<Register> &VRegs, const RegisterClassInfo &RCI) const;
 
   void findShrunkPrologEpilog(MachineFunction &MF, MachineBasicBlock *&PrologB,
       MachineBasicBlock *&EpilogB) const;
