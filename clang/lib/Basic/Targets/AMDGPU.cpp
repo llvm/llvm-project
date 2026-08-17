@@ -215,7 +215,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   // should just be assumed true for the dummy target.
   HasFastHalfType = true;
   HasFloat16 = true;
-  WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
+  WavefrontSize = llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+                      llvm::AMDGPU::FEAT_SUPPORTS_WAVE32)
+                      ? 32
+                      : 64;
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
@@ -224,10 +227,13 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
+    Int64Type = SignedLong;
+    IntMaxType = SignedLong;
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-  CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
+  CUMode = !llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+      llvm::AMDGPU::FEAT_SUPPORTS_WGP);
 
   for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts", "supports-wgp",
                  "supports-wave32", "xnack-support", "sramecc-support",

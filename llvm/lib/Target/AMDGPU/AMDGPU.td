@@ -2475,6 +2475,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
    FeatureRestrictedSOffset,
+   Feature45BitNumRecordsBufferResource,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
@@ -3121,7 +3122,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureTanhInsts, FeatureTensorCvtLutInsts, FeatureTransposeLoadF4F6Insts,
   FeatureVMemToLDSLoad, FeatureVmemPrefInsts, FeatureWMMA128bInsts,
   FeatureWMMA256bInsts, FeatureXF32Insts,
-  FeatureWavefrontSize32, FeatureWavefrontSize64
+  FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
+  FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32
   ];
 }
 

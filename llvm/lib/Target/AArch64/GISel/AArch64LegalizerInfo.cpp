@@ -616,7 +616,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarIf(
           all(scalarNarrowerThan(0, 32),
               atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Release)),
-          changeTo(0, s32))
+          changeElementSizeTo(0, s32))
       .legalForTypesWithMemDesc(
           {{s8, p0, s8, 8},     {s16, p0, s8, 8},  // truncstorei8 from s16
            {s32, p0, s8, 8},                       // truncstorei8 from s32
@@ -2289,7 +2289,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
   Register ListPtr = MI.getOperand(1).getReg();
 
   LLT PtrTy = MRI.getType(ListPtr);
-  LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT IntPtrTy = LLT::integer(PtrTy.getSizeInBits());
 
   const unsigned PtrSize = PtrTy.getSizeInBits() / 8;
   const Align PtrAlign = Align(PtrSize);

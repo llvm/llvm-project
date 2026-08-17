@@ -9,15 +9,15 @@
 // parser accepts this as a Clang module definition, while the C++ parser
 // diagnoses it as a malformed module declaration.
 //--- original.cppm
-// expected-error@+2 {{unexpected preprocessing token '{' after module name}}
-// expected-error@+1 {{module directive must end with a ';'}}
+// expected-error@+3 {{unexpected preprocessing token '{' after module name}}
+// expected-error@+2 {{module directive must end with a ';'}}
+// expected-error@+1 {{definition of module 'M' is not available}}
 module M {}
 
 // Build the conflicting Clang module inline.
 //--- inline.cppm
-// expected-no-diagnostics
 #pragma clang module build Foo
 module Foo {}
 #pragma clang module endbuild
 
-module Foo;
+module Foo; // expected-error {{definition of module 'Foo' is not available}}

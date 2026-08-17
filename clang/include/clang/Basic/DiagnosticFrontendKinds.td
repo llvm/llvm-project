@@ -550,11 +550,10 @@ def err_member_ptr_requires_complete_type
     : Error<"member pointer representation requires a complete class type for "
             "%0 to perform this expression">;
 
-// ClangIR frontend errors
-def err_cir_to_cir_transform_failed : Error<
-    "CIR-to-CIR transformation failed">, DefaultFatal;
+def warn_dyndbg_unable_to_create_target : Warning<
+    "ignoring -fdynamic-debugging: unable to create target: '%0'">,
+    InGroup<DynamicDebugging>;
 
-def err_cir_verification_failed_pre_passes : Error<
-    "CIR module verification error before running CIR-to-CIR passes">,
-    DefaultFatal;
+def err_dyndbg_no_instrumentation : Error<
+    "'-fdynamic-debugging' unsupported with instrumentation (PGO/code coverage)">;
 }

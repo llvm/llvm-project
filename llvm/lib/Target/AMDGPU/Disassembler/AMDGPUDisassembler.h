@@ -137,8 +137,11 @@ public:
 
   unsigned getVgprClassId(unsigned Width) const;
   unsigned getAgprClassId(unsigned Width) const;
-  unsigned getSgprClassId(unsigned Width) const;
-  unsigned getTtmpClassId(unsigned Width) const;
+
+  /// Return the SGPR/TTMP register class accepted by source decoding for
+  /// \p Width, or std::nullopt if that width has no supported encoding.
+  std::optional<unsigned> getSgprClassId(unsigned Width) const;
+  std::optional<unsigned> getTtmpClassId(unsigned Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
 

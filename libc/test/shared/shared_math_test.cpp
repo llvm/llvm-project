@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "shared/math.h"
+#include "src/__support/FPUtil/float128.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+
+using LIBC_NAMESPACE::fputil::Float128;
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
@@ -576,7 +579,12 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+// Emulated float128 tests
+TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
+  EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
+}
+
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllFloat128) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float128>;
@@ -621,7 +629,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16divf128(
                                   float128(4.0), float128(2.0)));
-  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::ceilf128(float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::copysignf128(
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(float128(0.0),
@@ -751,7 +758,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 }
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
@@ -816,7 +823,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                                   bfloat16(0.0), bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::sqrtbf16(bfloat16(1.0)));
   // TODO: This test case just failed only when building with gcc-13 and only
-  //   for `ninja libc.test.shared.shared_math_test.__unit__.__NO_FMA_OPT
+  //   for `ninja libc.test.shared.shared_math_test.__NO_FMA_OPT
   //   Other gcc versions or other sub-targets work fine.
   //   https://github.com/llvm/llvm-project/issues/199332
   // #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE

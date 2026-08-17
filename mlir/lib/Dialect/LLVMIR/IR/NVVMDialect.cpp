@@ -671,6 +671,23 @@ LogicalResult BulkStoreOp::verify() {
   return success();
 }
 
+LogicalResult AsyncStoreGlobalOp::verify() {
+  NVVM::MemScopeKind scope = getScope();
+  bool isMmio = getMmio();
+  bool isMultimem = getMultimem();
+
+  if (scope != MemScopeKind::SYS && scope != MemScopeKind::GPU)
+    return emitOpError("scope must be either SYS or GPU");
+
+  if (isMmio && scope != MemScopeKind::SYS)
+    return emitOpError("mmio is only supported for SYS scope");
+
+  if (isMmio && isMultimem)
+    return emitOpError("multimem is not supported with mmio");
+
+  return success();
+}
+
 LogicalResult PMEventOp::verify() {
   auto eventId = getEventId();
   auto maskedEventId = getMaskedEventId();
@@ -3665,6 +3682,29 @@ DivFOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
           {mt.lookupValue(thisOp.getLhs()), mt.lookupValue(thisOp.getRhs())}};
 }
 
+mlir::NVVM::IDArgPair AsyncStoreGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  using IDArgPair = mlir::NVVM::IDArgPair;
+  auto thisOp = cast<NVVM::AsyncStoreGlobalOp>(op);
+  mlir::NVVM::MemScopeKind scope = thisOp.getScope();
+  bool isMmio = thisOp.getMmio();
+
+  llvm::Value *addr = mt.lookupValue(thisOp.getAddr());
+  llvm::Value *value = mt.lookupValue(thisOp.getValue());
+  llvm::Value *isMultimem = builder.getInt1(thisOp.getMultimem());
+
+  if (scope == MemScopeKind::SYS) {
+    return isMmio ? IDArgPair(llvm::Intrinsic::nvvm_st_async_mmio_sys,
+                              {addr, value})
+                  : IDArgPair(llvm::Intrinsic::nvvm_st_async_sys,
+                              {addr, value, isMultimem});
+  } else if (scope == MemScopeKind::GPU) {
+    return IDArgPair(llvm::Intrinsic::nvvm_st_async_gpu,
+                     {addr, value, isMultimem});
+  }
+  llvm_unreachable("unsupported scope for AsyncStoreGlobalOp");
+}
+
 mlir::NVVM::IDArgPair
 PMEventOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                                  llvm::IRBuilderBase &builder) {
@@ -5011,13 +5051,6 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
   return id;
 }
 
-#define TCGEN05_COMMIT_IMPL(cg, mc)                                            \
-  llvm::Intrinsic::nvvm_tcgen05_commit##mc##_##cg
-
-#define GET_TCGEN05_COMMIT_ID(cta_group, has_mc)                               \
-  has_mc ? TCGEN05_COMMIT_IMPL(cta_group, _mc)                                 \
-         : TCGEN05_COMMIT_IMPL(cta_group, )
-
 llvm::Intrinsic::ID
 Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
                                        LLVM::ModuleTranslation &mt,
@@ -5025,11 +5058,26 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
   auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
   bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
+  bool hasSmemARead = curOp.getSmemARead();
+  unsigned index = (static_cast<unsigned>(hasSmemARead) << 1) |
+                   static_cast<unsigned>(is2CTAMode);
 
-  llvm::Intrinsic::ID id = is2CTAMode
-                               ? GET_TCGEN05_COMMIT_ID(cg2, hasMulticast)
-                               : GET_TCGEN05_COMMIT_ID(cg1, hasMulticast);
+  using namespace llvm::Intrinsic;
+  static constexpr ID IDs[] = {
+      nvvm_tcgen05_commit_cg1,
+      nvvm_tcgen05_commit_cg2,
+      nvvm_tcgen05_commit_smem_a_read_cg1,
+      nvvm_tcgen05_commit_smem_a_read_cg2,
+  };
 
+  static constexpr ID multicastIDs[] = {
+      nvvm_tcgen05_commit_mc_cg1,
+      nvvm_tcgen05_commit_mc_cg2,
+      nvvm_tcgen05_commit_smem_a_read_mc_cg1,
+      nvvm_tcgen05_commit_smem_a_read_mc_cg2,
+  };
+
+  ID id = hasMulticast ? multicastIDs[index] : IDs[index];
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getAddr()));
   if (hasMulticast)
