@@ -244,8 +244,7 @@ public:
 
     while (WorkList.size()) {
       SymbolRef Item = WorkList.pop_back_val();
-      auto &SymConstraints = ConstraintsBySym[Item];
-      for (auto Idx : SymConstraints) {
+      for (auto Idx : ConstraintsBySym[Item]) {
         if (RetainedConstraints.test(Idx))
           continue;
 
