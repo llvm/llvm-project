@@ -85,9 +85,14 @@ private:
 
   // If the entire range [addr, addr+len) is covered by a single cache line
   // that is already in L2, returns a pointer into that line's data at the
-  // correct offset. Never reads from the inferior; returns nullptr on a miss.
+  // correct offset. Never reads from the inferior. Returns nullptr on a miss.
   // Caller must hold m_mutex.
   const uint8_t *FindL2CacheEntry(lldb::addr_t addr, size_t len) const;
+
+  // Looks the range [addr, addr+len) up in L1 and then L2, returning a pointer
+  // into the data of whichever entry covers it. Returns nullptr on a miss.
+  // Caller must hold m_mutex.
+  const uint8_t *FindCacheEntry(lldb::addr_t addr, size_t len) const;
 };
 
     

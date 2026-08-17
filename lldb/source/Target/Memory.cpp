@@ -146,10 +146,17 @@ const uint8_t *MemoryCache::FindL2CacheEntry(lldb::addr_t addr,
   BlockMap::const_iterator pos = m_L2_cache.find(addr - line_offset);
   if (pos == m_L2_cache.end())
     return nullptr;
-  // Like the L1 lookup, a read spanning two lines is treated as a miss.
   if (line_offset + len > pos->second->GetByteSize())
     return nullptr;
   return pos->second->GetBytes() + line_offset;
+}
+
+const uint8_t *MemoryCache::FindCacheEntry(lldb::addr_t addr,
+                                           size_t len) const {
+  const uint8_t *cached = FindL1CacheEntry(addr, len);
+  if (!cached)
+    cached = FindL2CacheEntry(addr, len);
+  return cached;
 }
 
 lldb::DataBufferSP MemoryCache::GetL2CacheLine(lldb::addr_t line_base_addr,
@@ -304,9 +311,7 @@ MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
       continue;
     }
 
-    const uint8_t *cached = FindL1CacheEntry(addr, len);
-    if (!cached)
-      cached = FindL2CacheEntry(addr, len);
+    const uint8_t *cached = FindCacheEntry(addr, len);
     if (cached) {
       results.push_back(buffer.take_front(len));
       buffer = buffer.drop_front(len);
