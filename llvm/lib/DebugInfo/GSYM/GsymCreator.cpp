@@ -228,7 +228,7 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
               if (PrevRich)
                 Out.Report(
                     "Duplicate address ranges with different debug info.",
-                    Severity::Warning, [&](raw_ostream &OS) {
+                    [&](raw_ostream &OS) {
                       OS << "warning: same address range contains "
                             "different debug "
                          << "info. Removing:\n"
@@ -238,13 +238,12 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
               std::swap(Prev, Curr);
             }
           } else {
-            Out.Report("Overlapping function ranges", Severity::Warning,
-                       [&](raw_ostream &OS) {
-                         // print warnings about overlaps
-                         OS << "warning: function ranges overlap:\n"
-                            << Prev << "\n"
-                            << Curr << "\n";
-                       });
+            Out.Report("Overlapping function ranges", [&](raw_ostream &OS) {
+              // print warnings about overlaps
+              OS << "warning: function ranges overlap:\n"
+                << Prev << "\n"
+                << Curr << "\n";
+            });
             FinalizedFuncs.emplace_back(std::move(Curr));
           }
         } else {

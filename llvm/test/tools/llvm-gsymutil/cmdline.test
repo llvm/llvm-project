@@ -10,7 +10,6 @@ HELP: --convert=<value>
 HELP: --help
 HELP: --num-threads=<value>
 HELP: --out-file=<value>
-HELP: --quieter
 HELP: --quiet
 HELP: --symtab-file=<value>
 HELP: --verbose

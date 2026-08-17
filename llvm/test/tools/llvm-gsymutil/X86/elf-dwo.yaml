@@ -5,8 +5,6 @@
 ## RUN: yaml2obj %s -o %t
 ## RUN: llvm-gsymutil --convert=%t -o %t.gsym | FileCheck %s --check-prefix=WARNING
 ## RUN: llvm-gsymutil --convert=%t -o %t.gsym --quiet | FileCheck %s --check-prefix=WARNING-QUIET --implicit-check-not=main_split-main.dwo
-## --quieter suppresses at least as much as --quiet does.
-## RUN: llvm-gsymutil --convert=%t -o %t.gsym --quieter | FileCheck %s --check-prefix=WARNING-QUIET --implicit-check-not=main_split-main.dwo
 
 ## WARNING: Input file: {{.*\.yaml\.tmp}}
 ## WARNING: Output file (x86_64): {{.*\.yaml\.tmp\.gsym}}

@@ -104,7 +104,7 @@ static uint32_t BenchmarkStart;
 static uint32_t BenchmarkStride;
 static unsigned NumThreads;
 static uint64_t SegmentSize;
-static QuietLevel Quiet = QuietLevel::None;
+static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
 static bool UseMergedFunctions = false;
@@ -216,12 +216,7 @@ static void parseArgs(int argc, char **argv) {
     }
   }
 
-  // --quieter is the next level up from --quiet: it silences the warnings
-  // that --quiet does, and the errors on top of that.
-  if (Args.hasArg(OPT_quieter))
-    Quiet = QuietLevel::Quieter;
-  else if (Args.hasArg(OPT_quiet))
-    Quiet = QuietLevel::Quiet;
+  Quiet = Args.hasArg(OPT_quiet);
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_address_EQ)) {
     StringRef S{A->getValue()};

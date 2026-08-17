@@ -251,7 +251,7 @@ static void parseInlineInfo(GsymCreator &Gsym, OutputAggregator &Out,
               WarnIfEmpty = false;
             } else
               Out.Report("Function DIE has uncontained address range",
-                         Severity::Error, [&](raw_ostream &OS) {
+                         [&](raw_ostream &OS) {
                            OS << "error: inlined function DIE at "
                               << HEX32(Die.getOffset()) << " has a range ["
                               << HEX64(InlineRange.start()) << " - "
@@ -290,7 +290,7 @@ static void parseInlineInfo(GsymCreator &Gsym, OutputAggregator &Out,
     } else
       Out.Report(
           "Inlined function die has invlaid file index in DW_AT_call_file",
-          Severity::Error, [&](raw_ostream &OS) {
+          [&](raw_ostream &OS) {
             OS << "error: inlined function DIE at " << HEX32(Die.getOffset())
                << " has an invalid file index " << DwarfFileIdx
                << " in its DW_AT_call_file attribute, this inline entry and "
@@ -340,7 +340,7 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     // was invalid, but we still have valid line entries.
     if (StmtSeqOffset &&
         CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
-      Out.Report("Invalid DW_AT_LLVM_stmt_sequence value", Severity::Error,
+      Out.Report("Invalid DW_AT_LLVM_stmt_sequence value",
                  [&](raw_ostream &OS) {
                    OS << "error: function DIE at " << HEX32(Die.getOffset())
                       << " has a DW_AT_LLVM_stmt_sequence value "
@@ -363,16 +363,14 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
         // error if it isn't there.
         if (DwarfFileIdx == UINT32_MAX)
           return;
-        Out.Report(
-            "Invalid file index in DW_AT_decl_file", Severity::Error,
-            [&](raw_ostream &OS) {
-              OS << "error: function DIE at " << HEX32(Die.getOffset())
-                 << " has an invalid file index " << DwarfFileIdx
-                 << " in its DW_AT_decl_file attribute, unable to create a "
-                    "single "
-                 << "line entry from the DW_AT_decl_file/DW_AT_decl_line "
-                 << "attributes.\n";
-            });
+        Out.Report("Invalid file index in DW_AT_decl_file", [&](raw_ostream
+                                                                    &OS) {
+          OS << "error: function DIE at " << HEX32(Die.getOffset())
+             << " has an invalid file index " << DwarfFileIdx
+             << " in its DW_AT_decl_file attribute, unable to create a single "
+             << "line entry from the DW_AT_decl_file/DW_AT_decl_line "
+             << "attributes.\n";
+        });
         return;
       }
       if (auto Line = dwarf::toUnsigned(
@@ -394,8 +392,7 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
         CUI.DWARFToGSYMFileIndex(Gsym, Row.File);
     if (!OptFileIdx) {
       Out.Report(
-          "Invalid file index in DWARF line table", Severity::Error,
-          [&](raw_ostream &OS) {
+          "Invalid file index in DWARF line table", [&](raw_ostream &OS) {
             OS << "error: function DIE at " << HEX32(Die.getOffset()) << " has "
                << "a line entry with invalid DWARF file index, this entry will "
                << "be removed:\n";
@@ -416,7 +413,7 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     if (!FI.Range.contains(RowAddress)) {
       if (RowAddress < FI.Range.start()) {
         Out.Report("Start address lies between valid Row table entries",
-                   Severity::Error, [&](raw_ostream &OS) {
+                   [&](raw_ostream &OS) {
                      OS << "error: DIE has a start address whose LowPC is "
                            "between the "
                            "line table Row["
@@ -440,13 +437,12 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
       // so break out after printing a warning.
       auto FirstLE = FI.OptLineTable->first();
       if (FirstLE && *FirstLE == LE)
-        Out.Report("Duplicate line table detected", Severity::Warning,
-                   [&](raw_ostream &OS) {
-                     OS << "warning: duplicate line table detected for DIE:\n";
-                     Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
-                   });
+        Out.Report("Duplicate line table detected", [&](raw_ostream &OS) {
+          OS << "warning: duplicate line table detected for DIE:\n";
+          Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
+        });
       else
-        Out.Report("Non-monotonically increasing addresses", Severity::Error,
+        Out.Report("Non-monotonically increasing addresses",
                    [&](raw_ostream &OS) {
                      OS << "error: line table has addresses that do not "
                         << "monotonically increase:\n";
@@ -495,7 +491,7 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
       break;
     auto NameIndex = getQualifiedNameIndex(Die, CUI.Language, Gsym);
     if (!NameIndex) {
-      Out.Report("Function has no name", Severity::Error, [&](raw_ostream &OS) {
+      Out.Report("Function has no name", [&](raw_ostream &OS) {
         OS << "error: function at " << HEX64(Die.getOffset())
            << " has no name\n ";
         Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
@@ -535,7 +531,7 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
         if (Range.LowPC != 0) {
           // Unexpected invalid address, emit a warning
           Out.Report("Address range starts outside executable section",
-                     Severity::Warning, [&](raw_ostream &OS) {
+                     [&](raw_ostream &OS) {
                        OS << "warning: DIE has an address range whose "
                              "start address "
                              "is not in any executable sections ("
@@ -572,7 +568,7 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
         if (FI.Inline->Children.empty()) {
           if (WarnIfEmpty)
             Out.Report("DIE contains inline functions with no valid ranges",
-                       Severity::Warning, [&](raw_ostream &OS) {
+                       [&](raw_ostream &OS) {
                          OS << "warning: DIE contains inline function "
                                "information that has no valid ranges, removing "
                                "inline information:\n";
@@ -664,7 +660,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
         Out.Report(
             "warning: Unable to retrieve DWO .debug_info section for some "
             "object files. (Remove the --quiet flag for full output)",
-            Severity::Warning, [&](raw_ostream &OS) {
+            [&](raw_ostream &OS) {
               std::string DWOName = dwarf::toString(
                   DwarfUnit.getUnitDIE().find(
                       {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
@@ -714,7 +710,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
           std::string storage;
           raw_string_ostream StrStream(storage);
           OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr,
-                                     Out.GetQuietLevel());
+                                     Out.IsQuiet());
           handleDie(ThreadOut, CUI, Die);
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);
