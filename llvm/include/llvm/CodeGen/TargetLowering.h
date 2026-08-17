@@ -2280,7 +2280,9 @@ public:
   unsigned getMinCmpXchgSizeInBits() const { return MinCmpXchgSizeInBits; }
 
   /// Whether the target supports unaligned atomic operations.
-  bool supportsUnalignedAtomics() const { return SupportsUnalignedAtomics; }
+  virtual bool supportsUnalignedAtomics(const Instruction *I) const {
+    return SupportsUnalignedAtomics;
+  }
 
   /// Whether AtomicExpandPass should automatically insert fences and reduce
   /// ordering for this atomic. This should be true for most architectures with
