@@ -3,6 +3,8 @@ add_llvm_component_library(LLVMLTO
   LTOBackend.cpp
   LTOModule.cpp
   LTOCodeGenerator.cpp
+  LTOConfigBitcode.cpp
+  TargetOptionsBitcode.cpp
   UpdateCompilerUsed.cpp
   ThinLTOCodeGenerator.cpp
 

@@ -97,6 +97,8 @@ enum CodeObjectVersionKind {
 
 class TargetOptions {
 public:
+  // When adding fields, update the structured binding and serialization in
+  // llvm/lib/LTO/TargetOptionsBitcode.cpp.
   TargetOptions()
       : NoZerosInBSS(false), GuaranteedTailCallOpt(false),
         StackSymbolOrdering(true), EnableFastISel(false),

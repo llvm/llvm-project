@@ -315,6 +315,10 @@ public:
   /// Emit the current module to the bitstream.
   void write();
 
+  /// Emit the blocks required for module-level metadata into an already open
+  /// module block.
+  void writeModuleMetadataOnly();
+
 private:
   uint64_t bitcodeStartBit() { return BitcodeStartBit; }
 
@@ -474,6 +478,8 @@ class IndexBitcodeWriter : public BitcodeWriterBase {
   /// provides a map of modules to the corresponding GUIDs/summaries to write.
   const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex;
 
+  /// Optional module whose module-level metadata is emitted into the index.
+  const Module *ModuleMetadata;
   /// The summaries in ModuleToSummariesForIndex, sorted by GUID. The
   /// per-module maps are DenseMaps whose iteration order depends on insertion
   /// order, which can change with unrelated modules in the link. Writing in
@@ -512,10 +518,13 @@ public:
       BitstreamWriter &Stream, StringTableBuilder &StrtabBuilder,
       const ModuleSummaryIndex &Index,
       const GVSummaryPtrSet *DecSummaries = nullptr,
-      const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex = nullptr)
+      const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex = nullptr,
+      const Module *ModuleMetadata = nullptr)
       : BitcodeWriterBase(Stream, StrtabBuilder), Index(Index),
         DecSummaries(DecSummaries),
-        ModuleToSummariesForIndex(ModuleToSummariesForIndex) {
+        ModuleToSummariesForIndex(ModuleToSummariesForIndex),
+        ModuleMetadata(ModuleMetadata) {
+ 
     if (ModuleToSummariesForIndex) {
       for (const auto &[ModPath, Summaries] : *ModuleToSummariesForIndex)
         llvm::append_range(SortedSummariesForIndex, Summaries);
@@ -5647,6 +5656,14 @@ void ModuleBitcodeWriter::write() {
   Stream.ExitBlock();
 }
 
+void ModuleBitcodeWriter::writeModuleMetadataOnly() {
+  writeBlockInfo();
+  writeTypeTable();
+  writeModuleConstants();
+  writeModuleMetadataKinds();
+  writeModuleMetadata();
+}
+
 static void writeInt32ToBuffer(uint32_t Value, SmallVectorImpl<char> &Buffer,
                                uint32_t &Position) {
   support::endian::write32le(&Buffer[Position], Value);
@@ -5821,9 +5838,9 @@ void BitcodeWriter::writeModule(const Module &M,
 void BitcodeWriter::writeIndex(
     const ModuleSummaryIndex *Index,
     const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex,
-    const GVSummaryPtrSet *DecSummaries) {
+    const GVSummaryPtrSet *DecSummaries, const Module *ModuleMetadata) {
   IndexBitcodeWriter IndexWriter(*Stream, StrtabBuilder, *Index, DecSummaries,
-                                 ModuleToSummariesForIndex);
+                                 ModuleToSummariesForIndex, ModuleMetadata);
   IndexWriter.write();
 }
 
@@ -5863,6 +5880,14 @@ void IndexBitcodeWriter::write() {
 
   writeModuleVersion();
 
+  if (ModuleMetadata) {
+    ModuleBitcodeWriter MetadataWriter(*ModuleMetadata, StrtabBuilder, Stream,
+                                       /*ShouldPreserveUseListOrder=*/false,
+                                       /*Index=*/nullptr,
+                                       /*GenerateHash=*/false);
+    MetadataWriter.writeModuleMetadataOnly();
+  }
+
   // Write the module paths in the combined index.
   writeModStrings();
 
@@ -5879,12 +5904,13 @@ void IndexBitcodeWriter::write() {
 void llvm::writeIndexToFile(
     const ModuleSummaryIndex &Index, raw_ostream &Out,
     const ModuleToSummariesForIndexTy *ModuleToSummariesForIndex,
-    const GVSummaryPtrSet *DecSummaries) {
+    const GVSummaryPtrSet *DecSummaries, const Module *ModuleMetadata) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
   BitcodeWriter Writer(Buffer);
-  Writer.writeIndex(&Index, ModuleToSummariesForIndex, DecSummaries);
+  Writer.writeIndex(&Index, ModuleToSummariesForIndex, DecSummaries,
+                    ModuleMetadata);
   Writer.writeStrtab();
 
   Out.write((char *)&Buffer.front(), Buffer.size());
