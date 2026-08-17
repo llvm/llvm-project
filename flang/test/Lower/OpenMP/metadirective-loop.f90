@@ -671,3 +671,72 @@ subroutine test_standalone_selected_construct_context(n, a)
     end do
   end do
 end subroutine
+
+! An intervening parallel region breaks close nesting, so its barrier remains
+! valid inside a selected DO replacement.
+! CHECK-LABEL: func.func @_QPtest_barrier_nested_in_parallel(
+! CHECK:         omp.wsloop
+! CHECK:           omp.loop_nest
+! CHECK:             omp.parallel
+! CHECK:               omp.barrier
+! CHECK:               omp.terminator
+! CHECK:             omp.yield
+! CHECK:         return
+subroutine test_barrier_nested_in_parallel(n, a)
+  integer :: n, a(n), i
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(llvm)}: do) &
+  !$omp& otherwise(nothing)
+  do i = 1, n
+    !$omp parallel shared(a) firstprivate(i)
+    !$omp barrier
+    a(i) = i
+    !$omp end parallel
+  end do
+end subroutine
+
+! A PARALLEL replacement selected by a nested metadirective also breaks close
+! nesting. Validate the BARRIER against the realized replacement rather than
+! rejecting the nested metadirective conservatively.
+! CHECK-LABEL: func.func @_QPtest_barrier_nested_in_metadirective_parallel(
+! CHECK:         omp.wsloop
+! CHECK:           omp.loop_nest
+! CHECK:             omp.parallel
+! CHECK:               omp.barrier
+! CHECK:               omp.terminator
+! CHECK:             omp.yield
+! CHECK:         return
+subroutine test_barrier_nested_in_metadirective_parallel(n)
+  integer :: n, i
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(llvm)}: do) &
+  !$omp& otherwise(nothing)
+  do i = 1, n
+    !$omp begin metadirective &
+    !$omp& when(implementation={vendor(llvm)}: parallel) &
+    !$omp& otherwise(nothing)
+    !$omp barrier
+    !$omp end metadirective
+  end do
+end subroutine
+
+! An unreachable nested BARRIER replacement does not constrain the selected
+! outer loop.
+! CHECK-LABEL: func.func @_QPtest_unreachable_nested_barrier(
+! CHECK:         omp.wsloop
+! CHECK:           omp.loop_nest
+! CHECK-NOT:         omp.barrier
+! CHECK:             omp.yield
+! CHECK-NOT:     omp.barrier
+! CHECK:         return
+subroutine test_unreachable_nested_barrier(n)
+  integer :: n, i
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(llvm)}: do) &
+  !$omp& otherwise(nothing)
+  do i = 1, n
+    !$omp metadirective &
+    !$omp& when(construct={parallel}: barrier) &
+    !$omp& otherwise(nothing)
+  end do
+end subroutine

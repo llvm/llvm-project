@@ -2763,6 +2763,18 @@ static void genWsloopClauses(
 //===----------------------------------------------------------------------===//
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
+static bool isCloselyNestedInWorksharingOrSimdLoop(mlir::Operation *op) {
+  for (; op; op = op->getParentOp()) {
+    // A parallel region encountered before the loop wrapper breaks close
+    // nesting with the enclosing worksharing or SIMD loop.
+    if (mlir::isa<mlir::omp::ParallelOp>(op))
+      return false;
+    if (mlir::isa<mlir::omp::WsloopOp, mlir::omp::SimdOp>(op))
+      return true;
+  }
+  return false;
+}
+
 static mlir::omp::AllocateDirOp genAllocateDirOp(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
@@ -2793,7 +2805,16 @@ genBarrierOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
              semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
              mlir::Location loc, const ConstructQueue &queue,
              ConstructQueue::const_iterator item) {
-  return mlir::omp::BarrierOp::create(converter.getFirOpBuilder(), loc);
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  // Semantic nesting checks cannot yet see a metadirective's selected
+  // replacement. Check the realized operation ancestry at the common BARRIER
+  // emission point so direct directives, replacement directives, and
+  // directives in nested metadirective bodies follow the same rule.
+  if (isCloselyNestedInWorksharingOrSimdLoop(
+          builder.getInsertionBlock()->getParentOp()))
+    TODO(loc,
+         "BARRIER closely nested in loop-associated METADIRECTIVE variant");
+  return mlir::omp::BarrierOp::create(builder, loc);
 }
 
 static mlir::omp::CancelOp genCancelOp(lower::AbstractConverter &converter,
@@ -6887,21 +6908,22 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
   return &eval.getNestedEvaluations().back();
 }
 
-static bool hasContentFollowingAssociatedDo(
-    lower::pft::Evaluation &eval, lower::pft::Evaluation &loopEval) {
+static bool hasContentFollowingAssociatedDo(lower::pft::Evaluation &eval,
+                                            lower::pft::Evaluation &loopEval) {
   auto &nested = eval.getNestedEvaluations();
   auto loopIt = llvm::find_if(
       nested, [&](lower::pft::Evaluation &e) { return &e == &loopEval; });
   assert(loopIt != nested.end() && "associated loop not nested");
-  return llvm::any_of(
-      llvm::make_range(std::next(loopIt), nested.end()),
-      [](lower::pft::Evaluation &e) {
-        // PFTBuilder adds a source-less CONTINUE as the exit target when an
-        // executable directive's region ends with a construct.
-        bool isSyntheticExit =
-            e.getIf<parser::ContinueStmt>() && e.position.empty();
-        return !e.isEndStmt() && !isSyntheticExit;
-      });
+  return llvm::any_of(llvm::make_range(std::next(loopIt), nested.end()),
+                      [](lower::pft::Evaluation &e) {
+                        // PFTBuilder adds a source-less CONTINUE as the exit
+                        // target when an executable directive's region ends
+                        // with a construct.
+                        bool isSyntheticExit =
+                            e.getIf<parser::ContinueStmt>() &&
+                            e.position.empty();
+                        return !e.isEndStmt() && !isSyntheticExit;
+                      });
 }
 
 static bool hasDirectiveAssociation(llvm::omp::Directive directive,
