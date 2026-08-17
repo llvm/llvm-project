@@ -163,10 +163,6 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   return Results;
 }
 
-bool isAngled(const std::string &String) {
-  return !String.empty() && String[0] == '<';
-}
-
 std::string fixIncludes(const AnalysisResults &Results,
                         llvm::StringRef FileName, llvm::StringRef Code,
                         const format::FormatStyle &Style) {
@@ -181,33 +177,13 @@ std::string fixIncludes(const AnalysisResults &Results,
     }
   }
 
-  struct InsertionInfo {
-    std::string Text;
-    unsigned Length = 0;
-  };
-  llvm::DenseMap<unsigned, InsertionInfo> InsertionsByOffset;
-
-  for (auto &[Spelled, _] : Results.Missing) {
-    auto Insertion = HeaderIncludes.insert(
-        llvm::StringRef{Spelled}.trim("\"<>"), isAngled(Spelled),
-        tooling::IncludeDirective::Include);
-    if (Insertion) {
-      auto &Info = InsertionsByOffset[Insertion->getOffset()];
-      Info.Text += Insertion->getReplacementText();
-      if (Insertion->getLength() > 0) {
-        // We can concatenate pure insertions (length 0), but at most one
-        // true replacement (length > 0) to avoid overwriting the length.
-        assert(Info.Length == 0 && "Multiple replacements at same offset?");
-        Info.Length = Insertion->getLength();
-      }
-    }
+  llvm::SmallVector<tooling::HeaderIncludes::HeaderToInsert> HeadersToInsert;
+  for (const auto &[Spelled, _] : Results.Missing) {
+    HeadersToInsert.emplace_back(Spelled, tooling::IncludeDirective::Include);
   }
 
-  for (const auto &Entry : InsertionsByOffset) {
-    const auto &Info = Entry.second;
-    const unsigned Offset = Entry.first;
-    cantFail(
-        R.add(tooling::Replacement(FileName, Offset, Info.Length, Info.Text)));
+  for (const auto &Repl : HeaderIncludes.insert(HeadersToInsert)) {
+    cantFail(R.add(Repl));
   }
   auto Positioned = cantFail(format::cleanupAroundReplacements(Code, R, Style));
   return cantFail(tooling::applyAllReplacements(Code, Positioned));
