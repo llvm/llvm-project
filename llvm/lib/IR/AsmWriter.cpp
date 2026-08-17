@@ -448,6 +448,9 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::CHERIoT_LibraryCall:
     Out << "cheriot_librarycallcc";
     break;
+  case CallingConv::WASM_Multivalue:
+    Out << "wasm_multivalue";
+    break;
   }
 }
 

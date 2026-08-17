@@ -47,6 +47,7 @@ static bool callingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::PreserveAll ||
          CallConv == CallingConv::CXX_FAST_TLS ||
          CallConv == CallingConv::WASM_EmscriptenInvoke ||
+         CallConv == CallingConv::WASM_Multivalue ||
          CallConv == CallingConv::Swift;
 }
 
@@ -80,8 +81,8 @@ bool WebAssemblyCallLowering::canLowerReturn(MachineFunction &MF,
                                              CallingConv::ID CallConv,
                                              SmallVectorImpl<BaseArgInfo> &Outs,
                                              bool IsVarArg) const {
-  return WebAssembly::canLowerReturn(Outs.size(),
-                                     &MF.getSubtarget<WebAssemblySubtarget>());
+  return WebAssembly::canLowerReturn(
+      Outs.size(), &MF.getSubtarget<WebAssemblySubtarget>(), CallConv);
 }
 
 bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,

@@ -28,17 +28,18 @@ public:
       : ABIInfo(CGT), defaultInfo(CGT), Kind(Kind) {}
 
 private:
-  ABIArgInfo classifyReturnType(QualType RetTy) const;
-  ABIArgInfo classifyArgumentType(QualType Ty) const;
+  ABIArgInfo classifyReturnType(QualType RetTy, llvm::CallingConv::ID CC) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, llvm::CallingConv::ID CC) const;
 
   // DefaultABIInfo's classifyReturnType and classifyArgumentType are
   // non-virtual, but computeInfo and EmitVAArg are virtual, so we
   // overload them.
   void computeInfo(CGFunctionInfo &FI) const override {
+    llvm::CallingConv::ID CC = FI.getCallingConvention();
     if (!getCXXABI().classifyReturnType(FI))
-      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType(), CC);
     for (auto &Arg : FI.arguments())
-      Arg.info = classifyArgumentType(Arg.type);
+      Arg.info = classifyArgumentType(Arg.type, CC);
   }
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
@@ -95,8 +96,58 @@ public:
   }
 };
 
+/// Count the number of "scalar fields" in the given record type, as defined by
+/// WebAssembly/tool-conventions for the "wasm-multivalue" calling convention
+/// primarily. A scalar field is a field that recursively, through nested
+/// structs, unions, and arrays, contains just a single scalar value.
+///
+/// Returns the number of scalar fields, or std::nullopt if the record contains
+/// a field that is not a scalar field (e.g., a sub-aggregate with multiple
+/// scalars, a bit-field, or a flexible array member).
+///
+/// Note that this is similar to `isSingleElementStruct` in structure.
+static std::optional<unsigned> countScalarFields(ASTContext &Context,
+                                                 QualType T) {
+  if (T->getAs<ComplexType>())
+    return 2;
+  const auto *RD = T->getAsRecordDecl();
+  if (!RD)
+    return std::nullopt;
+  if (RD->hasFlexibleArrayMember())
+    return std::nullopt;
+
+  unsigned Count = 0;
+
+  // Check bases first for C++ records.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (const auto &Base : CXXRD->bases()) {
+      auto SubCount = countScalarFields(Context, Base.getType());
+      if (!SubCount)
+        return std::nullopt;
+      Count += *SubCount;
+    }
+  }
+
+  for (const auto *FD : RD->fields()) {
+    if (FD->isBitField())
+      return std::nullopt;
+    if (isEmptyField(Context, FD, true))
+      continue;
+
+    QualType T = FD->getType();
+    if (isAggregateTypeForABI(T) && !isSingleElementStruct(T, Context))
+      return std::nullopt;
+
+    ++Count;
+  }
+
+  return Count;
+}
+
 /// Classify argument of given type \p Ty.
-ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
+ABIArgInfo
+WebAssemblyABIInfo::classifyArgumentType(QualType Ty,
+                                         llvm::CallingConv::ID CC) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
   if (isAggregateTypeForABI(Ty)) {
@@ -113,6 +164,12 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
     // though watch out for things like bitfields.
     if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+    // For the wasm-multivalue calling convention, structs with exactly two
+    // scalar fields are passed directly as two arguments.
+    if (CC == llvm::CallingConv::WASM_Multivalue) {
+      if (auto N = countScalarFields(getContext(), Ty); N && *N == 2)
+        return ABIArgInfo::getExpand();
+    }
     // For the experimental multivalue ABI, fully expand all other aggregates
     if (Kind == WebAssemblyABIKind::ExperimentalMV) {
       if (Ty->getAs<ComplexType>())
@@ -136,7 +193,9 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
   return defaultInfo.classifyArgumentType(Ty);
 }
 
-ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
+ABIArgInfo
+WebAssemblyABIInfo::classifyReturnType(QualType RetTy,
+                                       llvm::CallingConv::ID CC) const {
   if (isAggregateTypeForABI(RetTy)) {
     // Records with non-trivial destructors/copy-constructors should not be
     // returned by value.
@@ -149,6 +208,14 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
       // ABIArgInfo::getDirect().
       if (const Type *SeltTy = isSingleElementStruct(RetTy, getContext()))
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+      // For the wasm-multivalue calling convention, structs whose fields are
+      // (recursively) scalars are returned directly via the multivalue
+      // proposal.
+      if (CC == llvm::CallingConv::WASM_Multivalue) {
+        if (auto N = countScalarFields(getContext(), RetTy);
+            N && *N > 0 && *N <= 100)
+          return ABIArgInfo::getDirect();
+      }
       // For the experimental multivalue ABI, return all other aggregates
       if (Kind == WebAssemblyABIKind::ExperimentalMV)
         return ABIArgInfo::getDirect();
