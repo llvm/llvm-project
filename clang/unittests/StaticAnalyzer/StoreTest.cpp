@@ -152,6 +152,101 @@ TEST(Store, LiteralCompound) {
       "void foo() { int *test = (int[]){ 1, 2, 3 }; }", "input.c"));
 }
 
+// Test that iterClusterBindings() reports the direct and default bindings of
+// only one cluster with their offsets.
+class IterClusterBindingsConsumer : public StoreTestConsumer {
+  struct Binding {
+    std::optional<uint64_t> BitOffset;
+    StoreManager::BindingKind Kind;
+    SVal Val;
+  };
+
+  class Collector : public StoreManager::ClusterBindingsHandler {
+  public:
+    std::vector<Binding> Bindings;
+
+    bool handleBinding(StoreManager &, Store, const MemRegion *,
+                       std::optional<uint64_t> BitOffset,
+                       StoreManager::BindingKind Kind, SVal Val) override {
+      Bindings.push_back({BitOffset, Kind, Val});
+      return true;
+    }
+  };
+
+  // Build a Store by hand and call iterClusterBindings on it.
+  void performTest(const Decl *D) override {
+    StoreManager &SManager = Eng.getStoreManager();
+    SValBuilder &Builder = Eng.getSValBuilder();
+    MemRegionManager &MRManager = SManager.getRegionManager();
+    ASTContext &ASTCtxt = Eng.getContext();
+
+    // Setup AST decls and StackFrame.
+    const auto *VDA = findDeclByName<VarDecl>(D, "a");
+    const auto *VDB = findDeclByName<VarDecl>(D, "b");
+    ASSERT_TRUE(VDA && VDB);
+
+    const StackFrame *SF =
+        Eng.getAnalysisDeclContextManager().getTopStackFrame(D);
+    const VarRegion *A = MRManager.getVarRegion(VDA, SF);
+    const VarRegion *B = MRManager.getVarRegion(VDB, SF);
+
+    QualType Int = ASTCtxt.IntTy;
+    SVal Zero = Builder.makeZeroVal(Int);
+    SVal One = Builder.makeIntVal(1, Int);
+
+    // Build one direct binding (a[1] = 1) and one default binding for the rest
+    // of 'a' so the handler sees both kinds. We give 'b' a binding of its own
+    // to ensure we don't see it (it's in a different cluster).
+    loc::MemRegionVal A1(
+        MRManager.getElementRegion(Int, Builder.makeArrayIndex(1), A, ASTCtxt));
+    loc::MemRegionVal B0(
+        MRManager.getElementRegion(Int, Builder.makeArrayIndex(0), B, ASTCtxt));
+
+    // Build the store, holding on to each StoreRef, since they own references
+    // to the tree the raw Store points to.
+    StoreRef StInit = SManager.getInitialStore(SF);
+    StoreRef StA1 = SManager.Bind(StInit.getStore(), A1, One).ResultingStore;
+    StoreRef StADefault =
+        SManager.BindDefaultInitial(StA1.getStore(), A, Zero).ResultingStore;
+    StoreRef St = SManager.Bind(StADefault.getStore(), B0, One).ResultingStore;
+
+    Collector C;
+    SManager.iterClusterBindings(St.getStore(), A, C);
+
+    // Ensure only the two bindings of 'a' are reported.
+    ASSERT_EQ(2u, C.Bindings.size());
+    const Binding *Direct = nullptr;
+    const Binding *Default = nullptr;
+    for (const Binding &Bind : C.Bindings) {
+      if (Bind.Kind == StoreManager::BindingKind::Direct)
+        Direct = &Bind;
+      else
+        Default = &Bind;
+    }
+    ASSERT_TRUE(Direct && Default);
+
+    EXPECT_EQ(ASTCtxt.getTypeSize(Int), Direct->BitOffset);
+    EXPECT_EQ(One, Direct->Val);
+    EXPECT_EQ(0u, Default->BitOffset);
+    EXPECT_EQ(Zero, Default->Val);
+
+    Collector CB;
+    SManager.iterClusterBindings(St.getStore(), B, CB);
+    ASSERT_EQ(1u, CB.Bindings.size());
+    EXPECT_EQ(0u, CB.Bindings[0].BitOffset);
+    EXPECT_EQ(StoreManager::BindingKind::Direct, CB.Bindings[0].Kind);
+  }
+
+public:
+  using StoreTestConsumer::StoreTestConsumer;
+};
+
+TEST(Store, IterClusterBindings) {
+  EXPECT_TRUE(tooling::runToolOnCode(
+      std::make_unique<TestAction<IterClusterBindingsConsumer>>(),
+      "void foo() { int a[3]; int b[3]; }", "input.c"));
+}
+
 } // namespace
 } // namespace ento
 } // namespace clang

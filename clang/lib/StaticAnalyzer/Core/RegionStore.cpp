@@ -43,27 +43,39 @@ using namespace ento;
 namespace {
 class BindingKey {
 public:
-  enum Kind {
-    Default = 0x0,
-    Direct = 0x1,
-    Symbolic = 0x2,
-  };
+  using Kind = StoreManager::BindingKind;
+
+  static constexpr Kind Direct = Kind::Direct;
+  static constexpr Kind Default = Kind::Default;
 
 private:
+  /// The integer value bitpacked into \c P. These flags represent whether the
+  /// binding is direct or default, and whether the offset is symbolic or not.
+  enum Flags : unsigned {
+    DefaultFlag = 0x0,
+    DirectFlag = 0x1,
+    SymbolicFlag = 0x2,
+  };
+
+  static constexpr unsigned toFlags(Kind k) {
+    return k == Kind::Direct ? DirectFlag : DefaultFlag;
+  }
+
   llvm::PointerIntPair<const MemRegion *, 2> P;
   uint64_t Data;
 
   /// Create a key for a binding to region \p r, which has a symbolic offset
   /// from region \p Base.
   explicit BindingKey(const SubRegion *r, const SubRegion *Base, Kind k)
-    : P(r, k | Symbolic), Data(reinterpret_cast<uintptr_t>(Base)) {
+      : P(r, toFlags(k) | SymbolicFlag),
+        Data(reinterpret_cast<uintptr_t>(Base)) {
     assert(r && Base && "Must have known regions.");
     assert(getConcreteOffsetRegion() == Base && "Failed to store base region");
   }
 
   /// Create a key for a binding at \p offset from base region \p r.
   explicit BindingKey(const MemRegion *r, uint64_t offset, Kind k)
-    : P(r, k), Data(offset) {
+      : P(r, toFlags(k)), Data(offset) {
     assert(r && "Must have known regions.");
     assert(getOffset() == offset && "Failed to store offset");
     assert((r == r->getBaseRegion() ||
@@ -72,9 +84,10 @@ private:
   }
 
 public:
-  bool isDirect() const { return P.getInt() & Direct; }
+  bool isDirect() const { return P.getInt() & DirectFlag; }
   bool isDefault() const { return !isDirect(); }
-  bool hasSymbolicOffset() const { return P.getInt() & Symbolic; }
+  Kind getBindingKind() const { return isDirect() ? Direct : Default; }
+  bool hasSymbolicOffset() const { return P.getInt() & SymbolicFlag; }
 
   const MemRegion *getRegion() const { return P.getPointer(); }
   uint64_t getOffset() const {
@@ -827,6 +840,25 @@ public: // Part of public interface to class.
             return;
         }
       }
+    }
+  }
+
+  void iterClusterBindings(Store S, const MemRegion *BaseRegion,
+                           ClusterBindingsHandler &Handler) override {
+    assert(BaseRegion == BaseRegion->getBaseRegion() &&
+           "Should only be called for base regions");
+    RegionBindingsRef B = getRegionBindings(S);
+    const ClusterBindings *Cluster = B.lookup(BaseRegion);
+    if (!Cluster)
+      return;
+    for (const auto &[Key, Value] : *Cluster) {
+      // Incorporate the offset.
+      std::optional<uint64_t> BitOffset;
+      if (!Key.hasSymbolicOffset())
+        BitOffset = Key.getOffset();
+      if (!Handler.handleBinding(*this, S, Key.getRegion(), BitOffset,
+                                 Key.getBindingKind(), Value))
+        return;
     }
   }
 };

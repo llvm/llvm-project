@@ -3264,6 +3264,33 @@ Check for cases where the dynamic and the static type of an object are unrelated
  NSNumber *number = date;
  [number doubleValue];
 
+.. _alpha-core-NullTerminated:
+
+alpha.core.NullTerminated (C, C++)
+""""""""""""""""""""""""""""""""""
+Check for arrays not null-terminated passed to functions whose parameters are
+annotated with ``__attribute__((annotate("null_terminated")))``.
+
+.. code-block:: c
+
+ #define NULL_TERMINATED __attribute__((annotate("null_terminated")))
+
+ void receive(NULL_TERMINATED const int signals[]);
+
+ void caller(void) {
+   int sigs[] = {1, 2, 3};  // Missing null terminator
+   receive(sigs);           // warn: array argument is not null-terminated
+ }
+
+An array is only reported when every one of its elements is known to be
+non-zero, so the checker remains silent if there is anything it cannot reason
+about.
+
+**Options**
+
+* ``MaxArraySize`` (integer). Arrays with more elements than this are not
+  inspected. Defaults to 1024.
+
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)

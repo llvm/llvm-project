@@ -286,6 +286,33 @@ public:
   /// iterBindings - Iterate over the bindings in the Store.
   virtual void iterBindings(Store store, BindingsHandler& f) = 0;
 
+  /// The kind of a binding: either \c Direct, a value bound to one specific
+  /// location, or \c Default, a value covering every location of a region that
+  /// has no direct binding of its own.
+  enum class BindingKind { Direct, Default };
+
+  class ClusterBindingsHandler {
+  public:
+    virtual ~ClusterBindingsHandler();
+
+    /// \param Region the region the offset is relative to: either the base
+    ///        region of the cluster, or the region the binding was created for
+    ///        if the binding has a symbolic offset.
+    /// \param BitOffset the offset of the binding within \p Region, or
+    ///        std::nullopt if the offset is symbolic.
+    /// \return whether the iteration should continue.
+    virtual bool handleBinding(StoreManager &SMgr, Store S,
+                               const MemRegion *Region,
+                               std::optional<uint64_t> BitOffset,
+                               BindingKind Kind, SVal Val) = 0;
+  };
+
+  /// Iterate over the bindings of the memory cluster \p BaseRegion belongs to.
+  /// Unlike iterBindings(), here we preserve the offset of each binding,
+  /// including default bindings.
+  virtual void iterClusterBindings(Store S, const MemRegion *BaseRegion,
+                                   ClusterBindingsHandler &Handler) = 0;
+
 protected:
   const ElementRegion *MakeElementRegion(const SubRegion *baseRegion,
                                          QualType pointeeTy,

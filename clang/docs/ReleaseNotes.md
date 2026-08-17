@@ -621,6 +621,12 @@ features cannot lower the translation-unit ABI level;
 
 #### Moved checkers
 
+#### New checkers or options
+
+- Introduced the ``alpha.core.NullTerminated`` checker to detect arrays missing
+  a null terminator passed as a parameter annotated with
+  ``__attribute__((annotate("null_terminated")))``.
+
 #### Diagnostic changes
 
 - For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)

@@ -289,6 +289,17 @@ def StdVariantChecker : Checker<"StdVariant">,
   HelpText<"Check for bad type access for std::variant.">,
   Documentation<HasDocumentation>;
 
+def NullTerminatedChecker
+    : Checker<"NullTerminated">,
+      HelpText<"Check for arrays not null-terminated passed to functions whose "
+               "parameters are annotated with annotate(\"null_terminated\")">,
+      CheckerOptions<[CmdLineOption<
+          Integer, "MaxArraySize",
+          "Maximum number of array elements to scan for a null terminator. "
+          "Arrays larger than this are skipped.",
+          "1024", InAlpha>]>,
+      Documentation<HasDocumentation>;
+
 } // end "alpha.core"
 
 //===----------------------------------------------------------------------===//

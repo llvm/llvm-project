@@ -528,6 +528,8 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
 
 StoreManager::BindingsHandler::~BindingsHandler() = default;
 
+StoreManager::ClusterBindingsHandler::~ClusterBindingsHandler() = default;
+
 bool StoreManager::FindUniqueBinding::HandleBinding(StoreManager& SMgr,
                                                     Store store,
                                                     const MemRegion* R,
