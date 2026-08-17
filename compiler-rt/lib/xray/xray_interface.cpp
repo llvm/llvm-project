@@ -21,6 +21,11 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#if SANITIZER_APPLE
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+#endif
+
 #if SANITIZER_FUCHSIA
 #include <zircon/process.h>
 #include <zircon/sanitizer.h>
@@ -130,6 +135,19 @@ public:
     }
     MustCleanup = true;
     return 0;
+#elif SANITIZER_APPLE
+    // On macOS, mprotect() cannot change protections on code-signed __TEXT
+    // pages. Use vm_protect() with VM_PROT_COPY to create a copy-on-write
+    // mapping that allows modification.
+    kern_return_t kr = vm_protect(
+        mach_task_self(), reinterpret_cast<vm_address_t>(PageAlignedAddr),
+        MProtectLen, 0, VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
+    if (kr == KERN_SUCCESS) {
+      MustCleanup = true;
+      return 0;
+    }
+    Report("XRay: vm_protect failed: %d\n", kr);
+    return -1;
 #else
     auto R = mprotect(PageAlignedAddr, MProtectLen,
                       PROT_READ | PROT_WRITE | PROT_EXEC);
@@ -148,6 +166,10 @@ public:
         Report("XRay: cannot change code protection: %s\n",
                _zx_status_get_string(R));
       }
+#elif SANITIZER_APPLE
+      vm_protect(mach_task_self(),
+                 reinterpret_cast<vm_address_t>(PageAlignedAddr), MProtectLen,
+                 0, VM_PROT_READ | VM_PROT_EXECUTE);
 #else
       mprotect(PageAlignedAddr, MProtectLen, PROT_READ | PROT_EXEC);
 #endif
