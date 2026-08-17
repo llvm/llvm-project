@@ -9381,7 +9381,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   const unsigned DstBits = APFloat::getSizeInBits(DstSem);
   const unsigned DstPrecision = APFloat::semanticsPrecision(DstSem);
   const unsigned DstMant = DstPrecision - 1;
-  // Unsigned formats such as Float8E5M3FNU spend no bit on the sign.
+  // Unsigned formats spend no bit on the sign.
   const bool DstHasSign = APFloat::semanticsHasSignedRepr(DstSem);
   const unsigned DstExpBits = DstBits - (DstHasSign ? 1 : 0) - DstMant;
   const int DstBias = 1 - APFloat::semanticsMinExponent(DstSem);
@@ -9557,8 +9557,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
                   DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, MantOverflow));
 
   // Precompute sign shifted to MSB of destination. Unsigned formats have no
-  // sign bit, so nothing is merged in and negative inputs are resolved
-  // separately when assembling the final result.
+  // sign bit to merge in.
   SDValue SignShifted =
       DstHasSign
           ? DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
@@ -9747,16 +9746,14 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
   Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
 
-  // An unsigned destination format cannot encode a negative value. -0.0 is
-  // already covered by the IsZero case above and converts to +0; any other
-  // negative input saturates to zero, or is poison when not saturating.
-  // Applied before the NaN case so that a negative NaN still produces the NaN
-  // encoding.
-  if (!DstHasSign) {
+  // Negative values are unrepresentable in an unsigned format: clamp to zero
+  // when saturating, poison otherwise so no select is needed. -0.0 is handled
+  // by IsZero above. Run before the NaN case so a negative NaN still yields
+  // NaN.
+  if (!DstHasSign && Saturate) {
     SDValue IsNegative =
         DAG.getSetCC(dl, FPSetCCVT, FloatVal, FPZero, ISD::SETOLT);
-    SDValue NegResult = Saturate ? Zero : DAG.getPOISON(IntVT);
-    Result = DAG.getSelect(dl, IntVT, IsNegative, NegResult, Result);
+    Result = DAG.getSelect(dl, IntVT, IsNegative, Zero, Result);
   }
 
   Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
@@ -9796,7 +9793,7 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   const unsigned SrcBits = APFloat::getSizeInBits(SrcSem);
   const unsigned SrcPrecision = APFloat::semanticsPrecision(SrcSem);
   const unsigned SrcMant = SrcPrecision - 1;
-  // Unsigned formats such as Float8E5M3FNU spend no bit on the sign.
+  // Unsigned formats spend no bit on the sign.
   const bool SrcHasSign = APFloat::semanticsHasSignedRepr(SrcSem);
   const unsigned SrcExp = SrcBits - (SrcHasSign ? 1 : 0) - SrcMant;
   const int SrcBias = 1 - APFloat::semanticsMinExponent(SrcSem);
@@ -9839,8 +9836,8 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
                               DAG.getShiftAmountConstant(SrcMant, IntVT, dl)),
                   DAG.getConstant(ExpMask, dl, IntVT));
 
-  // An unsigned source has no sign bit; bit SrcBits - 1 belongs to the
-  // exponent field, so the result is always non-negative.
+  // An unsigned source has no sign bit; bit SrcBits - 1 is part of the
+  // exponent.
   SDValue SignShifted =
       SrcHasSign
           ? DAG.getNode(
