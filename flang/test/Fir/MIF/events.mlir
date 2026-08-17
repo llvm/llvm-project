@@ -38,8 +38,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "EVENT_TEST"} {
 }
 
 // CHECK: fir.call @_QMprifPprif_initial_team_index(
-// CHECK: fir.call @_QMprifPprif_event_post(%[[IMAGE_INDEX:.*]], %[[EVENT_PTR:.*]], %[[OFFSET:.*]], %[[STAT:.*]], %[[ERRMSG:.*]], %[[ERRMSG2:.*]]) : (!fir.ref<i32>, !fir.ptr<none>, !fir.ref<i64>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_event_post(%[[IMAGE_INDEX:.*]], %[[EVENT_PTR:.*]], %[[OFFSET:.*]], %[[STAT:.*]], %[[ERRMSG:.*]], %[[ERRMSG2:.*]]) : (!fir.ref<i32>, !fir.ref<none>, !fir.ref<i64>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
 
 
 // CHECK: fir.call @_QMprifPprif_event_wait(%[[EVENT_PTR:.*]], %[[UNTIL_COUNT:.*]], %[[STAT:.*]], %[[ERRMSG:.*]], %[[ERRMSG2:.*]]) : (!fir.ptr<none>, !fir.ref<i64>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
-

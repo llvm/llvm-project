@@ -602,8 +602,8 @@ def mif_EventPostOp : mif_Op<"event_post", [AttrSizedOperandSegments,
   let description = [{
     This is a post-event operation.
     Arguments: 
-      - `image_num`: Shall be an integer that correspond to the image index of 
-        the event variable.
+      - `cosubscripts`: Shall be a list of integer cosubscripts to determine the 
+        image_num to be communicated.
       - `event_var`: Shall be a coarray or be part of a coarray of 
         type EVENT_TYPE from the intrinsic module ISO_FORTRAN_ENV.
   }];
@@ -631,7 +631,7 @@ def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments,
         the given event variable to be waited for.
   }];
 
-  let arguments = (ins fir_ReferenceType:$event,
+  let arguments = (ins AnyRefOrBoxType:$event,
       Optional<AnyIntegerType>:$until_count,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
