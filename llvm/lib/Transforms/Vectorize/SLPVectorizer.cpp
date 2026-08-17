@@ -26831,9 +26831,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (ScheduleData *OpSD = getScheduleData(I);
             OpSD && OpSD->hasValidDependencies()) {
           OpSD->clearDirectDependencies();
-          if (RegionHasStackSave ||
-              !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
-            ControlDependentMembers.push_back(OpSD);
+          ControlDependentMembers.push_back(OpSD);
           if (any_of(VL, [&](Value *V) { return S.isExpandedBinOp(V); })) {
             // Clear scheduling data for all operands, if this node is operand
             // of the expanded instruction.
