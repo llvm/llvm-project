@@ -460,7 +460,12 @@ public:
   bool hasCalls() const { return !CallTargets.empty(); }
 
   uint64_t getSamples() const { return NumSamples; }
-  const CallTargetMap &getCallTargets() const { return CallTargets; }
+  /// Return the call targets collected in this sample record.
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this SampleRecord.
+  const CallTargetMap &getCallTargets() const LLVM_LIFETIME_BOUND {
+    return CallTargets;
+  }
   SortedCallTargetSet getSortedCallTargets() const {
     return sortCallTargets(CallTargets);
   }
@@ -975,8 +980,11 @@ public:
   /// Returns the call target map collected at a given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
   ErrorOr<const SampleRecord::CallTargetMap &>
-  findCallTargetMapAt(uint32_t LineOffset, uint32_t Discriminator) const {
+  findCallTargetMapAt(uint32_t LineOffset,
+                      uint32_t Discriminator) const LLVM_LIFETIME_BOUND {
     const auto &Ret = BodySamples.find(
         mapIRLocToProfileLoc(LineLocation(LineOffset, Discriminator)));
     if (Ret == BodySamples.end())
@@ -986,8 +994,10 @@ public:
 
   /// Returns the call target map collected at a given location specified by \p
   /// CallSite. If the location is not found in profile, return error.
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
   ErrorOr<const SampleRecord::CallTargetMap &>
-  findCallTargetMapAt(const LineLocation &CallSite) const {
+  findCallTargetMapAt(const LineLocation &CallSite) const LLVM_LIFETIME_BOUND {
     const auto &Ret = BodySamples.find(mapIRLocToProfileLoc(CallSite));
     if (Ret == BodySamples.end())
       return std::error_code();
@@ -995,13 +1005,14 @@ public:
   }
 
   /// Return the function samples at the given callsite location.
-  FunctionSamplesMap &functionSamplesAt(const LineLocation &Loc) {
+  FunctionSamplesMap &
+  functionSamplesAt(const LineLocation &Loc) LLVM_LIFETIME_BOUND {
     return CallsiteSamples[mapIRLocToProfileLoc(Loc)];
   }
 
   /// Returns the FunctionSamplesMap at the given \p Loc.
   const FunctionSamplesMap *
-  findFunctionSamplesMapAt(const LineLocation &Loc) const {
+  findFunctionSamplesMapAt(const LineLocation &Loc) const LLVM_LIFETIME_BOUND {
     auto Iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
     if (Iter == CallsiteSamples.end())
       return nullptr;
@@ -1009,7 +1020,10 @@ public:
   }
 
   /// Returns the TypeCountMap for inlined callsites at the given \p Loc.
-  const TypeCountMap *findCallsiteTypeSamplesAt(const LineLocation &Loc) const {
+  /// The returned pointer may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
+  const TypeCountMap *
+  findCallsiteTypeSamplesAt(const LineLocation &Loc) const LLVM_LIFETIME_BOUND {
     auto Iter = VirtualCallsiteTypeCounts.find(mapIRLocToProfileLoc(Loc));
     if (Iter == VirtualCallsiteTypeCounts.end())
       return nullptr;
@@ -1022,11 +1036,11 @@ public:
   /// \p Loc with the maximum total sample count. If \p Remapper or \p
   /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
   /// with equivalent name as \p CalleeName.
-  LLVM_ABI const FunctionSamples *
-  findFunctionSamplesAt(const LineLocation &Loc, StringRef CalleeName,
-                        SampleProfileReaderItaniumRemapper *Remapper,
-                        const HashKeyMap<DenseMap, FunctionId, FunctionId>
-                            *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
+      const LineLocation &Loc, StringRef CalleeName,
+      SampleProfileReaderItaniumRemapper *Remapper,
+      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+          *FuncNameToProfNameMap = nullptr) const LLVM_LIFETIME_BOUND;
 
   bool empty() const { return TotalSamples == 0; }
 
@@ -1070,10 +1084,14 @@ public:
   }
 
   /// Return all the samples collected in the body of the function.
-  const BodySampleMap &getBodySamples() const { return BodySamples; }
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
+  const BodySampleMap &getBodySamples() const LLVM_LIFETIME_BOUND {
+    return BodySamples;
+  }
 
   /// Return all the callsite samples collected in the body of the function.
-  const CallsiteSampleMap &getCallsiteSamples() const {
+  const CallsiteSampleMap &getCallsiteSamples() const LLVM_LIFETIME_BOUND {
     return CallsiteSamples;
   }
 
@@ -1082,14 +1100,18 @@ public:
 
   /// Returns vtable access samples for the C++ types collected in this
   /// function.
-  const CallsiteTypeMap &getCallsiteTypeCounts() const {
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
+  const CallsiteTypeMap &getCallsiteTypeCounts() const LLVM_LIFETIME_BOUND {
     return VirtualCallsiteTypeCounts;
   }
 
   /// Returns the vtable access samples for the C++ types for \p Loc.
   /// Under the hood, the caller-specified \p Loc will be un-drifted before the
   /// type sample lookup if possible.
-  TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) {
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
+  TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) LLVM_LIFETIME_BOUND {
     return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
   }
 
@@ -1360,13 +1382,13 @@ public:
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
   /// name.
-  LLVM_ABI const FunctionSamples *
-  findFunctionSamples(const DILocation *DIL,
-                      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
-                      const HashKeyMap<DenseMap, FunctionId, FunctionId>
-                          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *findFunctionSamples(
+      const DILocation *DIL,
+      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
+      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+          *FuncNameToProfNameMap = nullptr) const LLVM_LIFETIME_BOUND;
 
-  SampleContext &getContext() const { return Context; }
+  SampleContext &getContext() const LLVM_LIFETIME_BOUND { return Context; }
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
 
