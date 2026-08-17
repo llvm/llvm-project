@@ -31,11 +31,12 @@ CharacterValueImpl CharacterValueImpl::Zero(int kind) {
 
 CharacterValueImpl CharacterValueImpl::FromRawBytes(
     int kind, const void *raw, size_t byteSize) {
-  return withCharProto(kind, [kind, raw, byteSize](auto charProto) {
+  return withCharProto(kind, [kind, raw, size](auto charProto) {
     using CharT = decltype(charProto);
+    CHECK(size % sizeof(CharT) == 0);
     std::basic_string<CharT> s;
-    if (byteSize > 0) {
-      s.assign(static_cast<const CharT *>(raw), byteSize);
+    if (size > 0) {
+      s.assign(static_cast<const CharT *>(raw), size / sizeof(CharT));
     }
     return CharacterValueImpl{kind, std::move(s)};
   });
