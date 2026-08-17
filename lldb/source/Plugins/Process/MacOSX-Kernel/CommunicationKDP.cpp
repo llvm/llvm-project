@@ -49,12 +49,17 @@ bool CommunicationKDP::SendRequestPacket(
   return SendRequestPacketNoLock(request_packet);
 }
 
+static constexpr uint8_t Combine(CommunicationKDP::PacketType packet_type,
+                                 CommunicationKDP::CommandType command_type) {
+  return uint8_t(command_type) | uint8_t(packet_type);
+}
+
 void CommunicationKDP::MakeRequestPacketHeader(CommandType request_type,
                                                PacketStreamType &request_packet,
                                                uint16_t request_length) {
   request_packet.Clear();
-  request_packet.PutHex8(request_type |
-                         ePacketTypeRequest);      // Set the request type
+  request_packet.PutHex8(
+      Combine(ePacketTypeRequest, request_type));  // Set the request type
   request_packet.PutHex8(m_request_sequence_id++); // Sequence number
   request_packet.PutHex16(
       request_length); // Length of the packet including this header
@@ -252,8 +257,8 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
     lldb::offset_t offset = 0;
     uint8_t reply_command = packet.GetU8(&offset);
     switch (reply_command) {
-    case ePacketTypeRequest | KDP_EXCEPTION:
-    case ePacketTypeRequest | KDP_TERMINATION:
+    case Combine(ePacketTypeRequest, KDP_EXCEPTION):
+    case Combine(ePacketTypeRequest, KDP_TERMINATION):
       // We got an exception request, so be sure to send an ACK
       {
         PacketStreamType request_ack_packet(Stream::eBinary, m_byte_order);
@@ -268,36 +273,36 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
       }
       // Fall through to case below to get packet contents
       [[fallthrough]];
-    case ePacketTypeReply | KDP_CONNECT:
-    case ePacketTypeReply | KDP_DISCONNECT:
-    case ePacketTypeReply | KDP_HOSTINFO:
-    case ePacketTypeReply | KDP_VERSION:
-    case ePacketTypeReply | KDP_MAXBYTES:
-    case ePacketTypeReply | KDP_READMEM:
-    case ePacketTypeReply | KDP_WRITEMEM:
-    case ePacketTypeReply | KDP_READREGS:
-    case ePacketTypeReply | KDP_WRITEREGS:
-    case ePacketTypeReply | KDP_LOAD:
-    case ePacketTypeReply | KDP_IMAGEPATH:
-    case ePacketTypeReply | KDP_SUSPEND:
-    case ePacketTypeReply | KDP_RESUMECPUS:
-    case ePacketTypeReply | KDP_BREAKPOINT_SET:
-    case ePacketTypeReply | KDP_BREAKPOINT_REMOVE:
-    case ePacketTypeReply | KDP_REGIONS:
-    case ePacketTypeReply | KDP_REATTACH:
-    case ePacketTypeReply | KDP_HOSTREBOOT:
-    case ePacketTypeReply | KDP_READMEM64:
-    case ePacketTypeReply | KDP_WRITEMEM64:
-    case ePacketTypeReply | KDP_BREAKPOINT_SET64:
-    case ePacketTypeReply | KDP_BREAKPOINT_REMOVE64:
-    case ePacketTypeReply | KDP_KERNELVERSION:
-    case ePacketTypeReply | KDP_READPHYSMEM64:
-    case ePacketTypeReply | KDP_WRITEPHYSMEM64:
-    case ePacketTypeReply | KDP_READIOPORT:
-    case ePacketTypeReply | KDP_WRITEIOPORT:
-    case ePacketTypeReply | KDP_READMSR64:
-    case ePacketTypeReply | KDP_WRITEMSR64:
-    case ePacketTypeReply | KDP_DUMPINFO: {
+    case Combine(ePacketTypeReply, KDP_CONNECT):
+    case Combine(ePacketTypeReply, KDP_DISCONNECT):
+    case Combine(ePacketTypeReply, KDP_HOSTINFO):
+    case Combine(ePacketTypeReply, KDP_VERSION):
+    case Combine(ePacketTypeReply, KDP_MAXBYTES):
+    case Combine(ePacketTypeReply, KDP_READMEM):
+    case Combine(ePacketTypeReply, KDP_WRITEMEM):
+    case Combine(ePacketTypeReply, KDP_READREGS):
+    case Combine(ePacketTypeReply, KDP_WRITEREGS):
+    case Combine(ePacketTypeReply, KDP_LOAD):
+    case Combine(ePacketTypeReply, KDP_IMAGEPATH):
+    case Combine(ePacketTypeReply, KDP_SUSPEND):
+    case Combine(ePacketTypeReply, KDP_RESUMECPUS):
+    case Combine(ePacketTypeReply, KDP_BREAKPOINT_SET):
+    case Combine(ePacketTypeReply, KDP_BREAKPOINT_REMOVE):
+    case Combine(ePacketTypeReply, KDP_REGIONS):
+    case Combine(ePacketTypeReply, KDP_REATTACH):
+    case Combine(ePacketTypeReply, KDP_HOSTREBOOT):
+    case Combine(ePacketTypeReply, KDP_READMEM64):
+    case Combine(ePacketTypeReply, KDP_WRITEMEM64):
+    case Combine(ePacketTypeReply, KDP_BREAKPOINT_SET64):
+    case Combine(ePacketTypeReply, KDP_BREAKPOINT_REMOVE64):
+    case Combine(ePacketTypeReply, KDP_KERNELVERSION):
+    case Combine(ePacketTypeReply, KDP_READPHYSMEM64):
+    case Combine(ePacketTypeReply, KDP_WRITEPHYSMEM64):
+    case Combine(ePacketTypeReply, KDP_READIOPORT):
+    case Combine(ePacketTypeReply, KDP_WRITEIOPORT):
+    case Combine(ePacketTypeReply, KDP_READMSR64):
+    case Combine(ePacketTypeReply, KDP_WRITEMSR64):
+    case Combine(ePacketTypeReply, KDP_DUMPINFO): {
       offset = 2;
       const uint16_t length = packet.GetU16(&offset);
       if (length <= bytes_available) {
