@@ -92,18 +92,12 @@ define void @v_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
 define amdgpu_ps i64 @s_bfm64_pattern(i64 inreg %x, i64 inreg %y) {
 ; SI-LABEL: s_bfm64_pattern:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_lshl_b64 s[0:1], 1, s0
-; SI-NEXT:    s_add_u32 s0, s0, -1
-; SI-NEXT:    s_addc_u32 s1, s1, -1
-; SI-NEXT:    s_lshl_b64 s[0:1], s[0:1], s2
+; SI-NEXT:    s_bfm_b64 s[0:1], s0, s2
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_bfm64_pattern:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_lshl_b64 s[0:1], 1, s0
-; VI-NEXT:    s_add_u32 s0, s0, -1
-; VI-NEXT:    s_addc_u32 s1, s1, -1
-; VI-NEXT:    s_lshl_b64 s[0:1], s[0:1], s2
+; VI-NEXT:    s_bfm_b64 s[0:1], s0, s2
 ; VI-NEXT:    ; return to shader part epilog
   %a = shl i64 1, %x
   %b = sub i64 %a, 1
@@ -114,16 +108,12 @@ define amdgpu_ps i64 @s_bfm64_pattern(i64 inreg %x, i64 inreg %y) {
 define amdgpu_ps i64 @s_bfm64_pattern_simple(i64 inreg %x) {
 ; SI-LABEL: s_bfm64_pattern_simple:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_lshl_b64 s[0:1], 1, s0
-; SI-NEXT:    s_add_u32 s0, s0, -1
-; SI-NEXT:    s_addc_u32 s1, s1, -1
+; SI-NEXT:    s_bfm_b64 s[0:1], s0, 0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_bfm64_pattern_simple:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_lshl_b64 s[0:1], 1, s0
-; VI-NEXT:    s_add_u32 s0, s0, -1
-; VI-NEXT:    s_addc_u32 s1, s1, -1
+; VI-NEXT:    s_bfm_b64 s[0:1], s0, 0
 ; VI-NEXT:    ; return to shader part epilog
   %a = shl i64 1, %x
   %b = sub i64 %a, 1
@@ -159,26 +149,14 @@ define void @v_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
 define amdgpu_ps <2 x i64> @s_bfm64_v2i64_pattern(<2 x i64> inreg %x, <2 x i64> inreg %y) {
 ; SI-LABEL: s_bfm64_v2i64_pattern:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_lshl_b64 s[2:3], 1, s2
-; SI-NEXT:    s_lshl_b64 s[0:1], 1, s0
-; SI-NEXT:    s_add_u32 s0, s0, -1
-; SI-NEXT:    s_addc_u32 s1, s1, -1
-; SI-NEXT:    s_add_u32 s2, s2, -1
-; SI-NEXT:    s_addc_u32 s3, s3, -1
-; SI-NEXT:    s_lshl_b64 s[2:3], s[2:3], s6
-; SI-NEXT:    s_lshl_b64 s[0:1], s[0:1], s4
+; SI-NEXT:    s_bfm_b64 s[2:3], s2, s6
+; SI-NEXT:    s_bfm_b64 s[0:1], s0, s4
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_bfm64_v2i64_pattern:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_lshl_b64 s[2:3], 1, s2
-; VI-NEXT:    s_lshl_b64 s[0:1], 1, s0
-; VI-NEXT:    s_add_u32 s0, s0, -1
-; VI-NEXT:    s_addc_u32 s1, s1, -1
-; VI-NEXT:    s_add_u32 s2, s2, -1
-; VI-NEXT:    s_addc_u32 s3, s3, -1
-; VI-NEXT:    s_lshl_b64 s[2:3], s[2:3], s6
-; VI-NEXT:    s_lshl_b64 s[0:1], s[0:1], s4
+; VI-NEXT:    s_bfm_b64 s[2:3], s2, s6
+; VI-NEXT:    s_bfm_b64 s[0:1], s0, s4
 ; VI-NEXT:    ; return to shader part epilog
   %a = shl <2 x i64> splat (i64 1), %x
   %b = sub <2 x i64> %a, splat (i64 1)
@@ -189,22 +167,14 @@ define amdgpu_ps <2 x i64> @s_bfm64_v2i64_pattern(<2 x i64> inreg %x, <2 x i64> 
 define amdgpu_ps <2 x i64> @s_bfm64_v2i64_pattern_simple(<2 x i64> inreg %x) {
 ; SI-LABEL: s_bfm64_v2i64_pattern_simple:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_lshl_b64 s[0:1], 1, s0
-; SI-NEXT:    s_lshl_b64 s[2:3], 1, s2
-; SI-NEXT:    s_add_u32 s2, s2, -1
-; SI-NEXT:    s_addc_u32 s3, s3, -1
-; SI-NEXT:    s_add_u32 s0, s0, -1
-; SI-NEXT:    s_addc_u32 s1, s1, -1
+; SI-NEXT:    s_bfm_b64 s[2:3], s2, 0
+; SI-NEXT:    s_bfm_b64 s[0:1], s0, 0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: s_bfm64_v2i64_pattern_simple:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_lshl_b64 s[0:1], 1, s0
-; VI-NEXT:    s_lshl_b64 s[2:3], 1, s2
-; VI-NEXT:    s_add_u32 s2, s2, -1
-; VI-NEXT:    s_addc_u32 s3, s3, -1
-; VI-NEXT:    s_add_u32 s0, s0, -1
-; VI-NEXT:    s_addc_u32 s1, s1, -1
+; VI-NEXT:    s_bfm_b64 s[2:3], s2, 0
+; VI-NEXT:    s_bfm_b64 s[0:1], s0, 0
 ; VI-NEXT:    ; return to shader part epilog
   %a = shl <2 x i64> splat (i64 1), %x
   %b = sub <2 x i64> %a, splat (i64 1)
