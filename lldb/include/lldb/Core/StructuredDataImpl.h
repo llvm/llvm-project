@@ -108,8 +108,8 @@ public:
     m_data_sp = StructuredData::FromBoolean(value);
   }
 
-  void SetStringValue(std::string value) {
-    m_data_sp = StructuredData::FromString(std::move(value));
+  void SetStringValue(llvm::StringRef value) {
+    m_data_sp = StructuredData::FromString(value);
   }
 
   void SetGenericValue(void *value) {

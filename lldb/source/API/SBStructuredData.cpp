@@ -272,7 +272,7 @@ void SBStructuredData::SetBooleanValue(bool value) {
 void SBStructuredData::SetStringValue(const char *value) {
   LLDB_INSTRUMENT_VA(this, value);
 
-  m_impl_up->SetStringValue(value);
+  m_impl_up->SetStringValue(llvm::StringRef(value));
 }
 
 void SBStructuredData::SetGenericValue(SBScriptObject value) {

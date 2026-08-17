@@ -150,6 +150,23 @@ class TestStructuredDataAPI(TestBase):
         example.SetStringValue("Bonjour, 123!")
         self.assertEqual(example.GetType(), lldb.eStructuredDataTypeString)
         self.assertEqual(example.GetStringValue(42), "Bonjour, 123!")
+        # Verify small buffer doesn't read random memory.
+        self.assertEqual(example.GetStringValue(8), "Bonjour")
+
+        # Verify StructuredData's string as None doesn't crash.
+        example.SetStringValue(None)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeString)
+        self.assertEqual(example.GetStringValue(20), "")
+        self.assertEqual(example.GetStringValue(), "")
+
+        # Verify writing a large buffer doesn't get
+        # trimmed when using the dynamic property.
+        large_str = "0xdeadbeef430e~~" * 4096
+        example.SetStringValue(large_str)
+        self.assertEqual(example.GetType(), lldb.eStructuredDataTypeString)
+        self.assertEqual(example.dynamic, large_str)
+        self.assertEqual(example.GetStringValue(), large_str)
+        self.assertEqual(example.GetStringValue(len(large_str) + 1), large_str)
 
         value = lldb.SBStructuredData()
         example.SetValueForKey("Hello", value)

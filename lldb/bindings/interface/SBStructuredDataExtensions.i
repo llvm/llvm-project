@@ -1,6 +1,17 @@
 STRING_EXTENSION_OUTSIDE(SBStructuredData)
 
 %extend lldb::SBStructuredData {
+    std::string GetStringValue() const {
+        const size_t len = $self->GetStringValue(nullptr, 0);
+        if (len == 0)
+            return std::string{};
+
+        std::string result(len, '\0');
+        $self->GetStringValue(result.data(), result.size() + 1);
+
+        return result;
+    }
+
 #ifdef SWIGPYTHON
     %pythoncode%{
     def __len__(self):
@@ -85,8 +96,7 @@ STRING_EXTENSION_OUTSIDE(SBStructuredData)
         elif data_type == eStructuredDataTypeFloat:
             return self.GetFloatValue()
         elif data_type == eStructuredDataTypeString:
-            size = len(self) or 1023
-            return self.GetStringValue(size + 1)
+            return self.GetStringValue()
         elif data_type == eStructuredDataTypeGeneric:
             return self.GetGenericValue()
         else:
