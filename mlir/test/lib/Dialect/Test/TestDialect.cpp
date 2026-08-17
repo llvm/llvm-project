@@ -98,6 +98,7 @@ llvm::hash_code test::computeHash(const PropertiesWithCustomPrint &prop) {
 
 void test::customPrintProperties(OpAsmPrinter &p,
                                  const PropertiesWithCustomPrint &prop) {
+  p << " ";
   p.printKeywordOrString(*prop.label);
   p << " is " << prop.value;
 }
@@ -193,7 +194,7 @@ llvm::hash_code test::computeHash(const VersionedProperties &prop) {
 
 void test::customPrintProperties(OpAsmPrinter &p,
                                  const VersionedProperties &prop) {
-  p << prop.value1 << " | " << prop.value2;
+  p << " " << prop.value1 << " | " << prop.value2;
 }
 
 ParseResult test::customParseProperties(OpAsmParser &parser,
