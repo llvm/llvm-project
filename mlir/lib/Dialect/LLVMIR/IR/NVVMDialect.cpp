@@ -5905,8 +5905,11 @@ getNVVMTcgen05MMAKind(NVVM::Tcgen05MMAKind kind) {
     return llvm::nvvm::Tcgen05MMAKind::I8;
   case NVVM::Tcgen05MMAKind::TI16:
     return llvm::nvvm::Tcgen05MMAKind::TI16;
+  case NVVM::Tcgen05MMAKind::MXF8F6F4:
+  case NVVM::Tcgen05MMAKind::MXF4:
+  case NVVM::Tcgen05MMAKind::MXF4NVF4:
+    llvm_unreachable("Unsupported tcgen05.mma kind");
   }
-  llvm_unreachable("unknown tcgen05.mma kind");
 }
 
 mlir::NVVM::IDArgPair
