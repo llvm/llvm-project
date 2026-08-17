@@ -26,7 +26,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RISCVVLOptimizer.h"
+#include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -164,7 +164,7 @@ INITIALIZE_PASS_BEGIN(RISCVVLOptimizerLegacy, DEBUG_TYPE, PASS_NAME, false,
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(RISCVVLOptimizerLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-FunctionPass *llvm::createRISCVVLOptimizerPass() {
+FunctionPass *llvm::createRISCVVLOptimizerLegacyPass() {
   return new RISCVVLOptimizerLegacy();
 }
 

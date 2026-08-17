@@ -13,7 +13,6 @@
 #include "RISCVAsmPrinter.h"
 #include "RISCVGatherScatterLowering.h"
 #include "RISCVTargetMachine.h"
-#include "RISCVVLOptimizer.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
