@@ -13,6 +13,8 @@
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -2521,7 +2523,11 @@ public:
 
 class GatherConverter : public OpConversionPattern<tosa::GatherOp> {
 public:
-  using OpConversionPattern<tosa::GatherOp>::OpConversionPattern;
+  GatherConverter(MLIRContext *context, bool gatherHardening,
+                  PatternBenefit benefit = 1)
+      : OpConversionPattern(context, benefit),
+        gatherHardening(gatherHardening){};
+
   LogicalResult
   matchAndRewrite(tosa::GatherOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
@@ -2551,7 +2557,9 @@ public:
             rewriter.getContext()),
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
 
-    Value kSzVal = rewriter.createOrFold<tensor::DimOp>(loc, input, 1);
+    Value kSzVal;
+    if (gatherHardening)
+      kSzVal = rewriter.createOrFold<tensor::DimOp>(loc, input, 1);
     auto genericOp = linalg::GenericOp::create(
         rewriter, loc, ArrayRef<Type>({resultTy}), ValueRange{indices},
         ValueRange{emptyTensor}, affineMaps,
@@ -2561,12 +2569,14 @@ public:
           auto index0 = linalg::IndexOp::create(rewriter, loc, 0);
           Value index1 = arith::IndexCastOp::create(
               rewriter, loc, rewriter.getIndexType(), indexValue);
-          auto outOfBound =
-              arith::CmpIOp::create(rewriter, loc, rewriter.getI1Type(),
-                                    arith::CmpIPredicate::uge, index1, kSzVal);
-          index1 =
-              arith::SelectOp::create(rewriter, loc, rewriter.getIndexType(),
-                                      outOfBound, kSzVal, index1);
+          if (gatherHardening) {
+            auto outOfBound = arith::CmpIOp::create(
+                rewriter, loc, rewriter.getI1Type(), arith::CmpIPredicate::uge,
+                index1, kSzVal);
+            cf::AssertOp::create(
+                rewriter, loc, outOfBound,
+                "Out of bound access for input on dimension #1 in tosa.gather");
+          }
           auto index2 = linalg::IndexOp::create(rewriter, loc, 2);
           Value extract = tensor::ExtractOp::create(
               rewriter, loc, input, ValueRange{index0, index1, index2});
@@ -2593,6 +2603,9 @@ public:
     addDynamicDimension(values, 2);
     return results;
   }
+
+private:
+  bool gatherHardening = false;
 };
 
 // Lowerings the TableOp to a series of gathers and numerica operations. This
@@ -3067,7 +3080,8 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgConversionPatterns(
-    const TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns,
+    bool gatherHardening) {
 
   // We have multiple resize coverters to handle degenerate cases.
   patterns->add<GenericResizeConverter>(patterns->getContext(),
@@ -3128,12 +3142,12 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       ReduceConverter<tosa::ReduceSumOp>,
       ReduceConverter<tosa::ReduceProductOp>,
       ArgMaxConverter,
-      GatherConverter,
       RescaleConverter,
       ReverseConverter,
       RFFT2dConverter,
       FFT2dConverter,
       TableConverter,
       TileConverter>(patterns->getContext());
+  patterns->add<GatherConverter>(patterns->getContext(), gatherHardening);
   // clang-format on
 }

@@ -1890,9 +1890,9 @@ func.func @gather_float(%arg0: tensor<2x3x2xf32>, %arg1: tensor<2x3xi32>) -> () 
   // CHECK:   %[[IDX0:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[BBARG0]]
   // CHECK:   %[[COND:.+]] = arith.cmpi uge, %[[CAST]], %[[C3]]
-  // CHECK:   %[[SELECT:.+]] = arith.select %[[COND]], %[[C3]], %[[CAST]]
+  // CHECK:   cf.assert %[[COND]]
   // CHECK:   %[[IDX2:.+]] = linalg.index 2
-  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[SELECT]], %[[IDX2]]] : tensor<2x3x2xf32>
+  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<2x3x2xf32>
   // CHECK:   linalg.yield %[[EXTRACT]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<2x3x2xf32>, tensor<2x3xi32>)  -> tensor<2x3x2xf32>
   return
@@ -1913,9 +1913,9 @@ func.func @gather_float_dyn(%arg0: tensor<?x3x2xf32>, %arg1: tensor<?x3xi32>) ->
   // CHECK:   %[[IDX0:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[BBARG0]]
   // CHECK:   %[[COND:.+]] = arith.cmpi uge, %[[CAST]], %[[C3]]
-  // CHECK:   %[[SELECT:.+]] = arith.select %[[COND]], %[[C3]], %[[CAST]]
+  // CHECK:   cf.assert %[[COND]]
   // CHECK:   %[[IDX2:.+]] = linalg.index 2
-  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[SELECT]], %[[IDX2]]] : tensor<?x3x2xf32>
+  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<?x3x2xf32>
   // CHECK:   linalg.yield %[[EXTRACT]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<?x3x2xf32>, tensor<?x3xi32>)  -> tensor<?x3x2xf32>
   return
@@ -1941,9 +1941,9 @@ func.func @gather_float_all_dynamic(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x
   // CHECK:   %[[IDX0:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[BBARG0]]
   // CHECK:   %[[COND:.+]] = arith.cmpi uge, %[[CAST]], %[[RANGE]]
-  // CHECK:   %[[SELECT:.+]] = arith.select %[[COND]], %[[RANGE]], %[[CAST]]
+  // CHECK:   cf.assert %[[COND]]
   // CHECK:   %[[IDX2:.+]] = linalg.index 2
-  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[SELECT]], %[[IDX2]]] : tensor<?x?x?xf32>
+  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<?x?x?xf32>
   // CHECK:   linalg.yield %[[EXTRACT]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<?x?x?xf32>, tensor<?x?xi32>)  -> tensor<?x?x?xf32>
   return
@@ -1962,9 +1962,9 @@ func.func @gather_int(%arg0: tensor<2x3x2xi32>, %arg1: tensor<2x3xi32>) -> () {
   // CHECK:   %[[IDX0:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[BBARG0]]
   // CHECK:   %[[COND:.+]] = arith.cmpi uge, %[[CAST]], %[[C3]]
-  // CHECK:   %[[SELECT:.+]] = arith.select %[[COND]], %[[C3]], %[[CAST]]
+  // CHECK:   cf.assert %[[COND]]
   // CHECK:   %[[IDX2:.+]] = linalg.index 2
-  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[SELECT]], %[[IDX2]]] : tensor<2x3x2xi32>
+  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<2x3x2xi32>
   // CHECK:   linalg.yield %[[EXTRACT]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<2x3x2xi32>, tensor<2x3xi32>)  -> tensor<2x3x2xi32>
   return

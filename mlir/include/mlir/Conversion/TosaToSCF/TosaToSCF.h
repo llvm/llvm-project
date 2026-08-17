@@ -22,10 +22,12 @@ namespace mlir {
 
 namespace tosa {
 
-void populateTosaToSCFConversionPatterns(RewritePatternSet *patterns);
+std::unique_ptr<Pass> createTosaToSCFPass(bool scatterHardening = true);
+void populateTosaToSCFConversionPatterns(RewritePatternSet *patterns,
+                                         bool scatterHardening = true);
 
 /// Populates passes to convert from TOSA to SCF.
-void addTosaToSCFPasses(OpPassManager &pm);
+void addTosaToSCFPasses(OpPassManager &pm, const TosaToSCFPassOptions &options);
 
 } // namespace tosa
 } // namespace mlir

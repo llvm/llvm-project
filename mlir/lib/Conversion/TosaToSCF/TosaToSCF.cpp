@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TosaToSCF/TosaToSCF.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
@@ -92,7 +94,10 @@ class ScatterOpConverter : public OpRewritePattern<tosa::ScatterOp> {
   }
 
 public:
-  using OpRewritePattern<tosa::ScatterOp>::OpRewritePattern;
+  ScatterOpConverter(MLIRContext *context, bool scatterHardening,
+                     PatternBenefit benefit = 1)
+      : OpRewritePattern(context, benefit),
+        scatterHardening(scatterHardening){};
 
   LogicalResult matchAndRewrite(tosa::ScatterOp scatter,
                                 PatternRewriter &rewriter) const final {
@@ -120,7 +125,9 @@ public:
     auto lbs = Repeated<Value>(2, zero);
     auto steps = Repeated<Value>(2, one);
     auto ubs = llvm::SmallVector<Value>{{dimN, dimW}};
-    Value kSzVal = rewriter.createOrFold<tensor::DimOp>(loc, valuesIn, 1);
+    Value kSzVal;
+    if (scatterHardening)
+      kSzVal = rewriter.createOrFold<tensor::DimOp>(loc, valuesIn, 1);
 
     auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                          ValueRange args) -> scf::ValueVector {
@@ -130,11 +137,14 @@ public:
       auto index = tensor::ExtractOp::create(builder, loc, indices, ivs);
       auto castIndex = arith::IndexCastOp::create(
           builder, loc, builder.getIndexType(), index);
-      auto outOfBound =
-          arith::CmpIOp::create(builder, loc, builder.getI1Type(),
-                                arith::CmpIPredicate::uge, castIndex, kSzVal);
-      auto clampedIndex = arith::SelectOp::create(
-          builder, loc, builder.getIndexType(), outOfBound, kSzVal, castIndex);
+      if (scatterHardening) {
+        auto outOfBound =
+            arith::CmpIOp::create(builder, loc, builder.getI1Type(),
+                                  arith::CmpIPredicate::uge, castIndex, kSzVal);
+        cf::AssertOp::create(
+            rewriter, loc, outOfBound,
+            "Out of bound access for output on dimension #1 in tosa.scatter");
+      }
 
       // Offset, sizes, and strides for the input tensor
       auto inputOffset = llvm::to_vector(ivs);
@@ -147,7 +157,7 @@ public:
                                                   inputOffset, sizes, strides);
 
       // Insert the slice into the output accumulator tensor.
-      llvm::SmallVector<Value> outputOffset = {n, clampedIndex, zero};
+      llvm::SmallVector<Value> outputOffset = {n, castIndex, zero};
       auto updated = tensor::InsertSliceOp::create(
           builder, loc, slice, args[0], outputOffset, sizes, strides);
 
@@ -160,6 +170,9 @@ public:
 
     return success();
   }
+
+private:
+  bool scatterHardening = false;
 };
 
 class WhileOpConverter : public OpRewritePattern<tosa::WhileOp> {
@@ -185,7 +198,7 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToSCFConversionPatterns(
-    RewritePatternSet *patterns) {
-  patterns->add<IfOpConverter, ScatterOpConverter, WhileOpConverter>(
-      patterns->getContext());
+    RewritePatternSet *patterns, bool scatterHardening) {
+  patterns->add<IfOpConverter, WhileOpConverter>(patterns->getContext());
+  patterns->add<ScatterOpConverter>(patterns->getContext(), scatterHardening);
 }

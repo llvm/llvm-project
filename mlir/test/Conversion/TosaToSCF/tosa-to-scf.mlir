@@ -74,9 +74,9 @@ func.func @scatter_test(%values_in: tensor<3x7x5xi32>, %indices : tensor<3x6xi32
       // CHECK-DAG: [[EXTRACTED:%.+]] = tensor.extract [[INDICES]][[[ITER_VAR_0]], [[ITER_VAR_1]]] : tensor<3x6xi32>
       // CHECK-DAG: [[EXTRACTED_CAST:%.+]] = arith.index_cast [[EXTRACTED]] : i32 to index
       // CHECK-DAG: [[EXTRACTED_COND:%.+]] = arith.cmpi uge, [[EXTRACTED_CAST]], [[C_7]]
-      // CHECK-DAG: [[EXTRACTED_CLAMP:%.+]] = arith.select [[EXTRACTED_COND]], [[C_7]], [[EXTRACTED_CAST]]
+      // CHECK-DAG: cf.assert [[EXTRACTED_COND]]
       // CHECK-DAG: [[EXTRACTED_SLICE:%.+]] = tensor.extract_slice [[INPUT]][[[ITER_VAR_0]], [[ITER_VAR_1]], [[C_0_0]]] [[[C_1_0]], [[C_1_0]], [[C_5]]] [[[C_1_0]], [[C_1_0]], [[C_1_0]]] : tensor<3x6x5xi32> to tensor<?x?x?xi32>
-      // CHECK-DAG: [[INSERTED_SLICE:%.+]] = tensor.insert_slice [[EXTRACTED_SLICE]] into [[ITER_ARG_1]][[[ITER_VAR_0]], [[EXTRACTED_CLAMP]], [[C_0_0]]] [[[C_1_0]], [[C_1_0]], [[C_5]]] [[[C_1_0]], [[C_1_0]], [[C_1_0]]] : tensor<?x?x?xi32> into tensor<3x7x5xi32>
+      // CHECK-DAG: [[INSERTED_SLICE:%.+]] = tensor.insert_slice [[EXTRACTED_SLICE]] into [[ITER_ARG_1]][[[ITER_VAR_0]], [[EXTRACTED_CAST]], [[C_0_0]]] [[[C_1_0]], [[C_1_0]], [[C_5]]] [[[C_1_0]], [[C_1_0]], [[C_1_0]]] : tensor<?x?x?xi32> into tensor<3x7x5xi32>
       // CHECK: scf.yield [[INSERTED_SLICE]] : tensor<3x7x5xi32>
     // CHECK: }
     // CHECK: scf.yield [[RESULT_1]] : tensor<3x7x5xi32>
