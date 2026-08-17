@@ -226,8 +226,8 @@ public:
 
   ProgramStateRef removeDeadBindings(ProgramStateRef State,
                                      SymbolReaper &SymReaper) override {
-    auto CZ = State->get<ConstraintSMT>();
-    auto &CZFactory = State->get_context<ConstraintSMT>();
+    ConstraintSMTType CZ = State->get<ConstraintSMT>();
+    ConstraintSMTType::Factory &CZFactory = State->get_context<ConstraintSMT>();
     llvm::SmallVector<ConstraintEntry> Constraints(CZ.begin(), CZ.end());
     llvm::DenseMap<SymbolRef, SmallVector<size_t>> ConstraintsBySym;
     llvm::DenseSet<SymbolRef> TraversedSymbols;
