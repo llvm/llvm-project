@@ -10,7 +10,7 @@ class TestSMERegistersDarwin(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipUnlessFeature(cpu_feature.AArch64.SME)
     @skipUnlessFeature(cpu_feature.AArch64.SME2)
     # thread_set_state/thread_get_state only avail in macOS 15.4+

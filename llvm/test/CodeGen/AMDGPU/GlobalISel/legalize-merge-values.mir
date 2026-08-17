@@ -106,6 +106,51 @@ body: |
 ...
 
 ---
+name: test_merge_f16_i8_i8
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_merge_f16_i8_i8
+    ; CHECK: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i16) = G_CONSTANT i16 0
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[C]], [[C2]](i32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[SHL]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i16) = G_OR [[C1]], [[TRUNC]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[OR]](i16)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(f16) = G_TRUNC [[ANYEXT]](i32)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[TRUNC1]](f16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[FPEXT]](f32)
+    %0:_(i8) = G_CONSTANT i8 0
+    %1:_(i8) = G_CONSTANT i8 1
+    %2:_(f16) = G_MERGE_VALUES %0(i8), %1(i8)
+    %3:_(f32) = G_FPEXT %2(f16)
+    $vgpr0 = COPY %3(f32)
+...
+
+---
+name: test_merge_bf16_i8_i8
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_merge_bf16_i8_i8
+    ; CHECK: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i16) = G_CONSTANT i16 0
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[C]], [[C2]](i32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[SHL]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i16) = G_OR [[C1]], [[TRUNC]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[OR]](i16)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[ANYEXT]], [[C3]](i32)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[SHL1]](i32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](f32)
+    %0:_(i8) = G_CONSTANT i8 0
+    %1:_(i8) = G_CONSTANT i8 1
+    %2:_(bf16) = G_MERGE_VALUES %0(i8), %1(i8)
+    %3:_(f32) = G_FPEXT %2(bf16)
+    $vgpr0 = COPY %3(f32)
+...
+
+---
 name: test_merge_s24_s8_s8_s8
 body: |
   bb.0:
@@ -162,6 +207,34 @@ body: |
     %2:_(s8) = G_CONSTANT i8 2
     %3:_(s8) = G_CONSTANT i8 3
     %4:_(s32) = G_MERGE_VALUES %0, %1, %2, %3
+    $vgpr0 = COPY %4
+...
+
+---
+name: test_merge_f32_i8_i8_i8_i8
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_merge_f32_i8_i8_i8_i8
+    ; CHECK: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: [[C4:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[C1]], [[C4]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[C]], [[SHL]]
+    ; CHECK-NEXT: [[C5:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[C2]], [[C5]](i32)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
+    ; CHECK-NEXT: [[C6:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[C3]], [[C6]](i32)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[OR1]], [[SHL2]]
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[OR2]](i32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](f32)
+    %0:_(i8) = G_CONSTANT i8 0
+    %1:_(i8) = G_CONSTANT i8 1
+    %2:_(i8) = G_CONSTANT i8 2
+    %3:_(i8) = G_CONSTANT i8 3
+    %4:_(f32) = G_MERGE_VALUES %0, %1, %2, %3
     $vgpr0 = COPY %4
 ...
 

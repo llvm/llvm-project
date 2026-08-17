@@ -352,17 +352,17 @@ DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
 DIRecursiveTypeAttrInterface DICompileUnitAttr::withRecId(DistinctAttr recId) {
   return DICompileUnitAttr::get(
       getContext(), recId, getIsRecSelf(), getId(), getSourceLanguage(),
-      getFile(), getProducer(), getIsOptimized(), getEmissionKind(),
-      getIsDebugInfoForProfiling(), getNameTableKind(), getSplitDebugFilename(),
-      getImportedEntities());
+      getSourceLanguageDialect(), getFile(), getProducer(), getIsOptimized(),
+      getEmissionKind(), getIsDebugInfoForProfiling(), getNameTableKind(),
+      getSplitDebugFilename(), getImportedEntities());
 }
 
 DIRecursiveTypeAttrInterface DICompileUnitAttr::getRecSelf(DistinctAttr recId) {
 
   return DICompileUnitAttr::get(
       recId.getContext(), recId, /*isRecSelf=*/true, /*id=*/{},
-      /*sourceLanguage=*/0u, /*file=*/{}, /*producer=*/{},
-      /*isOptimized=*/false, DIEmissionKind::None,
+      /*sourceLanguage=*/0u, /*sourceLanguageDialect=*/0u, /*file=*/{},
+      /*producer=*/{}, /*isOptimized=*/false, DIEmissionKind::None,
       /*isDebugInfoForProfiling=*/false, DINameTableKind::Default,
       /*splitDebugFilename=*/{}, /*importedEntities=*/{});
 }
@@ -598,3 +598,19 @@ ModFlagBehavior ModuleFlagAttr::getModuleFlagBehavior() const {
 StringAttr ModuleFlagAttr::getModuleFlagKey() const { return getKey(); }
 
 Attribute ModuleFlagAttr::getModuleFlagValue() const { return getValue(); }
+
+//===----------------------------------------------------------------------===//
+// MDAddrSpaceCastAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            Attribute arg, unsigned addressSpace) {
+  // `addrspacecast` operates on pointers, so the operand must be a metadata
+  // attribute that models a pointer-typed constant.
+  if (!isa<MDGlobalValueAttr, MDNullAttr, MDAddrSpaceCastAttr>(arg))
+    return emitError() << "expected #llvm.md_global_value, #llvm.md_null, or "
+                          "#llvm.md_addrspacecast operand, but got "
+                       << arg;
+  return success();
+}

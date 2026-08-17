@@ -315,10 +315,10 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    return TypeSize::getFixed((ST->hasPackedFP64Ops() || ST->hasPackedU64Ops())
-                                  ? 128
-                              : ST->hasPackedFP32Ops() ? 64
-                                                       : 32);
+    return TypeSize::getFixed(
+        (ST->hasAnyPackedFP64Ops() || ST->hasAnyPackedU64Ops()) ? 128
+        : ST->hasAnyPackedFP32Ops()                             ? 64
+                                                                : 32);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
   }
@@ -334,11 +334,11 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     return 32 * 4 / ElemWidth;
   // For a given width return the max 0number of elements that can be combined
   // into a wider bit value:
-  return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
-         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
-         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+  return (ElemWidth == 8 && ST->has16BitInsts())          ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())       ? 2
+         : (ElemWidth == 32 && ST->hasAnyPackedFP32Ops()) ? 2
          : (ElemWidth == 64 &&
-            (ST->hasPackedFP64Ops() || ST->hasPackedU64Ops()))
+            (ST->hasAnyPackedFP64Ops() || ST->hasAnyPackedU64Ops()))
              ? 2
              : 1;
 }
@@ -554,7 +554,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     return getFullRateInstrCost() * LT.first * NElts;
   case ISD::ADD:
   case ISD::SUB:
-    if (SLT == MVT::i64 && ST->hasPackedU64Ops())
+    if (SLT == MVT::i64 && ST->hasAnyPackedU64Ops())
       NElts = (NElts + 1) / 2;
     [[fallthrough]];
   case ISD::AND:
@@ -605,12 +605,12 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
-    if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
+    if (ST->hasAnyPackedFP32Ops() && SLT == MVT::f32)
       NElts = (NElts + 1) / 2;
     if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
       NElts = (NElts + 1) / 2;
     if (SLT == MVT::f64) {
-      if (ST->hasPackedFP64Ops())
+      if (ST->hasAnyPackedFP64Ops())
         NElts = (NElts + 1) / 2;
       return LT.first * NElts * get64BitInstrCost(CostKind);
     }
@@ -876,11 +876,11 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
         (SLT == MVT::bf16 && ST->hasBF16PackedInsts()))) ||
-      (ST->hasPackedFP64Ops() && SLT == MVT::f64) ||
-      (ST->hasPackedU64Ops() && SLT == MVT::i64)) {
+      (ST->hasAnyPackedFP64Ops() && SLT == MVT::f64) ||
+      (ST->hasAnyPackedU64Ops() && SLT == MVT::i64)) {
     NElts = (NElts + 1) / 2;
   } else if (SLT == MVT::f32) {
-    bool HasPk2FP32Op = ST->hasPackedFP32Ops() &&
+    bool HasPk2FP32Op = ST->hasAnyPackedFP32Ops() &&
                         IID != Intrinsic::minimumnum &&
                         IID != Intrinsic::maximumnum;
     NElts = HasPk2FP32Op ? (NElts + 1) / 2 : NElts;
@@ -1322,9 +1322,10 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   case Intrinsic::amdgcn_make_buffer_rsrc: {
     Type *SrcTy = NewV->getType();
     Type *DstTy = II->getType();
+    Type *NumRecordsTy = II->getArgOperand(2)->getType();
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        M, II->getIntrinsicID(), {DstTy, SrcTy});
+        M, II->getIntrinsicID(), {DstTy, SrcTy, NumRecordsTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;

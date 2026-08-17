@@ -106,6 +106,61 @@ define i1 @test2_as2_larger(ptr addrspace(2) %a, ptr addrspace(2) %b) {
   ret i1 %r
 }
 
+; These casts on a non-integral ptr type should not be folded away for ptrtoint.
+
+define i1 @test3_as3_same_int(ptr addrspace(3) %a, ptr addrspace(3) %b) {
+; CHECK-LABEL: @test3_as3_same_int(
+; CHECK-NEXT:    [[TA:%.*]] = ptrtoint ptr addrspace(3) [[A:%.*]] to i32
+; CHECK-NEXT:    [[TB:%.*]] = ptrtoint ptr addrspace(3) [[B:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TA]], [[TB]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ta = ptrtoint ptr addrspace(3) %a to i32
+  %tb = ptrtoint ptr addrspace(3) %b to i32
+  %r = icmp eq i32 %ta, %tb
+  ret i1 %r
+}
+
+define i1 @test3_as3_same_int_ptrtoaddr(ptr addrspace(3) %a, ptr addrspace(3) %b) {
+; CHECK-LABEL: @test3_as3_same_int_ptrtoaddr(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq ptr addrspace(3) [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ta = ptrtoaddr ptr addrspace(3) %a to i16
+  %tb = ptrtoaddr ptr addrspace(3) %b to i16
+  %r = icmp eq i16 %ta, %tb
+  ret i1 %r
+}
+
+define i1 @test3_as3_same_int_ptrtoint(ptr addrspace(3) %a, ptr addrspace(3) %b) {
+; CHECK-LABEL: @test3_as3_same_int_ptrtoint(
+; CHECK-NEXT:    [[TA:%.*]] = ptrtoaddr ptr addrspace(3) [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[B:%.*]] to i32
+; CHECK-NEXT:    [[TB:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[TA]], [[TB]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ta = ptrtoaddr ptr addrspace(3) %a to i16
+  %tb = ptrtoint ptr addrspace(3) %b to i16
+  %r = icmp eq i16 %ta, %tb
+  ret i1 %r
+}
+
+; These casts should not be folded away.
+
+define i1 @test3_as3_larger(ptr addrspace(3) %a, ptr addrspace(3) %b) {
+; CHECK-LABEL: @test3_as3_larger(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[A:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr addrspace(3) [[B:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ta = ptrtoint ptr addrspace(3) %a to i33
+  %tb = ptrtoint ptr addrspace(3) %b to i33
+  %r = icmp eq i33 %ta, %tb
+  ret i1 %r
+}
+
 ; These casts should not be folded away.
 
 define i1 @test2_diff_as(ptr %p, ptr addrspace(1) %q) {

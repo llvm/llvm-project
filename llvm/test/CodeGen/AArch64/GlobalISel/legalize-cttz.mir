@@ -225,7 +225,7 @@ body:             |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i64) = G_OR [[COPY]], [[C]]
     ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i64) = G_OR [[COPY1]], [[C1]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](i64), [[C]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[OR]](i64), [[C]]
     ; CHECK-NEXT: [[BITREVERSE:%[0-9]+]]:_(i64) = G_BITREVERSE [[OR1]]
     ; CHECK-NEXT: [[CTLZ:%[0-9]+]]:_(i64) = G_CTLZ [[BITREVERSE]](i64)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
@@ -233,8 +233,8 @@ body:             |
     ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(i64), [[UADDE1:%[0-9]+]]:_(i32) = G_UADDE [[C]], [[C]], [[UADDO1]]
     ; CHECK-NEXT: [[BITREVERSE1:%[0-9]+]]:_(i64) = G_BITREVERSE [[OR]]
     ; CHECK-NEXT: [[CTLZ1:%[0-9]+]]:_(i64) = G_CTLZ [[BITREVERSE1]](i64)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](s32), [[UADDO]], [[CTLZ1]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](s32), [[UADDE]], [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i32), [[UADDO]], [[CTLZ1]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i32), [[UADDE]], [[C]]
     ; CHECK-NEXT: $x0 = COPY [[SELECT]](i64)
     ; CHECK-NEXT: $x1 = COPY [[SELECT1]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
@@ -248,14 +248,14 @@ body:             |
     ; CHECK-CSSC-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
     ; CHECK-CSSC-NEXT: [[OR:%[0-9]+]]:_(i64) = G_OR [[COPY]], [[C]]
     ; CHECK-CSSC-NEXT: [[OR1:%[0-9]+]]:_(i64) = G_OR [[COPY1]], [[C1]]
-    ; CHECK-CSSC-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[OR]](i64), [[C]]
+    ; CHECK-CSSC-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[OR]](i64), [[C]]
     ; CHECK-CSSC-NEXT: [[CTTZ:%[0-9]+]]:_(i64) = G_CTTZ [[OR1]](i64)
     ; CHECK-CSSC-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
     ; CHECK-CSSC-NEXT: [[UADDO:%[0-9]+]]:_(i64), [[UADDO1:%[0-9]+]]:_(i32) = G_UADDO [[CTTZ]], [[C2]]
     ; CHECK-CSSC-NEXT: [[UADDE:%[0-9]+]]:_(i64), [[UADDE1:%[0-9]+]]:_(i32) = G_UADDE [[C]], [[C]], [[UADDO1]]
     ; CHECK-CSSC-NEXT: [[CTTZ1:%[0-9]+]]:_(i64) = G_CTTZ [[OR]](i64)
-    ; CHECK-CSSC-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](s32), [[UADDO]], [[CTTZ1]]
-    ; CHECK-CSSC-NEXT: [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](s32), [[UADDE]], [[C]]
+    ; CHECK-CSSC-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i32), [[UADDO]], [[CTTZ1]]
+    ; CHECK-CSSC-NEXT: [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i32), [[UADDE]], [[C]]
     ; CHECK-CSSC-NEXT: $x0 = COPY [[SELECT]](i64)
     ; CHECK-CSSC-NEXT: $x1 = COPY [[SELECT1]](i64)
     ; CHECK-CSSC-NEXT: RET_ReallyLR implicit $x0, implicit $x1

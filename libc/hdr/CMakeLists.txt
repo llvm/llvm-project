@@ -113,6 +113,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  semaphore_macros
+  HDRS
+    semaphore_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.semaphore_macros
+)
+
+add_proxy_header_library(
   signal_macros
   HDRS
     signal_macros.h
@@ -253,7 +261,7 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.unistd_macros
 )
 
-if (WIN32)
+if(WIN32)
   set(windows_addtional_time_macros libc.include.llvm-libc-macros.windows.time_macros_ext)
 else()
   set(windows_addtional_time_macros "")
@@ -357,60 +365,12 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.elf_macros
 )
 
-add_gen_header(
+add_proxy_header_library(
   elf_proxy
-  YAML_FILE
-    ../libc/include/elf.yaml
-  GEN_HDR
+  HDRS
     elf_proxy.h
-  DEPENDS
-    libc.include.llvm_libc_common_h
-    libc.include.llvm-libc-types.Elf32_Addr
-    libc.include.llvm-libc-types.Elf32_Chdr
-    libc.include.llvm-libc-types.Elf32_Dyn
-    libc.include.llvm-libc-types.Elf32_Ehdr
-    libc.include.llvm-libc-types.Elf32_Half
-    libc.include.llvm-libc-types.Elf32_Lword
-    libc.include.llvm-libc-types.Elf32_Nhdr
-    libc.include.llvm-libc-types.Elf32_Off
-    libc.include.llvm-libc-types.Elf32_Phdr
-    libc.include.llvm-libc-types.Elf32_Rel
-    libc.include.llvm-libc-types.Elf32_Rela
-    libc.include.llvm-libc-types.Elf32_Shdr
-    libc.include.llvm-libc-types.Elf32_Sword
-    libc.include.llvm-libc-types.Elf32_Sym
-    libc.include.llvm-libc-types.Elf32_Verdaux
-    libc.include.llvm-libc-types.Elf32_Verdef
-    libc.include.llvm-libc-types.Elf32_Vernaux
-    libc.include.llvm-libc-types.Elf32_Verneed
-    libc.include.llvm-libc-types.Elf32_Versym
-    libc.include.llvm-libc-types.Elf32_Word
-    libc.include.llvm-libc-types.Elf32_Xword
-    libc.include.llvm-libc-types.Elf32_auxv_t
-    libc.include.llvm-libc-types.Elf64_Addr
-    libc.include.llvm-libc-types.Elf64_Chdr
-    libc.include.llvm-libc-types.Elf64_Dyn
-    libc.include.llvm-libc-types.Elf64_Ehdr
-    libc.include.llvm-libc-types.Elf64_Half
-    libc.include.llvm-libc-types.Elf64_Lword
-    libc.include.llvm-libc-types.Elf64_Nhdr
-    libc.include.llvm-libc-types.Elf64_Off
-    libc.include.llvm-libc-types.Elf64_Phdr
-    libc.include.llvm-libc-types.Elf64_Rel
-    libc.include.llvm-libc-types.Elf64_Rela
-    libc.include.llvm-libc-types.Elf64_Shdr
-    libc.include.llvm-libc-types.Elf64_Sword
-    libc.include.llvm-libc-types.Elf64_Sxword
-    libc.include.llvm-libc-types.Elf64_Sym
-    libc.include.llvm-libc-types.Elf64_Verdaux
-    libc.include.llvm-libc-types.Elf64_Verdef
-    libc.include.llvm-libc-types.Elf64_Vernaux
-    libc.include.llvm-libc-types.Elf64_Verneed
-    libc.include.llvm-libc-types.Elf64_Versym
-    libc.include.llvm-libc-types.Elf64_Word
-    libc.include.llvm-libc-types.Elf64_Xword
-    libc.include.llvm-libc-types.Elf64_auxv_t
-  PROXY
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-proxy.elf_proxy
 )
 
 add_proxy_header_library(

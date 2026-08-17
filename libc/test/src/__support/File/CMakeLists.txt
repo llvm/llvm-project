@@ -40,7 +40,7 @@ foreach(target IN LISTS platform_file_targets)
   if(TARGET libc.src.__support.File.${target})
     add_libc_test(
       ${target}_test
-      HERMETIC_TEST_ONLY
+      FULL_BUILD_ONLY
       SUITE
         libc-support-tests
       SRCS

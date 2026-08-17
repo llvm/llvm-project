@@ -542,8 +542,14 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
     return;
 
   unsigned N = M.getLangOpts().GPUMaxThreadsPerBlock;
-  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>())
+  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
     N = FlatWGS->getMax()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+  } else if (auto LB = FD->getAttr<CUDALaunchBoundsAttr>()) {
+    if (uint64_t MaxThreads = LB->getMaxThreads()
+                                  ->EvaluateKnownConstInt(M.getContext())
+                                  .getExtValue())
+      N = MaxThreads;
+  }
 
   // We encode the maximum flat WG size in the first component of the 3D
   // max_work_group_size attribute, which will get reverse translated into the
@@ -560,30 +566,8 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
 
 StringRef SPIRVTargetCodeGenInfo::getLLVMSyncScopeStr(
     const LangOptions &, SyncScope Scope, llvm::AtomicOrdering) const {
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return "subgroup";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return "device";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return "";
-  }
-  return "";
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(),
+                                       getAtomicScope(Scope));
 }
 
 void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(

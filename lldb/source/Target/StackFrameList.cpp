@@ -105,7 +105,7 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
         LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
-                       "Frame provider reached end at index {0}: {1}", idx);
+                       "Frame provider reached end at index {1}: {0}", idx);
         SetAllFramesFetched();
         break;
       }
