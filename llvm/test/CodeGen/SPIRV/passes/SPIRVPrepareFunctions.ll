@@ -36,6 +36,16 @@ define void @memset_attrs(ptr %p, i8 %v, i32 %n) {
   ret void
 }
 
+; @fp keeps pointing at @callback across the clone/rename via RAUW.
+; CHECK-LABEL: define void @caller(
+; CHECK: %ptr = load ptr addrspace(4), ptr @fp
+; CHECK: call addrspace(4) i32 %ptr(i32 0), !spv.mutated_callsite ![[#MUTATED_CS:]]
+define void @caller() {
+  %ptr = load ptr addrspace(4), ptr @fp
+  %r = call addrspace(4) { float, float } %ptr(i32 0)
+  ret void
+}
+
 ; The bswap helper is materialized with the standard shift/mask/or unrolling.
 ; CHECK-LABEL: define i32 @spirv.llvm_bswap_i32(i32 %0)
 ; CHECK-DAG:   shl i32 %0, 24
@@ -79,3 +89,9 @@ declare i32 @llvm.fshr.i32(i32, i32, i32)
 define { float, float } @callback({ float, float } %x) addrspace(4) {
   ret { float, float } %x
 }
+
+; CHECK-DAG: ![[#MUTATED_CS]] = !{!"spv.mutated_callsite.caller.0"}
+; CHECK-DAG: !spv.cloned_funcs = !{![[#CLONED:]]}
+; CHECK-DAG: ![[#CLONED]] = !{!"callback", ![[#RET:]], ![[#ARG:]]}
+; CHECK-DAG: ![[#RET]] = !{i32 -1, { float, float } zeroinitializer}
+; CHECK-DAG: ![[#ARG]] = !{i32 0, { float, float } zeroinitializer}

@@ -636,9 +636,8 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
-  for (auto *U : make_early_inc_range(F->users())) {
-    if (CallInst *CI;
-        (CI = dyn_cast<CallInst>(U)) && CI->getCalledFunction() == F)
+  for (User *U : F->users()) {
+    if (auto *CI = dyn_cast<CallInst>(U); CI && CI->getCalledFunction() == F)
       CI->mutateFunctionType(NewF->getFunctionType());
   }
   F->replaceAllUsesWith(NewF);
