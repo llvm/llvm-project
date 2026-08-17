@@ -274,9 +274,12 @@ static void emitGetInstructionIndexForOpLookup(
 static void
 emitGetNamedOperandIdx(raw_ostream &OS,
                        const MapVector<SmallVector<int>, unsigned> &OperandMap,
-                       unsigned MaxOperandNo, unsigned NumOperandNames) {
-  OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName "
-        "Name) {\n";
+                       unsigned MaxOperandNo, unsigned NumOperandNames,
+                       bool ExportNamedOperandLookup) {
+  if (ExportNamedOperandLookup)
+    OS << "LLVM_ABI ";
+  OS << "LLVM_READONLY int16_t "
+        "getNamedOperandIdx(uint32_t Opcode, OpName Name) {\n";
   OS << "  assert(Name != OpName::NUM_OPERAND_NAMES);\n";
   if (!NumOperandNames) {
     // There are no operands, so no need to emit anything
@@ -399,6 +402,8 @@ void InstrInfoEmitter::emitOperandNameMappings(
 
   const size_t NumOperandNames = OperandNameToID.size();
   const unsigned MaxNumOperands = MaxOperandNo + 1;
+  const bool ExportNamedOperandLookup =
+      Target.getInstructionSet()->getValueAsBit("ExportNamedOperandLookup");
 
   const SmallString<32> Namespace({"llvm::", Target.getInstNamespace()});
   {
@@ -414,8 +419,10 @@ void InstrInfoEmitter::emitOperandNameMappings(
     OS << "  NUM_OPERAND_NAMES = " << NumOperandNames << ",\n";
     OS << "}; // enum class OpName\n\n";
 
-    OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName "
-          "Name);\n";
+    if (ExportNamedOperandLookup)
+      OS << "LLVM_ABI ";
+    OS << "LLVM_READONLY int16_t "
+          "getNamedOperandIdx(uint32_t Opcode, OpName Name);\n";
     OS << "LLVM_READONLY OpName getOperandIdxName(uint32_t Opcode, int16_t "
           "Idx);\n";
   }
@@ -425,7 +432,8 @@ void InstrInfoEmitter::emitOperandNameMappings(
     NamespaceEmitter NS(OS, Namespace);
     emitGetInstructionIndexForOpLookup(OS, OperandMap, InstructionIndex);
 
-    emitGetNamedOperandIdx(OS, OperandMap, MaxOperandNo, NumOperandNames);
+    emitGetNamedOperandIdx(OS, OperandMap, MaxOperandNo, NumOperandNames,
+                           ExportNamedOperandLookup);
     emitGetOperandIdxName(OS, OperandNameToID, OperandMap, MaxNumOperands,
                           NumOperandNames);
   }

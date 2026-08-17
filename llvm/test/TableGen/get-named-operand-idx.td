@@ -1,10 +1,17 @@
-// RUN: llvm-tblgen -gen-instr-info -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-instr-info -I %p/../../include \
+// RUN:   -D EXPORT_NAMED_OPERAND_LOOKUP %s | FileCheck %s
+// RUN: llvm-tblgen -gen-instr-info -I %p/../../include %s | \
+// RUN:   FileCheck %s --check-prefix=NOEXPORT
 
 // Check that OpName enum and getNamedOperandIdx are as expected.
 
 include "llvm/Target/Target.td"
 
-def archInstrInfo : InstrInfo { }
+def archInstrInfo : InstrInfo {
+#ifdef EXPORT_NAMED_OPERAND_LOOKUP
+  let ExportNamedOperandLookup = true;
+#endif
+}
 
 def arch : Target {
   let InstructionSet = archInstrInfo;
@@ -64,12 +71,16 @@ defm : RemapAllTargetPseudoPointerOperands<RegClass>;
 // CHECK-NEXT:    NUM_OPERAND_NAMES = 5,
 // CHECK-NEXT:  }; // enum class OpName
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName Name);
+// CHECK-NEXT:  LLVM_ABI LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName Name);
 // CHECK-NEXT:  LLVM_READONLY OpName getOperandIdxName(uint32_t Opcode, int16_t Idx);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyNamespace
 // CHECK-EMPTY:
 // CHECK-NEXT:  #endif // GET_INSTRINFO_OPERAND_ENUM
+
+// NOEXPORT-LABEL: #ifdef GET_INSTRINFO_OPERAND_ENUM
+// NOEXPORT-NOT: LLVM_ABI LLVM_READONLY int16_t getNamedOperandIdx
+// NOEXPORT: LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName Name);
 
 // CHECK-LABEL: #ifdef GET_INSTRINFO_NAMED_OPS
 // CHECK-NEXT:  #undef GET_INSTRINFO_NAMED_OPS
@@ -102,7 +113,7 @@ defm : RemapAllTargetPseudoPointerOperands<RegClass>;
 // CHECK-NEXT:    };
 // CHECK-NEXT:    return InstructionIndex[Opcode];
 // CHECK-NEXT:  }
-// CHECK-NEXT:  LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName Name) {
+// CHECK-NEXT:  LLVM_ABI LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName Name) {
 // CHECK-NEXT:    assert(Name != OpName::NUM_OPERAND_NAMES);
 // CHECK-NEXT:    static constexpr int8_t OperandMap[][5] = {
 // CHECK-NEXT:      {-1, -1, -1, -1, -1, },
@@ -126,3 +137,7 @@ defm : RemapAllTargetPseudoPointerOperands<RegClass>;
 // CHECK-NEXT:  } // namespace llvm::MyNamespace
 // CHECK-EMPTY:
 // CHECK-NEXT:  #endif // GET_INSTRINFO_NAMED_OPS
+
+// NOEXPORT-LABEL: #ifdef GET_INSTRINFO_NAMED_OPS
+// NOEXPORT-NOT: LLVM_ABI LLVM_READONLY int16_t getNamedOperandIdx
+// NOEXPORT: LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName Name) {

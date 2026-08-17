@@ -1308,6 +1308,10 @@ class InstrInfo {
   //
   // This option is a temporary migration help. It will go away.
   bit guessInstructionProperties = true;
+
+  // Export the generated getNamedOperandIdx function from shared LLVM
+  // libraries.
+  bit ExportNamedOperandLookup = false;
 }
 
 // Standard Pseudo Instructions.
