@@ -700,6 +700,37 @@ bool AArch64MIPeepholeOptImpl::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
   return true;
 }
 
+static bool isZeroingDRegLoadOpcode(unsigned int Op) {
+  switch (Op) {
+  case AArch64::LD1Twov1d:
+  case AArch64::LD1Twov1d_POST:
+  case AArch64::LD1Threev1d:
+  case AArch64::LD1Threev1d_POST:
+  case AArch64::LD1Fourv1d:
+  case AArch64::LD1Fourv1d_POST:
+  case AArch64::LD2Twov8b:
+  case AArch64::LD2Twov8b_POST:
+  case AArch64::LD2Twov4h:
+  case AArch64::LD2Twov4h_POST:
+  case AArch64::LD2Twov2s:
+  case AArch64::LD2Twov2s_POST:
+  case AArch64::LD3Threev8b:
+  case AArch64::LD3Threev8b_POST:
+  case AArch64::LD3Threev4h:
+  case AArch64::LD3Threev4h_POST:
+  case AArch64::LD3Threev2s:
+  case AArch64::LD3Threev2s_POST:
+  case AArch64::LD4Fourv8b:
+  case AArch64::LD4Fourv8b_POST:
+  case AArch64::LD4Fourv4h:
+  case AArch64::LD4Fourv4h_POST:
+  case AArch64::LD4Fourv2s:
+  case AArch64::LD4Fourv2s_POST:
+    return true;
+  }
+  return false;
+}
+
 // All instructions that set a FPR64 will implicitly zero the top bits of the
 // register. When the def is expressed as a COPY from a GPR, turn it into an
 // explicit FMOV so it cannot be elided later in further passes.
@@ -715,9 +746,17 @@ static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
     MachineOperand &SrcOp = MI->getOperand(1);
     if (!SrcOp.isReg())
       return false;
-    if (SrcOp.getSubReg())
-      return false;
     Register SrcReg = SrcOp.getReg();
+    if (SrcOp.getSubReg()) {
+      // If operand is defined by a LD1/2/3/4 that define a D subreg
+      // Then upper bits are implicitly zeroed and fmov is unneeded
+      if (!SrcReg.isVirtual()) {
+        return false;
+      }
+
+      MachineInstr *SrcDef = MRI->getUniqueVRegDef(SrcReg);
+      return SrcDef && isZeroingDRegLoadOpcode(SrcDef->getOpcode());
+    }
     auto IsGPR64Like = [&]() -> bool {
       if (SrcReg.isVirtual())
         return AArch64::GPR64allRegClass.hasSubClassEq(
