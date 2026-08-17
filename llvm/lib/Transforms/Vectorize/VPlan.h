@@ -1098,10 +1098,10 @@ private:
   }
 
 public:
-  /// Returns default flags for \p Opcode for opcodes that support it, asserts
-  /// otherwise. Opcodes not supporting default flags include compares and
-  /// ComputeReductionResult.
-  static VPIRFlags getDefaultFlags(unsigned Opcode);
+  /// Returns default flags for \p Opcode and scalar \p ResultTy for opcodes
+  /// that support it, asserts otherwise. Opcodes not supporting default flags
+  /// include compares and ComputeReductionResult.
+  static VPIRFlags getDefaultFlags(unsigned Opcode, Type *ResultTy = nullptr);
 
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
@@ -1242,13 +1242,21 @@ public:
     // Creates a mask where each lane is active (true) whilst the current
     // counter (first operand + index) is less than the second operand. i.e.
     //    mask[i] = icmpt ult (op0 + i), op1
-    // The size of the mask returned is VF * Multiplier (UF, third op).
+    // ActiveLaneMask is used for tail-folding, with the exception of the
+    // DataAndControlFlow style. The size of the mask returned is VF.
+    // When unrolled, ActiveLaneMask is duplicated.
     ActiveLaneMask,
+    // As above, but takes an additional operand (Multiplier). The size of
+    // the mask returned is VF * Multiplier (UF, op2).
+    // WideActiveLaneMask is used for control flow and is unrolled by widening,
+    // with one extract vector created per unroll part.
+    WideActiveLaneMask,
+    // Extracts each unrolled part of a (VF * UF) widened vector/mask.
+    ExtractVectorForPart,
     ExplicitVectorLength,
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.
     IncomingAliasMask,
-    CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     // Abstract instruction that compares two values and branches. This is
@@ -2062,7 +2070,6 @@ class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
   Align Alignment;
 
 public:
-  // TODO: support StoreInst for strided store
   VPWidenMemIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                             ArrayRef<VPValue *> CallArguments, Type *Ty,
                             Align Alignment, const VPIRMetadata &MD = {},
@@ -2071,7 +2078,8 @@ public:
                                VectorIntrinsicID, CallArguments, Ty, {}, MD,
                                DL),
         Alignment(Alignment) {
-    assert(VectorIntrinsicID == Intrinsic::experimental_vp_strided_load &&
+    assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
+            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
            "Unexpected intrinsic");
   }
 

@@ -1652,7 +1652,7 @@ private:
   }
 
   bool isDefinedInThisLoop(Register Reg) const {
-    return Reg.isVirtual() && MRI.getVRegDef(Reg)->getParent() == OrigMBB;
+    return Reg.isVirtual() && MRI.getDefBlock(Reg) == OrigMBB;
   }
 
   // Search for live-in variables. They are factored into the register pressure
@@ -2912,7 +2912,7 @@ static Register findUniqueOperandDefinedInLoop(const MachineInstr &MI) {
     Register Reg = Use.getReg();
     if (!Reg.isVirtual())
       return Register();
-    if (MRI.getVRegDef(Reg)->getParent() != MI.getParent())
+    if (MRI.getDefBlock(Reg) != MI.getParent())
       continue;
     if (Result)
       return Register();

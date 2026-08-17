@@ -161,6 +161,24 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPmanaged_func_result_section()
 ! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_device>
 
+! Pinned data is host memory, so a whole managed array and device data on the
+! other side are copied.
+subroutine pinned_transfer(n)
+  integer :: n
+  integer(4), allocatable, pinned :: pa(:)
+  integer(4), managed :: mb(16)
+  integer(4), device :: dc(16)
+  allocate(pa(n))
+  mb = pa
+  pa = dc
+  dc = pa
+end subroutine
+
+! CHECK-LABEL: func.func @_QPpinned_transfer
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<device_host>
+! CHECK: cuf.data_transfer {{.*}}#cuf.cuda_transfer<host_device>
+
 ! Assignments done on the host.
 
 ! An expression involving managed data is evaluated on the host, which avoids a

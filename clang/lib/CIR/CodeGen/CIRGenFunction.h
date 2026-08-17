@@ -48,6 +48,11 @@ class LoopOp;
 } // namespace acc
 } // namespace mlir
 
+namespace clang {
+class OutlinedFunctionDecl;
+class SYCLKernelCallStmt;
+} // namespace clang
+
 namespace clang::CIRGen {
 
 struct CGCoroData;
@@ -62,6 +67,33 @@ private:
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
+
+  /// Saves the builder's constrained floating-point configuration on
+  /// construction and restores it on destruction. The builder is shared
+  /// across all functions in the module, so its constrained-FP state must be
+  /// scoped to each function's emission.
+  ///
+  /// Note that the similarly named CIRGenFunction::CIRGenFPOptionsRAII
+  /// intentionally avoids restoring the "isFPConstrained" state because that
+  /// state is function-wide, but this object does restore the state so that
+  /// any CIRGenFunction instance created while we are in the process of
+  /// emitting another function cannot corrupt the prior functions state.
+  struct ConstrainedFPRAII {
+    CIRGenBuilderTy &builder;
+    bool savedIsFPConstrained;
+    LangOptions::FPExceptionModeKind savedExcept;
+    llvm::RoundingMode savedRounding;
+
+    explicit ConstrainedFPRAII(CIRGenBuilderTy &builder)
+        : builder(builder), savedIsFPConstrained(builder.getIsFPConstrained()),
+          savedExcept(builder.getDefaultConstrainedExcept()),
+          savedRounding(builder.getDefaultConstrainedRounding()) {}
+    ~ConstrainedFPRAII() {
+      builder.setIsFPConstrained(savedIsFPConstrained);
+      builder.setDefaultConstrainedExcept(savedExcept);
+      builder.setDefaultConstrainedRounding(savedRounding);
+    }
+  } constrainedFPState{builder};
 
 public:
   /// The GlobalDecl for the current function being compiled or the global
@@ -243,7 +275,7 @@ public:
     void ConstructorHelper(clang::FPOptions FPFeatures);
     CIRGenFunction &cgf;
     clang::FPOptions oldFPFeatures;
-    llvm::fp::ExceptionBehavior oldExcept;
+    LangOptions::FPExceptionModeKind oldExcept;
     llvm::RoundingMode oldRounding;
   };
   clang::FPOptions curFPFeatures;
@@ -585,6 +617,16 @@ public:
                I);
     }
   };
+
+  /// True if the current statement has noinline attribute.
+  bool inNoInlineAttributedStmt = false;
+
+  /// True if the current statement has always_inline attribute.
+  bool inAlwaysInlineAttributedStmt = false;
+
+  // The CallExpr within the current statement that the musttail attribute
+  // applies to.  nullptr if there is no 'musttail' on the current statement.
+  const CallExpr *mustTailCall = nullptr;
 
   struct VlaSizePair {
     mlir::Value numElts;
@@ -1786,14 +1828,14 @@ public:
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  bool isMustTail, mlir::Location loc);
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
-                  const CallArgList &args,
+                  const CallArgList &args, bool isMustTail,
                   cir::CIRCallOpInterface *callOrTryCall = nullptr) {
     assert(currSrcLoc && "source location must have been set");
     return emitCall(funcInfo, callee, returnValue, args, callOrTryCall,
-                    *currSrcLoc);
+                    isMustTail, *currSrcLoc);
   }
 
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
@@ -1846,13 +1888,13 @@ public:
   void emitConstructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
-  cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
-  cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
-  cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
-                                       mlir::Value coroframeAddr);
+  cir::CoroEndOp emitCoroEndBuiltinCall(const CallExpr *e);
+  cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
+  cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
+  cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
 
-  cir::CallOp emitCoroFreeBuiltin(const CallExpr *e);
+  cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
+  cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
@@ -2263,6 +2305,15 @@ public:
                                      bool buildingTopLevelCase);
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
+  mlir::LogicalResult emitSYCLKernelCallStmt(const SYCLKernelCallStmt &s);
+
+  void emitSYCLKernelCaller(const clang::OutlinedFunctionDecl *outlinedFnDecl,
+                            cir::FuncOp funcOp, cir::FuncType funcType,
+                            FunctionArgList &args);
+
+  /// Remove leftover empty and unreachable blocks from an emitted function.
+  static void eraseEmptyAndUnusedBlocks(cir::FuncOp func);
+
   std::optional<mlir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
                         ReturnValueSlot &returnValue);
@@ -2531,7 +2582,10 @@ public:
   mlir::LogicalResult emitOMPFlushDirective(const OMPFlushDirective &s);
   mlir::LogicalResult emitOMPDepobjDirective(const OMPDepobjDirective &s);
   mlir::LogicalResult emitOMPScanDirective(const OMPScanDirective &s);
-  mlir::LogicalResult emitOMPOrderedDirective(const OMPOrderedDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective &s);
   mlir::LogicalResult emitOMPAtomicDirective(const OMPAtomicDirective &s);
   mlir::LogicalResult emitOMPTargetDirective(const OMPTargetDirective &s);
   mlir::LogicalResult emitOMPTeamsDirective(const OMPTeamsDirective &s);

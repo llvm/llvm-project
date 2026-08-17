@@ -287,6 +287,9 @@ protected:
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasUnalignedAccess : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasAMDGPUTypes : 1;
+
   unsigned ARMCDECoprocMask : 8;
 
   unsigned MaxOpenCLWorkGroupSize;
@@ -1072,6 +1075,10 @@ public:
   /// Returns whether or not the AArch64 ACLE built-in types are
   /// available on this target.
   bool hasAArch64ACLETypes() const { return HasAArch64ACLETypes; }
+
+  /// Returns whether or not the AMDGPU built-in types are
+  /// available on this target.
+  bool hasAMDGPUTypes() const { return HasAMDGPUTypes; }
 
   /// Returns whether or not the RISC-V V built-in types are
   /// available on this target.

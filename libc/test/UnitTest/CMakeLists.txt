@@ -8,7 +8,7 @@ function(add_unittest_framework_library name)
   )
   if(NOT TEST_LIB_SRCS)
     message(FATAL_ERROR "'add_unittest_framework_library' requires SRCS; for "
-                        "header only libraries, use 'add_header_library'")
+      "header only libraries, use 'add_header_library'")
   endif()
 
   foreach(lib IN ITEMS ${name}.unit ${name}.hermetic)
@@ -16,12 +16,28 @@ function(add_unittest_framework_library name)
       ${lib}
       STATIC
       EXCLUDE_FROM_ALL
-      ${TEST_LIB_SRCS}
-      ${TEST_LIB_HDRS}
+        ${TEST_LIB_SRCS}
+        ${TEST_LIB_HDRS}
     )
     target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
+    endif()
+
+    # Find out if the target supports catching signals.
+    if(NOT LLVM_LIBC_FULL_BUILD)
+      # In an overlay build of libc, assume signal.h is available: the host
+      # libc will provide it even if we don't.
+      set(no_signal FALSE)
+    elseif(TARGET libc.src.signal.signal)
+      # In a full build, signal.h only exists if we provide it ourselves, which
+      # we might not on bare metal.
+      get_target_property(no_signal libc.src.signal.signal SKIPPED)
+    else()
+      set(no_signal TRUE)
+    endif()
+    if(NOT no_signal)
+      target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_SIGNAL_CATCHING)
     endif()
   endforeach()
 
@@ -35,12 +51,12 @@ function(add_unittest_framework_library name)
     _get_common_test_compile_options(compile_options "" "")
   endif()
 
-  if (TEST_LIB_COMPILE_OPTIONS)
+  if(TEST_LIB_COMPILE_OPTIONS)
     list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
   endif()
   target_compile_options(${name}.unit PRIVATE ${compile_options})
 
-  _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "" "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
   target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
@@ -60,7 +76,7 @@ function(add_unittest_framework_library name)
   endif()
 endfunction()
 
-if (NOT TARGET libc.src.__support.OSUtil.osutil OR NOT LLVM_LIBC_FULL_BUILD)
+if(NOT TARGET libc.src.__support.OSUtil.osutil OR NOT LLVM_LIBC_FULL_BUILD)
   message(STATUS "TestLogger will use system libc's stdio to print.")
   set(test_logger_compile_options "-DLIBC_TEST_USE_SYSTEM_PRINTF")
   set(test_logger_osutil "")
@@ -73,10 +89,12 @@ add_unittest_framework_library(
   LibcTest
   SRCS
     CmakeFilePath.cpp
+    LibcCTest.cpp
     LibcTest.cpp
     LibcTestMain.cpp
     TestLogger.cpp
   HDRS
+    LibcCTest.h
     LibcTest.h
     Test.h
     TestLogger.h
@@ -101,9 +119,9 @@ set(libc_death_test_deps
   libc.hdr.stdint_proxy
   libc.src.__support.libc_assert
 )
-if (LIBC_TEST_SUBPROCESS_TESTS)
+if(LIBC_TEST_SUBPROCESS_TESTS)
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
-  if (LLVM_LIBC_FULL_BUILD)
+  if(LLVM_LIBC_FULL_BUILD)
     list(APPEND libc_death_test_deps
       libc.include.llvm-libc-macros.poll-macros
       libc.include.llvm-libc-macros.signal_macros

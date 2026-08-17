@@ -11,7 +11,8 @@
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #include "src/sys/auxv/getauxval.h"
 #endif
 
@@ -73,7 +74,9 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 void *aligned_alloc(size_t align, size_t s) {
   if (align & (align - 1)) // Must be power of 2
     return nullptr;
-  s = ((s + align - 1) / align) * align;
+  uintptr_t ptr_val = reinterpret_cast<uintptr_t>(ptr);
+  uintptr_t aligned_ptr_val = ((ptr_val + align - 1) / align) * align;
+  ptr = reinterpret_cast<uint8_t *>(aligned_ptr_val);
   void *mem = ptr;
   ptr += s;
   return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
@@ -111,7 +114,8 @@ void __cxa_pure_virtual() {
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 // Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
 // defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
 unsigned long __getauxval(unsigned long id) {
@@ -142,6 +146,6 @@ enum class align_val_t : size_t {};
 
 void operator delete(void *ptr, std::align_val_t) noexcept { free(ptr); }
 
-void operator delete(void *ptr, unsigned int, std::align_val_t) noexcept {
+void operator delete(void *ptr, size_t, std::align_val_t) noexcept {
   free(ptr);
 }
