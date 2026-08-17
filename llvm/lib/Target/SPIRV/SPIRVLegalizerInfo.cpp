@@ -1132,11 +1132,13 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
   auto Sign = assignSPIRVTy(
       MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_NE, DstTy, AsInt, Abs));
 
-  auto Res = buildSPIRVConstant(DstTy, 0);
+  MachineInstrBuilder Res;
 
   const auto appendToRes = [&](MachineInstrBuilder &&ToAppend) {
-    Res = assignSPIRVTy(
-        MIRBuilder.buildOr(DstTyCopy, Res, assignSPIRVTy(std::move(ToAppend))));
+    auto Appended = assignSPIRVTy(std::move(ToAppend));
+    Res = Res.getInstr()
+              ? assignSPIRVTy(MIRBuilder.buildOr(DstTyCopy, Res, Appended))
+              : Appended;
   };
 
   // Tests that involve more than one class should be processed first.
