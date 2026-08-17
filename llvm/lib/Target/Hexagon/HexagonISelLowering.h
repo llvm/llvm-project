@@ -501,6 +501,14 @@ private:
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpSetoeq(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMinMax(SDValue Op, unsigned PairwiseOpc,
+                                   bool IgnoreNaN, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMin(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMax(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMinimum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMaximum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFMinNum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFMaxNum(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;

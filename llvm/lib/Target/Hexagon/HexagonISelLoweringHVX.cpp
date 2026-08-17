@@ -149,8 +149,14 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,              T, Legal);
       setOperationAction(ISD::FMINIMUMNUM, T, Legal);
       setOperationAction(ISD::FMAXIMUMNUM, T, Legal);
-      setOperationAction(ISD::FMINNUM, T, Legal);
-      setOperationAction(ISD::FMAXNUM, T, Legal);
+      setOperationAction(ISD::FMINIMUM, T, Legal);
+      setOperationAction(ISD::FMAXIMUM, T, Legal);
+      setOperationAction(ISD::FMINNUM, T, Custom);
+      setOperationAction(ISD::FMAXNUM, T, Custom);
+      setOperationAction(ISD::VECREDUCE_FMIN, T, Custom);
+      setOperationAction(ISD::VECREDUCE_FMAX, T, Custom);
+      setOperationAction(ISD::VECREDUCE_FMINIMUM, T, Custom);
+      setOperationAction(ISD::VECREDUCE_FMAXIMUM, T, Custom);
 
       setOperationAction(ISD::INSERT_SUBVECTOR,  T, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, T, Custom);
@@ -230,8 +236,14 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FMUL,           P, Custom);
       setOperationAction(ISD::FMINIMUMNUM, P, Custom);
       setOperationAction(ISD::FMAXIMUMNUM, P, Custom);
+      setOperationAction(ISD::FMINIMUM, P, Custom);
+      setOperationAction(ISD::FMAXIMUM, P, Custom);
       setOperationAction(ISD::FMINNUM, P, Custom);
       setOperationAction(ISD::FMAXNUM, P, Custom);
+      setOperationAction(ISD::VECREDUCE_FMIN, P, Custom);
+      setOperationAction(ISD::VECREDUCE_FMAX, P, Custom);
+      setOperationAction(ISD::VECREDUCE_FMINIMUM, P, Custom);
+      setOperationAction(ISD::VECREDUCE_FMAXIMUM, P, Custom);
       setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
@@ -3772,6 +3784,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::FMUL:
       case ISD::FMINIMUMNUM:
       case ISD::FMAXIMUMNUM:
+      case ISD::FMINIMUM:
+      case ISD::FMAXIMUM:
       case ISD::FMINNUM:
       case ISD::FMAXNUM:
       case ISD::MULHS:
@@ -3859,6 +3873,18 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::PARTIAL_REDUCE_UMLA:
     case ISD::PARTIAL_REDUCE_SUMLA:
       return LowerHvxPartialReduceMLA(Op, DAG);
+    case ISD::VECREDUCE_FMIN:
+      return LowerHvxVecReduceFMin(Op, DAG);
+    case ISD::VECREDUCE_FMAX:
+      return LowerHvxVecReduceFMax(Op, DAG);
+    case ISD::VECREDUCE_FMINIMUM:
+      return LowerHvxVecReduceFMinimum(Op, DAG);
+    case ISD::VECREDUCE_FMAXIMUM:
+      return LowerHvxVecReduceFMaximum(Op, DAG);
+    case ISD::FMINNUM:
+      return LowerHvxFMinNum(Op, DAG);
+    case ISD::FMAXNUM:
+      return LowerHvxFMaxNum(Op, DAG);
       // clang-format on
   }
 #ifndef NDEBUG
@@ -4389,6 +4415,172 @@ SDValue HexagonTargetLowering::splitVecReduceAdd(SDNode *N,
   // SelectionDAGBuilder. However, we just replace the final result since we
   // have analyzed the input completely.
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, ScalarType, Partial);
+}
+
+// Shared helper for VECREDUCE_FMIN/FMAX/FMINIMUM/FMAXIMUM on HVX float
+// vector types. IgnoreNaN=true (FMIN/FMAX): NaN elements are replaced with
+// the neutral value before the reduction so they don't corrupt the result
+// even when the hardware pairwise instruction propagates NaN.
+// IgnoreNaN=false (FMINIMUM/FMAXIMUM): NaN propagates naturally.
+SDValue HexagonTargetLowering::LowerHvxVecReduceFMinMax(
+    SDValue Op, unsigned PairwiseOpc, bool IgnoreNaN, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Vec = Op.getOperand(0);
+  MVT VecTy = ty(Vec);
+  SDNodeFlags Flags = Op->getFlags();
+  bool ShouldStripNaN = IgnoreNaN && !Flags.hasNoNaNs();
+
+  // Save original input before NaN stripping; needed for the all-NaN fixup.
+  SDValue OrigVec = Vec;
+  MVT OrigVecTy = VecTy;
+
+  // Replace NaN elements in V with +/-Inf so the tree reduction ignores them.
+  bool IsMax = (Op.getOpcode() == ISD::VECREDUCE_FMAX);
+  auto ReplaceNaN = [&](SDValue V, MVT Ty) -> SDValue {
+    APFloat Neutral = APFloat::getInf(
+        Ty.getVectorElementType().getFltSemantics(), /*Negative=*/IsMax);
+    SDValue NeutralVec = DAG.getConstantFP(Neutral, DL, Ty);
+    EVT BoolTy = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), Ty);
+    SDValue IsNaN = DAG.getSetCC(DL, BoolTy, V, V, ISD::SETUO);
+    return DAG.getNode(ISD::VSELECT, DL, Ty, IsNaN, NeutralVec, V);
+  };
+
+  // For a pair vector, strip NaN from each half before the cross-half
+  // pairwise reduction so a NaN in one half can't corrupt the other.
+  if (isHvxPairTy(VecTy)) {
+    auto [Lo, Hi] = opSplit(Vec, DL, DAG);
+    MVT SingleTy = ty(Lo);
+    if (ShouldStripNaN) {
+      Lo = ReplaceNaN(Lo, SingleTy);
+      Hi = ReplaceNaN(Hi, SingleTy);
+    }
+    Vec = DAG.getNode(PairwiseOpc, DL, SingleTy, Lo, Hi, Flags);
+    VecTy = SingleTy;
+  } else if (ShouldStripNaN) {
+    Vec = ReplaceNaN(Vec, VecTy);
+  }
+
+  // Tree reduction using VROR + pairwise op. Each iteration rotates the vector
+  // by half the remaining element count (in bytes) and takes element-wise
+  // min/max, halving the active width until element 0 holds the result.
+  unsigned ElemBytes = VecTy.getScalarSizeInBits() / 8;
+  unsigned HwLen = Subtarget.getVectorLength();
+  unsigned NumElems = HwLen / ElemBytes;
+
+  SDValue Curr = Vec;
+  for (unsigned Width = NumElems / 2; Width >= 1; Width /= 2) {
+    SDValue RotAmt = DAG.getConstant(Width * ElemBytes, DL, MVT::i32);
+    SDValue Rotated = DAG.getNode(HexagonISD::VROR, DL, VecTy, Curr, RotAmt);
+    Curr = DAG.getNode(PairwiseOpc, DL, VecTy, Curr, Rotated, Flags);
+  }
+
+  // Extract element 0 as the scalar result.
+  MVT ScalarTy = Op.getSimpleValueType();
+  SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarTy, Curr,
+                               DAG.getConstant(0, DL, MVT::i32));
+
+  // Per llvm.maxnum/minnum semantics, all-NaN input must return NaN.  The
+  // NaN-stripping above replaced every NaN with the neutral value, so an
+  // all-NaN vector produces the neutral value instead.  Fix: if no element
+  // in the original vector was non-NaN, return NaN.
+  if (ShouldStripNaN) {
+    EVT BoolVecTy =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OrigVecTy);
+    // IsOrd[i] == 1 iff OrigVec[i] is not NaN.
+    SDValue IsOrd = DAG.getSetCC(DL, BoolVecTy, OrigVec, OrigVec, ISD::SETO);
+    // BoolVecTy is vNi1 with exactly N bits; bitcast to an integer and
+    // check != 0 to detect whether any element was non-NaN.
+    unsigned NumBits = BoolVecTy.getSizeInBits();
+    MVT IntTy = MVT::getIntegerVT(NumBits);
+    SDValue IsOrdInt = DAG.getBitcast(IntTy, IsOrd);
+    SDValue AnyNonNaN = DAG.getSetCC(DL, MVT::i1, IsOrdInt,
+                                     DAG.getConstant(0, DL, IntTy), ISD::SETNE);
+    SDValue NaN = DAG.getConstantFP(APFloat::getNaN(ScalarTy.getFltSemantics()),
+                                    DL, ScalarTy);
+    Result = DAG.getSelect(DL, ScalarTy, AnyNonNaN, Result, NaN);
+  }
+
+  return Result;
+}
+
+SDValue HexagonTargetLowering::LowerHvxVecReduceFMin(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  return LowerHvxVecReduceFMinMax(Op, ISD::FMINNUM, /*IgnoreNaN=*/true, DAG);
+}
+
+SDValue HexagonTargetLowering::LowerHvxVecReduceFMax(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  return LowerHvxVecReduceFMinMax(Op, ISD::FMAXNUM, /*IgnoreNaN=*/true, DAG);
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxVecReduceFMinimum(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  return LowerHvxVecReduceFMinMax(Op, ISD::FMINIMUM, /*IgnoreNaN=*/false, DAG);
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxVecReduceFMaximum(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  return LowerHvxVecReduceFMinMax(Op, ISD::FMAXIMUM, /*IgnoreNaN=*/false, DAG);
+}
+
+// Lower FMINNUM/FMAXNUM on a single HVX float vector.  These ops must ignore
+// NaN (return the non-NaN operand).  Because the hardware vmin/vmax may
+// propagate NaN, replace NaN in each operand with the neutral value (+/-Inf)
+// before delegating to FMINIMUM/FMAXIMUM.
+SDValue HexagonTargetLowering::LowerHvxFMinNum(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  auto A = Op.getOperand(0), B = Op.getOperand(1);
+  auto Ty = ty(Op);
+  auto Flags = Op->getFlags();
+
+  if (!Flags.hasNoNaNs()) {
+    auto &Sem = Ty.getVectorElementType().getFltSemantics();
+    auto PosInf = DAG.getConstantFP(APFloat::getInf(Sem, false), DL, Ty);
+    auto BoolTy =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), Ty);
+    auto IsNaN_A = DAG.getSetCC(DL, BoolTy, A, A, ISD::SETUO);
+    auto IsNaN_B = DAG.getSetCC(DL, BoolTy, B, B, ISD::SETUO);
+    // Per llvm.minnum: if both operands are NaN, return NaN.  Replace NaN
+    // with +Inf so the hardware min ignores single-operand NaN, then restore
+    // NaN for lanes where both inputs were NaN.
+    auto BothNaN = DAG.getNode(ISD::AND, DL, BoolTy, IsNaN_A, IsNaN_B);
+    A = DAG.getNode(ISD::VSELECT, DL, Ty, IsNaN_A, PosInf, A);
+    B = DAG.getNode(ISD::VSELECT, DL, Ty, IsNaN_B, PosInf, B);
+    auto Res = DAG.getNode(ISD::FMINIMUM, DL, Ty, A, B, Flags);
+    auto NaN = DAG.getConstantFP(APFloat::getNaN(Sem), DL, Ty);
+    return DAG.getNode(ISD::VSELECT, DL, Ty, BothNaN, NaN, Res);
+  }
+  return DAG.getNode(ISD::FMINIMUM, DL, Ty, A, B, Flags);
+}
+
+SDValue HexagonTargetLowering::LowerHvxFMaxNum(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  auto A = Op.getOperand(0), B = Op.getOperand(1);
+  auto Ty = ty(Op);
+  auto Flags = Op->getFlags();
+
+  if (!Flags.hasNoNaNs()) {
+    auto &Sem = Ty.getVectorElementType().getFltSemantics();
+    auto NegInf = DAG.getConstantFP(APFloat::getInf(Sem, true), DL, Ty);
+    auto BoolTy =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), Ty);
+    auto IsNaN_A = DAG.getSetCC(DL, BoolTy, A, A, ISD::SETUO);
+    auto IsNaN_B = DAG.getSetCC(DL, BoolTy, B, B, ISD::SETUO);
+    // Per llvm.maxnum: if both operands are NaN, return NaN.  Replace NaN
+    // with -Inf so the hardware max ignores single-operand NaN, then restore
+    // NaN for lanes where both inputs were NaN.
+    auto BothNaN = DAG.getNode(ISD::AND, DL, BoolTy, IsNaN_A, IsNaN_B);
+    A = DAG.getNode(ISD::VSELECT, DL, Ty, IsNaN_A, NegInf, A);
+    B = DAG.getNode(ISD::VSELECT, DL, Ty, IsNaN_B, NegInf, B);
+    auto Res = DAG.getNode(ISD::FMAXIMUM, DL, Ty, A, B, Flags);
+    auto NaN = DAG.getConstantFP(APFloat::getNaN(Sem), DL, Ty);
+    return DAG.getNode(ISD::VSELECT, DL, Ty, BothNaN, NaN, Res);
+  }
+  return DAG.getNode(ISD::FMAXIMUM, DL, Ty, A, B, Flags);
 }
 
 // When possible, separate an MLA reduction with extended operands but
