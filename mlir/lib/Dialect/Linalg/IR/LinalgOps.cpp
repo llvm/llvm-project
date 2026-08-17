@@ -5300,6 +5300,43 @@ struct FoldConsecutiveScalarBinaryPattern : public OpRewritePattern<OpTy> {
   }
 };
 
+ElementwiseKind ElementwiseOp::getElementwiseKind() { return getKind(); }
+
+//===----------------------------------------------------------------------===//
+// Shared utilities for named elementwise ops (AddOp, SubOp, ExpOp, etc.)
+//===----------------------------------------------------------------------===//
+
+void buildElementwiseRegion(ImplicitLocOpBuilder &b, Block &block,
+                            ElementwiseKind kind,
+                            function_ref<InFlightDiagnostic()> emitError) {
+  ArityGroupAndKind groupAndKind = getArityGroupAndKind(kind);
+  auto arityGroup = groupAndKind.arityGroup;
+  auto fnKind = groupAndKind.kind;
+
+  unsigned expectedArgs = getArityGroupAsUInt(arityGroup) + 1;
+  assert(block.getNumArguments() == expectedArgs &&
+         "elementwise regionBuilder arg count mismatch");
+
+  RegionBuilderHelper helper(b, block);
+  Value result;
+
+  if (arityGroup == ElementwiseArityGroup::Unary) {
+    result = helper.buildUnaryFn(fnKind.unaryFn, block.getArgument(0));
+  } else if (arityGroup == ElementwiseArityGroup::Binary) {
+    result = helper.buildBinaryFn(fnKind.binaryFn, block.getArgument(0),
+                                  block.getArgument(1), emitError);
+  } else if (arityGroup == ElementwiseArityGroup::Ternary) {
+    result = helper.buildTernaryFn(fnKind.ternaryFn, block.getArgument(0),
+                                   block.getArgument(1), block.getArgument(2));
+  } else {
+    assert(false && "unhandled arity group");
+  }
+
+  if (!result)
+    return;
+  helper.yieldOutputs({result});
+}
+
 //===----------------------------------------------------------------------===//
 // PackOp/UnPackOp Common
 //===----------------------------------------------------------------------===//

@@ -31,6 +31,9 @@ class IteratorTypeAttr;
 class LinalgOp;
 class GenericOp;
 
+// Forward declaration needed by ElementwiseOpInterface.
+enum class ElementwiseKind : uint32_t;
+
 namespace detail {
 /// Implementation of the method that check if given operands
 /// can be dropped, i.e. the remaining operands can compute the loop

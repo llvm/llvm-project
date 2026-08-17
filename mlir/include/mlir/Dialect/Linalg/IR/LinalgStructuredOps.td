@@ -544,7 +544,8 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 //===----------------------------------------------------------------------===//
 
 def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
-                    AttrSizedOperandSegments]> {
+                    AttrSizedOperandSegments,
+                    DeclareOpInterfaceMethods<ElementwiseOpInterface>]> {
   let summary = [{ Performs element-wise operation }];
   let description = [{
     The attribute `kind` describes arithmetic operation to perform. The
@@ -1212,6 +1213,182 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
       bool hasUserDefinedMaps();
     }];
 }
+
+//===----------------------------------------------------------------------===//
+// Elementwise specializations
+//
+// These are registered ops that are specializations of `linalg.elementwise`,
+// also known as linalg (elementwise) named ops.
+// They always use identity indexing maps and fix the operation kind.
+// Their C++ implementations reuse the same helpers
+// (buildStructuredOp, RegionBuilderHelper) as ElementwiseOp.
+//===----------------------------------------------------------------------===//
+
+multiclass ElementwiseNamedOp<string mnemonic, string kind, int numRegionArgs,
+                              string opSummary> {
+  def Op : LinalgStructuredBase_Op<mnemonic, [AttrSizedOperandSegments,
+              DeclareOpInterfaceMethods<ElementwiseOpInterface>]> {
+    let summary = opSummary;
+    let description = [{
+      }] # opSummary # [{
+
+
+      The shapes and element types must be identical. The appropriate casts,
+      broadcasts and reductions should be done previously to calling this op.
+      Ideally, named ops should be lowered to linalg.elementwise and then
+      broadcast, transpose can be folded in using indexing maps.
+    }];
+
+    let arguments = (ins
+      Variadic<AnyType>:$inputs,
+      Variadic<AnyShaped>:$outputs
+    );
+    let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+    let regions = (region AnyRegion:$region);
+
+    let skipDefaultBuilders = 1;
+    let builders = [
+      OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+          attributes, }] # NAME # [{Op::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+            "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildStructuredOp($_builder, $_state, resultTensorTypes,
+          inputs, outputs, attributes, }] # NAME # [{Op::getRegionBuilder());
+      }]>,
+      OpBuilder<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addOperands(operands);
+        $_state.addAttributes(attributes);
+        $_state.addTypes(resultTensorTypes);
+        (void)$_state.addRegion();
+      }]>
+    ];
+
+    let hasCustomAssemblyFormat = 1;
+    let hasFolder = 1;
+
+    let extraClassDeclaration = structuredOpsBaseDecls # [{
+      SmallVector<utils::IteratorType> getIteratorTypesArray() {
+        int64_t rank = getRank(getDpsInitOperand(0));
+        return SmallVector<utils::IteratorType>(rank,
+                                               utils::IteratorType::parallel);
+      }
+
+      ArrayAttr getIndexingMaps() {
+        unsigned numDims = getRank(getDpsInitOperand(0));
+        MLIRContext *context = getContext();
+        AffineMap scalarMap = AffineMap::get(numDims, 0, context);
+        AffineMap tensorMap = numDims == 0
+            ? scalarMap
+            : AffineMap::getMultiDimIdentityMap(numDims, context);
+        SmallVector<AffineMap> maps;
+        for (OpOperand &opOperand : getOperation()->getOpOperands())
+          maps.push_back(getRank(&opOperand) == 0 ? scalarMap : tensorMap);
+        return Builder(context).getAffineMapArrayAttr(maps);
+      }
+
+      ::mlir::MutableOperandRange getDpsInitsMutable() {
+        return getOutputsMutable();
+      }
+
+      std::string getLibraryCallName() {
+        return generateLibraryCallName(getOperation());
+      }
+
+      static unsigned getNumRegionArgs() { return }] #  !cast<string>(numRegionArgs) # [{; }
+
+      static std::function<void(ImplicitLocOpBuilder &,
+                                Block &, ArrayRef<NamedAttribute>,
+                                function_ref<InFlightDiagnostic()>)>
+      getRegionBuilder() {
+        return elementwiseNamedOpRegionBuilder<ElementwiseKind::}] # kind # [{>;
+      }
+    }];
+
+    let extraClassDefinition = [{
+      ElementwiseKind $cppClass::getElementwiseKind() {
+        return ElementwiseKind::}] # kind # [{;
+      }
+      ParseResult $cppClass::parse(OpAsmParser &parser, OperationState &result) {
+        return ::parseNamedStructuredOp(parser, result,
+                                        $cppClass::getNumRegionArgs(),
+                                        $cppClass::getRegionBuilder());
+      }
+      void $cppClass::print(OpAsmPrinter &p) {
+        ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                                 {"operandSegmentSizes",
+                                  "linalg.memoized_indexing_maps"});
+      }
+      LogicalResult $cppClass::fold(FoldAdaptor,
+                                    SmallVectorImpl<OpFoldResult> &) {
+        return memref::foldMemRefCast(*this);
+      }
+      void $cppClass::getEffects(
+          SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+              &effects) {
+        if (hasPureTensorSemantics())
+          return;
+        getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+      }
+      Speculation::Speculatability $cppClass::getSpeculatability() {
+        return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+      }
+    }];
+  }
+}
+
+// Shorthand wrappers for common arities where kind == mnemonic.
+multiclass UnaryElementwiseOp<string mnemonic>
+    : ElementwiseNamedOp<mnemonic, mnemonic, 2,
+        "Applies " # mnemonic # "(x) elementwise.">;
+
+multiclass BinaryElementwiseOp<string mnemonic, string summary>
+    : ElementwiseNamedOp<mnemonic, mnemonic, 3, summary>;
+
+// --- Unary ops ---
+defm Exp       : UnaryElementwiseOp<"exp">;
+defm Log       : UnaryElementwiseOp<"log">;
+defm Abs       : UnaryElementwiseOp<"abs">;
+defm Ceil      : UnaryElementwiseOp<"ceil">;
+defm Floor     : UnaryElementwiseOp<"floor">;
+defm NegF      : UnaryElementwiseOp<"negf">;
+defm Reciprocal: UnaryElementwiseOp<"reciprocal">;
+defm Round     : UnaryElementwiseOp<"round">;
+defm Sqrt      : UnaryElementwiseOp<"sqrt">;
+defm Rsqrt     : UnaryElementwiseOp<"rsqrt">;
+defm Square    : UnaryElementwiseOp<"square">;
+defm Tanh      : UnaryElementwiseOp<"tanh">;
+defm Erf       : UnaryElementwiseOp<"erf">;
+
+// --- Binary ops ---
+defm Add : BinaryElementwiseOp<"add", "Adds two tensors elementwise.">;
+defm Sub : BinaryElementwiseOp<"sub", "Subtracts two tensors elementwise.">;
+defm Mul : BinaryElementwiseOp<"mul", "Multiplies two tensors elementwise.">;
+defm Div : BinaryElementwiseOp<"div", "Divides two tensors elementwise.">;
+defm DivUnsigned : BinaryElementwiseOp<"div_unsigned",
+    "Unsigned-divides two tensors elementwise.">;
+defm PowF : BinaryElementwiseOp<"powf",
+    "Takes powf(lhs, rhs) elementwise.">;
+
+// Binary ops where kind != mnemonic (signed variants).
+defm Max : ElementwiseNamedOp<"max", "max_signed", 3,
+    "Takes the signed max between two tensors, elementwise.">;
+defm Min : ElementwiseNamedOp<"min", "min_signed", 3,
+    "Takes the signed min between two tensors, elementwise.">;
+
+// --- Ternary ops ---
+defm Select : ElementwiseNamedOp<"select", "select", 4,
+    "Chooses one value based on a binary condition.">;
 
 //===----------------------------------------------------------------------===//
 // Named Linalg ops, implemented as a declarative configurations of generic ops.
