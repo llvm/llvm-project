@@ -93,6 +93,12 @@ The on-disk layout of the serialized hash table is described at :doc:`HashTable`
 Note that the entire Named Stream Map is not length-prefixed, so the only way to
 get to the data following it is to de-serialize it in its entirety.
 
+After the serialized hash table, producers append a 32-bit ``niMac`` field used
+by Microsoft's named-stream table implementation when assigning stream name
+indices. Consumers that only need the name-to-index map may ignore this value,
+but parsers that read past the map must account for these 4 bytes before the
+feature codes that follow.
+
 
 .. _pdb_stream_features:
 
