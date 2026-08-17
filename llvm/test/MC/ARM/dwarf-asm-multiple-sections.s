@@ -4,7 +4,7 @@
 // RUN: llvm-objdump -r %t | FileCheck --check-prefixes=RELOC,RELOC56 %s
 
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 5 -fdebug-compilation-dir=/tmp
-// RUN: llvm-dwarfdump -v %t | FileCheck --check-prefixes=DWARF,DWARF56 -DDWVER=5 %s
+// RUN: llvm-dwarfdump -v %t | FileCheck --check-prefixes=DWARF,DWARF5,DWARF56 -DDWVER=5 %s
 // RUN: llvm-dwarfdump --debug-line %t | FileCheck -check-prefix DWARF-DL -check-prefix DWARF-DL-56 -DDWVER=5 -DDWFILE=0 %s
 // RUN: llvm-objdump -r %t | FileCheck --check-prefixes=RELOC,RELOC56 %s
 
@@ -19,7 +19,7 @@
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 2 2>&1 | FileCheck -check-prefix VERSION %s
 
 // RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 1 2>&1 | FileCheck -check-prefix DWARF1 %s
-// RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 7 2>&1 | FileCheck -check-prefix DWARF6 %s
+// RUN: not llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -dwarf-version 7 2>&1 | FileCheck -check-prefix DWARF7 %s
   .section .text, "ax"
 a:
   mov r0, r0
@@ -50,7 +50,8 @@ d:
 // DWARF:         DW_AT_name      DW_FORM_string
 // DWARF:         DW_AT_comp_dir  DW_FORM_string
 // DWARF:         DW_AT_producer  DW_FORM_string
-// DWARF:         DW_AT_language  DW_FORM_data2
+// DWARF34:       DW_AT_language  DW_FORM_data2
+// DWARF5:        DW_AT_language  DW_FORM_data2
 
 // DWARF: .debug_info contents:
 // DWARF: 0x{{[0-9a-f]+}}: DW_TAG_compile_unit [1]
@@ -140,4 +141,4 @@ d:
 // VERSION: {{.*}} warning: DWARF2 only supports one section per compilation unit
 
 // DWARF1: Dwarf version 1 is not supported.
-// DWARF6: Dwarf version 7 is not supported.
+// DWARF7: Dwarf version 7 is not supported.

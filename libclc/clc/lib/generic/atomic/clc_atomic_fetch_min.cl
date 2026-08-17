@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_fetch_min.h>
+#include "clc/atomic/clc_atomic_fetch_min.h"
 
 #define __CLC_FUNCTION __clc_atomic_fetch_min
 #define __CLC_IMPL_FUNCTION __scoped_atomic_fetch_min
 
-#define __CLC_BODY <clc_atomic_def.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc_atomic_def.inc"
+#include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <clc_atomic_def.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_atomic_def.inc"
+#include "clc/math/gentype.inc"

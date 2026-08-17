@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_nan.h>
+#include "clc/math/clc_nan.h"
 
-#define __CLC_BODY <nan.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "nan.inc"
+#include "clc/math/gentype.inc"

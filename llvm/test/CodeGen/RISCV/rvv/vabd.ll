@@ -167,8 +167,8 @@ define <vscale x 64 x i8> @vabd_vv_i8m8(<vscale x 64 x i8> %a, <vscale x 64 x i8
 define <vscale x 64 x i8> @vabd_vv_mask_i8m8(<vscale x 64 x i8> %passthru, <vscale x 64 x i8> %a, <vscale x 64 x i8> %b, <vscale x 64 x i1> %mask, iXLen %vl) {
 ; CHECK-LABEL: vabd_vv_mask_i8m8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8r.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
+; CHECK-NEXT:    vle8.v v24, (a0)
 ; CHECK-NEXT:    vabd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %res = call <vscale x 64 x i8> @llvm.riscv.vabd.mask(
@@ -318,8 +318,8 @@ define <vscale x 32 x i16> @vabd_vv_i16m8(<vscale x 32 x i16> %a, <vscale x 32 x
 define <vscale x 32 x i16> @vabd_vv_mask_i16m8(<vscale x 32 x i16> %passthru, <vscale x 32 x i16> %a, <vscale x 32 x i16> %b, <vscale x 32 x i1> %mask,iXLen %vl) {
 ; CHECK-LABEL: vabd_vv_mask_i16m8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vabd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %res = call <vscale x 32 x i16> @llvm.riscv.vabd.mask(

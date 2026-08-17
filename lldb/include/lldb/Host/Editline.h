@@ -41,7 +41,7 @@
 #include <histedit.h>
 #endif
 
-#include <csignal>
+#include <atomic>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -384,6 +384,12 @@ private:
 
   void ApplyTerminalSizeChange();
 
+  /// Apply a resize signaled by TerminalSizeChanged() if one is pending. The
+  /// output stream lock must be held. Repaints issued from the resize
+  /// notification thread call this so they draw at the new dimensions rather
+  /// than the dimensions cached before the resize.
+  void ApplyPendingTerminalSizeChange();
+
   // The following set various editline parameters.  It's not any less
   // verbose to put the editline calls into a function, but it
   // provides type safety, since the editline functions take varargs
@@ -412,7 +418,11 @@ private:
   std::string m_set_continuation_prompt;
   std::string m_current_prompt;
   bool m_needs_prompt_repaint = false;
-  volatile std::sig_atomic_t m_terminal_size_has_changed = 0;
+  /// Set from the signal thread on SIGWINCH and consumed on the thread that
+  /// owns libedit, which applies the resize in its read loop. el_resize() is
+  /// not safe to run off that thread, so this only records that a resize is
+  /// pending rather than performing it here.
+  std::atomic<bool> m_terminal_size_has_changed = false;
   std::string m_editor_name;
   FILE *m_input_file;
   lldb::LockableStreamFileSP m_output_stream_sp;

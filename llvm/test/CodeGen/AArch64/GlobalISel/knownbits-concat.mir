@@ -10,9 +10,9 @@ body: |
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1
   ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:1
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s8>) = COPY $h1
-    %2:_(<4 x s8>) = G_CONCAT_VECTORS %0, %1
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i8>) = COPY $h1
+    %2:_(<4 x i8>) = G_CONCAT_VECTORS %0, %1
 ...
 ---
 name: zext_concat
@@ -25,11 +25,11 @@ body: |
   ; CHECK-NEXT: %zext0:_ KnownBits:00000000???????? SignBits:8
   ; CHECK-NEXT: %zext1:_ KnownBits:00000000???????? SignBits:8
   ; CHECK-NEXT: %res:_ KnownBits:00000000???????? SignBits:8
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s8>) = COPY $h1
-    %zext0:_(<2 x s16>) = G_ZEXT %0
-    %zext1:_(<2 x s16>) = G_ZEXT %1
-    %res:_(<4 x s16>) = G_CONCAT_VECTORS %zext0, %zext1
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i8>) = COPY $h1
+    %zext0:_(<2 x i16>) = G_ZEXT %0
+    %zext1:_(<2 x i16>) = G_ZEXT %1
+    %res:_(<4 x i16>) = G_CONCAT_VECTORS %zext0, %zext1
 ...
 ---
 
@@ -43,11 +43,11 @@ body: |
   ; CHECK-NEXT: %sext0:_ KnownBits:???????????????? SignBits:9
   ; CHECK-NEXT: %sext1:_ KnownBits:???????????????? SignBits:9
   ; CHECK-NEXT: %res:_ KnownBits:???????????????? SignBits:9
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s8>) = COPY $h1
-    %sext0:_(<2 x s16>) = G_SEXT %0
-    %sext1:_(<2 x s16>) = G_SEXT %1
-    %res:_(<4 x s16>) = G_CONCAT_VECTORS %sext0, %sext1
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i8>) = COPY $h1
+    %sext0:_(<2 x i16>) = G_SEXT %0
+    %sext1:_(<2 x i16>) = G_SEXT %1
+    %res:_(<4 x i16>) = G_CONCAT_VECTORS %sext0, %sext1
 ...
 ---
 
@@ -61,9 +61,9 @@ body: |
   ; CHECK-NEXT: %zext0:_ KnownBits:00000000???????? SignBits:8
   ; CHECK-NEXT: %sext1:_ KnownBits:???????????????? SignBits:9
   ; CHECK-NEXT: %res:_ KnownBits:???????????????? SignBits:8
-    %0:_(<2 x s8>) = COPY $h0
-    %1:_(<2 x s8>) = COPY $h1
-    %zext0:_(<2 x s16>) = G_ZEXT %0
-    %sext1:_(<2 x s16>) = G_SEXT %1
-    %res:_(<4 x s16>) = G_CONCAT_VECTORS %zext0, %sext1
+    %0:_(<2 x i8>) = COPY $h0
+    %1:_(<2 x i8>) = COPY $h1
+    %zext0:_(<2 x i16>) = G_ZEXT %0
+    %sext1:_(<2 x i16>) = G_SEXT %1
+    %res:_(<4 x i16>) = G_CONCAT_VECTORS %zext0, %sext1
 ...

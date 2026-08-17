@@ -19,52 +19,52 @@
 void test1(void) {
   extern volatile int f11G, a, b;
   
-  // DEFAULT-CIR:  cir.binop(add, {{.*}}, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.add nsw {{.*}}, {{.*}} : !s32i
   // DEFAULT-LLVM: add nsw i32
   // DEFAULT-OGCG: add nsw i32
-  // WRAPV-CIR:  cir.binop(add, {{.*}}, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.add {{.*}}, {{.*}} : !s32i
   // WRAPV-LLVM: add i32
   // WRAPV-OGCG: add i32
   f11G = a + b;
   
-  // DEFAULT-CIR:  cir.binop(sub, {{.*}}, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.sub nsw {{.*}}, {{.*}} : !s32i
   // DEFAULT-LLVM: sub nsw i32
   // DEFAULT-OGCG: sub nsw i32
-  // WRAPV-CIR:  cir.binop(sub, {{.*}}, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.sub {{.*}}, {{.*}} : !s32i
   // WRAPV-LLVM: sub i32
   // WRAPV-OGCG: sub i32
   f11G = a - b;
   
-  // DEFAULT-CIR:  cir.binop(mul, {{.*}}, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.mul nsw {{.*}}, {{.*}} : !s32i
   // DEFAULT-LLVM: mul nsw i32
   // DEFAULT-OGCG: mul nsw i32
-  // WRAPV-CIR:  cir.binop(mul, {{.*}}, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.mul {{.*}}, {{.*}} : !s32i
   // WRAPV-LLVM: mul i32
   // WRAPV-OGCG: mul i32
   f11G = a * b;
 
-  // DEFAULT-CIR:  cir.unary(minus, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.minus nsw {{.*}} : !s32i
   // DEFAULT-LLVM: sub nsw i32 0, 
   // DEFAULT-OGCG: sub nsw i32 0, 
-  // WRAPV-CIR:  cir.unary(minus, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.minus {{.*}} : !s32i
   // WRAPV-LLVM: sub i32 0, 
   // WRAPV-OGCG: sub i32 0, 
   f11G = -a;
   
   // PR7426 - Overflow checking for increments.
   
-  // DEFAULT-CIR:  cir.unary(inc, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.inc nsw {{.*}} : !s32i
   // DEFAULT-LLVM: add nsw i32 {{.*}}, 1
   // DEFAULT-OGCG: add nsw i32 {{.*}}, 1
-  // WRAPV-CIR:  cir.unary(inc, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.inc {{.*}} : !s32i
   // WRAPV-LLVM: add i32 {{.*}}, 1
   // WRAPV-OGCG: add i32 {{.*}}, 1
   ++a;
   
-  // DEFAULT-CIR:  cir.unary(dec, {{.*}}) nsw : !s32i
+  // DEFAULT-CIR:  cir.dec nsw {{.*}} : !s32i
   // DEFAULT-LLVM: sub nsw i32 {{.*}}, 1
   // DEFAULT-OGCG: add nsw i32 {{.*}}, -1
-  // WRAPV-CIR:  cir.unary(dec, {{.*}}) : !s32i
+  // WRAPV-CIR:  cir.dec {{.*}} : !s32i
   // WRAPV-LLVM: sub i32 {{.*}}, 1
   // WRAPV-OGCG: add i32 {{.*}}, -1
   --a;
@@ -84,40 +84,40 @@ void test1(void) {
 
   // PR9350: char pre-increment never overflows.
   extern volatile signed char PR9350_char_inc;
-  // DEFAULT-CIR:  cir.unary(inc, {{.*}}) : !s8i
+  // DEFAULT-CIR:  cir.inc {{.*}} : !s8i
   // DEFAULT-LLVM: add i8 {{.*}}, 1
   // DEFAULT-OGCG: add i8 {{.*}}, 1
-  // WRAPV-CIR:  cir.unary(inc, {{.*}}) : !s8i
+  // WRAPV-CIR:  cir.inc {{.*}} : !s8i
   // WRAPV-LLVM: add i8 {{.*}}, 1
   // WRAPV-OGCG: add i8 {{.*}}, 1
   ++PR9350_char_inc;
 
   // PR9350: char pre-decrement never overflows.
   extern volatile signed char PR9350_char_dec;
-  // DEFAULT-CIR:  cir.unary(dec, {{.*}}) : !s8i
+  // DEFAULT-CIR:  cir.dec {{.*}} : !s8i
   // DEFAULT-LLVM: sub i8 {{.*}}, 1
   // DEFAULT-OGCG: add i8 {{.*}}, -1
-  // WRAPV-CIR:  cir.unary(dec, {{.*}}) : !s8i
+  // WRAPV-CIR:  cir.dec {{.*}} : !s8i
   // WRAPV-LLVM: sub i8 {{.*}}, 1
   // WRAPV-OGCG: add i8 {{.*}}, -1
   --PR9350_char_dec;
 
   // PR9350: short pre-increment never overflows.
   extern volatile signed short PR9350_short_inc;
-  // DEFAULT-CIR:  cir.unary(inc, {{.*}}) : !s16i
+  // DEFAULT-CIR:  cir.inc {{.*}} : !s16i
   // DEFAULT-LLVM: add i16 {{.*}}, 1
   // DEFAULT-OGCG: add i16 {{.*}}, 1
-  // WRAPV-CIR:  cir.unary(inc, {{.*}}) : !s16i
+  // WRAPV-CIR:  cir.inc {{.*}} : !s16i
   // WRAPV-LLVM: add i16 {{.*}}, 1
   // WRAPV-OGCG: add i16 {{.*}}, 1
   ++PR9350_short_inc;
 
   // PR9350: short pre-decrement never overflows.
   extern volatile signed short PR9350_short_dec;
-  // DEFAULT-CIR:  cir.unary(dec, {{.*}}) : !s16i
+  // DEFAULT-CIR:  cir.dec {{.*}} : !s16i
   // DEFAULT-LLVM: sub i16 {{.*}}, 1
   // DEFAULT-OGCG: add i16 {{.*}}, -1
-  // WRAPV-CIR:  cir.unary(dec, {{.*}}) : !s16i
+  // WRAPV-CIR:  cir.dec {{.*}} : !s16i
   // WRAPV-LLVM: sub i16 {{.*}}, 1
   // WRAPV-OGCG: add i16 {{.*}}, -1
   --PR9350_short_dec;

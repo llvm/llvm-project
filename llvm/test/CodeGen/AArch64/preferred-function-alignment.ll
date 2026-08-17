@@ -29,10 +29,11 @@ define void @test() {
 }
 
 ; CHECK-LABEL: test
-; ALIGN2: .p2align 2
-; ALIGN3: .p2align 3
-; ALIGN4: .p2align 4
-; ALIGN5: .p2align 5
+; CHECK: .p2align 2
+; ALIGN2-NOT: .prefalign
+; ALIGN3-NEXT: .prefalign 3
+; ALIGN4-NEXT: .prefalign 4
+; ALIGN5-NEXT: .prefalign 5
 
 define void @test_optsize() optsize {
   ret void

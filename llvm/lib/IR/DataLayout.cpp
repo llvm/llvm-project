@@ -153,6 +153,7 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
          IndexBitWidth == Other.IndexBitWidth &&
          HasUnstableRepresentation == Other.HasUnstableRepresentation &&
          HasExternalState == Other.HasExternalState &&
+         NullPtrValue == Other.NullPtrValue &&
          AddrSpaceName == Other.AddrSpaceName;
 }
 
@@ -188,18 +189,13 @@ constexpr DataLayout::PrimitiveSpec DefaultFloatSpecs[] = {
     {64, Align::Constant<8>(), Align::Constant<8>()},    // f64:64:64
     {128, Align::Constant<16>(), Align::Constant<16>()}, // f128:128:128
 };
-constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
-    {64, Align::Constant<8>(), Align::Constant<8>()},    // v64:64:64
-    {128, Align::Constant<16>(), Align::Constant<16>()}, // v128:128:128
-};
 
 DataLayout::DataLayout()
     : IntSpecs(ArrayRef(DefaultIntSpecs)),
-      FloatSpecs(ArrayRef(DefaultFloatSpecs)),
-      VectorSpecs(ArrayRef(DefaultVectorSpecs)) {
+      FloatSpecs(ArrayRef(DefaultFloatSpecs)) {
   // Default pointer type specifications.
   setPointerSpec(0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false,
-                 false, "");
+                 false, "", APInt::getZero(64));
 }
 
 DataLayout::DataLayout(StringRef LayoutString) : DataLayout() {
@@ -212,6 +208,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
   LayoutMap = nullptr;
   StringRepresentation = Other.StringRepresentation;
   BigEndian = Other.BigEndian;
+  VectorsAreElementAligned = Other.VectorsAreElementAligned;
   AllocaAddrSpace = Other.AllocaAddrSpace;
   ProgramAddrSpace = Other.ProgramAddrSpace;
   DefaultGlobalsAddrSpace = Other.DefaultGlobalsAddrSpace;
@@ -232,6 +229,7 @@ DataLayout &DataLayout::operator=(const DataLayout &Other) {
 bool DataLayout::operator==(const DataLayout &Other) const {
   // NOTE: StringRepresentation might differ, it is not canonicalized.
   return BigEndian == Other.BigEndian &&
+         VectorsAreElementAligned == Other.VectorsAreElementAligned &&
          AllocaAddrSpace == Other.AllocaAddrSpace &&
          ProgramAddrSpace == Other.ProgramAddrSpace &&
          DefaultGlobalsAddrSpace == Other.DefaultGlobalsAddrSpace &&
@@ -449,6 +447,9 @@ Error DataLayout::parsePointerSpec(
   unsigned AddrSpace = 0;
   bool ExternalState = false;
   bool UnstableRepr = false;
+  // Null pointer value flags: default, z = all-zeros, o = all-ones.
+  enum class NullPtrKind { Default, Zero, AllOnes };
+  NullPtrKind NullPtrFlag = NullPtrKind::Default;
   StringRef AddrSpaceName;
   StringRef AddrSpaceStr = Components[0];
   while (!AddrSpaceStr.empty()) {
@@ -457,6 +458,14 @@ Error DataLayout::parsePointerSpec(
       ExternalState = true;
     } else if (C == 'u') {
       UnstableRepr = true;
+    } else if (C == 'z') {
+      if (NullPtrFlag != NullPtrKind::Default)
+        return createStringError("only one of 'z' or 'o' may be specified");
+      NullPtrFlag = NullPtrKind::Zero;
+    } else if (C == 'o') {
+      if (NullPtrFlag != NullPtrKind::Default)
+        return createStringError("only one of 'z' or 'o' may be specified");
+      NullPtrFlag = NullPtrKind::AllOnes;
     } else if (isAlpha(C)) {
       return createStringError("'%c' is not a valid pointer specification flag",
                                C);
@@ -509,8 +518,12 @@ Error DataLayout::parsePointerSpec(
     return createStringError(
         "index size cannot be larger than the pointer size");
 
+  APInt NullPtrValue = NullPtrFlag == NullPtrKind::AllOnes
+                           ? APInt::getAllOnes(BitWidth)
+                           : APInt::getZero(BitWidth);
+
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
-                 UnstableRepr, ExternalState, AddrSpaceName);
+                 UnstableRepr, ExternalState, AddrSpaceName, NullPtrValue);
   return Error::success();
 }
 
@@ -534,6 +547,11 @@ Error DataLayout::parseSpecification(
         return createStringError("address space 0 cannot be non-integral");
       NonIntegralAddressSpaces.push_back(AddrSpace);
     }
+    return Error::success();
+  }
+
+  if (Spec == "ve") {
+    VectorsAreElementAligned = true;
     return Error::success();
   }
 
@@ -690,7 +708,7 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
                    /*HasUnstableRepr=*/true, /*HasExternalState=*/false,
-                   getAddressSpaceName(AS));
+                   getAddressSpaceName(AS), PS.NullPtrValue);
   }
 
   return Error::success();
@@ -739,13 +757,14 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
 void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 Align ABIAlign, Align PrefAlign,
                                 uint32_t IndexBitWidth, bool HasUnstableRepr,
-                                bool HasExternalState,
-                                StringRef AddrSpaceName) {
+                                bool HasExternalState, StringRef AddrSpaceName,
+                                APInt NullPtrValue) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
                                        IndexBitWidth, HasUnstableRepr,
-                                       HasExternalState, AddrSpaceName.str()});
+                                       HasExternalState, AddrSpaceName.str(),
+                                       std::move(NullPtrValue)});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
@@ -754,6 +773,7 @@ void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
     I->HasUnstableRepresentation = HasUnstableRepr;
     I->HasExternalState = HasExternalState;
     I->AddrSpaceName = AddrSpaceName.str();
+    I->NullPtrValue = std::move(NullPtrValue);
   }
 }
 
@@ -872,6 +892,9 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     const Align Align = abi_or_pref ? StructABIAlignment : StructPrefAlignment;
     return std::max(Align, Layout->getAlignment());
   }
+  case Type::ByteTyID:
+    // The byte type has the same alignment as the equally sized integer type.
+    return getIntegerAlignment(Ty->getByteBitWidth(), abi_or_pref);
   case Type::IntegerTyID:
     return getIntegerAlignment(Ty->getIntegerBitWidth(), abi_or_pref);
   case Type::HalfTyID:
@@ -902,6 +925,9 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     auto I = lower_bound(VectorSpecs, BitWidth, LessPrimitiveBitWidth());
     if (I != VectorSpecs.end() && I->BitWidth == BitWidth)
       return abi_or_pref ? I->ABIAlign : I->PrefAlign;
+
+    if (vectorsAreElementAligned())
+      return getAlignment(cast<VectorType>(Ty)->getElementType(), abi_or_pref);
 
     // By default, use natural alignment for vector types. This is consistent
     // with what clang and llvm-gcc do.
@@ -981,6 +1007,21 @@ Type *DataLayout::getIntPtrType(Type *Ty) const {
   if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
     return VectorType::get(IntTy, VecTy);
   return IntTy;
+}
+
+ByteType *DataLayout::getBytePtrType(LLVMContext &C,
+                                     unsigned AddressSpace) const {
+  return ByteType::get(C, getPointerSizeInBits(AddressSpace));
+}
+
+Type *DataLayout::getBytePtrType(Type *Ty) const {
+  assert(Ty->isPtrOrPtrVectorTy() &&
+         "Expected a pointer or pointer vector type.");
+  unsigned NumBits = getPointerTypeSizeInBits(Ty);
+  ByteType *ByteTy = ByteType::get(Ty->getContext(), NumBits);
+  if (VectorType *VecTy = dyn_cast<VectorType>(Ty))
+    return VectorType::get(ByteTy, VecTy);
+  return ByteTy;
 }
 
 Type *DataLayout::getSmallestLegalIntType(LLVMContext &C, unsigned Width) const {

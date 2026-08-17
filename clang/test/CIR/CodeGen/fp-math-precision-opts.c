@@ -47,9 +47,9 @@ float test_precise(float f) {
   // CIR-ERRNO: cir.call @cosf
   // CIR-NO-ERRNO: cir.call @cosf
   // LLVM-ERRNO: call float @cosf
-  // LLVM-NO-ERRNO: call float @cosf
+  // LLVM-NO-ERRNO: call nofpclass(nan inf) float @cosf
   // OGCG-ERRNO: call {{.*}} float @cosf
-  // OGCG-NO-ERRNO: call {{.*}} float @cosf
+  // OGCG-NO-ERRNO: call nofpclass(nan inf) float @cosf
 }
 
 float test_fast(float f) {
@@ -73,7 +73,7 @@ float test_optnone(float f) {
   // CIR-ERRNO: cir.call @cosf
   // CIR-NO-ERRNO: cir.call @cosf
   // LLVM-ERRNO: call float @cosf
-  // LLVM-NO-ERRNO: call float @cosf
+  // LLVM-NO-ERRNO: call nofpclass(nan inf) float @cosf
   // OGCG-ERRNO: call {{.*}} float @cosf
-  // OGCG-NO-ERRNO: call {{.*}} float @cosf
+  // OGCG-NO-ERRNO: call nofpclass(nan inf) float @cosf
 }

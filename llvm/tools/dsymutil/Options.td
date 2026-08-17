@@ -219,7 +219,7 @@ def include_swiftmodules_from_interface: Flag<["--", "-"], "include-swiftmodules
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">,
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'parallel'">,
   Group<grp_general>;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
 
@@ -228,6 +228,39 @@ def build_variant_suffix: Separate<["--", "-"], "build-variant-suffix">,
   HelpText<"Specify the build variant suffix used to build the executable file.">,
   Group<grp_general>;
 def: Joined<["--", "-"], "build-variant-suffix=">, Alias<build_variant_suffix>;
+
+def embed_resource: Separate<["--", "-"], "embed-resource">,
+  MetaVarName<"<src-path>=<bundle-relative-path>">,
+  HelpText<"Copy a file or directory into the dSYM bundle's Resources directory. "
+           "The argument is <source-path>=<destination-relative-to-Resources>. "
+           "If the source is a directory, its contents are copied recursively. "
+           "This option can be specified multiple times.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "embed-resource=">, Alias<embed_resource>;
+
+def allow: Separate<["--", "-"], "allow">,
+  MetaVarName<"<path>">,
+  HelpText<"Only process debug map objects listed in the YAML file at <path>. "
+  "Only filters N_OSO entries. If `--oso-prepend-path` is specified, the path "
+  "prefix applies, i.e. paths in the file should exact match that of N_OSO "
+  "entries.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "allow=">, Alias<allow>;
+
+def disallow: Separate<["--", "-"], "disallow">,
+  MetaVarName<"<path>">,
+  HelpText<"Exclude debug map objects listed in the YAML file at <path>. "
+  "Only filters N_OSO entries. If `--oso-prepend-path` is specified, the path "
+  "prefix applies, i.e. paths in the file should exact match that of N_OSO "
+  "entries.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "disallow=">, Alias<disallow>;
+
+def codesign: Separate<["--", "-"], "codesign">,
+  MetaVarName<"<identity>">,
+  HelpText<"Code sign the dSYM bundle with the given signing identity after linking.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "codesign=">, Alias<codesign>;
 
 def dsym_search_path: Separate<["-", "--"], "D">,
   MetaVarName<"<path>">,

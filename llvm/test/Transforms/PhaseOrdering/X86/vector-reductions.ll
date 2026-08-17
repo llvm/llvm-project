@@ -24,11 +24,8 @@ define i32 @ext_ext_or_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 
 define i32 @ext_ext_partial_add_reduction_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: @ext_ext_partial_add_reduction_v4i32(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[SHIFT]], [[X]]
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], [[SHIFT1]]
-; CHECK-NEXT:    [[X210:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[X210:%.*]] = tail call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[X210]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
@@ -279,15 +276,14 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], splat (double 0x3EB0C6F7A0B5ED8D)
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uge <2 x double> [[TMP7]], splat (double f0x3EB0C6F7A0B5ED8D)
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i1> [[TMP8]], [[SHIFT]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = extractelement <2 x i1> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <2 x i1> [[TMP10]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP10]], [[SHIFT2]]
-; CHECK-NEXT:    [[OR_COND1_NOT:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND]], i1 false, i1 [[OR_COND1_NOT]]
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = or <2 x i1> [[TMP8]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp ule <2 x double> [[TMP7]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[SHIFT3:%.*]] = shufflevector <2 x i1> [[TMP9]], <2 x i1> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i1> [[TMP9]], [[SHIFT3]]
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP4:%.*]] = and <2 x i1> [[FOLDEXTEXTBINOP]], [[TMP10]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = extractelement <2 x i1> [[FOLDEXTEXTBINOP4]], i64 0
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:

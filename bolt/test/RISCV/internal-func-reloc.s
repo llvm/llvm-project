@@ -6,6 +6,10 @@
 // RUN: ld.lld --emit-relocs -o %t %t.o
 // RUN: llvm-bolt -o %t.bolt %t
 // RUN: llvm-objdump -d %t.bolt | FileCheck %s
+// RUN: llvm-mc -triple riscv32 -filetype=obj -o %t.rv32.o %s
+// RUN: ld.lld --emit-relocs -o %t.rv32 %t.rv32.o
+// RUN: llvm-bolt -o %t.rv32.bolt %t.rv32
+// RUN: llvm-objdump -d %t.rv32.bolt | FileCheck %s
 
   .text
   .globl _start

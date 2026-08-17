@@ -54,7 +54,7 @@ class InvalidArgsCommandTestCase(TestBase):
             "command alias blub foo",
             error=True,
             substrs=[
-                "error: invalid command given to 'command alias'. 'foo' does not begin with a valid command.  No alias created."
+                "error: invalid command given to 'command alias'. 'foo' does not begin with a valid command.  No alias created"
             ],
         )
 
@@ -87,7 +87,5 @@ class InvalidArgsCommandTestCase(TestBase):
         self.expect(
             "command source",
             error=True,
-            substrs=[
-                "'command source' takes exactly one executable filename argument."
-            ],
+            substrs=["'command source' takes exactly one executable filename argument"],
         )

@@ -437,7 +437,9 @@ int caller() {
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv.resolver() {{[#0-9]* }}comdat {
+// CHECK: Function Attrs: disable_sanitizer_instrumentation
+// CHECK-LABEL: define {{[^@]+}}@fmv.resolver
+// CHECK-SAME: () #[[ATTR48:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -811,6 +813,5 @@ int caller() {
 // CHECK-NEXT:    ret ptr @fmv.default
 //
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

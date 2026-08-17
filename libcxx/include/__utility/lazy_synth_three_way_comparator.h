@@ -35,20 +35,20 @@ struct __lazy_compare_result {
   const _LHS& __lhs_;
   const _RHS& __rhs_;
 
-  _LIBCPP_HIDE_FROM_ABI
-  __lazy_compare_result(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator& __comp,
-                        _LIBCPP_CTOR_LIFETIMEBOUND const _LHS& __lhs,
-                        _LIBCPP_CTOR_LIFETIMEBOUND const _RHS& __rhs)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __lazy_compare_result(
+      _LIBCPP_CTOR_LIFETIMEBOUND const _Comparator& __comp,
+      _LIBCPP_CTOR_LIFETIMEBOUND const _LHS& __lhs,
+      _LIBCPP_CTOR_LIFETIMEBOUND const _RHS& __rhs)
       : __comp_(__comp), __lhs_(__lhs), __rhs_(__rhs) {}
 
-  _LIBCPP_HIDE_FROM_ABI bool __less() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __less() const {
     bool __result = __comp_(__lhs_, __rhs_);
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(__result ? !static_cast<bool>(__comp_(__rhs_, __lhs_)) : true,
                                         "Comparator does not induce a strict weak ordering");
     return __result;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool __greater() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __greater() const {
     bool __result = __comp_(__rhs_, __lhs_);
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(__result ? !static_cast<bool>(__comp_(__lhs_, __rhs_)) : true,
                                         "Comparator does not induce a strict weak ordering");
@@ -63,10 +63,11 @@ template <class _Comparator, class _LHS, class _RHS, class = void>
 struct __lazy_synth_three_way_comparator {
   const _Comparator& __comp_;
 
-  _LIBCPP_HIDE_FROM_ABI __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator& __comp)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator& __comp)
       : __comp_(__comp) {}
 
-  _LIBCPP_HIDE_FROM_ABI __lazy_compare_result<_Comparator, _LHS, _RHS>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __lazy_compare_result<_Comparator, _LHS, _RHS>
   operator()(_LIBCPP_LIFETIMEBOUND const _LHS& __lhs, _LIBCPP_LIFETIMEBOUND const _RHS& __rhs) const {
     return __lazy_compare_result<_Comparator, _LHS, _RHS>(__comp_, __lhs, __rhs);
   }
@@ -75,10 +76,10 @@ struct __lazy_synth_three_way_comparator {
 struct __eager_compare_result {
   int __res_;
 
-  _LIBCPP_HIDE_FROM_ABI explicit __eager_compare_result(int __res) : __res_(__res) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __eager_compare_result(int __res) : __res_(__res) {}
 
-  _LIBCPP_HIDE_FROM_ABI bool __less() const { return __res_ < 0; }
-  _LIBCPP_HIDE_FROM_ABI bool __greater() const { return __res_ > 0; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __less() const { return __res_ < 0; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool __greater() const { return __res_ > 0; }
 };
 
 template <class _Comparator, class _LHS, class _RHS>
@@ -89,10 +90,11 @@ struct __lazy_synth_three_way_comparator<_Comparator,
                                                             __has_default_three_way_comparator<_LHS, _RHS> >::value> > {
   // This lifetimebound annotation is technically incorrect, but other specializations actually capture the lifetime of
   // the comparator.
-  _LIBCPP_HIDE_FROM_ABI __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
 
   // Same comment as above.
-  _LIBCPP_HIDE_FROM_ABI static __eager_compare_result
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static __eager_compare_result
   operator()(_LIBCPP_LIFETIMEBOUND const _LHS& __lhs, _LIBCPP_LIFETIMEBOUND const _RHS& __rhs) {
     return __eager_compare_result(__default_three_way_comparator<_LHS, _RHS>()(__lhs, __rhs));
   }
@@ -106,10 +108,11 @@ struct __lazy_synth_three_way_comparator<_Comparator,
                                                             __has_default_three_way_comparator<_LHS, _RHS> >::value> > {
   // This lifetimebound annotation is technically incorrect, but other specializations actually capture the lifetime of
   // the comparator.
-  _LIBCPP_HIDE_FROM_ABI __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  __lazy_synth_three_way_comparator(_LIBCPP_CTOR_LIFETIMEBOUND const _Comparator&) {}
 
   // Same comment as above.
-  _LIBCPP_HIDE_FROM_ABI static __eager_compare_result
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static __eager_compare_result
   operator()(_LIBCPP_LIFETIMEBOUND const _LHS& __lhs, _LIBCPP_LIFETIMEBOUND const _RHS& __rhs) {
     return __eager_compare_result(-__default_three_way_comparator<_LHS, _RHS>()(__lhs, __rhs));
   }

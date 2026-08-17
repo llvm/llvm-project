@@ -23,7 +23,8 @@ public:
   RedundantMemberInitCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         IgnoreBaseInCopyConstructors(
-            Options.get("IgnoreBaseInCopyConstructors", false)) {}
+            Options.get("IgnoreBaseInCopyConstructors", false)),
+        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", false)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -36,6 +37,7 @@ public:
 
 private:
   bool IgnoreBaseInCopyConstructors;
+  bool IgnoreMacros;
 };
 
 } // namespace clang::tidy::readability

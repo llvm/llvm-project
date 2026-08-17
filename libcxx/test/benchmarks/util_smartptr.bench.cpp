@@ -11,8 +11,9 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
-static void BM_SharedPtrCreateDestroy(benchmark::State& st) {
+static TEST_ALIGN_BENCHMARK void BM_SharedPtrCreateDestroy(benchmark::State& st) {
   while (st.KeepRunning()) {
     auto sp = std::make_shared<int>(42);
     benchmark::DoNotOptimize(sp.get());
@@ -20,7 +21,7 @@ static void BM_SharedPtrCreateDestroy(benchmark::State& st) {
 }
 BENCHMARK(BM_SharedPtrCreateDestroy);
 
-static void BM_SharedPtrIncDecRef(benchmark::State& st) {
+static TEST_ALIGN_BENCHMARK void BM_SharedPtrIncDecRef(benchmark::State& st) {
   auto sp = std::make_shared<int>(42);
   benchmark::DoNotOptimize(sp.get());
   while (st.KeepRunning()) {
@@ -30,7 +31,7 @@ static void BM_SharedPtrIncDecRef(benchmark::State& st) {
 }
 BENCHMARK(BM_SharedPtrIncDecRef);
 
-static void BM_WeakPtrIncDecRef(benchmark::State& st) {
+static TEST_ALIGN_BENCHMARK void BM_WeakPtrIncDecRef(benchmark::State& st) {
   auto sp = std::make_shared<int>(42);
   benchmark::DoNotOptimize(sp.get());
   while (st.KeepRunning()) {

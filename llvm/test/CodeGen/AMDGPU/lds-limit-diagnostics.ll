@@ -1,19 +1,19 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT160K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-4-generic -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx600 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT32K %s
+; RUN: not llc -mtriple=amdgpu9.50-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT160K %s
+; RUN: not llc -mtriple=amdgpu9.4-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9.42-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9.06-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9.0a-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9.0c-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu10.10-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu10.30-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu11.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu12.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu8.03-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu7.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu6.00-amd-amdpal -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT32K %s
 
 ; gfx950 supports upto 160 KB LDS memory. The generic target does not.
 ; This is a negative test to check when the LDS size exceeds the max usable limit.

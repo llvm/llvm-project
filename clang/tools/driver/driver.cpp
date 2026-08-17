@@ -242,8 +242,8 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
-                        " and include the crash backtrace, preprocessed "
-                        "source, and associated run script.\n");
+                        " and include the crash backtrace and"
+                        " dumped files.\n");
   SmallVector<const char *, 256> Args(Argv, Argv + Argc);
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())
@@ -455,8 +455,6 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                                                   *C, *FailingCommand))
     Res = 1;
 
-  Diags.getClient()->finish();
-
   if (!UseNewCC1Process && IsCrash) {
     // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
     // the internal linked list might point to already released stack frames.
@@ -484,6 +482,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // llvm-ifs, exit with code 255 (-1) on failure.
   if (CommandRes > 128 && CommandRes != 255) {
     llvm::sys::unregisterHandlers();
+    // DiagnosticConsumer must be always destroyed.
+    Diags.getClient()->~DiagnosticConsumer();
     raise(CommandRes - 128);
   }
   // When cc1 runs out-of-process (CLANG_SPAWN_CC1), ExecuteAndWait returns -2
@@ -491,6 +491,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // so resignal with SIGABRT to ensure the driver exits via signal.
   if (CommandRes == -2) {
     llvm::sys::unregisterHandlers();
+    // DiagnosticConsumer must be always destroyed.
+    Diags.getClient()->~DiagnosticConsumer();
     raise(SIGABRT);
   }
 #endif

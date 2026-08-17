@@ -35,6 +35,62 @@ extern uintptr_t __bss_size[];
 } // extern "C"
 
 namespace {
+#if __ARM_ARCH_PROFILE == 'A' && !defined(__ARM_ARCH_ISA_A64) && __ARM_ARCH >= 7
+constexpr uint32_t PAGE_TABLE_ENTRY_COUNT = 4096;
+constexpr uint32_t PAGE_TABLE_ALIGNMENT = 16384;
+
+// Put the page table in a no-init section so it doesn't later get
+// zero-initialized.
+[[gnu::section(".noinit.page_table"), gnu::aligned(PAGE_TABLE_ALIGNMENT),
+  gnu::used]] volatile uint32_t page_table[PAGE_TABLE_ENTRY_COUNT];
+
+void setup_mmu() {
+  constexpr uint32_t PAGE_SHIFT = 20;
+
+  // Fill the page table with a flat mapping of 4096 1MB sections with all
+  // sections marked as normal.
+  //  base address = bits 20:31
+  //  bits 18:19 set to 0
+  //  nG = bit 17 set to 0 (global)
+  //  S = bit 16 set to 0 (non-shared)
+  //  APX = bit 15 set to 0 (full read/write)
+  //  TEX = bits 12:14 = b111 (normal)
+  //  AP = bits 10:11 set to b11 (full read/write)
+  //  P = bit 9 set to 0 (no ECC)
+  //  domain = bits 5:8 = b000
+  //  XN = bit 4 set to 0
+  //  C, B bits = bits 2:3 set to b11 (normal)
+  //  size = 1MB = bits 0:1 set to b10
+  constexpr uint32_t PAGE_TABLE_ENTRY = 0x7c0e;
+
+  uint32_t value = 3;
+  __arm_wsr("p15:0:c3:c0:0", value); // DACR: manager access to domain 0.
+  value = 0;
+  __arm_wsr("p15:0:c2:c0:2", value); // TTBCR: always use TTBR0.
+  value = reinterpret_cast<uint32_t>(page_table) | 1;
+  __arm_wsr("p15:0:c2:c0:0", value); // TTBR0: inner-cacheable walks.
+  __isb(0xF);
+
+  for (uint32_t page = 0; page < PAGE_TABLE_ENTRY_COUNT; ++page)
+    page_table[page] = PAGE_TABLE_ENTRY | (page << PAGE_SHIFT);
+
+  __dsb(0xF);
+
+  uint32_t sctlr = __arm_rsr("p15:0:c1:c0:0");
+#ifdef __ARM_FEATURE_UNALIGNED
+  sctlr &= ~(1 << 1); // SCTLR.A: disable alignment checks.
+  sctlr |= 1 << 22;   // SCTLR.U: enable unaligned access support.
+#else
+  sctlr |= 1 << 1; // SCTLR.A: enable alignment checks.
+#endif
+  sctlr |= 1 << 0;  // SCTLR.M: enable MMU.
+  sctlr |= 1 << 2;  // SCTLR.C: enable data cache.
+  sctlr |= 1 << 12; // SCTLR.I: enable instruction cache.
+  __arm_wsr("p15:0:c1:c0:0", sctlr);
+  __isb(0xF);
+}
+#endif
+
 #if __ARM_ARCH_PROFILE == 'M'
 // Based on
 // https://developer.arm.com/documentation/107565/0101/Use-case-examples/Generic-Information/What-is-inside-a-program-image-/Vector-table
@@ -118,17 +174,37 @@ namespace LIBC_NAMESPACE_DECL {
 #if __ARM_ARCH_PROFILE == 'A' || __ARM_ARCH_PROFILE == 'R'
   // Set up registers to be used in exception handling
   // Copy the current sp value to each of the banked copies of sp.
-  __arm_wsr("CPSR_c", 0x11); // FIQ
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x12); // IRQ
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x17); // ABT
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x1B); // UND
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x1F); // SYS
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x13); // SVC
+  asm volatile("mov r0, sp\n"
+               "mov r1, #0x11\n" // FIQ
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x12\n" // IRQ
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x17\n" // ABT
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x1B\n" // UND
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x1F\n" // SYS
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x13\n" // return to SVC
+               "msr CPSR_c, r1"
+               :
+               :
+               : "r0", "r1");
+#endif
+
+#if __ARM_ARCH_PROFILE == 'A' && !defined(__ARM_ARCH_ISA_A64) && __ARM_ARCH >= 7
+  __arm_wsr("p15:0:c12:c0:0", reinterpret_cast<uint32_t>(&vector_table));
+  setup_mmu();
+#endif
+
+#if __ARM_ARCH_PROFILE == 'M' && !defined(__ARM_FEATURE_UNALIGNED)
+  auto ccr = reinterpret_cast<volatile uint32_t *const>(0xE000ED14);
+  *ccr |= 1 << 3; // CCR.UNALIGN_TRP: trap unaligned accesses.
 #endif
 
 #if __ARM_ARCH_PROFILE == 'M' &&                                               \

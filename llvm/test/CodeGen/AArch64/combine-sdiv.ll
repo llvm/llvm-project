@@ -801,31 +801,30 @@ define <4 x i32> @combine_vec_sdiv_by_pow2b_PosAndNeg(<4 x i32> %x) {
 define <16 x i8> @non_splat_minus_one_divisor_0(<16 x i8> %A) {
 ; CHECK-SD-LABEL: non_splat_minus_one_divisor_0:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    umov w9, v0.b[0]
-; CHECK-SD-NEXT:    mov w8, wzr
-; CHECK-SD-NEXT:    umov w10, v0.b[1]
-; CHECK-SD-NEXT:    sub w9, w8, w9, sxtb
-; CHECK-SD-NEXT:    sub w10, w8, w10, sxtb
-; CHECK-SD-NEXT:    fmov s1, w9
-; CHECK-SD-NEXT:    smov w9, v0.b[2]
-; CHECK-SD-NEXT:    mov v1.b[1], w10
-; CHECK-SD-NEXT:    umov w10, v0.b[3]
-; CHECK-SD-NEXT:    mov v1.b[2], w9
-; CHECK-SD-NEXT:    sub w9, w8, w10, sxtb
-; CHECK-SD-NEXT:    umov w10, v0.b[4]
-; CHECK-SD-NEXT:    mov v1.b[3], w9
-; CHECK-SD-NEXT:    sub w9, w8, w10, sxtb
-; CHECK-SD-NEXT:    umov w10, v0.b[5]
-; CHECK-SD-NEXT:    mov v1.b[4], w9
-; CHECK-SD-NEXT:    sub w9, w8, w10, sxtb
-; CHECK-SD-NEXT:    umov w10, v0.b[7]
-; CHECK-SD-NEXT:    mov v1.b[5], w9
-; CHECK-SD-NEXT:    smov w9, v0.b[6]
-; CHECK-SD-NEXT:    mov v1.b[6], w9
-; CHECK-SD-NEXT:    sub w9, w8, w10, sxtb
-; CHECK-SD-NEXT:    umov w10, v0.b[8]
-; CHECK-SD-NEXT:    mov v1.b[7], w9
-; CHECK-SD-NEXT:    sub w8, w8, w10, sxtb
+; CHECK-SD-NEXT:    smov w8, v0.b[0]
+; CHECK-SD-NEXT:    smov w9, v0.b[1]
+; CHECK-SD-NEXT:    neg w8, w8
+; CHECK-SD-NEXT:    neg w9, w9
+; CHECK-SD-NEXT:    fmov s1, w8
+; CHECK-SD-NEXT:    smov w8, v0.b[2]
+; CHECK-SD-NEXT:    mov v1.b[1], w9
+; CHECK-SD-NEXT:    smov w9, v0.b[3]
+; CHECK-SD-NEXT:    mov v1.b[2], w8
+; CHECK-SD-NEXT:    neg w8, w9
+; CHECK-SD-NEXT:    smov w9, v0.b[4]
+; CHECK-SD-NEXT:    mov v1.b[3], w8
+; CHECK-SD-NEXT:    neg w8, w9
+; CHECK-SD-NEXT:    smov w9, v0.b[5]
+; CHECK-SD-NEXT:    mov v1.b[4], w8
+; CHECK-SD-NEXT:    neg w8, w9
+; CHECK-SD-NEXT:    smov w9, v0.b[7]
+; CHECK-SD-NEXT:    mov v1.b[5], w8
+; CHECK-SD-NEXT:    smov w8, v0.b[6]
+; CHECK-SD-NEXT:    mov v1.b[6], w8
+; CHECK-SD-NEXT:    neg w8, w9
+; CHECK-SD-NEXT:    smov w9, v0.b[8]
+; CHECK-SD-NEXT:    mov v1.b[7], w8
+; CHECK-SD-NEXT:    neg w8, w9
 ; CHECK-SD-NEXT:    mov v1.b[8], w8
 ; CHECK-SD-NEXT:    smov w8, v0.b[9]
 ; CHECK-SD-NEXT:    mov v1.b[9], w8
@@ -1154,18 +1153,17 @@ define <8 x i16> @combine_vec_sdiv_nonuniform6(<8 x i16> %x) {
 define <8 x i16> @combine_vec_sdiv_nonuniform7(<8 x i16> %x) {
 ; CHECK-SD-LABEL: combine_vec_sdiv_nonuniform7:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    umov w9, v0.h[0]
-; CHECK-SD-NEXT:    mov w8, wzr
-; CHECK-SD-NEXT:    umov w10, v0.h[1]
-; CHECK-SD-NEXT:    umov w11, v0.h[2]
-; CHECK-SD-NEXT:    sub w9, w8, w9, sxth
-; CHECK-SD-NEXT:    sub w10, w8, w10, sxth
-; CHECK-SD-NEXT:    fmov s1, w9
-; CHECK-SD-NEXT:    sub w9, w8, w11, sxth
-; CHECK-SD-NEXT:    mov v1.h[1], w10
-; CHECK-SD-NEXT:    umov w10, v0.h[3]
-; CHECK-SD-NEXT:    mov v1.h[2], w9
-; CHECK-SD-NEXT:    sub w8, w8, w10, sxth
+; CHECK-SD-NEXT:    smov w8, v0.h[0]
+; CHECK-SD-NEXT:    smov w9, v0.h[1]
+; CHECK-SD-NEXT:    neg w8, w8
+; CHECK-SD-NEXT:    neg w9, w9
+; CHECK-SD-NEXT:    fmov s1, w8
+; CHECK-SD-NEXT:    smov w8, v0.h[2]
+; CHECK-SD-NEXT:    mov v1.h[1], w9
+; CHECK-SD-NEXT:    smov w9, v0.h[3]
+; CHECK-SD-NEXT:    neg w8, w8
+; CHECK-SD-NEXT:    mov v1.h[2], w8
+; CHECK-SD-NEXT:    neg w8, w9
 ; CHECK-SD-NEXT:    mov v1.h[3], w8
 ; CHECK-SD-NEXT:    smov w8, v0.h[4]
 ; CHECK-SD-NEXT:    mov v1.h[4], w8

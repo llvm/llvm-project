@@ -39,7 +39,7 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
   label.split(components, ":", /*MaxSplit=*/4);
 
   if (components.size() != 5)
-    return llvm::createStringError("malformed function call label.");
+    return llvm::createStringError("malformed function call label");
 
   if (components[0] != FunctionCallLabelPrefix)
     return llvm::createStringErrorV(
@@ -53,12 +53,12 @@ lldb_private::FunctionCallLabel::fromString(llvm::StringRef label) {
 
   lldb::user_id_t module_id = 0;
   if (!llvm::to_integer(module_label, module_id))
-    return llvm::createStringErrorV("failed to parse module ID from '{0}'.",
+    return llvm::createStringErrorV("failed to parse module ID from '{0}'",
                                     module_label);
 
   lldb::user_id_t die_id;
   if (!llvm::to_integer(die_label, die_id))
-    return llvm::createStringErrorV("failed to parse symbol ID from '{0}'.",
+    return llvm::createStringErrorV("failed to parse symbol ID from '{0}'",
                                     die_label);
 
   return FunctionCallLabel{/*.discriminator=*/discriminator,
@@ -75,9 +75,8 @@ std::string lldb_private::FunctionCallLabel::toString() const {
 
 void llvm::format_provider<FunctionCallLabel>::format(
     const FunctionCallLabel &label, raw_ostream &OS, StringRef Style) {
-  OS << llvm::formatv("FunctionCallLabel{ discriminator: {0}, module_id: "
-                      "{1:x}, symbol_id: {2:x}, "
-                      "lookup_name: {3} }",
+  OS << llvm::formatv("FunctionCallLabel{{ discriminator: {}, module_id: "
+                      "{:x}, symbol_id: {:x}, lookup_name: {} }}",
                       label.discriminator, label.module_id, label.symbol_id,
                       label.lookup_name);
 }

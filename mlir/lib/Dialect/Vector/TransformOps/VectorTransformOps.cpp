@@ -129,11 +129,11 @@ void transform::ApplyMaterializeMasksPatternsOp::populatePatterns(
 //===----------------------------------------------------------------------===//
 // Multi-reduction patterns
 //===----------------------------------------------------------------------===//
-void transform::ApplyReorderAndExpandMultiReductionPatternsOp::populatePatterns(
+void transform::ApplyReorderMultiReductionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;
   vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
-  vector::populateVectorMultiReductionReorderAndExpandPatterns(
+  vector::populateVectorMultiReductionReorderPatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 
@@ -183,6 +183,11 @@ void transform::ApplyLowerShapeCastPatternsOp::populatePatterns(
   vector::populateVectorShapeCastLoweringPatterns(patterns);
 }
 
+void transform::ApplyLowerStepPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorStepLoweringPatterns(patterns, getIndexBitwidth());
+}
+
 void transform::ApplyLowerTransferPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferLoweringPatterns(patterns,
@@ -207,9 +212,10 @@ void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
   vector::populateVectorInterleaveLoweringPatterns(patterns);
 }
 
-void transform::ApplyInterleaveToShufflePatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
+void transform::ApplyInterleaveAndDeinterleaveToShufflePatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
   vector::populateVectorInterleaveToShufflePatterns(patterns);
+  vector::populateVectorDeinterleaveToShufflePatterns(patterns);
 }
 
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(

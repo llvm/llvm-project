@@ -17,8 +17,8 @@
 ;; We should only get these two messages from -memprof-report-hinted-sizes
 ;; as they are the only MIBs with recorded context size info.
 ; SIZES-NOT: full allocation context
-; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning (context id 2)
-; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning (context id 2)
+; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning (internal context id 2)
+; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning (internal context id 2)
 ; SIZES-NOT: full allocation context
 
 source_filename = "memprof-report-hinted-partial.ll"

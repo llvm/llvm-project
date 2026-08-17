@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstddef>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -34,6 +35,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -479,6 +481,27 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   return State;
 }
 
+// Returns the number of reachable blocks (would be visited if we only visit
+// each reachable block once). This is a light version of the main fixpoint loop
+// (keep in sync).
+size_t NumReachableBlocks(const CFG &CFG) {
+  PostOrderCFGView POV(&CFG);
+  ForwardDataflowWorklist Worklist(CFG, &POV);
+  llvm::BitVector VisitedBlocks(CFG.size());
+  const CFGBlock &Entry = CFG.getEntry();
+  Worklist.enqueueSuccessors(&Entry);
+  while (const CFGBlock *Block = Worklist.dequeue()) {
+    if (VisitedBlocks[Block->getBlockID()])
+      continue;
+    VisitedBlocks[Block->getBlockID()] = true;
+    // Do not add unreachable successor blocks to `Worklist`.
+    if (Block->hasNoReturnElement())
+      continue;
+    Worklist.enqueueSuccessors(Block);
+  }
+  return VisitedBlocks.count();
+}
+
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
@@ -496,6 +519,19 @@ runTypeErasedDataflowAnalysis(
       MaybeStartingEnv ? *MaybeStartingEnv : InitEnv;
 
   const clang::CFG &CFG = ACFG.getCFG();
+
+  // Bail out if the number of reachable blocks is already beyond the maximum
+  // number of block visits to save time and avoid running out of memory for
+  // massive CFGs. Note: CFG.size() could have unreachable blocks,
+  // but it is a faster to compare that to MaxBlockVisits first before doing the
+  // reachable block count.
+  if (CFG.size() > static_cast<size_t>(MaxBlockVisits) &&
+      NumReachableBlocks(CFG) > static_cast<size_t>(MaxBlockVisits)) {
+    return llvm::createStringError(std::errc::timed_out,
+                                   "number of blocks in cfg will lead to "
+                                   "exceeding maximum number of block visits");
+  }
+
   PostOrderCFGView POV(&CFG);
   ForwardDataflowWorklist Worklist(CFG, &POV);
   llvm::SmallDenseSet<const CFGBlock *> NonStructLoopBackedgeNodes =

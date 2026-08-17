@@ -5,10 +5,10 @@ add_entrypoint_object(
   HDRS
     ../remove.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.unlinkat
     libc.src.errno.errno
 )
 
@@ -19,10 +19,8 @@ add_entrypoint_object(
   HDRS
     ../rename.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rename
     libc.src.errno.errno
-    libc.hdr.fcntl_macros
 )
 
 add_entrypoint_object(
@@ -34,4 +32,53 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  stdin
+  SRCS
+    stdin.cpp
+  HDRS
+    ../stdin.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  stdout
+  SRCS
+    stdout.cpp
+  HDRS
+    ../stdout.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  stderr
+  SRCS
+    stderr.cpp
+  HDRS
+    ../stderr.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  tmpfile
+  SRCS
+    tmpfile.cpp
+  HDRS
+    ../tmpfile.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.FILE
+    libc.src.__support.common
+    libc.src.__support.File.platform_file
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
 )

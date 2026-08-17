@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SRC__SUPPORT_WCHAR_WCSNRTOMBS_H
 
 #include "hdr/types/char32_t.h"
+#include "hdr/types/char8_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/__support/wchar/mbstate.h"

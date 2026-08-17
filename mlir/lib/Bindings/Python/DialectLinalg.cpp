@@ -179,6 +179,38 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
         "Infers convolution dimensions", nb::arg("op"));
 
   m.def(
+      "infer_convolution_dimensions_from_maps",
+      [](std::vector<PyAffineMap> indexingMaps)
+          -> std::optional<PyLinalgConvolutionDimensions> {
+        if (indexingMaps.empty())
+          return std::nullopt;
+
+        std::vector<MlirAffineMap> indexingMaps_(indexingMaps.size());
+        std::copy(indexingMaps.begin(), indexingMaps.end(),
+                  indexingMaps_.begin());
+        MlirLinalgConvolutionDimensions dims =
+            mlirLinalgInferConvolutionDimensionsFromMaps(indexingMaps_.data(),
+                                                         indexingMaps_.size());
+
+        // Detect "empty" result from invalid input or failed inference.
+        if (mlirAttributeIsNull(dims.batch) &&
+            mlirAttributeIsNull(dims.outputImage) &&
+            mlirAttributeIsNull(dims.outputChannel) &&
+            mlirAttributeIsNull(dims.filterLoop) &&
+            mlirAttributeIsNull(dims.inputChannel) &&
+            mlirAttributeIsNull(dims.depth) &&
+            mlirAttributeIsNull(dims.strides) &&
+            mlirAttributeIsNull(dims.dilations)) {
+          return std::nullopt;
+        }
+        return dims;
+      },
+      "Infers convolution dimensions (batch/output_image/output_channel/"
+      "filter_loop/input_channel/depth/strides/dilations) from a list of "
+      "affine maps.",
+      nb::arg("indexing_maps"));
+
+  m.def(
       "get_indexing_maps",
       [](PyOperationBase &op) -> std::optional<PyArrayAttribute> {
         MlirAttribute attr =

@@ -31,20 +31,20 @@ def GetRangeFromAddrValue(test_base, addr, shrink=False):
     If 'shrink' is True, the address range will be reduced to not exceed 2K.
     """
     region = lldb.SBMemoryRegionInfo()
+    process = test_base.process
+    addr_val = process.FixAddress(addr.GetValueAsUnsigned())
     test_base.assertTrue(
-        test_base.process.GetMemoryRegionInfo(
-            addr.GetValueAsUnsigned(), region
-        ).Success(),
+        process.GetMemoryRegionInfo(addr_val, region).Success(),
     )
 
     test_base.assertTrue(region.IsReadable())
     test_base.assertFalse(region.IsExecutable())
 
-    base = region.GetRegionBase()
-    end = region.GetRegionEnd()
+    base = process.FixAddress(region.GetRegionBase())
+    end = process.FixAddress(region.GetRegionEnd())
 
     if shrink:
-        addr2 = addr.GetValueAsUnsigned()
+        addr2 = addr_val
         addr2 -= addr2 % 512
         base = max(base, addr2 - 1024)
         end = min(end, addr2 + 1024)

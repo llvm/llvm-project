@@ -13,10 +13,10 @@
 
 namespace llvm {
 
-class MachineCSEPass : public PassInfoMixin<MachineCSEPass> {
+class MachineCSEPass : public OptionalPassInfoMixin<MachineCSEPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setIsSSA();

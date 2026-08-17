@@ -685,6 +685,14 @@ common::optional<char32_t> IoStatementState::NextInField(
             return common::nullopt;
           }
           break;
+        case '!':
+          // Extension (gfortran, ifx, classic nvfortran): in NAMELIST input,
+          // '!' terminates a value even when not preceded by a separator,
+          // so that "name=value!comment" is accepted.
+          if (edit.IsNamelist()) {
+            return common::nullopt;
+          }
+          break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
             return common::nullopt;
@@ -1278,6 +1286,12 @@ bool InquireUnitState::Inquire(
         : mutableModes().editingFlags & decimalComma ? "COMMA"
                                                      : "POINT";
     break;
+  case HashInquiryKeyword("Leading_Zero"):
+    str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
+        ? "UNDEFINED"
+        : mutableModes().editingFlags & leadingZeroSuppress ? "SUPPRESS"
+                                                            : "PRINT";
+    break;
   case HashInquiryKeyword("DELIM"):
     if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
@@ -1503,6 +1517,7 @@ bool InquireNoUnitState::Inquire(
   case HashInquiryKeyword("DECIMAL"):
   case HashInquiryKeyword("DELIM"):
   case HashInquiryKeyword("FORM"):
+  case HashInquiryKeyword("Leading_Zero"):
   case HashInquiryKeyword("NAME"):
   case HashInquiryKeyword("PAD"):
   case HashInquiryKeyword("POSITION"):
@@ -1591,6 +1606,7 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("DECIMAL"):
   case HashInquiryKeyword("DELIM"):
   case HashInquiryKeyword("FORM"):
+  case HashInquiryKeyword("Leading_Zero"):
   case HashInquiryKeyword("PAD"):
   case HashInquiryKeyword("POSITION"):
   case HashInquiryKeyword("ROUND"):

@@ -123,6 +123,22 @@ LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                              const SimplifyQuery &Q,
                                              unsigned Depth = 0);
 
+enum class NoCommonBitsSetResult {
+  /// Not known to have no common set bits.
+  Unknown,
+
+  /// Known to have no common set bits only if undef values are ignored.
+  OnlyIfUndefIgnored,
+
+  /// Known to have no common set bits.
+  Known,
+};
+
+/// Return how strongly LHS and RHS are known to have no common set bits.
+LLVM_ABI NoCommonBitsSetResult getNoCommonBitsSetResult(
+    const WithCache<const Value *> &LHSCache,
+    const WithCache<const Value *> &RHSCache, const SimplifyQuery &SQ);
+
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                   const WithCache<const Value *> &RHSCache,
@@ -237,10 +253,6 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 /// the result of the comparison is true when the input value is signed.
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
-
-LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
-    const Instruction *I, const KnownFPClass &KnownLHS,
-    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
@@ -423,25 +435,29 @@ LLVM_ABI uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 
 /// This function returns call pointer argument that is considered the same by
 /// aliasing rules. You CAN'T use it to replace one value with another. If
-/// \p MustPreserveNullness is true, the call must preserve the nullness of
-/// the pointer.
+/// \p MustPreserveOffset is true, the call must preserve the byte offset of
+/// the pointer within its underlying object. Offset preservation implies
+/// nullness preservation; pass true when callers reason about either offset or
+/// null equality (e.g. GEP decomposition, dereferenceability, isKnownNonZero).
 LLVM_ABI const Value *
 getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                     bool MustPreserveNullness);
+                                     bool MustPreserveOffset);
 inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
-                                                   bool MustPreserveNullness) {
+                                                   bool MustPreserveOffset) {
   return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
-      const_cast<const CallBase *>(Call), MustPreserveNullness));
+      const_cast<const CallBase *>(Call), MustPreserveOffset));
 }
 
 /// {launder,strip}.invariant.group returns pointer that aliases its argument,
 /// and it only captures pointer by returning it.
 /// These intrinsics are not marked as nocapture, because returning is
 /// considered as capture. The arguments are not marked as returned neither,
-/// because it would make it useless. If \p MustPreserveNullness is true,
-/// the intrinsic must preserve the nullness of the pointer.
+/// because it would make it useless. If \p MustPreserveOffset is true, the
+/// intrinsic must preserve the byte offset of the pointer within its
+/// underlying object (which excludes `llvm.ptrmask`, since masking off low
+/// bits changes the byte offset while still aliasing the same object).
 LLVM_ABI bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveNullness);
+    const CallBase *Call, bool MustPreserveOffset);
 
 /// This method strips off any GEP address adjustments, pointer casts
 /// or `llvm.threadlocal.address` from the specified value \p V, returning the
@@ -629,9 +645,13 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
                                       const DominatorTree *DT = nullptr,
                                       bool AllowEphemerals = false);
 
+inline bool isValidAssumeForContext(const Instruction *I,
+                                    const SimplifyQuery &Q) {
+  return isValidAssumeForContext(I, Q.CxtI, Q.DT, Q.AllowEphemerals);
+}
+
 /// Returns true, if no instruction between \p Assume and \p CtxI may free
-/// memory and the function is marked as NoSync. The latter ensures the current
-/// function cannot arrange for another thread to free on its behalf.
+/// (including through synchronization).
 LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
                                  const Instruction *CtxI);
 
@@ -682,10 +702,7 @@ LLVM_ABI ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.
 LLVM_ABI ConstantRange computeConstantRange(const Value *V, bool ForSigned,
-                                            bool UseInstrInfo = true,
-                                            AssumptionCache *AC = nullptr,
-                                            const Instruction *CtxI = nullptr,
-                                            const DominatorTree *DT = nullptr,
+                                            const SimplifyQuery &SQ,
                                             unsigned Depth = 0);
 
 /// Combine constant ranges from computeConstantRange() and computeKnownBits().
@@ -843,6 +860,8 @@ LLVM_ABI bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
 /// form with the strictness flipped predicate. Return the new predicate and
 /// corresponding constant RHS if possible. Otherwise return std::nullopt.
 /// E.g., (icmp sgt X, 0) -> (icmp sle X, 1).
+/// For a samesign predicate, fail if adjusting the constant would change its
+/// sign bit, because that would change the comparison's poison domain.
 LLVM_ABI std::optional<std::pair<CmpPredicate, Constant *>>
 getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C);
 

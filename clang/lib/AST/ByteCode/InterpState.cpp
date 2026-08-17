@@ -33,9 +33,8 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
     : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
-      Stk(Stk), Ctx(Ctx),
-      BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
@@ -150,7 +149,7 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
     if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
         TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
       QualType ElemType = TAL[0].getAsType();
-      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
+      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetOpPC()));
       return {NewCall, ElemType};
     }
   }
@@ -166,6 +165,8 @@ bool InterpState::noteStep(CodePtr OpPC) {
   if (StepsLeft != 0)
     return true;
 
-  FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded);
+  FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded, 1)
+      << getLangOpts().ConstexprStepLimit;
+  Note(Current->getSource(OpPC), diag::note_constexpr_steps);
   return false;
 }

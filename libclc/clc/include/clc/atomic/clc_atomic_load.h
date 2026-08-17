@@ -9,16 +9,16 @@
 #ifndef __CLC_ATOMIC_CLC_ATOMIC_LOAD_H__
 #define __CLC_ATOMIC_CLC_ATOMIC_LOAD_H__
 
-#include <clc/internal/clc.h>
+#include "clc/internal/clc.h"
 
 #define __CLC_FUNCTION __clc_atomic_load
 #define __CLC_NO_VALUE_ARG
 
-#define __CLC_BODY <clc/atomic/atomic_decl.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc/atomic/atomic_decl.inc"
+#include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <clc/atomic/atomic_decl.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/atomic/atomic_decl.inc"
+#include "clc/math/gentype.inc"
 
 #undef __CLC_NO_VALUE_ARG
 #undef __CLC_FUNCTION

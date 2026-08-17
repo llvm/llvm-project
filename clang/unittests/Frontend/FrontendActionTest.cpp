@@ -259,42 +259,4 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   EXPECT_EQ("This is a note", std::string(TDC->Note));
 }
 
-TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
-  // Create a temporary file for writing out the PCH that will be cleaned up.
-  int PCHFD;
-  llvm::SmallString<128> PCHFilename;
-  ASSERT_FALSE(
-      llvm::sys::fs::createTemporaryFile("test.h", "pch", PCHFD, PCHFilename));
-  llvm::ToolOutputFile PCHFile(PCHFilename, PCHFD);
-
-  for (bool ShouldCache : {false, true}) {
-    auto Invocation = std::make_shared<CompilerInvocation>();
-    Invocation->getLangOpts().CacheGeneratedPCH = ShouldCache;
-    Invocation->getPreprocessorOpts().addRemappedFile(
-        "test.h",
-        MemoryBuffer::getMemBuffer("int foo(void) { return 1; }\n").release());
-    Invocation->getFrontendOpts().Inputs.push_back(
-        FrontendInputFile("test.h", Language::C));
-    Invocation->getFrontendOpts().OutputFile = PCHFilename.str().str();
-    Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
-    Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
-    CompilerInstance Compiler(std::move(Invocation));
-    Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
-    Compiler.createDiagnostics();
-
-    GeneratePCHAction TestAction;
-    ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
-
-    // Check whether the PCH was cached.
-    if (ShouldCache)
-      EXPECT_EQ(InMemoryModuleCache::Final,
-                Compiler.getModuleCache().getInMemoryModuleCache().getPCMState(
-                    PCHFilename));
-    else
-      EXPECT_EQ(InMemoryModuleCache::Unknown,
-                Compiler.getModuleCache().getInMemoryModuleCache().getPCMState(
-                    PCHFilename));
-  }
-}
-
 } // anonymous namespace

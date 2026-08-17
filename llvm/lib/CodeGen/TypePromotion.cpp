@@ -188,7 +188,6 @@ public:
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.setPreservesCFG();
-    AU.addPreserved<LoopInfoWrapperPass>();
   }
 
   StringRef getPassName() const override { return PASS_NAME; }
@@ -489,6 +488,10 @@ void IRPromoter::PromoteTree() {
       if ((Op->getType() == ExtTy) || !isa<IntegerType>(Op->getType()))
         continue;
 
+      // Skip the condition operand of select.
+      if (isa<SelectInst>(I) && i == 0)
+        continue;
+
       if (auto *Const = dyn_cast<ConstantInt>(Op)) {
         // For subtract, we only need to zext the constant. We only put it in
         // SafeWrap because SafeWrap.size() is used elsewhere.
@@ -732,7 +735,7 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
              !GenerateSignBits(I);
     case Instruction::GetElementPtr:
     case Instruction::Store:
-    case Instruction::Br:
+    case Instruction::CondBr:
     case Instruction::Switch:
       return true;
     case Instruction::PHI:
@@ -858,6 +861,9 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
       if (auto *I = dyn_cast<Instruction>(V)) {
         // Visit operands of any instruction visited.
         for (auto &U : I->operands()) {
+          // Skip condition of selects.
+          if (isa<SelectInst>(I) && U.getOperandNo() == 0)
+            continue;
           if (!AddLegalInst(U))
             return false;
         }
@@ -1058,6 +1064,5 @@ PreservedAnalyses TypePromotionPass::run(Function &F,
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LoopAnalysis>();
   return PA;
 }

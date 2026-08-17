@@ -1,0 +1,10 @@
+static_library("Tool") {
+  output_name = "clangScalableStaticAnalysisTool"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//clang/lib/ScalableStaticAnalysis/Core",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "Utils.cpp" ]
+}

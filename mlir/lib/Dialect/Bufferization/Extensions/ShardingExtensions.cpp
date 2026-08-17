@@ -12,22 +12,20 @@
 #include "mlir/IR/DialectRegistry.h"
 
 using namespace mlir;
-
-/// Variadic helper function.
-template <typename... OpTypes>
-static void registerAll(MLIRContext *ctx) {
-  (OpTypes::template attachInterface<
-       shard::IndependentParallelIteratorDomainShardingInterface<OpTypes>>(
-       *ctx),
-   ...);
-}
+using namespace mlir::bufferization;
+using namespace mlir::shard;
 
 void mlir::bufferization::shard_ext::registerShardingInterfaceExternalModels(
     DialectRegistry &registry) {
 
-  registry.addExtension(+[](MLIRContext *ctx,
-                            bufferization::BufferizationDialect *dialect) {
-    registerAll<bufferization::AllocTensorOp, bufferization::DeallocTensorOp,
-                bufferization::MaterializeInDestinationOp>(ctx);
+  registry.addExtension(+[](MLIRContext *ctx, BufferizationDialect *dialect) {
+    AllocTensorOp::attachInterface<
+        IndependentParallelIteratorDomainShardingInterface<AllocTensorOp>>(
+        *ctx);
+    DeallocTensorOp::attachInterface<
+        IndependentParallelIteratorDomainShardingInterface<DeallocTensorOp>>(
+        *ctx);
+    MaterializeInDestinationOp::attachInterface<
+        ElementwiseShardingInterface<MaterializeInDestinationOp>>(*ctx);
   });
 }

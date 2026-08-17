@@ -98,16 +98,16 @@ define void @tre_tnfa_run_backtrack_callbr(i1 %arg) {
 ; CHECK-NEXT:            to label [[RETRY:%.*]] []
 ; CHECK:       retry:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG:%.*]])
-; CHECK-NEXT:            to label [[RETRY_TARGET_BACKTRACK:%.*]] [label %retry.target.while.body248]
+; CHECK-NEXT:            to label [[RETRY_TARGET_BACKTRACK:%.*]] [label [[RETRY_TARGET_WHILE_BODY248:%.*]]]
 ; CHECK:       while.body248:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
-; CHECK-NEXT:            to label [[IF_THEN250:%.*]] [label %if.end275]
+; CHECK-NEXT:            to label [[IF_THEN250:%.*]] [label [[IF_END275:%.*]]]
 ; CHECK:       if.then250:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[FOR_COND264:%.*]] []
 ; CHECK:       for.cond264:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
-; CHECK-NEXT:            to label [[FOR_BODY267:%.*]] [label %backtrack]
+; CHECK-NEXT:            to label [[FOR_BODY267:%.*]] [label [[BACKTRACK:%.*]]]
 ; CHECK:       for.body267:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[FOR_COND264]] []
@@ -116,22 +116,22 @@ define void @tre_tnfa_run_backtrack_callbr(i1 %arg) {
 ; CHECK-NEXT:            to label [[FOR_COND342:%.*]] []
 ; CHECK:       for.cond342:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
-; CHECK-NEXT:            to label [[FOR_BODY345:%.*]] [label %for.end580]
+; CHECK-NEXT:            to label [[FOR_BODY345:%.*]] [label [[FOR_END580:%.*]]]
 ; CHECK:       for.body345:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[FOR_COND342]] []
 ; CHECK:       for.end580:
 ; CHECK-NEXT:    callbr void asm "", ""()
-; CHECK-NEXT:            to label [[BACKTRACK:%.*]] []
+; CHECK-NEXT:            to label [[BACKTRACK]] []
 ; CHECK:       backtrack:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
-; CHECK-NEXT:            to label [[IF_THEN595:%.*]] [label %if.else629]
+; CHECK-NEXT:            to label [[IF_THEN595:%.*]] [label [[IF_ELSE629:%.*]]]
 ; CHECK:       if.then595:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[FOR_COND616:%.*]] []
 ; CHECK:       for.cond616:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[ARG]])
-; CHECK-NEXT:            to label [[FOR_BODY619:%.*]] [label %for.end626]
+; CHECK-NEXT:            to label [[FOR_BODY619:%.*]] [label [[FOR_END626:%.*]]]
 ; CHECK:       for.body619:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[FOR_COND616]] []
@@ -148,7 +148,7 @@ define void @tre_tnfa_run_backtrack_callbr(i1 %arg) {
 ; CHECK:       retry.target.while.body248:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_WHILE_BODY248:%.*]] = phi i1 [ true, [[FOR_END626_TARGET_WHILE_BODY248]] ], [ false, [[RETRY_TARGET_BACKTRACK]] ], [ true, [[RETRY_TARGET_WHILE_BODY248:%.*]] ]
+; CHECK-NEXT:    [[GUARD_WHILE_BODY248:%.*]] = phi i1 [ true, [[FOR_END626_TARGET_WHILE_BODY248]] ], [ false, [[RETRY_TARGET_BACKTRACK]] ], [ true, [[RETRY_TARGET_WHILE_BODY248]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_WHILE_BODY248]], label [[WHILE_BODY248:%.*]], label [[BACKTRACK]]
 ;
 entry:
@@ -198,4 +198,119 @@ for.end626:                                       ; preds = %for.cond616
 
 if.else629:                                       ; preds = %backtrack
   callbr void asm "", ""() to label %retry []
+}
+
+define void @tre_tnfa_run_backtrack_switch(i32 %arg) {
+; CHECK-LABEL: @tre_tnfa_run_backtrack_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[RETRY:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       retry:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[RETRY_TARGET_BACKTRACK:%.*]] [
+; CHECK-NEXT:      i32 0, label [[RETRY_TARGET_WHILE_BODY248:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       while.body248:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[IF_THEN250:%.*]] [
+; CHECK-NEXT:      i32 0, label [[IF_END275:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       if.then250:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_COND264:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       for.cond264:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_BODY267:%.*]] [
+; CHECK-NEXT:      i32 0, label [[BACKTRACK:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       for.body267:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_COND264]] [
+; CHECK-NEXT:    ]
+; CHECK:       if.end275:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_COND342:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       for.cond342:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_BODY345:%.*]] [
+; CHECK-NEXT:      i32 0, label [[FOR_END580:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       for.body345:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_COND342]] [
+; CHECK-NEXT:    ]
+; CHECK:       for.end580:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[BACKTRACK]] [
+; CHECK-NEXT:    ]
+; CHECK:       backtrack:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[IF_THEN595:%.*]] [
+; CHECK-NEXT:      i32 0, label [[IF_ELSE629:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       if.then595:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_COND616:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       for.cond616:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_BODY619:%.*]] [
+; CHECK-NEXT:      i32 0, label [[FOR_END626:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       for.body619:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_COND616]] [
+; CHECK-NEXT:    ]
+; CHECK:       for.end626:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[FOR_END626_TARGET_WHILE_BODY248:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       if.else629:
+; CHECK-NEXT:    switch i32 [[ARG]], label [[RETRY]] [
+; CHECK-NEXT:    ]
+; CHECK:       for.end626.target.while.body248:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       retry.target.backtrack:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       retry.target.while.body248:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_WHILE_BODY248:%.*]] = phi i1 [ true, [[FOR_END626_TARGET_WHILE_BODY248]] ], [ false, [[RETRY_TARGET_BACKTRACK]] ], [ true, [[RETRY_TARGET_WHILE_BODY248]] ]
+; CHECK-NEXT:    br i1 [[GUARD_WHILE_BODY248]], label [[WHILE_BODY248:%.*]], label [[BACKTRACK]]
+;
+entry:
+  switch i32 %arg, label %retry []
+
+retry:
+  switch i32 %arg, label %backtrack [ i32 0, label %while.body248 ]
+
+while.body248:                                    ; preds = %for.end626, %retry
+  switch i32 %arg, label %if.then250 [ i32 0, label %if.end275 ]
+
+if.then250:                                       ; preds = %while.body248
+  switch i32 %arg, label %for.cond264 []
+
+for.cond264:                                      ; preds = %for.body267, %if.then250
+  switch i32 %arg, label %for.body267 [ i32 0, label %backtrack ]
+
+for.body267:                                      ; preds = %for.cond264
+  switch i32 %arg, label %for.cond264 []
+
+if.end275:                                        ; preds = %while.body248
+  switch i32 %arg, label %for.cond342 []
+
+for.cond342:                                      ; preds = %for.body345, %if.end275
+  switch i32 %arg, label %for.body345 [ i32 0, label %for.end580 ]
+
+for.body345:                                      ; preds = %for.cond342
+  switch i32 %arg, label %for.cond342 []
+
+for.end580:                                       ; preds = %for.cond342
+  switch i32 %arg, label %backtrack []
+
+backtrack:                                        ; preds = %for.end580, %for.cond264, %retry
+  switch i32 %arg, label %if.then595 [ i32 0, label %if.else629 ]
+
+if.then595:                                       ; preds = %backtrack
+  switch i32 %arg, label %for.cond616 []
+
+for.cond616:                                      ; preds = %for.body619, %if.then595
+  switch i32 %arg, label %for.body619 [ i32 0, label %for.end626 ]
+
+for.body619:                                      ; preds = %for.cond616
+  switch i32 %arg, label %for.cond616 []
+
+for.end626:                                       ; preds = %for.cond616
+  switch i32 %arg, label %while.body248 []
+
+if.else629:                                       ; preds = %backtrack
+  switch i32 %arg, label %retry []
 }

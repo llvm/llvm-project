@@ -1,8 +1,8 @@
 ; RUN: rm -rf %t 
 ; RUN: split-file %s %t
 ; RUN: mkdir -p %t/System/Library/Frameworks 
-; RUN: cp -r %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
-; RUN: cp -r %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Foundation/Foundation.framework %t/System/Library/Frameworks/
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 ; RUN: yaml2obj %S/Inputs/Simple/Simple.yaml -o %t/Simple 
 
@@ -45,7 +45,7 @@
 ; WARNINGS: warning: no declaration was found for exported symbol '(ObjC Class) SimpleInternalSPI' in dynamic library
 ; WARNINGS: warning: no declaration was found for exported symbol '(ObjC Class) SimpleInternalAPI' in dynamic library
 
-; PEDANTIC-NOT: error
+; PEDANTIC-NOT: error:
 ; PEDANTIC: warning: cannot find protocol definition for 'ForwardProcotol'
 
 ; NOPUBLIC: error: no such public header file:

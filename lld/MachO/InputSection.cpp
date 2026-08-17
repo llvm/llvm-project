@@ -89,7 +89,7 @@ uint64_t InputSection::getVA(uint64_t off) const {
   return parent->addr + getOffset(off);
 }
 
-static uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
+uint64_t macho::resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
                                       int64_t offset) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(type);
   uint64_t symVA;
@@ -204,16 +204,20 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
   for (auto &copySym : copy->symbols)
     copySym->identicalCodeFoldingKind = foldKind;
 
-  symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
-  copy->symbols.clear();
-
-  // Remove duplicate compact unwind info for symbols at the same address.
-  if (symbols.empty())
+  if (copy->symbols.empty())
     return;
-  for (auto it = symbols.begin() + 1; it != symbols.end(); ++it) {
+  auto *it = copy->symbols.begin();
+  // The first symbol in the merged section (symbols.front()) must keep its
+  // unwind entry. If this section is empty, the copy's first symbol becomes the
+  // new front, so we skip clearing it.
+  if (symbols.empty())
+    ++it;
+  for (; it != copy->symbols.end(); ++it) {
     assert((*it)->value == 0);
     (*it)->originalUnwindEntry = nullptr;
   }
+  symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
+  copy->symbols.clear();
 }
 
 void ConcatInputSection::writeTo(uint8_t *buf) {

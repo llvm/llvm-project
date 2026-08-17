@@ -147,7 +147,7 @@ protected:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 private:
@@ -250,7 +250,7 @@ public:
   bool HasNativeLLVMSupport() const override;
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   bool IsBlocksDefault() const override {
@@ -355,6 +355,11 @@ public:
   // the argument translation business.
   mutable bool TargetInitialized;
 
+  /// Whether the target was lazily initialized from the triple by
+  /// ensureTargetInitialized() rather than by AddDeploymentTarget(). Such a
+  /// target is a best-effort guess that setTarget() may overwrite.
+  mutable bool TargetInitializedLazily = false;
+
   // TODO: Are these useful? Can we use Triple::OSType/EnvironmentType instead?
   enum DarwinPlatformKind {
     MacOS,
@@ -389,7 +394,13 @@ private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
 
   void VerifyTripleForSDK(const llvm::opt::ArgList &Args,
-                          const llvm::Triple Triple) const;
+                          const llvm::Triple &Triple) const;
+
+protected:
+  /// Lazily initialize the target platform from the triple when
+  /// AddDeploymentTarget has not run yet (e.g. when Darwin is used as
+  /// a host toolchain for device offloading).
+  void ensureTargetInitialized() const;
 
 public:
   Darwin(const Driver &D, const llvm::Triple &Triple,
@@ -397,6 +408,7 @@ public:
   ~Darwin() override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                          BoundArch BA,
                                           types::ID InputType) const override;
 
   /// @name Darwin Specific Toolchain Implementation
@@ -440,10 +452,17 @@ protected:
     if (TargetInitialized && TargetPlatform == Platform &&
         TargetEnvironment == Environment &&
         (Environment == MacCatalyst ? OSTargetVersion : TargetVersion) ==
-            VersionTuple(Major, Minor, Micro))
+            VersionTuple(Major, Minor, Micro)) {
+      TargetInitializedLazily = false;
       return;
+    }
 
-    assert(!TargetInitialized && "Target already initialized!");
+    // A lazily-initialized target (see ensureTargetInitialized()) is a
+    // best-effort guess from the triple alone; the authoritative
+    // initialization from AddDeploymentTarget() may overwrite it.
+    assert((!TargetInitialized || TargetInitializedLazily) &&
+           "Target already initialized!");
+    TargetInitializedLazily = false;
     TargetInitialized = true;
     TargetPlatform = Platform;
     TargetEnvironment = Environment;
@@ -586,9 +605,10 @@ protected:
   /// the c++ standard library of the deployment target we are targeting.
   bool isSizedDeallocationUnavailable() const;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
   void addClangCC1ASTargetOptions(
       const llvm::opt::ArgList &Args,
@@ -609,7 +629,7 @@ public:
   bool isCrossCompiling() const override { return false; }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
   CXXStdlibType GetDefaultCXXStdlibType() const override;
@@ -645,7 +665,9 @@ public:
 
   bool SupportsEmbeddedBitcode() const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 /// DarwinClang - The Darwin toolchain used by Clang.
@@ -674,7 +696,7 @@ public:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   void AddLinkARCArgs(const llvm::opt::ArgList &Args,

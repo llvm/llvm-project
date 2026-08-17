@@ -1,5 +1,10 @@
 // RUN: fir-opt -split-input-file -verify-diagnostics --strict-fir-volatile-verifier %s
 
+// expected-error@+1{{'fir.alloca' op must not be defined at module scope}}
+%0 = fir.alloca i32 {adapt.valuebyref}
+
+// -----
+
 // expected-error@+1{{custom op 'fir.string_lit' must have character type}}
 %0 = fir.string_lit "Hello, World!"(13) : !fir.int<32>
 
@@ -214,57 +219,6 @@ func.func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
 
 // -----
 
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %c2 = arith.constant 2 : index
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  // expected-error@+1 {{'fir.array_load' op operand #0 must be any reference or box, but got 'index'}}
-  %av1 = fir.array_load %c2(%s) : (index, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<f32>, %m : index, %n : index, %o : index, %p : index) {
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  // expected-error@+1 {{'fir.array_load' op must be a reference to an array}}
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<f32>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %s = fir.shape_shift %m, %n: (index, index) -> !fir.shapeshift<1>
-  // expected-error@+1 {{'fir.array_load' op rank of dimension mismatched}}
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<1>) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %c2 = arith.constant 2 : index
-  %shift = fir.shift %c2 : (index) -> !fir.shift<1>
-  // expected-error@+1 {{'fir.array_load' op shift can only be provided with fir.box memref}}
-  %av1 = fir.array_load %arr1(%shift) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shift<1>) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %c47 = arith.constant 47 : index
-  %c78 = arith.constant 78 : index
-  %c3 = arith.constant 3 : index
-  %slice = fir.slice %c47, %c78, %c3 : (index,index,index) -> !fir.slice<1>
-  %s = fir.shape_shift %m, %n, %o, %p: (index, index, index, index) -> !fir.shapeshift<2>
-  // expected-error@+1 {{'fir.array_load' op rank of dimension in slice mismatched}}
-  %av1 = fir.array_load %arr1(%s)[%slice] : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>, !fir.slice<1>) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
 func.func @test_coordinate_of(%arr : !fir.ref<!fir.array<?x?xf32>>) {
   %1 = arith.constant 10 : i32
   // expected-error@+1 {{'fir.coordinate_of' op cannot find coordinate with unknown extents}}
@@ -367,6 +321,46 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived{a:i32,b
     fir.result %14, %17 : index, i32
   }
   fir.store %4#1 to %0 : !fir.ref<i32>
+  return
+}
+
+// -----
+
+func.func @create_box_rank_mismatch(%arg0: !fir.ref<!fir.array<?xf32>>, %lb0: index, %ext0: index, %sm0: index, %lb1: index, %ext1: index, %sm1: index) {
+  // expected-error@+1 {{'fir.create_box' op memref rank does not match result box rank}}
+  %0 = fir.create_box %arg0 lbs(%lb0, %lb1) extents(%ext0, %ext1) strides(%sm0, %sm1) : (!fir.ref<!fir.array<?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_operand_count(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op expected 2 values for each of lbounds, extents, and strides}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext, %ext) strides(%sm, %sm) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_dynamic_char(%arg0: !fir.ref<!fir.array<?x!fir.char<1,?>>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op result box element type must be statically sized}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, index, index, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  return
+}
+
+// -----
+
+func.func @create_box_storage_kind(%arg0: !fir.heap<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op result box element storage kind must match the memref storage kind}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// -----
+
+func.func @create_box_volatile_mismatch(%arg0: !fir.ref<!fir.array<?xf32>, volatile>, %lb: index, %ext: index, %sm: index) {
+  // expected-error@+1 {{'fir.create_box' op cannot convert between volatile and non-volatile types}}
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?xf32>, volatile>, index, index, index) -> !fir.box<!fir.array<?xf32>>
   return
 }
 
@@ -607,84 +601,6 @@ func.func @bad_save_result(%buffer : !fir.ref<!fir.array<?xf32>>, %n :index) {
 
 // -----
 
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  // expected-error@+1 {{'fir.array_fetch' op number of indices != dimension of array}}
-  %f = fir.array_fetch %av1, %m : (!fir.array<?x?xf32>, index) -> f32
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  // expected-error@+1 {{'fir.array_fetch' op return type does not match array}}
-  %f = fir.array_fetch %av1, %m, %n : (!fir.array<?x?xf32>, index, index) -> i32
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %f = fir.array_fetch %av1, %m, %n : (!fir.array<?x?xf32>, index, index) -> f32
-  // expected-error@+1 {{'fir.array_update' op number of indices != dimension of array}}
-  %av2 = fir.array_update %av1, %f, %m : (!fir.array<?x?xf32>, f32, index) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %c0 = arith.constant 0 : i32
-  // expected-error@+1 {{'fir.array_update' op merged value does not have element type}}
-  %av2 = fir.array_update %av1, %c0, %m, %n : (!fir.array<?x?xf32>, i32, index, index) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index, %f: !fir.ref<i32>) {
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  // expected-error@+1 {{'fir.array_update' op does not support reference type for merge}}
-  %av2 = fir.array_update %av1, %f, %m, %n : (!fir.array<?x?xf32>, !fir.ref<i32>, index, index) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
-func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %f = fir.array_fetch %av1, %m, %n : (!fir.array<?x?xf32>, index, index) -> f32
-  %av2 = fir.array_update %av1, %f, %m, %n : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
-  // expected-error@+1 {{'fir.array_merge_store' op operand #0 must be result of a fir.array_load op}}
-  fir.array_merge_store %av2, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
-  return
-}
-
-// -----
-
-func.func @bad_array_modify(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index, %f : f32) {
-  %i10 = arith.constant 10 : index
-  %j20 = arith.constant 20 : index
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  // expected-error@+1 {{'fir.array_modify' op number of indices must match array dimension}}
-  %addr, %av2 = fir.array_modify %av1, %i10 : (!fir.array<?x?xf32>, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
-  fir.store %f to %addr : !fir.ref<f32>
-  fir.array_merge_store %av1, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
-  return
-}
-
-// -----
-
 func.func @slice_must_be_integral() {
   %0 = arith.constant 42 : i32
   %1 = fir.field_index field, !fir.type<t(param:i32){field:i32}> (%0 : i32)
@@ -703,86 +619,6 @@ func.func @array_coor_no_slice_substr(%a : !fir.ref<!fir.array<?x?xf32>>) {
   %p = fir.array_coor %a[%slice] %c1, %c1 : (!fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>, index, index) -> !fir.ref<f32>
   return
 }
-
-// -----
-
-func.func @array_coor_no_slice_substr(%a : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = arith.constant 1 : index
-  %c10 = arith.constant 10 : index
-  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
-  // expected-error@+1 {{'fir.array_load' op array_load cannot take a slice with substring}}
-  %v = fir.array_load %a[%slice] : (!fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>) -> !fir.array<?x?xf32>
-  return
-}
-
-// -----
-
-func.func @array_merge_store_no_slice_substr(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index, %f : f32) {
-  %i10 = arith.constant 10 : index
-  %j20 = arith.constant 20 : index
-  %c1 = arith.constant 1 : index
-  %c10 = arith.constant 10 : index
-  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %slice = fir.slice %c1, %c10, %c1 substr %c1, %c10 : (index, index, index, index, index) -> !fir.slice<1>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %addr, %av2 = fir.array_modify %av1, %i10, %i10 : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
-  fir.store %f to %addr : !fir.ref<f32>
-  // expected-error@+1 {{'fir.array_merge_store' op array_merge_store cannot take a slice with substring}}
-  fir.array_merge_store %av1, %av2 to %arr1[%slice] : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>, !fir.slice<1>
-  return
-}
-
-// -----
-
-func.func @array_access(%a : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = arith.constant 1 : index
-  %n = arith.constant 0 : index
-  %m = arith.constant 50 : index
-  %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
-  %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
-  // expected-error@+1 {{'fir.array_access' op number of indices != dimension of array}}
-  %p = fir.array_access %v, %c1 : (!fir.array<?x?xf32>, index) -> !fir.ref<f32>
-  return
-}
-
-// -----
-
-func.func @array_access(%a : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = arith.constant 1 : index
-  %n = arith.constant 0 : index
-  %m = arith.constant 50 : index
-  %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
-  %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
-  // expected-error@+1 {{'fir.array_access' op return type does not match array}}
-  %p = fir.array_access %v, %c1, %c1 : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f64>
-  return
-}
-
-// -----
-
-func.func @foo(%arg0: !fir.ref<!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>>) {
-  %c1 = arith.constant 1 : index
-  %c0 = arith.constant 0 : index
-  %c9 = arith.constant 9 : index
-  %c19 = arith.constant 19 : index
-  %c30 = arith.constant 30 : index
-  %0 = fir.shape %c30 : (index) -> !fir.shape<1>
-  %1 = fir.array_load %arg0(%0) : (!fir.ref<!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>>, !fir.shape<1>) -> !fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>
-  %2 = fir.do_loop %arg1 = %c1 to %c9 step %c1 unordered iter_args(%arg2 = %1) -> (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>) {
-    %3 = fir.field_index c, !fir.type<t{c:!fir.array<20xi32>}>
-    %4 = fir.do_loop %arg3 = %c0 to %c19 step %c1 unordered iter_args(%arg4 = %arg2) -> (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>) {
-      // expected-error@+1 {{'fir.array_access' op return type and/or indices do not type check}}
-      %5 = fir.array_access %1, %arg1, %3, %arg3 : (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>, index, !fir.field, index) -> !fir.ref<f32>
-      %6 = fir.call @ifoo(%5) : (!fir.ref<f32>) -> i32
-      %7 = fir.array_update %arg4, %6, %arg1, %3, %arg3 : (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>, i32, index, !fir.field, index) -> !fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>
-      fir.result %7 : !fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>
-    }
-    fir.result %4 : !fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>
-  }
-  fir.array_merge_store %1, %2 to %arg0 : !fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>, !fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>, !fir.ref<!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>>
-  return
-}
-func.func private @ifoo(!fir.ref<f32>) -> i32
 
 // -----
 
@@ -1490,4 +1326,77 @@ func.func @bad_declare_value(%arg0: !fir.ref<i32>) {
   // expected-error@+1 {{'fir.declare_value' op value must be a simple scalar (integer, real, complex, or logical)}}
   fir.declare_value %arg0 {uniq_name = "test"} : !fir.ref<i32>
   return
+}
+
+// -----
+
+func.func @bitcast_pointer_input(%arg0: !fir.ref<i32>) -> i32 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.ref<i32>) -> i32
+  return %0 : i32
+}
+
+// -----
+
+func.func @bitcast_pointer_output(%arg0: i32) -> !fir.ref<i32> {
+  // expected-error@+1 {{'fir.bitcast' op output type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (i32) -> !fir.ref<i32>
+  return %0 : !fir.ref<i32>
+}
+
+// -----
+
+func.func @bitcast_complex(%arg0: complex<f32>) -> i64 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (complex<f32>) -> i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @bitcast_char_not_singleton(%arg0: !fir.char<1,2>) -> i16 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.char<1,2>) -> i16
+  return %0 : i16
+}
+
+// -----
+
+func.func @bitcast_box(%arg0: !fir.box<!fir.type<t{i:i32}>>) -> i64 {
+  // expected-error@+1 {{'fir.bitcast' op input type is not bitcast compatible}}
+  %0 = fir.bitcast %arg0 : (!fir.box<!fir.type<t{i:i32}>>) -> i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @bitcast_size_mismatch(%arg0: i32) -> f64 {
+  // expected-error@+1 {{'fir.bitcast' op bit size mismatch: input has 32 bits but output has 64 bits}}
+  %0 = fir.bitcast %arg0 : (i32) -> f64
+  return %0 : f64
+}
+
+// -----
+
+func.func @logical_and_type_mismatch(%a: !fir.logical<4>, %b: !fir.logical<2>) {
+  // expected-note@-1 {{prior use here}}
+  // expected-error@+1 {{use of value '%b' expects different type than prior uses: '!fir.logical<4>' vs '!fir.logical<2>'}}
+  %0 = fir.logical_and %a, %b : !fir.logical<4>
+  return
+}
+
+// -----
+
+func.func @logical_or_float(%a: f32, %b: f32) {
+  // expected-error@+1 {{'fir.logical_or' op operand #0 must be fir.logical or signless integer, but got 'f32'}}
+  %0 = fir.logical_or %a, %b : f32
+  return
+}
+
+// -----
+
+func.func @allocmem_bad_alignment() -> !fir.heap<!fir.array<10xf32>> {
+  // expected-error@+1 {{'fir.allocmem' op alignment must be a positive power of two}}
+  %0 = fir.allocmem !fir.array<10xf32> {alignment = 3 : i64}
+  return %0 : !fir.heap<!fir.array<10xf32>>
 }

@@ -20,6 +20,7 @@ include "mlir/IR/BuiltinTypes.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Dialect/OpenACC/OpenACCAttributes.td"
 include "mlir/Dialect/OpenACC/OpenACCBase.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsTypes.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td"
@@ -38,6 +39,11 @@ class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
 def OpenACC_ReductionOperatorNone    : I32EnumAttrCase<"AccNone", 0, "none">;
 def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"AccAdd", 1, "add">;
 def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"AccMul", 2, "mul">;
+// When NaNs or signed zeros are possible, AccMax and AccMin parallel reductions
+// cannot guarantee stable results for floating-point values.
+// As such, auto-parallelization of such reductions cannot be done.
+// The FrontEnds can use alternative max/min reduction kinds (see below)
+// to enable auto-parallelization.
 def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"AccMax", 3, "max">;
 def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"AccMin", 4, "min">;
 def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"AccIand", 5, "iand">;
@@ -47,16 +53,62 @@ def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"AccEqv", 8, "eqv">;
 def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"AccNeqv", 9, "neqv">;
 def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"AccLand", 10, "land">;
 def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"AccLor", 11, "lor">;
+// The following reduction operators correspond to arith::AtomicRMWKind kinds
+// named alike. They can only be applied to floating-point types.
+// These reductions can be auto-parallelized.
+def OpenACC_ReductionOperatorMaximum
+    : I32EnumAttrCase<"AccMaximumf", 12, "maximumf">;
+def OpenACC_ReductionOperatorMinimum
+    : I32EnumAttrCase<"AccMinimumf", 13, "minimumf">;
+def OpenACC_ReductionOperatorMaxnum
+    : I32EnumAttrCase<"AccMaxnumf", 14, "maxnumf">;
+def OpenACC_ReductionOperatorMinnum
+    : I32EnumAttrCase<"AccMinnumf", 15, "minnumf">;
 
-def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
-    "built-in reduction operations supported by OpenACC",
-    [OpenACC_ReductionOperatorNone, OpenACC_ReductionOperatorAdd, 
-     OpenACC_ReductionOperatorMul, OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
-     OpenACC_ReductionOperatorAnd, OpenACC_ReductionOperatorOr,
-     OpenACC_ReductionOperatorXor, OpenACC_ReductionOperatorLogEqv,
-     OpenACC_ReductionOperatorLogNeqv, OpenACC_ReductionOperatorLogAnd,
-     OpenACC_ReductionOperatorLogOr
-    ]> {
+def OpenACC_ReductionOperator
+    : I32EnumAttr<
+          "ReductionOperator",
+          // Built-in reduction operations supported by OpenACC
+          // according OpenACC 3.3:
+          //
+          //  |-------------------|----------------------|
+          //  | Language operator |                      |
+          //  |-------------------|   ReductionOperator  |
+          //  | C/C++   | Fortran |                      |
+          //  |------------------------------------------|
+          //  |     +   |      +  |         add          |
+          //  |     *   |      *  |         mul          |
+          //  |   max   |    max  | max/maximumf/maxnumf |
+          //  |   min   |    min  | min/minimumf/minnumf |
+          //  |     &   |   iand  |        iand          |
+          //  |     |   |    ior  |         ior          |
+          //  |     ^   |   ieor  |         xor          |
+          //  |    &&   |  .and.  |        land          |
+          //  |    ||   |   .or.  |         lor          |
+          //  |         |  .eqv.  |         eqv          |
+          //  |         | .neqv.  |        neqv          |
+          //  |------------------------------------------|
+          //
+          //  The different max/min ReductionOperator's have different behavior
+          //  when the arguments may be NaNs or signed zeros:
+          //    * max/min - in general, produces inconsistent results
+          //      in parallel execution, because it is not commutative.
+          //      The max/min returns the second argument,
+          //      when one of the arguments is NaN,
+          //      or both arguments are zeros regardless of the sign.
+          //    * maximumf/minimumf - safe to parallelize, corresponds to
+          //      maximum/minimum defined in IEEE-754-2019.
+          //    * maxnumf/minnumf - safe to parallelize, corresponds to
+          //      maxNum/minNum defined in IEEE-754-2008.
+          "built-in reduction operations supported by OpenACC",
+          [OpenACC_ReductionOperatorNone, OpenACC_ReductionOperatorAdd,
+           OpenACC_ReductionOperatorMul, OpenACC_ReductionOperatorMax,
+           OpenACC_ReductionOperatorMin, OpenACC_ReductionOperatorAnd,
+           OpenACC_ReductionOperatorOr, OpenACC_ReductionOperatorXor,
+           OpenACC_ReductionOperatorLogEqv, OpenACC_ReductionOperatorLogNeqv,
+           OpenACC_ReductionOperatorLogAnd, OpenACC_ReductionOperatorLogOr,
+           OpenACC_ReductionOperatorMaximum, OpenACC_ReductionOperatorMinimum,
+           OpenACC_ReductionOperatorMaxnum, OpenACC_ReductionOperatorMinnum]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::acc";
 }
@@ -329,6 +381,15 @@ def DeclareActionAttr : OpenACC_Attr<"DeclareAction", "declare_action"> {
                         OptionalParameter<"SymbolRefAttr">:$postAlloc,
                         OptionalParameter<"SymbolRefAttr">:$preDealloc,
                         OptionalParameter<"SymbolRefAttr">:$postDealloc);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// Attribute to store locations for an optional OpenACC loop directive and one
+// or more loops
+def OpenACC_LoopLocAttr : OpenACC_Attr<"LoopLoc", "loop_loc"> {
+  let summary = "Stores the OpenACC loop directive and per-loop source locations";
+  let parameters = (ins OptionalParameter<"::mlir::LocationAttr">:$directive,
+                        ArrayRefParameter<"::mlir::LocationAttr">:$loops);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -1393,11 +1454,13 @@ def OpenACC_PrivateRecipeOp
     /// and it must be a valid place for this operation to be inserted. The
     /// `recipeName` must be a unique name to prevent "redefinition of symbol"
     /// IR errors.
+    /// The `hostVar` is the original host variable from which the type and
+    /// language-specific metadata are derived.
     static std::optional<PrivateRecipeOp> createAndPopulate(
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
         ::llvm::StringRef recipeName,
-        ::mlir::Type varType,
+        ::mlir::Value hostVar,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
 
@@ -1518,11 +1581,13 @@ def OpenACC_FirstprivateRecipeOp
     /// and it must be a valid place for this operation to be inserted. The
     /// `recipeName` must be a unique name to prevent "redefinition of symbol"
     /// IR errors.
+    /// The `hostVar` is the original host variable from which the type and
+    /// language-specific metadata are derived.
     static std::optional<FirstprivateRecipeOp> createAndPopulate(
         ::mlir::OpBuilder &builder,
         ::mlir::Location loc,
         ::llvm::StringRef recipeName,
-        ::mlir::Type varType,
+        ::mlir::Value hostVar,
         ::llvm::StringRef varName = "",
         ::mlir::ValueRange bounds = {});
   }];
@@ -1651,6 +1716,9 @@ def OpenACC_ReductionRecipeOp
     (`destroy` $destroyRegion^)?
   }];
 
+  // TODO: we need to verify that reduction operators
+  // maxnumf, maximumf, minnumf anf minimumf are only applied
+  // to FloatType element types.
   let hasRegionVerifier = 1;
 }
 
@@ -1769,6 +1837,13 @@ def OpenACC_ParallelOp
     /// present.
     mlir::Operation::operand_range
     getNumGangsValues(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has any num_gangs, num_workers, or vector_length
+    /// clause for the given device_type.
+    bool hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType);
+
+    /// Check whether num_gangs, num_workers, and vector_length are all 1.
+    bool isEffectivelySerial();
 
     /// Return true if the op has the wait attribute for the
     /// mlir::acc::DeviceType::None device_type.
@@ -2097,6 +2172,13 @@ def OpenACC_KernelsOp
     mlir::Operation::operand_range
     getNumGangsValues(mlir::acc::DeviceType deviceType);
 
+    /// Return true if the op has any num_gangs, num_workers, or vector_length
+    /// clause for the given device_type.
+    bool hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType);
+
+    /// Check whether num_gangs, num_workers, and vector_length are all 1.
+    bool isEffectivelySerial();
+
     /// Return true if the op has the wait attribute for the
     /// mlir::acc::DeviceType::None device_type.
     bool hasWaitOnly();
@@ -2300,7 +2382,8 @@ def OpenACC_DataOp
 def OpenACC_TerminatorOp
     : OpenACC_Op<"terminator", [Pure, Terminator,
                                 DeclareOpInterfaceMethods<
-                                    RegionBranchTerminatorOpInterface>]> {
+                                    RegionBranchTerminatorOpInterface,
+                                    ["getMutableSuccessorOperands"]>]> {
   let summary = "Generic terminator for OpenACC regions";
 
   let description = [{
@@ -2748,6 +2831,10 @@ def OpenACC_LoopOp
     // 'default'/None device-type.
     bool hasDefaultGangWorkerVector();
 
+    // Return whether this LoopOp has a gang, worker, or vector for the given
+    // device-type.
+    bool hasAnyGangWorkerVector(DeviceType deviceType);
+
     // Used to obtain the parallelism mode for the requested device type.
     // This first checks if the mode is set for the device_type requested.
     // And if not, it returns the non-device_type mode.
@@ -2844,7 +2931,8 @@ def OpenACC_LoopOp
 // Yield operation for the acc.loop and acc.parallel operations.
 def OpenACC_YieldOp : OpenACC_Op<"yield", [Pure, ReturnLike, Terminator,
     ParentOneOf<["FirstprivateRecipeOp, LoopOp, ParallelOp, PrivateRecipeOp,"
-                 "ReductionRecipeOp, SerialOp, AtomicUpdateOp"]>]> {
+                 "ReductionRecipeOp, ReductionInitOp, ReductionCombineRegionOp,"
+                 "SerialOp, AtomicUpdateOp, ComputeRegionOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{
@@ -3638,6 +3726,33 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
     ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// acc_on_device runtime call
+//===----------------------------------------------------------------------===//
+
+def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
+  let summary = "acc_on_device intrinsic operation";
+
+  let description = [{
+    Represents a call to the OpenACC `acc_on_device` runtime function.
+    Returns whether the current thread is executing on the given device type.
+
+    Example:
+
+    ```mlir
+    %host = arith.constant 1 : i32
+    %on_host = acc.on_device %host : i32 -> i1
+    ```
+  }];
+
+  let arguments = (ins IntOrIndex:$deviceType);
+  let results = (outs I1:$result);
+
+  let assemblyFormat = [{
+    $deviceType attr-dict `:` type($deviceType) `->` type($result)
+  }];
 }
 
 include "mlir/Dialect/OpenACC/OpenACCCGAttributes.td"

@@ -19,8 +19,8 @@ ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
     : Signature(M.Signature), ClangModule(&M) {
   if (M.Directory)
     Path = M.Directory->getName();
-  if (auto File = M.getASTFile())
-    ASTFile = File->getName();
+  if (auto FileKey = M.getASTFileName())
+    ASTFile = FileKey->str();
 }
 
 std::string ASTSourceDescriptor::getModuleName() const {

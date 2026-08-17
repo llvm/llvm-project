@@ -100,14 +100,15 @@ template <typename T>
 static T pyTryCast(nanobind::handle object) {
   try {
     return nanobind::cast<T>(object);
-  } catch (nanobind::cast_error &err) {
+  } catch (std::exception &err) {
+    if (object.is_none()) {
+      std::string msg = std::string("Invalid attribute (None?) when attempting "
+                                    "to create an ArrayAttribute (") +
+                        err.what() + ")";
+      throw std::runtime_error(msg.c_str());
+    }
     std::string msg = std::string("Invalid attribute when attempting to "
                                   "create an ArrayAttribute (") +
-                      err.what() + ")";
-    throw std::runtime_error(msg.c_str());
-  } catch (std::runtime_error &err) {
-    std::string msg = std::string("Invalid attribute (None?) when attempting "
-                                  "to create an ArrayAttribute (") +
                       err.what() + ")";
     throw std::runtime_error(msg.c_str());
   }
@@ -193,7 +194,7 @@ public:
     });
     c.def("__iter__",
           [](const DerivedT &arr) { return PyDenseArrayIterator(arr); });
-    c.def("__add__", [](DerivedT &arr, const nanobind::list &extras) {
+    c.def("__add__", [](DerivedT &arr, const nanobind::sequence &extras) {
       std::vector<EltTy> values;
       intptr_t numOldElements = mlirDenseArrayGetNumElements(arr);
       values.reserve(numOldElements + nanobind::len(extras));
@@ -342,7 +343,7 @@ public:
   static void bindDerived(ClassTy &c);
 
 private:
-  static nanobind::object toPyInt(PyIntegerAttribute &self);
+  static nanobind::int_ toPyInt(PyIntegerAttribute &self);
 };
 
 /// Bool Attribute subclass - BoolAttr.
@@ -402,10 +403,10 @@ public:
   static constexpr const char *pyClassName = "DenseElementsAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
 
-  static PyDenseElementsAttribute
-  getFromList(const nanobind::list &attributes,
-              std::optional<PyType> explicitType,
-              DefaultingPyMlirContext contextWrapper);
+  static PyDenseElementsAttribute getFromList(
+      const nanobind::typed<nanobind::sequence, PyAttribute> &attributes,
+      std::optional<PyType> explicitType,
+      DefaultingPyMlirContext contextWrapper);
 
   static PyDenseElementsAttribute
   getFromBuffer(const nb_buffer &array, bool signless,
@@ -423,6 +424,13 @@ public:
   static void bindDerived(ClassTy &c);
 
   static PyType_Slot slots[];
+
+protected:
+  /// Registers get/get_splat factory methods with the concrete return
+  /// type in the nb::sig. Subclasses call this from their bindDerived
+  /// to override the return type in generated stubs.
+  template <typename ClassT>
+  static void bindFactoryMethods(ClassT &c, const char *pyClassName);
 
 private:
   static int bf_getbuffer(PyObject *exporter, Py_buffer *view, int flags);

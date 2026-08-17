@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMOrcJIT
   AbsoluteSymbols.cpp
   BacktraceTools.cpp
   COFF.cpp
+  COFFAutoImportGenerator.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp
@@ -19,13 +20,17 @@ add_llvm_component_library(LLVMOrcJIT
   EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
   EPCGenericDylibManager.cpp
+  EPCGenericDylibManagerSPS.cpp
   EPCGenericJITLinkMemoryManager.cpp
+  EPCGenericJITLinkMemoryManagerSPS.cpp
+  EPCGenericMemoryAccessSPS.cpp
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
   IndirectionUtils.cpp
+  InProcessEPC.cpp
   InProcessMemoryAccess.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp

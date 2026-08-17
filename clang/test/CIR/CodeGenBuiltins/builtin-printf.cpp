@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// CIR: cir.global "private" constant cir_private dso_local @".str" = #cir.const_array<"%s\00" : !cir.array<!s8i x 3>> : !cir.array<!s8i x 3> 
-// CIR: cir.global "private" constant cir_private dso_local @".str.1" = #cir.const_array<"%s %d\0A\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>
+// CIR: cir.global "private" constant cir_private dso_local @".str" = #cir.const_array<"%s" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 3> 
+// CIR: cir.global "private" constant cir_private dso_local @".str.1" = #cir.const_array<"%s %d\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7>
 // LLVM: @.str = private constant [3 x i8] c"%s\00"
 // LLVM: @.str.1 = private constant [7 x i8] c"%s %d\0A\00"
 // OGCG: @.str = private unnamed_addr constant [3 x i8] c"%s\00"
@@ -21,8 +21,8 @@ void func(char const * const str, int i) {
 // CIR: cir.func{{.*}} @printf(!cir.ptr<!s8i> {{.*}}, ...) -> !s32i
 
 // CIR: cir.func{{.*}} @_Z4funcPKci(%[[arg0:.+]]: !cir.ptr<!s8i>{{.*}}, %[[arg1:.+]]: !s32i
-// CIR:   %[[str_ptr:.+]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["str", init, const]
-// CIR:   %[[i_ptr:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
+// CIR:   %[[str_ptr:.+]] = cir.alloca "str" {{.*}} init const : !cir.ptr<!cir.ptr<!s8i>>
+// CIR:   %[[i_ptr:.+]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store %[[arg0]], %[[str_ptr]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 // CIR:   cir.store %[[arg1]], %[[i_ptr]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[null_ptr:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>

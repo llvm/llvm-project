@@ -14,8 +14,8 @@
 #ifndef LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/APFloat.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include <cstdint>
 #include <optional>
 
@@ -77,6 +77,7 @@ constexpr uint32_t CMP_TRUE_US = 0x1F; // True (unordered, signaling)
 
 // Return true if immediate and the comparison flags are matching
 bool MatchesPredicate(uint32_t Imm, llvm::APFloatBase::cmpResult CompareResult);
+class CallExpr;
 } // namespace clang
 
 using namespace clang;
@@ -126,6 +127,26 @@ void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
+
+/// Convert a builtin ID to the canonical x86 builtin ID the constant evaluators
+/// dispatch on in their x86 target-specific cases.
+///
+/// Target-independent builtins are returned unchanged. An x86 target builtin
+/// (including an auxiliary-target x86 builtin, whose ID is shifted past the
+/// primary target's builtins) is translated to its canonical X86::BI* value.
+/// Any other target's builtin returns 0: the constant evaluators only fold x86
+/// target builtins, and target builtin IDs of different targets overlap (each
+/// numbers from Builtin::FirstTSBuiltin), so an unrelated target's ID must not
+/// be mistaken for an x86 one.
+///
+/// The ID-based overload performs no work beyond a single comparison for
+/// target-independent builtins, so it is suitable for hot paths (e.g. the
+/// bytecode interpreter's builtin dispatch) where re-deriving the ID from the
+/// call expression would be wasteful.
+unsigned ConvertBuiltinIDToX86BuiltinID(const ASTContext &Ctx,
+                                        unsigned BuiltinID);
+unsigned ConvertBuiltinIDToX86BuiltinID(const ASTContext &Ctx,
+                                        const CallExpr *E);
 
 uint8_t GFNIMultiplicativeInverse(uint8_t Byte);
 uint8_t GFNIMul(uint8_t AByte, uint8_t BByte);

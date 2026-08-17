@@ -39,6 +39,7 @@ enum class DeclUpdateKind {
   StaticLocalNumber,
   DeclMarkedOpenMPThreadPrivate,
   DeclMarkedOpenMPAllocate,
+  DeclMarkedOpenMPIndirectCall,
   DeclMarkedOpenMPDeclareTarget,
   DeclExported,
   AddedAttrToRecord,

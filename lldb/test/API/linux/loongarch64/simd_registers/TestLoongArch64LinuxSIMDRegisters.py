@@ -15,6 +15,7 @@ class Mode(Enum):
 
 
 class LoongArch64LinuxRegisters(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def get_build_flags(self, mode):
@@ -77,7 +78,7 @@ class LoongArch64LinuxRegisters(TestBase):
         self.expect("continue", substrs=["exited with status = 0"])
 
     @skipUnlessArch("loongarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_lsx(self):
         """Test read/write of LSX registers."""
         if not self.isLoongArchLSX():
@@ -85,7 +86,7 @@ class LoongArch64LinuxRegisters(TestBase):
         self.simd_registers_impl(Mode.LSX)
 
     @skipUnlessArch("loongarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_lasx(self):
         """Test read/write of LASX registers."""
         if not self.isLoongArchLASX():

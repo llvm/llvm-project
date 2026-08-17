@@ -920,7 +920,7 @@ define float @fmul_c1_use(float %x, float %y) {
 
 define half @fdiv_c0(half %x, half %y) {
 ; CHECK-LABEL: @fdiv_c0(
-; CHECK-NEXT:    [[M:%.*]] = fdiv half 0xH4700, [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = fdiv half 7.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fsub half [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    ret half [[R]]
 ;

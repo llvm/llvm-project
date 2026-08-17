@@ -106,8 +106,7 @@ program OmpAtomicUpdate
 !CHECK:  %[[VAL_D_LOADED:.*]] = fir.load %[[VAL_D_DECLARE]]#0 : !fir.ref<i32>
 !CHECK: omp.atomic.update memory_order(relaxed) %[[VAL_Y_DECLARE]]#0 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
-!CHECK:  {{.*}} = arith.cmpi sgt, %[[ARG]], {{.*}} : i32
-!CHECK:  %[[TEMP:.*]] = arith.select {{.*}} : i32
+!CHECK:  %[[TEMP:.*]] = arith.maxsi {{.*}} : i32
 !CHECK:  omp.yield(%[[TEMP]] : i32)
 !CHECK: }
     !$omp atomic update relaxed
@@ -175,8 +174,7 @@ program OmpAtomicUpdate
 !CHECK:   %[[VAL_Z_LOADED:.*]] = fir.load %[[VAL_Z_DECLARE]]#0 : !fir.ref<i32>
 !CHECK:   omp.atomic.update %[[VAL_W_DECLARE]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG_W:.*]]: i32):
-!CHECK:     %[[W_CMP:.*]] = arith.cmpi sgt, %[[ARG_W]], {{.*}} : i32
-!CHECK:     %[[WXYZ_MAX:.*]] = arith.select %[[W_CMP]], %[[ARG_W]], {{.*}} : i32
+!CHECK:     %[[WXYZ_MAX:.*]] = arith.maxsi %[[ARG_W]], {{.*}} : i32
 !CHECK:     omp.yield(%[[WXYZ_MAX]] : i32)
 !CHECK:   }
   !$omp atomic update

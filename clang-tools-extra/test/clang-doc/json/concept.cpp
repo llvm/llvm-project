@@ -1,13 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=html --executor=standalone %s
+// RUN: clang-doc --pretty-json --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %S/../Inputs/concept.cpp
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
-
-// Requires that T suports post and pre-incrementing.
-template<typename T>
-concept Incrementable = requires(T x) {
-  ++x;
-  x++;
-};
 
 // CHECK:       {
 // CHECK-NEXT:    "Concepts": [
@@ -18,13 +11,13 @@ concept Incrementable = requires(T x) {
 // CHECK-NEXT:        "ParagraphComments": [
 // CHECK-NEXT:          [
 // CHECK-NEXT:            {
-// CHECK-NEXT:              "TextComment": " Requires that T suports post and pre-incrementing."
+// CHECK-NEXT:              "TextComment": "Requires that T suports post and pre-incrementing."
 // CHECK:             "End": true,
 // CHECK-NEXT:        "InfoType": "concept",
 // CHECK-NEXT:        "IsType": true,
 // CHECK-NEXT:        "Location": {
 // CHECK-NEXT:          "Filename": "{{.*}}concept.cpp",
-// CHECK-NEXT:          "LineNumber": 6
+// CHECK-NEXT:          "LineNumber": 2
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "Name": "Incrementable",
 // CHECK-NEXT:        "Template": {

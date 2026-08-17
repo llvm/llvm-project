@@ -17,7 +17,8 @@
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/Tester.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_OPTREDUCTIONPASS
@@ -42,50 +43,59 @@ public:
 
 /// Runs the pass instance in the pass pipeline.
 void OptReductionPass::runOnOperation() {
-  LLVM_DEBUG(llvm::dbgs() << "\nOptimization Reduction pass: ");
+  LDBG() << "\nOptimization Reduction pass: ";
 
   Tester test(testerName, testerArgs);
+  Operation *topOp = this->getOperation();
 
-  ModuleOp module = this->getOperation();
-  ModuleOp moduleVariant = module.clone();
+  std::string pipelineStr = optPass;
+  if (pipelineStr.empty()) {
+    if (!optPassFile.empty()) {
+      auto fileOrErr = llvm::MemoryBuffer::getFile(optPassFile);
+      if (std::error_code ec = fileOrErr.getError()) {
+        topOp->emitError() << "Could not open pass pipeline file: "
+                           << optPassFile << " (" << ec.message() << ")";
+        return signalPassFailure();
+      }
+      pipelineStr = fileOrErr.get()->getBuffer().trim().str();
+    }
+  }
 
-  OpPassManager passManager("builtin.module");
-  if (failed(parsePassPipeline(optPass, passManager))) {
-    module.emitError() << "\nfailed to parse pass pipeline";
+  PassManager passManager(topOp->getName());
+  if (failed(parsePassPipeline(pipelineStr, passManager))) {
+    topOp->emitError() << "\nfailed to parse pass pipeline";
     return signalPassFailure();
   }
 
-  std::pair<Tester::Interestingness, int> original = test.isInteresting(module);
+  std::pair<Tester::Interestingness, int> original = test.isInteresting(topOp);
   if (original.first != Tester::Interestingness::True) {
-    module.emitError() << "\nthe original input is not interested";
+    topOp->emitError() << "\nthe original input is not interested";
     return signalPassFailure();
   }
+  Operation *topOpVariant = topOp->clone();
 
-  // Temporarily push the variant under the main module and execute the pipeline
-  // on it.
-  module.getBody()->push_back(moduleVariant);
-  LogicalResult pipelineResult = runPipeline(passManager, moduleVariant);
-  moduleVariant->remove();
-
+  LogicalResult pipelineResult = passManager.run(topOpVariant);
   if (failed(pipelineResult)) {
-    module.emitError() << "\nfailed to run pass pipeline";
+    topOp->emitError() << "\nfailed to run pass pipeline";
     return signalPassFailure();
   }
 
   std::pair<Tester::Interestingness, int> reduced =
-      test.isInteresting(moduleVariant);
+      test.isInteresting(topOpVariant);
 
   if (reduced.first == Tester::Interestingness::True &&
       reduced.second < original.second) {
-    module.getBody()->clear();
-    module.getBody()->getOperations().splice(
-        module.getBody()->begin(), moduleVariant.getBody()->getOperations());
-    LLVM_DEBUG(llvm::dbgs() << "\nSuccessful Transformed version\n\n");
+    topOp->getRegion(0).getBlocks().clear();
+    topOp->getRegion(0).getBlocks().splice(
+        topOp->getRegion(0).getBlocks().begin(),
+        topOpVariant->getRegion(0).getBlocks());
+
+    LDBG() << "\nSuccessful Transformed version\n";
   } else {
-    LLVM_DEBUG(llvm::dbgs() << "\nUnsuccessful Transformed version\n\n");
+    LDBG() << "\nUnsuccessful Transformed version\n";
   }
 
-  moduleVariant->destroy();
+  topOpVariant->destroy();
 
-  LLVM_DEBUG(llvm::dbgs() << "Pass Complete\n\n");
+  LDBG() << "Pass Complete\n";
 }

@@ -3,14 +3,7 @@
 //  p# = positive test
 //  n# = negative test
 
-namespace std {
-template< class T >
-struct add_cv { typedef const volatile T type; };
-
-template< class T> struct add_const { typedef const T type; };
-
-template< class T> struct add_volatile { typedef volatile T type; };
-}
+#include <type_traits>
 
 const int p1() {
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qualified at the top level, which may reduce code readability without improving const correctness

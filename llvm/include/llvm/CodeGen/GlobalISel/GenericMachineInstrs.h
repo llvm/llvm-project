@@ -80,7 +80,7 @@ public:
 };
 
 /// Represents any type of generic load or store.
-/// G_LOAD, G_STORE, G_ZEXTLOAD, G_SEXTLOAD.
+/// G_LOAD, G_STORE, G_ZEXTLOAD, G_SEXTLOAD, G_FPEXTLOAD, G_FPTRUNCSTORE.
 class GLoadStore : public GMemOperation {
 public:
   /// Get the source register of the pointer value.
@@ -92,6 +92,8 @@ public:
     case TargetOpcode::G_STORE:
     case TargetOpcode::G_ZEXTLOAD:
     case TargetOpcode::G_SEXTLOAD:
+    case TargetOpcode::G_FPEXTLOAD:
+    case TargetOpcode::G_FPTRUNCSTORE:
       return true;
     default:
       return false;
@@ -192,11 +194,15 @@ public:
     return getMMO().getRanges();
   }
 
+  /// Returns the cache hint metadata for this load.
+  const MDNode *getMemCacheHint() const { return getMMO().getMemCacheHint(); }
+
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_ZEXTLOAD:
     case TargetOpcode::G_SEXTLOAD:
+    case TargetOpcode::G_FPEXTLOAD:
       return true;
     default:
       return false;
@@ -212,12 +218,13 @@ public:
   }
 };
 
-/// Represents either a G_SEXTLOAD or G_ZEXTLOAD.
+/// Represents either a G_SEXTLOAD, G_ZEXTLOAD, or G_FPEXTLOAD.
 class GExtLoad : public GAnyLoad {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_SEXTLOAD ||
-           MI->getOpcode() == TargetOpcode::G_ZEXTLOAD;
+           MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
+           MI->getOpcode() == TargetOpcode::G_FPEXTLOAD;
   }
 };
 
@@ -237,14 +244,44 @@ public:
   }
 };
 
-/// Represents a G_STORE.
-class GStore : public GLoadStore {
+/// Represents a G_FPEXTLOAD.
+class GFPExtLoad : public GAnyLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_FPEXTLOAD;
+  }
+};
+
+/// Represents any generic store, including truncating variants.
+class GAnyStore : public GLoadStore {
 public:
   /// Get the stored value register.
   Register getValueReg() const { return getOperand(0).getReg(); }
 
   static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_STORE:
+    case TargetOpcode::G_FPTRUNCSTORE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents a G_STORE.
+class GStore : public GAnyStore {
+public:
+  static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_STORE;
+  }
+};
+
+/// Represents a G_FPTRUNCSTORE.
+class GFPTruncStore : public GAnyStore {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_FPTRUNCSTORE;
   }
 };
 
@@ -938,6 +975,17 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_STEP_VECTOR;
+  };
+};
+
+/// Represents a G_CONSTANT.
+class GConstant : public GenericMachineInstr {
+public:
+  const ConstantInt *getConstantInt() const { return getOperand(1).getCImm(); }
+  const APInt &getValue() const { return getConstantInt()->getValue(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_CONSTANT;
   };
 };
 

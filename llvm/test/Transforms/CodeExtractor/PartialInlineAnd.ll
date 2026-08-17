@@ -43,7 +43,7 @@ bb:
 ; LIMIT-LABEL: @dummy_caller
 ; LIMIT: br i1
 ; LIMIT-NOT: br
-; LIMIT: call void @bar.1.
+; LIMIT: call i32 @bar.1.
   %tmp = tail call i32 @bar(i32 %arg)
   ret i32 %tmp
 }

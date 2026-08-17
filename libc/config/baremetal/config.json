@@ -70,5 +70,10 @@
     "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
       "value": false
     }
+  },
+  "ctype": {
+    "LIBC_CONF_CTYPE_SMALLER_ASCII": {
+      "value": true
+    }
   }
 }

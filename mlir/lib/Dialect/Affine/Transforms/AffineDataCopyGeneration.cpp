@@ -208,9 +208,6 @@ void AffineDataCopyGeneration::runOnOperation() {
   // nests are stored herein.
   DenseSet<Operation *> copyNests;
 
-  // Clear recorded copy nests.
-  copyNests.clear();
-
   for (auto &block : f)
     runOnBlock(&block, copyNests);
 

@@ -75,7 +75,7 @@ static FixItHint generateFixItHint(const FunctionDecl *Decl) {
   if (NewName != Name)
     return FixItHint::CreateReplacement(
         CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
-        llvm::StringRef(NewName));
+        StringRef(NewName));
 
   return {};
 }

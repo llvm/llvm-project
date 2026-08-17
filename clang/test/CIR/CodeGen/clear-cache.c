@@ -7,7 +7,7 @@
 
 char buffer[32] = "This is a largely unused buffer";
 
-// __builtin___clear_cache always maps to @llvm.clear_cache, but what
+// __builtin___clear_cache always maps to @llvm.clear_cache.p0, but what
 // each back-end produces is different, and this is tested in LLVM
 
 // CIR-LABEL: main
@@ -22,10 +22,10 @@ char buffer[32] = "This is a largely unused buffer";
 // CIR:  cir.clear_cache %[[VAL_3]], %[[VAL_8]] : !cir.ptr<!void>
 
 // LLVM-LABEL: main
-// LLVM:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
+// LLVM:  call void @llvm.clear_cache.p0(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
 
 // OGCG-LABEL: main
-// OGCG:  call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds (i8, ptr @buffer, i64 32))
+// OGCG:  call void @llvm.clear_cache.p0(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
 
 int main(void) {
   __builtin___clear_cache(buffer, buffer + 32);

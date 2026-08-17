@@ -662,7 +662,26 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MI.isInlineAsm()) {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
+  }
+
+  if (Opcode == TargetOpcode::BUNDLE)
+    return getInstBundleSize(MI);
+
+  if (MI.getOpcode() == SP::GETPCX) {
+    const TargetMachine &TM = MI.getParent()->getParent()->getTarget();
+    if (TM.isPositionIndependent())
+      return 16;
+    switch (TM.getCodeModel()) {
+    default:
+      llvm_unreachable("Unsupported absolute code model");
+    case CodeModel::Small:
+      return 8;
+    case CodeModel::Medium:
+      return 16;
+    case CodeModel::Large:
+      return 24;
+    }
   }
 
   // If the instruction has a delay slot, be conservative and also include

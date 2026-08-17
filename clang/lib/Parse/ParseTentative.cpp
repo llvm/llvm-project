@@ -171,9 +171,10 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
     }
     [[fallthrough]];
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
   case tok::kw___attribute:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   {
     ConsumeToken();
     if (Tok.isNot(tok::l_paren))
@@ -1143,8 +1144,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
                                      BracedCastResult, InvalidAsDeclSpec);
 
   case tok::kw_auto: {
-    if (!getLangOpts().CPlusPlus23)
-      return TPResult::True;
     if (NextToken().is(tok::l_brace))
       return TPResult::False;
     if (NextToken().is(tok::l_paren))
@@ -1243,6 +1242,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw_in:
   case tok::kw_inout:
   case tok::kw_out:
+    // HLSL matrix layout qualifiers
+  case tok::kw_row_major:
+  case tok::kw_column_major:
 
     // GNU
   case tok::kw_restrict:
@@ -1522,7 +1524,8 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     return TPResult::True;
 
   // GNU typeof support.
-  case tok::kw_typeof: {
+  case tok::kw_typeof:
+  case tok::kw_typeof_unqual: {
     if (NextToken().isNot(tok::l_paren))
       return TPResult::True;
 
@@ -1545,7 +1548,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     return TPResult::True;
 
   // C11 _Alignas
@@ -1587,8 +1590,9 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::annot_template_id:
   case tok::annot_typename:
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     return true;
 
     // elaborated-type-specifier
@@ -1647,7 +1651,8 @@ bool Parser::isCXXDeclarationSpecifierAType() {
 }
 
 Parser::TPResult Parser::TryParseTypeofSpecifier() {
-  assert(Tok.is(tok::kw_typeof) && "Expected 'typeof'!");
+  assert(Tok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual) &&
+         "Expected 'typeof' or 'typeof_unqual'!");
   ConsumeToken();
 
   assert(Tok.is(tok::l_paren) && "Expected '('");

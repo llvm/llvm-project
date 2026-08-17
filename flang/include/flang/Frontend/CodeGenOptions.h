@@ -16,13 +16,13 @@
 #define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
 #include "flang/Optimizer/OpenMP/Utils.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -179,6 +179,9 @@ public:
 
   /// Output filename for the split debug info, not used in the skeleton CU.
   std::string SplitDwarfOutput;
+
+  /// Name of the profile file to use with -fprofile-sample-use.
+  std::string SampleProfileFile;
 
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {

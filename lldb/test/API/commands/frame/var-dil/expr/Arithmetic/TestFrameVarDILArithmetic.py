@@ -48,9 +48,9 @@ class TestFrameVarDILArithmetic(TestBase):
         # Check basic math and resulting types
         self.expect_var_path("1 + 2", value="3", type="int")
         self.expect_var_path("1 + true", value="2", type="int")
-        self.expect_var_path("1L + wchar", value="2", type="long")
-        self.expect_var_path("1L + char16", value="3", type="long")
-        self.expect_var_path("1LL + char32", value="4", type="long long")
+        self.expect_var_path("1UL + wchar", value="2", type="unsigned long")
+        self.expect_var_path("1UL + char16", value="3", type="unsigned long")
+        self.expect_var_path("1ULL + char32", value="4", type="unsigned long long")
         self.expect_var_path("1UL + 1L", value="2", type="unsigned long")
         self.expect_var_path("s + x", value="12", type="int")
         self.expect_var_path("s + l", value="15", type="long")
@@ -63,15 +63,36 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("1 + s + (x + l)", value="18", type="long")
         self.expect_var_path("+2 + (-1)", value="1", type="int")
         self.expect_var_path("-2 + (+1)", value="-1", type="int")
+        self.expect_var_path("1 + (2 - 3)", value="0")
+        self.expect_var_path("s - x - 1", value="7")
+        self.expect_var_path("2 * 2", value="4", type="int")
+        self.expect_var_path("2 * 2.0", value="4", type="double")
+        self.expect_var_path("2 * 2.0f", value="4", type="float")
+        self.expect_var_path("4 / 2", value="2", type="int")
+        self.expect_var_path("4 / 2.0", value="2", type="double")
+        self.expect_var_path("4 / 2.0f", value="2", type="float")
+        self.expect_var_path("4 % 3", value="1", type="int")
+        self.expect_var_path("0.0 / 0", value="NaN")
+        self.expect_var_path("0 / 0.0", value="NaN")
+        self.expect_var_path("1 / +0.0", value="+Inf")
+        self.expect_var_path("1 / -0.0", value="-Inf")
 
         # Check limits and overflows
         frame = thread.GetFrameAtIndex(0)
         int_min = frame.GetValueForVariablePath("int_min").GetValue()
+        int_max = frame.GetValueForVariablePath("int_max").GetValue()
+        uint_max = frame.GetValueForVariablePath("uint_max").GetValue()
         ll_min = frame.GetValueForVariablePath("ll_min").GetValue()
+        ll_max = frame.GetValueForVariablePath("ll_max").GetValue()
+        ull_max = frame.GetValueForVariablePath("ull_max").GetValue()
         self.expect_var_path("int_max + 1", value=int_min)
+        self.expect_var_path("int_min - 1", value=int_max)
         self.expect_var_path("uint_max + 1", value="0")
+        self.expect_var_path("uint_zero - 1", value=uint_max)
         self.expect_var_path("ll_max + 1", value=ll_min)
+        self.expect_var_path("ll_min - 1", value=ll_max)
         self.expect_var_path("ull_max + 1", value="0")
+        self.expect_var_path("ull_zero - 1", value=ull_max)
 
         # Check signed integer promotion when different types have the same size
         uint = frame.GetValueForVariablePath("ui")
@@ -87,5 +108,70 @@ class TestFrameVarDILArithmetic(TestBase):
 
         # Check references and typedefs
         self.expect_var_path("ref + 1", value="3")
+        self.expect_var_path("ref - 1l", value="1")
+        self.expect_var_path("ref * 2u", value="4")
+        self.expect_var_path("ref / 2ull", value="1")
+        self.expect_var_path("ref % 2", value="0")
         self.expect_var_path("my_ref + 1", value="3")
+        self.expect_var_path("my_ref - 1", value="1")
+        self.expect_var_path("my_ref * 2", value="4")
+        self.expect_var_path("my_ref / 2", value="1")
+        self.expect_var_path("my_ref % 2", value="0")
         self.expect_var_path("ref + my_ref", value="4")
+        self.expect_var_path("ref - my_ref", value="0")
+        self.expect_var_path("ref * my_ref", value="4")
+        self.expect_var_path("ref / my_ref", value="1")
+        self.expect_var_path("ref % my_ref", value="0")
+
+        # Check enums
+        self.expect_var_path("enum_one + 1", value="2")
+        self.expect_var_path("enum_one - 1", value="0")
+        self.expect_var_path("enum_one * 2", value="2")
+        self.expect_var_path("enum_one / 1", value="1")
+        self.expect_var_path("enum_one % 1", value="0")
+
+        # Check errors
+        self.expect(
+            "frame var -- '1 / 0'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1 / uint_zero'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1LL / 0 + 1'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1 % 0'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '1 % uint_zero'",
+            error=True,
+            substrs=["division by zero is undefined"],
+        )
+        self.expect(
+            "frame var -- '*((int*) 0) + 1'",
+            error=True,
+            substrs=["invalid lhs value: parent is NULL"],
+        )
+        self.expect(
+            "frame var -- '1 / *((int*) 0)'",
+            error=True,
+            substrs=["invalid rhs value: parent is NULL"],
+        )
+
+        # Check that binary * is allowed only in full mode
+        frame = thread.GetFrameAtIndex(0)
+        simple = frame.GetValueForVariablePath("x * 2", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePath("x * 2", lldb.eDILModeLegacy)
+        full = frame.GetValueForVariablePath("x * 2", lldb.eDILModeFull)
+        self.assertFailure(simple.GetError())
+        self.assertFailure(legacy.GetError())
+        self.assertSuccess(full.GetError())

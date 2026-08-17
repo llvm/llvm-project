@@ -253,13 +253,13 @@ TEST(DominatorTree, Unreachable) {
         // Check DFS Numbers before
         DT->updateDFSNumbers();
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumIn(), 0UL);
-        EXPECT_EQ(DT->getNode(BB0)->getDFSNumOut(), 7UL);
+        EXPECT_EQ(DT->getNode(BB0)->getDFSNumOut(), 4UL);
         EXPECT_EQ(DT->getNode(BB1)->getDFSNumIn(), 1UL);
         EXPECT_EQ(DT->getNode(BB1)->getDFSNumOut(), 2UL);
-        EXPECT_EQ(DT->getNode(BB2)->getDFSNumIn(), 5UL);
-        EXPECT_EQ(DT->getNode(BB2)->getDFSNumOut(), 6UL);
-        EXPECT_EQ(DT->getNode(BB4)->getDFSNumIn(), 3UL);
-        EXPECT_EQ(DT->getNode(BB4)->getDFSNumOut(), 4UL);
+        EXPECT_EQ(DT->getNode(BB2)->getDFSNumIn(), 3UL);
+        EXPECT_EQ(DT->getNode(BB2)->getDFSNumOut(), 4UL);
+        EXPECT_EQ(DT->getNode(BB4)->getDFSNumIn(), 2UL);
+        EXPECT_EQ(DT->getNode(BB4)->getDFSNumOut(), 3UL);
 
         // Check levels before
         EXPECT_EQ(DT->getNode(BB0)->getLevel(), 0U);
@@ -269,21 +269,21 @@ TEST(DominatorTree, Unreachable) {
 
         // Reattach block 3 to block 1 and recalculate
         BB1->getTerminator()->eraseFromParent();
-        BranchInst::Create(BB4, BB3, ConstantInt::getTrue(F.getContext()), BB1);
+        CondBrInst::Create(ConstantInt::getTrue(F.getContext()), BB4, BB3, BB1);
         DT->recalculate(F);
 
         // Check DFS Numbers after
         DT->updateDFSNumbers();
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumIn(), 0UL);
-        EXPECT_EQ(DT->getNode(BB0)->getDFSNumOut(), 9UL);
+        EXPECT_EQ(DT->getNode(BB0)->getDFSNumOut(), 5UL);
         EXPECT_EQ(DT->getNode(BB1)->getDFSNumIn(), 1UL);
-        EXPECT_EQ(DT->getNode(BB1)->getDFSNumOut(), 4UL);
-        EXPECT_EQ(DT->getNode(BB2)->getDFSNumIn(), 7UL);
-        EXPECT_EQ(DT->getNode(BB2)->getDFSNumOut(), 8UL);
+        EXPECT_EQ(DT->getNode(BB1)->getDFSNumOut(), 3UL);
+        EXPECT_EQ(DT->getNode(BB2)->getDFSNumIn(), 4UL);
+        EXPECT_EQ(DT->getNode(BB2)->getDFSNumOut(), 5UL);
         EXPECT_EQ(DT->getNode(BB3)->getDFSNumIn(), 2UL);
         EXPECT_EQ(DT->getNode(BB3)->getDFSNumOut(), 3UL);
-        EXPECT_EQ(DT->getNode(BB4)->getDFSNumIn(), 5UL);
-        EXPECT_EQ(DT->getNode(BB4)->getDFSNumOut(), 6UL);
+        EXPECT_EQ(DT->getNode(BB4)->getDFSNumIn(), 3UL);
+        EXPECT_EQ(DT->getNode(BB4)->getDFSNumOut(), 4UL);
 
         // Check levels after
         EXPECT_EQ(DT->getNode(BB0)->getLevel(), 0U);
@@ -296,7 +296,7 @@ TEST(DominatorTree, Unreachable) {
         EXPECT_TRUE(DT->verify());
         BasicBlock *NewEntry =
             BasicBlock::Create(F.getContext(), "new_entry", &F, BB0);
-        BranchInst::Create(BB0, NewEntry);
+        UncondBrInst::Create(BB0, NewEntry);
         EXPECT_EQ(F.begin()->getName(), NewEntry->getName());
         EXPECT_TRUE(&F.getEntryBlock() == NewEntry);
         DT->setNewRoot(NewEntry);

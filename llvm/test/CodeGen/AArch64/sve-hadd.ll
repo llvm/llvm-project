@@ -303,14 +303,22 @@ entry:
 }
 
 define <vscale x 4 x i16> @hadds_v4i16_lsh(<vscale x 4 x i16> %s0, <vscale x 4 x i16> %s1) {
-; CHECK-LABEL: hadds_v4i16_lsh:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
-; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    lsr z0.s, z0.s, #1
-; CHECK-NEXT:    ret
+; SVE-LABEL: hadds_v4i16_lsh:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    sxth z0.s, p0/m, z0.s
+; SVE-NEXT:    sxth z1.s, p0/m, z1.s
+; SVE-NEXT:    add z0.s, z0.s, z1.s
+; SVE-NEXT:    lsr z0.s, z0.s, #1
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: hadds_v4i16_lsh:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    sxth z0.s, p0/m, z0.s
+; SVE2-NEXT:    saddwb z0.s, z0.s, z1.h
+; SVE2-NEXT:    lsr z0.s, z0.s, #1
+; SVE2-NEXT:    ret
 entry:
   %s0s = sext <vscale x 4 x i16> %s0 to <vscale x 4 x i32>
   %s1s = sext <vscale x 4 x i16> %s1 to <vscale x 4 x i32>
@@ -511,14 +519,22 @@ entry:
 }
 
 define <vscale x 8 x i8> @hadds_v8i8_lsh(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s1) {
-; CHECK-LABEL: hadds_v8i8_lsh:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
-; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
-; CHECK-NEXT:    lsr z0.h, z0.h, #1
-; CHECK-NEXT:    ret
+; SVE-LABEL: hadds_v8i8_lsh:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    ptrue p0.h
+; SVE-NEXT:    sxtb z0.h, p0/m, z0.h
+; SVE-NEXT:    sxtb z1.h, p0/m, z1.h
+; SVE-NEXT:    add z0.h, z0.h, z1.h
+; SVE-NEXT:    lsr z0.h, z0.h, #1
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: hadds_v8i8_lsh:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    sxtb z0.h, p0/m, z0.h
+; SVE2-NEXT:    saddwb z0.h, z0.h, z1.b
+; SVE2-NEXT:    lsr z0.h, z0.h, #1
+; SVE2-NEXT:    ret
 entry:
   %s0s = sext <vscale x 8 x i8> %s0 to <vscale x 8 x i16>
   %s1s = sext <vscale x 8 x i8> %s1 to <vscale x 8 x i16>
@@ -698,10 +714,9 @@ define <vscale x 2 x i32> @rhadds_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i3
 ; SVE-LABEL: rhadds_v2i32:
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    ptrue p0.d
-; SVE-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    sxtw z0.d, p0/m, z0.d
 ; SVE-NEXT:    sxtw z1.d, p0/m, z1.d
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.d, z1.d, z0.d
 ; SVE-NEXT:    asr z0.d, z0.d, #1
 ; SVE-NEXT:    ret
@@ -727,10 +742,9 @@ define <vscale x 2 x i32> @rhadds_v2i32_lsh(<vscale x 2 x i32> %s0, <vscale x 2 
 ; CHECK-LABEL: rhadds_v2i32_lsh:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    sub z0.d, z1.d, z0.d
 ; CHECK-NEXT:    lsr z0.d, z0.d, #1
 ; CHECK-NEXT:    ret
@@ -747,10 +761,9 @@ entry:
 define <vscale x 2 x i32> @rhaddu_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i32> %s1) {
 ; SVE-LABEL: rhaddu_v2i32:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    and z0.d, z0.d, #0xffffffff
 ; SVE-NEXT:    and z1.d, z1.d, #0xffffffff
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.d, z1.d, z0.d
 ; SVE-NEXT:    lsr z0.d, z0.d, #1
 ; SVE-NEXT:    ret
@@ -848,10 +861,9 @@ define <vscale x 2 x i16> @rhadds_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i1
 ; SVE-LABEL: rhadds_v2i16:
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    ptrue p0.d
-; SVE-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    sxth z0.d, p0/m, z0.d
 ; SVE-NEXT:    sxth z1.d, p0/m, z1.d
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.d, z1.d, z0.d
 ; SVE-NEXT:    asr z0.d, z0.d, #1
 ; SVE-NEXT:    ret
@@ -877,10 +889,9 @@ define <vscale x 2 x i16> @rhadds_v2i16_lsh(<vscale x 2 x i16> %s0, <vscale x 2 
 ; CHECK-LABEL: rhadds_v2i16_lsh:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    sxth z0.d, p0/m, z0.d
 ; CHECK-NEXT:    sxth z1.d, p0/m, z1.d
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    sub z0.d, z1.d, z0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
 ; CHECK-NEXT:    lsr z0.d, z0.d, #1
@@ -898,10 +909,9 @@ entry:
 define <vscale x 2 x i16> @rhaddu_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i16> %s1) {
 ; SVE-LABEL: rhaddu_v2i16:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    and z0.d, z0.d, #0xffff
 ; SVE-NEXT:    and z1.d, z1.d, #0xffff
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.d, z1.d, z0.d
 ; SVE-NEXT:    lsr z0.d, z0.d, #1
 ; SVE-NEXT:    ret
@@ -927,10 +937,9 @@ define <vscale x 4 x i16> @rhadds_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i1
 ; SVE-LABEL: rhadds_v4i16:
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    sxth z0.s, p0/m, z0.s
 ; SVE-NEXT:    sxth z1.s, p0/m, z1.s
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.s, z1.s, z0.s
 ; SVE-NEXT:    asr z0.s, z0.s, #1
 ; SVE-NEXT:    ret
@@ -956,10 +965,9 @@ define <vscale x 4 x i16> @rhadds_v4i16_lsh(<vscale x 4 x i16> %s0, <vscale x 4 
 ; CHECK-LABEL: rhadds_v4i16_lsh:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    sub z0.s, z1.s, z0.s
 ; CHECK-NEXT:    lsr z0.s, z0.s, #1
 ; CHECK-NEXT:    ret
@@ -976,10 +984,9 @@ entry:
 define <vscale x 4 x i16> @rhaddu_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i16> %s1) {
 ; SVE-LABEL: rhaddu_v4i16:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    and z0.s, z0.s, #0xffff
 ; SVE-NEXT:    and z1.s, z1.s, #0xffff
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.s, z1.s, z0.s
 ; SVE-NEXT:    lsr z0.s, z0.s, #1
 ; SVE-NEXT:    ret
@@ -1077,10 +1084,9 @@ define <vscale x 4 x i8> @rhadds_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %
 ; SVE-LABEL: rhadds_v4i8:
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    sxtb z0.s, p0/m, z0.s
 ; SVE-NEXT:    sxtb z1.s, p0/m, z1.s
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.s, z1.s, z0.s
 ; SVE-NEXT:    asr z0.s, z0.s, #1
 ; SVE-NEXT:    ret
@@ -1106,10 +1112,9 @@ define <vscale x 4 x i8> @rhadds_v4i8_lsh(<vscale x 4 x i8> %s0, <vscale x 4 x i
 ; CHECK-LABEL: rhadds_v4i8_lsh:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    sxtb z1.s, p0/m, z1.s
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    sub z0.s, z1.s, z0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    lsr z0.s, z0.s, #1
@@ -1127,10 +1132,9 @@ entry:
 define <vscale x 4 x i8> @rhaddu_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %s1) {
 ; SVE-LABEL: rhaddu_v4i8:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    and z0.s, z0.s, #0xff
 ; SVE-NEXT:    and z1.s, z1.s, #0xff
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.s, z1.s, z0.s
 ; SVE-NEXT:    lsr z0.s, z0.s, #1
 ; SVE-NEXT:    ret
@@ -1156,10 +1160,9 @@ define <vscale x 8 x i8> @rhadds_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %
 ; SVE-LABEL: rhadds_v8i8:
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    ptrue p0.h
-; SVE-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    sxtb z0.h, p0/m, z0.h
 ; SVE-NEXT:    sxtb z1.h, p0/m, z1.h
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.h, z1.h, z0.h
 ; SVE-NEXT:    asr z0.h, z0.h, #1
 ; SVE-NEXT:    ret
@@ -1185,10 +1188,9 @@ define <vscale x 8 x i8> @rhadds_v8i8_lsh(<vscale x 8 x i8> %s0, <vscale x 8 x i
 ; CHECK-LABEL: rhadds_v8i8_lsh:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    sub z0.h, z1.h, z0.h
 ; CHECK-NEXT:    lsr z0.h, z0.h, #1
 ; CHECK-NEXT:    ret
@@ -1205,10 +1207,9 @@ entry:
 define <vscale x 8 x i8> @rhaddu_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s1) {
 ; SVE-LABEL: rhaddu_v8i8:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
 ; SVE-NEXT:    and z0.h, z0.h, #0xff
 ; SVE-NEXT:    and z1.h, z1.h, #0xff
-; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; SVE-NEXT:    sub z0.h, z1.h, z0.h
 ; SVE-NEXT:    lsr z0.h, z0.h, #1
 ; SVE-NEXT:    ret
@@ -1375,10 +1376,9 @@ define void @zext_mload_avgceilu(ptr %p1, ptr %p2, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: zext_mload_avgceilu:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ld1b { z0.h }, p0/z, [x0]
-; SVE-NEXT:    mov z1.h, #-1 // =0xffffffffffffffff
-; SVE-NEXT:    ld1b { z2.h }, p0/z, [x1]
-; SVE-NEXT:    eor z0.d, z0.d, z1.d
-; SVE-NEXT:    sub z0.h, z2.h, z0.h
+; SVE-NEXT:    ld1b { z1.h }, p0/z, [x1]
+; SVE-NEXT:    subr z0.b, z0.b, #255 // =0xff
+; SVE-NEXT:    sub z0.h, z1.h, z0.h
 ; SVE-NEXT:    lsr z0.h, z0.h, #1
 ; SVE-NEXT:    st1b { z0.h }, p0, [x0]
 ; SVE-NEXT:    ret

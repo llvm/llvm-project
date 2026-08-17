@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ----------------------------------------------------------------------
 # Be sure to add the python path that points to the LLDB shared library.
@@ -189,7 +189,7 @@ can be specified multiple times to look for longer streams of data.
     return parser
 
 
-def memfind_command(debugger, command, result, dict):
+def memfind_command(debugger, command, exe_ctx, result, internal_dict):
     # Use the Shell Lexer to properly parse up command options just like a
     # shell would
     command_args = shlex.split(command)
@@ -203,7 +203,7 @@ def memfind_command(debugger, command, result, dict):
     #     result.SetStatus (lldb.eReturnStatusFailed)
     #     print >>result, "error: option parsing failed" # returning a string is the same as returning an error whose description is the string
     #     return
-    memfind(debugger.GetSelectedTarget(), options, args, result)
+    memfind(exe_ctx.target, options, args, result)
 
 
 def print_error(str, show_usage, result):

@@ -12,18 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXLowerAggrCopies.h"
 #include "NVPTX.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 
@@ -31,38 +33,15 @@
 
 using namespace llvm;
 
-namespace {
+static const unsigned MaxAggrCopySize = 128;
 
-// actual analysis class, which is a functionpass
-struct NVPTXLowerAggrCopies : public FunctionPass {
-  static char ID;
-
-  NVPTXLowerAggrCopies() : FunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<StackProtector>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  static const unsigned MaxAggrCopySize = 128;
-
-  StringRef getPassName() const override {
-    return "Lower aggregate copies/intrinsics into loops";
-  }
-};
-
-char NVPTXLowerAggrCopies::ID = 0;
-
-bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
+static bool lowerAggrCopies(Function &F, const TargetTransformInfo &TTI,
+                            AAResults &AA) {
   SmallVector<LoadInst *, 4> AggrLoads;
   SmallVector<MemIntrinsic *, 4> MemCalls;
 
   const DataLayout &DL = F.getDataLayout();
   LLVMContext &Context = F.getParent()->getContext();
-  const TargetTransformInfo &TTI =
-      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   // Collect all aggregate loads and mem* calls.
   for (BasicBlock &BB : F) {
@@ -108,14 +87,43 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
     ConstantInt *CopyLen =
         ConstantInt::get(Type::getInt32Ty(Context), NumLoads);
 
-    createMemCpyLoopKnownSize(/* ConvertedInst */ SI,
-                              /* SrcAddr */ SrcAddr, /* DstAddr */ DstAddr,
-                              /* CopyLen */ CopyLen,
-                              /* SrcAlign */ LI->getAlign(),
-                              /* DestAlign */ SI->getAlign(),
-                              /* SrcIsVolatile */ LI->isVolatile(),
-                              /* DstIsVolatile */ SI->isVolatile(),
-                              /* CanOverlap */ true, TTI);
+    LocationSize Size = LocationSize::precise(NumLoads);
+    if (AA.isNoAlias(MemoryLocation(SrcAddr, Size),
+                     MemoryLocation(DstAddr, Size))) {
+      // No overlap: emit a plain memcpy loop. Expand the loop here (rather
+      // than emitting a memcpy intrinsic and letting the code below expand it)
+      // so we can pass CanOverlap = false; expandMemCpyAsLoop would
+      // conservatively assume overlap.
+      createMemCpyLoopKnownSize(/* ConvertedInst */ SI,
+                                /* SrcAddr */ SrcAddr, /* DstAddr */ DstAddr,
+                                /* CopyLen */ CopyLen,
+                                /* SrcAlign */ LI->getAlign(),
+                                /* DestAlign */ SI->getAlign(),
+                                /* SrcIsVolatile */ LI->isVolatile(),
+                                /* DstIsVolatile */ SI->isVolatile(),
+                                /* CanOverlap */ false, TTI);
+    } else {
+      // May alias: lower as a memmove, which picks the copy direction at
+      // runtime. Emit the intrinsic here and let the loop below expand it.
+      //
+      // The pointers may alias even if they're in different address spaces
+      // (e.g. the generic addrspace may alias global).  If they're in
+      // different addrspaces, cast to the generic space first, because
+      // expandMemMoveAsLoop needs to compare the pointer values to determine
+      // the copy direction.
+      IRBuilder<> Builder(SI);
+      unsigned SrcAS = LI->getPointerAddressSpace();
+      unsigned DstAS = SI->getPointerAddressSpace();
+      if (SrcAS != DstAS) {
+        PointerType *GenericPtrTy =
+            PointerType::get(Context, NVPTXAS::ADDRESS_SPACE_GENERIC);
+        SrcAddr = Builder.CreateAddrSpaceCast(SrcAddr, GenericPtrTy);
+        DstAddr = Builder.CreateAddrSpaceCast(DstAddr, GenericPtrTy);
+      }
+      MemCalls.push_back(cast<MemMoveInst>(Builder.CreateMemMove(
+          DstAddr, SI->getAlign(), SrcAddr, LI->getAlign(), CopyLen,
+          LI->isVolatile() || SI->isVolatile())));
+    }
 
     SI->eraseFromParent();
     LI->eraseFromParent();
@@ -123,25 +131,69 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
 
   // Transform mem* intrinsic calls.
   for (MemIntrinsic *MemCall : MemCalls) {
+    bool Expanded = true;
     if (MemCpyInst *Memcpy = dyn_cast<MemCpyInst>(MemCall)) {
       expandMemCpyAsLoop(Memcpy, TTI);
     } else if (MemMoveInst *Memmove = dyn_cast<MemMoveInst>(MemCall)) {
-      expandMemMoveAsLoop(Memmove, TTI);
+      Expanded = expandMemMoveAsLoop(Memmove, TTI);
     } else if (MemSetInst *Memset = dyn_cast<MemSetInst>(MemCall)) {
       expandMemSetAsLoop(Memset, TTI);
     }
-    MemCall->eraseFromParent();
+    if (Expanded)
+      MemCall->eraseFromParent();
   }
 
   return true;
 }
 
+namespace {
+
+struct NVPTXLowerAggrCopiesLegacyPass : public FunctionPass {
+  static char ID;
+
+  NVPTXLowerAggrCopiesLegacyPass() : FunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<StackProtector>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
+  }
+
+  bool runOnFunction(Function &F) override {
+    return lowerAggrCopies(
+        F, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
+        getAnalysis<AAResultsWrapperPass>().getAAResults());
+  }
+
+  StringRef getPassName() const override {
+    return "Lower aggregate copies/intrinsics into loops";
+  }
+};
+
+char NVPTXLowerAggrCopiesLegacyPass::ID = 0;
+
 } // namespace
 
-INITIALIZE_PASS(NVPTXLowerAggrCopies, "nvptx-lower-aggr-copies",
-                "Lower aggregate copies, and llvm.mem* intrinsics into loops",
-                false, false)
+INITIALIZE_PASS_BEGIN(
+    NVPTXLowerAggrCopiesLegacyPass, "nvptx-lower-aggr-copies",
+    "Lower aggregate copies, and llvm.mem* intrinsics into loops", false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_END(
+    NVPTXLowerAggrCopiesLegacyPass, "nvptx-lower-aggr-copies",
+    "Lower aggregate copies, and llvm.mem* intrinsics into loops", false, false)
 
-FunctionPass *llvm::createLowerAggrCopies() {
-  return new NVPTXLowerAggrCopies();
+FunctionPass *llvm::createNVPTXLowerAggrCopiesLegacyPass() {
+  return new NVPTXLowerAggrCopiesLegacyPass();
+}
+
+PreservedAnalyses NVPTXLowerAggrCopiesPass::run(Function &F,
+                                                FunctionAnalysisManager &FAM) {
+  if (!lowerAggrCopies(F, FAM.getResult<TargetIRAnalysis>(F),
+                       FAM.getResult<AAManager>(F)))
+    return PreservedAnalyses::all();
+  // Copies are expanded into loops, so the CFG is not preserved.
+  PreservedAnalyses PA;
+  PA.preserve<SSPLayoutAnalysis>();
+  return PA;
 }

@@ -22,9 +22,9 @@ define <16 x i8> @vtrni8_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrni8_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d17, [r0]
-; CHECK-NEXT:    vtrn.8 d17, d16
-; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vtrn.8 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <8 x i8>, ptr %A
@@ -54,9 +54,9 @@ define <8 x i16> @vtrni16_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrni16_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d17, [r0]
-; CHECK-NEXT:    vtrn.16 d17, d16
-; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vtrn.16 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <4 x i16>, ptr %A
@@ -86,9 +86,9 @@ define <4 x i32> @vtrni32_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrni32_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d17, [r0]
-; CHECK-NEXT:    vtrn.32 d17, d16
-; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vtrn.32 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <2 x i32>, ptr %A
@@ -118,9 +118,9 @@ define <4 x float> @vtrnf_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrnf_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d17, [r0]
-; CHECK-NEXT:    vtrn.32 d17, d16
-; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vtrn.32 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <2 x float>, ptr %A
@@ -283,9 +283,9 @@ define <16 x i8> @vtrni8_undef_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrni8_undef_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d17, [r0]
-; CHECK-NEXT:    vtrn.8 d17, d16
-; CHECK-NEXT:    vmov r0, r1, d17
+; CHECK-NEXT:    vldr d18, [r0]
+; CHECK-NEXT:    vtrn.8 d18, d16
+; CHECK-NEXT:    vmov r0, r1, d18
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <8 x i8>, ptr %A
@@ -456,6 +456,7 @@ define void @test_15xi16(ptr %next.gep, ptr %next.gep13) {
 ; CHECK-NEXT:    vld1.16 {d18}, [r2]!
 ; CHECK-NEXT:    vld1.16 {d20, d21}, [r3]!
 ; CHECK-NEXT:    ldr r2, [r2]
+; CHECK-NEXT:    vtrn.16 q8, q10
 ; CHECK-NEXT:    vld1.16 {d22}, [r3]!
 ; CHECK-NEXT:    vmov.16 d19[0], r2
 ; CHECK-NEXT:    ldr r3, [r3]
@@ -463,7 +464,6 @@ define void @test_15xi16(ptr %next.gep, ptr %next.gep13) {
 ; CHECK-NEXT:    add r0, r0, #34
 ; CHECK-NEXT:    vmov.16 d19[1], r3
 ; CHECK-NEXT:    vld1.16 {d19[2]}, [r2:16]
-; CHECK-NEXT:    vtrn.16 q8, q10
 ; CHECK-NEXT:    vld1.16 {d19[3]}, [r0:16]
 ; CHECK-NEXT:    vtrn.16 d18, d22
 ; CHECK-NEXT:    vst1.16 {d16, d17}, [r1]!

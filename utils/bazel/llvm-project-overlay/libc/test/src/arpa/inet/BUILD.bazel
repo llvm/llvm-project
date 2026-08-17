@@ -1,0 +1,94 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc arpa/inet.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "htonl_test",
+    srcs = ["htonl_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:htonl",
+        "//libc:ntohl",
+    ],
+)
+
+libc_test(
+    name = "htons_test",
+    srcs = ["htons_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:htons",
+        "//libc:ntohs",
+    ],
+)
+
+libc_test(
+    name = "inet_addr_test",
+    srcs = ["inet_addr_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:htonl",
+        "//libc:inet_addr",
+    ],
+)
+
+libc_test(
+    name = "inet_aton_test",
+    srcs = ["inet_aton_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:htonl",
+        "//libc:inet_aton",
+    ],
+)
+
+libc_test(
+    name = "inet_ntoa_test",
+    srcs = ["inet_ntoa_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:inet_ntoa",
+        "//libc:types_struct_in_addr",
+    ],
+)
+
+libc_test(
+    name = "inet_ntop_test",
+    srcs = ["inet_ntop_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:inet_ntop",
+        "//libc:types_struct_in6_addr",
+        "//libc:types_struct_in_addr",
+    ],
+)
+
+libc_test(
+    name = "ntohl_test",
+    srcs = ["ntohl_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:htonl",
+        "//libc:ntohl",
+    ],
+)
+
+libc_test(
+    name = "ntohs_test",
+    srcs = ["ntohs_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:htons",
+        "//libc:ntohs",
+    ],
+)

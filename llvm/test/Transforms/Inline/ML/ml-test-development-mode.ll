@@ -20,4 +20,4 @@ CHECK-LOG-NEXT: {{^sroa_savings:}} 0
 CHECK-LOG: {{^cost_estimate:}} -30
 CHECK-LOG: {{^inlining_decision:}} 1
 CHECK-LOG-NEXT: observation: 1
-CHECK-LOG: observation: 6
+CHECK-LOG: observation: 5

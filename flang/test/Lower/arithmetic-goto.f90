@@ -1,28 +1,28 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
-! CHECK-LABEL: func @_QPkagi
+! CHECK-LABEL: func.func @_QPkagi
 ! CHECK-SAME: %[[ARG0:[^:]+]]: !fir.ref<i32>
 function kagi(index)
-  ! CHECK:   %[[ARG0_D:[0-9]+]] = fir.declare %[[ARG0]]
-  ! CHECK:   %[[V_0_RAW:[0-9]+]] = fir.alloca i32 {bindc_name = "kagi"
-  ! CHECK:   %[[V_0:[0-9]+]] = fir.declare %[[V_0_RAW]]
-  ! CHECK:   %[[V_1:[0-9]+]] = fir.load %[[ARG0_D]] : !fir.ref<i32>
-  ! CHECK:   %[[V_2:[0-9]+]] = arith.cmpi slt, %[[V_1]], %c0{{.*}} : i32
+  ! CHECK:   %[[ARG0_D:.*]]:2 = hlfir.declare %[[ARG0]]
+  ! CHECK:   %[[V_0_RAW:.*]] = fir.alloca i32 {bindc_name = "kagi"
+  ! CHECK:   %[[V_0:.*]]:2 = hlfir.declare %[[V_0_RAW]]
+  ! CHECK:   %[[V_1:.*]] = fir.load %[[ARG0_D]]#0 : !fir.ref<i32>
+  ! CHECK:   %[[V_2:.*]] = arith.cmpi slt, %[[V_1]], %c0{{.*}} : i32
   ! CHECK:   cf.cond_br %[[V_2]], ^bb2, ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   %[[V_3:[0-9]+]] = arith.cmpi sgt, %[[V_1]], %c0{{.*}} : i32
+  ! CHECK:   %[[V_3:.*]] = arith.cmpi sgt, %[[V_1]], %c0{{.*}} : i32
   ! CHECK:   cf.cond_br %[[V_3]], ^bb4, ^bb3
   ! CHECK: ^bb2:  // pred: ^bb0
-  ! CHECK:   fir.store %c1{{.*}} to %[[V_0]] : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %c1{{.*}} to %[[V_0]]#0 : i32, !fir.ref<i32>
   ! CHECK:   cf.br ^bb5
   ! CHECK: ^bb3:  // pred: ^bb1
-  ! CHECK:   fir.store %c2{{.*}} to %[[V_0]] : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %c2{{.*}} to %[[V_0]]#0 : i32, !fir.ref<i32>
   ! CHECK:   cf.br ^bb5
   ! CHECK: ^bb4:  // pred: ^bb1
-  ! CHECK:   fir.store %c3{{.*}} to %[[V_0]] : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %c3{{.*}} to %[[V_0]]#0 : i32, !fir.ref<i32>
   ! CHECK:   cf.br ^bb5
   ! CHECK: ^bb5:  // 3 preds: ^bb2, ^bb3, ^bb4
-  ! CHECK:   %[[V_4:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<i32>
+  ! CHECK:   %[[V_4:.*]] = fir.load %[[V_0]]#0 : !fir.ref<i32>
   ! CHECK:   return %[[V_4]] : i32
   if (index) 7, 8, 9
   kagi = 0; return
@@ -31,32 +31,32 @@ function kagi(index)
 9 kagi = 3; return
 end
 
-! CHECK-LABEL: func @_QPkagf
+! CHECK-LABEL: func.func @_QPkagf
 ! CHECK-SAME: %[[ARG0:[^:]+]]: !fir.ref<f32>
 function kagf(findex)
+  ! CHECK:   %[[ARG0_D:.*]]:2 = hlfir.declare %[[ARG0]]
+  ! CHECK:   %[[V_0_RAW:.*]] = fir.alloca i32 {bindc_name = "kagf"
+  ! CHECK:   %[[V_0:.*]]:2 = hlfir.declare %[[V_0_RAW]]
+  ! CHECK:   %[[V_1:.*]] = fir.load %[[ARG0_D]]#0 : !fir.ref<f32>
+  ! CHECK:   %[[V_3:.*]] = arith.addf {{.*}}, {{.*}} {{.*}} : f32
+  ! CHECK:   %[[V_4:.*]] = arith.addf %[[V_3]], %[[V_3]] {{.*}} : f32
   ! CHECK:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-  ! CHECK:   %[[ARG0_D:[0-9]+]] = fir.declare %[[ARG0]]
-  ! CHECK:   %[[V_0_RAW:[0-9]+]] = fir.alloca i32 {bindc_name = "kagf"
-  ! CHECK:   %[[V_0:[0-9]+]] = fir.declare %[[V_0_RAW]]
-  ! CHECK:   %[[V_1:[0-9]+]] = fir.load %[[ARG0_D]] : !fir.ref<f32>
-  ! CHECK:   %[[V_3:[0-9]+]] = arith.addf %[[V_1]], %[[V_1]] {{.*}} : f32
-  ! CHECK:   %[[V_4:[0-9]+]] = arith.addf %[[V_3]], %[[V_3]] {{.*}} : f32
-  ! CHECK:   %[[V_5:[0-9]+]] = arith.cmpf olt, %[[V_4]], %[[CST]] {{.*}} : f32
+  ! CHECK:   %[[V_5:.*]] = arith.cmpf olt, %[[V_4]], %[[CST]] {{.*}} : f32
   ! CHECK:   cf.cond_br %[[V_5]], ^bb2, ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   %[[V_6:[0-9]+]] = arith.cmpf ogt, %[[V_4]], %[[CST]] {{.*}} : f32
+  ! CHECK:   %[[V_6:.*]] = arith.cmpf ogt, %[[V_4]], %[[CST]] {{.*}} : f32
   ! CHECK:   cf.cond_br %[[V_6]], ^bb4, ^bb3
   ! CHECK: ^bb2:  // pred: ^bb0
-  ! CHECK:   fir.store %c1{{.*}} to %[[V_0]] : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %c1{{.*}} to %[[V_0]]#0 : i32, !fir.ref<i32>
   ! CHECK:   cf.br ^bb5
   ! CHECK: ^bb3:  // pred: ^bb1
-  ! CHECK:   fir.store %c2{{.*}} to %[[V_0]] : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %c2{{.*}} to %[[V_0]]#0 : i32, !fir.ref<i32>
   ! CHECK:   cf.br ^bb5
   ! CHECK: ^bb4:  // pred: ^bb1
-  ! CHECK:   fir.store %c3{{.*}} to %[[V_0]] : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %c3{{.*}} to %[[V_0]]#0 : i32, !fir.ref<i32>
   ! CHECK:   cf.br ^bb5
   ! CHECK: ^bb5:  // 3 preds: ^bb2, ^bb3, ^bb4
-  ! CHECK:   %[[V_7:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<i32>
+  ! CHECK:   %[[V_7:.*]] = fir.load %[[V_0]]#0 : !fir.ref<i32>
   ! CHECK:   return %[[V_7]] : i32
   if (findex+findex) 7, 8, 9
   kagf = 0; return
@@ -65,7 +65,7 @@ function kagf(findex)
 9 kagf = 3; return
 end
 
-! CHECK-LABEL: func @_QQmain
+! CHECK-LABEL: func.func @_QQmain
   do i = -2, 2
     print*, kagi(i)
   enddo

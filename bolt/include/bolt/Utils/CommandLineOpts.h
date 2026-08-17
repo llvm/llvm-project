@@ -48,7 +48,13 @@ enum SplitFunctionsStrategy : char {
   All
 };
 
-using HeatmapBlockSizes = std::vector<unsigned>;
+/// A bucket size and how it was spelled on the command line, so output can
+/// echo "64K" rather than reformatting the value.
+struct HeatmapBlockSize {
+  unsigned Value = 0;
+  std::string Spec;
+};
+using HeatmapBlockSizes = std::vector<HeatmapBlockSize>;
 struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSizes> {
   explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
       : llvm::cl::parser<HeatmapBlockSizes>(O) {}
@@ -72,6 +78,14 @@ extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
+extern llvm::cl::opt<bool> AlignBlocks;
+extern llvm::cl::opt<unsigned> AlignBlocksMinSize;
+extern llvm::cl::opt<unsigned> AlignBlocksThreshold;
+extern llvm::cl::opt<unsigned> AlignFunctionsMaxBytes;
+extern llvm::cl::opt<unsigned> BlockAlignment;
+extern llvm::cl::opt<bool> PreserveBlocksAlignment;
+extern llvm::cl::opt<bool> UseCompactAligner;
+extern llvm::cl::opt<bool> X86AlignBranchBoundaryHotOnly;
 extern llvm::cl::opt<bool> AggregateOnly;
 extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
@@ -86,6 +100,7 @@ extern llvm::cl::opt<HeatmapBlockSizes, false, HeatmapBlockSpecParser>
     HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
+extern llvm::cl::opt<int> HeatmapCdfPct;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;
 extern llvm::cl::opt<std::string> HeatmapOutput;
 extern llvm::cl::opt<bool> HotData;
@@ -94,14 +109,14 @@ extern llvm::cl::opt<bool> HotText;
 extern llvm::cl::opt<bool> Hugify;
 extern llvm::cl::opt<bool> Instrument;
 extern llvm::cl::opt<std::string> OutputFilename;
-extern llvm::cl::opt<std::string> PerfData;
+extern llvm::cl::list<std::string> PerfData;
 extern llvm::cl::opt<bool> PrintCacheMetrics;
 extern llvm::cl::opt<bool> PrintSections;
 extern llvm::cl::opt<bool> UpdateBranchProtection;
 extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
-enum ProfileFormatKind { PF_Fdata, PF_YAML };
+enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg, PF_PerfScript };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
 extern llvm::cl::opt<bool> ShowDensity;
@@ -124,15 +139,37 @@ extern llvm::cl::opt<bool> UpdateDebugSections;
 // dbgs() for output within DEBUG().
 extern llvm::cl::opt<unsigned> Verbosity;
 
+// Option to control whether liveness analysis should be used by
+// FixupBranches and LongJmpPass. Needed for branch inversion on AArch64.
+extern llvm::cl::opt<bool> FixBranchesWithLiveness;
+
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
 
 /// Return true if we should dump dot graphs for the given function.
 bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 
-enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
+/// Bitmask representing a subset of possible gadget kinds.
+enum GadgetKindBitmask : unsigned {
+  /// Scan for unprotected backward control-flow (return instructions).
+  GS_PTRAUTH_RETURN_TARGETS = (1 << 0),
+  /// Scan for tail calls performed with untrusted link register.
+  GS_PTRAUTH_TAIL_CALLS = (1 << 1),
+  /// Scan for unprotected forward control-flow (branch and call instructions).
+  GS_PTRAUTH_BRANCH_AND_CALL_TARGETS = (1 << 2),
+  /// Scan for signing oracles.
+  GS_PTRAUTH_SIGN_ORACLES = (1 << 3),
+  /// Scan for authentication oracles.
+  GS_PTRAUTH_AUTH_ORACLES = (1 << 4),
 
-extern llvm::cl::bits<GadgetScannerKind> GadgetScannersToRun;
+  /// Scan for all Pointer Authentication issues.
+  GS_PTRAUTH_ALL_MASK = GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS |
+                        GS_PTRAUTH_BRANCH_AND_CALL_TARGETS |
+                        GS_PTRAUTH_SIGN_ORACLES | GS_PTRAUTH_AUTH_ORACLES,
+
+  /// Run all implemented scanners.
+  GS_ALL_MASK = GS_PTRAUTH_ALL_MASK,
+};
 
 } // namespace opts
 

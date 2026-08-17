@@ -9,20 +9,20 @@
 define <vscale x 1 x iXLen> @lrint_nxv1f32(<vscale x 1 x float> %x, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv1f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; RV32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv1f32:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv1f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV64-i64-NEXT:    vfwcvt.x.f.v v9, v8, v0.t
+; RV64-i64-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; RV64-i64-NEXT:    vfwcvt.x.f.v v9, v8
 ; RV64-i64-NEXT:    vmv1r.v v8, v9
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 1 x iXLen> @llvm.vp.lrint.nxv1iXLen.nxv1f32(<vscale x 1 x float> %x, <vscale x 1 x i1> %m, i32 %evl)
@@ -32,21 +32,21 @@ define <vscale x 1 x iXLen> @lrint_nxv1f32(<vscale x 1 x float> %x, <vscale x 1 
 define <vscale x 2 x iXLen> @lrint_nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv2f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; RV32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv2f32:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv2f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; RV64-i64-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; RV64-i64-NEXT:    vmv1r.v v10, v8
-; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v10, v0.t
+; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v10
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 2 x iXLen> @llvm.vp.lrint.nxv2iXLen.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x iXLen> %a
@@ -55,21 +55,21 @@ define <vscale x 2 x iXLen> @lrint_nxv2f32(<vscale x 2 x float> %x, <vscale x 2 
 define <vscale x 4 x iXLen> @lrint_nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv4f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; RV32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv4f32:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv4f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; RV64-i64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; RV64-i64-NEXT:    vmv2r.v v12, v8
-; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v12, v0.t
+; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v12
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 4 x iXLen> @llvm.vp.lrint.nxv4iXLen.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x iXLen> %a
@@ -78,21 +78,21 @@ define <vscale x 4 x iXLen> @lrint_nxv4f32(<vscale x 4 x float> %x, <vscale x 4 
 define <vscale x 8 x iXLen> @lrint_nxv8f32(<vscale x 8 x float> %x, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; RV32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv8f32:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv8f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; RV64-i64-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; RV64-i64-NEXT:    vmv4r.v v16, v8
-; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v16, v0.t
+; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v16
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 8 x iXLen> @llvm.vp.lrint.nxv8iXLen.nxv8f32(<vscale x 8 x float> %x, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x iXLen> %a
@@ -101,36 +101,21 @@ define <vscale x 8 x iXLen> @lrint_nxv8f32(<vscale x 8 x float> %x, <vscale x 8 
 define <vscale x 16 x iXLen> @lrint_nxv16f32(<vscale x 16 x float> %x, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv16f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; RV32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv16f32:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; RV64-i32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv16f32:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64-i64-NEXT:    vmv1r.v v24, v0
-; RV64-i64-NEXT:    csrr a1, vlenb
-; RV64-i64-NEXT:    srli a2, a1, 3
-; RV64-i64-NEXT:    sub a3, a0, a1
-; RV64-i64-NEXT:    vslidedown.vx v0, v0, a2
-; RV64-i64-NEXT:    sltu a2, a0, a3
-; RV64-i64-NEXT:    addi a2, a2, -1
-; RV64-i64-NEXT:    and a2, a2, a3
-; RV64-i64-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
-; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v12, v0.t
-; RV64-i64-NEXT:    bltu a0, a1, .LBB4_2
-; RV64-i64-NEXT:  # %bb.1:
-; RV64-i64-NEXT:    mv a0, a1
-; RV64-i64-NEXT:  .LBB4_2:
-; RV64-i64-NEXT:    vmv1r.v v0, v24
-; RV64-i64-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV64-i64-NEXT:    vfwcvt.x.f.v v24, v8, v0.t
+; RV64-i64-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; RV64-i64-NEXT:    vfwcvt.x.f.v v24, v8
+; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v12
 ; RV64-i64-NEXT:    vmv8r.v v8, v24
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 16 x iXLen> @llvm.vp.lrint.nxv16iXLen.nxv16f32(<vscale x 16 x float> %x, <vscale x 16 x i1> %m, i32 %evl)
@@ -140,22 +125,22 @@ define <vscale x 16 x iXLen> @lrint_nxv16f32(<vscale x 16 x float> %x, <vscale x
 define <vscale x 1 x iXLen> @lrint_nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv1f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV32-NEXT:    vfncvt.x.f.w v9, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; RV32-NEXT:    vfncvt.x.f.w v9, v8
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv1f64:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; RV64-i32-NEXT:    vfncvt.x.f.w v9, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; RV64-i32-NEXT:    vfncvt.x.f.w v9, v8
 ; RV64-i32-NEXT:    vmv1r.v v8, v9
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv1f64:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV64-i64-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; RV64-i64-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 1 x iXLen> @llvm.vp.lrint.nxv1iXLen.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x iXLen> %a
@@ -164,22 +149,22 @@ define <vscale x 1 x iXLen> @lrint_nxv1f64(<vscale x 1 x double> %x, <vscale x 1
 define <vscale x 2 x iXLen> @lrint_nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv2f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; RV32-NEXT:    vfncvt.x.f.w v10, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV32-NEXT:    vfncvt.x.f.w v10, v8
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv2f64:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; RV64-i32-NEXT:    vfncvt.x.f.w v10, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; RV64-i32-NEXT:    vfncvt.x.f.w v10, v8
 ; RV64-i32-NEXT:    vmv.v.v v8, v10
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv2f64:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV64-i64-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i64-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; RV64-i64-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 2 x iXLen> @llvm.vp.lrint.nxv2iXLen.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x iXLen> %a
@@ -188,22 +173,22 @@ define <vscale x 2 x iXLen> @lrint_nxv2f64(<vscale x 2 x double> %x, <vscale x 2
 define <vscale x 4 x iXLen> @lrint_nxv4f64(<vscale x 4 x double> %x, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; RV32-NEXT:    vfncvt.x.f.w v12, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV32-NEXT:    vfncvt.x.f.w v12, v8
 ; RV32-NEXT:    vmv.v.v v8, v12
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv4f64:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; RV64-i32-NEXT:    vfncvt.x.f.w v12, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; RV64-i32-NEXT:    vfncvt.x.f.w v12, v8
 ; RV64-i32-NEXT:    vmv.v.v v8, v12
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv4f64:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV64-i64-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i64-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; RV64-i64-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 4 x iXLen> @llvm.vp.lrint.nxv4iXLen.nxv4f64(<vscale x 4 x double> %x, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x iXLen> %a
@@ -212,22 +197,22 @@ define <vscale x 4 x iXLen> @lrint_nxv4f64(<vscale x 4 x double> %x, <vscale x 4
 define <vscale x 8 x iXLen> @lrint_nxv8f64(<vscale x 8 x double> %x, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_nxv8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV32-NEXT:    vfncvt.x.f.w v16, v8, v0.t
+; RV32-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; RV32-NEXT:    vfncvt.x.f.w v16, v8
 ; RV32-NEXT:    vmv.v.v v8, v16
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lrint_nxv8f64:
 ; RV64-i32:       # %bb.0:
-; RV64-i32-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; RV64-i32-NEXT:    vfncvt.x.f.w v16, v8, v0.t
+; RV64-i32-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; RV64-i32-NEXT:    vfncvt.x.f.w v16, v8
 ; RV64-i32-NEXT:    vmv.v.v v8, v16
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lrint_nxv8f64:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV64-i64-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-i64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV64-i64-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-i64-NEXT:    ret
   %a = call <vscale x 8 x iXLen> @llvm.vp.lrint.nxv8iXLen.nxv8f64(<vscale x 8 x double> %x, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x iXLen> %a

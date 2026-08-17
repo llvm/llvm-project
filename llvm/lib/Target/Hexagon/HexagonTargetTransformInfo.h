@@ -83,7 +83,8 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getMinVectorRegisterBitWidth() const override;
@@ -168,6 +169,15 @@ public:
                                   Align Alignment) const override;
   bool forceScalarizeMaskedScatter(VectorType *VTy,
                                    Align Alignment) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 
   /// @}
 

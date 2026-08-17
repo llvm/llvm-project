@@ -9,6 +9,7 @@
 #include "ClangTidyProfiling.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -45,13 +46,24 @@ void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS,
 void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
                                      llvm::TimerGroup &TG) {
   assert(Storage && "We should have a filename.");
-  OS << "{\n";
-  OS << R"("file": ")" << Storage->SourceFilename << "\",\n";
-  OS << R"("timestamp": ")" << Storage->Timestamp << "\",\n";
-  OS << "\"profile\": {\n";
-  TG.printJSONValues(OS, "");
-  OS << "\n}\n";
-  OS << "}\n";
+  std::string TimestampStr;
+  llvm::raw_string_ostream TmpOS(TimestampStr);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+  TmpOS << Storage->Timestamp;
+
+  llvm::json::OStream JOS(OS, 2);
+  JOS.object([&] {
+    JOS.attribute("file", Storage->SourceFilename);
+    JOS.attribute("timestamp", TimestampStr);
+    JOS.attributeBegin("profile");
+    JOS.rawValue([&](llvm::raw_ostream &ROS) {
+      ROS << "{\n";
+      TG.printJSONValues(ROS, "");
+      ROS << "\n}";
+    });
+    JOS.attributeEnd();
+  });
+  OS << "\n";
   OS.flush();
 }
 

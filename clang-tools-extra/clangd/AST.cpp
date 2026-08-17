@@ -27,8 +27,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Sema/HeuristicResolver.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1113,6 +1113,22 @@ searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
   ForwardingToConstructorVisitor Visitor{SeenFunctions, Result};
   Visitor.TraverseStmt(FD->getBody());
   return Result;
+}
+
+ArrayRef<const CXXConstructorDecl *>
+getForwardedConstructors(const FunctionDecl *FD,
+                         ForwardingToConstructorCache &Cache) {
+  assert(FD && "FD must not be null");
+  if (!FD->isTemplateInstantiation())
+    return {};
+  if (auto It = Cache.find(FD); It != Cache.end())
+    return It->getSecond();
+  const auto *PT = FD->getPrimaryTemplate();
+  if (!PT || !isLikelyForwardingFunction(PT))
+    return {};
+  auto Inserted =
+      Cache.try_emplace(FD, searchConstructorsInForwardingFunction(FD));
+  return Inserted.first->getSecond();
 }
 
 } // namespace clangd

@@ -11,8 +11,8 @@ module test
   !$omp threadprivate(x, y, z)
 
 !CHECK-DAG: fir.global @_QMtestEx : !fir.char<1> {
-!CHECK-DAG: fir.global @_QMtestEy : !fir.array<5xi32> {
-!CHECK-DAG: fir.global @_QMtestEz : !fir.array<5x!fir.char<1,5>> {
+!CHECK-DAG: fir.global @_QMtestEy {alignment = 64 : i64} : !fir.array<5xi32> {
+!CHECK-DAG: fir.global @_QMtestEz {alignment = 64 : i64} : !fir.array<5x!fir.char<1,5>> {
 
 contains
   subroutine sub()

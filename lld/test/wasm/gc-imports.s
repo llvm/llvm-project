@@ -48,8 +48,6 @@ _start:
 # CHECK-NEXT:     GlobalNames:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Name:            used_undef_global
-# CHECK-NEXT:       - Index:           1
-# CHECK-NEXT:         Name:            __stack_pointer
 # CHECK-NEXT: ...
 
 # RUN: wasm-ld --no-gc-sections --allow-undefined \

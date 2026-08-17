@@ -10,7 +10,7 @@
 ; RUN:   -ppc-vsr-nums-as-vr -mcpu=future < %s | FileCheck %s --check-prefix=AIX32
 
 declare void @dummy_func()
-declare <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1>, i32)
+declare <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1>, i32)
 
 define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) nounwind {
 ; CHECK-LABEL: test_dmsha3hash:
@@ -205,9 +205,9 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) nounwind {
 ; AIX32-NEXT:    blr
   entry:
     %0 = load <2048 x i1>, ptr %vopp, align 64
-    %2 = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> %0, i32 5)
+    %2 = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> %0, i32 5)
     tail call void @dummy_func()
-    %3 = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> %0, i32 5)
+    %3 = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> %0, i32 5)
     store <2048 x i1> %2, ptr %resp, align 64
     ret void
 }

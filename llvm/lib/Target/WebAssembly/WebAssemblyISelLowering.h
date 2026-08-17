@@ -26,9 +26,6 @@ public:
   WebAssemblyTargetLowering(const TargetMachine &TM,
                             const WebAssemblySubtarget &STI);
 
-  MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override;
-  MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const override;
-
 private:
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
   /// right decision when generating code for different targets.
@@ -74,6 +71,12 @@ private:
   getPreferredVectorAction(MVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
+
+  bool isProfitableToCombineMinNumMaxNum(EVT VT) const override {
+    // Prefer leaving cmp + select alone to form pmin/pmax,
+    // or relaxed_fmin/relaxed_fmax with appropriate FMF.
+    return false;
+  }
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;

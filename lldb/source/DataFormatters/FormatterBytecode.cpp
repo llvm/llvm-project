@@ -10,9 +10,11 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
@@ -106,26 +108,26 @@ static llvm::Error FormatImpl(DataStack &data) {
     }
     using namespace llvm::support::detail;
     auto arg = data[data.size() - num_args + r.Index];
-    auto format = [&](format_adapter &&adapter) {
+    auto format = [&](FormatFunctorRef &&adapter) {
       llvm::FmtAlign Align(adapter, r.Where, r.Width, r.Pad);
       Align.format(os, r.Options);
     };
 
     if (auto s = std::get_if<std::string>(&arg))
-      format(build_format_adapter(s->c_str()));
+      format(FormatFunctor(s->c_str()));
     else if (auto u = std::get_if<uint64_t>(&arg))
-      format(build_format_adapter(u));
+      format(FormatFunctor(u));
     else if (auto i = std::get_if<int64_t>(&arg))
-      format(build_format_adapter(i));
+      format(FormatFunctor(i));
     else if (auto valobj = std::get_if<ValueObjectSP>(&arg)) {
       if (!valobj->get())
-        format(build_format_adapter("null object"));
+        format(FormatFunctor("null object"));
       else
-        format(build_format_adapter(valobj->get()->GetValueAsCString()));
+        format(FormatFunctor(valobj->get()->GetValueAsCString()));
     } else if (auto type = std::get_if<CompilerType>(&arg))
-      format(build_format_adapter(type->GetDisplayTypeName()));
+      format(FormatFunctor(type->GetDisplayTypeName()));
     else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&arg))
-      format(build_format_adapter(toString(*sel)));
+      format(FormatFunctor(toString(*sel)));
   }
   data.Push(s);
   return llvm::Error::success();
@@ -187,7 +189,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     return llvm::Error::success();
   // Since the only data types are single endian and ULEBs, the
   // endianness should not matter.
-  llvm::DataExtractor cur_block(control.back(), true, 64);
+  llvm::DataExtractor cur_block(control.back(), true);
   llvm::DataExtractor::Cursor pc(0);
 
   while (!control.empty()) {
@@ -196,7 +198,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       // Save the return address.
       if (control.size() > 1)
         control[control.size() - 2] = cur_block.getData().drop_front(pc.tell());
-      cur_block = llvm::DataExtractor(control.back(), true, 64);
+      cur_block = llvm::DataExtractor(control.back(), true);
       if (pc)
         pc = llvm::DataExtractor::Cursor(0);
     };
@@ -222,9 +224,10 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     if (control.empty() || !pc)
       return pc.takeError();
 
-    LLDB_LOGV(GetLog(LLDBLog::DataFormatters),
-              "[eval {0}] opcode={1}, control={2}, data={3}", toString(sig),
-              toString(opcode), control.size(), toString(data));
+    LLDB_LOG_VERBOSE(GetLog(LLDBLog::DataFormatters),
+                     "[eval {0}] opcode={1}, control={2}, data={3}",
+                     toString(sig), toString(opcode), control.size(),
+                     toString(data));
 
     // Various shorthands to improve the readability of error handling.
 #define TYPE_CHECK(...)                                                        \
@@ -449,9 +452,9 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     return error("null object");
 
       auto sel_error = [&](const char *msg) {
-        return llvm::createStringError("{0} (opcode={1}, selector={2})", msg,
-                                       toString(opcode).c_str(),
-                                       toString(sel).c_str());
+        return llvm::createStringErrorV("{0} (opcode={1}, selector={2})", msg,
+                                        toString(opcode).c_str(),
+                                        toString(sel).c_str());
       };
 
       switch (sel) {
@@ -494,6 +497,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
           data.Push((uint64_t)*index_or_err);
         else
           return index_or_err.takeError();
+        break;
+      }
+      case sel_get_parent: {
+        TYPE_CHECK(Object);
+        POP_VALOBJ(valobj);
+        auto *parent = valobj->GetParent();
+        data.Push(parent ? parent->GetSP() : ValueObjectSP());
         break;
       }
       case sel_get_type: {
@@ -566,6 +576,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         auto type = data.Pop<CompilerType>();
         POP_VALOBJ(valobj);
         data.Push(valobj->Cast(type));
+        break;
+      }
+      case sel_clone: {
+        TYPE_CHECK(Object, String);
+        auto new_name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        data.Push(valobj->Clone(new_name));
         break;
       }
       case sel_strlen: {

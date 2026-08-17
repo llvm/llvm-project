@@ -26,6 +26,13 @@ STATISTIC(ReadOnlyLiveGVars,
 STATISTIC(WriteOnlyLiveGVars,
           "Number of live global variables marked write only");
 
+namespace llvm {
+cl::opt<bool>
+    AlwaysRenamePromotedLocals("always-rename-promoted-locals", cl::init(true),
+                               cl::Hidden,
+                               cl::desc("Always rename promoted locals."));
+} // namespace llvm
+
 static cl::opt<bool> PropagateAttrs("propagate-attrs", cl::init(true),
                                     cl::Hidden,
                                     cl::desc("Propagate attributes in index"));

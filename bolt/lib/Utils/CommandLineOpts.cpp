@@ -51,6 +51,48 @@ cl::opt<unsigned> AlignFunctions(
     cl::desc("align functions at a given value (relocation mode)"),
     cl::init(64), cl::cat(BoltOptCategory));
 
+cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
+                          cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignBlocksMinSize(
+    "align-blocks-min-size",
+    cl::desc("minimal size of the basic block that should be aligned"),
+    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignBlocksThreshold(
+    "align-blocks-threshold",
+    cl::desc(
+        "align only blocks with frequency larger than containing function "
+        "execution frequency specified in percent. E.g. 1000 means aligning "
+        "blocks that are 10 times more frequently executed than the "
+        "containing function."),
+    cl::init(800), cl::Hidden, cl::cat(BoltOptCategory));
+
+cl::opt<unsigned> AlignFunctionsMaxBytes(
+    "align-functions-max-bytes",
+    cl::desc("maximum number of bytes to use to align functions"), cl::init(32),
+    cl::cat(BoltOptCategory));
+
+cl::opt<unsigned>
+    BlockAlignment("block-alignment",
+                   cl::desc("boundary to use for alignment of basic blocks"),
+                   cl::init(16), cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    PreserveBlocksAlignment("preserve-blocks-alignment",
+                            cl::desc("try to preserve basic block alignment"),
+                            cl::cat(BoltOptCategory));
+
+cl::opt<bool>
+    UseCompactAligner("use-compact-aligner",
+                      cl::desc("Use compact approach for aligning functions"),
+                      cl::init(true), cl::cat(BoltOptCategory));
+
+cl::opt<bool> X86AlignBranchBoundaryHotOnly(
+    "x86-align-branch-boundary-hot-only",
+    cl::desc("only apply branch boundary alignment in hot code"),
+    cl::init(true), cl::cat(BoltOptCategory));
+
 cl::opt<bool>
 AggregateOnly("aggregate-only",
   cl::desc("exit after writing aggregated data file"),
@@ -150,7 +192,9 @@ bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
   unsigned PreviousSize = 0;
   for (StringRef Size : Sizes) {
     StringRef OrigSize = Size;
-    unsigned &SizeVal = Val.emplace_back(0);
+    HeatmapBlockSize &Block = Val.emplace_back();
+    Block.Spec = OrigSize.str();
+    unsigned &SizeVal = Block.Value;
     if (Size.consumeInteger(10, SizeVal)) {
       O.error("'" + OrigSize + "' value can't be parsed as an integer");
       return true;
@@ -174,9 +218,22 @@ cl::opt<opts::HeatmapBlockSizes, false, opts::HeatmapBlockSpecParser>
     HeatmapBlock(
         "block-size", cl::value_desc("initial_size{,zoom-out_size,...}"),
         cl::desc("heatmap bucket size, optionally followed by zoom-out sizes "
-                 "for coarse-grained heatmaps (default 64B, 4K, 256K)."),
-        cl::init(HeatmapBlockSizes{/*Initial*/ 64, /*Zoom-out*/ 4096, 262144}),
+                 "for coarse-grained heatmaps (default 64, 4K, 16K, 64K, 2M)."),
+        // Cache line, then the page sizes x86-64 and AArch64 actually use
+        // (4K, and 16K/64K on AArch64), then the PMD hugepage above a 4K base
+        // page.
+        cl::init(HeatmapBlockSizes{/*Initial*/ {64, "64"},
+                                   /*Zoom-out*/ {4096, "4K"},
+                                   {16384, "16K"},
+                                   {65536, "64K"},
+                                   {2097152, "2M"}}),
         cl::cat(HeatmapCategory));
+
+cl::opt<int> HeatmapCdfPct(
+    "heatmap-cdf-pct", cl::init(990000),
+    cl::desc("Sample CDF cutoff, in millionths, at which to report the working "
+             "set."),
+    cl::value_desc("n"), cl::cat(HeatmapCategory));
 
 cl::opt<unsigned long long> HeatmapMaxAddress(
     "max-address", cl::init(0xffffffff),
@@ -216,10 +273,23 @@ cl::opt<bool> HotText(
         "will put hot code into 2M pages. This requires relocation."),
     cl::ZeroOrMore, cl::cat(BoltCategory));
 
+cl::opt<bool> Hugify(
+    "hugify",
+    cl::desc("Automatically put hot code on 2MB page(s) (hugify) at runtime. "
+             "No manual call to hugify is needed in the binary (which is what "
+             "--hot-text relies on)."),
+    cl::cat(BoltOptCategory));
+
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
+
+cl::opt<bool> LargeCodeModel(
+    "large-code-model",
+    cl::desc("use large code model for exception handling encodings. "
+             "Auto-detected by the presence of .ltext sections otherwise."),
+    cl::cat(BoltCategory));
 
 cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
                    cl::cat(BoltCategory));
@@ -230,15 +300,14 @@ OutputFilename("o",
   cl::Optional,
   cl::cat(BoltOutputCategory));
 
-cl::opt<std::string> PerfData("perfdata", cl::desc("<data file>"), cl::Optional,
-                              cl::cat(AggregatorCategory),
-                              cl::sub(cl::SubCommand::getAll()));
+cl::list<std::string> PerfData("perfdata", cl::CommaSeparated,
+                               cl::desc("<data file>"),
+                               cl::cat(AggregatorCategory),
+                               cl::sub(cl::SubCommand::getAll()));
 
-static cl::alias
-PerfDataA("p",
-  cl::desc("alias for -perfdata"),
-  cl::aliasopt(PerfData),
-  cl::cat(AggregatorCategory));
+static cl::alias PerfDataA("p", cl::CommaSeparated,
+                           cl::desc("alias for -perfdata"),
+                           cl::aliasopt(PerfData), cl::cat(AggregatorCategory));
 
 cl::opt<bool> PrintCacheMetrics(
     "print-cache-metrics",
@@ -265,7 +334,10 @@ cl::opt<ProfileFormatKind> ProfileFormat(
         "format to dump profile output in aggregation mode, default is fdata"),
     cl::init(PF_Fdata),
     cl::values(clEnumValN(PF_Fdata, "fdata", "offset-based plaintext format"),
-               clEnumValN(PF_YAML, "yaml", "dense YAML representation")),
+               clEnumValN(PF_YAML, "yaml", "dense YAML representation"),
+               clEnumValN(PF_PreAgg, "preagg", "pre-aggregated profile format"),
+               clEnumValN(PF_PerfScript, "perfscript",
+                          "perfscript profile format")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<std::string> SaveProfile("w",
@@ -307,6 +379,12 @@ cl::opt<unsigned>
     Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
+
+cl::opt<bool> FixBranchesWithLiveness(
+    "fix-branches-with-liveness",
+    cl::desc("use liveness analysis during branch fixup "
+             "(needed for branch inversion on AArch64)"),
+    cl::init(false), cl::cat(BoltCategory));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

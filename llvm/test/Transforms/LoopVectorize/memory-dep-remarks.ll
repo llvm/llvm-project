@@ -83,7 +83,7 @@ exit:
 ; }
 
 ; CHECK-NOT: remark: source.c:{{0-9]+}}:{{[0-9]+}}:
-define dso_local void @test_forward(i64 %n, ptr nocapture %A, ptr nocapture %B) !dbg !70 {
+define void @test_forward(i64 %n, ptr nocapture %A, ptr nocapture %B) !dbg !70 {
 entry:
   %cmp11 = icmp sgt i64 %n, 1
   br i1 %cmp11, label %loop, label %exit, !dbg !81
@@ -118,7 +118,7 @@ loop:
 
 ; CHECK-NOT: remark: source.c:{{0-9]+}}:{{[0-9]+}}:
 
-define dso_local void @test_backwardVectorizable(i64 %n, ptr nocapture %A) !dbg !93 {
+define void @test_backwardVectorizable(i64 %n, ptr nocapture %A) !dbg !93 {
 entry:
   %cmp8 = icmp sgt i64 %n, 4
   br i1 %cmp8, label %loop, label %exit
@@ -157,11 +157,11 @@ entry:
   %cmp.not19 = icmp slt i64 %n, 4
   br i1 %cmp.not19, label %exit, label %loop.preheader
 
-loop.preheader:                               ; preds = %entry
+loop.preheader:
   %sub = add nsw i64 %n, -3
   br label %loop
 
-loop:                                         ; preds = %loop.preheader, %loop
+loop:
   %iv = phi i64 [ 1, %loop.preheader ], [ %iv.next, %loop ]
   %0 = add nsw i64 %iv, -1
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0

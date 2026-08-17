@@ -36,9 +36,9 @@ module @add attributes {gpu.container_module} {
   }
   gpu.module @test_kernel {
     gpu.func @test_kernel(%arg0: memref<2x2x2xf32>, %arg1: memref<2x2x2xf32>, %arg2: memref<2x2x2xf32>) kernel {
-      %0 = gpu.block_id  x
-      %1 = gpu.block_id  y
-      %2 = gpu.block_id  z
+      %0 = gpu.block_id x
+      %1 = gpu.block_id y
+      %2 = gpu.block_id z
       %3 = memref.load %arg0[%0, %1, %2] : memref<2x2x2xf32>
       %4 = memref.load %arg1[%0, %1, %2] : memref<2x2x2xf32>
       %5 = arith.addf %3, %4 : f32

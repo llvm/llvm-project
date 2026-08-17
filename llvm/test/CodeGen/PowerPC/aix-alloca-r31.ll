@@ -3,7 +3,7 @@
 ; RUN:     -mattr=+altivec -vec-extabi -xcoff-traceback-table=true < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK-ASM32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mcpu=pwr4 \
 ; RUN:     -mattr=+altivec -vec-extabi -xcoff-traceback-table=true < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK-ASM64 %s
 

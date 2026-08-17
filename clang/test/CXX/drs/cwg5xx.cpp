@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx98-23,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx98-23,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx98-23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,cxx98-23,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx26,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,cxx98
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-14,cxx98-17,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx17,cxx98-17,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx20,since-cxx17,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx23,since-cxx20,since-cxx17,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx26,since-cxx23,since-cxx20,since-cxx17,since-cxx11
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -83,9 +83,6 @@ namespace cwg506 { // cwg506: 2.7
   // cxx98-error@-1 {{cannot pass object of non-POD type 'NonPod' through variadic function; call will abort at runtime}}
   // since-cxx11-error@-2 {{cannot pass object of non-trivial type 'NonPod' through variadic function; call will abort at runtime}}
 } // namespace cwg506
-
-// FIXME: Add tests here once CWG260 is resolved.
-// cwg507: dup 260
 
 // cwg508: na
 // cwg509: na
@@ -475,7 +472,7 @@ namespace cwg535 { // cwg535: 3.1
 // cwg538: na
 
 namespace cwg539 { // cwg539: 3.4
-const f(const a) {
+const cwg539_f(const a) {
 // expected-error@-1 {{unknown type name 'a'}}
 // expected-error@-2 {{a type specifier is required for all declarations}}
   const b;
@@ -682,8 +679,8 @@ namespace cwg553 {
   // "is looked up in global scope", where it is not visible.
   void *p = new (c) int;
   // expected-error@-1 {{no matching function for call to 'operator new'}}
-  //   since-cxx17-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: no known conversion from 'cwg553_class' to 'std::align_val_t' for 2nd argument}}
   //   expected-note@#cwg5xx-global-operator-new {{candidate function not viable: requires 1 argument, but 2 were provided}}
+  //   since-cxx17-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 
   struct namespace_scope {
     friend void *operator new(size_t, namespace_scope);
