@@ -79,9 +79,15 @@ contains
   end subroutine
 end module
 
-! CHECK-DAG: omp.declare_mapper @{{.*}}pdt_omp_default_mapper : !fir.type<{{.*}}TpdtK4
-! CHECK-DAG: mapper(@{{.*}}pdt_omp_default_mapper)
 ! CHECK-DAG: mapper(@{{.*}}reuse_casepdtK8_omp_default_mapper)
+! CHECK-DAG: omp.declare_mapper @{{.*}}direct_explicit_pdt_casepdt_omp_default_mapper : !fir.type<{{.*}}TpdtK4
+! CHECK-DAG: omp.declare_mapper @{{.*}}pdt_omp_default_mapper : !fir.type<{{.*}}TpdtK4
+! CHECK-DAG: omp.declare_mapper @{{.*}}direct_pdtK4_omp_default_mapper : !fir.type<{{.*}}Tdirect_pdtK4
+! CHECK-DAG: omp.declare_mapper @{{.*}}direct_pdtK8_omp_default_mapper : !fir.type<{{.*}}Tdirect_pdtK8
+! CHECK-DAG: mapper(@{{.*}}direct_pdtK4_omp_default_mapper)
+! CHECK-DAG: mapper(@{{.*}}direct_pdtK8_omp_default_mapper)
+! CHECK-LABEL: func.func @_QMdirect_explicit_pdt_casePtrigger() {
+! CHECK-DAG: mapper(@{{.*}}pdt_omp_default_mapper)
 
 module direct_pdt_case
   type :: direct_pdt(k)
@@ -97,7 +103,17 @@ contains
   end subroutine
 end module
 
-! CHECK-DAG: omp.declare_mapper @{{.*}}direct_pdtK4_omp_default_mapper : !fir.type<{{.*}}Tdirect_pdtK4
-! CHECK-DAG: omp.declare_mapper @{{.*}}direct_pdtK8_omp_default_mapper : !fir.type<{{.*}}Tdirect_pdtK8
-! CHECK-DAG: mapper(@{{.*}}direct_pdtK4_omp_default_mapper)
-! CHECK-DAG: mapper(@{{.*}}direct_pdtK8_omp_default_mapper)
+module direct_explicit_pdt_case
+  type :: pdt(k)
+    integer, kind :: k
+    real(k) :: x
+  end type
+  !$omp declare mapper(default: pdt(4) :: v) map(tofrom: v%x)
+contains
+  subroutine trigger
+    type(pdt(4)) :: h4
+    !$omp target data map(h4)
+    !$omp end target data
+  end subroutine
+end module
+
