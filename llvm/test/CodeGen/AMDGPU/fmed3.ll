@@ -9248,12 +9248,8 @@ define double @v_test_nnan_input_fmed3_r_i_i_f64_maximum_minimum(double %a) {
   ret double %med
 }
 
-; FMIN_LEGACY/FMAX_LEGACY are compare-selects that return one of the operands
-; bit-for-bit, so a signaling NaN operand passes through unquieted. Their
-; result must not be treated as known-never-sNaN.
-
-; The canonicalize of the min_legacy result must be kept to quiet a
-; passed-through sNaN.
+; FMIN_LEGACY passes an sNaN operand through bit-for-bit, so the canonicalize
+; must not be folded away.
 define amdgpu_kernel void @canonicalize_fmin_legacy(ptr addrspace(1) %out, float %a, float %b) #3 {
 ; SI-SDAG-LABEL: canonicalize_fmin_legacy:
 ; SI-SDAG:       ; %bb.0:
@@ -9262,9 +9258,10 @@ define amdgpu_kernel void @canonicalize_fmin_legacy(ptr addrspace(1) %out, float
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s3
+; SI-SDAG-NEXT:    v_min_legacy_f32_e32 v0, s2, v0
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
-; SI-SDAG-NEXT:    v_min_legacy_f32_e32 v0, s2, v0
+; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-SDAG-NEXT:    s_endpgm
 ;
@@ -9365,9 +9362,7 @@ define amdgpu_kernel void @canonicalize_fmin_legacy(ptr addrspace(1) %out, float
   ret void
 }
 
-; The min_legacy result feeding the clamp chain may be an sNaN; med3 must
-; not be formed on it directly (med3 with an sNaN first operand under
-; IEEE=1 yields 4.0, the select chain yields 2.0).
+; A possibly-sNaN FMIN_LEGACY result must not feed med3 directly.
 define amdgpu_kernel void @med3_fmin_legacy(ptr addrspace(1) %out, float %a, float %b) #3 {
 ; SI-SDAG-LABEL: med3_fmin_legacy:
 ; SI-SDAG:       ; %bb.0:
@@ -9377,6 +9372,7 @@ define amdgpu_kernel void @med3_fmin_legacy(ptr addrspace(1) %out, float %a, flo
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s3
 ; SI-SDAG-NEXT:    v_min_legacy_f32_e32 v0, s2, v0
+; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-SDAG-NEXT:    s_mov_b32 s4, s0
 ; SI-SDAG-NEXT:    s_mov_b32 s5, s1
 ; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
