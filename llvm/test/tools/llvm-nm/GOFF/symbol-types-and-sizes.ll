@@ -26,6 +26,11 @@ entry:
   ret void
 }
 
+; The functions within this test are label definitions (LD). The function entry
+; point is typically created as a label within a container, and these label
+; symbols do not have an explicit size set, hence why 0 is the expected size
+; for the below functions.
+
 ; CHECK-DAG: {{^[0-9A-Fa-f]+}} 0000000000000004 D GlobalData
 ; CHECK-DAG: {{^[0-9A-Fa-f]+}} 0000000000000004 d LocalData
 ; CHECK-DAG: {{^[0-9A-Fa-f]+}} 0000000000000000 T GlobalFunc
