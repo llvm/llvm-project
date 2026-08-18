@@ -411,8 +411,8 @@ def AMDGPU_RawBufferLoadOp :
   let assemblyFormat = [{
     `boundsCheck` `(` $boundsCheck `)`
     attr-dict $memref `[` $indices `]`
-      (`indexOffset` `(` $indexOffset^ `)`)?
-      (`sgprOffset` `(` $sgprOffset^ `)`)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($memref) (`,` type($indices)^)? `->` type($value)
   }];
   let hasCanonicalizer = 1;
@@ -452,8 +452,8 @@ def AMDGPU_RawBufferStoreOp :
   let assemblyFormat = [{
     `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`indexOffset` `(` $indexOffset^ `)`)?
-      (`sgprOffset` `(` $sgprOffset^ `)`)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) (`,` type($indices)^)?
   }];
   let hasCanonicalizer = 1;
@@ -496,8 +496,8 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
   let assemblyFormat = [{
     `boundsCheck` `(` $boundsCheck `)`
     attr-dict $src `,` $cmp `->` $memref `[` $indices `]`
-      (`indexOffset` `(` $indexOffset^ `)`)?
-      (`sgprOffset` `(` $sgprOffset^ `)`)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -540,8 +540,8 @@ def AMDGPU_RawBufferAtomicFaddOp :
   let assemblyFormat = [{
     `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`indexOffset` `(` $indexOffset^ `)`)?
-      (`sgprOffset` `(` $sgprOffset^ `)`)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -584,8 +584,8 @@ def AMDGPU_RawBufferAtomicFmaxOp :
   let assemblyFormat = [{
     `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`indexOffset` `(` $indexOffset^ `)`)?
-      (`sgprOffset` `(` $sgprOffset^ `)`)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -627,8 +627,8 @@ def AMDGPU_RawBufferAtomicSmaxOp :
   let assemblyFormat = [{
     `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`indexOffset` `(` $indexOffset^ `)`)?
-      (`sgprOffset` `(` $sgprOffset^ `)`)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -670,8 +670,8 @@ def AMDGPU_RawBufferAtomicUminOp :
   let assemblyFormat = [{
     `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`indexOffset` `(` $indexOffset^ `)`)?
-      (`sgprOffset` `(` $sgprOffset^ `)`)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
