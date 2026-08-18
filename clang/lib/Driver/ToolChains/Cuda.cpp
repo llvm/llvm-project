@@ -551,7 +551,7 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
                                     const char *LinkingOutput) const {
   const auto &TC =
       static_cast<const toolchains::CudaToolChain &>(getToolChain());
-  bool UsesLLVMOffloading = Args.hasFlag(
+  [[maybe_unused]] bool UsesLLVMOffloading = Args.hasFlag(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   assert((UsesLLVMOffloading || TC.getTriple().isNVPTX()) && "Wrong platform");
 
@@ -601,7 +601,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       static_cast<const toolchains::NVPTXToolChain &>(getToolChain());
   ArgStringList CmdArgs;
 
-  bool UsesLLVMOffloading = Args.hasFlag(
+  [[maybe_unused]] bool UsesLLVMOffloading = Args.hasFlag(
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   assert((UsesLLVMOffloading || TC.getTriple().isNVPTX()) && "Wrong platform");
 

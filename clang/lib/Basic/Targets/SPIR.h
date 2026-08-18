@@ -183,9 +183,7 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_C || CC == CC_SpirFunction || CC == CC_DeviceKernel)
-               ? CCCR_OK
-               : CCCR_Warning;
+    return (CC == CC_C || CC == CC_DeviceKernel) ? CCCR_OK : CCCR_Warning;
   }
 
   void setAddressSpaceMap(bool DefaultIsGeneric) {

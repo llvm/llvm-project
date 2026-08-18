@@ -251,10 +251,10 @@ ASTNodeUP DILParser::ParseExclusiveOrExpression() {
 // Parse an and_expression.
 //
 //  and_expression:
-//    shift_expression {"&" shift_expression}
+//    equality_expression {"&" equality_expression}
 //
 ASTNodeUP DILParser::ParseAndExpression() {
-  auto lhs = ParseShiftExpression();
+  auto lhs = ParseEqualityExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
   while (CurToken().Is(Token::amp)) {
@@ -264,6 +264,55 @@ ASTNodeUP DILParser::ParseAndExpression() {
               token.GetLocation(), token.GetSpelling().length());
       return std::make_unique<ErrorNode>();
     }
+    m_dil_lexer.Advance();
+    auto rhs = ParseEqualityExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an equality_expression.
+//
+//  equality_expression:
+//    relational_expression {"==" relational_expression}
+//    relational_expression {"!=" relational_expression}
+//
+ASTNodeUP DILParser::ParseEqualityExpression() {
+  auto lhs = ParseRelationalExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().IsOneOf({Token::equalequal, Token::exclaimequal})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseRelationalExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a relational_expression.
+//
+//  relational_expression:
+//    shift_expression {"<" shift_expression}
+//    shift_expression {">" shift_expression}
+//    shift_expression {"<=" shift_expression}
+//    shift_expression {">=" shift_expression}
+//
+ASTNodeUP DILParser::ParseRelationalExpression() {
+  auto lhs = ParseShiftExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().IsOneOf(
+      {Token::less, Token::greater, Token::lessequal, Token::greaterequal})) {
+    Token token = CurToken();
     m_dil_lexer.Advance();
     auto rhs = ParseShiftExpression();
     assert(rhs && "ASTNodeUP must not contain a nullptr");

@@ -83,6 +83,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
@@ -8357,6 +8358,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, EPI, LVP, Config,
         *PSE.getSE(), ResumeValues);
     LVP.attachRuntimeChecks(BestEpiPlan, Checks, HasBranchWeights);
+    RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LVP.executePlan(
         EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
@@ -8432,6 +8434,13 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
     if (Changed) {
       LAIs->clear();
 
+      // If CycleAnalysis was cached by a prior pass (e.g. DSE), it now holds
+      // stale pointers to blocks that may have been deleted during
+      // vectorization. Clear it so that BlockFrequencyAnalysis (if requested
+      // for a later loop) recomputes it fresh.
+      if (FAM->getCachedResult<CycleAnalysis>(F))
+        FAM->clearAnalysis<CycleAnalysis>(F);
+
 #ifndef NDEBUG
       if (VerifySCEV)
         SE->verify();
@@ -8462,6 +8471,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  FAM = &AM;
   GetBFI = [&AM, &F]() -> BlockFrequencyInfo & {
     return AM.getResult<BlockFrequencyAnalysis>(F);
   };

@@ -18100,7 +18100,9 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   Expr::EvalResult EvalResult;
   SmallVector<PartialDiagnosticAt, 8> Notes;
+  SmallVector<PartialDiagnosticAt> MSWarning;
   EvalResult.Diag = &Notes;
+  EvalResult.ExtendedDiag = &MSWarning;
 
   // Try to evaluate the expression, and produce diagnostics explaining why it's
   // not a constant expression as a side-effect.
@@ -18111,6 +18113,17 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   if (!isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);
+
+  // For -fms-compatibility mode we relax some requirements
+  // for constant folding in non-SFINAE contexts
+  if (!MSWarning.empty()) {
+    if (isSFINAEContext()) {
+      Folded = false;
+    } else {
+      for (auto &Info : MSWarning)
+        Diag(Info.first, Info.second);
+    }
+  }
 
   // In C++11, we can rely on diagnostics being produced for any expression
   // which is not a constant expression. If no diagnostics were produced, then
