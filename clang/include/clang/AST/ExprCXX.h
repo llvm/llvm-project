@@ -3483,9 +3483,8 @@ class DependentTemplateIdExpr final
 
 public:
   static DependentTemplateIdExpr *
-  Create(const ASTContext &Context,
-         const DeclarationNameInfo &NameInfo, TemplateName Name,
-         const TemplateArgumentListInfo &TemplateArgs);
+  Create(const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+         TemplateName Name, const TemplateArgumentListInfo &TemplateArgs);
 
   static DependentTemplateIdExpr *CreateEmpty(const ASTContext &Context,
                                               unsigned NumTemplateArgs);
@@ -3513,13 +3512,9 @@ public:
     return getTrailingObjects(getNumTemplateArgs());
   }
 
-  SourceLocation getBeginLoc() const {
-    return getNameLoc();
-  }
+  SourceLocation getBeginLoc() const { return getNameLoc(); }
 
-  SourceLocation getEndLoc() const {
-    return getRAngleLoc();
-  }
+  SourceLocation getEndLoc() const { return getRAngleLoc(); }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());

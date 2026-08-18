@@ -16538,7 +16538,8 @@ ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
 
   NestedNameSpecifierLoc Loc;
   TemplateName Name = getDerived().TransformTemplateName(
-      Loc, /*Template Keyword=*/SourceLocation(), E->getTemplateName(), E->getNameLoc());
+      Loc, /*Template Keyword=*/SourceLocation(), E->getTemplateName(),
+      E->getNameLoc());
   if (Name.isNull())
     return ExprError();
 
@@ -16556,8 +16557,9 @@ ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
   LookupResult R(SemaRef, E->getNameInfo(), Sema::LookupOrdinaryName);
   R.addDecl(TD);
   R.resolveKind();
-  return getDerived().RebuildTemplateIdExpr(SS, /*Template Keyword=*/SourceLocation(), R,
-                                            /*RequiresADL=*/false, &TransArgs);
+  return getDerived().RebuildTemplateIdExpr(
+      SS, /*Template Keyword=*/SourceLocation(), R,
+      /*RequiresADL=*/false, &TransArgs);
 }
 
 template<typename Derived>

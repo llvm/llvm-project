@@ -8845,8 +8845,7 @@ ASTNodeImporter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
                                          E->template_arguments(), ToTAInfo))
     return std::move(Err);
 
-  return DependentTemplateIdExpr::Create(Importer.getToContext(),
-                                         ToNameInfo,
+  return DependentTemplateIdExpr::Create(Importer.getToContext(), ToNameInfo,
                                          ToName, ToTAInfo);
 }
 

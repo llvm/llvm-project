@@ -1240,8 +1240,8 @@ static ExprResult formImmediatelyDeclaredConstraint(
   else {
     assert(SS.isEmpty() && "template parameter with a scope specifier?");
     auto *CDT = dyn_cast<TemplateTemplateParmDecl>(NamedConcept);
-    ImmediatelyDeclaredConstraint = S.CheckVarOrConceptTemplateTemplateId(
-        NameInfo, CDT, &ConstraintArgs);
+    ImmediatelyDeclaredConstraint =
+        S.CheckVarOrConceptTemplateTemplateId(NameInfo, CDT, &ConstraintArgs);
   }
   if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
     return ImmediatelyDeclaredConstraint;
@@ -4983,7 +4983,8 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   R.suppressDiagnostics();
 
   if (R.getAsSingle<ConceptDecl>()) {
-    assert(TemplateKWLoc.isInvalid() && "template keyword in front of a concept id?");
+    assert(TemplateKWLoc.isInvalid() &&
+           "template keyword in front of a concept id?");
     return CheckConceptTemplateId(SS, TemplateKWLoc, R.getLookupNameInfo(),
                                   R.getRepresentativeDecl(),
                                   R.getAsSingle<ConceptDecl>(), TemplateArgs);
@@ -4994,7 +4995,8 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   UnresolvedLookupExpr *ULE;
   if (R.getAsSingle<TemplateTemplateParmDecl>()) {
     assert(SS.isEmpty() && "template parameter with a scope specifier?");
-    assert(TemplateKWLoc.isInvalid() && "template keyword in front of a template parameter?");
+    assert(TemplateKWLoc.isInvalid() &&
+           "template keyword in front of a template parameter?");
     return CheckVarOrConceptTemplateTemplateId(
         R.getLookupNameInfo(), R.getAsSingle<TemplateTemplateParmDecl>(),
         TemplateArgs);

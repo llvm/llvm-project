@@ -402,13 +402,13 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
 }
 
 DependentTemplateIdExpr::DependentTemplateIdExpr(
-    const ASTContext &Context,
-    const DeclarationNameInfo &NameInfo, TemplateName Name,
-    const TemplateArgumentListInfo &TemplateArgs)
+    const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs)
     : Expr(DependentTemplateIdExprClass, Context.DependentTy, VK_LValue,
            OK_Ordinary),
       NameInfo(NameInfo), Name(Name) {
-  KWAndArgs.initializeFrom(/*TemplateKWLoc=*/{}, TemplateArgs, getTrailingObjects());
+  KWAndArgs.initializeFrom(/*TemplateKWLoc=*/{}, TemplateArgs,
+                           getTrailingObjects());
   setDependence(computeDependence(this));
 }
 
@@ -419,14 +419,13 @@ DependentTemplateIdExpr::DependentTemplateIdExpr(EmptyShell Empty,
 }
 
 DependentTemplateIdExpr *DependentTemplateIdExpr::Create(
-    const ASTContext &Context,
-    const DeclarationNameInfo &NameInfo, TemplateName Name,
-    const TemplateArgumentListInfo &TemplateArgs) {
+    const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs) {
   void *Mem = Context.Allocate(
       totalSizeToAlloc<TemplateArgumentLoc>(TemplateArgs.size()),
       alignof(DependentTemplateIdExpr));
-  return new (Mem) DependentTemplateIdExpr(Context, NameInfo,
-                                           Name, TemplateArgs);
+  return new (Mem)
+      DependentTemplateIdExpr(Context, NameInfo, Name, TemplateArgs);
 }
 
 DependentTemplateIdExpr *
