@@ -5,7 +5,7 @@
 ; The third candidate uses the second as its basis, then compressPath examines
 ; the deeper basis. Count both basis selection and path compression.
 ;
-; CHECK: 8 slsr - Number of SCEV candidate differences computed by SLSR
+; CHECK: 8 slsr - Number of candidate-basis SCEV differences computed by SLSR
 
 declare i64 @source(i32)
 declare void @use(ptr)
