@@ -5021,12 +5021,17 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
     cir::VecTernaryOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  // Convert `cond` into a vector of i1, then use that in a `select` op.
-  mlir::Value bitVec = mlir::LLVM::ICmpOp::create(
-      rewriter, op.getLoc(), mlir::LLVM::ICmpPredicate::ne, adaptor.getCond(),
-      mlir::LLVM::ZeroOp::create(
-          rewriter, op.getCond().getLoc(),
-          typeConverter->convertType(op.getCond().getType())));
+  mlir::Value bitVec = adaptor.getCond();
+
+  if (!isa<cir::BoolType>(op.getCond().getType().getElementType())) {
+    // Convert `cond` into a vector of i1, then use that in a `select` op.
+    bitVec = mlir::LLVM::ICmpOp::create(
+        rewriter, op.getLoc(), mlir::LLVM::ICmpPredicate::ne, adaptor.getCond(),
+        mlir::LLVM::ZeroOp::create(
+            rewriter, op.getCond().getLoc(),
+            typeConverter->convertType(op.getCond().getType())));
+  }
+
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
       op, bitVec, adaptor.getLhs(), adaptor.getRhs());
   return mlir::success();
