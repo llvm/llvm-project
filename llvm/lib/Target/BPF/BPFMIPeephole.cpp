@@ -779,8 +779,9 @@ static bool isZeroInstructionMBB(const MachineBasicBlock &MBB) {
   return !any_of(MBB.instrs(), emitsBPFCode);
 }
 
-static void collectCondBranchTargets(
-    MachineFunction &MF, SmallPtrSet<MachineBasicBlock *, 8> &Targets) {
+static void
+collectCondBranchTargets(MachineFunction &MF,
+                         SmallPtrSet<MachineBasicBlock *, 8> &Targets) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &Term : MBB.terminators()) {
       if (!Term.isConditionalBranch())
