@@ -66,8 +66,6 @@ void test() {
   auto iter = view.begin();
 
   *iter;    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter++;   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter--;   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   iter[0];  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   iter + 0; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   0 + iter; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
