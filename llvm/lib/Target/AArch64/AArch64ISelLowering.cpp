@@ -28010,8 +28010,6 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   auto *MemN = cast<MemSDNode>(N);
   if (IsScalable) {
-    if (NumParts == 3)
-      return SDValue();
     SDValue Pred;
     if (IsMasked) {
       Pred = getNarrowMaskForInterleavedOps(DAG, DL, Mask, NumParts);
@@ -28022,8 +28020,18 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       Pred = DAG.getConstant(1, DL, PredVT);
     }
 
-    const Intrinsic::ID IID =
-        NumParts == 2 ? Intrinsic::aarch64_sve_st2 : Intrinsic::aarch64_sve_st4;
+    Intrinsic::ID IID;
+    switch (NumParts) {
+    case 2:
+      IID = Intrinsic::aarch64_sve_st2;
+      break;
+    case 3:
+      IID = Intrinsic::aarch64_sve_st3;
+      break;
+    case 4:
+      IID = Intrinsic::aarch64_sve_st4;
+      break;
+    }
     SmallVector<SDValue, 8> Ops;
     Ops.append({Chain, DAG.getConstant(IID, DL, MVT::i32)});
     Ops.append(ValueInterleaveOps);
@@ -31123,8 +31131,6 @@ static SDValue performVectorDeinterleaveCombine(
   SDValue Res;
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
   if (IsScalable) {
-    if (NumParts == 3)
-      return SDValue();
     SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
       // Bail out if the masked load has an unexpected number of uses, since we
@@ -31158,8 +31164,18 @@ static SDValue performVectorDeinterleaveCombine(
       BasePtr = Load->getBasePtr();
     }
 
-    const Intrinsic::ID IID = NumParts == 2 ? Intrinsic::aarch64_sve_ld2_sret
-                                            : Intrinsic::aarch64_sve_ld4_sret;
+    Intrinsic::ID IID;
+    switch (NumParts) {
+    case 2:
+      IID = Intrinsic::aarch64_sve_ld2_sret;
+      break;
+    case 3:
+      IID = Intrinsic::aarch64_sve_ld3_sret;
+      break;
+    case 4:
+      IID = Intrinsic::aarch64_sve_ld4_sret;
+      break;
+    }
     SDValue NewLdOps[] = {Chain, DAG.getConstant(IID, DL, MVT::i32), Pred,
                           BasePtr};
     Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
@@ -34644,6 +34660,30 @@ AArch64TargetLowering::LowerFixedLengthIntToFPToSVE(SDValue Op,
   }
 }
 
+static SDValue lowerPredicateInterleaveWithPackedVectors(SDValue Op,
+                                                         SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  EVT OpVT = Op.getValueType();
+  assert(OpVT.isScalableVector() && OpVT.getVectorElementType() == MVT::i1 &&
+         Op->getNumOperands() == 3 && "Unexpected predicate interleave");
+
+  EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
+  SmallVector<SDValue, 3> PackedOps;
+  for (SDValue V : Op->ops())
+    PackedOps.push_back(DAG.getNode(ISD::ZERO_EXTEND, DL, PackedVT, V));
+
+  SmallVector<EVT, 3> PackedVTs(3, PackedVT);
+  SDValue PackedOp =
+      DAG.getNode(Op.getOpcode(), DL, DAG.getVTList(PackedVTs), PackedOps);
+
+  SDValue Zero = DAG.getConstant(0, DL, PackedVT);
+  SmallVector<SDValue, 3> Results;
+  for (unsigned I = 0; I != 3; ++I)
+    Results.push_back(
+        DAG.getSetCC(DL, OpVT, PackedOp.getValue(I), Zero, ISD::SETNE));
+  return DAG.getMergeValues(Results, DL);
+}
+
 SDValue
 AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
                                                 SelectionDAG &DAG) const {
@@ -34682,6 +34722,9 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   }
 
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
+    if (OpVT.getVectorElementType() == MVT::i1)
+      return lowerPredicateInterleaveWithPackedVectors(Op, DAG);
+
     // aarch64_sve_ld3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
     Align Alignment = DAG.getReducedAlign(PackedVT, /*UseABI=*/false);
@@ -34792,6 +34835,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   }
 
   if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
+    if (OpVT.getVectorElementType() == MVT::i1)
+      return lowerPredicateInterleaveWithPackedVectors(Op, DAG);
+
     // aarch64_sve_st3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
     SmallVector<SDValue, 3> InVecs;
