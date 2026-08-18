@@ -1658,17 +1658,17 @@ ReoptimizeBlock:
           if (CanFoldFallThrough) {
             SmallVector<MachineOperand, 4> ReversedCond(PredCond);
             DebugLoc Dl = MBB->findBranchDebugLoc();
-            TII->reverseBranchCondition(ReversedCond);
+            if (TII->reverseBranchCondition(ReversedCond))
+              continue;
 
             if (!TII->canMakeTailCallConditional(ReversedCond, TailCall))
               continue;
 
+            PredCond = ReversedCond;
+
             TII->removeBranch(*Pred);
             TII->insertBranch(*Pred, MBB, PredTBB, ReversedCond, Dl);
           }
-
-          PredAnalyzable =
-              !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
 
           if (TII->canMakeTailCallConditional(PredCond, TailCall)) {
             // TODO: It would be nice if analyzeBranch() could provide a
