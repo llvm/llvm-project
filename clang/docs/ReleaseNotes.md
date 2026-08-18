@@ -396,6 +396,10 @@ features cannot lower the translation-unit ABI level;
 - `-Wunsafe-buffer-usage` now warns about unsafe two-parameter constructors of
   `std::string_view` (pointer and size), consistent with the existing warning for `std::span`.
 
+- `-Wno-unsafe-buffer-usage-in-static-sized-array` now also suppresses warnings
+  for pointer arithmetic on statically-sized arrays when the offset is a
+  non-negative constant within the array bounds.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
