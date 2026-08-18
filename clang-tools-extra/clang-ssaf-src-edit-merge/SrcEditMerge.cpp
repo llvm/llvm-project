@@ -170,15 +170,14 @@ std::string computeMainSourceFile(
 
 /// Build the conflict cluster list from the merged input key set.
 ///
-/// `InputKeysByFile` is every input Replacement, grouped by file — the
-/// caller does this grouping once, up front, rather than this function
-/// flattening across files just to immediately re-group by file itself.
+/// `InputKeysByFile` is every input Replacement with length > 0, grouped by
+/// file. Zero-length insertions are excluded by the caller because they never
+/// overlap anything and are a no-op to apply, so they can never affect this
+/// function's clustering.
 ///
 /// A cluster is a maximal connected component of one file's input
 /// replacements whose [offset, offset+length) byte ranges transitively
-/// overlap. Only length > 0 keys participate; zero-length insertions are
-/// out of scope for the drop-all policy per spec and continue to follow the
-/// library's existing IgnoreInsertConflict=false (first-registered) policy.
+/// overlap.
 ///
 /// The walk merges into the current cluster whenever
 ///   key.offset < lastEnd, where
@@ -212,8 +211,6 @@ std::vector<std::vector<clang::tooling::Replacement>> buildConflictClusters(
     };
 
     for (const clang::tooling::Replacement &K : Keys) {
-      if (K.getLength() == 0)
-        continue;
       if (Current.empty()) {
         Current.push_back(K);
         LastEnd = K.getOffset() + K.getLength();
@@ -446,11 +443,14 @@ int main(int argc, const char **argv) {
 
   // Pre-compute the input-side replacement set for conflict reporting,
   // grouped by file up front since buildConflictClusters only looks for
-  // overlap within one file.
+  // overlap within one file. Zero-length insertions never overlap anything
+  // — they're dropped here rather than inside buildConflictClusters, since
+  // there's no other reason for them to be in this set at all.
   std::map<std::string, std::set<clang::tooling::Replacement>> InputKeysByFile;
   for (const auto &TU : TUs)
     for (const auto &R : TU.Replacements)
-      InputKeysByFile[R.getFilePath().str()].insert(R);
+      if (R.getLength() > 0)
+        InputKeysByFile[R.getFilePath().str()].insert(R);
 
   // Build a SourceManager for mergeAndDeduplicate.
   clang::DiagnosticOptions DiagOpts;
