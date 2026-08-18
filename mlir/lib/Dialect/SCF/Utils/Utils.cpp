@@ -386,6 +386,16 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   bool generateEpilogueLoop = true;
 
   std::optional<APInt> constTripCount = forOp.getStaticTripCount();
+  // A static trip count does not imply constant bounds: it is also known when
+  // the lower and the upper bound are the same value (zero iterations), when
+  // the lower bound is zero and the upper bound is the step (one iteration),
+  // and when the upper bound is a constant offset from a non-constant lower
+  // bound. The computation below reads all three bounds as constants, so fall
+  // back to the dynamic case unless they are.
+  if (constTripCount && !(getConstantAPIntValue(forOp.getLowerBound()) &&
+                          getConstantAPIntValue(forOp.getUpperBound()) &&
+                          getConstantAPIntValue(step)))
+    constTripCount = std::nullopt;
   if (constTripCount) {
     // Constant loop bounds computation.
     bool isUnsignedLoop = forOp.getUnsignedCmp();
