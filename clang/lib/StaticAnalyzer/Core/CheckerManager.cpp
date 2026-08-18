@@ -549,7 +549,7 @@ void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
   // We define the builder outside of the loop because if at least one checker
   // creates a successor for Pred, we do not need to generate an
   // autotransition for it.
-  NodeBuilder Bldr(Pred, Dst, Eng.getBuilderContext());
+  Dst.insert(Pred);
   for (const auto &checkFn : EndFunctionCheckers) {
     const ProgramPoint &L =
         FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);
@@ -762,8 +762,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
   for (auto *const Pred : Src) {
     std::optional<StringRef> evaluatorChecker;
 
-    ExplodedNodeSet checkDst;
-    NodeBuilder B(Pred, checkDst, Eng.getBuilderContext());
+    ExplodedNodeSet checkDst{Pred};
 
     ProgramStateRef State = Pred->getState();
     CallEventRef<> UpdatedCall = Call.cloneWithState(State);
