@@ -350,6 +350,9 @@ namespace isfpclass {
                                           // both-note@#decla {{declared here}}
 #endif
   }
+
+  constexpr float a = 1.0f;
+  static_assert(__builtin_isfpclass(1.0f, a) == 0);
 }
 
 namespace signbit {

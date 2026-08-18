@@ -6484,8 +6484,9 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
   if (IsFPClass) {
     if (BuiltinConstantArgRange(TheCall, 1, 0, llvm::fcAllFlags))
       return true;
-    ExprResult MaskRes =
-        DefaultFunctionArrayLvalueConversion(TheCall->getArg(NumArgs - 1));
+
+    ExprResult MaskRes = PerformImplicitConversion(
+        TheCall->getArg(NumArgs - 1), Context.IntTy, AssignmentAction::Passing);
     if (!MaskRes.isUsable())
       return true;
     TheCall->setArg(NumArgs - 1, MaskRes.get());
