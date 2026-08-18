@@ -198,7 +198,7 @@ LLVM_ABI void
 initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineCFGPrinterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCSELegacyPass(PassRegistry &);
-LLVM_ABI void initializeMachineCombinerPass(PassRegistry &);
+LLVM_ABI void initializeMachineCombinerLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCopyPropagationLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCycleInfoPrinterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCycleInfoWrapperPassPass(PassRegistry &);

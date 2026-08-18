@@ -131,6 +131,7 @@
 #include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCFGPrinter.h"
+#include "llvm/CodeGen/MachineCombiner.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCheckDebugify.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"

@@ -126,8 +126,7 @@ void X86CodeGenPassBuilder::addPreLegalizeMachineIR(
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
   if (X86EnableMachineCombinerPass) {
-    // TODO(boomanaiden154): Add the MachineCombinerPass here once it has been
-    // ported to the new pass manager.
+    addMachineFunctionPass(MachineCombinerPass(), PMW);
   }
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
 }
