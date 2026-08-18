@@ -812,3 +812,39 @@ to instruction memory, with the length specified by ``len``, which should be
 0-31 (1-32 chunks, units of 128 bytes).
 }];
 }
+
+def DocCatRegisterPinning : DocumentationCategory<"Register Pinning Builtins"> {
+  let Content = [{
+These builtins ask for a value to be held in a named register tuple. They exist
+for kernels whose performance depends on a hand-chosen register layout, such as
+a matrix-multiply accumulator that must stay in place across an unrolled loop.
+}];
+}
+
+def DocPinVGPR : Documentation {
+  let Category = DocCatRegisterPinning;
+  let Content = [{
+Returns ``value`` unchanged, having asked the register allocator to keep it in
+the VGPR tuple starting at ``reg``, which must be an integer constant. The
+value may be of any type occupying a whole number of 32-bit registers.
+
+This is a request, not a guarantee: a value the allocator cannot place there is
+placed elsewhere and the program stays correct. Which requests were met is not
+apparent from the source, so the compiler reports the ones it could not meet
+under ``-Rpass-missed=si-pin-regs``.
+
+Two things decide whether a request can be met. The tuple must be legal for the
+value's width and alignment, and it must be within the VGPR budget the kernel's
+occupancy allows. The value must also be pinned at the width it is used: pinning
+one wide value and then reading it back in pieces gives the pieces no place of
+their own, so pin each piece that an instruction consumes as a unit instead.
+}];
+}
+
+def DocPinAGPR : Documentation {
+  let Category = DocCatRegisterPinning;
+  let Content = [{
+As ``__builtin_amdgcn_pin_vgpr``, but names an AGPR tuple. On a target with no
+AGPR file the request is dropped and the value stays in a VGPR.
+}];
+}

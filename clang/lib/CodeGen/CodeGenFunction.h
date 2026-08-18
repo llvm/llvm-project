@@ -1554,6 +1554,11 @@ private:
   /// decls.
   DeclMapTy LocalDeclMap;
 
+  /// Return \p V wrapped with llvm.amdgcn.pin.{vgpr,agpr} asking for the tuple
+  /// starting at \p Reg, chunked into the widths the intrinsic has patterns
+  /// for. Used by the pin builtins.
+  llvm::Value *emitAMDGPUPin(llvm::Value *V, bool IsAGPR, unsigned Reg);
+
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
   llvm::DenseMap<const ParmVarDecl *, EHScopeStack::stable_iterator>

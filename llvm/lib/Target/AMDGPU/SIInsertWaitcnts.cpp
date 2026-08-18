@@ -3709,14 +3709,22 @@ bool SIInsertWaitcnts::run() {
     // Hardware entrypoints must begin with a specific sequence:
     //   S_MOV_B64 S[64:65], 0
     //   V_NOP
-    //   GLOBAL_PREFETCH_B8 V0, S[64:65] SCOPE:SCOPE_SE TH:TH_LOAD_RT
+    // The address is immaterial, but it still has to be one the hardware can
+    // translate. The saddr operand must therefore name a real SGPR pair: with
+    // NULL there, a global instruction takes its full 64-bit address from
+    // vaddr, which at an entrypoint means v[0:1] -- and only v0 is live-in, so
+    // the high half is whatever the previous wave left behind. That reliably
+    // faults on the first instruction of the kernel. Reading an undefined
+    // SGPR pair is safe by comparison: vaddr is then only a 32-bit offset, and
+    // v0 holds a workitem id, so the access stays near an address the wave was
+    // launched with.
     MachineBasicBlock::iterator I = EntryBB.begin();
     BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::S_MOV_B64),
             AMDGPU::SGPR64_SGPR65)
         .addImm(0);
     BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
     BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
-        .addReg(AMDGPU::SGPR64_SGPR65)
+        .addReg(AMDGPU::SGPR0_SGPR1, RegState::Undef)
         .addReg(AMDGPU::VGPR0, RegState::Undef)
         .addImm(0)
         .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);

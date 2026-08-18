@@ -45,6 +45,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
@@ -3049,6 +3050,52 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 
   assert(Src.isScalar() && "Can't emit an agg store with this method");
   EmitStoreOfScalar(Src.getScalarVal(), Dst, isInit);
+}
+
+llvm::Value *CodeGenFunction::emitAMDGPUPin(llvm::Value *V, bool IsAGPR,
+                                            unsigned Reg) {
+  llvm::Type *Ty = V->getType();
+  unsigned Bits = CGM.getDataLayout().getTypeSizeInBits(Ty);
+  if (Bits == 0 || (Bits % 32) != 0)
+    return V; // Only whole-dword values are pinnable.
+  unsigned Lanes = Bits / 32;
+
+  llvm::Intrinsic::ID IID = IsAGPR ? llvm::Intrinsic::amdgcn_pin_agpr
+                                   : llvm::Intrinsic::amdgcn_pin_vgpr;
+
+  // Patterns exist only for i32 widths 1/2/4/8/16 (float bases would need
+  // v1f32/v2f32, which have no pattern and crash isel), so bitcast to <N x i32>
+  // and decompose into those widths (e.g. 12 -> 8 + 4).
+  auto *VecTy = llvm::FixedVectorType::get(Int32Ty, Lanes);
+  llvm::Value *Vec = Builder.CreateBitCast(V, VecTy);
+
+  auto Pin = [&](llvm::Value *Chunk, unsigned RegNo) -> llvm::Value * {
+    llvm::Function *Fn = CGM.getIntrinsic(IID, {Chunk->getType()});
+    return Builder.CreateCall(Fn,
+                              {Chunk, llvm::ConstantInt::get(Int32Ty, RegNo)});
+  };
+  auto FloorWidth = [](unsigned L) -> unsigned {
+    for (unsigned W : {16u, 8u, 4u, 2u})
+      if (L >= W)
+        return W;
+    return 1;
+  };
+
+  for (unsigned Off = 0; Off < Lanes;) {
+    unsigned W = FloorWidth(Lanes - Off);
+    if (W == 1) {
+      llvm::Value *Idx = llvm::ConstantInt::get(Int32Ty, Off);
+      llvm::Value *Elt = Builder.CreateExtractElement(Vec, Idx);
+      Vec = Builder.CreateInsertElement(Vec, Pin(Elt, Reg + Off), Idx);
+    } else {
+      llvm::Value *Idx = llvm::ConstantInt::get(Int64Ty, Off);
+      llvm::Value *Sub = Builder.CreateExtractVector(
+          llvm::FixedVectorType::get(Int32Ty, W), Vec, Idx);
+      Vec = Builder.CreateInsertVector(VecTy, Vec, Pin(Sub, Reg + Off), Idx);
+    }
+    Off += W;
+  }
+  return Builder.CreateBitCast(Vec, Ty);
 }
 
 void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,

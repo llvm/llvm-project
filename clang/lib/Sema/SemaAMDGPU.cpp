@@ -181,6 +181,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
 
     return false;
   }
+  case AMDGPU::BI__builtin_amdgcn_pin_vgpr:
+    return checkPinCall(TheCall, /*IsAGPR=*/false);
+  case AMDGPU::BI__builtin_amdgcn_pin_agpr:
+    return checkPinCall(TheCall, /*IsAGPR=*/true);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
     return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
@@ -510,6 +514,40 @@ bool SemaAMDGPU::checkAVLoadStore(CallExpr *TheCall, bool IsStore) {
 
   Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
   return checkScopeAsInt(*this, Scope);
+}
+
+bool SemaAMDGPU::checkPinCall(CallExpr *TheCall, bool IsAGPR) {
+  if (SemaRef.checkArgCount(TheCall, 2))
+    return true;
+
+  // The pinned value keeps its type, so the call's own type is only known here.
+  // Set it even when a later check fails, to keep the expression well-formed.
+  Expr *Value = TheCall->getArg(0);
+  QualType Ty = Value->getType();
+  TheCall->setType(Ty);
+  if (Value->isTypeDependent() || TheCall->getArg(1)->isValueDependent())
+    return false;
+
+  std::string Name = getASTContext().BuiltinInfo.getQuotedName(
+      TheCall->getBuiltinCallee());
+
+  // The value is passed through as a single register-allocated value, which an
+  // aggregate is not.
+  if (!Ty->isScalarType() && !Ty->isVectorType())
+    return Diag(Value->getExprLoc(), diag::err_amdgcn_pin_invalid_type)
+           << Name << Ty << Value->getSourceRange();
+
+  // A register tuple holds whole registers, so a value that does not fill one
+  // has no placement to ask for.
+  uint64_t Bits = getASTContext().getTypeSize(Ty);
+  if (Bits == 0 || Bits % 32 != 0)
+    return Diag(Value->getExprLoc(), diag::err_amdgcn_pin_invalid_size)
+           << Name << Ty << Bits << Value->getSourceRange();
+
+  // Highest addressable register of each file. Whether a given target and
+  // occupancy can reach that far is settled in the backend, which degrades
+  // gracefully; rejecting it here would reject code that is merely aspirational.
+  return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, IsAGPR ? 255 : 1023);
 }
 
 bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
