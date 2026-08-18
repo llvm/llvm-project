@@ -21,8 +21,8 @@
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -324,7 +324,7 @@ class HeaderSearch {
   /// diagnostic, keyed by the spelling of the include that resolved to them.
   /// Since the set of shadowing candidates depends on the spelling, the same
   /// file has to be considered once per spelling it was found under.
-  llvm::StringMap<llvm::DenseSet<const FileEntry *>> ShadowCheckedHeaders;
+  llvm::StringMap<llvm::SmallPtrSet<const FileEntry *, 1>> ShadowCheckedHeaders;
 
   /// Collection mapping a framework or subframework
   /// name like "Carbon" to the Carbon.framework directory.
