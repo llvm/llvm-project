@@ -129,6 +129,7 @@ subroutine test_contained_component_same_dsa()
   use component_ref_types, only: nested_t
   type(nested_t) :: n
   integer :: i
+  !ERROR: 'n%pt%x' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
   !$acc parallel loop private(n%pt, n%pt%x)
   do i = 1, 10
     n%pt%x = real(i)
@@ -140,6 +141,7 @@ subroutine test_contained_component_same_dsa_child_first()
   use component_ref_types, only: nested_t
   type(nested_t) :: n
   integer :: i
+  !ERROR: 'n%pt' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
   !$acc parallel loop private(n%pt%x, n%pt)
   do i = 1, 10
     n%pt%x = real(i)
