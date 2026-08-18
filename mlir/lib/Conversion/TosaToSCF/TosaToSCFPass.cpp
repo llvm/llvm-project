@@ -34,7 +34,7 @@ struct TosaToSCF : public impl::TosaToSCFPassBase<TosaToSCF> {
 public:
   TosaToSCF(bool scatterHardening)
       : impl::TosaToSCFPassBase<TosaToSCF>(),
-        scatterHardening(scatterHardening){};
+        scatterHardening(scatterHardening) {};
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());

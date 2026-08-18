@@ -97,7 +97,7 @@ public:
   ScatterOpConverter(MLIRContext *context, bool scatterHardening,
                      PatternBenefit benefit = 1)
       : OpRewritePattern(context, benefit),
-        scatterHardening(scatterHardening){};
+        scatterHardening(scatterHardening) {};
 
   LogicalResult matchAndRewrite(tosa::ScatterOp scatter,
                                 PatternRewriter &rewriter) const final {

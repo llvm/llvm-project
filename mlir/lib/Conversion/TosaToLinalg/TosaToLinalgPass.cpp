@@ -41,7 +41,7 @@ struct TosaToLinalg : public impl::TosaToLinalgBase<TosaToLinalg> {
 public:
   TosaToLinalg(bool gatherHardening)
       : impl::TosaToLinalgBase<TosaToLinalg>(),
-        gatherHardening(gatherHardening){};
+        gatherHardening(gatherHardening) {};
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry

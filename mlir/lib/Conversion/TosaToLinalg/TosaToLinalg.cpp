@@ -2526,7 +2526,7 @@ public:
   GatherConverter(MLIRContext *context, bool gatherHardening,
                   PatternBenefit benefit = 1)
       : OpConversionPattern(context, benefit),
-        gatherHardening(gatherHardening){};
+        gatherHardening(gatherHardening) {};
 
   LogicalResult
   matchAndRewrite(tosa::GatherOp op, OpAdaptor adaptor,
