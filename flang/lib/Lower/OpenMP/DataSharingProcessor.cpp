@@ -13,6 +13,8 @@
 #include "DataSharingProcessor.h"
 
 #include "Utils.h"
+#include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
@@ -31,6 +33,29 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include <variant>
+
+namespace {
+static bool isWholeArraySection(const Fortran::lower::omp::Object &object) {
+  if (!object.ref())
+    return false;
+
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      Fortran::evaluate::ExtractDataRef(*object.ref());
+  if (!dataRef)
+    return false;
+
+  const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef)
+    return false;
+
+  return llvm::all_of(
+      arrayRef->subscript(), [](const Fortran::evaluate::Subscript &sub) {
+        const auto *triplet = std::get_if<Fortran::evaluate::Triplet>(&sub.u);
+        return triplet && !triplet->GetLower() && !triplet->GetUpper() &&
+               Fortran::evaluate::ToInt64(triplet->GetStride()) == 1;
+      });
+}
+} // namespace
 
 namespace Fortran {
 namespace lower {
@@ -264,6 +289,13 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
     return false;
   };
 
+  auto collectWholeArrayReductionSymbols = [&](const auto &reductionClause) {
+    const ObjectList &objects = std::get<ObjectList>(reductionClause.t);
+    for (const Object &object : objects)
+      if (object.sym() && isWholeArraySection(object))
+        wholeArrayReductionSymbols.insert(&object.sym()->GetUltimate());
+  };
+
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
@@ -295,6 +327,15 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       } else {
         collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
       }
+    } else if (const auto *inReductionClause =
+                   std::get_if<omp::clause::InReduction>(&clause.u)) {
+      collectWholeArrayReductionSymbols(*inReductionClause);
+    } else if (const auto *reductionClause =
+                   std::get_if<omp::clause::Reduction>(&clause.u)) {
+      collectWholeArrayReductionSymbols(*reductionClause);
+    } else if (const auto *taskReductionClause =
+                   std::get_if<omp::clause::TaskReduction>(&clause.u)) {
+      collectWholeArrayReductionSymbols(*taskReductionClause);
     }
   }
 
@@ -538,6 +579,12 @@ void DataSharingProcessor::collectPrivatizedSymbols(
       return false;
 
     if (collectImplicit) {
+      // A full-extent section is lowered through the same descriptor as its
+      // base array. Do not create a second implicit firstprivate descriptor;
+      // the reduction region argument must be the binding used in the body.
+      if (wholeArrayReductionSymbols.contains(&sym->GetUltimate()))
+        return false;
+
       // If we're a combined construct with a target region, implicit
       // firstprivate captures, should only belong to the target region
       // and not be added/captured by later directives. Parallel regions

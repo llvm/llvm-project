@@ -95,6 +95,8 @@ private:
   llvm::SmallVector<mlir::Value> loopIVs;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
+  // Base symbols of reduction objects written as full-extent sections.
+  llvm::SetVector<const semantics::Symbol *> wholeArrayReductionSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> conditionalLastPrivatizedSymbols;
