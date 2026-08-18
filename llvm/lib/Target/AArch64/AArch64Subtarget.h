@@ -72,6 +72,7 @@ protected:
   unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
   unsigned FixedLoadLatency = 0;
+  unsigned MinFDivForCombining = 3;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
@@ -312,6 +313,8 @@ public:
   }
 
   unsigned getFixedLoadLatency() const { return FixedLoadLatency; }
+
+  unsigned getMinFDivForCombining() const { return MinFDivForCombining; }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
