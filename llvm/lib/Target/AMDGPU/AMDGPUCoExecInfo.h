@@ -346,6 +346,16 @@ inline CoExecInfo CoExecInfo::build(unsigned TotalWindow, const char *Pattern) {
   return Info;
 }
 
+/// Apply \p ExtraBits to every slot in \p Info starting with \p StartIndex
+/// Used by MFMA co-exec rules, because MFMA co-exec slots are incremental, i.e.
+/// for every slot N it supports all instructions which were supported by the
+/// previous slot N-1 and may support something extra.
+inline void AllowCoExec(CoExecInfo &Info, CoExecMaskT ExtraBits,
+                        unsigned StartIndex) {
+  for (unsigned Index = StartIndex; Index < Info.TotalWindow; ++Index)
+    Info.Slots[Index].Mask |= ExtraBits;
+}
+
 /// Get co-execution info for a gfx950 MFMA instruction.
 /// The occupancy (cycles until the next MFMA may issue) is expressed as the
 /// first stage carrying the WMMA bit.
@@ -360,15 +370,6 @@ inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
   // but perhaps the pattern should be instead dynamically reconstructed when
   // needed by printing specific slots in full instead of a key for them.
   Res.Pattern = "undefinedundefinedundefinedundefined";
-
-  // MFMA co-exec slots are incremental, i.e. for every slot N it supports all
-  // instructions which were supported by the previous slot N-1 and may support
-  // something extra.
-  auto AllowCoExec = [](CoExecInfo &Info, CoExecMaskT ExtraBits,
-                        unsigned StartIndex) {
-    for (unsigned Index = StartIndex; Index < Info.TotalWindow; ++Index)
-      Info.Slots[Index].Mask |= ExtraBits;
-  };
 
   switch (MI.getOpcode()) {
   // 4-cycle occupancy, 8-cycle window.
