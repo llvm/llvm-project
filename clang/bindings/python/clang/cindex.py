@@ -1456,8 +1456,11 @@ class CursorKind(BaseEnumeration):
     # OpenMP split directive.
     OMP_SPLIT_DIRECTIVE = 312
 
+    # OpenMP ordered-blockassoc directive.
+    OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE = 313
+
     # OpenMP flatten directive.
-    OMP_FLATTEN_DIRECTIVE = 313
+    OMP_FLATTEN_DIRECTIVE = 314
 
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320

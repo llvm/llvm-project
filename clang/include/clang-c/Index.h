@@ -2170,9 +2170,13 @@ enum CXCursorKind {
    */
   CXCursor_OMPSplitDirective = 312,
 
+  /** OpenMP ordered-blockassoc directive.
+   */
+  CXCursor_OMPOrderedBlockAssocDirective = 313,
+
   /** OpenMP flatten directive.
    */
-  CXCursor_OMPFlattenDirective = 313,
+  CXCursor_OMPFlattenDirective = 314,
 
   /** OpenACC Compute Construct.
    */
