@@ -109,6 +109,15 @@ def remark_module_validation : Remark<
   "validating %0 input files in module '%1' from '%2'">,
   ShowInSystemHeader,
   InGroup<ModuleValidation>;
+def remark_module_directory_dep_changed
+    : Remark<"module '%0' is out of date because the build system reported "
+             "that the contents of directory '%1' changed">,
+      ShowInSystemHeader,
+      InGroup<ModuleValidation>;
+def err_module_directory_dep_changed
+    : Error<"module '%0' cannot be reused because the build system reported "
+            "that the contents of directory '%1' changed">,
+      ShowInSystemHeader, DefaultFatal;
 def remark_module_check_relocation
     : Remark<"checking if module '%0' from '%1' has relocated">,
       ShowInSystemHeader,

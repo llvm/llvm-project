@@ -22,6 +22,29 @@
 using namespace clang;
 using namespace dependencies;
 
+void ModuleCacheEntries::addInvalidatedDirectories(
+    llvm::ArrayRef<std::string> Dirs) {
+  if (Dirs.empty())
+    return;
+  bool Added = false;
+  {
+    std::lock_guard<std::mutex> Lock(InvalidatedDirsMutex);
+    for (StringRef Dir : Dirs) {
+      SmallString<256> Canonical(Dir);
+      llvm::sys::fs::make_absolute(Canonical);
+      llvm::sys::path::remove_dots(Canonical, /*remove_dot_dot=*/true);
+      Added |= InvalidatedDirs.insert(Canonical).second;
+    }
+  }
+  if (Added)
+    AnyInvalidatedDirs.store(true, std::memory_order_release);
+}
+
+bool ModuleCacheEntries::isDirectoryInvalidated(StringRef Directory) const {
+  std::lock_guard<std::mutex> Lock(InvalidatedDirsMutex);
+  return InvalidatedDirs.contains(Directory);
+}
+
 void ModuleCacheEntries::flush() {
   auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   for (auto &[Path, Entry] : Map) {
@@ -132,6 +155,23 @@ public:
 
     Logger.log() << "timestamp_write: " << Filename;
     Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
+  }
+
+  bool needsDirectoryValidation(StringRef Filename) override {
+    if (!Entries.hasInvalidatedDirectories())
+      return false; // The build system reported nothing changed.
+    return !getOrCreateEntry(Filename).DirectoriesValidated.load(
+        std::memory_order_acquire);
+  }
+
+  bool isDirectoryInvalidated(StringRef Directory) override {
+    return Entries.isDirectoryInvalidated(Directory);
+  }
+
+  void markDirectoriesValidated(StringRef Filename) override {
+    if (Entries.hasInvalidatedDirectories())
+      getOrCreateEntry(Filename).DirectoriesValidated.store(
+          true, std::memory_order_release);
   }
 
   void maybePrune(StringRef Path, time_t PruneInterval,

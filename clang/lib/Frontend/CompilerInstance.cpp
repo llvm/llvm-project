@@ -1436,11 +1436,14 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
     bool IsSystem = isSystem(SLoc.getFile().getFileCharacteristic());
 
     // Use the module map where this module resides.
-    return cloneForModuleCompileImpl(
+    auto Instance = cloneForModuleCompileImpl(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
         std::move(ThreadSafeConfig));
+    Instance->setInheritedDirectoryDependencies(
+        Module->getDirectoryDependencies());
+    return Instance;
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1459,6 +1462,12 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
       std::move(ThreadSafeConfig));
+  // This instance builds from the module map text printed above rather than by
+  // repeating the inference, so directories the inference enumerated (a
+  // framework's Frameworks subdirectory) are only known here. Hand them over so
+  // they reach the module's AST file.
+  Instance->setInheritedDirectoryDependencies(
+      Module->getDirectoryDependencies());
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
@@ -1555,6 +1564,10 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
           .ModulesValidateOncePerBuildSession) {
     ImportingInstance.getModuleCache().updateModuleTimestamp(ModuleFileName);
   }
+
+  // This module was just built, so it reflects the current contents of every
+  // directory it enumerated.
+  ImportingInstance.getModuleCache().markDirectoriesValidated(ModuleFileName);
 
   // This isn't strictly necessary, but it's more efficient to extract the AST
   // file (which may be wrapped in an object file) now rather than doing so

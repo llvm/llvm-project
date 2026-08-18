@@ -238,6 +238,12 @@ features cannot lower the translation-unit ABI level;
 
 - Added support for the `__builtin_strlcat` builtin.
 
+- Added support for efficiently detecting when adding a header file to the file
+  system should invalidate a module with an umbrella. `clang-scan-deps` reports
+  such paths via `directory-deps` in its `experimental-full` output. Build
+  systems can watch these directories and pass invalidated ones to
+  `clang-scan-deps` via `-invalidated-directory=` in future incremental scans.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
