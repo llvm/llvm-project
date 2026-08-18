@@ -1876,6 +1876,7 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   Value *V = U.get();
   auto *CxtI = cast<Instruction>(U.getUser());
   ValueLatticeElement VL = getValueInBlock(V, CxtI->getParent(), CxtI);
+  BasicBlock *LastQueriedBB = CxtI->getParent();
 
   // Check whether the only (possibly transitive) use of the value is in a
   // position where V can be constrained by a select or branch condition.
@@ -1885,6 +1886,17 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
     std::optional<ValueLatticeElement> CondVal;
     auto *CurrI = cast<Instruction>(CurrU->getUser());
+
+    // All instructions on the one-use chain between the original use and CurrI
+    // are speculatable and have a single user each, so they could be sunk to
+    // CurrI. This means information that holds at CurrI also holds for the
+    // original use and can be used to refine it. Skip phis, as V may not
+    // dominate their block.
+    if (I != 0 && !isa<PHINode>(CurrI) && CurrI->getParent() != LastQueriedBB) {
+      LastQueriedBB = CurrI->getParent();
+      VL = VL.intersect(getValueInBlock(V, LastQueriedBB, CurrI));
+    }
+
     if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
       // If the value is undef, a different value may be chosen in
       // the select condition and at use.

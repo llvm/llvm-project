@@ -23,6 +23,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -1709,45 +1710,6 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
   });
 }
 
-TEST_F(ScalarEvolutionsTest, ForgetLoopPreservesUnrelatedCachesInLoopBody) {
-  LLVMContext C;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M =
-      parseAssemblyString("define void @foo(i32 %n) { "
-                          "entry: "
-                          "  br label %loop "
-                          "loop: "
-                          "  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] "
-                          "  %iv.next = add nsw i32 %iv, 1 "
-                          "  %cmp = icmp slt i32 %iv, %n "
-                          "  br i1 %cmp, label %loop, label %exit "
-                          "exit: "
-                          "  ret void "
-                          "} ",
-                          Err, C);
-
-  ASSERT_TRUE(M && "Could not parse module?");
-  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
-
-  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *IV = getInstructionByName(F, "iv");
-    auto *Cmp = getInstructionByName(F, "cmp");
-
-    const SCEV *IVScev = SE.getSCEV(IV);
-    EXPECT_NE(IVScev, nullptr);
-    EXPECT_TRUE(isa<SCEVAddRecExpr>(IVScev));
-
-    const SCEV *CmpScev = SE.getSCEV(Cmp);
-    EXPECT_NE(CmpScev, nullptr);
-    EXPECT_TRUE(isa<SCEVUnknown>(CmpScev));
-
-    Loop *L = *LI.begin();
-    SE.forgetLoop(L);
-    EXPECT_EQ(SE.getExistingSCEV(IV), nullptr);
-    EXPECT_EQ(SE.getExistingSCEV(Cmp), CmpScev);
-  });
-}
-
 TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
   // Regression test for a case where caching of equivalent values caused the
   // comparator to get inconsistent.
@@ -2100,6 +2062,67 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
       EXPECT_EQ(NewLHS, A);
       EXPECT_EQ(NewRHS, B);
     }
+  });
+}
+
+// An operand of a SCEV expression is a SCEVUse and may carry use-specific
+// no-wrap flags. Check that SCEV::print renders the operands as uses, so such a
+// flag is visible in the printout of the expression using it.
+TEST_F(ScalarEvolutionsTest, PrintUseFlagsOfOperands) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b) {
+      entry:
+        br label %loop
+
+      loop:
+        %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+        %iv.next = add i32 %iv, 1
+        %c = icmp ult i32 %iv.next, 10
+        br i1 %c, label %loop, label %exit
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto Rendered = [](SCEVUse U) {
+      std::string S;
+      raw_string_ostream OS(S);
+      OS << U;
+      return S;
+    };
+
+    SCEVUse A = SE.getSCEV(getArgByName(F, "a"));
+    SCEVUse B = SE.getSCEV(getArgByName(F, "b"));
+    const Loop *L = LI.getLoopFor(getInstructionByName(F, "iv")->getParent());
+
+    // Uses of (%a + %b) and (4 + %a) carrying use-specific no-wrap flags.
+    SCEVUse Add = SE.getAddExpr(A, B);
+    SCEVUse Add4 = SE.getAddExpr(A, SE.getConstant(APInt(32, 4)));
+    SCEVUse NUWAdd(Add, SCEV::FlagNUW);
+    SCEVUse NSWAdd4(Add4, SCEV::FlagNSW);
+    EXPECT_EQ(Rendered(Add), "(%a + %b)");
+    EXPECT_EQ(Rendered(Add4), "(4 + %a)");
+    EXPECT_EQ(Rendered(NUWAdd), "(%a + %b)<u nuw>");
+    EXPECT_EQ(Rendered(NSWAdd4), "(4 + %a)<u nsw>");
+
+    SCEVUse Max = SE.getUMaxExpr(NUWAdd, NSWAdd4);
+    EXPECT_EQ(Rendered(Max), "((4 + %a)<u nsw> umax (%a + %b)<u nuw>)");
+
+    SCEVUse UDiv = SE.getUDivExpr(NUWAdd, NSWAdd4);
+    EXPECT_EQ(Rendered(UDiv), "((%a + %b)<u nuw> /u (4 + %a)<u nsw>)");
+
+    SCEVUse AR = SE.getAddRecExpr(NUWAdd, NSWAdd4, L, SCEV::FlagAnyWrap);
+    EXPECT_EQ(Rendered(AR), "{(%a + %b)<u nuw>,+,(4 + %a)<u nsw>}<%loop>");
   });
 }
 

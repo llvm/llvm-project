@@ -445,10 +445,10 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
     out.try_emplace(key_utf8, value.GetFloatValue());
     break;
   case lldb::eStructuredDataTypeUnsignedInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue((uint64_t)0));
+    out.try_emplace(key_utf8, value.GetUnsignedIntegerValue());
     break;
   case lldb::eStructuredDataTypeSignedInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue((int64_t)0));
+    out.try_emplace(key_utf8, value.GetSignedIntegerValue());
     break;
   case lldb::eStructuredDataTypeArray: {
     lldb::SBStream contents;

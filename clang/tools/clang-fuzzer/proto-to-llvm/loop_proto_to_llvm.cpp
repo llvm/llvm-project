@@ -157,12 +157,13 @@ void NestedLoopToString(std::ostream &os, const LoopFunction &x) {
   }
   os << "%i_ct_new = add i64 %inner_ct, 1\n"
      << "%jmp_inner = icmp eq i64 %i_ct_new, %s\n"
-     << "br i1 %jmp_inner, label %outer_loop, label %inner_loop, !llvm.loop !0\n"
+     << "br i1 %jmp_inner, label %outer_loop, label %inner_loop, !llvm.loop "
+        "!0\n"
      << "end:\n"
      << "ret void\n"
      << "}\n"
      << "!0 = distinct !{!0, !1, !2}\n"
-     << "!1 = !{!\"llvm.loop.vectorize.enable\", i1 true}\n"
+     << "!1 = !{!\"llvm.loop.vectorize.enable\"}\n"
      << "!2 = !{!\"llvm.loop.vectorize.width\", i32 " << kArraySize << "}\n";
 }
 void SingleLoopToString(std::ostream &os, const LoopFunction &x) {
@@ -176,12 +177,11 @@ void SingleLoopToString(std::ostream &os, const LoopFunction &x) {
      << "ret void\n"
      << "loop:\n"
      << "%outer_ct = phi i64 [ %ctnew, %loop ], [ 0, %start ]\n"
-     << x.outer_statements()
-     << "%ctnew = add i64 %outer_ct, 1\n"
+     << x.outer_statements() << "%ctnew = add i64 %outer_ct, 1\n"
      << "%j = icmp eq i64 %ctnew, %s\n"
      << "br i1 %j, label %end, label %loop, !llvm.loop !0\n}\n"
      << "!0 = distinct !{!0, !1, !2}\n"
-     << "!1 = !{!\"llvm.loop.vectorize.enable\", i1 true}\n"
+     << "!1 = !{!\"llvm.loop.vectorize.enable\"}\n"
      << "!2 = !{!\"llvm.loop.vectorize.width\", i32 " << kArraySize << "}\n";
 }
 std::ostream &operator<<(std::ostream &os, const LoopFunction &x) {

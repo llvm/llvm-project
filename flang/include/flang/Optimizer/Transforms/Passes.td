@@ -76,6 +76,22 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
+def SelectOpsConversion : Pass<"fir-select-ops-conversion", "::mlir::func::FuncOp"> {
+  let summary = "Lower fir.select / fir.select_case / fir.select_rank to cf.*";
+
+  let description = [{
+    Lowers FIR multi-way branch terminators to control-flow dialect ops
+    (`cf.switch`, `cf.cond_br`, `cf.br`), keeping the same CFG shape (block
+    count, branch directions, destination operand forwarding).
+
+    `fir.select_type` is intentionally NOT handled here since it's already
+    handled by `PolymorphicOpConversion`.
+  }];
+
+  let dependentDialects = ["mlir::arith::ArithDialect",
+      "mlir::cf::ControlFlowDialect", "fir::FIROpsDialect"];
+}
+
 def FIRToSCFPass : Pass<"fir-to-scf"> {
   let summary = "Convert FIR structured control flow ops to SCF dialect.";
   let description = [{
@@ -108,32 +124,6 @@ def AnnotateConstantOperands : Pass<"annotate-constant"> {
   }];
   let constructor = "::fir::createAnnotateConstantOperandsPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
-}
-
-def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
-  let summary = "Convert array value operations to memory operations.";
-  let description = [{
-    Transform the set of array value primitives to a memory-based array
-    representation.
-
-    The Ops `array_load`, `array_store`, `array_fetch`, and `array_update` are
-    used to manage abstract aggregate array values. A simple analysis is done
-    to determine if there are potential dependences between these operations.
-    If not, these array operations can be lowered to work directly on the memory
-    representation. If there is a potential conflict, a temporary is created
-    along with appropriate copy-in/copy-out operations. Here, a more refined
-    analysis might be deployed, such as using the affine framework.
-
-    This pass is required before code gen to the LLVM IR dialect.
-  }];
-  let constructor = "::fir::createArrayValueCopyPass()";
-  let dependentDialects = [ "fir::FIROpsDialect" ];
-  let options = [
-    Option<"optimizeConflicts", "optimize-conflicts", "bool",
-           /*default=*/"false",
-           "do more detailed conflict analysis to reduce the number "
-           "of temporaries">
-  ];
 }
 
 def CharacterConversion : Pass<"character-conversion"> {
@@ -411,8 +401,8 @@ def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
-    This pass breaks up the lowering of operations on polymorphic types by 
-    introducing an intermediate FIR level that simplifies code geneation. 
+    This pass breaks up the lowering of operations on polymorphic types by
+    introducing an intermediate FIR level that simplifies code generation.
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
@@ -436,6 +426,7 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
      Set an attribute for the vscale range on functions, to allow scalable
      vector operations to be used on processors with variable vector length.
   }];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
   let options = [Option<"vscaleMin", "vscale-min", "unsigned", /*default=*/"1",
                         "vector scale minimum value. Defaults to \"1\"">,
                  Option<"vscaleMax", "vscale-max", "unsigned", /*default=*/"0",
@@ -538,6 +529,18 @@ def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
 def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
   let summary = "Convert allocation related CUF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect"];
+  let options = [
+    Option<"descriptorAllocFunction", "descriptor-alloc-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to allocate CUDA Fortran descriptors. "
+           "Must have the same signature as CUFAllocDescriptor. "
+           "Defaults to CUFAllocDescriptor.">,
+    Option<"descriptorFreeFunction", "descriptor-free-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to free CUDA Fortran descriptors. "
+           "Must have the same signature as CUFFreeDescriptor. "
+           "Defaults to CUFFreeDescriptor.">
+  ];
 }
 
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {

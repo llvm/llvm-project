@@ -11,9 +11,7 @@ target triple = "aarch64-none-elf"
 
 define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK-LABEL: 'fmaxnum_reduction_f32'
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i32 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK:  Cost of 0 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
@@ -42,9 +40,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP12]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK:  Cost of 0 for VF 2: IR %max.next.lcssa = phi float [ %max.next, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i32 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 1 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
@@ -94,9 +90,7 @@ exit:
 
 define double @fmaxnum_reduction_f64(double %base, i64 %n) {
 ; CHECK-LABEL: 'fmaxnum_reduction_f64'
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK:  Cost of 0 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to double
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>

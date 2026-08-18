@@ -79,6 +79,8 @@ public:
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBCommandReturnObject> result_up);
   static PythonObject ToSWIGWrapper(lldb::ValueObjectSP value_sp);
+  static PythonObject ToSWIGWrapper(lldb::ValueObjectSP value_sp,
+                                    bool use_synthetic);
   static PythonObject ToSWIGWrapper(lldb::TargetSP target_sp);
   static PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp);
   static PythonObject ToSWIGWrapper(lldb::ModuleSP module_sp);
@@ -139,30 +141,12 @@ public:
       const lldb::TypeSummaryOptionsSP &options_sp, std::string &retval);
 
   static python::PythonObject
-  LLDBSwigPythonCreateSyntheticProvider(const char *python_class_name,
-                                        const char *session_dictionary_name,
-                                        const lldb::ValueObjectSP &valobj_sp);
-
-  static size_t LLDBSwigPython_CalculateNumChildren(PyObject *implementor,
-                                                    uint32_t max);
-
-  static PyObject *LLDBSwigPython_GetChildAtIndex(PyObject *implementor,
-                                                  uint32_t idx);
-
-  static uint32_t
-  LLDBSwigPython_GetIndexOfChildWithName(PyObject *implementor,
-                                         const char *child_name);
+  LLDBSwigPythonCreateCommandObject(const char *python_class_name,
+                                    const char *session_dictionary_name,
+                                    lldb::DebuggerSP debugger_sp);
 
   static lldb::ValueObjectSP
   LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data);
-
-  static bool LLDBSwigPython_UpdateSynthProviderInstance(PyObject *implementor);
-
-  static bool
-  LLDBSwigPython_MightHaveChildrenSynthProviderInstance(PyObject *implementor);
-
-  static PyObject *
-  LLDBSwigPython_GetValueSynthProviderInstance(PyObject *implementor);
 
   static bool
   LLDBSwigPythonCallCommand(const char *python_function_name,

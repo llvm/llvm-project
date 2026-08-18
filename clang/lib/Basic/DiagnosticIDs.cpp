@@ -173,6 +173,7 @@ struct StaticDiagInfoRec {
 VALIDATE_DIAG_SIZE(COMMON)
 VALIDATE_DIAG_SIZE(DRIVER)
 VALIDATE_DIAG_SIZE(FRONTEND)
+VALIDATE_DIAG_SIZE(CODEGEN)
 VALIDATE_DIAG_SIZE(SERIALIZATION)
 VALIDATE_DIAG_SIZE(LEX)
 VALIDATE_DIAG_SIZE(PARSE)
@@ -207,6 +208,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
+#include "clang/Basic/DiagnosticCodeGenKinds.inc"
 #include "clang/Basic/DiagnosticSerializationKinds.inc"
 #include "clang/Basic/DiagnosticLexKinds.inc"
 #include "clang/Basic/DiagnosticParseKinds.inc"
@@ -251,7 +253,8 @@ static const StaticDiagInfoRec *GetDiagInfo(unsigned DiagID) {
   }
 CATEGORY(DRIVER, COMMON)
 CATEGORY(FRONTEND, DRIVER)
-CATEGORY(SERIALIZATION, FRONTEND)
+CATEGORY(CODEGEN, FRONTEND)
+CATEGORY(SERIALIZATION, CODEGEN)
 CATEGORY(LEX, SERIALIZATION)
 CATEGORY(PARSE, LEX)
 CATEGORY(AST, PARSE)

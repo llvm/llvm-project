@@ -35,7 +35,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-if (NOT LLVM_USE_SANITIZER)
+if(NOT LLVM_USE_SANITIZER)
   add_libc_test(
     mprotect_test
     SUITE
@@ -59,7 +59,7 @@ add_libc_test(
   SUITE
     libc_sys_mman_unittests
   SRCS
-  madvise_test.cpp
+    madvise_test.cpp
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
@@ -74,7 +74,7 @@ add_libc_test(
 # Disable sanitizers for pkey_test.
 # This test intentionally triggers segfaults to verify pkey_mprotect behavior,
 # and sanitizers register signal handlers that interfere with death testing.
-if (NOT LLVM_USE_SANITIZER)
+if(NOT LLVM_USE_SANITIZER)
   add_libc_test(
     pkey_test
     SUITE
@@ -103,7 +103,7 @@ add_libc_test(
   SUITE
     libc_sys_mman_unittests
   SRCS
-  posix_madvise_test.cpp
+    posix_madvise_test.cpp
   DEPENDS
     libc.hdr.sys_mman_macros
     libc.include.sys_mman
@@ -192,25 +192,25 @@ if(CMAKE_CROSSCOMPILING_EMULATOR)
     message(STATUS "Skipping remap_file_pages_test under emulator.")
   endif()
 else()
-add_libc_test(
-  remap_file_pages_test
-  SUITE
-    libc_sys_mman_unittests
-  SRCS
-    remap_file_pages_test.cpp
-  DEPENDS
-    libc.hdr.sys_mman_macros
-    libc.hdr.sys_stat_macros
-    libc.test.UnitTest.ErrnoCheckingTest
-    libc.test.UnitTest.ErrnoSetterMatcher
-    libc.src.sys.mman.remap_file_pages
-    libc.src.errno.errno
-    libc.src.sys.mman.mmap
-    libc.src.sys.mman.munmap
-    libc.src.fcntl.open
-    libc.src.unistd.close
-    libc.src.unistd.sysconf
-)
+  add_libc_test(
+    remap_file_pages_test
+    SUITE
+      libc_sys_mman_unittests
+    SRCS
+      remap_file_pages_test.cpp
+    DEPENDS
+      libc.hdr.sys_mman_macros
+      libc.hdr.sys_stat_macros
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.src.sys.mman.remap_file_pages
+      libc.src.errno.errno
+      libc.src.sys.mman.mmap
+      libc.src.sys.mman.munmap
+      libc.src.fcntl.open
+      libc.src.unistd.close
+      libc.src.unistd.sysconf
+  )
 endif()
 
 add_libc_test(

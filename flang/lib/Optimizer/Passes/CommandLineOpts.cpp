@@ -61,6 +61,22 @@ cl::opt<bool> useOldAliasTags(
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
 EnableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
+EnableOption(AllocationPlacement, "allocation-placement",
+             "unified array allocation placement (experimental; replaces "
+             "stack-arrays and memory-allocation-opt)");
+
+cl::opt<std::size_t> allocationPlacementSmallArraySize(
+    "allocation-placement-small-array-size",
+    cl::desc("constant-size arrays up to <size> bytes are placed on the stack "
+             "by the allocation-placement pass"),
+    cl::init(64), cl::Hidden);
+
+cl::opt<std::size_t> allocationPlacementStackLimit(
+    "allocation-placement-stack-limit",
+    cl::desc(
+        "per-function budget in bytes for small arrays placed on the stack "
+        "by the allocation-placement pass"),
+    cl::init(4ull * 1024 * 1024), cl::Hidden);
 
 /// CodeGen Passes
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");

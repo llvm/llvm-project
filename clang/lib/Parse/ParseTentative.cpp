@@ -174,7 +174,7 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
   case tok::kw_typeof_unqual:
   case tok::kw___attribute:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   {
     ConsumeToken();
     if (Tok.isNot(tok::l_paren))
@@ -1144,8 +1144,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
                                      BracedCastResult, InvalidAsDeclSpec);
 
   case tok::kw_auto: {
-    if (!getLangOpts().CPlusPlus23)
-      return TPResult::True;
     if (NextToken().is(tok::l_brace))
       return TPResult::False;
     if (NextToken().is(tok::l_paren))
@@ -1550,7 +1548,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
     return TPResult::True;
 
   // C11 _Alignas
@@ -1594,7 +1592,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   case tok::kw_typeof:
   case tok::kw_typeof_unqual:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
     return true;
 
     // elaborated-type-specifier

@@ -290,15 +290,6 @@ clang_tidy_library(
 )
 
 clang_tidy_library(
-    name = "zircon",
-    deps = [
-        ":fuchsia",
-        ":lib",
-        ":utils",
-    ],
-)
-
-clang_tidy_library(
     name = "cppcoreguidelines",
     deps = [
         ":bugprone",
@@ -376,7 +367,6 @@ CHECKS = [
     ":performance",
     ":portability",
     ":readability",
-    ":zircon",
 ] + select({
     ":static_analyzer_enabled": [":mpi"],
     "//conditions:default": [],

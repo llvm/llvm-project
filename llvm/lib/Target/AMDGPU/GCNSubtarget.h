@@ -218,12 +218,6 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool supportsWGP() const {
-    if (HasGFX1250Insts)
-      return false;
-    return getGeneration() >= GFX10;
-  }
-
   bool hasHWFP64() const { return HasFP64; }
 
   bool hasAddr64() const {
@@ -584,6 +578,12 @@ public:
   // if also at the end of the allocation block.
   bool hasShift64HighRegBug() const { return HasGFX90AInsts; }
 
+  // v_dot2c_f32_f16 unconditionally flushes f16 subnormal inputs to zero
+  // regardless of the MODE register, unlike v_fma_mix_f32 which respects it.
+  bool dot2UnconditionalFlush() const {
+    return HasGFX90AInsts && !HasGFX940Insts;
+  }
+
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
   bool hasTransForwardingHazard() const { return HasGFX940Insts; }
@@ -754,6 +754,14 @@ public:
   bool hasCondSubInsts() const { return HasGFX12Insts; }
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
+
+  bool hasAnyPackedFP32Ops() const {
+    return hasPackedFP32Ops() || hasPackedFP32SingleSGPROps();
+  };
+
+  bool hasAnyPackedFP64Ops() const { return hasPackedFP64SingleSGPROps(); };
+
+  bool hasAnyPackedU64Ops() const { return hasPackedU64SingleSGPROps(); };
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

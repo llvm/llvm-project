@@ -149,10 +149,18 @@ class Builder:
             "xcrun clang": "xcrun clang++",
         }
         # Determine the C++ compiler based on the given compiler path/command.
-        cxx_type = cxx_types.get(compiler)
-        if cxx_type is None:
+        try:
+            cxx_type = cxx_types[compiler]
+        except KeyError:
             # If that did not work, then use the inferred cc_type.
-            cxx_type = cxx_types.get(cc_type, cxx_type)
+            try:
+                cxx_type = cxx_types[cc_type]
+            except KeyError:
+                err = "Could not infer C++ compiler name from "
+                if compiler is not None:
+                    err += f'compiler name "{compiler}" or '
+                err += f'compiler type "{cc_type}"'
+                raise RuntimeError(err)
 
         cc_dir = cc_path.parent
 
@@ -208,15 +216,6 @@ class Builder:
             "CC_TYPE=%s" % cc_type,
             "CXX=%s" % cxx,
         ] + utils
-
-    def getSDKRootSpec(self):
-        """
-        Helper function to return the key-value string to specify the SDK root
-        used for the make system.
-        """
-        if configuration.sdkroot:
-            return ["SDKROOT={}".format(configuration.sdkroot)]
-        return []
 
     def getModuleCacheSpec(self):
         """
@@ -302,7 +301,6 @@ class Builder:
             self.getTripleSpec(),
             self.getToolchainSpec(compiler),
             self.getExtraMakeArgs(),
-            self.getSDKRootSpec(),
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
             self.getLLDBObjRoot(),
