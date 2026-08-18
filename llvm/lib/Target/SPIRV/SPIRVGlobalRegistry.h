@@ -477,8 +477,6 @@ private:
   SPIRVTypeInst getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
                                SPIRV::FPEncoding::FPEncoding FPEncode);
 
-  SPIRVTypeInst getOpTypeVoid(MachineIRBuilder &MIRBuilder);
-
   SPIRVTypeInst getOpTypeVectorImpl(uint32_t NumElems, SPIRVTypeInst ElemType,
                                     MachineIRBuilder &MIRBuilder,
                                     bool IsLongVectorEXT = false);
