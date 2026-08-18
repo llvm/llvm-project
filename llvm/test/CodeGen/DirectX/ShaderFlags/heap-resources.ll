@@ -1,9 +1,11 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
 ; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 
-; This test makes sure that the shader flags 'Resource descriptor heap indexing'
-; is set when the shader uses CreateHandleFromHeap instruction on a resource
-; descriptor heap.
+; This test makes sure that the shader flag 'Resource descriptor heap indexing'
+; is set when the shader uses CreateHandleFromHeap instruction to get a resource
+; from a resource descriptor heap, and that the shader flag `Sampler descriptor
+; heap indexing` is set when the shader uses the same instruction to get a sampler
+; from a sampler descriptor heap.
 
 target triple = "dxil-pc-shadermodel6.6-library"
 
@@ -24,7 +26,7 @@ define void @test_1() "hlsl.export" {
 
 ; CHECK: Function test_2 : 0x80000000
 define void @test_2() "hlsl.export" {
-  ; SamplerState Samp = ResourceDescriptorHeap[100];
+  ; SamplerState Samp = SamplerDescriptorHeap[100];
   %samp = call target("dx.Sampler", 0)
               @llvm.dx.resource.handlefromheap.tdx.Sampler_0(i32 100, i1 true)
   ret void
