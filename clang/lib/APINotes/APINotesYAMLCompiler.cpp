@@ -1240,11 +1240,8 @@ public:
 
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      if (WhereSelector->Parameters || WhereSelector->Object)
-        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereSelector, MI,
-                            SwiftVersion);
-      else
-        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
+      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion,
+                          *WhereSelector);
     }
 
     // Convert nested tags.
@@ -1341,16 +1338,8 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      if (WhereSelector->Parameters) {
-        llvm::SmallVector<llvm::StringRef, 4> ParameterRefs;
-        ParameterRefs.reserve(WhereSelector->Parameters->size());
-        for (const std::string &Parameter : *WhereSelector->Parameters)
-          ParameterRefs.push_back(Parameter);
-        Writer.addGlobalFunction(Ctx, Function.Name, ParameterRefs, GFI,
-                                 SwiftVersion);
-      } else {
-        Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
-      }
+      Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion,
+                               *WhereSelector);
     }
 
     // Write all enumerators.
