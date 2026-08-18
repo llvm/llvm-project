@@ -26,7 +26,6 @@ MCAsmInfoGOFF::MCAsmInfoGOFF(const MCTargetOptions &Options)
 }
 
 void MCAsmInfoGOFF::printSwitchToSection(const MCSection &, uint32_t,
-                                         const Triple &,
-                                         raw_ostream &) const {
+                                         const Triple &, raw_ostream &) const {
   llvm_unreachable("GOFF section switching is handled by the HLASM streamer");
 }
