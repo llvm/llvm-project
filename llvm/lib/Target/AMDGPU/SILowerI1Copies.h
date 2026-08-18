@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 
 namespace llvm {
+class MachineIDFSSAUpdater;
 namespace AMDGPU {
 /// Incoming for lane mask phi as machine instruction, incoming register \p Reg
 /// and incoming block \p Block are taken from machine instruction.
@@ -60,6 +61,15 @@ protected:
 public:
   bool lowerPhis();
   bool isConstantLaneMask(Register Reg, bool &Val) const;
+
+  /// Merge the \p Incomings lane masks into \p DstReg, the value owned by
+  /// \p MBB. Builds the per-predecessor merges and leaves \p SSAUpdater
+  /// calculated so the caller can query the merged value with
+  /// getValueInMiddleOfBlock. \p Incomings is sorted and its UpdatedReg fields
+  /// are filled in.
+  void mergeIncomingLaneMasks(Register DstReg, MachineBasicBlock &MBB,
+                              SmallVectorImpl<Incoming> &Incomings,
+                              MachineIDFSSAUpdater &SSAUpdater);
   MachineBasicBlock::iterator
   getSaluInsertionAtEnd(MachineBasicBlock &MBB) const;
 
