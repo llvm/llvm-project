@@ -28679,15 +28679,32 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     // only merges the stores, while the scalars remain live for the other users
     // and all the lanes are gathered back. A single outside use may still be a
     // part of the larger vectorizable graph, same for the values, fed by the
-    // loads, where the vector loads may pay off the gathering. Likewise two
-    // outside uses (e.g. carry compare and next-limb add) may still be part of
-    // the same tree; require 3+ outside users before early-rejecting here.
+    // loads, where the vector loads may pay off the gathering. Two outside uses
+    // may still be part of the same tree when they are local carry deps (cmp/add
+    // in the same block); reject 3+ outside users or 2 non-local outside users.
+    auto IsBenignOutsideUser = [](Instruction *V, User *U) {
+      auto *UI = dyn_cast<Instruction>(U);
+      if (!UI || UI->getParent() != V->getParent())
+        return false;
+      return isa<CmpInst>(UI) || isa<BinaryOperator>(UI) || isa<SelectInst>(UI);
+    };
+    auto HasTooManyOutsideUsers = [&](Value *V) {
+      unsigned Outside = 0;
+      bool HasNonBenign = false;
+      for (User *U : V->users()) {
+        if (Stores.contains(U))
+          continue;
+        ++Outside;
+        if (!IsBenignOutsideUser(cast<Instruction>(V), U))
+          HasNonBenign = true;
+      }
+      return Outside > 2 || (Outside == 2 && HasNonBenign);
+    };
     if (S && S.getOpcode() != Instruction::Load &&
         all_of(ValOps.getArrayRef(), [&](Value *V) {
           return none_of(cast<Instruction>(V)->operand_values(),
                          IsaPred<LoadInst>) &&
-                 count_if(V->users(),
-                          [&](User *U) { return !Stores.contains(U); }) > 2;
+                 HasTooManyOutsideUsers(V);
         })) {
       Size = 1;
       return false;
