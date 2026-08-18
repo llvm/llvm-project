@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: diagnose-if-support
 // REQUIRES: std-at-least-c++20
+// REQUIRES: diagnose-if-support
 // UNSUPPORTED: no-threads
 
 #include <atomic>
