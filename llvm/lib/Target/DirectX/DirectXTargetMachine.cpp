@@ -34,6 +34,7 @@
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -170,6 +171,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
   TargetPassConfig *PassConfig = createPassConfig(PM);
+  PM.add(createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
   PassConfig->addCodeGenPrepare();
 
   switch (FileType) {
