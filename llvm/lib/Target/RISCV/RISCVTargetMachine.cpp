@@ -545,7 +545,7 @@ void RISCVPassConfig::addPreLegalizeMachineIR() {
 }
 
 bool RISCVPassConfig::addLegalizeMachineIR() {
-  addPass(new LegalizerLegacy());
+  addPass(new Legalizer());
   return false;
 }
 

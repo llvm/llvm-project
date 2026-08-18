@@ -499,7 +499,7 @@ bool ARMPassConfig::addIRTranslator() {
 }
 
 bool ARMPassConfig::addLegalizeMachineIR() {
-  addPass(new LegalizerLegacy());
+  addPass(new Legalizer());
   return false;
 }
 

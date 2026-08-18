@@ -590,7 +590,7 @@ bool PPCPassConfig::addIRTranslator() {
 }
 
 bool PPCPassConfig::addLegalizeMachineIR() {
-  addPass(new LegalizerLegacy());
+  addPass(new Legalizer());
   return false;
 }
 

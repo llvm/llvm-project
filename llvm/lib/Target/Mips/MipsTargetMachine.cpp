@@ -313,7 +313,7 @@ void MipsPassConfig::addPreLegalizeMachineIR() {
 }
 
 bool MipsPassConfig::addLegalizeMachineIR() {
-  addPass(new LegalizerLegacy());
+  addPass(new Legalizer());
   return false;
 }
 
