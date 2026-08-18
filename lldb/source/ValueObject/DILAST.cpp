@@ -43,6 +43,18 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::LAnd;
   case Token::pipepipe:
     return BinaryOpKind::LOr;
+  case Token::less:
+    return BinaryOpKind::LT;
+  case Token::greater:
+    return BinaryOpKind::GT;
+  case Token::lessequal:
+    return BinaryOpKind::LE;
+  case Token::greaterequal:
+    return BinaryOpKind::GE;
+  case Token::equalequal:
+    return BinaryOpKind::EQ;
+  case Token::exclaimequal:
+    return BinaryOpKind::NE;
   default:
     break;
   }
