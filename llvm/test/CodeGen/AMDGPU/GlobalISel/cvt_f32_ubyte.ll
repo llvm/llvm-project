@@ -888,8 +888,8 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(ptr addrspace(1) noalias %out, ptr
 ; VI-NEXT:    v_mov_b32_e32 v7, s0
 ; VI-NEXT:    s_add_u32 s0, s0, 16
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v10, s1
 ; VI-NEXT:    v_mov_b32_e32 v9, s0
+; VI-NEXT:    v_mov_b32_e32 v10, s1
 ; VI-NEXT:    s_waitcnt vmcnt(6)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; VI-NEXT:    s_waitcnt vmcnt(5)
@@ -961,8 +961,8 @@ define amdgpu_kernel void @load_v8i8_to_v8f32(ptr addrspace(1) noalias %out, ptr
 ; VI-NEXT:    v_mov_b32_e32 v8, s0
 ; VI-NEXT:    s_add_u32 s0, s0, 16
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v11, s1
 ; VI-NEXT:    v_mov_b32_e32 v10, s0
+; VI-NEXT:    v_mov_b32_e32 v11, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
 ; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1

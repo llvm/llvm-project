@@ -2777,12 +2777,9 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX9-LABEL: store_load_v3i32_unaligned:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s2, 3
-; GFX9-NEXT:    s_mov_b32 s1, 2
-; GFX9-NEXT:    s_mov_b32 s0, 1
-; GFX9-NEXT:    v_mov_b32_e32 v3, s2
-; GFX9-NEXT:    v_mov_b32_e32 v2, s1
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v3, 3
+; GFX9-NEXT:    v_mov_b32_e32 v2, 2
+; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    scratch_store_dwordx3 v0, v[1:3], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    scratch_load_dwordx3 v[0:2], v0, off glc
@@ -2792,12 +2789,9 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-LABEL: store_load_v3i32_unaligned:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s2, 3
-; GFX10-NEXT:    s_mov_b32 s1, 2
-; GFX10-NEXT:    s_mov_b32 s0, 1
-; GFX10-NEXT:    v_mov_b32_e32 v3, s2
-; GFX10-NEXT:    v_mov_b32_e32 v2, s1
-; GFX10-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-NEXT:    v_mov_b32_e32 v3, 3
+; GFX10-NEXT:    v_mov_b32_e32 v2, 2
+; GFX10-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-NEXT:    scratch_store_dwordx3 v0, v[1:3], off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    scratch_load_dwordx3 v[0:2], v0, off glc dlc
@@ -2807,12 +2801,9 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX942-LABEL: store_load_v3i32_unaligned:
 ; GFX942:       ; %bb.0: ; %bb
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s2, 3
-; GFX942-NEXT:    s_mov_b32 s1, 2
-; GFX942-NEXT:    s_mov_b32 s0, 1
-; GFX942-NEXT:    v_mov_b32_e32 v4, s2
-; GFX942-NEXT:    v_mov_b32_e32 v3, s1
-; GFX942-NEXT:    v_mov_b32_e32 v2, s0
+; GFX942-NEXT:    v_mov_b32_e32 v4, 3
+; GFX942-NEXT:    v_mov_b32_e32 v3, 2
+; GFX942-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX942-NEXT:    scratch_store_dwordx3 v0, v[2:4], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    scratch_load_dwordx3 v[0:2], v0, off sc0 sc1
@@ -2822,11 +2813,8 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-LABEL: store_load_v3i32_unaligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s2, 3
-; GFX11-NEXT:    s_mov_b32 s1, 2
-; GFX11-NEXT:    s_mov_b32 s0, 1
-; GFX11-NEXT:    v_dual_mov_b32 v3, s2 :: v_dual_mov_b32 v2, s1
-; GFX11-NEXT:    v_mov_b32_e32 v1, s0
+; GFX11-NEXT:    v_dual_mov_b32 v3, 3 :: v_dual_mov_b32 v2, 2
+; GFX11-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX11-NEXT:    scratch_store_b96 v0, v[1:3], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b96 v[0:2], v0, off glc dlc
@@ -2840,12 +2828,8 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s2, 3
-; GFX12-NEXT:    s_mov_b32 s1, 2
-; GFX12-NEXT:    s_mov_b32 s0, 1
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_dual_mov_b32 v3, s2 :: v_dual_mov_b32 v2, s1
-; GFX12-NEXT:    v_mov_b32_e32 v1, s0
+; GFX12-NEXT:    v_dual_mov_b32 v3, 3 :: v_dual_mov_b32 v2, 2
+; GFX12-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    scratch_store_b96 v0, v[1:3], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
@@ -3154,14 +3138,10 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX9-LABEL: store_load_v4i32_unaligned:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s3, 4
-; GFX9-NEXT:    s_mov_b32 s2, 3
-; GFX9-NEXT:    s_mov_b32 s1, 2
-; GFX9-NEXT:    s_mov_b32 s0, 1
-; GFX9-NEXT:    v_mov_b32_e32 v4, s3
-; GFX9-NEXT:    v_mov_b32_e32 v3, s2
-; GFX9-NEXT:    v_mov_b32_e32 v2, s1
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    v_mov_b32_e32 v4, 4
+; GFX9-NEXT:    v_mov_b32_e32 v3, 3
+; GFX9-NEXT:    v_mov_b32_e32 v2, 2
+; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    scratch_store_dwordx4 v0, v[1:4], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    scratch_load_dwordx4 v[0:3], v0, off glc
@@ -3171,14 +3151,10 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-LABEL: store_load_v4i32_unaligned:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s3, 4
-; GFX10-NEXT:    s_mov_b32 s2, 3
-; GFX10-NEXT:    s_mov_b32 s1, 2
-; GFX10-NEXT:    s_mov_b32 s0, 1
-; GFX10-NEXT:    v_mov_b32_e32 v4, s3
-; GFX10-NEXT:    v_mov_b32_e32 v3, s2
-; GFX10-NEXT:    v_mov_b32_e32 v2, s1
-; GFX10-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-NEXT:    v_mov_b32_e32 v4, 4
+; GFX10-NEXT:    v_mov_b32_e32 v3, 3
+; GFX10-NEXT:    v_mov_b32_e32 v2, 2
+; GFX10-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-NEXT:    scratch_store_dwordx4 v0, v[1:4], off
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    scratch_load_dwordx4 v[0:3], v0, off glc dlc
@@ -3188,12 +3164,10 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX942-LABEL: store_load_v4i32_unaligned:
 ; GFX942:       ; %bb.0: ; %bb
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s3, 4
-; GFX942-NEXT:    s_mov_b32 s2, 3
-; GFX942-NEXT:    s_mov_b32 s1, 2
-; GFX942-NEXT:    s_mov_b32 s0, 1
-; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
-; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; GFX942-NEXT:    v_mov_b32_e32 v5, 4
+; GFX942-NEXT:    v_mov_b32_e32 v4, 3
+; GFX942-NEXT:    v_mov_b32_e32 v3, 2
+; GFX942-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX942-NEXT:    scratch_store_dwordx4 v0, v[2:5], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    scratch_load_dwordx4 v[0:3], v0, off sc0 sc1
@@ -3203,12 +3177,8 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-LABEL: store_load_v4i32_unaligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s3, 4
-; GFX11-NEXT:    s_mov_b32 s2, 3
-; GFX11-NEXT:    s_mov_b32 s1, 2
-; GFX11-NEXT:    s_mov_b32 s0, 1
-; GFX11-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
-; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; GFX11-NEXT:    v_dual_mov_b32 v4, 4 :: v_dual_mov_b32 v3, 3
+; GFX11-NEXT:    v_dual_mov_b32 v2, 2 :: v_dual_mov_b32 v1, 1
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b128 v[0:3], v0, off glc dlc
@@ -3222,13 +3192,8 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s3, 4
-; GFX12-NEXT:    s_mov_b32 s2, 3
-; GFX12-NEXT:    s_mov_b32 s1, 2
-; GFX12-NEXT:    s_mov_b32 s0, 1
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
-; GFX12-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-NEXT:    v_dual_mov_b32 v4, 4 :: v_dual_mov_b32 v3, 3
+; GFX12-NEXT:    v_dual_mov_b32 v2, 2 :: v_dual_mov_b32 v1, 1
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    scratch_store_b128 v0, v[1:4], off scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0

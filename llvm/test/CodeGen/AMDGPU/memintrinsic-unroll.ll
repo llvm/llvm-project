@@ -16370,14 +16370,10 @@ define void @memset_p0_sz2048(ptr addrspace(0) %dst) #1 {
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[6:7], v[2:5] offset:32
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB10_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
-; UNROLL3-NEXT:    s_mov_b32 s5, s4
-; UNROLL3-NEXT:    s_mov_b32 s6, s4
-; UNROLL3-NEXT:    s_mov_b32 s7, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v2, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v3, s5
-; UNROLL3-NEXT:    v_mov_b32_e32 v4, s6
-; UNROLL3-NEXT:    v_mov_b32_e32 v5, s7
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, 0x41414141
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v5, v2
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:2016
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:2032
 ; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)
@@ -16795,14 +16791,10 @@ define void @memset_p1_sz2048(ptr addrspace(1) %dst) #1 {
 ; UNROLL3-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:32
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB11_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
-; UNROLL3-NEXT:    s_mov_b32 s5, s4
-; UNROLL3-NEXT:    s_mov_b32 s6, s4
-; UNROLL3-NEXT:    s_mov_b32 s7, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v2, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v3, s5
-; UNROLL3-NEXT:    v_mov_b32_e32 v4, s6
-; UNROLL3-NEXT:    v_mov_b32_e32 v5, s7
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, 0x41414141
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v5, v2
 ; UNROLL3-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:2016
 ; UNROLL3-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:2032
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
@@ -17154,14 +17146,10 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) #1 {
 ; UNROLL3-NEXT:    s_and_b32 vcc_lo, exec_lo, s10
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB12_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
-; UNROLL3-NEXT:    s_mov_b32 s5, s4
-; UNROLL3-NEXT:    s_mov_b32 s6, s4
-; UNROLL3-NEXT:    s_mov_b32 s7, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v1, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v2, s5
-; UNROLL3-NEXT:    v_mov_b32_e32 v3, s6
-; UNROLL3-NEXT:    v_mov_b32_e32 v4, s7
+; UNROLL3-NEXT:    v_mov_b32_e32 v1, 0x41414141
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, v1
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, v1
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, v1
 ; UNROLL3-NEXT:    ds_write_b128 v0, v[1:4] offset:2016
 ; UNROLL3-NEXT:    ds_write_b128 v0, v[1:4] offset:2032
 ; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)

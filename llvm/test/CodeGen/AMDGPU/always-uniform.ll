@@ -13,14 +13,14 @@ define amdgpu_kernel void @readfirstlane_uniform(ptr addrspace(1) noalias nocapt
 ; GCN-NEXT:    s_lshl_b32 s4, s4, 2
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s4, s[0:1], s4
-; GCN-NEXT:    s_add_u32 s0, s2, 40
-; GCN-NEXT:    s_addc_u32 s1, s3, 0
+; GCN-NEXT:    s_load_dword s0, s[0:1], s4
+; GCN-NEXT:    s_add_u32 s1, s2, 40
+; GCN-NEXT:    s_addc_u32 s2, s3, 0
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_mov_b32_e32 v0, s1
+; GCN-NEXT:    v_mov_b32_e32 v1, s2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()

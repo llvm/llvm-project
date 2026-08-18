@@ -13,9 +13,9 @@ define amdgpu_ps void @mad_i64_uniform(i64 inreg %a, i64 inreg %b, ptr addrspace
 ; GFX7-NEXT:    s_mul_i32 s1, s1, s2
 ; GFX7-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX7-NEXT:    s_add_u32 s0, s0, s5
-; GFX7-NEXT:    s_add_u32 s5, s1, s0
+; GFX7-NEXT:    s_add_u32 s0, s1, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
-; GFX7-NEXT:    v_mov_b32_e32 v3, s5
+; GFX7-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[0:1], 0
@@ -61,8 +61,8 @@ define amdgpu_ps void @mad_u64_u32_uniform_carry(i32 inreg %a, i32 inreg %b, i64
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX7-NEXT:    s_addc_u32 s1, s1, s3
-; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s0
+; GFX7-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX7-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
@@ -81,11 +81,11 @@ define amdgpu_ps void @mad_u64_u32_uniform_carry(i32 inreg %a, i32 inreg %b, i64
 ; GFX11-LABEL: mad_u64_u32_uniform_carry:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_mul_i32 s4, s0, s1
-; GFX11-NEXT:    s_mul_hi_u32 s1, s0, s1
-; GFX11-NEXT:    s_add_u32 s0, s4, s2
-; GFX11-NEXT:    s_addc_u32 s1, s1, s3
+; GFX11-NEXT:    s_mul_hi_u32 s0, s0, s1
+; GFX11-NEXT:    s_add_u32 s1, s4, s2
+; GFX11-NEXT:    s_addc_u32 s0, s0, s3
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
+; GFX11-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v3, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX11-NEXT:    s_endpgm
   %a.ext = zext i32 %a to i64

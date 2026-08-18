@@ -563,17 +563,15 @@ define amdgpu_kernel void @add_v2_v_lit_hi0(ptr addrspace(1) %a) {
 ; GFX1251-GISEL-NEXT:    v_nop
 ; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1251-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24 nv
+; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], 0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 1
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], 0
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 1
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
-; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x i64>, ptr addrspace(1) %a, i32 %id
@@ -607,17 +605,15 @@ define amdgpu_kernel void @add_v2_v_lit_lo0(ptr addrspace(1) %a) {
 ; GFX1251-GISEL-NEXT:    v_nop
 ; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1251-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24 nv
+; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], 1
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 0
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], 1
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
-; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x i64>, ptr addrspace(1) %a, i32 %id
@@ -651,17 +647,15 @@ define amdgpu_kernel void @add_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1251-GISEL-NEXT:    v_nop
 ; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1251-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24 nv
+; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], 2
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 1
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], 2
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 1
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
-; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x i64>, ptr addrspace(1) %a, i32 %id
@@ -1213,17 +1207,15 @@ define amdgpu_kernel void @sub_v2_v_lit_hi0(ptr addrspace(1) %a) {
 ; GFX1251-GISEL-NEXT:    v_nop
 ; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1251-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24 nv
+; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], 0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 1
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], 0
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 1
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_pk_sub_nc_u64 v[0:3], v[0:3], v[4:7]
-; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x i64>, ptr addrspace(1) %a, i32 %id
@@ -1257,17 +1249,15 @@ define amdgpu_kernel void @sub_v2_v_lit_lo0(ptr addrspace(1) %a) {
 ; GFX1251-GISEL-NEXT:    v_nop
 ; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1251-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24 nv
+; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], 1
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 0
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], 1
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_pk_sub_nc_u64 v[0:3], v[0:3], v[4:7]
-; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x i64>, ptr addrspace(1) %a, i32 %id
@@ -1301,17 +1291,15 @@ define amdgpu_kernel void @sub_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
 ; GFX1251-GISEL-NEXT:    v_nop
 ; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1251-GISEL-NEXT:    s_load_b64 s[6:7], s[4:5], 0x24 nv
+; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1251-GISEL-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], 2
-; GFX1251-GISEL-NEXT:    s_mov_b64 s[0:1], 1
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
-; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], 2
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 1
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v8, s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-GISEL-NEXT:    v_pk_sub_nc_u64 v[0:3], v[0:3], v[4:7]
-; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[6:7] scale_offset
+; GFX1251-GISEL-NEXT:    global_store_b128 v8, v[0:3], s[0:1] scale_offset
 ; GFX1251-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x i64>, ptr addrspace(1) %a, i32 %id

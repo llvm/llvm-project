@@ -1938,9 +1938,8 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32(ptr addrspace(1) %vbase, i3
 ;
 ; GFX12-GISEL-LABEL: global_load_i8_vgpr64_sgpr32:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v0, v2
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc
@@ -1995,9 +1994,8 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32_offset_4095(ptr addrspace(1
 ;
 ; GFX12-GISEL-LABEL: global_load_i8_vgpr64_sgpr32_offset_4095:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_mov_b32 s3, 0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v0, v2
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc

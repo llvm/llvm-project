@@ -121,10 +121,10 @@ define void @v_constained_fma_v2f64_fpexcept_strict_uni(<2 x double> inreg %x, <
 ; GFX8-NEXT:    v_fma_f64 v[4:5], s[18:19], v[4:5], v[6:7]
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v2
 ; GFX8-NEXT:    v_readfirstlane_b32 s5, v3
-; GFX8-NEXT:    v_readfirstlane_b32 s6, v4
-; GFX8-NEXT:    v_readfirstlane_b32 s7, v5
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
+; GFX8-NEXT:    v_readfirstlane_b32 s6, v4
+; GFX8-NEXT:    v_readfirstlane_b32 s7, v5
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
@@ -146,10 +146,10 @@ define void @v_constained_fma_v2f64_fpexcept_strict_uni(<2 x double> inreg %x, <
 ; GFX900-NEXT:    v_fma_f64 v[4:5], s[18:19], v[4:5], v[6:7]
 ; GFX900-NEXT:    v_readfirstlane_b32 s4, v2
 ; GFX900-NEXT:    v_readfirstlane_b32 s5, v3
-; GFX900-NEXT:    v_readfirstlane_b32 s6, v4
-; GFX900-NEXT:    v_readfirstlane_b32 s7, v5
 ; GFX900-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX900-NEXT:    v_mov_b32_e32 v3, s5
+; GFX900-NEXT:    v_readfirstlane_b32 s6, v4
+; GFX900-NEXT:    v_readfirstlane_b32 s7, v5
 ; GFX900-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX900-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX900-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
@@ -284,24 +284,24 @@ define void @v_constained_fma_v3f64_fpexcept_strict_uni(<3 x double> inreg %x, <
 ; GFX8-NEXT:    v_fma_f64 v[0:1], s[16:17], v[0:1], v[6:7]
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s24
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s25
-; GFX8-NEXT:    v_mov_b32_e32 v9, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v8, s4
+; GFX8-NEXT:    v_mov_b32_e32 v9, s5
 ; GFX8-NEXT:    v_fma_f64 v[6:7], s[18:19], v[6:7], v[8:9]
-; GFX8-NEXT:    v_readfirstlane_b32 s8, v2
-; GFX8-NEXT:    v_readfirstlane_b32 s9, v3
-; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX8-NEXT:    v_readfirstlane_b32 s4, v2
+; GFX8-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX8-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX8-NEXT:    v_readfirstlane_b32 s7, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s26
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s27
-; GFX8-NEXT:    v_mov_b32_e32 v2, s8
-; GFX8-NEXT:    v_mov_b32_e32 v3, s9
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
+; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:    v_fma_f64 v[8:9], s[20:21], v[0:1], v[2:3]
-; GFX8-NEXT:    v_readfirstlane_b32 s6, v6
-; GFX8-NEXT:    v_readfirstlane_b32 s7, v7
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8-NEXT:    v_mov_b32_e32 v1, s5
-; GFX8-NEXT:    v_mov_b32_e32 v2, s6
-; GFX8-NEXT:    v_mov_b32_e32 v3, s7
+; GFX8-NEXT:    v_readfirstlane_b32 s8, v6
+; GFX8-NEXT:    v_readfirstlane_b32 s4, v7
+; GFX8-NEXT:    v_mov_b32_e32 v0, s6
+; GFX8-NEXT:    v_mov_b32_e32 v1, s7
+; GFX8-NEXT:    v_mov_b32_e32 v2, s8
+; GFX8-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_nop 0
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v4
@@ -322,15 +322,15 @@ define void @v_constained_fma_v3f64_fpexcept_strict_uni(<3 x double> inreg %x, <
 ; GFX900-NEXT:    v_fma_f64 v[0:1], s[16:17], v[0:1], v[6:7]
 ; GFX900-NEXT:    v_mov_b32_e32 v6, s24
 ; GFX900-NEXT:    v_mov_b32_e32 v7, s25
-; GFX900-NEXT:    v_mov_b32_e32 v9, s5
 ; GFX900-NEXT:    v_mov_b32_e32 v8, s4
+; GFX900-NEXT:    v_mov_b32_e32 v9, s5
 ; GFX900-NEXT:    v_fma_f64 v[6:7], s[18:19], v[6:7], v[8:9]
 ; GFX900-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX900-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX900-NEXT:    v_readfirstlane_b32 s4, v3
 ; GFX900-NEXT:    v_mov_b32_e32 v2, s26
 ; GFX900-NEXT:    v_mov_b32_e32 v3, s27
-; GFX900-NEXT:    v_mov_b32_e32 v9, s7
 ; GFX900-NEXT:    v_mov_b32_e32 v8, s6
+; GFX900-NEXT:    v_mov_b32_e32 v9, s4
 ; GFX900-NEXT:    v_fma_f64 v[8:9], s[20:21], v[2:3], v[8:9]
 ; GFX900-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX900-NEXT:    v_readfirstlane_b32 s5, v1
@@ -510,8 +510,8 @@ define void @v_constained_fma_v4f64_fpexcept_strict_uni(<4 x double> inreg %x, <
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s10
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s11
 ; GFX8-NEXT:    v_fma_f64 v[4:5], s[20:21], v[4:5], v[6:7]
-; GFX8-NEXT:    v_mov_b32_e32 v7, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s4
+; GFX8-NEXT:    v_mov_b32_e32 v7, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v8, s12
 ; GFX8-NEXT:    v_mov_b32_e32 v9, s13
 ; GFX8-NEXT:    v_fma_f64 v[6:7], s[22:23], v[6:7], v[8:9]
@@ -566,8 +566,8 @@ define void @v_constained_fma_v4f64_fpexcept_strict_uni(<4 x double> inreg %x, <
 ; GFX900-NEXT:    v_mov_b32_e32 v6, s10
 ; GFX900-NEXT:    v_mov_b32_e32 v7, s11
 ; GFX900-NEXT:    v_fma_f64 v[4:5], s[20:21], v[4:5], v[6:7]
-; GFX900-NEXT:    v_mov_b32_e32 v7, s5
 ; GFX900-NEXT:    v_mov_b32_e32 v6, s4
+; GFX900-NEXT:    v_mov_b32_e32 v7, s5
 ; GFX900-NEXT:    v_mov_b32_e32 v8, s12
 ; GFX900-NEXT:    v_mov_b32_e32 v9, s13
 ; GFX900-NEXT:    v_fma_f64 v[6:7], s[22:23], v[6:7], v[8:9]
@@ -663,9 +663,9 @@ define void @v_constained_fma_v4f64_fpexcept_strict_uni(<4 x double> inreg %x, <
 ; GFX11-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-NEXT:    v_dual_mov_b32 v11, s7 :: v_dual_mov_b32 v10, s6
-; GFX11-NEXT:    v_dual_mov_b32 v9, s5 :: v_dual_mov_b32 v8, s4
+; GFX11-NEXT:    v_dual_mov_b32 v8, s4 :: v_dual_mov_b32 v9, s5
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-NEXT:    v_dual_mov_b32 v10, s6 :: v_dual_mov_b32 v11, s7
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GFX11-NEXT:    global_store_b128 v[6:7], v[8:11], off offset:16
@@ -706,9 +706,8 @@ define void @v_constained_fma_v4f64_fpexcept_strict_uni(<4 x double> inreg %x, <
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX12-NEXT:    v_dual_mov_b32 v11, s7 :: v_dual_mov_b32 v10, s6
-; GFX12-NEXT:    v_dual_mov_b32 v9, s5 :: v_dual_mov_b32 v8, s4
+; GFX12-NEXT:    v_dual_mov_b32 v8, s4 :: v_dual_mov_b32 v9, s5
+; GFX12-NEXT:    v_dual_mov_b32 v10, s6 :: v_dual_mov_b32 v11, s7
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[0:3], off
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[8:11], off offset:16
@@ -1104,9 +1103,9 @@ define void @v_constained_fma_v2f64_fpexcept_strict_fneg_fneg_uni(<2 x double> i
 ; GFX8-NEXT:    v_fma_f64 v[4:5], -s[18:19], -v[4:5], v[6:7]
 ; GFX8-NEXT:    v_readfirstlane_b32 s4, v2
 ; GFX8-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_readfirstlane_b32 s6, v4
 ; GFX8-NEXT:    v_readfirstlane_b32 s7, v5
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s7
@@ -1129,9 +1128,9 @@ define void @v_constained_fma_v2f64_fpexcept_strict_fneg_fneg_uni(<2 x double> i
 ; GFX900-NEXT:    v_fma_f64 v[4:5], -s[18:19], -v[4:5], v[6:7]
 ; GFX900-NEXT:    v_readfirstlane_b32 s4, v2
 ; GFX900-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX900-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX900-NEXT:    v_readfirstlane_b32 s6, v4
 ; GFX900-NEXT:    v_readfirstlane_b32 s7, v5
-; GFX900-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX900-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX900-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX900-NEXT:    v_mov_b32_e32 v5, s7

@@ -1591,8 +1591,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) nounwind {
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_add_u32 s0, s0, 32
 ; CI-NEXT:    s_addc_u32 s1, s1, 0
-; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
+; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    flat_atomic_inc_x2 v[2:3], v[0:1]
 ; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CI-NEXT:    buffer_wbinvl1_vol
@@ -1606,8 +1606,8 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i64_offset(ptr %ptr) nounwind {
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s0, s0, 32
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    flat_atomic_inc_x2 v[2:3], v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol

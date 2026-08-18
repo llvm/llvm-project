@@ -88,8 +88,8 @@ define amdgpu_kernel void @gep_as0_uniform(ptr %p, i64 %offset, ptr %ret) {
 ; GFX8-NEXT:    s_add_u32 s0, s4, 4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    s_addc_u32 s1, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    flat_store_dword v[2:3], v5
@@ -124,8 +124,8 @@ define amdgpu_kernel void @gep_as0_uniform(ptr %p, i64 %offset, ptr %ret) {
 ; GFX10-NEXT:    s_add_u32 s0, s0, s2
 ; GFX10-NEXT:    s_addc_u32 s1, s1, s3
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s5
-; GFX10-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
+; GFX10-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX10-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -245,8 +245,8 @@ define amdgpu_kernel void @multi_gep_as0_uniform(ptr %p, i64 %offset, ptr %ret) 
 ; GFX8-NEXT:    s_add_u32 s0, s4, 4
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    s_addc_u32 s1, s5, 0
-; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    flat_store_dword v[2:3], v5
@@ -285,8 +285,8 @@ define amdgpu_kernel void @multi_gep_as0_uniform(ptr %p, i64 %offset, ptr %ret) 
 ; GFX10-NEXT:    s_add_u32 s0, s0, 5
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s5
-; GFX10-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s0
+; GFX10-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX10-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX10-NEXT:    s_endpgm
 ;

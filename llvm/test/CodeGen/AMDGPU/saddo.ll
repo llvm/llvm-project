@@ -58,8 +58,8 @@ define amdgpu_kernel void @saddo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b)
 ; VI-NEXT:    s_cselect_b64 s[2:3], 1, 0
 ; VI-NEXT:    s_add_u32 s0, s0, s2
 ; VI-NEXT:    s_addc_u32 s1, s1, s3
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
 ;

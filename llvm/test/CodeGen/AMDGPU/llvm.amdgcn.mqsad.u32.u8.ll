@@ -43,15 +43,14 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_integer_immediate(ptr addrspace
 ;
 ; GFX600-GISEL-LABEL: v_mqsad_u32_u8_inline_integer_immediate:
 ; GFX600-GISEL:       ; %bb.0:
-; GFX600-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; GFX600-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX600-GISEL-NEXT:    s_load_dword s4, s[4:5], 0xd
-; GFX600-GISEL-NEXT:    s_mov_b32 s3, 40
-; GFX600-GISEL-NEXT:    s_mov_b32 s2, 30
-; GFX600-GISEL-NEXT:    s_mov_b32 s1, 20
-; GFX600-GISEL-NEXT:    s_mov_b32 s0, 10
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v10, 40
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v9, 30
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v8, 20
 ; GFX600-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v0, s10
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v1, s11
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX600-GISEL-NEXT:    ;;#ASMSTART
 ; GFX600-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
 ; GFX600-GISEL-NEXT:    ;;#ASMEND
@@ -62,17 +61,14 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_integer_immediate(ptr addrspace
 ; GFX600-GISEL-NEXT:    v_mov_b32 v4, v2
 ; GFX600-GISEL-NEXT:    ;;#ASMEND
 ; GFX600-GISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v10, s3
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v9, s2
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v8, s1
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v7, s0
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v7, 10
 ; GFX600-GISEL-NEXT:    v_mqsad_u32_u8 v[2:5], v[0:1], v6, v[7:10]
-; GFX600-GISEL-NEXT:    s_mov_b32 s10, -1
-; GFX600-GISEL-NEXT:    s_mov_b32 s11, 0xf000
+; GFX600-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX600-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX600-GISEL-NEXT:    ;;#ASMSTART
 ; GFX600-GISEL-NEXT:    ;; force constraint
 ; GFX600-GISEL-NEXT:    ;;#ASMEND
-; GFX600-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
+; GFX600-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GFX600-GISEL-NEXT:    s_endpgm
 ;
 ; GFX803-SDAG-LABEL: v_mqsad_u32_u8_inline_integer_immediate:
@@ -107,15 +103,14 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_integer_immediate(ptr addrspace
 ;
 ; GFX803-GISEL-LABEL: v_mqsad_u32_u8_inline_integer_immediate:
 ; GFX803-GISEL:       ; %bb.0:
-; GFX803-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX803-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX803-GISEL-NEXT:    s_load_dword s4, s[4:5], 0x34
-; GFX803-GISEL-NEXT:    s_mov_b32 s3, 40
-; GFX803-GISEL-NEXT:    s_mov_b32 s2, 30
-; GFX803-GISEL-NEXT:    s_mov_b32 s1, 20
-; GFX803-GISEL-NEXT:    s_mov_b32 s0, 10
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v10, 40
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v9, 30
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v8, 20
 ; GFX803-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, s10
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, s11
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX803-GISEL-NEXT:    ;;#ASMSTART
 ; GFX803-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
@@ -126,16 +121,13 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_integer_immediate(ptr addrspace
 ; GFX803-GISEL-NEXT:    v_mov_b32 v4, v2
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v10, s3
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v9, s2
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v8, s1
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v7, s0
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v7, 10
 ; GFX803-GISEL-NEXT:    v_mqsad_u32_u8 v[2:5], v[0:1], v6, v[7:10]
 ; GFX803-GISEL-NEXT:    ;;#ASMSTART
 ; GFX803-GISEL-NEXT:    ;; force constraint
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v4, s8
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v5, s9
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v5, s1
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX803-GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX803-GISEL-NEXT:    s_endpgm
 ;
@@ -170,24 +162,19 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_integer_immediate(ptr addrspace
 ; GFX13-GISEL-NEXT:    s_clause 0x1
 ; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX13-GISEL-NEXT:    s_load_b32 s4, s[4:5], 0x34 nv
-; GFX13-GISEL-NEXT:    s_mov_b32 s7, 40
-; GFX13-GISEL-NEXT:    s_mov_b32 s6, 30
-; GFX13-GISEL-NEXT:    s_mov_b32 s5, 20
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, 30 :: v_dual_mov_b32 v8, 20
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, s4
-; GFX13-GISEL-NEXT:    s_mov_b32 s4, 10
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, s7 :: v_dual_mov_b32 v9, s6
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v8, s5
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, 40 :: v_dual_mov_b32 v0, s2
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v4, s4
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
 ; GFX13-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
 ; GFX13-GISEL-NEXT:    ;;#ASMEND
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s4 :: v_dual_mov_b32 v0, v2
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, 10 :: v_dual_mov_b32 v0, v2
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
 ; GFX13-GISEL-NEXT:    v_mov_b32 v4, v4
 ; GFX13-GISEL-NEXT:    ;;#ASMEND
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, v3 :: v_dual_mov_b32 v6, v4
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_mqsad_u32_u8 v[2:5], v[0:1], v6, v[7:10]
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v6, 0
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
@@ -399,15 +386,14 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ;
 ; GFX600-GISEL-LABEL: v_mqsad_u32_u8_inline_fp_immediate:
 ; GFX600-GISEL:       ; %bb.0:
-; GFX600-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; GFX600-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX600-GISEL-NEXT:    s_load_dword s4, s[4:5], 0xd
-; GFX600-GISEL-NEXT:    s_mov_b32 s1, 0
-; GFX600-GISEL-NEXT:    s_mov_b32 s0, 1.0
-; GFX600-GISEL-NEXT:    s_mov_b32 s2, s1
-; GFX600-GISEL-NEXT:    s_mov_b32 s3, s1
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v8, 0
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v7, 1.0
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v9, v8
 ; GFX600-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v0, s10
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v1, s11
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX600-GISEL-NEXT:    ;;#ASMSTART
 ; GFX600-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
 ; GFX600-GISEL-NEXT:    ;;#ASMEND
@@ -418,17 +404,14 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ; GFX600-GISEL-NEXT:    v_mov_b32 v4, v2
 ; GFX600-GISEL-NEXT:    ;;#ASMEND
 ; GFX600-GISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v10, s3
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v9, s2
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v8, s1
-; GFX600-GISEL-NEXT:    v_mov_b32_e32 v7, s0
+; GFX600-GISEL-NEXT:    v_mov_b32_e32 v10, v8
 ; GFX600-GISEL-NEXT:    v_mqsad_u32_u8 v[2:5], v[0:1], v6, v[7:10]
-; GFX600-GISEL-NEXT:    s_mov_b32 s10, -1
-; GFX600-GISEL-NEXT:    s_mov_b32 s11, 0xf000
+; GFX600-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX600-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX600-GISEL-NEXT:    ;;#ASMSTART
 ; GFX600-GISEL-NEXT:    ;; force constraint
 ; GFX600-GISEL-NEXT:    ;;#ASMEND
-; GFX600-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
+; GFX600-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GFX600-GISEL-NEXT:    s_endpgm
 ;
 ; GFX803-SDAG-LABEL: v_mqsad_u32_u8_inline_fp_immediate:
@@ -463,15 +446,14 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ;
 ; GFX803-GISEL-LABEL: v_mqsad_u32_u8_inline_fp_immediate:
 ; GFX803-GISEL:       ; %bb.0:
-; GFX803-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX803-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX803-GISEL-NEXT:    s_load_dword s4, s[4:5], 0x34
-; GFX803-GISEL-NEXT:    s_mov_b32 s1, 0
-; GFX803-GISEL-NEXT:    s_mov_b32 s0, 1.0
-; GFX803-GISEL-NEXT:    s_mov_b32 s2, s1
-; GFX803-GISEL-NEXT:    s_mov_b32 s3, s1
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v8, 0
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v7, 1.0
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v9, v8
 ; GFX803-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, s10
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, s11
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX803-GISEL-NEXT:    ;;#ASMSTART
 ; GFX803-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
@@ -482,16 +464,13 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ; GFX803-GISEL-NEXT:    v_mov_b32 v4, v2
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
 ; GFX803-GISEL-NEXT:    v_mov_b32_e32 v6, v4
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v10, s3
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v9, s2
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v8, s1
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v7, s0
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v10, v8
 ; GFX803-GISEL-NEXT:    v_mqsad_u32_u8 v[2:5], v[0:1], v6, v[7:10]
 ; GFX803-GISEL-NEXT:    ;;#ASMSTART
 ; GFX803-GISEL-NEXT:    ;; force constraint
 ; GFX803-GISEL-NEXT:    ;;#ASMEND
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v4, s8
-; GFX803-GISEL-NEXT:    v_mov_b32_e32 v5, s9
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v5, s1
+; GFX803-GISEL-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX803-GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX803-GISEL-NEXT:    s_endpgm
 ;
@@ -524,20 +503,16 @@ define amdgpu_kernel void @v_mqsad_u32_u8_inline_fp_immediate(ptr addrspace(1) %
 ; GFX13-GISEL:       ; %bb.0:
 ; GFX13-GISEL-NEXT:    s_clause 0x1
 ; GFX13-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX13-GISEL-NEXT:    s_load_b32 s7, s[4:5], 0x34 nv
-; GFX13-GISEL-NEXT:    s_mov_b32 s5, 0
-; GFX13-GISEL-NEXT:    s_mov_b32 s4, 1.0
-; GFX13-GISEL-NEXT:    s_mov_b32 s6, s5
+; GFX13-GISEL-NEXT:    s_load_b32 s4, s[4:5], 0x34 nv
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v7, 1.0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, s7
-; GFX13-GISEL-NEXT:    s_mov_b32 s7, s5
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s6 :: v_dual_mov_b32 v8, s5
-; GFX13-GISEL-NEXT:    v_mov_b32_e32 v10, s7
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_2)
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, v8 :: v_dual_mov_b32 v0, s2
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v4, s4
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
 ; GFX13-GISEL-NEXT:    v_lsrlrev_b64 v[2:3], v[0:1], 1
 ; GFX13-GISEL-NEXT:    ;;#ASMEND
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s4 :: v_dual_mov_b32 v0, v2
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v10, v8 :: v_dual_mov_b32 v0, v2
 ; GFX13-GISEL-NEXT:    ;;#ASMSTART
 ; GFX13-GISEL-NEXT:    v_mov_b32 v4, v4
 ; GFX13-GISEL-NEXT:    ;;#ASMEND

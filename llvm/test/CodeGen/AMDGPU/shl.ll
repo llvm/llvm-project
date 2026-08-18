@@ -1096,8 +1096,8 @@ define amdgpu_kernel void @v_shl_32_i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-NEXT:    s_add_u32 s0, s0, s4
 ; VI-NEXT:    s_addc_u32 s1, s1, s5
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s2
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]

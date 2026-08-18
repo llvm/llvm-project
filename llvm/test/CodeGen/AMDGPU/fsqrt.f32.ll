@@ -4542,13 +4542,13 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
 ; GISEL-IEEE-NEXT:    s_cselect_b32 s4, 1, 0
 ; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 1, 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 1, 0
 ; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s6
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 0x7fc00000, s7
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s3
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 0x7fc00000, s6
+; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s7
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s2
 ; GISEL-IEEE-NEXT:    s_mov_b32 s2, -1
 ; GISEL-IEEE-NEXT:    s_mov_b32 s3, 0xf000
 ; GISEL-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
@@ -4653,13 +4653,13 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
 ; GISEL-DAZ-NEXT:    s_cselect_b32 s4, 1, 0
 ; GISEL-DAZ-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 1, 0
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 1, 0
 ; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 0x7fc00000, s6
-; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 0x7fc00000, s7
-; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, s3
+; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 0x7fc00000, s6
+; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 0x7fc00000, s7
+; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, s3
+; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, s2
 ; GISEL-DAZ-NEXT:    s_mov_b32 s2, -1
 ; GISEL-DAZ-NEXT:    s_mov_b32 s3, 0xf000
 ; GISEL-DAZ-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
@@ -4789,13 +4789,13 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 ; GISEL-IEEE-NEXT:    v_cmp_nge_f32_e32 vcc, s3, v0
 ; GISEL-IEEE-NEXT:    s_cselect_b32 s4, 1, 0
 ; GISEL-IEEE-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 1, 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 1, 0
 ; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s6
-; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 0x7fc00000, s7
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s3
+; GISEL-IEEE-NEXT:    s_cselect_b32 s3, 0x7fc00000, s6
+; GISEL-IEEE-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-IEEE-NEXT:    s_cselect_b32 s2, 0x7fc00000, s7
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v0, s3
+; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, s2
 ; GISEL-IEEE-NEXT:    s_mov_b32 s2, -1
 ; GISEL-IEEE-NEXT:    s_mov_b32 s3, 0xf000
 ; GISEL-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
@@ -4900,13 +4900,13 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 ; GISEL-DAZ-NEXT:    v_cmp_nge_f32_e32 vcc, s3, v0
 ; GISEL-DAZ-NEXT:    s_cselect_b32 s4, 1, 0
 ; GISEL-DAZ-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 1, 0
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 1, 0
 ; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s4, 0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 0x7fc00000, s6
-; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s3, 0
-; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 0x7fc00000, s7
-; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, s2
-; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, s3
+; GISEL-DAZ-NEXT:    s_cselect_b32 s3, 0x7fc00000, s6
+; GISEL-DAZ-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-DAZ-NEXT:    s_cselect_b32 s2, 0x7fc00000, s7
+; GISEL-DAZ-NEXT:    v_mov_b32_e32 v0, s3
+; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, s2
 ; GISEL-DAZ-NEXT:    s_mov_b32 s2, -1
 ; GISEL-DAZ-NEXT:    s_mov_b32 s3, 0xf000
 ; GISEL-DAZ-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0

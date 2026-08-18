@@ -596,11 +596,11 @@ define i32 @ucmp_i128_uniform(i128 inreg %a, i128 inreg %b) {
 ; GFX7-SDAG-LABEL: ucmp_i128_uniform:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_mov_b32_e32 v0, s22
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v1, s23
+; GFX7-SDAG-NEXT:    v_mov_b32_e32 v0, s22
 ; GFX7-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc, s[18:19], v[0:1]
-; GFX7-SDAG-NEXT:    v_mov_b32_e32 v2, s20
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v3, s21
+; GFX7-SDAG-NEXT:    v_mov_b32_e32 v2, s20
 ; GFX7-SDAG-NEXT:    s_and_b64 s[6:7], vcc, exec
 ; GFX7-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc, s[16:17], v[2:3]
 ; GFX7-SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[18:19], v[0:1]
@@ -728,8 +728,8 @@ define i32 @ucmp_i64_uniform(i64 inreg %a, i64 inreg %b) {
 ; GFX7-SDAG-LABEL: ucmp_i64_uniform:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v1, s19
+; GFX7-SDAG-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX7-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc, s[16:17], v[0:1]
 ; GFX7-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
 ; GFX7-SDAG-NEXT:    v_cmp_ge_u64_e32 vcc, s[16:17], v[0:1]

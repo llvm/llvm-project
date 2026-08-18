@@ -1008,10 +1008,10 @@ define amdgpu_kernel void @s_test_srem32_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    s_cselect_b32 s7, s12, s8
 ; GCN-NEXT:    s_cselect_b32 s6, s13, s10
 ; GCN-NEXT:    s_xor_b64 s[6:7], s[6:7], s[4:5]
-; GCN-NEXT:    s_sub_u32 s6, s6, s4
-; GCN-NEXT:    s_subb_u32 s7, s7, s4
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
+; GCN-NEXT:    s_sub_u32 s5, s6, s4
+; GCN-NEXT:    s_subb_u32 s4, s7, s4
+; GCN-NEXT:    v_mov_b32_e32 v0, s5
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 ;

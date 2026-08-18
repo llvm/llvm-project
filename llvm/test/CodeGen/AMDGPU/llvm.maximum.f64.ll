@@ -456,8 +456,8 @@ define void @s_maximum_f64(double inreg %src0, double inreg %src1) #0 {
 ; GFX7-LABEL: s_maximum_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s19
+; GFX7-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX7-NEXT:    v_max_f64 v[2:3], s[16:17], v[0:1]
 ; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
 ; GFX7-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
@@ -471,8 +471,8 @@ define void @s_maximum_f64(double inreg %src0, double inreg %src1) #0 {
 ; GFX8-LABEL: s_maximum_f64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s19
+; GFX8-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX8-NEXT:    v_max_f64 v[2:3], s[16:17], v[0:1]
 ; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
@@ -486,8 +486,8 @@ define void @s_maximum_f64(double inreg %src0, double inreg %src1) #0 {
 ; GFX900-LABEL: s_maximum_f64:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX900-NEXT:    v_mov_b32_e32 v1, s19
+; GFX900-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX900-NEXT:    v_max_f64 v[2:3], s[16:17], v[0:1]
 ; GFX900-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
@@ -896,12 +896,12 @@ define void @s_maximum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX7-LABEL: s_maximum_v2f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v0, s22
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s23
+; GFX7-NEXT:    v_mov_b32_e32 v0, s22
 ; GFX7-NEXT:    v_max_f64 v[2:3], s[18:19], v[0:1]
 ; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, s[18:19], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s21
+; GFX7-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX7-NEXT:    v_max_f64 v[4:5], s[16:17], v[0:1]
 ; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
 ; GFX7-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
@@ -917,12 +917,12 @@ define void @s_maximum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX8-LABEL: s_maximum_v2f64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v0, s22
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s23
+; GFX8-NEXT:    v_mov_b32_e32 v0, s22
 ; GFX8-NEXT:    v_max_f64 v[2:3], s[18:19], v[0:1]
 ; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, s[18:19], v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s21
+; GFX8-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX8-NEXT:    v_max_f64 v[4:5], s[16:17], v[0:1]
 ; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
@@ -938,12 +938,12 @@ define void @s_maximum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX900-LABEL: s_maximum_v2f64:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v0, s22
 ; GFX900-NEXT:    v_mov_b32_e32 v1, s23
+; GFX900-NEXT:    v_mov_b32_e32 v0, s22
 ; GFX900-NEXT:    v_max_f64 v[2:3], s[18:19], v[0:1]
 ; GFX900-NEXT:    v_cmp_u_f64_e32 vcc, s[18:19], v[0:1]
-; GFX900-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX900-NEXT:    v_mov_b32_e32 v1, s21
+; GFX900-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX900-NEXT:    v_max_f64 v[4:5], s[16:17], v[0:1]
 ; GFX900-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v6, 0x7ff80000

@@ -10,249 +10,238 @@
 define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ; GFX10-LABEL: long_store_chain:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
-; GFX10-NEXT:    s_mov_b32 s0, 0
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    s_mov_b32 s1, s0
-; GFX10-NEXT:    s_mov_b32 s2, s0
-; GFX10-NEXT:    s_mov_b32 s3, s0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-NEXT:    v_mov_b32_e32 v2, s2
-; GFX10-NEXT:    v_mov_b32_e32 v3, s3
+; GFX10-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:16
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:32
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:48
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:64
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:80
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:96
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:112
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:128
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:144
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:160
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:176
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:192
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:208
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:224
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:240
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:256
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:272
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:288
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:304
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:320
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:336
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:352
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:368
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:384
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:400
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:416
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:432
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:448
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:464
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:480
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:496
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:512
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:528
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:544
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:560
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:576
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:592
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:608
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:624
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:640
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:656
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:672
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:688
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:704
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:720
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:736
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:752
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:768
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:784
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:800
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:816
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:832
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:848
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:864
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:880
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:896
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:912
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:928
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:944
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:960
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:976
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:992
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:1008
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:1024
-; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5] offset:1040
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:16
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:32
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:48
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:64
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:80
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:96
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:112
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:128
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:144
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:160
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:176
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:192
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:208
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:224
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:240
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:256
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:272
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:288
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:304
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:320
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:336
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:352
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:368
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:384
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:400
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:416
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:432
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:448
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:464
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:480
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:496
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:512
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:528
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:544
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:560
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:576
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:592
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:608
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:624
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:640
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:656
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:672
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:688
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:704
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:720
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:736
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:752
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:768
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:784
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:800
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:816
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:832
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:848
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:864
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:880
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:896
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:912
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:928
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:944
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:960
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:976
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:992
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:1008
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:1024
+; GFX10-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:1040
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: long_store_chain:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
-; GFX11-NEXT:    s_mov_b32 s0, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_mov_b32 s1, s0
-; GFX11-NEXT:    s_mov_b32 s2, s0
-; GFX11-NEXT:    s_mov_b32 s3, s0
-; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s1
-; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GFX11-NEXT:    v_mov_b32_e32 v2, s2
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, v0
+; GFX11-NEXT:    v_mov_b32_e32 v2, v0
+; GFX11-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1f
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5]
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:16
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:32
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:48
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:64
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:80
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:96
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:112
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:128
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:144
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:160
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:176
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:192
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:208
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:224
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:240
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:256
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:272
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:288
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:304
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:320
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:336
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:352
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:368
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:384
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:400
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:416
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:432
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:448
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:464
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:480
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:496
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:16
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:32
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:48
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:64
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:80
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:96
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:112
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:128
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:144
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:160
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:176
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:192
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:208
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:224
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:240
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:256
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:272
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:288
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:304
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:320
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:336
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:352
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:368
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:384
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:400
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:416
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:432
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:448
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:464
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:480
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:496
 ; GFX11-NEXT:    s_clause 0x1f
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:512
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:528
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:544
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:560
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:576
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:592
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:608
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:624
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:640
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:656
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:672
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:688
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:704
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:720
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:736
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:752
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:768
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:784
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:800
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:816
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:832
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:848
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:864
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:880
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:896
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:912
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:928
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:944
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:960
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:976
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:992
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1008
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:512
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:528
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:544
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:560
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:576
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:592
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:608
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:624
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:640
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:656
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:672
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:688
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:704
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:720
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:736
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:752
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:768
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:784
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:800
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:816
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:832
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:848
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:864
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:880
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:896
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:912
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:928
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:944
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:960
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:976
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:992
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:1008
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1024
-; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1040
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:1024
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:1040
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: long_store_chain:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
-; GFX12-NEXT:    s_mov_b32 s0, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_mov_b32 s1, s0
-; GFX12-NEXT:    s_mov_b32 s2, s0
-; GFX12-NEXT:    s_mov_b32 s3, s0
-; GFX12-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, v0
+; GFX12-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_clause 0x1f
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5]
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:16
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:32
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:48
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:64
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:80
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:96
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:112
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:128
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:144
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:160
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:176
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:192
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:208
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:224
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:240
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:256
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:272
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:288
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:304
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:320
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:336
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:352
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:368
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:384
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:400
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:416
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:432
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:448
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:464
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:480
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:496
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:16
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:32
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:48
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:64
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:80
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:96
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:112
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:128
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:144
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:160
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:176
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:192
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:208
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:224
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:240
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:256
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:272
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:288
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:304
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:320
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:336
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:352
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:368
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:384
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:400
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:416
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:432
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:448
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:464
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:480
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:496
 ; GFX12-NEXT:    s_clause 0x1f
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:512
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:528
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:544
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:560
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:576
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:592
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:608
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:624
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:640
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:656
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:672
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:688
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:704
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:720
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:736
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:752
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:768
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:784
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:800
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:816
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:832
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:848
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:864
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:880
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:896
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:912
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:928
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:944
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:960
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:976
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:992
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1008
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:512
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:528
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:544
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:560
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:576
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:592
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:608
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:624
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:640
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:656
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:672
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:688
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:704
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:720
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:736
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:752
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:768
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:784
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:800
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:816
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:832
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:848
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:864
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:880
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:896
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:912
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:928
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:944
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:960
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:976
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:992
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:1008
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1024
-; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[4:5] offset:1040
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:1024
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1] offset:1040
 ; GFX12-NEXT:    s_endpgm
   store <4 x i32> zeroinitializer, ptr addrspace(1) %p
   %ptr1 = getelementptr <4 x i32>, ptr addrspace(1) %p, i64 1

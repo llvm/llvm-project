@@ -1416,8 +1416,8 @@ define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
 ; VI-NEXT:    flat_load_ushort v4, v[2:3]
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    flat_load_ushort v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_f16_e32 v3, v4
@@ -1899,8 +1899,8 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
 ; VI-NEXT:    flat_load_ushort v4, v[2:3]
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    flat_load_ushort v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_f16_e32 v3, v4
@@ -3133,8 +3133,8 @@ define amdgpu_kernel void @fast_frem_f32(ptr addrspace(1) %out, ptr addrspace(1)
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
 ; VI-NEXT:    flat_load_dword v4, v[2:3]
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_div_scale_f32 v5, s[0:1], v2, v2, v4
@@ -3411,8 +3411,8 @@ define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
 ; VI-NEXT:    flat_load_dword v4, v[2:3]
-; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    flat_load_dword v2, v[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_div_scale_f32 v5, s[0:1], v2, v2, v4
@@ -14083,8 +14083,8 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_add_u32 s2, s4, 64
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    s_addc_u32 s3, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v5, s3
 ; VI-NEXT:    v_mov_b32_e32 v4, s2
+; VI-NEXT:    v_mov_b32_e32 v5, s3
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; VI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -16909,8 +16909,8 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_add_u32 s2, s4, 64
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    s_addc_u32 s3, s5, 0
-; VI-NEXT:    v_mov_b32_e32 v5, s3
 ; VI-NEXT:    v_mov_b32_e32 v4, s2
+; VI-NEXT:    v_mov_b32_e32 v5, s3
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; VI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
