@@ -1,16 +1,12 @@
-===============================================
-Architecture and Design of DXIL Support in LLVM
-===============================================
+# Architecture and Design of DXIL Support in LLVM
 
+```{toctree}
+:hidden: true
+```
 
-.. toctree::
-   :hidden:
+## Introduction
 
-Introduction
-============
-
-LLVM supports reading and writing the `DirectX Intermediate Language.
-<https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst>`_,
+LLVM supports reading and writing the [DirectX Intermediate Language.](https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst),
 or DXIL. DXIL is essentially LLVM 3.7 era bitcode with some
 restrictions and various semantically important operations and
 metadata.
@@ -26,8 +22,7 @@ There are three places to look for DXIL related code in LLVM: The
 reading; and in library code that is shared between writing and
 reading. We'll describe these in reverse order.
 
-Common Code for Reading and Writing
-===================================
+## Common Code for Reading and Writing
 
 There's quite a bit of logic that needs to be shared between reading
 and writing DXIL in order to avoid code duplication. While we don't
@@ -39,8 +34,7 @@ DXIL and modern LLVM constructs live in `lib/Transforms/Utils`, and
 more analyses that are needed to derive or preserve information are
 implemented as typical `lib/Analysis` passes.
 
-The DXILUpgrade Pass
-====================
+## The DXILUpgrade Pass
 
 Translating DXIL to LLVM IR takes advantage of the fact that DXIL is
 compatible with LLVM 3.7 bitcode, and that modern LLVM is capable of
@@ -59,21 +53,19 @@ on the utilities described in "Common Code" above in order to share
 logic with both the DirectX backend and with Clang's codegen of HLSL
 support as much as possible.
 
-The DirectX Intrinsic Expansion Pass
-====================================
+## The DirectX Intrinsic Expansion Pass
+
 There are intrinsics that don't map directly to DXIL Ops. In some cases
 an intrinsic needs to be expanded to a set of LLVM IR instructions. In
 other cases an intrinsic needs modifications to the arguments or return
-values of a DXIL Op. The `DXILIntrinsicExpansion` pass handles all 
-the cases where our intrinsics don't have a one to one mapping. This 
-pass may also be used when the expansion is specific to DXIL to keep 
-implementation details out of CodeGen. Finally, there is an expectation 
-that we maintain vector types through this pass. Therefore, best 
+values of a DXIL Op. The `DXILIntrinsicExpansion` pass handles all
+the cases where our intrinsics don't have a one to one mapping. This
+pass may also be used when the expansion is specific to DXIL to keep
+implementation details out of CodeGen. Finally, there is an expectation
+that we maintain vector types through this pass. Therefore, best
 practice would be to avoid scalarization in this pass.
 
-
-The DirectX Backend
-===================
+## The DirectX Backend
 
 The DirectX backend lowers LLVM IR into DXIL. As we're transforming to
 an intermediate format rather than a specific ISA, this backend does
@@ -100,55 +92,52 @@ leverage LLVM's current bitcode libraries to do a lot of the work, but
 it's possible that at some point in the future it will need to be
 completely separate as modern LLVM bitcode evolves.
 
-DirectX Backend Flow
---------------------
+### DirectX Backend Flow
 
 The code generation flow for DXIL is broken into a series of passes. The passes
 are grouped into two flows:
 
-#. Generating DXIL IR.
-#. Generating DXIL Binary.
+1. Generating DXIL IR.
+2. Generating DXIL Binary.
 
 The passes to generate DXIL IR follow the flow:
 
-  DXILOpLowering -> DXILPrepare -> DXILTranslateMetadata
+> DXILOpLowering -> DXILPrepare -> DXILTranslateMetadata
 
 Each of these passes has a defined responsibility:
 
-#. DXILOpLowering translates LLVM intrinsic calls to dx.op calls.
-#. DXILPrepare updates functions in the DXIL IR to be compatible with LLVM 3.7,
+1. DXILOpLowering translates LLVM intrinsic calls to dx.op calls.
+2. DXILPrepare updates functions in the DXIL IR to be compatible with LLVM 3.7,
    namely removing attributes, and inserting bitcasts to allow typed pointers
    to be inserted.
-#. DXILTranslateMetadata transforms and emits all recognized DXIL Metadata.
+3. DXILTranslateMetadata transforms and emits all recognized DXIL Metadata.
 
 The passes to encode DXIL to binary in the DX Container follow the flow:
 
-  DXILEmbedder -> DXContainerGlobals -> AsmPrinter
+> DXILEmbedder -> DXContainerGlobals -> AsmPrinter
 
 Each of these passes have the following defined responsibilities:
 
-#. DXILEmbedder runs the DXIL bitcode writer to generate a bitcode stream and
+1. DXILEmbedder runs the DXIL bitcode writer to generate a bitcode stream and
    embeds the binary data inside a global in the original module.
-#. DXContainerGlobals generates binary data globals for the other DX Container
+2. DXContainerGlobals generates binary data globals for the other DX Container
    parts based on computed analysis passes.
-#. AsmPrinter is the standard LLVM infrastructure for emitting object files.
+3. AsmPrinter is the standard LLVM infrastructure for emitting object files.
 
 When emitting DXIL into a DX Container file the MC layer is used in a similar
-way to how the Clang ``-fembed-bitcode`` option operates. The DX Container
+way to how the Clang `-fembed-bitcode` option operates. The DX Container
 object writer knows how to construct the headers and structural fields of the
 container, and reads global variables from the module to fill in the remaining
 part data.
 
-DirectX Container
------------------
+### DirectX Container
 
 The DirectX container format is treated in LLVM as an object file format.
 Reading is implemented between the BinaryFormat and Object libraries, and
 writing is implemented in the MC layer. Additional testing and inspection
 support are implemented in the ObjectYAML library and tools.
 
-Testing
-=======
+## Testing
 
 A lot of DXIL testing can be done with typical IR to IR tests using
 `opt` and `FileCheck`, since a lot of the support is implemented in
@@ -168,3 +157,4 @@ DXIL reading path.
 As soon as we are able, we will also want to round trip using the DXIL
 writing and reading paths in order to ensure self consistency and to
 get test coverage when `dxil-dis` isn't available.
+
