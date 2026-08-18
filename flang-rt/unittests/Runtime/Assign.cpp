@@ -109,7 +109,7 @@ TEST(AssignSimple, ReallocateUnallocated) {
   EXPECT_EQ(dest.rank(), 1);
   EXPECT_EQ(dest.GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(dest.GetDimension(0).Extent(), 4);
-  EXPECT_EQ(dest.Elements(), 4);
+  EXPECT_EQ(dest.Elements(), 4U);
 
   int expected[4] = {10, 20, 30, 40};
   EXPECT_EQ(
@@ -141,7 +141,7 @@ TEST(AssignSimple, ReallocateShapeMismatch) {
   EXPECT_EQ(dest->rank(), 1);
   EXPECT_EQ(dest->GetDimension(0).LowerBound(), 1);
   EXPECT_EQ(dest->GetDimension(0).Extent(), 5);
-  EXPECT_EQ(dest->Elements(), 5);
+  EXPECT_EQ(dest->Elements(), 5U);
 
   int expected[5] = {10, 20, 30, 40, 50};
   EXPECT_EQ(
@@ -191,15 +191,15 @@ TEST(AssignSimple, ZeroSizeArray) {
   auto dest{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{0}, std::vector<int>{}, sizeof(int))};
 
-  EXPECT_EQ(source->Elements(), 0);
-  EXPECT_EQ(dest->Elements(), 0);
+  EXPECT_EQ(source->Elements(), 0U);
+  EXPECT_EQ(dest->Elements(), 0U);
 
   // Should not crash with zero-size arrays
   RTNAME(AssignSimple)(*dest, *source, __FILE__, __LINE__);
 
   // Verify both still have 0 elements
-  EXPECT_EQ(dest->Elements(), 0);
-  EXPECT_EQ(source->Elements(), 0);
+  EXPECT_EQ(dest->Elements(), 0U);
+  EXPECT_EQ(source->Elements(), 0U);
 
   dest->Destroy();
   source->Destroy();
