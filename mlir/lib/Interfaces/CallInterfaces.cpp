@@ -213,7 +213,7 @@ LogicalResult call_interface_impl::verifyCallOpInterface(
            << argumentTypes.size() << ", but got " << argOperands.size();
   for (unsigned i = 0, e = argOperands.size(); i != e; ++i) {
     Type operandType = argOperands[i].getType();
-    if (!call.areTypesCompatible(operandType, argumentTypes[i]))
+    if (operandType != argumentTypes[i])
       return op->emitOpError("operand type mismatch: expected operand type ")
              << argumentTypes[i] << ", but provided " << operandType
              << " for operand number " << i;
@@ -226,7 +226,7 @@ LogicalResult call_interface_impl::verifyCallOpInterface(
     return op->emitOpError("incorrect number of results for callee: expected ")
            << resultTypes.size() << ", but got " << forwardedResults.size();
   for (unsigned i = 0, e = forwardedResults.size(); i != e; ++i) {
-    if (call.areTypesCompatible(forwardedResults[i].getType(), resultTypes[i]))
+    if (forwardedResults[i].getType() == resultTypes[i])
       continue;
     InFlightDiagnostic diag = op->emitOpError("result type mismatch at index ")
                               << i;

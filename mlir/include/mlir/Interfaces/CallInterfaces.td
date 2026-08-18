@@ -83,8 +83,8 @@ def CallOpInterface : OpInterface<"CallOpInterface",
     1:1 relationship with the arguments/results of the callee: the i-th
     forwarded operand is passed as the i-th argument of the callee and the i-th
     forwarded result receives the i-th value returned by the callee.
-    Corresponding types are not required to be equal; `areTypesCompatible`
-    decides which types may be paired. By default, types must be equal.
+    Corresponding types are not required to be equal; it is up to the operation
+    to verify them as needed.
 
     Note: This interface does not model variadic operands ("argument pack").
     Neither does the CallableOpInterface. Variadic operands should be modeled
@@ -116,10 +116,9 @@ def CallOpInterface : OpInterface<"CallOpInterface",
 
         The returned range must be a contiguous sub-range of the operation's
         operands. The i-th forwarded operand is passed as the i-th argument of
-        the callee; the two types are not required to be equal, but must be
-        compatible according to `areTypesCompatible`. Operands that are not part
-        of the returned range are consumed by the operation itself and are not
-        passed to the callee as arguments.
+        the callee. Operands that are not part of the returned range are
+        consumed by the operation itself and are not passed to the callee as
+        arguments.
       }],
       "::mlir::Operation::operand_range", "getArgOperands"
     >,
@@ -137,10 +136,8 @@ def CallOpInterface : OpInterface<"CallOpInterface",
 
         The returned range must be a contiguous sub-range of the operation's
         results. The i-th forwarded result receives the i-th value returned by
-        the callee; the two types are not required to be equal, but must be
-        compatible according to `areTypesCompatible`. Results that are not part
-        of the returned range are produced by the operation itself and do not
-        originate from the callee.
+        the callee. Results that are not part of the returned range are produced
+        by the operation itself and do not originate from the callee.
 
         By default, all results of the operation are forwarded results.
       }],
@@ -168,17 +165,6 @@ def CallOpInterface : OpInterface<"CallOpInterface",
       /*methodBody=*/[{}], /*defaultImplementation=*/[{
         return ::mlir::call_interface_impl::resolveCallable($_op);
       }]
-    >,
-    InterfaceMethod<[{
-        Compares types across the call boundary for compatibility: the type of
-        a forwarded operand against the type of the corresponding callee
-        argument, and the type of a forwarded result against the type of the
-        corresponding callee result. By default, the types are checked as equal.
-      }],
-      "bool", "areTypesCompatible",
-      (ins "::mlir::Type":$callerType, "::mlir::Type":$calleeType),
-      /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{ return callerType == calleeType; }]
     >
   ];
 }

@@ -4021,25 +4021,6 @@ def TestCallAndProduceOp : TEST_Op<"call_and_produce",
     "`:` functional-type(operands, results)";
 }
 
-// A call-like operation that overrides `areTypesCompatible`: `i32` and `i64` are
-// interchangeable across the call boundary, all other types must match.
-def TestCallTypesCompatOp : TEST_Op<"call_types_compat",
-    [DeclareOpInterfaceMethods<CallOpInterface, ["areTypesCompatible"]>,
-     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
-  let arguments = (ins
-    SymbolRefAttr:$callee,
-    Variadic<AnyType>:$forwarded_operands,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs
-  );
-  let results = (outs
-    Variadic<AnyType>:$results
-  );
-  let assemblyFormat =
-    "$callee `(` $forwarded_operands `)` attr-dict "
-    "`:` functional-type(operands, results)";
-}
-
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {

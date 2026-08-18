@@ -843,7 +843,6 @@ interface section goes as follows:
     -   `Operation::operand_range getArgOperands()`
     -   `MutableOperandRange getArgOperandsMutable()`
     -   `Operation::result_range getForwardedResults()`
-    -   `bool areTypesCompatible(Type, Type)`
     -   `Operation * resolveCallable()`
     -   `Operation * resolveCallableInTable(SymbolTableCollection *)`
     -   `ArrayAttr getArgAttrsAttr()`
@@ -870,9 +869,9 @@ results to be *produced* by it. The operands that are passed to the callee
 callee (`getForwardedResults`) are said to be *forwarded*, and they are in a 1:1
 relationship with the arguments and results of the callee: the i-th forwarded
 operand is passed as the i-th argument of the callee and the i-th forwarded
-result receives the i-th value returned by the callee. Corresponding types need
-not be equal; `areTypesCompatible` decides which types may be paired (by
-default, types must be equal).
+result receives the i-th value returned by the callee. Corresponding types are
+not required to be equal; it is up to the call operation to verify them as
+needed.
 
 Variadic arguments of a call to a variadic callee (if supported by the call
 op / callee op) are consumed operands, not forwarded ones: they do not

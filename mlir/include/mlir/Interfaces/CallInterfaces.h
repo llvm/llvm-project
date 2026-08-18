@@ -39,8 +39,7 @@ Operation *resolveCallable(CallOpInterface call,
 
 /// Verify that the forwarded operands and results of `call` are in a 1:1
 /// relationship with the given argument and result types of its callee: the
-/// numbers must match and corresponding types must be compatible according to
-/// `CallOpInterface::areTypesCompatible`.
+/// numbers must match and corresponding types must be equal.
 ///
 /// This overload is for call operations whose callee does not necessarily
 /// implement `CallableOpInterface`, e.g., `llvm.call`, which can also call an
