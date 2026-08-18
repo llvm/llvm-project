@@ -1440,7 +1440,10 @@ cc_library(
             "include/llvm/Analysis/Utils/*.h",
         ],
     ) + ["include/llvm-c/Analysis.h"],
-    copts = llvm_copts + ["-ftrapping-math"],
+    copts = llvm_copts + select({
+        "@platforms//os:emscripten": [],
+        "//conditions:default": ["-ftrapping-math"],
+    }),
     features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
