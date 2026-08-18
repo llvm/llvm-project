@@ -43,9 +43,12 @@ void test() {
   // [range.cartesian.view]
 
   std::ranges::cartesian_product_view<View> v{View{}};
-  v.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.size();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.begin();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.end();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.size();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(v).begin();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -55,27 +58,35 @@ void test() {
 
   // Not a common range: end() returns default_sentinel_t.
   const std::ranges::cartesian_product_view<NonCommonView> non_common{NonCommonView{}};
-  non_common.end(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  non_common.end();
 
   // [range.cartesian.iterator]
 
-  auto iter = v.begin();
+  auto iter = std::as_const(v).begin();
 
-  *iter;    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter[0];  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter + 0; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  0 + iter; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter - 0; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  *iter;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  iter[0];
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  iter + 0;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  0 + iter;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  iter - 0;
 
   // operator== and operator<=> are omitted: -Wunused-value already warns on discarded comparisons.
 
-  iter - iter; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  iter - iter;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   iter - std::default_sentinel;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::default_sentinel - iter;
 
-  iter_move(iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  iter_move(iter);
 
   // [range.cartesian.overview]
 
