@@ -33,9 +33,28 @@
 #include "hdr/stdio_macros.h"
 #include "src/__support/macros/properties/os.h"
 
-using LlvmLibcFreopenTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+
+struct LlvmLibcFreopenTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
+  static constexpr size_t VERIFY_BUFFER_SIZE = 128;
+
+  void verify_file_content(const char *filepath, const char *expected) {
+    size_t len = 0;
+    while (expected[len] != '\0')
+      ++len;
+    ASSERT_LT(len, VERIFY_BUFFER_SIZE);
+
+    ::FILE *file = LIBC_NAMESPACE::fopen(filepath, "r");
+    ASSERT_FALSE(file == nullptr);
+    char read_buf[VERIFY_BUFFER_SIZE] = {0};
+    ASSERT_THAT(
+        LIBC_NAMESPACE::fread(read_buf, 1, VERIFY_BUFFER_SIZE - 1, file),
+        Succeeds(len));
+    ASSERT_STREQ(read_buf, expected);
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+  }
+};
 
 TEST_F(LlvmLibcFreopenTest, ReopenFile) {
   const auto FILENAME_A = libc_make_test_file_path("freopen_a.test");
@@ -46,9 +65,9 @@ TEST_F(LlvmLibcFreopenTest, ReopenFile) {
   ASSERT_FALSE(file == nullptr);
 
   constexpr char CONTENT_A[] = "File A Content";
-  ASSERT_EQ(LIBC_NAMESPACE::fwrite(CONTENT_A, 1, sizeof(CONTENT_A) - 1, file),
-            sizeof(CONTENT_A) - 1);
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite(CONTENT_A, 1, sizeof(CONTENT_A) - 1, file),
+              Succeeds(sizeof(CONTENT_A) - 1));
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
 
   // Step 2: Open file A for reading.
   file = LIBC_NAMESPACE::fopen(FILENAME_A, "r");
@@ -56,24 +75,17 @@ TEST_F(LlvmLibcFreopenTest, ReopenFile) {
 
   // Step 3: Use freopen to redirect stream from file A to file B for writing.
   ::FILE *reopened_file = LIBC_NAMESPACE::freopen(FILENAME_B, "w", file);
-  ASSERT_NE(reopened_file, static_cast<::FILE *>(nullptr));
   ASSERT_EQ(reopened_file, file);
 
   // Step 4: Write to reopened stream (file B).
   constexpr char CONTENT_B[] = "File B Content Written via freopen";
-  ASSERT_EQ(LIBC_NAMESPACE::fwrite(CONTENT_B, 1, sizeof(CONTENT_B) - 1,
-                                   reopened_file),
-            sizeof(CONTENT_B) - 1);
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(reopened_file), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite(CONTENT_B, 1, sizeof(CONTENT_B) - 1,
+                                     reopened_file),
+              Succeeds(sizeof(CONTENT_B) - 1));
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(reopened_file), Succeeds(0));
 
   // Step 5: Verify file B content.
-  file = LIBC_NAMESPACE::fopen(FILENAME_B, "r");
-  ASSERT_FALSE(file == nullptr);
-  char read_buf[sizeof(CONTENT_B)] = {0};
-  ASSERT_EQ(LIBC_NAMESPACE::fread(read_buf, 1, sizeof(CONTENT_B) - 1, file),
-            sizeof(CONTENT_B) - 1);
-  ASSERT_STREQ(read_buf, CONTENT_B);
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+  verify_file_content(FILENAME_B, CONTENT_B);
 }
 
 TEST_F(LlvmLibcFreopenTest, NullFilenameModeChange) {
@@ -84,31 +96,23 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameModeChange) {
   ASSERT_FALSE(file == nullptr);
 
   constexpr char INITIAL_CONTENT[] = "Initial Data ";
-  ASSERT_EQ(LIBC_NAMESPACE::fwrite(INITIAL_CONTENT, 1,
-                                   sizeof(INITIAL_CONTENT) - 1, file),
-            sizeof(INITIAL_CONTENT) - 1);
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite(INITIAL_CONTENT, 1,
+                                     sizeof(INITIAL_CONTENT) - 1, file),
+              Succeeds(sizeof(INITIAL_CONTENT) - 1));
 
   // Step 2: Change mode with filename == nullptr to append.
   ::FILE *reopened = LIBC_NAMESPACE::freopen(nullptr, "a", file);
-  ASSERT_NE(reopened, static_cast<::FILE *>(nullptr));
   ASSERT_EQ(reopened, file);
 
   // Step 3: Write appended content.
   constexpr char APPENDED_CONTENT[] = "Appended Data";
-  ASSERT_EQ(LIBC_NAMESPACE::fwrite(APPENDED_CONTENT, 1,
-                                   sizeof(APPENDED_CONTENT) - 1, reopened),
-            sizeof(APPENDED_CONTENT) - 1);
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(reopened), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite(APPENDED_CONTENT, 1,
+                                     sizeof(APPENDED_CONTENT) - 1, reopened),
+              Succeeds(sizeof(APPENDED_CONTENT) - 1));
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(reopened), Succeeds(0));
 
   // Step 4: Verify combined content.
-  file = LIBC_NAMESPACE::fopen(FILENAME, "r");
-  ASSERT_FALSE(file == nullptr);
-  char read_buf[64] = {0};
-  size_t read_bytes =
-      LIBC_NAMESPACE::fread(read_buf, 1, sizeof(read_buf) - 1, file);
-  read_buf[read_bytes] = '\0';
-  ASSERT_STREQ(read_buf, "Initial Data Appended Data");
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+  verify_file_content(FILENAME, "Initial Data Appended Data");
 }
 
 TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
@@ -118,7 +122,7 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
   // Open file read-only.
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
 
   file = LIBC_NAMESPACE::fopen(FILENAME, "r");
   ASSERT_FALSE(file == nullptr);
@@ -131,7 +135,7 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
   ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "w+", file),
               Fails(EBADF, static_cast<void *>(nullptr)));
 
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
 }
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
@@ -142,15 +146,14 @@ TEST_F(LlvmLibcFreopenTest, InvalidModeFailure) {
   ASSERT_FALSE(file == nullptr);
 
   int old_fd = LIBC_NAMESPACE::fileno(file);
-  ASSERT_GT(old_fd, 0);
+  ASSERT_GE(old_fd, 0);
 
   ASSERT_THAT(LIBC_NAMESPACE::freopen(FILENAME, "invalid_mode_str", file),
               Fails(EINVAL, static_cast<void *>(nullptr)));
 
   // Per POSIX spec, original stream fd was closed on filename != nullptr
   // freopen attempt.
-  ASSERT_EQ(LIBC_NAMESPACE::fcntl(old_fd, F_GETFL), -1);
-  ASSERT_ERRNO_EQ(EBADF);
+  ASSERT_THAT(LIBC_NAMESPACE::fcntl(old_fd, F_GETFL), Fails(EBADF, -1));
 
   // Clean up stream object to avoid memory leaks.
   ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Fails(EBADF, EOF));
@@ -174,8 +177,7 @@ TEST_F(LlvmLibcFreopenTest, NonExistentFileFailure) {
               Fails(ENOENT, static_cast<void *>(nullptr)));
 
   // Per POSIX spec: The original stream fd is closed even if open fails.
-  ASSERT_EQ(LIBC_NAMESPACE::fcntl(old_fd, F_GETFL), -1);
-  ASSERT_ERRNO_EQ(EBADF);
+  ASSERT_THAT(LIBC_NAMESPACE::fcntl(old_fd, F_GETFL), Fails(EBADF, -1));
 
   // Clean up stream object to avoid memory leaks.
   ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Fails(EBADF, EOF));
@@ -190,22 +192,17 @@ TEST_F(LlvmLibcFreopenTest, FlushBeforeReopenTest) {
   ASSERT_FALSE(file == nullptr);
 
   constexpr char DIRTY_DATA[] = "Buffered data before freopen";
-  ASSERT_EQ(LIBC_NAMESPACE::fwrite(DIRTY_DATA, 1, sizeof(DIRTY_DATA) - 1, file),
-            sizeof(DIRTY_DATA) - 1);
+  ASSERT_THAT(
+      LIBC_NAMESPACE::fwrite(DIRTY_DATA, 1, sizeof(DIRTY_DATA) - 1, file),
+      Succeeds(sizeof(DIRTY_DATA) - 1));
 
   // freopen must flush unwritten buffered data to FILENAME_A before reopening
   ::FILE *reopened = LIBC_NAMESPACE::freopen(FILENAME_B, "w", file);
-  ASSERT_NE(reopened, static_cast<::FILE *>(nullptr));
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(reopened), 0);
+  ASSERT_EQ(reopened, file);
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(reopened), Succeeds(0));
 
   // Verify FILENAME_A received the flushed dirty buffer
-  file = LIBC_NAMESPACE::fopen(FILENAME_A, "r");
-  ASSERT_FALSE(file == nullptr);
-  char read_buf[sizeof(DIRTY_DATA)] = {0};
-  ASSERT_EQ(LIBC_NAMESPACE::fread(read_buf, 1, sizeof(DIRTY_DATA) - 1, file),
-            sizeof(DIRTY_DATA) - 1);
-  ASSERT_STREQ(read_buf, DIRTY_DATA);
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+  verify_file_content(FILENAME_A, DIRTY_DATA);
 }
 
 TEST_F(LlvmLibcFreopenTest, ClearFlagsTest) {
@@ -215,9 +212,9 @@ TEST_F(LlvmLibcFreopenTest, ClearFlagsTest) {
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME_A, "w");
   ASSERT_FALSE(file == nullptr);
   constexpr char SHORT_DATA[] = "X";
-  ASSERT_EQ(LIBC_NAMESPACE::fwrite(SHORT_DATA, 1, 1, file),
-            static_cast<size_t>(1));
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::fwrite(SHORT_DATA, 1, 1, file),
+              Succeeds(static_cast<size_t>(1)));
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
 
   // Trigger EOF on file
   file = LIBC_NAMESPACE::fopen(FILENAME_A, "r");
@@ -228,11 +225,11 @@ TEST_F(LlvmLibcFreopenTest, ClearFlagsTest) {
 
   // freopen must clear EOF and error indicators
   ::FILE *reopened = LIBC_NAMESPACE::freopen(FILENAME_B, "w", file);
-  ASSERT_NE(reopened, static_cast<::FILE *>(nullptr));
+  ASSERT_EQ(reopened, file);
   ASSERT_EQ(LIBC_NAMESPACE::feof(reopened), 0);
   ASSERT_EQ(LIBC_NAMESPACE::ferror(reopened), 0);
 
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(reopened), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(reopened), Succeeds(0));
 }
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
@@ -245,7 +242,7 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameBadFdTest) {
   int fd = LIBC_NAMESPACE::fileno(file);
   ASSERT_GT(fd, 0);
   // Manually close underlying fd to simulate bad file descriptor state
-  ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   // freopen with filename == nullptr on invalid fd should return nullptr +
   // EBADF
@@ -269,10 +266,10 @@ TEST_F(LlvmLibcFreopenTest, ResetOrientationTest) {
 
   // freopen must reset orientation to 0 (unoriented)
   ::FILE *reopened = LIBC_NAMESPACE::freopen(FILENAME_B, "w", file);
-  ASSERT_NE(reopened, static_cast<::FILE *>(nullptr));
-  ASSERT_EQ(LIBC_NAMESPACE::fwide(reopened, 0), 0);
+  ASSERT_EQ(reopened, file);
+  ASSERT_THAT(LIBC_NAMESPACE::fwide(reopened, 0), Succeeds(0));
 
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(reopened), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(reopened), Succeeds(0));
 }
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
@@ -285,26 +282,19 @@ TEST_F(LlvmLibcFreopenTest, StdoutRedirectionTest) {
   // Redirect stdout to FILENAME
   ::FILE *reopened =
       LIBC_NAMESPACE::freopen(FILENAME, "w", LIBC_NAMESPACE::stdout);
-  ASSERT_NE(reopened, static_cast<::FILE *>(nullptr));
   ASSERT_EQ(reopened, static_cast<::FILE *>(LIBC_NAMESPACE::stdout));
 
   // Verify fileno(stdout) is preserved as 1
   ASSERT_EQ(LIBC_NAMESPACE::fileno(LIBC_NAMESPACE::stdout), 1);
 
   constexpr char MSG[] = "Redirected Stdout";
-  ASSERT_EQ(
+  ASSERT_THAT(
       LIBC_NAMESPACE::fwrite(MSG, 1, sizeof(MSG) - 1, LIBC_NAMESPACE::stdout),
-      sizeof(MSG) - 1);
-  ASSERT_EQ(LIBC_NAMESPACE::fflush(LIBC_NAMESPACE::stdout), 0);
+      Succeeds(sizeof(MSG) - 1));
+  ASSERT_THAT(LIBC_NAMESPACE::fflush(LIBC_NAMESPACE::stdout), Succeeds(0));
 
   // Verify file content
-  ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "r");
-  ASSERT_FALSE(file == nullptr);
-  char read_buf[sizeof(MSG)] = {0};
-  ASSERT_EQ(LIBC_NAMESPACE::fread(read_buf, 1, sizeof(MSG) - 1, file),
-            sizeof(MSG) - 1);
-  ASSERT_STREQ(read_buf, MSG);
-  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+  verify_file_content(FILENAME, MSG);
 }
 
 TEST_F(LlvmLibcFreopenTest, StdoutFailureTest) {
