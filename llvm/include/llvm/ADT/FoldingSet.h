@@ -31,7 +31,7 @@
 
 namespace llvm {
 
-/// This folding set used for two purposes:
+/// This folding set is used for two purposes:
 ///   1. Given information about a node we want to create, look up the unique
 ///      instance of the node in the set.  If the node already exists, return
 ///      it, otherwise return the bucket it should be inserted into.
@@ -97,7 +97,8 @@ namespace llvm {
 /// 3) If you get a NULL result from FindNodeOrInsertPos then you can insert a
 /// new node with InsertNode;
 ///
-///    MyFoldingSet.InsertNode(M, InsertPoint);
+///    MyNode *N = new MyNode(Name, Value);
+///    MyFoldingSet.InsertNode(N, InsertPoint);
 ///
 /// 4) Finally, if you want to remove a node from the folding set call;
 ///
@@ -380,7 +381,7 @@ protected:
   /// was removed or false if the node was not in the folding set.
   LLVM_ABI bool RemoveNode(Node *N);
 
-  /// If there is an existing simple Node exactly equal to the node \p N,
+  /// If there is an existing node exactly equal to the node \p N,
   /// return it.  Otherwise, insert \p N and return it instead.
   LLVM_ABI Node *GetOrInsertNode(Node *N, const FoldingSetInfo &Info);
 
@@ -464,7 +465,7 @@ public:
   /// was removed or false if the node was not in the folding set.
   bool RemoveNode(T *N) { return FoldingSetBase::RemoveNode(N); }
 
-  /// If there is an existing simple Node exactly equal to the specified node,
+  /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
   T *GetOrInsertNode(T *N) {
     return static_cast<T *>(
@@ -641,7 +642,7 @@ public:
     return Set.FindNodeOrInsertPos(ID, InsertPos);
   }
 
-  /// If there is an existing simple Node exactly equal to the specified node,
+  /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
   T *GetOrInsertNode(T *N) {
     T *Result = Set.GetOrInsertNode(N);
