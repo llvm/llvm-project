@@ -332,8 +332,7 @@ func.func @zero_extent_alloca_multi_dim() {
 
 // -----
 
-// Same for the scalable path: the extent is `vector.vscale * 0`, a constant
-// zero, so the scalable vector type cannot be built either.
+// A memref with a `vector.vscale * 0` extent holds no elements and cannot be promoted.
 
 // CHECK-LABEL: func.func @scalable_zero_extent_alloca
 func.func @scalable_zero_extent_alloca() {
