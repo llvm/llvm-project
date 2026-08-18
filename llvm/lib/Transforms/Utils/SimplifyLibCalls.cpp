@@ -2009,13 +2009,6 @@ static Value *replaceBinaryCall(CallInst *CI, IRBuilderBase &B,
   return copyFlags(*CI, NewCall);
 }
 
-static Value *replaceScalbnWithLdexp(CallInst *CI, IRBuilderBase &B) {
-  Value *NewCall =
-      B.CreateLdexp(CI->getArgOperand(0), CI->getArgOperand(1), CI);
-  NewCall->takeName(CI);
-  return copyFlags(*CI, NewCall);
-}
-
 /// Return a variant of Val with float type.
 /// Currently this works in two cases: If Val is an FPExtension of a float
 /// value to something bigger, simply return the operand.
@@ -4163,8 +4156,12 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_scalbnl:
     // LLVM floating-point types have radix 2, so scalbn is equivalent to
     // ldexp. Do not replace a libcall that may set errno.
-    if (CI->doesNotAccessMemory())
-      return replaceScalbnWithLdexp(CI, Builder);
+    if (CI->doesNotAccessMemory()) {
+      Value *NewCall =
+          Builder.CreateLdexp(CI->getArgOperand(0), CI->getArgOperand(1), CI);
+      NewCall->takeName(CI);
+      return copyFlags(*CI, NewCall);
+    }
     return nullptr;
   case LibFunc_fabsf:
   case LibFunc_fabs:

@@ -5,15 +5,15 @@ declare float @scalbnf(float, i32)
 declare double @scalbn(double, i32)
 declare fp128 @scalbnl(fp128, i32)
 
-; Cover the float variant and preservation of fast-math flags and tail calls.
+; Cover the float variant.
 
 define float @scalbnf_f32(float %x, i32 %exp) {
 ; CHECK-LABEL: define float @scalbnf_f32(
 ; CHECK-SAME: float [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call fast float @llvm.ldexp.f32.i32(float [[X]], i32 [[EXP]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ldexp.f32.i32(float [[X]], i32 [[EXP]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = tail call fast float @scalbnf(float %x, i32 %exp) memory(none)
+  %r = call float @scalbnf(float %x, i32 %exp) memory(none)
   ret float %r
 }
 
@@ -39,6 +39,18 @@ define fp128 @scalbnl_f128(fp128 %x, i32 %exp) {
 ;
   %r = call fp128 @scalbnl(fp128 %x, i32 %exp) memory(none)
   ret fp128 %r
+}
+
+; Fast-math flags and tail calls must be preserved.
+
+define float @scalbnf_flags(float %x, i32 %exp) {
+; CHECK-LABEL: define float @scalbnf_flags(
+; CHECK-SAME: float [[X:%.*]], i32 [[EXP:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = tail call fast float @llvm.ldexp.f32.i32(float [[X]], i32 [[EXP]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = tail call fast float @scalbnf(float %x, i32 %exp) memory(none)
+  ret float %r
 }
 
 ; Calls that may set errno must remain libcalls.
@@ -74,5 +86,29 @@ define double @scalbn_nobuiltin(double %x, i32 %exp) {
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @scalbn(double %x, i32 %exp) nobuiltin memory(none)
+  ret double %r
+}
+
+; A scalbn call with the wrong exponent type must remain unchanged.
+
+define double @scalbn_wrong_exponent_type(double %x, double %exp) {
+; CHECK-LABEL: define double @scalbn_wrong_exponent_type(
+; CHECK-SAME: double [[X:%.*]], double [[EXP:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call double @scalbn(double [[X]], double [[EXP]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @scalbn(double %x, double %exp) memory(none)
+  ret double %r
+}
+
+; A scalbn call with the wrong number of arguments must remain unchanged.
+
+define double @scalbn_wrong_argument_count(double %x) {
+; CHECK-LABEL: define double @scalbn_wrong_argument_count(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call double @scalbn(double [[X]]) #[[ATTR4]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @scalbn(double %x) memory(none)
   ret double %r
 }
