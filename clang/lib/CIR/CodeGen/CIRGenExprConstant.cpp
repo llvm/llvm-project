@@ -1510,9 +1510,10 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
                                       cir::FPAttr::get(complexElemTy, real),
                                       cir::FPAttr::get(complexElemTy, imag));
   }
-  case APValue::FixedPoint:
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate fixed point");
-    return {};
+  case APValue::FixedPoint: {
+    mlir::Type ty = cgm.convertType(destType);
+    return cir::IntAttr::get(ty, value.getFixedPoint().getValue());
+  }
   case APValue::AddrLabelDiff: {
     const AddrLabelExpr *lhsExpr = value.getAddrLabelDiffLHS();
     const AddrLabelExpr *rhsExpr = value.getAddrLabelDiffRHS();

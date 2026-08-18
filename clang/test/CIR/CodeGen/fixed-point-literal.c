@@ -5,6 +5,34 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
+_Fract global_f = 0.5r;
+// CIR: cir.global external @global_f = #cir.int<16384> : !s16i {alignment = 2 : i64}
+// LLVM: @global_f = global i16 16384, align 2
+// OGCG: @global_f = global i16 16384, align 2
+_Accum global_a = 1.5k;
+// CIR: cir.global external @global_a = #cir.int<49152> : !s32i {alignment = 4 : i64}
+// LLVM: @global_a = global i32 49152, align 4
+// OGCG: @global_a = global i32 49152, align 4
+
+short _Fract global_short_f = 0.5hr;
+// CIR: cir.global external @global_short_f = #cir.int<64> : !s8i {alignment = 1 : i64}
+// LLVM: @global_short_f = global i8 64, align 1
+// OGCG: @global_short_f = global i8 64, align 1
+short _Accum global_short_a = 1.5hk;
+// CIR: cir.global external @global_short_a = #cir.int<192> : !s16i {alignment = 2 : i64}
+// LLVM: @global_short_a = global i16 192, align 2
+// OGCG: @global_short_a = global i16 192, align 2
+
+unsigned short _Fract global_unsigned_short_f = 0.5uhr;
+// CIR: cir.global external @global_unsigned_short_f = #cir.int<128> : !u8i {alignment = 1 : i64}
+// LLVM: @global_unsigned_short_f = global i8 -128, align 1
+// OGCG: @global_unsigned_short_f = global i8 -128, align 1
+
+unsigned short _Accum global_unsigned_short_a = 1.5uhk;
+// CIR: cir.global external @global_unsigned_short_a = #cir.int<384> : !u16i {alignment = 2 : i64}
+// LLVM: @global_unsigned_short_a = global i16 384, align 2
+// OGCG: @global_unsigned_short_a = global i16 384, align 2
+
 // Test basic fixed-point literals
 void test_short_fract() {
   // CIR:  cir.func{{.*}} @test_short_fract
