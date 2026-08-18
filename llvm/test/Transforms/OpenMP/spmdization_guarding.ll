@@ -55,7 +55,7 @@
 ; CHECK-DISABLED: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
 ; CHECK-DISABLED: @LocGlob = private unnamed_addr addrspace(5) global i32 43
 ; CHECK-DISABLED: @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK-DISABLED: @__omp_outlined__1_wrapper.ID = private constant i8 undef
+; CHECK-DISABLED: @__omp_outlined__1_wrapper.ID = private constant i8 poison
 ;.
 define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x, i64 %N) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_sequential_loop_l6

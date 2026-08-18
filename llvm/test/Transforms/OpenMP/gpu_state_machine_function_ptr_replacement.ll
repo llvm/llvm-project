@@ -23,8 +23,8 @@
 ; region (1 and 3) but not for the middle one (2) because it could be called from
 ; another kernel.
 
-; CHECK-DAG: @__omp_outlined__1_wrapper.ID = private constant i8 undef
-; CHECK-DAG: @__omp_outlined__2_wrapper.ID = private constant i8 undef
+; CHECK-DAG: @__omp_outlined__1_wrapper.ID = private constant i8 poison
+; CHECK-DAG: @__omp_outlined__2_wrapper.ID = private constant i8 poison
 
 ; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__1_wrapper.ID
 ; CHECK-DAG:   icmp eq ptr %worker.work_fn, @__omp_outlined__2_wrapper.ID

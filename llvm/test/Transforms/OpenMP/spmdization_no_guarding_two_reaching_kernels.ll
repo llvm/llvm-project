@@ -54,7 +54,7 @@
 ; CHECK-DISABLE-SPMDIZATION: @G = external addrspace(5) global i32, align 4
 ; CHECK-DISABLE-SPMDIZATION: @__omp_offloading_2b_10393b5_spmd_l12_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK-DISABLE-SPMDIZATION: @__omp_offloading_2b_10393b5_generic_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; CHECK-DISABLE-SPMDIZATION: @__omp_outlined___wrapper.ID = private constant i8 undef
+; CHECK-DISABLE-SPMDIZATION: @__omp_outlined___wrapper.ID = private constant i8 poison
 ;.
 define weak ptx_kernel void @__omp_offloading_2b_10393b5_spmd_l12(ptr %dyn) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2b_10393b5_spmd_l12

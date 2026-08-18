@@ -116,7 +116,7 @@
 ; AMDGPU: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ; AMDGPU: @x_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ; AMDGPU: @x_shared.1 = internal addrspace(3) global [4 x i8] poison, align 4
-; AMDGPU: @__omp_outlined__9_wrapper.ID = private constant i8 undef
+; AMDGPU: @__omp_outlined__9_wrapper.ID = private constant i8 poison
 ;.
 ; NVPTX: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; NVPTX: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
@@ -129,7 +129,7 @@
 ; NVPTX: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ; NVPTX: @x_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ; NVPTX: @x_shared1 = internal addrspace(3) global [4 x i8] poison, align 4
-; NVPTX: @__omp_outlined__9_wrapper.ID = private constant i8 undef
+; NVPTX: @__omp_outlined__9_wrapper.ID = private constant i8 poison
 ;.
 ; AMDGPU-DISABLED1: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; AMDGPU-DISABLED1: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
@@ -141,11 +141,11 @@
 ; AMDGPU-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; AMDGPU-DISABLED1: @x_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ; AMDGPU-DISABLED1: @x_shared.1 = internal addrspace(3) global [4 x i8] poison, align 4
-; AMDGPU-DISABLED1: @__omp_outlined__1_wrapper.ID = private constant i8 undef
-; AMDGPU-DISABLED1: @__omp_outlined__3_wrapper.ID = private constant i8 undef
-; AMDGPU-DISABLED1: @__omp_outlined__5_wrapper.ID = private constant i8 undef
-; AMDGPU-DISABLED1: @__omp_outlined__7_wrapper.ID = private constant i8 undef
-; AMDGPU-DISABLED1: @__omp_outlined__9_wrapper.ID = private constant i8 undef
+; AMDGPU-DISABLED1: @__omp_outlined__1_wrapper.ID = private constant i8 poison
+; AMDGPU-DISABLED1: @__omp_outlined__3_wrapper.ID = private constant i8 poison
+; AMDGPU-DISABLED1: @__omp_outlined__5_wrapper.ID = private constant i8 poison
+; AMDGPU-DISABLED1: @__omp_outlined__7_wrapper.ID = private constant i8 poison
+; AMDGPU-DISABLED1: @__omp_outlined__9_wrapper.ID = private constant i8 poison
 ;.
 ; AMDGPU-DISABLED2: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; AMDGPU-DISABLED2: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
@@ -168,11 +168,11 @@
 ; NVPTX-DISABLED1: @__omp_offloading_fd02_2044372e_do_not_spmdize_task_l74_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; NVPTX-DISABLED1: @x_shared = internal addrspace(3) global [4 x i8] poison, align 4
 ; NVPTX-DISABLED1: @x_shared1 = internal addrspace(3) global [4 x i8] poison, align 4
-; NVPTX-DISABLED1: @__omp_outlined__1_wrapper.ID = private constant i8 undef
-; NVPTX-DISABLED1: @__omp_outlined__3_wrapper.ID = private constant i8 undef
-; NVPTX-DISABLED1: @__omp_outlined__5_wrapper.ID = private constant i8 undef
-; NVPTX-DISABLED1: @__omp_outlined__7_wrapper.ID = private constant i8 undef
-; NVPTX-DISABLED1: @__omp_outlined__9_wrapper.ID = private constant i8 undef
+; NVPTX-DISABLED1: @__omp_outlined__1_wrapper.ID = private constant i8 poison
+; NVPTX-DISABLED1: @__omp_outlined__3_wrapper.ID = private constant i8 poison
+; NVPTX-DISABLED1: @__omp_outlined__5_wrapper.ID = private constant i8 poison
+; NVPTX-DISABLED1: @__omp_outlined__7_wrapper.ID = private constant i8 poison
+; NVPTX-DISABLED1: @__omp_outlined__9_wrapper.ID = private constant i8 poison
 ;.
 ; NVPTX-DISABLED2: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; NVPTX-DISABLED2: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
