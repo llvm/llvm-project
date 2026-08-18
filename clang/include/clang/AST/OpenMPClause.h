@@ -1411,14 +1411,14 @@ class OMPDepthClause final : public OMPClause {
 public:
   /// Build an AST node for a 'depth' clause.
   ///
-  /// \param C         Context of the AST.
   /// \param StartLoc  Location of the 'depth' identifier.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc    Location of ')'.
   /// \param Depth     The depth expression.
-  static OMPDepthClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                SourceLocation LParenLoc, SourceLocation EndLoc,
-                                Expr *Depth);
+  OMPDepthClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc, Expr *Depth)
+      : OMPClause(llvm::omp::OMPC_depth, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Depth(Depth) {}
 
   /// Build an empty 'depth' AST node for deserialization.
   ///

@@ -5999,8 +5999,8 @@ public:
   /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
   /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
   /// \param Clauses   The directive's clauses.
-  /// \param NumLoops  Number of affected loops (the flatten depth, currently
-  ///                  always 2).
+  /// \param NumLoops  Number of affected loops (the flatten depth: the
+  ///                  argument of the 'depth' clause, or 2 if omitted).
   /// \param AssociatedStmt  The outermost associated loop.
   /// \param TransformedStmt The flattened loop, or nullptr in dependent
   ///                        contexts.

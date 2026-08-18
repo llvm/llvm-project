@@ -6839,6 +6839,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_safelen:
       case OMPC_simdlen:
       case OMPC_sizes:
+      case OMPC_depth:
       case OMPC_default:
       case OMPC_proc_bind:
       case OMPC_private:
@@ -16395,29 +16396,6 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
                                          buildPreInits(Context, PreInits));
 }
 
-/// Counts the perfectly nested canonical loop depth at \p AStmt. Returns
-/// std::nullopt if a loop-generating transformation prevents a static count.
-static std::optional<unsigned> getCanonicalLoopNestDepth(Stmt *AStmt) {
-  unsigned Depth = 0;
-  Stmt *CurStmt = AStmt ? AStmt->IgnoreContainers() : nullptr;
-  while (CurStmt) {
-    if (isa<OMPLoopTransformationDirective>(CurStmt))
-      return std::nullopt;
-    if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
-      CurStmt = CanonLoop->getLoopStmt();
-    Stmt *Body = nullptr;
-    if (auto *For = dyn_cast<ForStmt>(CurStmt))
-      Body = For->getBody();
-    else if (auto *RangeFor = dyn_cast<CXXForRangeStmt>(CurStmt))
-      Body = RangeFor->getBody();
-    else
-      break;
-    ++Depth;
-    CurStmt = Body ? Body->IgnoreContainers() : nullptr;
-  }
-  return Depth;
-}
-
 StmtResult
 SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
                                         Stmt *AStmt, SourceLocation StartLoc,
@@ -16432,36 +16410,49 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
 
   // flatten without 'depth' clause combines two loops; 'depth(k)' selects k.
   unsigned NumLoops = 2;
-  bool DepthIsValueDependent = false;
+  bool DepthIsDependent = false;
   const auto *DepthClause =
       OMPExecutableDirective::getSingleClause<OMPDepthClause>(Clauses);
   if (DepthClause) {
     Expr *DepthExpr = DepthClause->getDepth();
-    if (DepthExpr && DepthExpr->isValueDependent()) {
-      DepthIsValueDependent = true;
+    if (DepthExpr && DepthExpr->isInstantiationDependent()) {
+      DepthIsDependent = true;
     } else if (DepthExpr) {
       Expr::EvalResult EvalResult;
       if (DepthExpr->EvaluateAsInt(EvalResult, Context))
-        NumLoops = EvalResult.Val.getInt().getZExtValue();
+        NumLoops = EvalResult.Val.getInt().getLimitedValue();
     }
   }
 
-  // Report "expected k for loops, but found only n" when depth exceeds the
-  // perfect nest (same form as 'collapse'); skip if depth or nest is unknown.
-  if (DepthClause && !DepthIsValueDependent) {
-    if (std::optional<unsigned> NestDepth = getCanonicalLoopNestDepth(AStmt);
-        NestDepth && NumLoops > *NestDepth) {
+  // Count perfectly nested loops with doForAllLoops. When 'depth' is present,
+  // walk NumLoops iterations to diagnose an insufficient nest. When it is
+  // omitted, walk one extra loop (3 total) so we can warn that default
+  // flatten only combines 2 of a deeper nest.
+  if (!DepthIsDependent) {
+    unsigned WalkLimit = DepthClause ? NumLoops : 3;
+    unsigned Found = 0;
+    bool Enough = OMPLoopBasedDirective::doForAllLoops(
+        AStmt->IgnoreContainers(), /*TryImperfectlyNestedLoops=*/false,
+        WalkLimit, [&](unsigned Cnt, Stmt *S) {
+          if (!isa<ForStmt>(S) && !isa<CXXForRangeStmt>(S))
+            return true;
+          Found = Cnt + 1;
+          return false;
+        });
+    if (DepthClause && !Enough) {
       Diag(AStmt->getBeginLoc(), diag::err_omp_not_for)
           << /*expected N for loops form=*/1
-          << getOpenMPDirectiveName(OMPD_flatten) << NumLoops
-          << (*NestDepth > 0) << *NestDepth;
+          << getOpenMPDirectiveName(OMPD_flatten) << NumLoops << (Found > 0)
+          << Found;
       return StmtError();
     }
+    if (!DepthClause && Found >= 3)
+      Diag(StartLoc, diag::warn_omp_flatten_omitted_depth);
   }
 
-  // Defer when 'depth' is value-dependent (concrete k unknown until
+  // Defer when 'depth' is instantiation-dependent (concrete k unknown until
   // instantiation).
-  if (DepthIsValueDependent)
+  if (DepthIsDependent)
     return OMPFlattenDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                        NumLoops, AStmt, nullptr, nullptr);
 
@@ -16537,19 +16528,29 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     AllCountsLessThan32Bits &=
         Context.getTypeSize(LoopHelpers[I].NumIterations->getType()) < 32;
 
-  ExprResult TripCount32 = BuildTripCount(/*Bits=*/32);
-  ExprResult TripCount64 = BuildTripCount(/*Bits=*/64);
-  if (!TripCount32.isUsable() || !TripCount64.isUsable())
+  ExprResult TripCount;
+  if (AllCountsLessThan32Bits || NumLoops == 1) {
+    TripCount = BuildTripCount(/*Bits=*/32);
+  } else {
+    ExprResult TripCount64 = BuildTripCount(/*Bits=*/64);
+    if (!TripCount64.isUsable())
+      return StmtError();
+    if (fitsInto(
+            /*Bits=*/32,
+            TripCount64.get()->getType()->hasSignedIntegerRepresentation(),
+            TripCount64.get(), SemaRef)) {
+      ExprResult TripCount32 = BuildTripCount(/*Bits=*/32);
+      if (TripCount32.isUsable() &&
+          Context.getTypeSize(TripCount32.get()->getType()) == 32)
+        TripCount = TripCount32;
+      else
+        TripCount = TripCount64;
+    } else {
+      TripCount = TripCount64;
+    }
+  }
+  if (!TripCount.isUsable())
     return StmtError();
-
-  ExprResult TripCount = TripCount64;
-  if (Context.getTypeSize(TripCount32.get()->getType()) == 32 &&
-      (AllCountsLessThan32Bits || NumLoops == 1 ||
-       fitsInto(
-           /*Bits=*/32,
-           TripCount32.get()->getType()->hasSignedIntegerRepresentation(),
-           TripCount64.get(), SemaRef)))
-    TripCount = TripCount32;
 
   QualType IVTy = TripCount.get()->getType();
   uint64_t IVWidth = Context.getTypeSize(IVTy);
@@ -16679,6 +16680,13 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // Ensure the structured block is not empty
   if (!AStmt)
     return StmtError();
+
+  if (const auto *DepthC =
+          OMPExecutableDirective::getSingleClause<OMPDepthClause>(Clauses)) {
+    Diag(DepthC->getBeginLoc(), diag::err_omp_clause_not_supported_yet)
+        << "depth" << getOpenMPDirectiveName(OMPD_fuse);
+    return StmtError();
+  }
 
   // Defer transformation in dependent contexts
   // The NumLoopNests argument is set to a placeholder 1 (even though
@@ -17911,6 +17919,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
+  case OMPC_depth:
   case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_schedule:
@@ -18532,8 +18541,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDepthClause(Expr *DepthExpr,
     return nullptr;
   DepthExpr = DepthResult.get();
 
-  return OMPDepthClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
-                                DepthExpr);
+  return new (getASTContext())
+      OMPDepthClause(StartLoc, LParenLoc, EndLoc, DepthExpr);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPLoopRangeClause(
@@ -18671,6 +18680,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
+  case OMPC_depth:
   case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_proc_bind:
@@ -18959,6 +18969,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
+  case OMPC_depth:
   case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_schedule:
@@ -19643,6 +19654,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
+  case OMPC_depth:
   case OMPC_allocator:
   case OMPC_collapse:
   case OMPC_default:
