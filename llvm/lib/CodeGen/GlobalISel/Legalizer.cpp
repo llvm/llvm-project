@@ -340,7 +340,6 @@ runLegalizerOnMachineFunction(MachineFunction &MF,
     // We want CSEInfo in addition to WorkListObserver to observe all changes.
     AuxObservers.push_back(CSEInfo);
   }
-  outs() << static_cast<bool>(CSEInfo) << "\n";
   assert(!CSEInfo || !errorToBool(CSEInfo->verify()));
   LostDebugLocObserver LocObserver(DEBUG_TYPE);
   if (VerifyDebugLocs > DebugLocVerifyLevel::None)
