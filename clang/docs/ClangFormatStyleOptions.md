@@ -4581,6 +4581,20 @@ the configuration (without a prefix: `Auto`).
   For example:
   [KJ_IF_MAYBE](https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes)
 
+(ignoreformatoffcomments)=
+
+**IgnoreFormatOffComments** (`Boolean`) {versionbadge}`clang-format 23` {ref}`¶ <IgnoreFormatOffComments>`
+
+: If `true`, the `// clang-format off` and `// clang-format on` comments
+  have no effect: the code between them is formatted like any other, and
+  include sorting is not disabled by them. This lets an environment that
+  enforces a format check make sure the check cannot be suppressed from
+  inside a file.
+
+  :::{note}
+  Markers matched by `OneLineFormatOffRegex` are still in effect.
+  :::
+
 (includeblocks)=
 
 **IncludeBlocks** (`IncludeBlocksStyle`) {versionbadge}`clang-format 6` {ref}`¶ <IncludeBlocks>`

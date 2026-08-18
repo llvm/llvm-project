@@ -3161,6 +3161,17 @@ struct FormatStyle {
   /// \version 13
   std::vector<std::string> IfMacros;
 
+  /// If `true`, the `// clang-format off` and `// clang-format on` comments
+  /// have no effect: the code between them is formatted like any other, and
+  /// include sorting is not disabled by them. This lets an environment that
+  /// enforces a format check make sure the check cannot be suppressed from
+  /// inside a file.
+  /// \note
+  ///  Markers matched by `OneLineFormatOffRegex` are still in effect.
+  /// \endnote
+  /// \version 23
+  bool IgnoreFormatOffComments;
+
   /// Specify whether access modifiers should have their own indentation level.
   ///
   /// When `false`, access modifiers are indented (or outdented) relative to
@@ -6191,6 +6202,7 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
+           IgnoreFormatOffComments == R.IgnoreFormatOffComments &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
            IncludeStyle.IncludeCategories == R.IncludeStyle.IncludeCategories &&
            IncludeStyle.IncludeIsMainRegex ==
@@ -6624,6 +6636,11 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
 
 bool isClangFormatOn(StringRef Comment);
 bool isClangFormatOff(StringRef Comment);
+
+// Like the overloads above, but return false when the style ignores the
+// clang-format on/off comments.
+bool isClangFormatOn(StringRef Comment, const FormatStyle &Style);
+bool isClangFormatOff(StringRef Comment, const FormatStyle &Style);
 
 } // end namespace format
 } // end namespace clang

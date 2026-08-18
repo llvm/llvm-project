@@ -1385,6 +1385,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
     IO.mapOptional("ForEachMacros", Style.ForEachMacros);
     IO.mapOptional("IfMacros", Style.IfMacros);
+    IO.mapOptional("IgnoreFormatOffComments", Style.IgnoreFormatOffComments);
     IO.mapOptional("IncludeBlocks", Style.IncludeStyle.IncludeBlocks);
     IO.mapOptional("IncludeCategories", Style.IncludeStyle.IncludeCategories);
     IO.mapOptional("IncludeIsMainRegex", Style.IncludeStyle.IncludeIsMainRegex);
@@ -1951,6 +1952,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ForEachMacros.push_back("Q_FOREACH");
   LLVMStyle.ForEachMacros.push_back("BOOST_FOREACH");
   LLVMStyle.IfMacros.push_back("KJ_IF_MAYBE");
+  LLVMStyle.IgnoreFormatOffComments = false;
   LLVMStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Preserve;
   LLVMStyle.IncludeStyle.IncludeCategories = {
       {"^\"(llvm|llvm-c|clang|clang-c)/", 2, 0, false},
@@ -3831,9 +3833,9 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
 
     bool IsBlockComment = false;
 
-    if (isClangFormatOff(Trimmed)) {
+    if (isClangFormatOff(Trimmed, Style)) {
       FormattingOff = true;
-    } else if (isClangFormatOn(Trimmed)) {
+    } else if (isClangFormatOn(Trimmed, Style)) {
       FormattingOff = false;
     } else if (Trimmed.starts_with("/*")) {
       IsBlockComment = true;
@@ -4023,9 +4025,9 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
     StringRef Trimmed = Line.trim();
     if (Trimmed.empty() || PackageRegex.match(Trimmed)) {
       // Skip empty line and package statement.
-    } else if (isClangFormatOff(Trimmed)) {
+    } else if (isClangFormatOff(Trimmed, Style)) {
       FormattingOff = true;
-    } else if (isClangFormatOn(Trimmed)) {
+    } else if (isClangFormatOn(Trimmed, Style)) {
       FormattingOff = false;
     } else if (Trimmed.starts_with("//")) {
       // Associating comments within the imports with the nearest import below.
@@ -4915,6 +4917,14 @@ bool isClangFormatOn(StringRef Comment) {
 
 bool isClangFormatOff(StringRef Comment) {
   return isClangFormatOnOff(Comment, /*On=*/false);
+}
+
+bool isClangFormatOn(StringRef Comment, const FormatStyle &Style) {
+  return !Style.IgnoreFormatOffComments && isClangFormatOn(Comment);
+}
+
+bool isClangFormatOff(StringRef Comment, const FormatStyle &Style) {
+  return !Style.IgnoreFormatOffComments && isClangFormatOff(Comment);
 }
 
 } // namespace format

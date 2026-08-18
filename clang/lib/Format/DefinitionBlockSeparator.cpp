@@ -90,7 +90,7 @@ void DefinitionBlockSeparator::separateBlocks(
 
       // Lines should not be added in the disabled region.
       if (TargetToken->is(tok::comment) &&
-          isClangFormatOn(TargetToken->TokenText)) {
+          isClangFormatOn(TargetToken->TokenText, Style)) {
         return;
       }
       // Do not handle EOF newlines.
@@ -155,7 +155,7 @@ void DefinitionBlockSeparator::separateBlocks(
           OperateIndex + 1 < Lines.size() ? Lines[OperateIndex + 1] : nullptr;
 
       if (const auto *Tok = OperateLine->First;
-          Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
+          Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText, Style)) {
         const bool IsEndComment = Tok->NewlinesBefore == 1 && NextLine &&
                                   NextLine->First->NewlinesBefore > 1;
         if (!IsEndComment)

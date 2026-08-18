@@ -283,6 +283,27 @@ TEST_F(SortIncludesTest, SupportClangFormatOffCStyle) {
                     "input.h", 2));
 }
 
+TEST_F(SortIncludesTest, IgnoreFormatOffComments) {
+  FmtStyle.IgnoreFormatOffComments = true;
+  verifyFormat("#include <a>\n"
+               "#include <b>\n"
+               "#include <c>\n"
+               "// clang-format off\n"
+               "#include <a>\n"
+               "#include <b>\n"
+               "#include <c>\n"
+               "// clang-format on",
+               sort("#include <b>\n"
+                    "#include <a>\n"
+                    "#include <c>\n"
+                    "// clang-format off\n"
+                    "#include <b>\n"
+                    "#include <a>\n"
+                    "#include <c>\n"
+                    "// clang-format on",
+                    "input.h", 2));
+}
+
 TEST_F(SortIncludesTest, IncludeSortingCanBeDisabled) {
   FmtStyle.SortIncludes = {};
   verifyFormat("#include \"a.h\"\n"

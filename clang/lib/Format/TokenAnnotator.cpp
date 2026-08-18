@@ -3671,7 +3671,7 @@ void TokenAnnotator::setCommentLineLevels(
     // it, that's probably intentional and we should keep it.
     if (const auto Column = Line->First->OriginalColumn;
         NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
-        Line->isComment() && !isClangFormatOff(Line->First->TokenText) &&
+        Line->isComment() && !isClangFormatOff(Line->First->TokenText, Style) &&
         NextNonCommentLine->First->OriginalColumn == Column) {
       const bool PPDirectiveOrImportStmt =
           NextNonCommentLine->Type == LT_PreprocessorDirective ||

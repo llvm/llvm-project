@@ -192,7 +192,8 @@ public:
     // Separate references from the main code body of the file.
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2 &&
         !(FirstNonImportLine->First->is(tok::comment) &&
-          isClangFormatOn(FirstNonImportLine->First->TokenText.trim()))) {
+          isClangFormatOn(FirstNonImportLine->First->TokenText.trim(),
+                          Style))) {
       ReferencesText += "\n";
     }
 
@@ -372,9 +373,9 @@ private:
       // This is tracked in FormattingOff here and on JsModuleReference.
       while (Current && Current->is(tok::comment)) {
         StringRef CommentText = Current->TokenText.trim();
-        if (isClangFormatOff(CommentText)) {
+        if (isClangFormatOff(CommentText, Style)) {
           FormattingOff = true;
-        } else if (isClangFormatOn(CommentText)) {
+        } else if (isClangFormatOn(CommentText, Style)) {
           FormattingOff = false;
           // Special case: consider a trailing "clang-format on" line to be part
           // of the module reference, so that it gets moved around together with

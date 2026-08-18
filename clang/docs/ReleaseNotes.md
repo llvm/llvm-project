@@ -600,6 +600,10 @@ features cannot lower the translation-unit ABI level;
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
 
+- Add `IgnoreFormatOffComments` option to strip `// clang-format off` and
+  `// clang-format on` comments of their special meaning, so that formatting
+  cannot be suppressed from inside a file.
+
 ### libclang
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.

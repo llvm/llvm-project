@@ -22422,6 +22422,59 @@ TEST_F(FormatTest, DisableRegions) {
                  "// clang-format on");
 }
 
+TEST_F(FormatTest, IgnoreFormatOffComments) {
+  auto Style = getLLVMStyle();
+  Style.IgnoreFormatOffComments = true;
+
+  verifyFormat("int i;\n"
+               "// clang-format off\n"
+               "int j;\n"
+               "// clang-format on\n"
+               "int k;",
+               " int  i;\n"
+               "   // clang-format off\n"
+               "  int j;\n"
+               " // clang-format on\n"
+               "   int   k;",
+               Style);
+
+  verifyFormat("int i;\n"
+               "/* clang-format off */\n"
+               "int j;\n"
+               "/* clang-format on */\n"
+               "int k;",
+               " int  i;\n"
+               "   /* clang-format off */\n"
+               "  int j;\n"
+               " /* clang-format on */\n"
+               "   int   k;",
+               Style);
+
+  verifyFormat("int *i;\n"
+               "// clang-format off: reason\n"
+               "int *j;\n"
+               "// clang-format on: reason\n"
+               "int *k;",
+               "int* i;\n"
+               "// clang-format off: reason\n"
+               "int* j;\n"
+               "// clang-format on: reason\n"
+               "int* k;",
+               Style);
+
+  // Markers matched by OneLineFormatOffRegex are still in effect.
+  Style.OneLineFormatOffRegex = "^// NOLINT$";
+  verifyFormat("int i;\n"
+               "// NOLINT\n"
+               "int  j ;\n"
+               "int k;",
+               "int  i ;\n"
+               "// NOLINT\n"
+               "int  j ;\n"
+               "int  k ;",
+               Style);
+}
+
 TEST_F(FormatTest, OneLineFormatOffRegex) {
   auto Style = getLLVMStyle();
   Style.OneLineFormatOffRegex = "// format off$";
