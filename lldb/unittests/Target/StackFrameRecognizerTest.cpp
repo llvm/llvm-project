@@ -76,3 +76,32 @@ TEST_F(StackFrameRecognizerTest, NullModuleRegex) {
 
   EXPECT_TRUE(any_printed);
 }
+
+// A recognizer that should match in any module is registered with an empty
+// module name. ConstString::GetCString() is null for an empty string, and
+// ForEach hands that to a std::string parameter, so this used to crash. The
+// command layer requires a module, so only a recognizer registered through
+// the API - as the GNUstep ObjC runtime's does, because the runtime library
+// is named differently on each platform - can reach it.
+TEST_F(StackFrameRecognizerTest, NullModuleName) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  StackFrameRecognizerManager manager;
+  std::vector<ConstString> symbols = {ConstString("boom")};
+  manager.AddRecognizer(std::make_shared<DummyStackFrameRecognizer>(),
+                        ConstString(), symbols,
+                        Mangled::NamePreference::ePreferDemangled, false);
+
+  bool any_printed = false;
+  std::string reported_module = "unset";
+  manager.ForEach([&](uint32_t recognizer_id, bool enabled, std::string name,
+                      std::string module, llvm::ArrayRef<ConstString> symbols,
+                      Mangled::NamePreference symbol_mangling, bool regexp) {
+    any_printed = true;
+    reported_module = module;
+  });
+
+  EXPECT_TRUE(any_printed);
+  EXPECT_EQ(reported_module, "");
+}
