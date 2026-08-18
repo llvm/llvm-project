@@ -5124,6 +5124,57 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM Asynchronous Store Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_AsyncStoreGlobalOp: NVVM_VoidIntrinsicOp<"store.async.global", 
+                                                  [NVVMRequiresSM<100>]> {
+  let description = [{
+    Performs an asynchronous store to global memory to the address given by 
+    `addr`.
+    The `value` operand specifies the value to store.
+    The `scope` operand specifies the scope of the store and must be one of the 
+    following:
+    - `sys`: Synchronization with all threads in the system.
+    - `gpu`: Synchronization with all threads in the same GPU.
+    The `multimem` operand specifies whether the store is performed on a 
+    multimem address.
+    The `mmio` operand specifies whether this is an MMIO operation.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-st-async)
+  }];
+  let summary = "Asynchronous Store Op to global memory";
+  let arguments = (ins LLVM_PointerGlobal:$addr,
+                       AnyTypeOf<[I8, I16, I32, I64]>:$value, 
+                       MemScopeKindAttr:$scope,
+                       DefaultValuedAttr<BoolAttr, "false">:$multimem,
+                       DefaultValuedAttr<BoolAttr, "false">:$mmio);
+  let results = (outs );
+  let assemblyFormat = "$addr `,` $value attr-dict `:` type($addr) `,` type($value)";
+  let hasVerifier = 1;
+}
+
+def NVVM_AsyncStoreSharedOp: 
+  LLVM_IntrOpBase<NVVM_Dialect, "store.async.shared", "nvvm_st_async",
+                  /*overloadedResults=*/[], /*overloadedOperands=*/[1],
+                  [NVVMRequiresSM<90>], /*numResults=*/0> {
+  let description = [{
+    Performs an asynchronous store to shared cluster memory to the address 
+    given by `addr`.
+    The `value` operand specifies the value to store.
+    The `mbarrier` operand specifies the mbarrier object which signals the 
+    completion of the store.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-st-async)
+  }];
+  let summary = "Asynchronous Store Op to shared cluster memory";
+  let arguments = (ins LLVM_PointerSharedCluster:$addr,
+                       AnyTypeOf<[I32, I64, I128]>:$value, 
+                       LLVM_PointerSharedCluster:$mbarrier);
+  let assemblyFormat = "$addr `,` $value `,` `mbarrier` `=` $mbarrier attr-dict `:` type($addr) `,` type($value) `,` type($mbarrier)";
+}
+
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{
@@ -5317,15 +5368,19 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMf<[100, 101,
     The multicast variants allow signaling on the *mbarrier objects*
     of multiple CTAs within the cluster. Operand `multicastMask`,
     when present, specifies the destination CTAs in the cluster such
-    that each bit position in the 16-bit `multicastMask` operand
+    that each bit position in the 16-bit or 32-bit `multicastMask` operand
     corresponds to the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
+    When present, the `smem_a_read` attribute restricts tracking to
+    shared-memory reads of matrix A performed by prior `tcgen05.mma`
+    operations.
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_AnyPointer, LLVM_PointerShared]>:$addr,
-    Optional<I16>:$multicastMask,
-    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group);
+    Optional<AnyTypeOf<[I16, I32]>>:$multicastMask,
+    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group,
+    DefaultValuedAttr<BoolAttr, "false">:$smem_a_read);
 
   let assemblyFormat = [{
     $addr (`,` `multicast_mask` `=` $multicastMask^)?

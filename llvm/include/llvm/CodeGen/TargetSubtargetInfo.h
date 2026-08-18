@@ -31,6 +31,7 @@
 namespace llvm {
 
 class APInt;
+class BitVector;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
@@ -353,13 +354,12 @@ public:
   /// This is called after a .mir file was loaded.
   virtual void mirFileLoaded(MachineFunction &MF) const;
 
-  /// True if the register allocator should use the allocation orders exactly as
-  /// written in the tablegen descriptions, false if it should allocate
-  /// the specified physical register later if is it callee-saved.
-  virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                           MCRegister PhysReg) const {
-    return false;
-  }
+  /// Constructs a Mask of physical registers whose allocation orders should be
+  /// used exactly as written in the TableGen descriptions, rather than
+  /// allocating them later if they are callee-saved. Mask is empty on entry
+  /// and must either remain empty or cover all physical registers.
+  virtual void getCSRAllocationOrderMask(const MachineFunction &MF,
+                                         BitVector &Mask) const {}
 
   /// Classify a global function reference. This mainly used to fetch target
   /// special flags for lowering a function address. For example mark a function

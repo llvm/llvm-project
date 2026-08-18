@@ -145,7 +145,6 @@ public:
     if (Bits == 0)
       Bits = bitWidth();
 
-    APInt V = getValue();
     if constexpr (Signed)
       return APSInt(getValue().sext(Bits), !Signed);
     else

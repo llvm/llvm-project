@@ -57,6 +57,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -2210,8 +2211,8 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   uint64_t BSz = DL.getTypeAllocSize(BTy);
   uint64_t TypeByteSize = (AStoreSz == BStoreSz) ? BSz : 0;
 
-  uint64_t StrideAScaled = std::abs(StrideAPtrInt) * ASz;
-  uint64_t StrideBScaled = std::abs(StrideBPtrInt) * BSz;
+  uint64_t StrideAScaled = AbsoluteValue(StrideAPtrInt) * ASz;
+  uint64_t StrideBScaled = AbsoluteValue(StrideBPtrInt) * BSz;
 
   uint64_t MaxStride = std::max(StrideAScaled, StrideBScaled);
 

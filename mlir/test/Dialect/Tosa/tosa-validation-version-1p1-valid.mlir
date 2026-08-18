@@ -76,7 +76,7 @@ func.func @test_conv2d_fp8_acc32(%arg0: tensor<1x4x4x4xf8E5M2>, %arg1: tensor<8x
 func.func @test_conv2d_mxfp(%arg0: tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg2: tensor<8xf16>) -> tensor<1x4x4x8xf16> {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  %0 = tosa.conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = bf16, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf16>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf16>
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = f16, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf16>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf16>
   return %0 : tensor<1x4x4x8xf16>
 }
 
@@ -455,7 +455,7 @@ func.func @test_scatter_i32_i64_indices(%arg0: tensor<13x27x3xi32>, %arg1: tenso
 
 // CHECK-LABEL: test_cast_bool_fp32
 func.func @test_cast_bool_fp32(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xf32> {
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi1>) -> tensor<13x21x3xf32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi1>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
 
@@ -463,7 +463,7 @@ func.func @test_cast_bool_fp32(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xf32>
 
 // CHECK-LABEL: test_cast_bool_i64
 func.func @test_cast_bool_i64(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi64> {
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi1>) -> tensor<13x21x3xi64>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi1>) -> tensor<13x21x3xi64>
   return %0 : tensor<13x21x3xi64>
 }
 
@@ -471,7 +471,7 @@ func.func @test_cast_bool_i64(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi64> 
 
 // CHECK-LABEL: test_cast_fp32_bool
 func.func @test_cast_fp32_bool(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xi1> {
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xi1>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xf32>) -> tensor<13x21x3xi1>
   return %0 : tensor<13x21x3xi1>
 }
 
@@ -479,7 +479,7 @@ func.func @test_cast_fp32_bool(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xi1>
 
 // CHECK-LABEL: test_cast_i64_bool
 func.func @test_cast_i64_bool(%arg0: tensor<13x21x3xi64>) -> tensor<13x21x3xi1> {
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi64>) -> tensor<13x21x3xi1>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi64>) -> tensor<13x21x3xi1>
   return %0 : tensor<13x21x3xi1>
 }
 
@@ -487,13 +487,13 @@ func.func @test_cast_i64_bool(%arg0: tensor<13x21x3xi64>) -> tensor<13x21x3xi1> 
 
 // CHECK-LABEL: test_cast_to_block_scaled_types
 func.func @test_cast_to_block_scaled_types(%fp16: tensor<4x32xf16>, %fp32: tensor<4x32xf32>, %bf16: tensor<4x32xbf16>, %fp8e4m3: tensor<4x32xf8E4M3FN>, %fp8e5m2: tensor<4x32xf8E5M2>) -> (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) {
-  %0 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
-  %1 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
-  %2 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
-  %3 = tosa.cast %fp16 : (tensor<4x32xf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
-  %4 = tosa.cast %bf16 : (tensor<4x32xbf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>
-  %5 = tosa.cast %fp8e4m3 : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
-  %6 = tosa.cast %fp8e5m2 : (tensor<4x32xf8E5M2>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  %0 = tosa.cast %fp32 {input_unsigned = false} : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  %1 = tosa.cast %fp32 {input_unsigned = false} : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  %2 = tosa.cast %fp32 {input_unsigned = false} : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+  %3 = tosa.cast %fp16 {input_unsigned = false} : (tensor<4x32xf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  %4 = tosa.cast %bf16 {input_unsigned = false} : (tensor<4x32xbf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>
+  %5 = tosa.cast %fp8e4m3 {input_unsigned = false} : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  %6 = tosa.cast %fp8e5m2 {input_unsigned = false} : (tensor<4x32xf8E5M2>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
   return %0, %1, %2, %3, %4, %5 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
 }
 
@@ -501,13 +501,13 @@ func.func @test_cast_to_block_scaled_types(%fp16: tensor<4x32xf16>, %fp32: tenso
 
 // CHECK-LABEL: test_cast_from_block_scaled_types
 func.func @test_cast_from_block_scaled_types(%fp4: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %fp6e2m3: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, %fp6e3m2: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, %fp8e4m3: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, %fp8e5m2: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>, %mxint8: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) -> (tensor<4x32xf32>, tensor<4x32xf16>, tensor<4x32xbf16>, tensor<4x32xf8E4M3FN>, tensor<4x32xf8E5M2>) {
-  %0 = tosa.cast %fp4 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf32>
-  %1 = tosa.cast %fp6e2m3 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<4x32xf32>
-  %2 = tosa.cast %fp6e3m2 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<4x32xf32>
-  %3 = tosa.cast %fp8e4m3 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<4x32xf16>
-  %4 = tosa.cast %fp8e5m2 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>) -> tensor<4x32xbf16>
-  %5 = tosa.cast %mxint8 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) -> tensor<4x32xf8E4M3FN>
-  %6 = tosa.cast %fp4 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf8E5M2>
+  %0 = tosa.cast %fp4 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf32>
+  %1 = tosa.cast %fp6e2m3 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<4x32xf32>
+  %2 = tosa.cast %fp6e3m2 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<4x32xf32>
+  %3 = tosa.cast %fp8e4m3 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<4x32xf16>
+  %4 = tosa.cast %fp8e5m2 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>) -> tensor<4x32xbf16>
+  %5 = tosa.cast %mxint8 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) -> tensor<4x32xf8E4M3FN>
+  %6 = tosa.cast %fp4 {input_unsigned = false} : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf8E5M2>
   return %0, %3, %4, %5, %6 : tensor<4x32xf32>, tensor<4x32xf16>, tensor<4x32xbf16>, tensor<4x32xf8E4M3FN>, tensor<4x32xf8E5M2>
 }
 

@@ -128,7 +128,8 @@ void Breakpoint::SetBreakpoint() {
   lldb::SBMutex lock = m_dap.GetAPIMutex();
   std::lock_guard<lldb::SBMutex> guard(lock);
 
-  m_bp.AddName(kDAPBreakpointLabel);
+  lldb::SBError error = m_bp.AddNameWithErrorHandling(kDAPBreakpointLabel);
+  // TODO: Report this error to the user instead of silently dropping it.
   if (!m_condition.empty())
     SetCondition();
   if (!m_hit_condition.empty())

@@ -3639,8 +3639,10 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   // exceptions), then don't bother to create these DAG nodes.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Constant *PersonalityFn = FuncInfo.Fn->getPersonalityFn();
-  if (TLI.getExceptionPointerRegister(PersonalityFn) == 0 &&
-      TLI.getExceptionSelectorRegister(PersonalityFn) == 0)
+  if (TLI.getExceptionPointerRegister(
+          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
+      TLI.getExceptionSelectorRegister(
+          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
     return;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -5002,7 +5004,10 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   EVT VT = Src0.getValueType();
 
+  const auto &TLI = DAG.getTargetLoweringInfo();
+
   auto MMOFlags = MachineMemOperand::MOStore;
+  MMOFlags |= TLI.getTargetMMOFlags(I);
   if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
 
@@ -5010,8 +5015,6 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::upperBound(VT.getStoreSize()), Alignment,
       I.getAAMetadata());
-
-  const auto &TLI = DAG.getTargetLoweringInfo();
 
   SDValue StoreNode =
       !IsCompressing && TTI->hasConditionalLoadStoreForType(
@@ -5160,7 +5163,10 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
+  const auto &TLI = DAG.getTargetLoweringInfo();
+
   auto MMOFlags = MachineMemOperand::MOLoad;
+  MMOFlags |= TLI.getTargetMMOFlags(I);
   if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
   if (I.hasMetadata(LLVMContext::MD_invariant_load))
@@ -5170,8 +5176,6 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::upperBound(VT.getStoreSize()), Alignment,
       MMOMetadata(AAInfo, Ranges));
-
-  const auto &TLI = DAG.getTargetLoweringInfo();
 
   // The Load/Res may point to different values and both of them are output
   // variables.
@@ -8532,30 +8536,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Op1 = getValue(I.getOperand(0));
     SDValue Op2 = getValue(I.getOperand(1));
     SDValue Mask = getValue(I.getOperand(2));
-    EVT Op1VT = Op1.getValueType();
-    EVT Op2VT = Op2.getValueType();
     EVT ResVT = Mask.getValueType();
-    unsigned SearchSize = Op2VT.getVectorNumElements();
-
-    // If the target has native support for this vector match operation, lower
-    // the intrinsic untouched; otherwise, expand it below.
-    if (!TLI.shouldExpandVectorMatch(Op1VT, SearchSize)) {
-      visitTargetIntrinsic(I, Intrinsic);
-      return;
-    }
-
-    SDValue Ret = DAG.getConstant(0, sdl, ResVT);
-
-    for (unsigned i = 0; i < SearchSize; ++i) {
-      SDValue Op2Elem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl,
-                                    Op2VT.getVectorElementType(), Op2,
-                                    DAG.getVectorIdxConstant(i, sdl));
-      SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, sdl, Op1VT, Op2Elem);
-      SDValue Cmp = DAG.getSetCC(sdl, ResVT, Op1, Splat, ISD::SETEQ);
-      Ret = DAG.getNode(ISD::OR, sdl, ResVT, Ret, Cmp);
-    }
-
-    setValue(&I, DAG.getNode(ISD::AND, sdl, ResVT, Ret, Mask));
+    setValue(&I, DAG.getNode(ISD::VECTOR_MATCH, sdl, ResVT, Op1, Op2, Mask));
     return;
   }
   case Intrinsic::vector_reverse:
