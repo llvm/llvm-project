@@ -616,7 +616,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarIf(
           all(scalarNarrowerThan(0, 32),
               atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Release)),
-          changeTo(0, s32))
+          changeElementSizeTo(0, s32))
       .legalForTypesWithMemDesc(
           {{s8, p0, s8, 8},     {s16, p0, s8, 8},  // truncstorei8 from s16
            {s32, p0, s8, 8},                       // truncstorei8 from s32

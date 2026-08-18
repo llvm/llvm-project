@@ -7917,9 +7917,10 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (DAG.MaskedValueIsZero(N0Op0, Mask))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0Op0);
 
-    // fold (and (any_ext V), c) -> (zero_ext (and (trunc V), c)) if profitable.
+    // fold (and (any_ext V), c) -> (zero_ext (and V, c)) if profitable, when
+    // the zext is free or the anyext costs the same as the zext.
     if (N1C->getAPIntValue().countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
-        TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
+        (TLI.isZExtFree(SrcVT, VT) || !TLI.isAnyExtFree(SrcVT, VT)) &&
         TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
         TLI.isNarrowingProfitable(N, VT, SrcVT))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
@@ -12239,8 +12240,8 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
       return CreateZextedAbd(ISD::ABDS);
 
     // fold (abs (sub x, y)) -> abdu(x, y)
-    bool Op1SignBitIsOne = DAG.computeKnownBits(Op1).isNegative();
-    bool AbsOpWillNUW = !IsAdd && DAG.SignBitIsZero(Op0) && Op1SignBitIsOne;
+    bool AbsOpWillNUW =
+        !IsAdd && DAG.SignBitIsZero(Op0) && DAG.SignBitIsZero(Op1);
 
     if (hasOperation(ISD::ABDU, VT) && AbsOpWillNUW)
       return CreateZextedAbd(ISD::ABDU);
@@ -28236,6 +28237,13 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   if (SDValue NarrowLoad = narrowExtractedVectorLoad(NVT, V, ExtIdx, DL, DAG))
     return NarrowLoad;
 
+  // Peek through frozen loads, but ensure the load has a single use.
+  if (V.getOpcode() == ISD::FREEZE && V.hasOneUse() &&
+      V.getOperand(0).hasOneUse())
+    if (SDValue NarrowLoad =
+            narrowExtractedVectorLoad(NVT, V.getOperand(0), ExtIdx, DL, DAG))
+      return DAG.getFreeze(NarrowLoad);
+
   // Combine an extract of an extract into a single extract_subvector.
   // ext (ext X, C1), C2 --> ext X, C1 + C2
   if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
@@ -31068,9 +31076,7 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
 
   // The use checks are intentionally on SDNode because we may be dealing
   // with opcodes that produce more than one SDValue.
-  // TODO: Do we really need to check N0 (the condition operand of the select)?
-  //       But removing that clause could cause an infinite loop...
-  if (!N0->hasOneUse() || !N1->hasOneUse() || !N2->hasOneUse())
+  if (!N1->hasOneUse() || !N2->hasOneUse())
     return SDValue();
 
   // Binops may include opcodes that return multiple values, so all values
