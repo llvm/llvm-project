@@ -1814,13 +1814,17 @@ let TargetPrefix = "nvvm" in {
   //
 
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
-                        IntrNoCreateUndefOrPoison] in
-    foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in
-      foreach ftz = ["", "_ftz"] in
-        foreach sat = ["", "_sat"] in
-          def int_nvvm_fadd # rnd # ftz # sat :
-            DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
-                                  [LLVMMatchType<0>, LLVMMatchType<0>]>;
+                        IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<2>>,
+                        Range<ArgIndex<2>, 0, 4>,
+                        ArgInfo<ArgIndex<2>,
+                                [ArgName<"rnd">,
+                                 ImmArgPrinter<"printFAddRoundingMode">]>] in
+    foreach ftz = ["", "_ftz"] in
+      foreach sat = ["", "_sat"] in
+        def int_nvvm_fadd # ftz # sat :
+          DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                                [LLVMMatchType<0>, LLVMMatchType<0>,
+                                 llvm_i32_ty]>;
 
   //
   // Dot Product

@@ -20,22 +20,22 @@ define float @sub_f32(float %a, float %b) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
   %f0 = fneg float %b
-  %r1 = call float @llvm.nvvm.fadd.rn.f32(float %a, float %f0)
+  %r1 = call float @llvm.nvvm.fadd.f32(float %a, float %f0, i32 1)
 
   %f1 = fneg float %r1
-  %r2 = call float @llvm.nvvm.fadd.rn.ftz.f32(float %a, float %f1)
+  %r2 = call float @llvm.nvvm.fadd.ftz.f32(float %a, float %f1, i32 1)
 
   %f2 = fneg float %r2
-  %r3 = call float @llvm.nvvm.fadd.rz.f32(float %a, float %f2)
+  %r3 = call float @llvm.nvvm.fadd.f32(float %a, float %f2, i32 0)
 
   %f3 = fneg float %r3
-  %r4 = call float @llvm.nvvm.fadd.rz.ftz.f32(float %a, float %f3)
+  %r4 = call float @llvm.nvvm.fadd.ftz.f32(float %a, float %f3, i32 0)
 
   %f4 = fneg float %r4
-  %r5 = call float @llvm.nvvm.fadd.rm.f32(float %a, float %f4)
+  %r5 = call float @llvm.nvvm.fadd.f32(float %a, float %f4, i32 3)
 
   %f5 = fneg float %r5
-  %r6 = call float @llvm.nvvm.fadd.rm.ftz.f32(float %a, float %f5)
+  %r6 = call float @llvm.nvvm.fadd.ftz.f32(float %a, float %f5, i32 3)
 
   ret float %r6
 }
@@ -55,16 +55,16 @@ define double @sub_f64(double %a, double %b) {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
   %f0 = fneg double %b
-  %r1 = call double @llvm.nvvm.fadd.rn.f64(double %a, double %f0)
+  %r1 = call double @llvm.nvvm.fadd.f64(double %a, double %f0, i32 1)
 
   %f1 = fneg double %r1
-  %r2 = call double @llvm.nvvm.fadd.rz.f64(double %a, double %f1)
+  %r2 = call double @llvm.nvvm.fadd.f64(double %a, double %f1, i32 0)
 
   %f2 = fneg double %r2
-  %r3 = call double @llvm.nvvm.fadd.rm.f64(double %a, double %f2)
+  %r3 = call double @llvm.nvvm.fadd.f64(double %a, double %f2, i32 3)
 
   %f3 = fneg double %r3
-  %r4 = call double @llvm.nvvm.fadd.rp.f64(double %a, double %f3)
+  %r4 = call double @llvm.nvvm.fadd.f64(double %a, double %f3, i32 2)
 
   ret double %r4
 }

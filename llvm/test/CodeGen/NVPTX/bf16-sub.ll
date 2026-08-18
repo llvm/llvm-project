@@ -14,7 +14,7 @@ define bfloat @sub_rn_bf16(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; CHECK-NEXT:    ret;
   %1 = fneg bfloat %b
-  %res = call bfloat @llvm.nvvm.fadd.rn.bf16(bfloat %a, bfloat %1)
+  %res = call bfloat @llvm.nvvm.fadd.bf16(bfloat %a, bfloat %1, i32 1)
   ret bfloat %res
 }
 
@@ -30,6 +30,6 @@ define <2 x bfloat> @sub_rn_bf16x2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %1 = fneg <2 x bfloat> %b
-  %res = call <2 x bfloat> @llvm.nvvm.fadd.rn.v2bf16(<2 x bfloat> %a, <2 x bfloat> %1)
+  %res = call <2 x bfloat> @llvm.nvvm.fadd.v2bf16(<2 x bfloat> %a, <2 x bfloat> %1, i32 1)
   ret <2 x bfloat> %res
 }
