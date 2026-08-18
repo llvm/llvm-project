@@ -11,7 +11,7 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__std_mbstate_t.h>
+#include <wchar.h>
 #include <cstdlib>
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>

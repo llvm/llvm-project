@@ -117,7 +117,7 @@ using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
 #  include <__fwd/sstream.h>
 #  include <__fwd/streambuf.h>
 #  include <__fwd/string.h>
-#  include <__std_mbstate_t.h>
+#  include <wchar.h>
 #  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
