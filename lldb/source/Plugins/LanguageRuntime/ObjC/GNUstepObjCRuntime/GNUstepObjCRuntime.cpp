@@ -1139,7 +1139,13 @@ void GNUstepObjCRuntime::AddClassesFromModule(const ModuleSP &module_sp) {
     name.consume_front(prefix);
     auto descriptor_sp = std::make_shared<GNUstepObjCClassDescriptor>(
         m_process->shared_from_this(), isa);
-    if (descriptor_sp->IsValid())
+    // A descriptor is a snapshot taken when it was built, and the map holds
+    // it for the life of the process. Before the runtime resolves a class its
+    // superclass pointer and instance size are not yet meaningful, and this
+    // sweep runs at the loader's rendezvous stop - which for a dlopen'd image
+    // is *before* its __objc_load. Caching one then would pin an empty class
+    // permanently, so leave it to be rebuilt on demand.
+    if (descriptor_sp->IsValid() && descriptor_sp->IsResolved())
       AddClass(isa, descriptor_sp, name.str().c_str());
   }
 }
@@ -1163,6 +1169,18 @@ GNUstepObjCRuntime::GetClassDescriptor(ValueObject &in_value) {
       m_tagged_pointer_vendor_up->IsPossibleTaggedPointer(ptr))
     return m_tagged_pointer_vendor_up->GetClassDescriptor(ptr);
   return ObjCLanguageRuntime::GetClassDescriptor(in_value);
+}
+
+std::optional<uint64_t>
+GNUstepObjCRuntime::GetTypeBitSize(const CompilerType &compiler_type) {
+  ClassDescriptorSP descriptor_sp =
+      GetClassDescriptorFromClassName(compiler_type.GetTypeName());
+  if (!descriptor_sp || !descriptor_sp->IsValid())
+    return std::nullopt;
+  const uint64_t instance_size = descriptor_sp->GetInstanceSize();
+  if (instance_size == 0)
+    return std::nullopt;
+  return instance_size * 8;
 }
 
 ObjCLanguageRuntime::EncodingToTypeSP
@@ -1194,10 +1212,13 @@ GNUstepObjCRuntime::GetClassDescriptorFromISA(ObjCISA isa) {
   // class methods look like instance methods and which has no ivars. Cache
   // metaclasses by ISA all the same, so they are not re-parsed on every
   // lookup.
-  if (descriptor_sp->IsMetaclass())
-    AddClass(isa, descriptor_sp);
-  else
-    AddClass(isa, descriptor_sp, descriptor_sp->GetClassName().GetCString());
+  // Only a resolved class is safe to cache; see AddClassesFromModule.
+  if (descriptor_sp->IsResolved()) {
+    if (descriptor_sp->IsMetaclass())
+      AddClass(isa, descriptor_sp);
+    else
+      AddClass(isa, descriptor_sp, descriptor_sp->GetClassName().GetCString());
+  }
   return descriptor_sp;
 }
 

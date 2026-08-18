@@ -38,6 +38,18 @@ using namespace lldb_private;
 // Flags from libobjc2's `enum objc_class_flags` (class.h).
 static constexpr uint64_t g_class_flag_meta = 1ULL << 0;
 static constexpr uint64_t g_class_flag_resolved = 1ULL << 9;
+static constexpr uint64_t g_class_flag_hidden = 1ULL << 12;
+
+// Bounds on what a well-formed ivar list can say about itself. These are not
+// tuning knobs: the values come from inferior memory, so a corrupted or
+// misidentified structure must not be able to drive an unbounded read.
+static constexpr uint32_t g_max_ivars = 4096;
+static constexpr size_t g_max_type_encoding_length = 1024;
+
+// Element strides are read from the metadata rather than assumed, because
+// that is how the runtime walks these arrays - but a stride this large is
+// not something a compiler emitted.
+static constexpr uint64_t g_max_element_stride = 1024;
 
 // An upper bound for plausible class names. A string that does not terminate
 // within this many bytes is not a class name, and stopping there keeps a
@@ -55,6 +67,8 @@ struct ClassLayout {
   uint64_t name_offset;
   uint64_t info_offset;
   uint64_t instance_size_offset;
+  uint64_t ivars_offset;
+  uint64_t methods_offset;
 };
 
 ClassLayout GetClassLayout(Process &process) {
@@ -70,6 +84,13 @@ ClassLayout GetClassLayout(Process &process) {
   layout.name_offset = 2 * layout.pointer_size;
   layout.info_offset = 3 * layout.pointer_size + layout.long_size;
   layout.instance_size_offset = 3 * layout.pointer_size + 2 * layout.long_size;
+  // `ivars` is the first field after the three `long`s, so it picks up
+  // whatever tail padding the target's alignment requires. Cross-check: two
+  // pointers further on is `dtable`, which libobjc2 pins per data model in
+  // asmconstants.h and asserts in dtable.c.
+  layout.ivars_offset = llvm::alignTo(
+      3 * layout.pointer_size + 3 * layout.long_size, layout.pointer_size);
+  layout.methods_offset = layout.ivars_offset + layout.pointer_size;
   return layout;
 }
 } // namespace
@@ -123,6 +144,7 @@ void GNUstepObjCClassDescriptor::Read() {
   // both directions is what keeps an arbitrary readable address from being
   // accepted as a class.
   const bool is_meta = (info & g_class_flag_meta) != 0;
+  m_is_hidden = (info & g_class_flag_hidden) != 0;
   if (!is_meta) {
     const uint64_t metaclass_info = process_sp->ReadUnsignedIntegerFromMemory(
         metaclass + layout.info_offset, layout.long_size, 0, error);
@@ -133,6 +155,7 @@ void GNUstepObjCClassDescriptor::Read() {
   // Only a resolved class has a real superclass pointer and instance size;
   // see the class documentation.
   const bool resolved = (info & g_class_flag_resolved) != 0;
+  m_resolved = resolved;
   if (resolved) {
     const int64_t instance_size = process_sp->ReadSignedIntegerFromMemory(
         m_isa + layout.instance_size_offset, layout.long_size, 0, error);
@@ -147,6 +170,170 @@ void GNUstepObjCClassDescriptor::Read() {
   m_is_meta = is_meta;
   m_name = ConstString(name_buffer);
   m_valid = true;
+}
+
+std::vector<GNUstepObjCClassDescriptor::RawIvar>
+GNUstepObjCClassDescriptor::ReadIvarList() const {
+  std::vector<RawIvar> ivars;
+  ProcessSP process_sp = m_process_wp.lock();
+  if (!process_sp || !m_valid || m_is_meta)
+    return ivars;
+
+  // See the header: the resolved flag is set before the offsets are computed,
+  // and a positive instance_size is what says the computation finished.
+  if (!m_resolved || m_instance_size == 0)
+    return ivars;
+
+  const ClassLayout layout = GetClassLayout(*process_sp);
+  const uint32_t ptr_size = layout.pointer_size;
+
+  Status error;
+  const addr_t list_addr =
+      process_sp->ReadPointerFromMemory(m_isa + layout.ivars_offset, error);
+  if (error.Fail() || list_addr == 0 || list_addr == LLDB_INVALID_ADDRESS ||
+      list_addr % ptr_size != 0)
+    return ivars;
+
+  // struct objc_ivar_list { int count; size_t size; struct objc_ivar[]; }
+  // (ivar.h). `size` is the element stride and is read rather than assumed,
+  // because the runtime uses it to walk the array.
+  const uint64_t count_offset = 0;
+  const uint64_t size_offset = llvm::alignTo(sizeof(uint32_t), ptr_size);
+  const uint64_t entries_offset = size_offset + ptr_size;
+
+  const int64_t count = process_sp->ReadSignedIntegerFromMemory(
+      list_addr + count_offset, sizeof(uint32_t), 0, error);
+  if (error.Fail() || count <= 0 || count > g_max_ivars)
+    return ivars;
+
+  const uint64_t stride = process_sp->ReadUnsignedIntegerFromMemory(
+      list_addr + size_offset, ptr_size, 0, error);
+  // An element smaller than the struct this code knows how to read would make
+  // every field after the first come from the wrong place.
+  const uint64_t min_stride = 3 * ptr_size + 2 * sizeof(uint32_t);
+  if (error.Fail() || stride < min_stride || stride > g_max_element_stride)
+    return ivars;
+
+  Log *log = GetLog(LLDBLog::Types);
+  ivars.reserve(count);
+  for (int64_t i = 0; i < count; ++i) {
+    // struct objc_ivar { const char *name; const char *type; int *offset;
+    //                    uint32_t size; uint32_t flags; }
+    const addr_t entry = list_addr + entries_offset + i * stride;
+
+    const addr_t name_ptr = process_sp->ReadPointerFromMemory(entry, error);
+    if (error.Fail() || name_ptr == 0 || name_ptr == LLDB_INVALID_ADDRESS)
+      return {};
+    const addr_t type_ptr =
+        process_sp->ReadPointerFromMemory(entry + ptr_size, error);
+    if (error.Fail() || type_ptr == 0 || type_ptr == LLDB_INVALID_ADDRESS)
+      return {};
+    const addr_t offset_ptr =
+        process_sp->ReadPointerFromMemory(entry + 2 * ptr_size, error);
+    // libobjc2 stores a pointer to the offset, not the offset itself, so that
+    // the runtime can rewrite it in place. Between class_addIvar and
+    // objc_registerClassPair (runtime.c) the field briefly holds a small
+    // integer masquerading as a pointer, which this alignment check rejects.
+    if (error.Fail() || offset_ptr == 0 || offset_ptr == LLDB_INVALID_ADDRESS ||
+        offset_ptr % sizeof(int32_t) != 0)
+      return {};
+    const uint32_t ivar_size = process_sp->ReadUnsignedIntegerFromMemory(
+        entry + 3 * ptr_size, sizeof(uint32_t), 0, error);
+    if (error.Fail())
+      return {};
+
+    // The offset is a 32-bit signed int wherever libobjc2 runs.
+    const int64_t offset = process_sp->ReadSignedIntegerFromMemory(
+        offset_ptr, sizeof(int32_t), 0, error);
+    if (error.Fail())
+      return {};
+
+    char name_buffer[g_max_class_name_length];
+    const size_t name_length = process_sp->ReadCStringFromMemory(
+        name_ptr, name_buffer, sizeof(name_buffer), error);
+    if (error.Fail() || name_length == 0 ||
+        name_length >= sizeof(name_buffer) - 1)
+      return {};
+
+    char type_buffer[g_max_type_encoding_length];
+    const size_t type_length = process_sp->ReadCStringFromMemory(
+        type_ptr, type_buffer, sizeof(type_buffer), error);
+    if (error.Fail() || type_length >= sizeof(type_buffer) - 1)
+      return {};
+
+    // An ivar that does not fit inside the object is evidence that this is
+    // not really an ivar list, so discard the whole thing rather than
+    // reporting a plausible-looking subset.
+    if (offset < 0 ||
+        static_cast<uint64_t>(offset) + ivar_size > m_instance_size) {
+      LLDB_LOG(log,
+               "GNUstep ivar {0} of {1} lies outside the object "
+               "(offset {2}, size {3}, instance size {4}); ignoring the list",
+               name_buffer, m_name, offset, ivar_size, m_instance_size);
+      return {};
+    }
+
+    RawIvar ivar;
+    ivar.name = ConstString(name_buffer);
+    ivar.type_encoding.assign(type_buffer, type_length);
+    ivar.offset = static_cast<int32_t>(offset);
+    ivar.size = ivar_size;
+    ivars.push_back(std::move(ivar));
+  }
+  return ivars;
+}
+
+void GNUstepObjCClassDescriptor::GetIVarInformation() {
+  if (m_ivars_filled)
+    return;
+  std::lock_guard<std::recursive_mutex> guard(m_ivars_mutex);
+
+  std::vector<RawIvar> raw = ReadIvarList();
+
+  // A descriptor is kept in the runtime's ISA map for the life of the
+  // process, so an answer latched here is permanent. Latch only a positive
+  // one: every failure inside ReadIvarList - a class caught mid-resolution,
+  // a list briefly dangling while another thread grows it - also yields an
+  // empty vector, and caching that would report "this class has no ivars"
+  // for the rest of the session. A class that genuinely declares none is
+  // cheap to re-read.
+  if (raw.empty())
+    return;
+  m_ivars_filled = true;
+
+  ProcessSP process_sp = m_process_wp.lock();
+  ObjCLanguageRuntime::EncodingToTypeSP encoding_to_type_sp;
+  if (process_sp) {
+    if (ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp))
+      encoding_to_type_sp = runtime->GetEncodingToType();
+  }
+
+  m_ivars.reserve(raw.size());
+  for (const RawIvar &ivar : raw) {
+    iVarDescriptor descriptor;
+    descriptor.m_name = ivar.name;
+    descriptor.m_size = ivar.size;
+    descriptor.m_offset = ivar.offset;
+    // The name, offset and size are useful on their own, so an encoding that
+    // does not realize leaves the ivar in place with an empty type rather
+    // than dropping it.
+    if (encoding_to_type_sp)
+      descriptor.m_type = encoding_to_type_sp->RealizeType(
+          ivar.type_encoding.c_str(), /*for_expression=*/false);
+    m_ivars.push_back(std::move(descriptor));
+  }
+}
+
+size_t GNUstepObjCClassDescriptor::GetNumIVars() {
+  GetIVarInformation();
+  return m_ivars.size();
+}
+
+ObjCLanguageRuntime::ClassDescriptor::iVarDescriptor
+GNUstepObjCClassDescriptor::GetIVarAtIndex(size_t idx) {
+  if (idx >= GetNumIVars())
+    return iVarDescriptor();
+  return m_ivars[idx];
 }
 
 ObjCLanguageRuntime::ClassDescriptorSP

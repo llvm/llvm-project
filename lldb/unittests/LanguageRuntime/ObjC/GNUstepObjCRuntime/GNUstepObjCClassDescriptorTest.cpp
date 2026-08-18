@@ -395,4 +395,233 @@ INSTANTIATE_TEST_SUITE_P(
       return name;
     });
 
+// --- Ivar list tests -------------------------------------------------------
+//
+// The addresses below sit in the same fake block as the class structures.
+constexpr addr_t g_ivar_list_addr = FakeProcess::g_base_addr + 0x600;
+constexpr addr_t g_ivar_names_addr = FakeProcess::g_base_addr + 0x700;
+constexpr addr_t g_ivar_offsets_addr = FakeProcess::g_base_addr + 0x800;
+
+/// One ivar to lay out. `offset` is the value the offset *variable* holds,
+/// which is what libobjc2 points at rather than storing inline.
+struct IvarSpec {
+  const char *name;
+  const char *type_encoding;
+  int32_t offset;
+  uint32_t size;
+};
+
+class GNUstepIvarTest : public GNUstepClassDescriptorTest {
+public:
+  /// sizeof(struct objc_ivar): three pointers then two uint32_t.
+  uint64_t IvarStride() const {
+    return 3 * PointerSize() + 2 * sizeof(uint32_t);
+  }
+
+  /// Offset of the first element of an objc_ivar_list: {int count; size_t
+  /// size;} with the size_t at its natural alignment.
+  uint64_t IvarListHeaderSize() const {
+    return AlignUp(sizeof(uint32_t), PointerSize()) + PointerSize();
+  }
+
+  /// Writes an objc_ivar_list plus the strings and offset variables it
+  /// points at, and returns its address.
+  addr_t WriteIvarList(llvm::ArrayRef<IvarSpec> ivars, uint32_t count_override,
+                       uint64_t stride_override,
+                       uint64_t inline_offset_value = 0) {
+    FakeProcess &process = GetProcess();
+    const uint64_t stride = stride_override ? stride_override : IvarStride();
+    process.WriteInteger(g_ivar_list_addr,
+                         count_override ? count_override : ivars.size(),
+                         sizeof(uint32_t));
+    process.WriteInteger(g_ivar_list_addr +
+                             AlignUp(sizeof(uint32_t), PointerSize()),
+                         stride, PointerSize());
+
+    addr_t name_addr = g_ivar_names_addr;
+    addr_t offset_var = g_ivar_offsets_addr;
+    for (size_t i = 0; i < ivars.size(); ++i) {
+      const addr_t entry = g_ivar_list_addr + IvarListHeaderSize() + i * stride;
+      process.WriteCString(name_addr, ivars[i].name);
+      const addr_t type_addr = name_addr + 0x20;
+      process.WriteCString(type_addr, ivars[i].type_encoding);
+      process.WriteInteger(offset_var, static_cast<uint64_t>(ivars[i].offset),
+                           sizeof(uint32_t));
+
+      process.WriteInteger(entry, name_addr, PointerSize());
+      process.WriteInteger(entry + PointerSize(), type_addr, PointerSize());
+      process.WriteInteger(entry + 2 * PointerSize(),
+                           inline_offset_value ? inline_offset_value
+                                               : offset_var,
+                           PointerSize());
+      process.WriteInteger(entry + 3 * PointerSize(), ivars[i].size,
+                           sizeof(uint32_t));
+      process.WriteInteger(entry + 3 * PointerSize() + sizeof(uint32_t), 0,
+                           sizeof(uint32_t));
+
+      name_addr += 0x40;
+      offset_var += sizeof(uint32_t);
+    }
+    return g_ivar_list_addr;
+  }
+
+  /// Lays out a resolved class with the given ivars and returns a descriptor.
+  GNUstepObjCClassDescriptor
+  MakeClassWithIvars(llvm::ArrayRef<IvarSpec> ivars, uint64_t instance_size,
+                     uint64_t info = g_flag_resolved,
+                     uint32_t count_override = 0, uint64_t stride_override = 0,
+                     uint64_t inline_offset_value = 0) {
+    FakeProcess &process = GetProcess();
+    process.WriteCString(g_name_addr, "Widget");
+    WriteClass(g_metaclass_addr, g_metaclass_addr, 0, g_name_addr,
+               g_flag_meta | g_flag_resolved, 0);
+    WriteClass(g_class_addr, g_metaclass_addr, 0, g_name_addr, info,
+               instance_size);
+    const addr_t list = WriteIvarList(ivars, count_override, stride_override,
+                                      inline_offset_value);
+    process.WriteInteger(g_class_addr + IvarsOffset(), list, PointerSize());
+    return GNUstepObjCClassDescriptor(m_process_sp, g_class_addr);
+  }
+};
+
+TEST_P(GNUstepIvarTest, ReadsIvars) {
+  // Deliberately not pointer-aligned sizes, so a stride computed from the
+  // wrong data model lands on the wrong entry.
+  const IvarSpec ivars[] = {
+      {"_count", "i", 0, 4},
+      {"_name", "@", static_cast<int32_t>(PointerSize()), PointerSize()},
+      {"_flag", "c", static_cast<int32_t>(2 * PointerSize()), 1},
+  };
+  GNUstepObjCClassDescriptor descriptor =
+      MakeClassWithIvars(ivars, 3 * PointerSize());
+
+  ASSERT_EQ(descriptor.GetNumIVars(), 3u);
+  EXPECT_EQ(descriptor.GetIVarAtIndex(0).m_name, ConstString("_count"));
+  EXPECT_EQ(descriptor.GetIVarAtIndex(0).m_offset, 0);
+  EXPECT_EQ(descriptor.GetIVarAtIndex(0).m_size, 4u);
+  EXPECT_EQ(descriptor.GetIVarAtIndex(1).m_name, ConstString("_name"));
+  EXPECT_EQ(descriptor.GetIVarAtIndex(1).m_offset,
+            static_cast<int32_t>(PointerSize()));
+  EXPECT_EQ(descriptor.GetIVarAtIndex(2).m_name, ConstString("_flag"));
+  EXPECT_EQ(descriptor.GetIVarAtIndex(2).m_offset,
+            static_cast<int32_t>(2 * PointerSize()));
+}
+
+// An out-of-range index must be inert rather than reading past the vector.
+TEST_P(GNUstepIvarTest, RejectsOutOfRangeIndex) {
+  const IvarSpec ivars[] = {{"_count", "i", 0, 4}};
+  GNUstepObjCClassDescriptor descriptor = MakeClassWithIvars(ivars, 8);
+  ASSERT_EQ(descriptor.GetNumIVars(), 1u);
+  EXPECT_FALSE(descriptor.GetIVarAtIndex(1).m_name);
+  EXPECT_FALSE(descriptor.GetIVarAtIndex(1000).m_name);
+}
+
+// The runtime walks the array by the stride the list declares, so this code
+// must too rather than assuming sizeof(objc_ivar).
+TEST_P(GNUstepIvarTest, HonorsDeclaredStride) {
+  const IvarSpec ivars[] = {{"_a", "i", 0, 4}, {"_b", "i", 4, 4}};
+  GNUstepObjCClassDescriptor descriptor =
+      MakeClassWithIvars(ivars, 16, g_flag_resolved, 0, IvarStride() + 8);
+  ASSERT_EQ(descriptor.GetNumIVars(), 2u);
+  EXPECT_EQ(descriptor.GetIVarAtIndex(1).m_name, ConstString("_b"));
+  EXPECT_EQ(descriptor.GetIVarAtIndex(1).m_offset, 4);
+}
+
+// A stride smaller than the struct would make every field after the first
+// come from the wrong place.
+TEST_P(GNUstepIvarTest, RejectsUndersizedStride) {
+  const IvarSpec ivars[] = {{"_a", "i", 0, 4}};
+  GNUstepObjCClassDescriptor descriptor =
+      MakeClassWithIvars(ivars, 16, g_flag_resolved, 0, PointerSize());
+  EXPECT_EQ(descriptor.GetNumIVars(), 0u);
+}
+
+// objc_resolve_class sets objc_class_flag_resolved *before* it calls
+// objc_compute_ivar_offsets, so the flag alone does not mean the offsets are
+// absolute yet. A non-positive instance_size is what marks that window, and
+// reporting ivars inside it would give offsets relative to the start of this
+// class's own ivars.
+TEST_P(GNUstepIvarTest, RejectsClassResolvedButNotYetLaidOut) {
+  const IvarSpec ivars[] = {{"_a", "i", 0, 4}};
+  GNUstepObjCClassDescriptor descriptor =
+      MakeClassWithIvars(ivars, 0, g_flag_resolved);
+  EXPECT_EQ(descriptor.GetNumIVars(), 0u);
+}
+
+TEST_P(GNUstepIvarTest, RejectsUnresolvedClass) {
+  const IvarSpec ivars[] = {{"_a", "i", 0, 4}};
+  GNUstepObjCClassDescriptor descriptor = MakeClassWithIvars(ivars, 16, 0);
+  EXPECT_EQ(descriptor.GetNumIVars(), 0u);
+}
+
+// A count the structure could not possibly hold is evidence this is not an
+// ivar list at all.
+TEST_P(GNUstepIvarTest, RejectsImplausibleCount) {
+  const IvarSpec ivars[] = {{"_a", "i", 0, 4}};
+  GNUstepObjCClassDescriptor huge =
+      MakeClassWithIvars(ivars, 16, g_flag_resolved, 0x10000);
+  EXPECT_EQ(huge.GetNumIVars(), 0u);
+
+  GNUstepObjCClassDescriptor negative =
+      MakeClassWithIvars(ivars, 16, g_flag_resolved, static_cast<uint32_t>(-1));
+  EXPECT_EQ(negative.GetNumIVars(), 0u);
+}
+
+// An ivar that does not fit inside the object means the list was
+// misidentified, so none of it can be trusted - not just that entry.
+TEST_P(GNUstepIvarTest, RejectsIvarOutsideTheObject) {
+  const IvarSpec ivars[] = {{"_a", "i", 0, 4}, {"_b", "i", 4096, 4}};
+  GNUstepObjCClassDescriptor descriptor = MakeClassWithIvars(ivars, 16);
+  EXPECT_EQ(descriptor.GetNumIVars(), 0u);
+}
+
+// Between class_addIvar and objc_registerClassPair, libobjc2 stores the
+// offset inline in the pointer field (runtime.c), so it is a small integer
+// masquerading as a pointer rather than something safe to dereference.
+TEST_P(GNUstepIvarTest, RejectsInlineOffsetMasqueradingAsPointer) {
+  // Only one class is laid out per test: Process caches the memory it reads,
+  // so writing a second variant over the same addresses would be masked by
+  // the first descriptor's reads. ReadsIvars covers the accepted shape.
+  const IvarSpec ivars[] = {{"_a", "i", 0, 4}};
+  GNUstepObjCClassDescriptor broken =
+      MakeClassWithIvars(ivars, 16, g_flag_resolved, 0, 0,
+                         /*inline_offset_value=*/3);
+  EXPECT_EQ(broken.GetNumIVars(), 0u);
+}
+
+TEST_P(GNUstepIvarTest, ClassWithNoIvarListHasNone) {
+  FakeProcess &process = GetProcess();
+  process.WriteCString(g_name_addr, "Widget");
+  WriteClass(g_metaclass_addr, g_metaclass_addr, 0, g_name_addr,
+             g_flag_meta | g_flag_resolved, 0);
+  WriteClass(g_class_addr, g_metaclass_addr, 0, g_name_addr, g_flag_resolved,
+             16);
+  process.WriteInteger(g_class_addr + IvarsOffset(), 0, PointerSize());
+  GNUstepObjCClassDescriptor descriptor(m_process_sp, g_class_addr);
+  EXPECT_EQ(descriptor.GetNumIVars(), 0u);
+}
+
+// A metaclass describes the class object, which has no ivars of its own.
+TEST_P(GNUstepIvarTest, MetaclassHasNoIvars) {
+  const IvarSpec ivars[] = {{"_a", "i", 0, 4}};
+  MakeClassWithIvars(ivars, 16);
+  GetProcess().WriteInteger(g_metaclass_addr + IvarsOffset(), g_ivar_list_addr,
+                            PointerSize());
+  GNUstepObjCClassDescriptor metaclass(m_process_sp, g_metaclass_addr);
+  EXPECT_EQ(metaclass.GetNumIVars(), 0u);
+}
+
+INSTANTIATE_TEST_SUITE_P(DataModels, GNUstepIvarTest,
+                         ::testing::Values(DataModel{"x86_64-pc-linux", 8, 8},
+                                           DataModel{"x86_64-pc-windows-msvc",
+                                                     8, 4},
+                                           DataModel{"i386-pc-linux", 4, 4}),
+                         [](const ::testing::TestParamInfo<DataModel> &info) {
+                           std::string name = info.param.triple;
+                           for (char &c : name)
+                             if (!std::isalnum(static_cast<unsigned char>(c)))
+                               c = '_';
+                           return name;
+                         });
+
 } // namespace
