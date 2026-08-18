@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -verify -Wno-unused -I %S/Inputs %s
 
+// debug increases stack usage to the point of overflow.
+// UNSUPPORTED: debug
+
 /* WG14 N590: Clang 3.2
  * Increase minimum translation limits
  *

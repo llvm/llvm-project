@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -verify -Wno-unused -I %S/Inputs %s
 // expected-no-diagnostics
+
+// debug increases stack usage to the point of overflow.
+// UNSUPPORTED: debug
+
 void func(void) {
   (void)0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,\
   5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,\
