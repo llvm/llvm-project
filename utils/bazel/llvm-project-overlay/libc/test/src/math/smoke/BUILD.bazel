@@ -87,6 +87,14 @@ math_test(
     hdrs = ["IsCanonicalTest.h"],
 )
 
+math_test(
+    name = "iscanonicalf128",
+    hdrs = ["IsCanonicalTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
 math_test(name = "cbrt")
 
 math_test(name = "cbrtf")
