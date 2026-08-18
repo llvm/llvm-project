@@ -688,8 +688,8 @@ define void @false_likely(i1 noundef zeroext %0) {
   ret void
 }
 
-!6 = !{!"branch_weights", !"expected", i32 2000, i32 1}
-!7 = !{!"branch_weights", !"expected", i32 1, i32 2000}
+!6 = !{!"branch_weights", i32 2000, i32 1}
+!7 = !{!"branch_weights", i32 1, i32 2000}
 
 
 declare dso_local void @func_true()

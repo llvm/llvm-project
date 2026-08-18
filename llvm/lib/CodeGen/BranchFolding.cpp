@@ -1644,13 +1644,13 @@ ReoptimizeBlock:
         bool CanFoldTakenBlock =
             (MBB == PredTBB && (!PredHasHotSuccessor || IsEdgeCold));
 
-        // When we have PGO (or equivalent) information, we want to fold the
+        // When we have profile information we want to fold the
         // fallthrough if it's cold.
         // Alternatively if the taken block is cold we want to fold that.
         // Folding a block puts it behind a conditional branch which isn't
         // desirable if it's hot.
         //
-        // When there isn't any PGO information available we want to fold the
+        // When profile information isn't available we want to fold the
         // taken block if it's possible and we never want to fold the
         // fallthrough as we don't know if that is desirable.
         if (PredAnalyzable && !PredCond.empty() && PredTBB != PredFBB &&
