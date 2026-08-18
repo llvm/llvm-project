@@ -119,6 +119,8 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool Pie = Args.hasArg(options::OPT_pie);
   const bool Nopie = Args.hasArg(options::OPT_no_pie, options::OPT_nopie);
   const bool Relocatable = Args.hasArg(options::OPT_r);
+  const bool StaticPie =
+      Static && !Shared && !Profiling && !Nopie && !Relocatable;
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -156,7 +158,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Pie)
+  // OpenBSD's system linker defaults to PIE, but cross-linkers may not.
+  // Explicitly pass -pie so that rcrt0.o's reference to _DYNAMIC is resolved.
+  if (Pie || StaticPie)
     CmdArgs.push_back("-pie");
   if (Nopie || Profiling)
     CmdArgs.push_back("-nopie");
@@ -180,7 +184,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Shared) {
       if (Profiling)
         crt0 = "gcrt0.o";
-      else if (Static && !Nopie)
+      else if (StaticPie)
         crt0 = "rcrt0.o";
       else
         crt0 = "crt0.o";
