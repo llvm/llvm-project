@@ -716,6 +716,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res =
             cmpNumbers(SI->isVolatile(), cast<StoreInst>(R)->isVolatile()))
       return Res;
+    if (int Res = cmpNumbers(SI->isElementwise(),
+                             cast<StoreInst>(R)->isElementwise()))
+      return Res;
     if (int Res = cmpAligns(SI->getAlign(), cast<StoreInst>(R)->getAlign()))
       return Res;
     if (int Res =

@@ -3,8 +3,8 @@
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i, !s64i}>
-!rec_Pair2 = !cir.struct<"Pair2" {!s32i, !s32i}>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+!rec_Pair2 = !cir.struct<"Pair2" {data !s32i, data !s32i}>
 !rec_E0 = !cir.struct<"E0" {}>
 
 module attributes {

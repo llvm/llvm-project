@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -81,7 +82,9 @@ class FastDivInsertionTask {
   BasicBlock *MainBB = nullptr;
   DomTreeUpdater *DTU = nullptr;
   LoopInfo *LI = nullptr;
+  BranchProbabilityInfo *BPI = nullptr;
 
+  BasicBlock *splitMainBB();
   bool isHashLikeValue(Value *V, VisitedSetTy &Visited);
   ValueRange getValueRange(Value *Op, VisitedSetTy &Visited);
   QuotRemWithBB createSlowBB(BasicBlock *Successor);
@@ -105,7 +108,8 @@ class FastDivInsertionTask {
 
 public:
   FastDivInsertionTask(Instruction *I, const BypassWidthsTy &BypassWidths,
-                       DomTreeUpdater *DTU, LoopInfo *LI);
+                       DomTreeUpdater *DTU, LoopInfo *LI,
+                       BranchProbabilityInfo *BPI);
 
   Value *getReplacement(DivCacheTy &Cache);
 };
@@ -114,8 +118,9 @@ public:
 
 FastDivInsertionTask::FastDivInsertionTask(Instruction *I,
                                            const BypassWidthsTy &BypassWidths,
-                                           DomTreeUpdater *DTU, LoopInfo *LI)
-    : DTU(DTU), LI(LI) {
+                                           DomTreeUpdater *DTU, LoopInfo *LI,
+                                           BranchProbabilityInfo *BPI)
+    : DTU(DTU), LI(LI), BPI(BPI) {
   switch (I->getOpcode()) {
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -259,6 +264,24 @@ ValueRange FastDivInsertionTask::getValueRange(Value *V,
     return VALRNG_LIKELY_LONG;
 
   return VALRNG_UNKNOWN;
+}
+
+// Split MainBB and keep BPI up-to-date if its present.
+BasicBlock *FastDivInsertionTask::splitMainBB() {
+  SmallVector<BranchProbability, 4> ExitProbs;
+  if (BPI)
+    for (unsigned I = 0, E = MainBB->getTerminator()->getNumSuccessors();
+         I != E; ++I)
+      ExitProbs.push_back(BPI->getEdgeProbability(MainBB, I));
+
+  BasicBlock *SuccessorBB = SplitBlock(MainBB, SlowDivOrRem, DTU, LI);
+  MainBB->back().eraseFromParent();
+
+  if (BPI) {
+    BPI->setEdgeProbability(SuccessorBB, ExitProbs);
+    BPI->eraseBlock(MainBB);
+  }
+  return SuccessorBB;
 }
 
 /// Add new basic block for slow div and rem operations and put it before
@@ -420,9 +443,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     // lets us entirely avoid a long div.
 
     // Split the basic block before the div/rem.
-    BasicBlock *SuccessorBB = SplitBlock(MainBB, SlowDivOrRem, DTU, LI);
-    // Remove the unconditional branch from MainBB to SuccessorBB.
-    MainBB->back().eraseFromParent();
+    BasicBlock *SuccessorBB = splitMainBB();
     QuotRemWithBB Long;
     Long.BB = MainBB;
     Long.Quotient = ConstantInt::get(getSlowType(), 0);
@@ -447,9 +468,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   // them at runtime.
 
   // Split the basic block before the div/rem.
-  BasicBlock *SuccessorBB = SplitBlock(MainBB, SlowDivOrRem, DTU, LI);
-  // Remove the unconditional branch from MainBB to SuccessorBB.
-  MainBB->back().eraseFromParent();
+  BasicBlock *SuccessorBB = splitMainBB();
   QuotRemWithBB Fast = createFastBB(SuccessorBB);
   QuotRemWithBB Slow = createSlowBB(SuccessorBB);
   QuotRemPair Result = createDivRemPhiNodes(Fast, Slow, SuccessorBB);
@@ -475,7 +494,8 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
 /// profitably bypassed and carried out with a shorter, faster divide.
 bool llvm::bypassSlowDivision(BasicBlock *BB,
                               const BypassWidthsTy &BypassWidths,
-                              DomTreeUpdater *DTU, LoopInfo *LI) {
+                              DomTreeUpdater *DTU, LoopInfo *LI,
+                              BranchProbabilityInfo *BPI) {
   DivCacheTy PerBBDivCache;
 
   bool MadeChange = false;
@@ -490,7 +510,7 @@ bool llvm::bypassSlowDivision(BasicBlock *BB,
     if (I->use_empty())
       continue;
 
-    FastDivInsertionTask Task(I, BypassWidths, DTU, LI);
+    FastDivInsertionTask Task(I, BypassWidths, DTU, LI, BPI);
     if (Value *Replacement = Task.getReplacement(PerBBDivCache)) {
       I->replaceAllUsesWith(Replacement);
       I->eraseFromParent();

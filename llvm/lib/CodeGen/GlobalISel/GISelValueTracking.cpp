@@ -407,6 +407,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
+  case TargetOpcode::G_VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = MI.getOperand(1).getCImm()->getValue();
+    Known = getVScaleRange(&F, BitWidth).multiply(Multiplier).toKnownBits();
+    break;
+  }
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
@@ -1059,6 +1065,20 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       computeKnownBitsImpl(InVec, Known2, DemandedVecElts, Depth + 1);
       Known = Known.intersectWith(Known2);
     }
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    APInt DemandedSrcElts;
+    if (SrcTy.isScalableVector()) {
+      DemandedSrcElts = APInt(1, 1);
+    } else {
+      uint64_t Idx = MI.getOperand(2).getImm();
+      unsigned NumSrcElts = SrcTy.getNumElements();
+      DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+    }
+    computeKnownBitsImpl(SrcReg, Known, DemandedSrcElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
@@ -1794,26 +1814,33 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive = Opcode == TargetOpcode::G_FREM &&
-                              (InterestedClasses & fcPositive) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
     if (!WantNan && !WantNegative && !WantPositive) {
       break;
     }
 
     KnownFPClass KnownLHS, KnownRHS;
+    const bool IsFDiv = Opcode == TargetOpcode::G_FDIV;
+    FPClassTest InterestedRHS =
+        IsFDiv ? fcAllFlags : fcNan | fcInf | fcZero | fcNegative;
 
-    computeKnownFPClass(RHS, DemandedElts, fcNan | fcInf | fcZero | fcNegative,
-                        KnownRHS, Depth + 1);
+    computeKnownFPClass(RHS, DemandedElts, InterestedRHS, KnownRHS, Depth + 1);
 
-    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
-                               KnownRHS.isKnownNever(fcNegative) ||
-                               KnownRHS.isKnownNever(fcPositive);
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN();
+    if (IsFDiv) {
+      KnowSomethingUseful |=
+          KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
+          KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
+    } else {
+      KnowSomethingUseful |= KnownRHS.isKnownNever(fcNegative) ||
+                             KnownRHS.isKnownNever(fcPositive);
+    }
 
-    if (KnowSomethingUseful || WantPositive) {
+    if (KnowSomethingUseful || (!IsFDiv && WantPositive)) {
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Depth + 1);
     }
 
-    if (Opcode == TargetOpcode::G_FDIV) {
+    if (IsFDiv) {
       Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     } else {
       // Inf REM x and x REM 0 produce NaN.
@@ -2421,6 +2448,13 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
     FirstAnswer =
         SignBitsOps::rot(Tmp, TyBits, MaybeAmt, Opcode == TargetOpcode::G_ROTR);
+    break;
+  }
+  case TargetOpcode::G_SAVGFLOOR:
+  case TargetOpcode::G_SAVGCEIL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    FirstAnswer = computeNumSignBitsMin(Src1, Src2, DemandedElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_SREM: {

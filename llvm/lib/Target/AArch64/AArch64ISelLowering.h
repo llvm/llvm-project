@@ -296,6 +296,8 @@ public:
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
+  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
+
   /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
@@ -401,12 +403,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
@@ -651,6 +655,7 @@ private:
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore128(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSMULFIXSAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) const;
