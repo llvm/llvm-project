@@ -54,6 +54,19 @@ TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
   return nullptr;
 }
 
+bool TargetMachine::isLargeDataSize(uint64_t Size) const {
+  if (getTargetTriple().getArch() != Triple::x86_64)
+    return false;
+
+  if (!getTargetTriple().isOSBinFormatELF())
+    return getCodeModel() == CodeModel::Large;
+
+  if (getCodeModel() == CodeModel::Medium || getCodeModel() == CodeModel::Large)
+    return Size == 0 || Size > LargeDataThreshold;
+
+  return false;
+}
+
 bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
@@ -139,8 +152,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
             .isReadOnlyWithRel())
       return false;
     const DataLayout &DL = GV->getDataLayout();
-    uint64_t Size = GV->getGlobalSize(DL);
-    return Size == 0 || Size > LargeDataThreshold;
+    return isLargeDataSize(GV->getGlobalSize(DL));
   }
 
   return false;

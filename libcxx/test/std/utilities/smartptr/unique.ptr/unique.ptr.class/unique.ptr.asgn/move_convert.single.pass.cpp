@@ -87,7 +87,7 @@ TEST_CONSTEXPR_CXX23 void test_sfinae() {
     static_assert(!std::is_assignable<UA, const UB&>::value, "");
   }
   { // cannot move if the deleter-types cannot convert
-    static_assert(std::is_assignable<UAD, UBD&&>::value, "");
+    static_assert(!std::is_assignable<UAD, UBD&&>::value, "");
     static_assert(!std::is_assignable<UAD, UB&&>::value, "");
     static_assert(!std::is_assignable<UA, UBD&&>::value, "");
   }

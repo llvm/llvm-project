@@ -181,7 +181,72 @@ bool SIInstrInfo::isReMaterializableImpl(
       return true;
   }
 
-  return TargetInstrInfo::isReMaterializableImpl(MI);
+  // Everything below copied from TargetInstrInfo::isReMaterializableImpl. The
+  // only difference is that we allow operations that perform read-modify-write
+  // on sub-registers.
+
+  // Remat clients assume operand 0 is the defined register.
+  if (!MI.getNumOperands() || !MI.getOperand(0).isReg())
+    return false;
+  Register DefReg = MI.getOperand(0).getReg();
+
+  const MachineFunction &MF = *MI.getMF();
+
+  // A load from a fixed stack slot can be rematerialized. This may be
+  // redundant with subsequent checks, but it's target-independent,
+  // simple, and a common case.
+  int FrameIdx = 0;
+  if (isLoadFromStackSlot(MI, FrameIdx) &&
+      MF.getFrameInfo().isImmutableObjectIndex(FrameIdx))
+    return true;
+
+  // Avoid instructions obviously unsafe for remat.
+  if (MI.isNotDuplicable() || MI.mayStore() || MI.mayRaiseFPException() ||
+      MI.hasUnmodeledSideEffects())
+    return false;
+
+  // Don't remat inline asm. We have no idea how expensive it is
+  // even if it's side effect free.
+  if (MI.isInlineAsm())
+    return false;
+
+  // Avoid instructions which load from potentially varying memory.
+  if (MI.mayLoad() && !MI.isDereferenceableInvariantLoad())
+    return false;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // If any of the registers accessed are non-constant, conservatively assume
+  // the instruction is not rematerializable.
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg == 0)
+      continue;
+
+    // Check for a well-behaved physical register.
+    if (Reg.isPhysical()) {
+      if (MO.isUse()) {
+        // If the physreg has no defs anywhere, it's just an ambient register
+        // and we can freely move its uses. Alternatively, if it's allocatable,
+        // it could get allocated to something with a def during allocation.
+        if (!MRI.isConstantPhysReg(Reg))
+          return false;
+      } else {
+        // A physreg def. We can't remat it.
+        return false;
+      }
+      continue;
+    }
+
+    // Only allow one virtual-register def.  There may be multiple defs of the
+    // same virtual register, though.
+    if (MO.isDef() && Reg != DefReg)
+      return false;
+  }
+
+  return true;
 }
 
 // Returns true if the result of a VALU instruction depends on exec.
@@ -226,6 +291,8 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
     if (Op.isReg() && Op.getReg().isVirtual() &&
         RI.isSGPRClass(MRI.getRegClass(Op.getReg()))) {
       MachineInstr *SgprDef = MRI.getVRegDef(Op.getReg());
+      if (!SgprDef)
+        continue;
 
       // SgprDef defined inside cycle
       CycleRef FromCycle = CI->getCycle(SgprDef->getParent());
@@ -4847,6 +4914,14 @@ bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
         OpNo == (unsigned)AMDGPU::getNamedOperandIdx(InstDesc.getOpcode(),
                                                      AMDGPU::OpName::src2))
       return false;
+
+    if (ST.hasBF16InlineConstFromUpperFP32() && isVOP1(Opc)) {
+      if ((OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+           OpInfo.OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16) &&
+          isInlineConstant(ImmVal, OpInfo.OperandType))
+        return false;
+    }
+
     return RI.opCanUseInlineConstant(OpInfo.OperandType);
   }
 
@@ -4942,14 +5017,22 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
                hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers)))
     return false;
 
-  // We don't need to check src0, all input types are legal, so just make sure
-  // src0 isn't using any modifiers.
+  // Make sure src0 isn't using any modifiers.
   if (hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers))
     return false;
 
   // Can it be shrunk to a valid 32 bit opcode?
   if (!hasVALU32BitEncoding(MI.getOpcode()))
     return false;
+
+  const MachineOperand *Src0 = getNamedOperand(MI, AMDGPU::OpName::src0);
+  if (Src0 && Src0->isImm()) {
+    unsigned Op32 = AMDGPU::getVOPe32(MI.getOpcode());
+    if (!isImmOperandLegal(
+            get(Op32), AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src0),
+            *Src0))
+      return false;
+  }
 
   // Check output modifiers
   return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&

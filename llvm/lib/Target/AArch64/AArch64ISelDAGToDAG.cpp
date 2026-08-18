@@ -17,6 +17,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/GlobalValue.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "aarch64-isel"
 #define PASS_NAME "AArch64 Instruction Selection"
@@ -1252,6 +1254,18 @@ static bool isWorthFoldingADDlow(SDValue N) {
   return true;
 }
 
+/// Check whether \p GAN is the low part of a TLS address computation, i.e. the
+/// second operand of an ADDlow. The target flags on their own do not tell the
+/// ELF local-exec (:tprel_lo12: and :tprel_lo12_nc:) cases apart from other
+/// uses, so callers that depend on local-exec semantics have to check the
+/// object format as well. Local dynamic never gets here because it does not
+/// build an ADDlow.
+static bool isTLSLo12(const GlobalAddressSDNode *GAN) {
+  unsigned Flags = GAN->getTargetFlags();
+  return (Flags & (AArch64II::MO_TLS | AArch64II::MO_FRAGMENT)) ==
+         (AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
+}
+
 /// Check if the immediate offset is valid as a scaled immediate.
 static bool isValidAsScaledImmediate(int64_t Offset, unsigned Range,
                                      unsigned Size) {
@@ -1347,8 +1361,13 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexed(SDValue N, unsigned Size,
     if (!GAN)
       return true;
 
+    // Folding the low part of an ELF local-exec TLS address into a 128-bit
+    // access needs R_AARCH64_TLSLE_LDST128_TPREL_LO12 or its NC variant, which
+    // the GNU bfd linker does not support, so keep materialising the address
+    // with an add.
     if (GAN->getOffset() % Size == 0 &&
-        GAN->getGlobal()->getPointerAlignment(DL) >= Size)
+        GAN->getGlobal()->getPointerAlignment(DL) >= Size &&
+        !(Size > 8 && Subtarget->isTargetELF() && isTLSLo12(GAN)))
       return true;
   }
 
@@ -8298,6 +8317,24 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
           ScalarTy == N.getOperand(0).getValueType())
         Result = addBitcastHints(*CurDAG, N);
 
+      break;
+    }
+    case AArch64ISD::VSHL: {
+      // Undo mul(shl(A,C),B) -> shl(mul(A,B),C) canonicalisation when A is an
+      // extend that can be folded into the shift.
+      EVT VT = N.getValueType(0);
+      SDValue A, B, C = N.getOperand(1);
+      if (sd_match(N.getOperand(0),
+                   m_OneUse(m_Mul(m_Value(A, m_AnyOf(m_ZExt(m_Value()),
+                                                     m_SExt(m_Value()))),
+                                  m_Value(B))))) {
+        // If both mul operands are extended, preserve the smull/umull idiom.
+        if (B.getOpcode() == A.getOpcode())
+          break;
+        SDLoc DL(&N);
+        SDValue SHL = CurDAG->getNode(AArch64ISD::VSHL, DL, VT, A, C);
+        Result = CurDAG->getNode(ISD::MUL, DL, VT, SHL, B);
+      }
       break;
     }
     default:
