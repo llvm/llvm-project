@@ -150,6 +150,38 @@ public:
     return *ranges::prev(ranges::end(__derived()));
   }
 
+#  if _LIBCPP_STD_VER >= 23
+
+  template <class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) cbegin()
+    requires input_range<_D2>
+  {
+    return *ranges::cbegin(__derived());
+  }
+
+  template <class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) cbegin() const
+    requires input_range<const _D2>
+  {
+    return *ranges::cbegin(__derived());
+  }
+
+  template <class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) cend()
+    requires input_range<_D2>
+  {
+    return *ranges::cend(__derived());
+  }
+
+  template <class _D2 = _Derived>
+  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) cend() const
+    requires input_range<const _D2>
+  {
+    return *ranges::cend(__derived());
+  }
+
+#  endif // _LIBCPP_STD_VER >= 23
+
   template <random_access_range _RARange = _Derived>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](range_difference_t<_RARange> __index) {
     return ranges::begin(__derived())[__index];
