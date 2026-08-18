@@ -732,11 +732,10 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   }
 
   HI.Definition = printDefinition(D, PP, TB);
-  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D))
     if (PVD->getASTContext().getLangOpts().HLSL)
       HI.Definition =
           PVD->getHLSLParamTypeAsWritten(PP) + " " + PVD->getNameAsString();
-  }
   return HI;
 }
 
