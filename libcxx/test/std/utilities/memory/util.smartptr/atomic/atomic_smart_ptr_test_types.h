@@ -17,7 +17,7 @@
 #include <memory>
 #include <string>
 
-// --- User-defined and semi-random scalar-like types ---------------------------------
+// User-defined and semi-random scalar-like types.
 
 struct TrackedPod {
   std::uint32_t gen{};
