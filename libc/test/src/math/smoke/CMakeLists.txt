@@ -1184,6 +1184,7 @@ add_fp_unittest(
   HDRS
     RIntTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.rintf128
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits

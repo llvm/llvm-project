@@ -1379,6 +1379,9 @@ math_test(
 math_test(
     name = "rintf128",
     hdrs = ["RIntTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
