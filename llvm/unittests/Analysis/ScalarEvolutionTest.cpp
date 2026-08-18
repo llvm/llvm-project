@@ -2126,4 +2126,61 @@ TEST_F(ScalarEvolutionsTest, PrintUseFlagsOfOperands) {
   });
 }
 
+// An operand carrying use-specific no-wrap flags makes the expression built
+// from it distinct from the one built from the bare operand
+TEST_F(ScalarEvolutionsTest, OperandUseFlagsArePartOfIdentity) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %x, i32 %y, i1 %c) {
+      entry:
+        br label %loop
+      loop:
+        br i1 %c, label %loop, label %exit
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
+    SCEVUse FlaggedX(X, SCEV::FlagNUW);
+    ASSERT_FALSE(LI.empty());
+    const Loop *L = *LI.begin();
+
+    // Each builder keys its uniquing on the operand uses, so the flagged
+    // operand yields a different expression for every kind of node.
+    SCEVUse FlaggedAdd = SE.getAddExpr(FlaggedX, Y);
+    EXPECT_NE(FlaggedAdd, SE.getAddExpr(X, Y));
+    EXPECT_NE(SE.getMulExpr(FlaggedX, Y), SE.getMulExpr(X, Y));
+    EXPECT_NE(SE.getUDivExpr(FlaggedX, Y), SE.getUDivExpr(X, Y));
+    EXPECT_NE(SE.getUMaxExpr(FlaggedX, Y), SE.getUMaxExpr(X, Y));
+    EXPECT_NE(SE.getAddRecExpr(FlaggedX, Y, L, SCEV::FlagAnyWrap),
+              SE.getAddRecExpr(X, Y, L, SCEV::FlagAnyWrap));
+    SmallVector<SCEVUse, 2> FlaggedSeqOps = {FlaggedX, Y};
+    SmallVector<SCEVUse, 2> BareSeqOps = {X, Y};
+    EXPECT_NE(SE.getUMinExpr(FlaggedSeqOps, /*Sequential=*/true),
+              SE.getUMinExpr(BareSeqOps, /*Sequential=*/true));
+
+    EXPECT_EQ(FlaggedAdd->getCanonical(), SE.getAddExpr(X, Y));
+    EXPECT_EQ(SE.getUDivExpr(FlaggedX, Y)->getCanonical(),
+              SE.getUDivExpr(X, Y));
+
+    // The flagged use is the operand of the expression built from it, while the
+    // canonical form's operands are all bare.
+    SmallVector<SCEVUse> FlaggedOps;
+    copy_if(FlaggedAdd->operands(), std::back_inserter(FlaggedOps),
+            [](SCEVUse Op) { return Op.hasUseFlags(); });
+    ASSERT_EQ(FlaggedOps.size(), 1u);
+    EXPECT_EQ(FlaggedOps[0], FlaggedX);
+    EXPECT_TRUE(none_of(FlaggedAdd->getCanonical()->operands(),
+                        [](SCEVUse Op) { return Op.hasUseFlags(); }));
+  });
+}
 }  // end namespace llvm

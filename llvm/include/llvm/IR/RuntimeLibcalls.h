@@ -92,7 +92,16 @@ public:
       EABI EABIVersion = EABI::Default, StringRef ABIName = "",
       VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
-  LLVM_ABI explicit RuntimeLibcallsInfo(const Module &M);
+  // FIXME: The floating-point ABI is read from the "float-abi" module flag, but
+  // the ExceptionModel/EABIVersion/ABIName/VecLib parameters are still
+  // TargetOptions values that are not yet represented in the IR. Delete these
+  // parameters (and build everything from the Module) once those fields are
+  // migrated to module flags.
+  LLVM_ABI explicit RuntimeLibcallsInfo(
+      const Module &M,
+      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      EABI EABIVersion = EABI::Default, StringRef ABIName = "",
+      VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
                            ModuleAnalysisManager::Invalidator &);
