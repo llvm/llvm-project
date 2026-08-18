@@ -7,6 +7,7 @@ endif()
 add_library(omptarget SHARED
   interface.cpp
   omptarget.cpp
+  OffloadRTL.cpp
   LegacyAPI.cpp
 
   OpenMP/API.cpp
@@ -16,7 +17,6 @@ add_library(omptarget SHARED
   ../libompaccsupport/device.cpp
   ../libompaccsupport/PluginManager.cpp
   ../libompaccsupport/DeviceImage.cpp
-  ../libompaccsupport/OffloadRTL.cpp
   ../libompaccsupport/Mapping.cpp
 
   KernelLanguage/API.cpp
