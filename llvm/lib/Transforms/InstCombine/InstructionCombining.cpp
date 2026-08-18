@@ -1781,7 +1781,8 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
 
 Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
                                                 bool FoldWithMultiUse,
-                                                bool SimplifyBothArms) {
+                                                bool SimplifyBothArms,
+                                                bool AllowNoArmSimplification) {
   // Don't modify shared select instructions unless set FoldWithMultiUse
   if (!SI->hasOneUser() && !FoldWithMultiUse)
     return nullptr;
@@ -1822,7 +1823,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   Value *NewTV = simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm=*/true);
   Value *NewFV =
       simplifyOperationIntoSelectOperand(Op, SI, /*IsTrueArm=*/false);
-  if (!NewTV && !NewFV)
+  if (!NewTV && !NewFV && !AllowNoArmSimplification)
     return nullptr;
 
   if (SimplifyBothArms && !(NewTV && NewFV))

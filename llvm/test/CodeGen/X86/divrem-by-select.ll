@@ -522,11 +522,20 @@ define <2 x i64> @sdivrem_identity_const(<2 x i1> %c, <2 x i64> %x) {
 define i32 @sdiv_select_of_constants(i32 %x, i1 %c) {
 ; CHECK-X64-LABEL: sdiv_select_of_constants:
 ; CHECK-X64:       # %bb.0:
-; CHECK-X64-NEXT:    movl %edi, %eax
-; CHECK-X64-NEXT:    andl $1, %esi
-; CHECK-X64-NEXT:    xorl $5, %esi
-; CHECK-X64-NEXT:    cltd
-; CHECK-X64-NEXT:    idivl %esi
+; CHECK-X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-X64-NEXT:    leal 3(%rdi), %ecx
+; CHECK-X64-NEXT:    testl %edi, %edi
+; CHECK-X64-NEXT:    cmovnsl %edi, %ecx
+; CHECK-X64-NEXT:    sarl $2, %ecx
+; CHECK-X64-NEXT:    movslq %edi, %rax
+; CHECK-X64-NEXT:    imulq $1717986919, %rax, %rax # imm = 0x66666667
+; CHECK-X64-NEXT:    movq %rax, %rdx
+; CHECK-X64-NEXT:    shrq $63, %rdx
+; CHECK-X64-NEXT:    sarq $33, %rax
+; CHECK-X64-NEXT:    addl %edx, %eax
+; CHECK-X64-NEXT:    testb $1, %sil
+; CHECK-X64-NEXT:    cmovnel %ecx, %eax
+; CHECK-X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-X64-NEXT:    retq
   %a = sdiv i32 %x, 4
   %b = sdiv i32 %x, 5
@@ -535,15 +544,41 @@ define i32 @sdiv_select_of_constants(i32 %x, i1 %c) {
 }
 
 define i32 @urem_select_of_constants(i32 %x, i1 %c) {
-; CHECK-X64-LABEL: urem_select_of_constants:
-; CHECK-X64:       # %bb.0:
-; CHECK-X64-NEXT:    movl %edi, %eax
-; CHECK-X64-NEXT:    andl $1, %esi
-; CHECK-X64-NEXT:    xorl $7, %esi
-; CHECK-X64-NEXT:    xorl %edx, %edx
-; CHECK-X64-NEXT:    divl %esi
-; CHECK-X64-NEXT:    movl %edx, %eax
-; CHECK-X64-NEXT:    retq
+; CHECK-X64-V3-LABEL: urem_select_of_constants:
+; CHECK-X64-V3:       # %bb.0:
+; CHECK-X64-V3-NEXT:    movl %edi, %eax
+; CHECK-X64-V3-NEXT:    movl %edi, %edx
+; CHECK-X64-V3-NEXT:    movl $2863311531, %ecx # imm = 0xAAAAAAAB
+; CHECK-X64-V3-NEXT:    imulq %rdx, %rcx
+; CHECK-X64-V3-NEXT:    shrq $34, %rcx
+; CHECK-X64-V3-NEXT:    addl %ecx, %ecx
+; CHECK-X64-V3-NEXT:    leal (%rcx,%rcx,2), %ecx
+; CHECK-X64-V3-NEXT:    movabsq $2635249153617166336, %rdi # imm = 0x24924924A0000000
+; CHECK-X64-V3-NEXT:    mulxq %rdi, %rdx, %rdx
+; CHECK-X64-V3-NEXT:    leal (,%rdx,8), %edi
+; CHECK-X64-V3-NEXT:    subl %edx, %edi
+; CHECK-X64-V3-NEXT:    testb $1, %sil
+; CHECK-X64-V3-NEXT:    cmovnel %ecx, %edi
+; CHECK-X64-V3-NEXT:    subl %edi, %eax
+; CHECK-X64-V3-NEXT:    retq
+;
+; CHECK-X64-V4-LABEL: urem_select_of_constants:
+; CHECK-X64-V4:       # %bb.0:
+; CHECK-X64-V4-NEXT:    movl %edi, %eax
+; CHECK-X64-V4-NEXT:    movl %edi, %edx
+; CHECK-X64-V4-NEXT:    movl $2863311531, %ecx # imm = 0xAAAAAAAB
+; CHECK-X64-V4-NEXT:    imulq %rdx, %rcx
+; CHECK-X64-V4-NEXT:    shrq $34, %rcx
+; CHECK-X64-V4-NEXT:    addl %ecx, %ecx
+; CHECK-X64-V4-NEXT:    movabsq $2635249153617166336, %rdi # imm = 0x24924924A0000000
+; CHECK-X64-V4-NEXT:    mulxq %rdi, %rdx, %rdx
+; CHECK-X64-V4-NEXT:    leal (%rcx,%rcx,2), %ecx
+; CHECK-X64-V4-NEXT:    leal (,%rdx,8), %edi
+; CHECK-X64-V4-NEXT:    subl %edx, %edi
+; CHECK-X64-V4-NEXT:    testb $1, %sil
+; CHECK-X64-V4-NEXT:    cmovnel %ecx, %edi
+; CHECK-X64-V4-NEXT:    subl %edi, %eax
+; CHECK-X64-V4-NEXT:    retq
   %a = urem i32 %x, 6
   %b = urem i32 %x, 7
   %r = select i1 %c, i32 %a, i32 %b

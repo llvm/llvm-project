@@ -1184,8 +1184,9 @@ define <2 x i8> @sdiv_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %
 
 define i32 @sdiv_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @sdiv_select_of_constants_divisor(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[X]], -3
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
@@ -1195,8 +1196,9 @@ define i32 @sdiv_select_of_constants_divisor(i1 %b, i32 %x) {
 
 define i32 @sdiv_select_of_constants_divisor_exact(i1 %b, i32 %x) {
 ; CHECK-LABEL: @sdiv_select_of_constants_divisor_exact(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 4, i32 5
-; CHECK-NEXT:    [[R:%.*]] = sdiv exact i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = sdiv exact i32 [[X]], 5
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 4, i32 5
@@ -1313,8 +1315,10 @@ define <2 x i8> @udiv_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %
 
 define i32 @udiv_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @udiv_select_of_constants_divisor(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[X]], -4
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
@@ -1324,8 +1328,9 @@ define i32 @udiv_select_of_constants_divisor(i1 %b, i32 %x) {
 
 define i32 @udiv_select_of_constants_divisor_pow2_arm(i1 %b, i32 %x) {
 ; CHECK-LABEL: @udiv_select_of_constants_divisor_pow2_arm(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 4, i32 5
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[X]], 5
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 4, i32 5
@@ -1335,8 +1340,9 @@ define i32 @udiv_select_of_constants_divisor_pow2_arm(i1 %b, i32 %x) {
 
 define i32 @udiv_select_of_constants_divisor_from_zext_add(i1 %b, i32 %x) {
 ; CHECK-LABEL: @udiv_select_of_constants_divisor_from_zext_add(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 4
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[X]], 2
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = zext i1 %b to i32
@@ -1359,8 +1365,9 @@ define i32 @udiv_select_of_constants_divisor_both_pow2(i1 %b, i32 %x) {
 
 define i32 @udiv_select_of_constants_divisor_exact(i1 %b, i32 %x) {
 ; CHECK-LABEL: @udiv_select_of_constants_divisor_exact(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 4, i32 5
-; CHECK-NEXT:    [[R:%.*]] = udiv exact i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv exact i32 [[X]], 5
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 4, i32 5
@@ -1382,8 +1389,9 @@ define i32 @udiv_select_of_constants_divisor_minus_one_arm(i1 %b, i32 %x) {
 
 define <2 x i32> @udiv_select_of_constants_divisor_splat(i1 %b, <2 x i32> %x) {
 ; CHECK-LABEL: @udiv_select_of_constants_divisor_splat(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i32> splat (i32 4), <2 x i32> splat (i32 5)
-; CHECK-NEXT:    [[R:%.*]] = udiv <2 x i32> [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <2 x i32> [[X]], splat (i32 5)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = select i1 %b, <2 x i32> splat (i32 4), <2 x i32> splat (i32 5)
@@ -1440,7 +1448,9 @@ define i32 @udiv_select_of_constants_divisor_multi_use(i1 %b, i32 %x) {
 ; CHECK-LABEL: @udiv_select_of_constants_divisor_multi_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 4, i32 5
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[X]], 5
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 4, i32 5
@@ -2093,7 +2103,8 @@ define i32 @sdiv_select_one_multiuse(i32 %a, i1 %b) {
 ; CHECK-LABEL: @sdiv_select_one_multiuse(
 ; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[B:%.*]], i32 1, i32 2
 ; CHECK-NEXT:    call void @use(i32 [[SUB]])
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B]], i32 [[A]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %sub = select i1 %b, i32 1, i32 2

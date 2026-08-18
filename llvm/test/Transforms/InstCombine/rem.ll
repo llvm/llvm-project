@@ -242,8 +242,8 @@ define <2 x i1> @test3a_vec(<2 x i32> %A) {
 
 define i32 @test4(i32 %X, i1 %C) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C:%.*]], i32 0, i32 7
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 0, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %V = select i1 %C, i32 1, i32 8
@@ -918,8 +918,9 @@ define <2 x i8> @srem_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %
 
 define i32 @srem_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @srem_select_of_constants_divisor(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
-; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[TMP2:%.*]] = srem i32 [[X]], 3
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
@@ -941,8 +942,13 @@ define i32 @srem_select_of_constants_divisor_minus_one_arm(i1 %b, i32 %x) {
 
 define i32 @urem_select_of_constants_divisor_high_bits(i1 %b, i32 %x) {
 ; CHECK-LABEL: @urem_select_of_constants_divisor_high_bits(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 -2, i32 -1
-; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X_FR]], -2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[X_FR]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[X_FR]], i32 [[TMP2]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[X_FR]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[DOTNOT]], i32 0, i32 [[X_FR]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP3]], i32 [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 -2, i32 -1
@@ -1048,8 +1054,12 @@ define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %
 
 define i32 @urem_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @urem_select_of_constants_divisor(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 12, i32 -3
-; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 [[X_FR]], 12
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[X_FR]], -3
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[X_FR]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i32 [[X_FR]], i32 [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i32 [[TMP1]], i32 [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 12, i32 -3
