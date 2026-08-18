@@ -70,10 +70,14 @@ struct SYCLJITOptions {
 ///  use by a runtime for JIT compilation. Not used for AOT.
 /// \param IsFinalizedImage True when \p Buffer holds an already finalized
 ///  device image, which must not be device-linked again.
-LLVM_ABI llvm::Error wrapSYCLBinaries(llvm::Module &M,
-                                      llvm::ArrayRef<char> Buffer,
-                                      SYCLJITOptions Options = SYCLJITOptions(),
-                                      bool IsFinalizedImage = false);
+/// \param RegistrationFuncs When given, receives the functions that register
+///  and unregister the binary with the runtime instead of them being appended
+///  to llvm.global_ctors and llvm.global_dtors. A caller has to add them
+///  to those lists itself.
+LLVM_ABI llvm::Error wrapSYCLBinaries(
+    llvm::Module &M, llvm::ArrayRef<char> Buffer,
+    SYCLJITOptions Options = SYCLJITOptions(), bool IsFinalizedImage = false,
+    std::pair<llvm::Function *, llvm::Function *> *RegistrationFuncs = nullptr);
 
 } // namespace offloading
 } // namespace llvm

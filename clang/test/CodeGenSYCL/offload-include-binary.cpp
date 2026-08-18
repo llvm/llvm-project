@@ -1,9 +1,9 @@
 // REQUIRES: x86-registered-target
 
 // Verify that -foffload-include-binary embeds the finalized SYCL device
-// image into the host module and emits the registration/unregistration
+// binary into the host module and emits the registration/unregistration
 // constructors and destructors expected by the SYCL runtime.
-// The image is already finalized, so it must not land in ".llvm.offloading".
+// The binary is already finalized, so it must not land in ".llvm.offloading".
 // RUN: echo -n 'FAKE_SYCL_DEVICE_IMAGE' > %t.bin
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsycl-is-host \
 // RUN:   -foffload-include-binary %t.bin -emit-llvm %s -o - \

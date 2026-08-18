@@ -661,7 +661,7 @@ public:
     return {Start, Size};
   }
 
-  void createRegisterFatbinFunction(Constant *Start, Constant *Size) {
+  Function *createRegisterFatbinFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
@@ -680,10 +680,10 @@ public:
     Builder.CreateCall(RegFuncC, {Start, Size});
     Builder.CreateRetVoid();
 
-    appendToGlobalCtors(M, Func, /*Priority*/ 1);
+    return Func;
   }
 
-  void createUnregisterFunction(Constant *Start, Constant *Size) {
+  Function *createUnregisterFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     Function *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
@@ -702,7 +702,7 @@ public:
     Builder.CreateCall(UnRegFuncC, {Start, Size});
     Builder.CreateRetVoid();
 
-    appendToGlobalDtors(M, Func, /*Priority*/ 1);
+    return Func;
   }
 
 private:
@@ -753,12 +753,20 @@ Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
   return Error::success();
 }
 
-Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
-                                         SYCLJITOptions Options,
-                                         bool IsFinalizedImage) {
+Error llvm::offloading::wrapSYCLBinaries(
+    llvm::Module &M, ArrayRef<char> Buffer, SYCLJITOptions Options,
+    bool IsFinalizedImage,
+    std::pair<Function *, Function *> *RegistrationFuncs) {
   SYCLWrapper W(M, Options, IsFinalizedImage);
   auto [Start, Size] = W.embedBinary(Buffer);
-  W.createRegisterFatbinFunction(Start, Size);
-  W.createUnregisterFunction(Start, Size);
+  Function *RegisterFunc = W.createRegisterFatbinFunction(Start, Size);
+  Function *UnregisterFunc = W.createUnregisterFunction(Start, Size);
+  if (RegistrationFuncs) {
+    *RegistrationFuncs = {RegisterFunc, UnregisterFunc};
+    return Error::success();
+  }
+
+  appendToGlobalCtors(M, RegisterFunc, /*Priority*/ 1);
+  appendToGlobalDtors(M, UnregisterFunc, /*Priority*/ 1);
   return Error::success();
 }

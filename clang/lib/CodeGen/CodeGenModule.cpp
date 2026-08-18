@@ -1157,6 +1157,15 @@ void CodeGenModule::Release() {
   else
     EmitCXXGlobalInitFunc();
   EmitCXXGlobalCleanUpFunc();
+  if (LangOpts.SYCLIsHost && !CodeGenOpts.OffloadBinaryToEmbedFile.empty()) {
+    auto [SYCLCtorFunction, SYCLDtorFunction] = embedSYCLDeviceBinary();
+    if (SYCLCtorFunction) {
+      // A static initializer may launch a kernel, so the device binaries have
+      // to be registered before any of them run, hence a priority.
+      AddGlobalCtor(SYCLCtorFunction, /*Priority=*/1);
+      AddGlobalDtor(SYCLDtorFunction, /*Priority=*/1);
+    }
+  }
   registerGlobalDtorsWithAtExit();
   EmitCXXThreadLocalInitFunc();
   if (ObjCRuntime)
@@ -1182,10 +1191,6 @@ void CodeGenModule::Release() {
   });
   EmitCtorList(GlobalCtors, "llvm.global_ctors");
   EmitCtorList(GlobalDtors, "llvm.global_dtors");
-  // The SYCL image registration functions are added to the constructor and
-  // destructor lists which merge into llvm.global_ctors and llvm.global_dtors.
-  if (LangOpts.SYCLIsHost && !CodeGenOpts.OffloadBinaryToEmbedFile.empty())
-    embedSYCLTargetBinary();
   EmitGlobalAnnotations();
   EmitStaticExternCAliases();
   checkAliases();
