@@ -172,16 +172,24 @@ protected:
   /// symbol is not named after the class).
   lldb::TypeSP LookupClassTypeInDebugInfo(ConstString class_name);
 
-  /// Address of gnustep-base's `const char *_NSPrintForDebugger(id)`, the
-  /// same debugger hook AppleObjCRuntime uses. Resolved lazily; nullptr when
-  /// gnustep-base is not loaded in the inferior.
-  Address *GetPrintForDebuggerAddr();
+  /// Lazily-built FunctionCaller for a utility function that reproduces
+  /// gnustep-base's `_NSPrintForDebugger` (NSDebug.m) using nothing but
+  /// libobjc2's exported API, so `po` works whether or not Foundation is
+  /// loaded and regardless of whether gnustep-base exports that hook - it
+  /// does on ELF but not from the MSVC DLL. Returns nullptr on failure; the
+  /// caller is owned by the utility function and stays valid for the
+  /// runtime's life.
+  FunctionCaller *GetObjectDescriptionCaller(ExecutionContext &exe_ctx);
 
   lldb::ModuleSP m_objc_module_sp;
 
-  std::unique_ptr<Address> m_print_for_debugger_addr_up;
-
-  std::unique_ptr<FunctionCaller> m_print_object_caller_up;
+  /// Utility function wrapping the -description/-UTF8String pair; owns
+  /// m_description_caller. Guarded by m_description_mutex, which also
+  /// latches a failed build so it is not retried on every `po`.
+  std::mutex m_description_mutex;
+  std::unique_ptr<UtilityFunction> m_description_utility_up;
+  FunctionCaller *m_description_caller = nullptr;
+  bool m_description_failed = false;
 
   /// Utility function wrapping objc_msg_lookup; owns m_msg_lookup_caller.
   /// Guarded by m_msg_lookup_mutex, which also latches a failed build so it

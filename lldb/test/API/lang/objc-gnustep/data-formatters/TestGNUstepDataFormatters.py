@@ -192,3 +192,34 @@ class TestGNUstepDataFormatters(TestBase):
         pair = person.GetChildAtIndex(0)
         self.assertEqual(pair.GetChildMemberWithName("key").GetName(), "key")
         self.assertEqual(pair.GetNumChildren(), 2)
+
+    def test_po(self):
+        """`po` describes objects without gnustep-base exporting a hook.
+
+        LLDB reproduces _NSPrintForDebugger (Source/NSDebug.m) from libobjc2's
+        exported runtime API rather than resolving that symbol, which
+        gnustep-base defines but does not dllexport on Windows. Nothing in
+        this directory supplies it, so these assertions fail if that
+        dependency ever comes back.
+        """
+        self.stop_at_end()
+        # A user class reached through its own -description.
+        self.expect("po account", substrs=["<Account Jane: 1234.5>"])
+        # Tagged pointers: the receiver's class comes from the pointer bits,
+        # not from a first-word read, so these only work if the description
+        # call dispatches through the runtime rather than dereferencing.
+        self.expect("po tinyString", substrs=["Hi"])
+        self.expect("po taggedInt", substrs=["123456"])
+        # A container, whose description recurses through its elements.
+        self.expect("po fruits", substrs=["apple", "banana", "cherry"])
+        # nil must not run anything in the inferior.
+        self.expect("po nilObject", substrs=["nil"])
+        # None of the above may have fallen back to `p`.
+        for expr in ("account", "tinyString", "taggedInt", "fruits"):
+            self.expect("po " + expr, matching=False, substrs=["was unsuccessful"])
+
+    def test_po_is_repeatable(self):
+        """Repeated `po` on the same object keeps working."""
+        self.stop_at_end()
+        for _ in range(3):
+            self.expect("po account", substrs=["<Account Jane: 1234.5>"])

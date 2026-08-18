@@ -105,14 +105,36 @@ int main() {
   return 0;
 }
 
-// LLDB resolves `_NSPrintForDebugger` by symbol in any loaded module and
-// calls it to implement `po`. In a full GNUstep environment gnustep-base
-// provides it; this hermetic stand-in exercises the same machinery.
-const char *_NSPrintForDebugger(id object) {
-  if (!object)
-    return 0;
-  return object_getClassName(object);
+// `po` sends -description and then -UTF8String to the result, which is what
+// gnustep-base's _NSPrintForDebugger does (Source/NSDebug.m), reached
+// through libobjc2's exported runtime API rather than through that symbol.
+// Nothing below needs Foundation, so this also covers `po` against a bare
+// runtime - a configuration where gnustep-base's hook does not exist at all.
+@interface Str : NSObject {
+  const char *_bytes;
 }
++ (id)withBytes:(const char *)bytes;
+- (const char *)UTF8String;
+@end
+@implementation Str
++ (id)withBytes:(const char *)bytes {
+  Str *str = [Str new];
+  str->_bytes = bytes;
+  return str;
+}
+- (const char *)UTF8String {
+  return _bytes;
+}
+@end
+
+@interface TestObj (Description)
+- (id)description;
+@end
+@implementation TestObj (Description)
+- (id)description {
+  return [Str withBytes:"<TestObj: described>"];
+}
+@end
 
 // A selector's name cannot be read from memory: __objc_load overwrites the
 // name field with a dispatch index, so the only source is the symbol clang
@@ -138,7 +160,8 @@ const char *_NSPrintForDebugger(id object) {
 // RUN:     -- %t | FileCheck %s --check-prefix=PO
 //
 // PO: (lldb) po t
-// PO: TestObj
+// PO: <TestObj: described>
+// PO-NOT: warning: `po` was unsuccessful
 
 // Stepping at a message send goes through the objc_msgSend trampoline into
 // the method implementation.

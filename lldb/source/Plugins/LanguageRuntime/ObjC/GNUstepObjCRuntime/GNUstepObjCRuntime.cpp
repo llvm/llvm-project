@@ -248,20 +248,102 @@ GNUstepObjCRuntime::GNUstepObjCRuntime(Process *process)
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
 }
 
-Address *GNUstepObjCRuntime::GetPrintForDebuggerAddr() {
-  if (!m_print_for_debugger_addr_up) {
-    SymbolContextList sc_list;
-    GetTargetRef().GetImages().FindSymbolsWithNameAndType(
-        ConstString("_NSPrintForDebugger"), eSymbolTypeCode, sc_list);
-    for (const SymbolContext &sc : sc_list) {
-      if (!sc.symbol)
-        continue;
-      m_print_for_debugger_addr_up =
-          std::make_unique<Address>(sc.symbol->GetAddress());
-      break;
-    }
+FunctionCaller *
+GNUstepObjCRuntime::GetObjectDescriptionCaller(ExecutionContext &exe_ctx) {
+  // gnustep-base's _NSPrintForDebugger (Source/NSDebug.m) is exactly:
+  //
+  //   if (object && [object respondsToSelector: @selector(description)])
+  //     return [[object description] UTF8String];
+  //   return NULL;
+  //
+  // Every runtime function it needs is OBJC_PUBLIC in libobjc2, so rather
+  // than depending on Foundation exporting that hook - it does from
+  // libgnustep-base.so but not from the MSVC gnustep-base DLL, which is why
+  // this used to need a shim on Windows - reproduce it here. As a bonus this
+  // makes `po` work against a bare libobjc2 with no Foundation at all, for
+  // any object implementing -description.
+  //
+  // object_getClass() rather than a raw isa read, because it also resolves
+  // tagged pointers (classForObject) and skips libobjc2's hidden classes.
+  static const char *g_description_name = "$__lldb_gnustep_object_description";
+  static const char *g_description_code =
+      "void *object_getClass(void *object);\n"
+      "void *sel_registerName(const char *name);\n"
+      "signed char class_respondsToSelector(void *cls, void *sel);\n"
+      "void *objc_msg_lookup(void *receiver, void *selector);\n"
+      "\n"
+      "const char *$__lldb_gnustep_object_description(void *object) {\n"
+      "  if (!object)\n"
+      "    return 0;\n"
+      "  void *description_sel = sel_registerName(\"description\");\n"
+      "  if (!class_respondsToSelector(object_getClass(object), "
+      "description_sel))\n"
+      "    return 0;\n"
+      "  void *(*description_imp)(void *, void *) =\n"
+      "      (void *(*)(void *, void *))objc_msg_lookup(object, "
+      "description_sel);\n"
+      "  if (!description_imp)\n"
+      "    return 0;\n"
+      "  void *description = description_imp(object, description_sel);\n"
+      "  if (!description)\n"
+      "    return 0;\n"
+      "  void *utf8_sel = sel_registerName(\"UTF8String\");\n"
+      "  if (!class_respondsToSelector(object_getClass(description), "
+      "utf8_sel))\n"
+      "    return 0;\n"
+      "  const char *(*utf8_imp)(void *, void *) =\n"
+      "      (const char *(*)(void *, void *))objc_msg_lookup(description, "
+      "utf8_sel);\n"
+      "  if (!utf8_imp)\n"
+      "    return 0;\n"
+      "  return utf8_imp(description, utf8_sel);\n"
+      "}\n";
+
+  std::lock_guard<std::mutex> guard(m_description_mutex);
+  if (m_description_caller)
+    return m_description_caller;
+  // Don't pay for compiling the wrapper again once it is known not to work
+  // in this process.
+  if (m_description_failed)
+    return nullptr;
+
+  Log *log = GetLog(LLDBLog::Expressions);
+
+  auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+      g_description_code, g_description_name, eLanguageTypeC, exe_ctx);
+  if (!utility_fn_or_error) {
+    LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
+                   "failed to build object description utility: {0}");
+    m_description_failed = true;
+    return nullptr;
   }
-  return m_print_for_debugger_addr_up.get();
+  m_description_utility_up = std::move(*utility_fn_or_error);
+
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(GetTargetRef());
+  if (!scratch_ts_sp) {
+    m_description_failed = true;
+    return nullptr;
+  }
+
+  Value void_ptr_value;
+  void_ptr_value.SetValueType(Value::ValueType::Scalar);
+  void_ptr_value.SetCompilerType(
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType());
+  ValueList args;
+  args.PushValue(void_ptr_value);
+
+  Status error;
+  m_description_caller = m_description_utility_up->MakeFunctionCaller(
+      scratch_ts_sp->GetCStringType(true), args, exe_ctx.GetThreadSP(), error);
+  if (error.Fail()) {
+    LLDB_LOG(log, "failed to make object description caller: {0}",
+             error.AsCString());
+    m_description_caller = nullptr;
+    m_description_failed = true;
+    return nullptr;
+  }
+  return m_description_caller;
 }
 
 llvm::Error GNUstepObjCRuntime::GetObjectDescription(Stream &str,
@@ -293,13 +375,6 @@ llvm::Error GNUstepObjCRuntime::GetObjectDescription(Stream &str,
 llvm::Error
 GNUstepObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
                                          ExecutionContextScope *exe_scope) {
-  // The libobjc2 runtime alone cannot describe objects; the hook lives in
-  // gnustep-base (Foundation), just like on Darwin.
-  Address *function_address = GetPrintForDebuggerAddr();
-  if (!function_address)
-    return llvm::createStringError(
-        "gnustep-base is not loaded: _NSPrintForDebugger not found");
-
   ExecutionContext exe_ctx;
   exe_scope->CalculateExecutionContext(exe_ctx);
   Process *process = exe_ctx.GetProcessPtr();
@@ -339,25 +414,18 @@ GNUstepObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   DiagnosticManager diagnostics;
   lldb::addr_t wrapper_struct_addr = LLDB_INVALID_ADDRESS;
 
-  if (!m_print_object_caller_up) {
-    Status error;
-    m_print_object_caller_up.reset(
-        exe_scope->CalculateTarget()->GetFunctionCallerForLanguage(
-            eLanguageTypeC, return_compiler_type, *function_address,
-            arg_value_list, "gnustep-object-description", error));
-    if (error.Fail()) {
-      m_print_object_caller_up.reset();
-      return llvm::createStringError(
-          llvm::Twine("could not get function runner to call "
-                      "_NSPrintForDebugger: ") +
-          error.AsCString());
-    }
-    m_print_object_caller_up->InsertFunction(exe_ctx, wrapper_struct_addr,
-                                             diagnostics);
-  } else {
-    m_print_object_caller_up->WriteFunctionArguments(
-        exe_ctx, wrapper_struct_addr, arg_value_list, diagnostics);
-  }
+  // Building the caller needs a thread, so this has to follow the frame
+  // selection above. MakeFunctionCaller already compiled the wrapper into
+  // the inferior, so only a fresh argument struct is needed per call.
+  FunctionCaller *caller = GetObjectDescriptionCaller(exe_ctx);
+  if (!caller)
+    return llvm::createStringError(
+        "could not build the object description function");
+
+  if (!caller->WriteFunctionArguments(exe_ctx, wrapper_struct_addr,
+                                      arg_value_list, diagnostics))
+    return llvm::createStringError(
+        "could not write the object description arguments");
 
   EvaluateExpressionOptions options;
   options.SetUnwindOnError(true);
@@ -367,21 +435,26 @@ GNUstepObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   options.SetTimeout(process->GetUtilityExpressionTimeout());
   options.SetIsForUtilityExpr(true);
 
-  ExpressionResults results = m_print_object_caller_up->ExecuteFunction(
+  ExpressionResults results = caller->ExecuteFunction(
       exe_ctx, &wrapper_struct_addr, options, diagnostics, ret);
   if (results != eExpressionCompleted)
     return llvm::createStringError(
-        "could not evaluate _NSPrintForDebugger in the inferior");
+        "could not evaluate the object description in the inferior");
 
   addr_t result_ptr = ret.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
   if (result_ptr == 0 || result_ptr == LLDB_INVALID_ADDRESS)
     return llvm::createStringError("object returned no description");
 
+  // -description returns inferior memory, so a string that never terminates
+  // would otherwise be read until the host runs out of it. No real
+  // description approaches this.
+  static constexpr size_t g_max_description_length = 1024 * 1024;
+
   char buf[512];
   size_t cstr_len = 0;
   size_t full_buffer_len = sizeof(buf) - 1;
   size_t curr_len = full_buffer_len;
-  while (curr_len == full_buffer_len) {
+  while (curr_len == full_buffer_len && cstr_len < g_max_description_length) {
     Status error;
     curr_len = process->ReadCStringFromMemory(result_ptr + cstr_len, buf,
                                               sizeof(buf), error);
