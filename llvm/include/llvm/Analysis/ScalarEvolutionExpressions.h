@@ -319,6 +319,12 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scUDivExpr; }
+
+  /// Returns true if the expression may trigger undefined-behavior.
+  bool mayTriggerUB(ScalarEvolution &SE) const {
+    return !SE.isKnownNonZero(getRHS()) ||
+           !ScalarEvolution::isGuaranteedNotToBePoison(getRHS());
+  }
 };
 
 /// This node represents a polynomial recurrence on the trip count

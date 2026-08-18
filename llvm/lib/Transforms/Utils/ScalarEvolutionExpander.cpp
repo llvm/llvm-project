@@ -717,20 +717,18 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
   const SCEV *RHSExpr = S->getRHS();
   Value *RHS = expand(RHSExpr);
   if (SafeUDivMode) {
-    bool GuaranteedNotPoison =
-        ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
-    if (!GuaranteedNotPoison)
+    if (!ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr))
       RHS = Builder.CreateFreeze(RHS);
 
     // We need an umax if either RHSExpr is not known to be zero, or if it is
     // not guaranteed to be non-poison. In the later case, the frozen poison may
     // be 0.
-    if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
+    if (S->mayTriggerUB(SE))
       RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
                                     {RHS, ConstantInt::get(RHS->getType(), 1)});
   }
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
-                     /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
+                     /*IsSafeToHoist=*/!S->mayTriggerUB(SE));
 }
 
 /// Determine if this is a well-behaved chain of instructions leading back to
@@ -1667,20 +1665,12 @@ Value *SCEVExpander::expand(SCEVUse S) {
 
   // We can move insertion point only if there is no div or rem operations
   // otherwise we are risky to move it over the check for zero denominator.
-  auto SafeToHoist = [](const SCEV *S) {
-    return !SCEVExprContains(S, [](const SCEV *S) {
-              if (const auto *D = dyn_cast<SCEVUDivExpr>(S)) {
-                if (const auto *SC = dyn_cast<SCEVConstant>(D->getRHS()))
-                  // Division by non-zero constants can be hoisted.
-                  return SC->getValue()->isZero();
-                // All other divisions should not be moved as they may be
-                // divisions by zero and should be kept within the
-                // conditions of the surrounding loops that guard their
-                // execution (see PR35406).
-                return true;
-              }
-              return false;
-            });
+  auto SafeToHoist = [this](const SCEV *S) {
+    return !SCEVExprContains(S, [this](const SCEV *S) {
+      const auto *D = dyn_cast<SCEVUDivExpr>(S);
+      // TODO: Why is this RHS-constant check necessary?
+      return D && (!isa<SCEVConstant>(D->getRHS()) || D->mayTriggerUB(SE));
+    });
   };
   if (SafeToHoist(S)) {
     for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
@@ -2507,8 +2497,7 @@ struct SCEVFindUnsafe {
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      if (!SE.isKnownNonZero(D->getRHS()) ||
-          !SE.isGuaranteedNotToBePoison(D->getRHS())) {
+      if (D->mayTriggerUB(SE)) {
         IsUnsafe = true;
         return false;
       }
