@@ -15,18 +15,23 @@
 // merge result is the caller's responsibility (typically clang-reforge
 // invokes `clang-apply-replacements` after this tool returns).
 //
-// Conflict policy: this tool implements a drop-all policy. After
-// mergeAndDeduplicate runs, the tool computes conflict clusters from the
-// input keys — a cluster being a maximal connected component of input
-// Replacements (within one file) whose [offset, offset+length) byte ranges
-// transitively overlap, restricted to length > 0 entries. For each
-// reportable cluster (one whose members intersect the library's
-// merged-output keys), every member is removed from the merged YAML,
-// one summary line is emitted to stderr, and the tool exits 0.
+// Conflict policy: this tool implements a drop-all policy on top of the
+// underlying merge step, which resolves overlapping Replacements itself by
+// keeping the first-registered one in each overlapping group, and silently
+// excludes any input file it could not process at all (e.g. one that does
+// not exist on disk).
 //
-// Zero-length insertions are out of scope for the drop-all policy in this
-// change; they continue to follow clang-apply-replacements' own
-// IgnoreInsertConflict=false (first-registered) policy.
+// To do so, it defines two sets: 1. InputKeys, every input Replacement, and
+// 2. OutputKeys, the Replacements that survived into the merged output.
+//
+// A conflict cluster is a maximal connected component of InputKeys entries
+// within one file whose byte ranges transitively overlap (length-0 entries
+// never overlap anything, so they never join a cluster). A cluster is
+// reportable if any member is also in OutputKeys. Otherwise its file was
+// already excluded for an unrelated reason, and there is nothing to report.
+//
+// Every member of a reportable cluster is removed from the merged YAML, one
+// stderr summary line is emitted per cluster, and the tool still exits 0.
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,6 +59,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <cassert>
 #include <map>
 #include <set>
 #include <string>
@@ -63,6 +69,32 @@
 namespace {
 
 namespace cl = llvm::cl;
+
+//===----------------------------------------------------------------------===//
+// Error Messages
+//===----------------------------------------------------------------------===//
+
+constexpr const char *ToolName = "clang-ssaf-src-edit-merge";
+
+constexpr const char *CannotReadInput = "cannot read {0}: {1}";
+
+constexpr const char *InvalidReplacementsYaml =
+    "{0}: invalid TranslationUnitReplacements YAML";
+
+constexpr const char *ConflictClusterSummary =
+    "conflict: skipped {0} overlapping replacement(s) at {1}:{2}";
+
+constexpr const char *CannotWriteFile = "cannot write {0}";
+
+constexpr const char *WriteErrorOnFile = "write error on {0}";
+
+constexpr const char *CannotWriteOutput = "cannot write {0}: {1}";
+
+constexpr const char *CandidateEditMessage = "candidate edit: \"{0}\"";
+
+constexpr const char *ConflictSarifMessage =
+    "{0} overlapping replacement(s) at {1} byte {2} were dropped; resolve "
+    "manually.";
 
 cl::OptionCategory MergeCategory("clang-ssaf-src-edit-merge options");
 
@@ -76,7 +108,7 @@ cl::opt<std::string> OutputFile("o", cl::Required, cl::value_desc("path"),
 
 cl::opt<std::string> SarifConflictsOut(
     "sarif-conflicts-out", cl::value_desc("path"),
-    cl::desc("Optional path. When supplied, write a SARIF 2.1.0 document "
+    cl::desc("Optional path. When supplied, write a SARIF document "
              "listing conflict clusters dropped from the merged output."),
     cl::cat(MergeCategory));
 
@@ -89,43 +121,18 @@ bool readInput(llvm::StringRef Path,
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
       llvm::MemoryBuffer::getFile(Path);
   if (std::error_code EC = Buffer.getError()) {
-    llvm::errs() << "clang-ssaf-src-edit-merge: cannot read " << Path << ": "
-                 << EC.message() << "\n";
+    llvm::errs() << ToolName << ": "
+                 << llvm::formatv(CannotReadInput, Path, EC.message()) << "\n";
     return false;
   }
   llvm::yaml::Input YAML(Buffer.get()->getBuffer());
   YAML >> Out;
   if (YAML.error()) {
-    llvm::errs() << "clang-ssaf-src-edit-merge: " << Path
-                 << ": invalid TranslationUnitReplacements YAML\n";
+    llvm::errs() << ToolName << ": "
+                 << llvm::formatv(InvalidReplacementsYaml, Path) << "\n";
     return false;
   }
   return true;
-}
-
-/// Identifying tuple for a replacement, used for both conflict-cluster
-/// analysis (input side) and drop-all filtering against the library's
-/// merged-output keys.
-struct ReplacementKey {
-  std::string FilePath;
-  unsigned Offset;
-  unsigned Length;
-  std::string Text;
-
-  bool operator<(const ReplacementKey &Other) const {
-    if (FilePath != Other.FilePath)
-      return FilePath < Other.FilePath;
-    if (Offset != Other.Offset)
-      return Offset < Other.Offset;
-    if (Length != Other.Length)
-      return Length < Other.Length;
-    return Text < Other.Text;
-  }
-};
-
-ReplacementKey makeKey(const clang::tooling::Replacement &R) {
-  return ReplacementKey{R.getFilePath().str(), R.getOffset(), R.getLength(),
-                        R.getReplacementText().str()};
 }
 
 /// Pull every Replacement out of a FileToChangesMap into a flat ordered
@@ -135,29 +142,23 @@ ReplacementKey makeKey(const clang::tooling::Replacement &R) {
 std::vector<clang::tooling::Replacement>
 flattenFileChanges(const clang::replace::FileToChangesMap &Changes) {
   // Group by file first so the output is deterministic across runs.
-  std::map<std::string, std::vector<clang::tooling::Replacement>> ByFile;
+  std::map<std::string, std::set<clang::tooling::Replacement>> ByFile;
   for (const auto &Entry : Changes) {
     const std::string Path = Entry.first.getName().str();
     auto &Bucket = ByFile[Path];
     for (const clang::tooling::AtomicChange &AC : Entry.second) {
       for (const clang::tooling::Replacement &R : AC.getReplacements())
-        Bucket.push_back(R);
+        Bucket.insert(R);
     }
   }
 
   std::vector<clang::tooling::Replacement> Flat;
   for (auto &Entry : ByFile) {
+    // Bucket is a std::set<Replacement>, so it's already ordered by
+    // Replacement::operator< — the (offset, length, text) order this
+    // function promises, since every entry here shares Entry.first as its
+    // file path.
     auto &Bucket = Entry.second;
-    // Sort within a file by (offset, length, text) so per-file order is
-    // deterministic regardless of input order.
-    llvm::sort(Bucket, [](const clang::tooling::Replacement &A,
-                          const clang::tooling::Replacement &B) {
-      if (A.getOffset() != B.getOffset())
-        return A.getOffset() < B.getOffset();
-      if (A.getLength() != B.getLength())
-        return A.getLength() < B.getLength();
-      return A.getReplacementText() < B.getReplacementText();
-    });
     for (const auto &R : Bucket)
       Flat.push_back(R);
   }
@@ -181,50 +182,39 @@ std::string computeMainSourceFile(
 
 /// Build the conflict cluster list from the merged input key set.
 ///
-/// A cluster is a maximal connected component of input replacements (within
-/// one file) whose [offset, offset+length) byte ranges transitively overlap.
-/// Only length > 0 keys participate; zero-length insertions are out of scope
-/// for the drop-all policy per spec and continue to follow the library's
-/// existing IgnoreInsertConflict=false (first-registered) policy.
+/// `InputKeysByFile` is every input Replacement, grouped by file — the
+/// caller does this grouping once, up front, rather than this function
+/// flattening across files just to immediately re-group by file itself.
 ///
-/// The walk groups by file, sorts each file's keys by (offset, length), and
-/// merges into the current cluster whenever
+/// A cluster is a maximal connected component of one file's input
+/// replacements whose [offset, offset+length) byte ranges transitively
+/// overlap. Only length > 0 keys participate; zero-length insertions are
+/// out of scope for the drop-all policy per spec and continue to follow the
+/// library's existing IgnoreInsertConflict=false (first-registered) policy.
+///
+/// The walk merges into the current cluster whenever
 ///   key.offset < lastEnd, where
 ///   lastEnd = max(member.offset + member.length) across cluster members.
 /// Otherwise the current cluster closes and a new one opens.
 ///
-/// Only clusters of size > 1 are returned — singletons are not conflicts.
+/// Only clusters of size > 1 are returned; singletons are not conflicts.
 ///
 /// Each returned cluster's member list is sorted by (offset, length, text);
 /// the cluster list itself is sorted by (file, min-offset) ascending. This
 /// pins iteration order for both stderr cluster lines and (in a follow-on
-/// task) the SARIF results array, satisfying the spec's argv-permutation
-/// invariance promise.
-std::vector<std::vector<ReplacementKey>>
-buildConflictClusters(const std::set<ReplacementKey> &InputKeys) {
-  // Group length > 0 keys by file.
-  std::map<std::string, std::vector<ReplacementKey>> ByFile;
-  for (const ReplacementKey &K : InputKeys) {
-    if (K.Length == 0)
-      continue;
-    ByFile[K.FilePath].push_back(K);
-  }
-
-  std::vector<std::vector<ReplacementKey>> Clusters;
-  for (auto &Entry : ByFile) {
+/// task) the SARIF results array.
+std::vector<std::vector<clang::tooling::Replacement>> buildConflictClusters(
+    const std::map<std::string, std::set<clang::tooling::Replacement>>
+        &InputKeysByFile) {
+  std::vector<std::vector<clang::tooling::Replacement>> Clusters;
+  for (auto &Entry : InputKeysByFile) {
+    // Keys is a std::set<Replacement>, so it's already ordered by
+    // Replacement::operator< — the (offset, length, text) order the cluster
+    // walk below needs, since every entry here shares Entry.first as its
+    // file path.
     auto &Keys = Entry.second;
-    // InputKeys is a std::set sorted by (file, offset, length, text), so the
-    // per-file vector is already in (offset, length, text) order. Sort
-    // defensively for clarity.
-    llvm::sort(Keys, [](const ReplacementKey &A, const ReplacementKey &B) {
-      if (A.Offset != B.Offset)
-        return A.Offset < B.Offset;
-      if (A.Length != B.Length)
-        return A.Length < B.Length;
-      return A.Text < B.Text;
-    });
 
-    std::vector<ReplacementKey> Current;
+    std::vector<clang::tooling::Replacement> Current;
     unsigned LastEnd = 0;
     auto Flush = [&]() {
       if (Current.size() > 1)
@@ -233,30 +223,32 @@ buildConflictClusters(const std::set<ReplacementKey> &InputKeys) {
       LastEnd = 0;
     };
 
-    for (const ReplacementKey &K : Keys) {
+    for (const clang::tooling::Replacement &K : Keys) {
+      if (K.getLength() == 0)
+        continue;
       if (Current.empty()) {
         Current.push_back(K);
-        LastEnd = K.Offset + K.Length;
+        LastEnd = K.getOffset() + K.getLength();
         continue;
       }
-      if (K.Offset < LastEnd) {
+      if (K.getOffset() < LastEnd) {
         Current.push_back(K);
-        LastEnd = std::max(LastEnd, K.Offset + K.Length);
+        LastEnd = std::max(LastEnd, K.getOffset() + K.getLength());
       } else {
         Flush();
         Current.push_back(K);
-        LastEnd = K.Offset + K.Length;
+        LastEnd = K.getOffset() + K.getLength();
       }
     }
     Flush();
   }
 
   // Pin cluster-list order by (file, min-offset) ascending.
-  llvm::sort(Clusters, [](const std::vector<ReplacementKey> &A,
-                          const std::vector<ReplacementKey> &B) {
-    if (A.front().FilePath != B.front().FilePath)
-      return A.front().FilePath < B.front().FilePath;
-    return A.front().Offset < B.front().Offset;
+  llvm::sort(Clusters, [](const std::vector<clang::tooling::Replacement> &A,
+                          const std::vector<clang::tooling::Replacement> &B) {
+    if (A.front().getFilePath() != B.front().getFilePath())
+      return A.front().getFilePath() < B.front().getFilePath();
+    return A.front().getOffset() < B.front().getOffset();
   });
 
   return Clusters;
@@ -264,21 +256,14 @@ buildConflictClusters(const std::set<ReplacementKey> &InputKeys) {
 
 /// Emit one stderr line per reportable conflict cluster.
 ///
-/// Format (preserved verbatim from the prior implementation):
-///   conflict: skipped <count> overlapping replacement(s) at <file>:<offset>
-/// where <count> is |cluster| (the full number of dropped members — under
-/// drop-all this is the cluster size, NOT cluster size − 1 as it was when
-/// first-registered let one survive) and <offset> is the cluster's minimum
-/// offset.
-///
-/// Caller is responsible for passing only reportable clusters
-/// (cluster ∩ OutputKeys ≠ ∅) and for the (file, min-offset) sort.
+/// Precondition: `Clusters` contains only reportable clusters (those with a
+/// member in OutputKeys) and is sorted by (file, min-offset)
 void emitConflictClusterLines(
-    const std::vector<std::vector<ReplacementKey>> &Clusters) {
+    const std::vector<std::vector<clang::tooling::Replacement>> &Clusters) {
   for (const auto &Cluster : Clusters) {
-    llvm::errs() << "conflict: skipped " << Cluster.size()
-                 << " overlapping replacement(s) at "
-                 << Cluster.front().FilePath << ":" << Cluster.front().Offset
+    llvm::errs() << llvm::formatv(ConflictClusterSummary, Cluster.size(),
+                                  Cluster.front().getFilePath(),
+                                  Cluster.front().getOffset())
                  << "\n";
   }
 }
@@ -306,42 +291,41 @@ std::string canonicalizeToFileUri(llvm::StringRef FilePath) {
   return "file://" + llvm::sys::path::convert_to_slash(FilePath);
 }
 
-/// Emit a SARIF 2.1.0 document at `Path` listing every conflict cluster.
+/// Emit a SARIF document at `Path` listing every conflict cluster.
 ///
 /// `Clusters` SHALL be pre-sorted by `(file, min-offset)` ascending by the
 /// caller; this emitter walks them in order to populate
 /// `runs[0].results[]`. Within each cluster, `relatedLocations[]` is
 /// sorted locally by `(byteLength, candidate-text)` ascending per the
-/// "SARIF conflict report" requirement — this is a different sort from
-/// the cluster's outer `(offset, length, text)` ordering, so members are
-/// re-sorted inside this helper.
+/// "SARIF conflict report" requirement.
 ///
 /// Even when `Clusters` is empty, this writes a well-formed SARIF
 /// document with `runs[0].results: []`. The file's presence is the
 /// "merger ran with conflict reporting requested" signal.
-llvm::Error
-emitConflictSarif(llvm::StringRef Path,
-                  llvm::ArrayRef<std::vector<ReplacementKey>> Clusters) {
+llvm::Error emitConflictSarif(
+    llvm::StringRef Path,
+    llvm::ArrayRef<std::vector<clang::tooling::Replacement>> Clusters) {
   llvm::json::Array Results;
   Results.reserve(Clusters.size());
 
   for (const auto &Cluster : Clusters) {
-    const ReplacementKey &Min = Cluster.front();
-    std::string Uri = canonicalizeToFileUri(Min.FilePath);
+    const clang::tooling::Replacement &Min = Cluster.front();
+    std::string Uri = canonicalizeToFileUri(Min.getFilePath());
 
-    // Re-sort cluster members locally by (byteLength, text) ascending for
-    // argv-permutation invariance of relatedLocations[].
-    std::vector<ReplacementKey> Sorted(Cluster.begin(), Cluster.end());
-    llvm::sort(Sorted, [](const ReplacementKey &A, const ReplacementKey &B) {
-      if (A.Length != B.Length)
-        return A.Length < B.Length;
-      return A.Text < B.Text;
+    // Re-sort cluster members locally by (byteLength, text) ascending.
+    std::vector<clang::tooling::Replacement> Sorted(Cluster.begin(),
+                                                    Cluster.end());
+    llvm::sort(Sorted, [](const clang::tooling::Replacement &A,
+                          const clang::tooling::Replacement &B) {
+      if (A.getLength() != B.getLength())
+        return A.getLength() < B.getLength();
+      return A.getReplacementText() < B.getReplacementText();
     });
 
     llvm::json::Array RelatedLocations;
     RelatedLocations.reserve(Sorted.size());
     for (size_t I = 0; I < Sorted.size(); ++I) {
-      const ReplacementKey &K = Sorted[I];
+      const clang::tooling::Replacement &K = Sorted[I];
       RelatedLocations.push_back(llvm::json::Object{
           {"id", static_cast<int64_t>(I + 1)},
           {"physicalLocation",
@@ -349,16 +333,17 @@ emitConflictSarif(llvm::StringRef Path,
                {"artifactLocation", llvm::json::Object{{"uri", Uri}}},
                {"region",
                 llvm::json::Object{
-                    {"byteOffset", static_cast<int64_t>(K.Offset)},
-                    {"byteLength", static_cast<int64_t>(K.Length)}}}}},
-          {"message", llvm::json::Object{
-                          {"text", ("candidate edit: \"" + K.Text + "\"")}}}});
+                    {"byteOffset", static_cast<int64_t>(K.getOffset())},
+                    {"byteLength", static_cast<int64_t>(K.getLength())}}}}},
+          {"message",
+           llvm::json::Object{{"text", llvm::formatv(CandidateEditMessage,
+                                                     K.getReplacementText())
+                                           .str()}}}});
     }
 
     std::string MessageText =
-        llvm::formatv("{0} overlapping replacement(s) at {1} byte {2} were "
-                      "dropped; resolve manually.",
-                      Cluster.size(), Uri, Min.Offset)
+        llvm::formatv(ConflictSarifMessage, Cluster.size(), Uri,
+                      Min.getOffset())
             .str();
 
     Results.push_back(llvm::json::Object{
@@ -370,9 +355,9 @@ emitConflictSarif(llvm::StringRef Path,
              {"physicalLocation",
               llvm::json::Object{
                   {"artifactLocation", llvm::json::Object{{"uri", Uri}}},
-                  {"region",
-                   llvm::json::Object{
-                       {"byteOffset", static_cast<int64_t>(Min.Offset)}}}}}}}},
+                  {"region", llvm::json::Object{{"byteOffset",
+                                                 static_cast<int64_t>(
+                                                     Min.getOffset())}}}}}}}},
         {"relatedLocations", std::move(RelatedLocations)}});
   }
 
@@ -384,20 +369,34 @@ emitConflictSarif(llvm::StringRef Path,
            {"tool",
             llvm::json::Object{
                 {"driver",
-                 llvm::json::Object{{"name", "clang-ssaf-src-edit-merge"},
+                 llvm::json::Object{{"name", ToolName},
                                     {"version", CLANG_VERSION_STRING}}}}},
            {"results", std::move(Results)}}}}};
 
   std::error_code EC;
   llvm::raw_fd_ostream OS(Path, EC, llvm::sys::fs::OF_Text);
   if (EC)
-    return llvm::createStringError(EC, "cannot write " + Path);
+    return llvm::createStringError(EC,
+                                   llvm::formatv(CannotWriteFile, Path).str());
   // Pretty-print with indent 2 via the json::Value format_provider.
   OS << llvm::formatv("{0:2}", Doc) << "\n";
   OS.flush();
   if (OS.has_error())
-    return llvm::createStringError(OS.error(), "write error on " + Path);
+    return llvm::createStringError(OS.error(),
+                                   llvm::formatv(WriteErrorOnFile, Path).str());
   return llvm::Error::success();
+}
+
+/// Returns whether `Path`'s parent directory exists, so a bad `-o` or
+/// `--sarif-conflicts-out` path can be rejected before any merge work runs.
+/// A `Path` with no directory component (e.g. a bare file name) is treated
+/// as valid — it names a file in the current directory. This is a
+/// best-effort check, not a substitute for handling the real open() failure:
+/// it cannot catch permission errors or a race between the check and the
+/// eventual write.
+bool parentDirectoryExists(llvm::StringRef Path) {
+  llvm::StringRef Parent = llvm::sys::path::parent_path(Path);
+  return Parent.empty() || llvm::sys::fs::is_directory(Parent);
 }
 
 } // namespace
@@ -411,6 +410,21 @@ int main(int argc, const char **argv) {
       "YAML files for one link unit into a single merged YAML. Does not "
       "write source files; the apply step is the caller's responsibility.\n");
 
+  // Validate the command-line parameters that can be checked without
+  // reading any input, so a bad -o or --sarif-conflicts-out path is rejected
+  // before the (potentially expensive) merge work below runs, rather than
+  // after it when the tool finally tries to open the file for writing.
+  if (!parentDirectoryExists(OutputFile)) {
+    llvm::errs() << ToolName << ": "
+                 << llvm::formatv(CannotWriteFile, OutputFile) << "\n";
+    return 1;
+  }
+  if (!SarifConflictsOut.empty() && !parentDirectoryExists(SarifConflictsOut)) {
+    llvm::errs() << ToolName << ": "
+                 << llvm::formatv(CannotWriteFile, SarifConflictsOut) << "\n";
+    return 1;
+  }
+
   // Read all inputs.
   std::vector<clang::tooling::TranslationUnitReplacements> TUs;
   TUs.reserve(InputFiles.size());
@@ -421,34 +435,35 @@ int main(int argc, const char **argv) {
     TUs.push_back(std::move(TU));
   }
 
-  // Pre-deduplicate identical replacements across all input TUs before the
-  // library merge. clang-apply-replacements' groupReplacements only dedups
-  // TUDiagnostics-sourced replacements; plain TUReplacements are appended
-  // unconditionally, so identical zero-length inserts at the same offset
-  // (e.g., a `.data()` rewrite in a header included by N TUs, or an
-  // `addr_of(...)` wrap closing-paren) get stacked by AtomicChange::replace
-  // into runaway `.data().data()...` or `))))` chains. The first occurrence
-  // (in input-file order, then within-file order) wins; later duplicates are
-  // byte-identical to it in (file, offset, length, text), so the choice is
-  // observationally moot.
+  // Pre-deduplicate identical replacements across all input TUs before
+  // calling into clang-apply-replacements.
+  //
+  // This loop keeps a running set of every (file, offset, length, text)
+  // tuple already kept across all TUs and drops
+  // any later Replacement that matches one already kept, so each distinct
+  // Replacement reaches the library exactly once. The first occurrence (in
+  // input-file order, then within-file order) wins; later duplicates are
+  // byte-identical to it, so which one is "first" is observationally moot.
   {
-    std::set<ReplacementKey> SeenKeys;
+    std::set<clang::tooling::Replacement> SeenKeys;
     for (auto &TU : TUs) {
       std::vector<clang::tooling::Replacement> Unique;
       Unique.reserve(TU.Replacements.size());
       for (const clang::tooling::Replacement &R : TU.Replacements) {
-        if (SeenKeys.insert(makeKey(R)).second)
+        if (SeenKeys.insert(R).second)
           Unique.push_back(R);
       }
       TU.Replacements = std::move(Unique);
     }
   }
 
-  // Pre-compute the input-side replacement set for conflict reporting.
-  std::set<ReplacementKey> InputKeys;
+  // Pre-compute the input-side replacement set for conflict reporting,
+  // grouped by file up front since buildConflictClusters only looks for
+  // overlap within one file.
+  std::map<std::string, std::set<clang::tooling::Replacement>> InputKeysByFile;
   for (const auto &TU : TUs)
     for (const auto &R : TU.Replacements)
-      InputKeys.insert(makeKey(R));
+      InputKeysByFile[R.getFilePath().str()].insert(R);
 
   // Build a SourceManager for mergeAndDeduplicate.
   clang::DiagnosticOptions DiagOpts;
@@ -457,13 +472,11 @@ int main(int argc, const char **argv) {
   clang::FileManager Files((clang::FileSystemOptions()));
   clang::SourceManager SM(Diagnostics, Files);
 
-  // Run the library's merge. mergeAndDeduplicate's return value (true = no
-  // overlap detected, false = at least one overlap dropped) is no longer
-  // consulted directly. The tool's drop-all policy operates on its own
-  // cluster analysis below; the library's first-registered behavior is
-  // overridden by removing every cluster member from OutDoc.Replacements.
-  // The library's return value still drives its own per-Replacement stderr
-  // diagnostics, which we leave intact.
+  // Run the library's merge. The tool's drop-all policy operates on its own
+  // cluster analysis below; the mergeAndDeduplicate library's first-registered
+  // behavior is overridden by removing every cluster member from
+  // OutDoc.Replacements. The library's return value still drives its own
+  // per-Replacement stderr diagnostics, which we leave intact.
   clang::replace::FileToChangesMap FileChanges;
   const clang::replace::TUDiagnostics NoDiagnostics;
   (void)clang::replace::mergeAndDeduplicate(TUs, NoDiagnostics, FileChanges, SM,
@@ -477,27 +490,23 @@ int main(int argc, const char **argv) {
   // Drop-all conflict handling.
   //
   // Step 1: build conflict clusters from the input key set.
-  std::vector<std::vector<ReplacementKey>> Clusters =
-      buildConflictClusters(InputKeys);
+  std::vector<std::vector<clang::tooling::Replacement>> Clusters =
+      buildConflictClusters(InputKeysByFile);
 
-  // Step 2: compute OutputKeys = set of ReplacementKey for every entry in
+  // Step 2: compute OutputKeys = set of Replacement for every entry in
   // the library's merged FileChanges, BEFORE drop-all filtering. This is
   // the cluster-eligibility predicate's right-hand side.
-  std::set<ReplacementKey> OutputKeys;
+  std::set<clang::tooling::Replacement> OutputKeys;
   for (const auto &R : OutDoc.Replacements)
-    OutputKeys.insert(makeKey(R));
+    OutputKeys.insert(R);
 
   // Step 3: a cluster is reportable iff at least one of its members appears
-  // in OutputKeys (cluster ∩ OutputKeys ≠ ∅). This eligibility predicate
-  // replaces the old `!MergeOk` gate: file-not-found inputs are silently
-  // filtered by the library during groupReplacements, so neither member
-  // appears in OutputKeys, so the cluster drops out of the report path
-  // naturally — no need to consult mergeAndDeduplicate's return value.
-  std::vector<std::vector<ReplacementKey>> ReportableClusters;
+  // in OutputKeys (cluster ∩ OutputKeys ≠ ∅).
+  std::vector<std::vector<clang::tooling::Replacement>> ReportableClusters;
   ReportableClusters.reserve(Clusters.size());
   for (auto &Cluster : Clusters) {
     bool Reportable = false;
-    for (const ReplacementKey &K : Cluster) {
+    for (const clang::tooling::Replacement &K : Cluster) {
       if (OutputKeys.count(K)) {
         Reportable = true;
         break;
@@ -509,21 +518,21 @@ int main(int argc, const char **argv) {
 
   // Step 4: build the exact key set for every reportable cluster member.
   // Drop-all then strips every matching entry from OutDoc. Keying on the
-  // full ReplacementKey (not just (file, offset)) matters because a
+  // full Replacement (not just (file, offset)) matters because a
   // zero-length insertion can share an offset with an unrelated conflict
   // cluster (zero-length ranges never overlap anything, so they're never
   // cluster members) — keying on (file, offset) alone would collaterally
   // delete that insertion too.
-  std::set<ReplacementKey> KeysToRemove;
+  std::set<clang::tooling::Replacement> KeysToRemove;
   for (const auto &Cluster : ReportableClusters)
-    for (const ReplacementKey &K : Cluster)
+    for (const clang::tooling::Replacement &K : Cluster)
       KeysToRemove.insert(K);
 
   if (!KeysToRemove.empty()) {
     auto &Reps = OutDoc.Replacements;
     Reps.erase(std::remove_if(Reps.begin(), Reps.end(),
                               [&](const clang::tooling::Replacement &R) {
-                                return KeysToRemove.count(makeKey(R)) > 0;
+                                return KeysToRemove.count(R) > 0;
                               }),
                Reps.end());
   }
@@ -541,8 +550,7 @@ int main(int argc, const char **argv) {
   if (!SarifConflictsOut.empty()) {
     if (llvm::Error E =
             emitConflictSarif(SarifConflictsOut, ReportableClusters)) {
-      llvm::errs() << "clang-ssaf-src-edit-merge: "
-                   << llvm::toString(std::move(E)) << "\n";
+      llvm::errs() << ToolName << ": " << llvm::toString(std::move(E)) << "\n";
       return 1;
     }
   }
@@ -551,16 +559,17 @@ int main(int argc, const char **argv) {
   std::error_code EC;
   llvm::raw_fd_ostream OutStream(OutputFile, EC, llvm::sys::fs::OF_Text);
   if (EC) {
-    llvm::errs() << "clang-ssaf-src-edit-merge: cannot write " << OutputFile
-                 << ": " << EC.message() << "\n";
+    llvm::errs() << ToolName << ": "
+                 << llvm::formatv(CannotWriteOutput, OutputFile, EC.message())
+                 << "\n";
     return 1;
   }
   llvm::yaml::Output YAML(OutStream);
   YAML << OutDoc;
   OutStream.flush();
   if (OutStream.has_error()) {
-    llvm::errs() << "clang-ssaf-src-edit-merge: write error on " << OutputFile
-                 << "\n";
+    llvm::errs() << ToolName << ": "
+                 << llvm::formatv(WriteErrorOnFile, OutputFile) << "\n";
     return 1;
   }
 
