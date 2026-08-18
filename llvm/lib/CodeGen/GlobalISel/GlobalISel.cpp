@@ -15,7 +15,7 @@
 using namespace llvm;
 
 void llvm::initializeGlobalISel(PassRegistry &Registry) {
-  initializeIRTranslatorPass(Registry);
+  initializeIRTranslatorLegacyPass(Registry);
   initializeLegalizerPass(Registry);
   initializeLoadStoreOptPass(Registry);
   initializeLocalizerPass(Registry);

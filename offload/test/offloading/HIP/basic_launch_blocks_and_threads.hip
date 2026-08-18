@@ -14,17 +14,19 @@
 
 #include <stdio.h>
 
-__global__ void square(int *A) {
+__global__ void incrementCounter(int *A) {
   __scoped_atomic_fetch_add(A, 1, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_DEVICE);
 }
 
 int main(int argc, char **argv) {
   int DevNo = 0;
   int *Ptr, I;
-  hipMalloc(&Ptr, 4);
+  hipMalloc(&Ptr, sizeof(int));
   printf("Ptr %p\n", Ptr);
   // CHECK: Ptr [[Ptr:0x.*]]
-  square<<<7, 6>>>(Ptr);
+  int Zero = 0;
+  hipMemcpy(Ptr, &Zero, sizeof(int), hipMemcpyHostToDevice);
+  incrementCounter<<<7, 6>>>(Ptr);
   hipMemcpy(&I, Ptr, sizeof(int), hipMemcpyDeviceToHost);
   printf("I: %i\n", I);
   // CHECK: I: 42
