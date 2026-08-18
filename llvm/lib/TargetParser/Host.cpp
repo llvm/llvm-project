@@ -1918,8 +1918,8 @@ StringRef sys::getHostCPUName() {
                       /*cpusetsize=*/sizeof(Affinity),
                       /*cpus=*/&Affinity, /*flags=*/0);
     if (Ret == 0) {
-      RISCV::CPUModel Model{static_cast<uint32_t>(Query[0].Value), Query[1].Value,
-                            Query[2].Value};
+      RISCV::CPUModel Model{static_cast<uint32_t>(Query[0].Value),
+                            Query[1].Value, Query[2].Value};
       StringRef Name = RISCV::getCPUNameFromCPUModel(Model);
       if (!Name.empty())
         return Name;
