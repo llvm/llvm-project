@@ -295,8 +295,8 @@ define void @test_rev_loops_deref_loads(ptr nocapture noundef writeonly %dest) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_CMP]], i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x i32> [[WIDE_LOAD]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i32> [[REVERSE]], splat (i32 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], splat (i32 3)
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP6]], <2 x i1> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP8]], align 4
@@ -384,8 +384,8 @@ define void @test_rev_loops_non_deref_loads(ptr nocapture noundef writeonly %des
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_CMP]], i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x i32> [[WIDE_LOAD]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i32> [[REVERSE]], splat (i32 3)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], splat (i32 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i1> [[TMP5]], <2 x i1> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP6]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -536,8 +536,8 @@ define void @test_rev_loops_strided_deref_loads(ptr nocapture noundef writeonly 
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_CMP]], i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x i32> [[WIDE_LOAD]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i32> [[REVERSE]], splat (i32 3)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], splat (i32 3)
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP4]], <2 x i1> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl <2 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP6]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[TMP7]]

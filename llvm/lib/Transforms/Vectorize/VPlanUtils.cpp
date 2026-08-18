@@ -383,7 +383,8 @@ vputils::getOpcodeOrIntrinsicID(const VPValue *V) {
 /// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
 /// uniform, the result will also be uniform.
 static bool preservesUniformity(unsigned Opcode) {
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
+  if (Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode) ||
+      Instruction::isCast(Opcode))
     return true;
   switch (Opcode) {
   case Instruction::Freeze:
@@ -402,11 +403,10 @@ static bool preservesUniformity(unsigned Opcode) {
 }
 
 bool vputils::isElementwise(const VPValue *V) {
-  // TODO: Handle more opcodes and recipes.
+  // TODO: Handle more recipes.
   if (!isa<VPInstruction, VPWidenRecipe>(V))
     return false;
-  unsigned Opcode = getOpcode(V);
-  return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
+  return preservesUniformity(getOpcode(V));
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {

@@ -1437,13 +1437,13 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:      CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<%next.gep>, ir<-1>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer inbounds i8, ir<%ptr.iv.next>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP8]]>
-; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = reverse ir<%l>
-; CHECK-NEXT:      WIDEN ir<%c.1> = icmp ne vp<[[VP9]]>, ir<0>
+; CHECK-NEXT:      WIDEN ir<%c.1> = icmp ne ir<%l>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = reverse ir<%c.1>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%c.1>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP9]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:

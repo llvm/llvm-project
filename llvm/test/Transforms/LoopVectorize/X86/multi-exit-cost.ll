@@ -120,8 +120,8 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <8 x i8> [[WIDE_LOAD]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i8> [[REVERSE]], splat (i8 32)
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], splat (i8 32)
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i1> [[TMP8]], <8 x i1> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP4]], i64 7
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
@@ -139,8 +139,8 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 76
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD2]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i8> [[REVERSE4]], splat (i8 32)
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD2]], splat (i8 32)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP13]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP10]], i64 3
 ; CHECK-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:

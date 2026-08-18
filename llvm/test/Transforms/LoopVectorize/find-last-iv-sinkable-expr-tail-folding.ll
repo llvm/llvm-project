@@ -532,12 +532,11 @@ define i64 @findlast_expr_flipped_select_anyof(ptr %a, ptr %b, i64 %rdx.start, i
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i64 -3
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP5]], <4 x i1> [[REVERSE]], <4 x i64> poison)
-; CHECK-NEXT:    [[REVERSE6:%.*]] = shufflevector <4 x i64> [[WIDE_MASKED_LOAD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP6]], i64 -3
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD8:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[TMP7]], <4 x i1> [[REVERSE]], <4 x i64> poison)
-; CHECK-NEXT:    [[REVERSE9:%.*]] = shufflevector <4 x i64> [[WIDE_MASKED_LOAD8]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sle <4 x i64> [[REVERSE6]], [[REVERSE9]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp sle <4 x i64> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP19]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP9]] = select <4 x i1> [[TMP16]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP10]] = or <4 x i1> [[VEC_PHI3]], [[TMP16]]
