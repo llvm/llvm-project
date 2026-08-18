@@ -3546,7 +3546,6 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_IntelOclBicc:
-  case CC_SpirFunction:
   case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:

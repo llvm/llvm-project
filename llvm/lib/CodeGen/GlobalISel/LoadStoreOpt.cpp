@@ -53,11 +53,7 @@ INITIALIZE_PASS_BEGIN(LoadStoreOpt, DEBUG_TYPE, "Generic memory optimizations",
 INITIALIZE_PASS_END(LoadStoreOpt, DEBUG_TYPE, "Generic memory optimizations",
                     false, false)
 
-LoadStoreOpt::LoadStoreOpt(std::function<bool(const MachineFunction &)> F)
-    : MachineFunctionPass(ID), DoNotRunPass(F) {}
-
-LoadStoreOpt::LoadStoreOpt()
-    : LoadStoreOpt([](const MachineFunction &) { return false; }) {}
+LoadStoreOpt::LoadStoreOpt() : MachineFunctionPass(ID) {}
 
 void LoadStoreOpt::init(MachineFunction &MF) {
   this->MF = &MF;

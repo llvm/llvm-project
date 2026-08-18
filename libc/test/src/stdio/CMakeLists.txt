@@ -1,6 +1,36 @@
 add_custom_target(libc_stdio_unittests)
 
 add_libc_test(
+  freopen_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    freopen_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.hdr.fcntl_macros
+    libc.hdr.stdio_macros
+    libc.src.__support.macros.properties.os
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fflush
+    libc.src.stdio.fileno
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.freopen
+    libc.src.stdio.fwrite
+    libc.src.stdio.stdout
+    libc.src.unistd.close
+    libc.src.wchar.fwide
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   fileop_test
   SUITE
     libc_stdio_unittests
