@@ -206,7 +206,7 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data, bool ParseCFIProgram) {
   // Retain the section contents so that the programs left undecoded below can
   // be parsed on demand later.
   if (!ParseCFIProgram)
-    this->Data = std::make_unique<DWARFDataExtractor>(Data);
+    this->Data = Data;
 
   while (Data.isValidOffset(Offset)) {
     uint64_t StartOffset = Offset;

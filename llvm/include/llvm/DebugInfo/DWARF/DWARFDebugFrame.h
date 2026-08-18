@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFUnwindTable.h"
@@ -18,12 +19,12 @@
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
 
 class raw_ostream;
-class DWARFDataExtractor;
 class MCRegisterInfo;
 struct DIDumpOptions;
 
@@ -100,6 +101,9 @@ protected:
 
   const bool IsDWARF64;
 
+  /// Whether CFIs holds the decoded CFI instruction program.
+  bool CFIsParsed = false;
+
   /// Offset of this entry in the section.
   const uint64_t Offset;
 
@@ -108,9 +112,6 @@ protected:
 
   /// Section offset at which this entry's CFI instructions begin.
   uint64_t CFIStartOffset = 0;
-
-  /// Whether CFIs holds the decoded CFI instruction program.
-  bool CFIsParsed = false;
 
   CFIProgram CFIs;
 };
@@ -228,7 +229,7 @@ class DWARFDebugFrame {
 
   /// Section contents, retained by parse() when it was asked to leave the CFI
   /// instruction programs undecoded, so that they can be parsed on demand.
-  std::unique_ptr<DWARFDataExtractor> Data;
+  std::optional<DWARFDataExtractor> Data;
 
   /// Return the entry at the given offset or nullptr.
   dwarf::FrameEntry *getEntryAtOffset(uint64_t Offset) const;
