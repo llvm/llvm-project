@@ -136,6 +136,18 @@ function (add_sphinx_target builder project)
     set(ARG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
   endif()
 
+  if (NOT DEFINED LLVM_PARALLEL_SPHINX_JOBS)
+    cmake_host_system_information(RESULT number_of_logical_cores
+                                  QUERY NUMBER_OF_LOGICAL_CORES)
+    math(EXPR LLVM_PARALLEL_SPHINX_JOBS
+         "(${number_of_logical_cores} + 1) / 2")
+    set(LLVM_PARALLEL_SPHINX_JOBS "${LLVM_PARALLEL_SPHINX_JOBS}"
+        CACHE STRING "Define the number of parallel Sphinx jobs.")
+  endif()
+  if (LLVM_PARALLEL_SPHINX_JOBS)
+    set(sphinx_jobs_flag -j ${LLVM_PARALLEL_SPHINX_JOBS})
+  endif()
+
   if ("${LLVM_VERSION_SUFFIX}" STREQUAL "git")
     set(PreReleaseTag "-tPreRelease")
   endif()
@@ -146,6 +158,7 @@ function (add_sphinx_target builder project)
                             ${SPHINX_EXECUTABLE}
                             -b ${builder}
                             -d "${SPHINX_DOC_TREE_DIR}"
+                            ${sphinx_jobs_flag}
                             -q # Quiet: no output other than errors and warnings.
                             -t builder-${builder} # tag for builder
                             -D version=${LLVM_VERSION_MAJOR}
