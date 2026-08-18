@@ -323,15 +323,15 @@ class Builder(object):
         assert (
             not args.objc_gnustep or args.objc_gnustep_dir
         ), "--objc-gnustep specified without path to libobjc2"
+        # lit passes --objc-gnustep-dir to every %build, so gate on
+        # --objc-gnustep: the path alone would put ObjC flags (and shadow
+        # --sysroot) on every test.
+        use_gnustep = args.objc_gnustep and args.objc_gnustep_dir
         self.objc_gnustep_inc = (
-            os.path.join(args.objc_gnustep_dir, "include")
-            if args.objc_gnustep_dir
-            else None
+            os.path.join(args.objc_gnustep_dir, "include") if use_gnustep else None
         )
         self.objc_gnustep_lib = (
-            os.path.join(args.objc_gnustep_dir, "lib")
-            if args.objc_gnustep_dir
-            else None
+            os.path.join(args.objc_gnustep_dir, "lib") if use_gnustep else None
         )
         self.sysroot = args.sysroot
 
