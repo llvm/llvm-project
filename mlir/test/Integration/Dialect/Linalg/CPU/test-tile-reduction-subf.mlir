@@ -2,18 +2,17 @@
 // result as the untiled reduction. The first RUN line runs the untiled
 // reduction, the second one tiles it first; both have to print the same values.
 
-// DEFINE: %{mlir_options} = -test-transform-dialect-erase-schedule \
+// DEFINE: %{lower_to_llvm} = mlir-opt -test-transform-dialect-erase-schedule \
 // DEFINE: -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries" \
-// DEFINE: -buffer-deallocation-pipeline -convert-bufferization-to-memref -convert-linalg-to-loops -convert-scf-to-cf \
-// DEFINE: -expand-strided-metadata -lower-affine -convert-arith-to-llvm --finalize-memref-to-llvm -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts
+// DEFINE: -buffer-deallocation-pipeline -convert-bufferization-to-memref -test-lower-to-llvm
 
 // DEFINE: %{run} = mlir-runner -e main -entry-point-result=void \
 // DEFINE:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // DEFINE: | FileCheck %s
 
-// RUN: mlir-opt %s %{mlir_options} | %{run}
+// RUN: %{lower_to_llvm} %s | %{run}
 
-// RUN: mlir-opt %s -transform-interpreter %{mlir_options} | %{run}
+// RUN: mlir-opt %s -transform-interpreter | %{lower_to_llvm} | %{run}
 
 func.func private @printMemrefF32(memref<*xf32>)
 
