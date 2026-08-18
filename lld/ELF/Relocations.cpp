@@ -758,11 +758,10 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
   }
   gotPlt.addEntry(sym);
   uint64_t off = sym.getGotPltOffset(ctx);
-  // A non-preemptible symbol has no dynsym entry, so a symbol-indexed pltRel
-  // would name STN_UNDEF. Resolve the slot at link time instead.
-  if (!isPreemptible && type == ctx.target->pltRel) {
-    if (ctx.arg.isPic)
-      addRelativeReloc(ctx, gotPlt, off, sym, 0, expr, ctx.target->symbolicRel);
+  // Non-PIC needs no runtime fixup; the slot is a link-time constant.
+  if (!isPreemptible && type == ctx.target->relativeRel &&
+      (!ctx.arg.isPic || isAbsolute(sym))) {
+    gotPlt.addReloc({R_ABS, ctx.target->symbolicRel, off, 0, &sym});
     return;
   }
   rel.addReloc({type, &gotPlt, off, isPreemptible, sym, 0, expr});
@@ -1313,9 +1312,18 @@ void elf::postScanRelocations(Ctx &ctx) {
       else
         addGotEntry(ctx, sym);
     }
-    if (flags & NEEDS_PLT)
-      addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
-                  ctx.target->pltRel, sym);
+    if (flags & NEEDS_PLT) {
+      if (sym.isPreemptible) {
+        addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
+                    ctx.target->pltRel, sym);
+      } else {
+        assert(ctx.target->usesGotPlt &&
+               "IPLT route needs a GOT.PLT slot to resolve");
+        sym.isInIplt = true;
+        addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, *ctx.in.relaDyn,
+                    ctx.target->relativeRel, sym);
+      }
+    }
     if (flags & NEEDS_COPY) {
       if (sym.isObject()) {
         invokeELFT(addCopyRelSymbol, ctx, cast<SharedSymbol>(sym));

@@ -45,16 +45,6 @@ template <RelExpr... Exprs> bool oneof(RelExpr expr) {
   return (uint64_t(1) << expr) & buildMask(Exprs...);
 }
 
-// Don't relax a branch from small code into large code: the callee may be more
-// than 2GB away.
-inline bool keepPltForRange(Ctx &ctx, const InputSectionBase *sec,
-                            const Symbol &sym) {
-  if (ctx.arg.emachine != EM_X86_64 || sec->flags & SHF_X86_64_LARGE)
-    return false;
-  auto *d = dyn_cast<Defined>(&sym);
-  return d && d->section && (d->section->flags & SHF_X86_64_LARGE);
-}
-
 // This class encapsulates states needed to scan relocations for one
 // InputSectionBase.
 class RelocScan {
@@ -103,7 +93,7 @@ public:
       process(R_PLT_PC, type, offset, sym, addend);
       return;
     }
-    if (sym.isPreemptible || keepPltForRange(ctx, sec, sym)) {
+    if (sym.isPreemptible) {
       sym.setFlags(NEEDS_PLT);
       sec->addReloc({R_PLT_PC, type, offset, addend, &sym});
     } else if (!(isAbsolute(sym) && ctx.arg.isPic)) {

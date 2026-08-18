@@ -711,6 +711,17 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
       // PLT-generating relocation:
     case R_X86_64_PLT32:
+      // Don't relax a branch from small code into large code: the callee may
+      // be more than 2GB away.
+      if (!sym.isPreemptible && !sym.isGnuIFunc() &&
+          !(sec.flags & SHF_X86_64_LARGE)) {
+        auto *d = dyn_cast<Defined>(&sym);
+        if (d && d->section && (d->section->flags & SHF_X86_64_LARGE)) {
+          sym.setFlags(NEEDS_PLT);
+          sec.addReloc({R_PLT_PC, type, offset, addend, &sym});
+          continue;
+        }
+      }
       rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
 

@@ -1045,12 +1045,7 @@ void GotPltSection::writeTo(uint8_t *buf) {
   ctx.target->writeGotPltHeader(buf);
   buf += ctx.target->gotPltHeaderEntriesNum * ctx.target->gotEntrySize;
   for (const Symbol *b : entries) {
-    // A non-preemptible symbol is never lazily bound, so the slot holds the
-    // target rather than the lazy stub.
-    if (b->isPreemptible)
-      ctx.target->writeGotPlt(buf, *b);
-    else
-      writeUint(ctx, buf, b->getVA(ctx));
+    ctx.target->writeGotPlt(buf, *b);
     buf += ctx.target->gotEntrySize;
   }
 }
@@ -1091,6 +1086,7 @@ size_t IgotPltSection::getSize() const {
 }
 
 void IgotPltSection::writeTo(uint8_t *buf) {
+  ctx.target->relocateAlloc(*this, buf);
   for (const Symbol *b : entries) {
     ctx.target->writeIgotPlt(buf, *b);
     buf += ctx.target->gotEntrySize;
