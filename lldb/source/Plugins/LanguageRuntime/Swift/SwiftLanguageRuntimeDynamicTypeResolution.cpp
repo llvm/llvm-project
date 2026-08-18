@@ -1863,8 +1863,13 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
     assert(false);
     return llvm::createStringError("enum with unexpected offset");
   }
-  return valobj.GetSyntheticChildAtOffset(0, projected_type, /*can_create=*/true,
-                                          ConstString(field_info.Name));
+  ValueObjectSP projected_sp = valobj.GetSyntheticChildAtOffset(
+      0, projected_type, /*can_create=*/true, ConstString(field_info.Name));
+  // Children inherit this flag, and it makes GetExpressionPath() emit a raw
+  // address instead of a path.
+  if (projected_sp)
+    projected_sp->SetSyntheticChildrenGenerated(false);
+  return projected_sp;
 }
 
 std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
