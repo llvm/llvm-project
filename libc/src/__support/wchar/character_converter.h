@@ -61,11 +61,15 @@ public:
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);
-  int push(wchar_t wchar);
 
   ErrorOr<char8_t> pop_utf8();
   ErrorOr<char32_t> pop_utf32();
+
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+  int push(wchar_t wchar);
   ErrorOr<wchar_t> pop_wchar();
+#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
+
   template <typename CharType> ErrorOr<CharType> pop();
 };
 
@@ -145,14 +149,6 @@ LIBC_INLINE int CharacterConverter::push(char32_t utf32) {
   return EILSEQ;
 }
 
-LIBC_INLINE int CharacterConverter::push(wchar_t wchar) {
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-  return push(static_cast<char32_t>(wchar));
-#else
-#error "Wide character support limited to UTF-32."
-#endif
-}
-
 LIBC_INLINE ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   // If pop is called too early, do not reset the state, use error to determine
   // whether enough bytes have been pushed
@@ -196,17 +192,6 @@ LIBC_INLINE ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   return static_cast<char8_t>(output);
 }
 
-LIBC_INLINE ErrorOr<wchar_t> CharacterConverter::pop_wchar() {
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-  ErrorOr<char32_t> Result = pop_utf32();
-  if (!Result)
-    return Error(Result.error());
-  return static_cast<wchar_t>(*Result);
-#else
-#error "Wide character support limited to UTF-32."
-#endif
-}
-
 template <> LIBC_INLINE ErrorOr<char8_t> CharacterConverter::pop() {
   return pop_utf8();
 }
@@ -227,13 +212,24 @@ template <> LIBC_INLINE size_t CharacterConverter::sizeAs<char32_t>() {
   return 1;
 }
 
-template <> LIBC_INLINE size_t CharacterConverter::sizeAs<wchar_t>() {
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-  return sizeAs<char32_t>();
-#else
-#error "Wide character support limited to UTF-32."
-#endif
+
+LIBC_INLINE int CharacterConverter::push(wchar_t wchar) {
+  return push(static_cast<char32_t>(wchar));
 }
+
+LIBC_INLINE ErrorOr<wchar_t> CharacterConverter::pop_wchar() {
+  ErrorOr<char32_t> Result = pop_utf32();
+  if (!Result)
+    return Error(Result.error());
+  return static_cast<wchar_t>(*Result);
+}
+
+template <> LIBC_INLINE size_t CharacterConverter::sizeAs<wchar_t>() {
+  return sizeAs<char32_t>();
+}
+
+#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
