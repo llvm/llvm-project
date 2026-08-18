@@ -99,8 +99,8 @@ Examples of transformations that should follow this rule include:
   (see the `MergedLoadStoreMotion` pass). For each group of identical
   instructions being hoisted/sunk, the merge of all their locations should be
   applied to the merged instruction.
-- Promoting a loop's loads and stores of a memory location to scalar values
-  (see the LICM utility `llvm::promoteLoopAccessesToScalars`).
+- Merging identical loop-invariant stores (see the LICM utility
+  `llvm::promoteLoopAccessesToScalars`).
 - Scalar instructions being combined into a vector instruction, like
   `(add A1, B1), (add A2, B2) => (add (A1, A2), (B1, B2))`. As the new vector
   `add` computes the result of both original `add` instructions
@@ -118,10 +118,10 @@ Examples of transformations for which this rule *does not* apply include:
   `zext` is modified but remains in its block, so the rule for
   {ref}`preserving locations <WhenToPreserveLocation>` should apply.
 - Combining multiple instructions when the replacement produces only one of
-  the original results, like
-  `(fadd (fmul A, B), C) => llvm.fma.f32(A, B, C)`. The `fma` produces the
-  `fadd` result; the `fmul` result is only an intermediate, so use the `fadd`
-  location.
+  the original results, like contracting `(fadd (fmul A, B), C)` to
+  `llvm.fma.f32(A, B, C)` when both operations permit contraction. The `fma`
+  produces the `fadd` result; the `fmul` result is only an intermediate, so use
+  the `fadd` location.
 - Converting an if-then-else CFG diamond into a `select`. Preserving the
   debug locations of speculated instructions can make it seem like a condition
   is true when it's not (or vice versa), which leads to a confusing
@@ -178,9 +178,8 @@ reason that it does not have a valid location. These are as follows:
 - `DebugLoc::getDropped()`: This indicates that the instruction has
   intentionally had its source location removed, according to the rules for
   {ref}`dropping locations <WhenToDropLocation>`. `Instruction::dropLocation()`
-  sets this unless the instruction already has a location, is a `CallBase` that
-  may lower to a function call, and its parent function has a `DISubprogram`;
-  then it attaches a line 0 location with the function scope instead.
+  usually sets this, but may keep a line 0 location for a call that can lower
+  to a function call so its scope survives inlining.
 - `DebugLoc::getUnknown()`: This indicates that the instruction does not have
   a known or currently knowable source location, e.g. that it is infeasible to
   determine the correct source location, or that the source location is
@@ -249,13 +248,17 @@ llvm::replaceAllDbgUsesWith(%c, theSimplifiedAndInstruction, ...)
 ```
 
 Because `%simplified` is narrower, the helper can describe `%c`'s original
-value only when the debug variable has known signedness. It appends the
-corresponding sign or zero extension to the `DIExpression`, leaving:
+value only when the debug variable has known signedness. The variable here is
+signed, so it appends a 16 to 32 bit sign extension to the `DIExpression`,
+leaving:
 
 ```llvm
 define i16 @foo(i16 %a) {
   %simplified = and i16 %a, 15
-    #dbg_value(i16 %simplified, ...)
+    #dbg_value(i16 %simplified, ...,
+               !DIExpression(DW_OP_LLVM_convert, 16, DW_ATE_signed,
+                             DW_OP_LLVM_convert, 32, DW_ATE_signed,
+                             DW_OP_stack_value), ...)
   ret i16 %simplified
 }
 ```
@@ -268,8 +271,8 @@ TODO
 
 `DIAssignID` metadata attachments are used by Assignment Tracking.
 
-See {doc}`AssignmentTracking` for how to update them, and for the current
-status of Assignment Tracking.
+See {doc}`AssignmentTracking` for how to update them, and for the design and
+current status of Assignment Tracking.
 
 ## How to automatically convert tests into debug info tests
 
@@ -330,10 +333,10 @@ A simple way to use `debugify` is as follows:
 $ opt -passes=debugify,pass-to-test,check-debugify -disable-output sample.ll
 ```
 
-Replace `pass-to-test` with the pipeline to test. This adds synthetic locations
-and variables to `sample.ll`, runs the pipeline, and reports anything missing
-as a warning. `check-debugify` still prints `PASS` and `opt` exits successfully,
-so use FileCheck to make a warning fail the test:
+Replace `pass-to-test` with the pipeline to test. This can be used to check that
+one or more passes preserve the synthetic locations and variables. Some losses
+are reported as `WARNING:` even though `check-debugify` still prints `PASS` and
+`opt` exits successfully, so reject warnings and require `PASS` with FileCheck:
 
 ```llvm
 ; RUN: opt -passes=debugify,pass-to-test,check-debugify -disable-output %s 2>&1 \
