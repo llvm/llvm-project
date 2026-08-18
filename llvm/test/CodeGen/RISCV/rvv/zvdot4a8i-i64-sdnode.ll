@@ -49,14 +49,13 @@ define <vscale x 1 x i64> @vdot4a_i64(<vscale x 1 x i64> %acc, <vscale x 8 x i8>
 ; DOT-LABEL: vdot4a_i64:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; DOT-NEXT:    vmv.v.i v11, 0
-; DOT-NEXT:    vdot4a.vv v11, v9, v10
-; DOT-NEXT:    csrr a0, vlenb
-; DOT-NEXT:    srli a0, a0, 3
-; DOT-NEXT:    vslidedown.vx v9, v11, a0
-; DOT-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; DOT-NEXT:    vadd.vv v9, v11, v9
-; DOT-NEXT:    vwadd.wv v8, v8, v9
+; DOT-NEXT:    vmv.v.i v12, 0
+; DOT-NEXT:    vdot4a.vv v12, v9, v10
+; DOT-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; DOT-NEXT:    vsext.vf2 v10, v12
+; DOT-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; DOT-NEXT:    vadd.vv v9, v10, v11
+; DOT-NEXT:    vadd.vv v8, v8, v9
 ; DOT-NEXT:    ret
 entry:
   %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i64>
@@ -106,14 +105,13 @@ define <vscale x 1 x i64> @vdot4au_i64(<vscale x 1 x i64> %acc, <vscale x 8 x i8
 ; DOT-LABEL: vdot4au_i64:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; DOT-NEXT:    vmv.v.i v11, 0
-; DOT-NEXT:    vdot4au.vv v11, v9, v10
-; DOT-NEXT:    csrr a0, vlenb
-; DOT-NEXT:    srli a0, a0, 3
-; DOT-NEXT:    vslidedown.vx v9, v11, a0
-; DOT-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; DOT-NEXT:    vadd.vv v9, v11, v9
-; DOT-NEXT:    vwaddu.wv v8, v8, v9
+; DOT-NEXT:    vmv.v.i v12, 0
+; DOT-NEXT:    vdot4au.vv v12, v9, v10
+; DOT-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; DOT-NEXT:    vzext.vf2 v10, v12
+; DOT-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; DOT-NEXT:    vadd.vv v9, v10, v11
+; DOT-NEXT:    vadd.vv v8, v8, v9
 ; DOT-NEXT:    ret
 entry:
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i64>
@@ -164,14 +162,13 @@ define <vscale x 1 x i64> @vdot4asu_i64(<vscale x 1 x i64> %acc, <vscale x 8 x i
 ; DOT-LABEL: vdot4asu_i64:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; DOT-NEXT:    vmv.v.i v11, 0
-; DOT-NEXT:    vdot4asu.vv v11, v9, v10
-; DOT-NEXT:    csrr a0, vlenb
-; DOT-NEXT:    srli a0, a0, 3
-; DOT-NEXT:    vslidedown.vx v9, v11, a0
-; DOT-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; DOT-NEXT:    vadd.vv v9, v11, v9
-; DOT-NEXT:    vwadd.wv v8, v8, v9
+; DOT-NEXT:    vmv.v.i v12, 0
+; DOT-NEXT:    vdot4asu.vv v12, v9, v10
+; DOT-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; DOT-NEXT:    vsext.vf2 v10, v12
+; DOT-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; DOT-NEXT:    vadd.vv v9, v10, v11
+; DOT-NEXT:    vadd.vv v8, v8, v9
 ; DOT-NEXT:    ret
 entry:
   %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i64>
