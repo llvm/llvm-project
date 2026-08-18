@@ -1112,6 +1112,7 @@ add_entrypoint_object(
   HDRS
     ../llrintf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.llrintf128
 )
 

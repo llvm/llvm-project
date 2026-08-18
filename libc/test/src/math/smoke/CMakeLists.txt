@@ -1376,6 +1376,7 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.errno.errno
     libc.src.math.llrintf128
     libc.src.__support.CPP.algorithm

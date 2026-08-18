@@ -1048,6 +1048,9 @@ math_test(
 math_test(
     name = "llrintf128",
     hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(

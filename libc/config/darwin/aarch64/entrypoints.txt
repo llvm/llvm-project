@@ -312,6 +312,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
+    libc.src.math.llrintf128
     libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
@@ -598,7 +599,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
-    libc.src.math.llrintf128
     libc.src.math.logbf128
     libc.src.math.modff128
     libc.src.math.nanf128
