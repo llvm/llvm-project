@@ -2022,3 +2022,5 @@ def ExperimentalOption : DiagGroup<"experimental-option">;
 def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
 
 def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
+
+def DynamicDebugging : DiagGroup<"dynamic-debugging">;

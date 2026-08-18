@@ -15,9 +15,10 @@
 # RUN: llvm-readelf -r out.so | FileCheck %s --check-prefix=SDYN
 # RUN: llvm-objdump -d --no-show-raw-insn --no-print-imm-hex out.so | FileCheck %s --check-prefix=SHARED
 
-# SEC:      .got PROGBITS 0000000000202418
+# SEC:      .got PROGBITS 00000000002023c8
 # SEC:      Relocation section '.rela.dyn' {{.*}} contains 1 entries:
-# SEC:      0000000000202418 {{.*}} R_X86_64_TPOFF64 {{.*}} y + 0
+# SEC-NEXT: Offset
+# SEC-NEXT: 00000000002023c8 {{.*}} R_X86_64_TPOFF64 {{.*}} y + 0
 
 ## The TLS block is 15 bytes. x1 is at DTPOFF 7 and TPOFF -8, and x2 at DTPOFF 11
 ## and TPOFF -4. Each optimized sequence is padded with a nop to the original 22 bytes.
@@ -28,7 +29,7 @@
 
 ## y is preemptible. Its GD sequence is optimized to IE.
 # EXE-NEXT:    movq %fs:0, %rax
-# EXE-NEXT:    addq 4331(%rip), %rax # 0x202418
+# EXE-NEXT:    addq [[#]](%rip), %rax # 0x2023c8
 # EXE-NEXT:    nopw (%rax,%rax)
 
 # EXE-NEXT:    nopw %cs:(%rax,%rax)
@@ -37,26 +38,29 @@
 # EXE-NEXT:    leaq -4(%rax), %rdx
 
 # SDYN:      Relocation section '.rela.dyn' {{.*}} contains 4 entries:
-# SDYN:      00000000000024f0 {{.*}} R_X86_64_DTPMOD64 0
-# SDYN-NEXT: 0000000000002500 {{.*}} R_X86_64_DTPMOD64 0
-# SDYN-NEXT: 0000000000002510 {{.*}} R_X86_64_DTPMOD64 {{.*}} y + 0
-# SDYN-NEXT: 0000000000002518 {{.*}} R_X86_64_DTPOFF64 {{.*}} y + 0
+# SDYN:      00000000000024e0 {{.*}} R_X86_64_DTPMOD64 0
+# SDYN-NEXT: 00000000000024f0 {{.*}} R_X86_64_DTPMOD64 0
+# SDYN-NEXT: 0000000000002500 {{.*}} R_X86_64_DTPMOD64 {{.*}} y + 0
+# SDYN-NEXT: 0000000000002508 {{.*}} R_X86_64_DTPOFF64 {{.*}} y + 0
 # SDYN:      Relocation section '.rela.plt' {{.*}} contains 1 entries:
 # SDYN:      {{.*}} R_X86_64_JUMP_SLOT {{.*}} __tls_get_addr + 0
 
 # SHARED-LABEL: <_start>:
-# SHARED:        leaq 4458(%rip), %rdi # 0x2500
+# SHARED:        leaq [[#]](%rip), %rdi # 0x24f0
 # SHARED-NEXT:   movabsq $-8496, %rax
 # SHARED-NEXT:   addq %rbx, %rax
 # SHARED-NEXT:   callq *%rax
-# SHARED-NEXT:   leaq 4452(%rip), %rdi # 0x2510
+
+# SHARED-NEXT:   leaq [[#]](%rip), %rdi # 0x2500
 # SHARED-NEXT:   movabsq $-8496, %rax
 # SHARED-NEXT:   addq %rbx, %rax
 # SHARED-NEXT:   callq *%rax
-# SHARED-NEXT:   leaq 4398(%rip), %rdi # 0x24f0
+
+# SHARED-NEXT:   leaq [[#]](%rip), %rdi # 0x24e0
 # SHARED-NEXT:   movabsq $-8496, %rax
 # SHARED-NEXT:   addq %r15, %rax
 # SHARED-NEXT:   callq *%rax
+
 ## x1 is at DTPOFF 7
 # SHARED-NEXT:   leaq 7(%rax), %rcx
 # SHARED-NEXT:   leaq 11(%rax), %rdx
@@ -64,12 +68,6 @@
 #--- a.s
 .globl _start
 _start:
-.L2:
-  leaq .L2(%rip), %rbx
-  movabsq $_GLOBAL_OFFSET_TABLE_-.L2, %r11
-  addq %r11, %rbx
-  movq %rbx, %r15
-
   leaq x1@tlsgd(%rip), %rdi
   movabsq $__tls_get_addr@PLTOFF, %rax
   addq %rbx, %rax

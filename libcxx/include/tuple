@@ -1358,78 +1358,55 @@ struct uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
 
 #    if _LIBCPP_STD_VER >= 17
 #      define _LIBCPP_NOEXCEPT_RETURN(...)                                                                             \
-        noexcept(noexcept(__VA_ARGS__)) { return __VA_ARGS__; }
+        noexcept(noexcept(__VA_ARGS__)) { return __VA_ARGS__; }                                                        \
+        static_assert(true)
 
-// The _LIBCPP_NOEXCEPT_RETURN macro breaks formatting.
-// clang-format off
 template <class _Fn, class _Tuple, size_t... _Id>
-inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto)
-__apply_tuple_impl(_Fn&& __f, _Tuple&& __t, index_sequence<_Id...>)
-    _LIBCPP_NOEXCEPT_RETURN(std::__invoke(std::forward<_Fn>(__f), std::get<_Id>(std::forward<_Tuple>(__t))...))
+inline
+    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) __apply_tuple_impl(_Fn&& __f, _Tuple&& __t, index_sequence<_Id...>)
+        _LIBCPP_NOEXCEPT_RETURN(std::__invoke(std::forward<_Fn>(__f), std::get<_Id>(std::forward<_Tuple>(__t))...));
 
 template <class _Fn, class _Tuple>
 inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) apply(_Fn&& __f, _Tuple&& __t)
-    _LIBCPP_NOEXCEPT_RETURN(std::__apply_tuple_impl(
-        std::forward<_Fn>(__f),
-        std::forward<_Tuple>(__t),
-        make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()))
+    _LIBCPP_NOEXCEPT_RETURN(std::__apply_tuple_impl(std::forward<_Fn>(__f),
+                                                    std::forward<_Tuple>(__t),
+                                                    make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()));
+#      undef _LIBCPP_NOEXCEPT_RETURN
 
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp, class _Tuple, size_t... _Idx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, index_sequence<_Idx...>)
-  noexcept(noexcept(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...)))
-  requires is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...> {
-  return _Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...);
-}
-#else
-template <class _Tp, class _Tuple, size_t... _Idx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, index_sequence<_Idx...>,
-    enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...>> * = nullptr)
-    _LIBCPP_NOEXCEPT_RETURN(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...))
-#endif // _LIBCPP_STD_VER >= 20
-#undef _LIBCPP_NOEXCEPT_RETURN
-
-template <class _Tp, class _Tuple,
-          class _Seq = make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>, class = void>
-inline constexpr bool __can_make_from_tuple = false;
+template <class _Tp, class _Tuple, class _Seq = make_index_sequence<tuple_size_v<__remove_cvref_t<_Tuple>>>>
+inline constexpr bool __can_make_from_tuple_v = false;
 
 template <class _Tp, class _Tuple, size_t... _Idx>
-inline constexpr bool __can_make_from_tuple<_Tp, _Tuple, index_sequence<_Idx...>,
-    enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::declval<_Tuple>()))...>>> = true;
+inline constexpr bool __can_make_from_tuple_v< _Tp, _Tuple, index_sequence<_Idx...>> =
+    is_constructible_v<_Tp, decltype(std::get<_Idx>(std::declval<_Tuple>()))...>;
 
-// Based on LWG3528(https://wg21.link/LWG3528) and http://eel.is/c++draft/description#structure.requirements-9,
-// the standard allows to impose requirements, we constraint std::make_from_tuple to make std::make_from_tuple
-// SFINAE friendly and also avoid worse diagnostic messages. We still keep the constraints of std::__make_from_tuple_impl
-// so that std::__make_from_tuple_impl will have the same advantages when used alone.
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp, class _Tuple>
-  requires __can_make_from_tuple<_Tp, _Tuple> // strengthen
-#else
-template <class _Tp, class _Tuple, class = enable_if_t<__can_make_from_tuple<_Tp, _Tuple>>> // strengthen
-#endif // _LIBCPP_STD_VER >= 20
+template <class _Tp, class _Tuple, class _Seq = make_index_sequence<tuple_size_v<__remove_cvref_t<_Tuple>>>>
+inline constexpr bool __can_nothrow_make_from_tuple_v = false;
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
-  noexcept(noexcept(std::__make_from_tuple_impl<_Tp>(std::forward<_Tuple>(__t),
-                    make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()))) {
-#if _LIBCPP_STD_VER >= 23
+template <class _Tp, class _Tuple, size_t... _Idx>
+inline constexpr bool __can_nothrow_make_from_tuple_v< _Tp, _Tuple, index_sequence<_Idx...>> =
+    is_nothrow_constructible_v<_Tp, decltype(std::get<_Idx>(std::declval<_Tuple>()))...>;
+
+template <class _Tp, class _Tuple, enable_if_t<__can_make_from_tuple_v<_Tp, _Tuple>, int> = 0>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp
+make_from_tuple(_Tuple&& __tuple) noexcept(__can_nothrow_make_from_tuple_v<_Tp, _Tuple>) {
+#      if _LIBCPP_STD_VER >= 23
   if constexpr (tuple_size_v<remove_reference_t<_Tuple>> == 1) {
     static_assert(!std::reference_constructs_from_temporary_v<_Tp, decltype(std::get<0>(std::declval<_Tuple>()))>,
                   "Attempted construction of reference element binds to a temporary whose lifetime has ended");
   }
-#endif // _LIBCPP_STD_VER >= 23
-  return std::__make_from_tuple_impl<_Tp>(
-        std::forward<_Tuple>(__t), make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>());
+#      endif // _LIBCPP_STD_VER >= 23
+  return std::apply([]<class... _Args>(_Args&&... __args) { return _Tp(std::forward<_Args>(__args)...); },
+                    std::forward<_Tuple>(__tuple));
 }
 
-#  endif // _LIBCPP_STD_VER >= 17
+#    endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_CXX03_LANG)
+#  endif // !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_POP_MACROS
-
-// clang-format on
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

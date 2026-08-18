@@ -1668,6 +1668,30 @@ func.func @truncFPConstantRounding() -> bf16 {
   return %0 : bf16
 }
 
+// f8E8M0FNU has no encoding for a negative value, so this conversion is not
+// lossless and is NOT folded. It used to fold, and printing the result of the
+// fold asserted in APFloat.
+// CHECK-LABEL: @truncFPConstantE8M0Negative
+//       CHECK:   arith.constant -2.000000e+00 : f32
+//       CHECK:   truncf
+func.func @truncFPConstantE8M0Negative() -> f8E8M0FNU {
+  %cst = arith.constant -2.000000e+00 : f32
+  %0 = arith.truncf %cst : f32 to f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
+// It has no encoding for zero either: the 0x00 pattern is 2^-127. Folding used
+// to produce that value silently, while the expansion in ExpandOps.cpp reads
+// the same pattern back as 0.0.
+// CHECK-LABEL: @truncFPConstantE8M0Zero
+//       CHECK:   arith.constant 0.000000e+00 : f32
+//       CHECK:   truncf
+func.func @truncFPConstantE8M0Zero() -> f8E8M0FNU {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = arith.truncf %cst : f32 to f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
 // CHECK-LABEL: @tripleAddAdd
 //       CHECK:   %[[cres:.+]] = arith.constant 59 : index
 //       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] : index

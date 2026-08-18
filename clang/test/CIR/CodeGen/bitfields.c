@@ -12,7 +12,7 @@ typedef struct {
   unsigned still_more_bits : 7;
 } A;
 
-// CIR-DAG:  !rec_A = !cir.struct<"A" packed padded {data !s8i, data !s8i, data !s8i, data !u16i, pad !cir.array<!u8i x 3>}>
+// CIR-DAG:  !rec_A = !cir.struct<"A" packed {data !s8i, data !s8i, data !s8i, data !u16i, pad !cir.array<!u8i x 3>}>
 // CIR-DAG:  #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storage_type = !u16i, size = 4, offset = 3, is_signed = false>
 // LLVM-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
 // OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>

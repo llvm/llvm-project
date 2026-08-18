@@ -1442,6 +1442,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VECREDUCE_OR, MVT::v2i64, Custom);
     setOperationAction(ISD::VECREDUCE_XOR, MVT::v2i64, Custom);
 
+    for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v2i32, MVT::v4i32})
+      setOperationAction(ISD::SMULFIXSAT, VT, Custom);
+
     setOperationAction(ISD::ANY_EXTEND, MVT::v4i32, Legal);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
     // Likewise, narrowing and extending vector loads/stores aren't handled
@@ -8177,6 +8180,21 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
                      Passthru);
 }
 
+SDValue AArch64TargetLowering::LowerSMULFIXSAT(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert((VT == MVT::v4i16 || VT == MVT::v8i16 || VT == MVT::v2i32 ||
+          VT == MVT::v4i32) &&
+         "Unexpected type for SMULFIXSAT lowering");
+
+  unsigned Scale = Op.getConstantOperandVal(2);
+  if (Scale != VT.getScalarSizeInBits() - 1)
+    return SDValue();
+
+  return DAG.getNode(AArch64ISD::SQDMULH, SDLoc(Op), VT, Op.getOperand(0),
+                     Op.getOperand(1));
+}
+
 // Generate SUBS and CSEL for integer abs.
 SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
@@ -8924,6 +8942,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFixedLengthVectorSelectToSVE(Op, DAG);
   case ISD::ABS:
     return LowerABS(Op, DAG);
+  case ISD::SMULFIXSAT:
+    return LowerSMULFIXSAT(Op, DAG);
   case ISD::ABDS:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
   case ISD::ABDU:
@@ -11517,10 +11537,7 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
     // add   x0, x0, :tprel_lo12:a
     SDValue Var = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, ThreadBase,
-                                      Var,
-                                      DAG.getTargetConstant(0, DL, MVT::i32)),
-                   0);
+    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ThreadBase, Var);
   }
 
   case 24: {
@@ -11536,10 +11553,10 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
                                       HiVar,
                                       DAG.getTargetConstant(0, DL, MVT::i32)),
                    0);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr,
-                                      LoVar,
-                                      DAG.getTargetConstant(0, DL, MVT::i32)),
-                   0);
+    // Emit the low part as an ADDlow so that it can be folded into the
+    // addressing mode of a following load or store, turning the add into a
+    // :tprel_lo12_nc: relocation on the memory access itself.
+    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, Addr, LoVar);
   }
 
   case 32: {
@@ -20276,6 +20293,11 @@ AArch64TargetLowering::getScratchRegisters(CallingConv::ID) const {
 ArrayRef<MCPhysReg> AArch64TargetLowering::getRoundingControlRegisters() const {
   static const MCPhysReg RCRegs[] = {AArch64::FPCR};
   return RCRegs;
+}
+
+bool AArch64TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                                  EVT DestVT) const {
+  return isTypeLegal(DestVT) && DestVT.isVector();
 }
 
 bool
@@ -29260,6 +29282,17 @@ static SDValue performSETCCCombine(SDNode *N,
       ISD::isConstantSplatVector(LHS.getNode(), SplatLHSVal) &&
       SplatLHSVal.isOne())
     return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, CmpVT), RHS, ISD::SETGE);
+
+  // Fold setcc(and(X, Y), 0, seteq) --> NOT(AArch64ISD::CMTST(X, Y)).
+  // SETNE will have been legalized to SETEQ by this point.
+  // The NOT folds away when the result feeds a BSP.
+  if (DCI.isAfterLegalizeDAG() && CmpVT.isFixedLengthVector() &&
+      Cond == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
+      isZerosVector(RHS.getNode())) {
+    SDValue CMTSTNode = DAG.getNode(AArch64ISD::CMTST, DL, CmpVT,
+                                    LHS.getOperand(0), LHS.getOperand(1));
+    return DAG.getNOT(DL, CMTSTNode, CmpVT);
+  }
 
   return SDValue();
 }
