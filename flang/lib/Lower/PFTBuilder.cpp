@@ -1049,11 +1049,25 @@ private:
             // Mark every possible target of the assigned GO TO so that
             // wrappability analyses can see any escape from an enclosing
             // construct.
+            //
+            // A FORMAT statement is not a branch target, so it is not marked
+            // here. Marking it would give it a block, and lowering selects
+            // the targets of the generated branch by testing for one, so a
+            // program that assigns a FORMAT label and then branches to it
+            // would silently jump into the FORMAT instead of reaching the
+            // run-time error it is supposed to get.
+            auto markIfBranchTarget = [&](parser::Label label) {
+              lower::pft::Evaluation *target{
+                  labelEvaluationMap->find(label)->second};
+              assert(target && "missing branch target evaluation");
+              if (!target->isA<parser::FormatStmt>())
+                markBranchTarget(eval, *target);
+            };
             const auto &labelList = std::get<std::list<parser::Label>>(s.t);
             if (!labelList.empty()) {
               // Explicit target list: `go to v, (l1, l2, ...)`.
               for (const auto &label : labelList)
-                markBranchTarget(eval, label);
+                markIfBranchTarget(label);
             } else {
               // No explicit list (`go to v`): fall back to the set of labels
               // that have been previously ASSIGN'd to v.
@@ -1065,7 +1079,7 @@ private:
                 auto iter = assignSymbolLabelMap->find(*sym);
                 if (iter != assignSymbolLabelMap->end())
                   for (auto label : iter->second)
-                    markBranchTarget(eval, label);
+                    markIfBranchTarget(label);
               }
             }
             eval.isUnstructured = true;
