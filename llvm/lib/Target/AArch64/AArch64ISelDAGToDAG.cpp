@@ -1871,7 +1871,10 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
 
   ISD::LoadExtType ExtType = LD->getExtensionType();
   bool InsertTo64 = false;
-  bool OffsetIsXZR = false;
+  bool UseLd1 =
+      (VT.is64BitVector() || VT.is128BitVector()) &&
+      (!Subtarget->isLittleEndian() || (Subtarget->requiresStrictAlign() &&
+                                        LD->getAlign() < VT.getStoreSize()));
   if (VT == MVT::i64)
     Opcode = IsPre ? AArch64::LDRXpre : AArch64::LDRXpost;
   else if (VT == MVT::i32) {
@@ -1918,16 +1921,11 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     Opcode = IsPre ? AArch64::LDRHpre : AArch64::LDRHpost;
   } else if (VT == MVT::f32) {
     Opcode = IsPre ? AArch64::LDRSpre : AArch64::LDRSpost;
-  } else if (VT == MVT::f64 ||
-             (VT.is64BitVector() && Subtarget->isLittleEndian() &&
-              (!Subtarget->requiresStrictAlign() ||
-               LD->getAlign() >= VT.getStoreSize()))) {
+  } else if (VT == MVT::f64 || (VT.is64BitVector() && !UseLd1)) {
     Opcode = IsPre ? AArch64::LDRDpre : AArch64::LDRDpost;
-  } else if (VT.is128BitVector() && Subtarget->isLittleEndian() &&
-             (!Subtarget->requiresStrictAlign() ||
-              LD->getAlign() >= VT.getStoreSize())) {
+  } else if (VT.is128BitVector() && !UseLd1) {
     Opcode = IsPre ? AArch64::LDRQpre : AArch64::LDRQpost;
-  } else if (VT.is64BitVector()) {
+  } else if (VT.is64BitVector() && UseLd1) {
     if (IsPre || OffsetVal != 8)
       return false;
     switch (VT.getScalarSizeInBits()) {
@@ -1946,8 +1944,7 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     default:
       llvm_unreachable("Expected vector element to be a power of 2");
     }
-    OffsetIsXZR = true;
-  } else if (VT.is128BitVector()) {
+  } else if (VT.is128BitVector() && UseLd1) {
     if (IsPre || OffsetVal != 16)
       return false;
     switch (VT.getScalarSizeInBits()) {
@@ -1966,16 +1963,14 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     default:
       llvm_unreachable("Expected vector element to be a power of 2");
     }
-    OffsetIsXZR = true;
   } else
     return false;
   SDValue Chain = LD->getChain();
   SDValue Base = LD->getBasePtr();
   SDLoc dl(N);
   // LD1 encodes an immediate offset by using XZR as the offset register.
-  SDValue Offset = OffsetIsXZR
-                       ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
-                       : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
+  SDValue Offset = UseLd1 ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
+                          : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
   SDValue Ops[] = { Base, Offset, Chain };
   SDNode *Res = CurDAG->getMachineNode(Opcode, dl, MVT::i64, DstVT,
                                        MVT::Other, Ops);

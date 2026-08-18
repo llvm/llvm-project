@@ -3154,16 +3154,14 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
   // unaligned accesses are disabled). Without this, these will be forced to
   // have 16-byte alignment with +strict-align (and fail to lower as we don't
   // yet support TLI.expandUnalignedLoad() and TLI.expandUnalignedStore()).
-  if (VT.isScalableVector()) {
-    unsigned ElementSizeBits = VT.getScalarSizeInBits();
-    if (ElementSizeBits % 8 == 0 && Alignment >= Align(ElementSizeBits / 8))
-      return true;
-  }
-
-  // For NEON, we can use LD1/ST1 when the alignment is less than the size of
-  // the vector, but greater than or equal to the size of the elements.
-  if (Subtarget->requiresStrictAlign() && VT.isFixedLengthVector() &&
-      (VT.getSizeInBits() == 64 || VT.getSizeInBits() == 128)) {
+  //
+  // For NEON in strict-align mode, we need to use LD1/ST1 when the alignment
+  // is less than the size of the vector, but greater than or equal to the size
+  // of the elements.
+  bool UseNEONLd1 = Subtarget->requiresStrictAlign() &&
+                    VT.isFixedLengthVector() &&
+                    (VT.getSizeInBits() == 64 || VT.getSizeInBits() == 128);
+  if (VT.isScalableVector() || UseNEONLd1) {
     unsigned ElementSizeBits = VT.getScalarSizeInBits();
     if (ElementSizeBits % 8 == 0 && Alignment >= Align(ElementSizeBits / 8))
       return true;
