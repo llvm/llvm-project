@@ -3188,22 +3188,31 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
     -> GenericResolution {
   const Symbol &ultimate{symbol.GetUltimate()};
-  // Check for a match with an explicit INTRINSIC
+  const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   const Symbol *explicitIntrinsic{nullptr};
-  if (ultimate.attrs().test(semantics::Attr::INTRINSIC)) {
+  auto probeIntrinsic{[&](const Symbol &intrinsic) {
     parser::Messages buffer;
     auto restorer{GetContextualMessages().SetMessages(buffer)};
     ActualArguments localActuals{actuals};
     if (context_.intrinsics().Probe(
-            CallCharacteristics{ultimate.name().ToString(), isSubroutine},
+            CallCharacteristics{intrinsic.name().ToString(), isSubroutine},
             localActuals, foldingContext_) &&
         !buffer.AnyFatalError()) {
-      explicitIntrinsic = &ultimate;
+      explicitIntrinsic = &intrinsic;
+    }
+  }};
+  if (ultimate.attrs().test(semantics::Attr::INTRINSIC)) {
+    probeIntrinsic(ultimate);
+  } else if (genericDetails) {
+    if (const Symbol *sameNameSpecific{genericDetails->specific()}) {
+      const Symbol &specificUltimate{sameNameSpecific->GetUltimate()};
+      if (specificUltimate.attrs().test(semantics::Attr::INTRINSIC)) {
+        probeIntrinsic(specificUltimate);
+      }
     }
   }
   const Symbol *elemental{nullptr}; // matching elemental specific proc
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
-  const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails && !explicitIntrinsic) {
     std::optional<CudaMatchingDistance> crtMatchingDistance;
     for (const Symbol &specific0 : genericDetails->specificProcs()) {
