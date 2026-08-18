@@ -2756,9 +2756,9 @@ void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
   getPointer()->print(OS);
   SCEV::NoWrapFlags Flags = getUseNoWrapFlags();
   if (any(Flags & SCEV::FlagNUW))
-    OS << "(u nuw)";
+    OS << "<u nuw>";
   if (any(Flags & SCEV::FlagNSW))
-    OS << "(u nsw)";
+    OS << "<u nsw>";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
