@@ -61,8 +61,7 @@ entry:
   ret <2 x double> %c
 }
 
-; A lane that is not a ConstantFP (e.g. poison or undef) has nothing to look
-; up in the table.
+; A lane that is not a ConstantFP has nothing to look up in the table.
 define <2 x float> @test_tdo_v2_f32_cos_poison_lane() {
 ; CHECK-LABEL: define <2 x float> @test_tdo_v2_f32_cos_poison_lane() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
