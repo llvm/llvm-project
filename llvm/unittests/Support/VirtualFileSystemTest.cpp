@@ -82,6 +82,12 @@ public:
     WorkingDirectory = Path.str();
     return std::error_code();
   }
+  // Stand in for a file system backed by observable storage, so that callers of
+  // getDirectoryContentSources can be exercised.
+  void getDirectoryContentSources(const Twine &Dir,
+                                  SmallVectorImpl<std::string> &Out) override {
+    Out.push_back(Dir.str());
+  }
   // Map any symlink to "/symlink".
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override {
@@ -2754,6 +2760,227 @@ TEST_F(VFSFromYAMLTest, ErrorMap) {
 
   // Lookup a file location that doesn't exist.
   ASSERT_FALSE(FS->status("/root/bar/file"));
+}
+
+TEST(VirtualFileSystemTest, GetDirectoryContentSourcesBase) {
+  auto Dummy = makeIntrusiveRefCnt<DummyFileSystem>();
+  Dummy->addDirectory("//root/foo");
+
+  SmallVector<std::string, 4> Sources;
+  Dummy->getDirectoryContentSources("//root/foo", Sources);
+  EXPECT_THAT(Sources, ElementsAre("//root/foo"));
+
+  // A directory that does not exist still has a location where it would
+  // appear.
+  Sources.clear();
+  Dummy->getDirectoryContentSources("//root/does_not_exist", Sources);
+  EXPECT_THAT(Sources, ElementsAre("//root/does_not_exist"));
+
+  // A file system with no storage a caller can observe has nothing to report.
+  auto InMemory = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  Sources.clear();
+  InMemory->getDirectoryContentSources("//root/foo", Sources);
+  EXPECT_THAT(Sources, testing::IsEmpty());
+}
+
+TEST_F(VFSFromYAMLTest, GetDirectoryContentSourcesDirectoryRemap) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/realheaders");
+  Lower->addDirectory("//root/real/Headers");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{ 'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory-remap',\n"
+                        "  'name': '//root/real/Headers',\n"
+                        "  'external-contents': '//root/realheaders'\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  // Should expect to see both paths for fallthrough.
+  SmallVector<std::string, 4> Sources;
+  FS->getDirectoryContentSources("//root/real/Headers", Sources);
+  EXPECT_THAT(Sources, UnorderedElementsAre("//root/realheaders",
+                                            "//root/real/Headers"));
+
+  // The same holds for a path inside the remapped directory, which does not
+  // need to exist in either location.
+  Sources.clear();
+  FS->getDirectoryContentSources("//root/real/Headers/sub", Sources);
+  EXPECT_THAT(Sources, UnorderedElementsAre("//root/realheaders/sub",
+                                            "//root/real/Headers/sub"));
+
+  // A path the YAML says nothing about is handled entirely by ExternalFS.
+  Sources.clear();
+  FS->getDirectoryContentSources("//root/elsewhere", Sources);
+  EXPECT_THAT(Sources, ElementsAre("//root/elsewhere"));
+}
+
+TEST_F(VFSFromYAMLTest, GetDirectoryContentSourcesRedirectOnly) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/realheaders");
+  Lower->addDirectory("//root/real/Headers");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{ 'redirecting-with': 'redirect-only',\n"
+                        "  'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory-remap',\n"
+                        "  'name': '//root/real/Headers',\n"
+                        "  'external-contents': '//root/realheaders'\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  // We expect to only see the redirected path for redirect-only
+  SmallVector<std::string, 4> Sources;
+  FS->getDirectoryContentSources("//root/real/Headers", Sources);
+  EXPECT_THAT(Sources, ElementsAre("//root/realheaders"));
+
+  // A path the YAML says nothing about cannot be enumerated at all.
+  Sources.clear();
+  FS->getDirectoryContentSources("//root/elsewhere", Sources);
+  EXPECT_THAT(Sources, testing::IsEmpty());
+}
+
+TEST_F(VFSFromYAMLTest, GetDirectoryContentSourcesDirectoryNode) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/real/Headers");
+  Lower->addRegularFile("//root/extra/injected.h");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'roots': [\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/real/Headers',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'injected.h',\n"
+      "                  'external-contents': '//root/extra/injected.h'\n"
+      "                }\n"
+      "              ]\n"
+      "}\n"
+      "]\n"
+      "}",
+      Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  // //root/extra isn't iterated, so shouldn't be included.
+  SmallVector<std::string, 4> Sources;
+  FS->getDirectoryContentSources("//root/real/Headers", Sources);
+  EXPECT_THAT(Sources, ElementsAre("//root/real/Headers"));
+}
+
+TEST_F(VFSFromYAMLTest, GetDirectoryContentSourcesRelativeExternalContents) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/cwd");
+  Lower->addDirectory("//root/cwd/rel/target");
+  Lower->setCurrentWorkingDirectory("//root/cwd");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{ 'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory-remap',\n"
+                        "  'name': '//root/virtual',\n"
+                        "  'external-contents': 'rel/target'\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Lower);
+  ASSERT_NE(FS.get(), nullptr);
+
+  // Relative paths need to be returned as absolute.
+  SmallVector<std::string, 4> Sources;
+  FS->getDirectoryContentSources("//root/virtual", Sources);
+  EXPECT_THAT(Sources,
+              UnorderedElementsAre("//root/cwd/rel/target", "//root/virtual"));
+
+  // A relative Dir is made absolute too.
+  Sources.clear();
+  FS->getDirectoryContentSources("sub", Sources);
+  EXPECT_THAT(Sources, ElementsAre("//root/cwd/sub"));
+}
+
+TEST_F(VFSFromYAMLTest, GetDirectoryContentSourcesStackedOverlays) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/c");
+
+  // The inner overlay remaps //root/b to //root/c.
+  IntrusiveRefCntPtr<vfs::FileSystem> Inner =
+      getFromYAMLString("{ 'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory-remap',\n"
+                        "  'name': '//root/b',\n"
+                        "  'external-contents': '//root/c'\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Lower);
+  ASSERT_NE(Inner.get(), nullptr);
+
+  // The outer overlay remaps //root/a to //root/b, which the inner overlay
+  // further remaps to //root/c.
+  IntrusiveRefCntPtr<vfs::FileSystem> Outer =
+      getFromYAMLString("{ 'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory-remap',\n"
+                        "  'name': '//root/a',\n"
+                        "  'external-contents': '//root/b'\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        Inner);
+  ASSERT_NE(Outer.get(), nullptr);
+
+  // Looking from the top reaches all dirs.
+  SmallVector<std::string, 4> Sources;
+  Outer->getDirectoryContentSources("//root/a", Sources);
+  EXPECT_THAT(Sources,
+              UnorderedElementsAre("//root/c", "//root/b", "//root/a"));
+
+  Sources.clear();
+  Outer->getDirectoryContentSources("//root/a/sub", Sources);
+  EXPECT_THAT(Sources, UnorderedElementsAre("//root/c/sub", "//root/b/sub",
+                                            "//root/a/sub"));
+
+  // A path only described by the inner overlay is still followed.
+  Sources.clear();
+  Outer->getDirectoryContentSources("//root/b", Sources);
+  EXPECT_THAT(Sources, UnorderedElementsAre("//root/c", "//root/b"));
+
+  // A path neither overlay mentions comes back unchanged.
+  Sources.clear();
+  Outer->getDirectoryContentSources("//root/c", Sources);
+  EXPECT_THAT(Sources, ElementsAre("//root/c"));
+}
+
+TEST_F(VFSFromYAMLTest, GetDirectoryContentSourcesOverlayFileSystem) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+
+  // A redirect-only layer contributes only its target, so the two layers
+  // contribute disjoint sets and a skipped layer is visible without relying on
+  // duplicates.
+  IntrusiveRefCntPtr<vfs::FileSystem> Redirecting =
+      getFromYAMLString("{ 'redirecting-with': 'redirect-only',\n"
+                        "  'roots': [\n"
+                        "{\n"
+                        "  'type': 'directory-remap',\n"
+                        "  'name': '//root/foo',\n"
+                        "  'external-contents': '//root/bar'\n"
+                        "}\n"
+                        "]\n"
+                        "}",
+                        makeIntrusiveRefCnt<DummyFileSystem>());
+  ASSERT_NE(Redirecting.get(), nullptr);
+
+  auto O = makeIntrusiveRefCnt<vfs::OverlayFileSystem>(Lower);
+  O->pushOverlay(Redirecting);
+
+  // dir_begin() combines every layer, so both contribute.
+  SmallVector<std::string, 4> Sources;
+  O->getDirectoryContentSources("//root/foo", Sources);
+  EXPECT_THAT(Sources, UnorderedElementsAre("//root/bar", "//root/foo"));
 }
 
 TEST_F(VFSFromYAMLTest, WorkingDirectory) {

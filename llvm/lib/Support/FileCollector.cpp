@@ -291,6 +291,11 @@ public:
     return EC;
   }
 
+  void getDirectoryContentSources(const Twine &Dir,
+                                  SmallVectorImpl<std::string> &Out) override {
+    FS->getDirectoryContentSources(Dir, Out);
+  }
+
   std::error_code isLocal(const Twine &Path, bool &Result) override {
     return FS->isLocal(Path, Result);
   }
