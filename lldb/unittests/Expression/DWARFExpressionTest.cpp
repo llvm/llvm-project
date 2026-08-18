@@ -143,8 +143,9 @@ struct MockProcess : Process {
   MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
               MockMemory memory)
       : Process(target_sp, listener_sp), m_memory(std::move(memory)) {}
-  size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
+    addr_t vm_addr = process_addr.GetValue();
     auto expected_memory = m_memory.ReadMemory(vm_addr, size);
     if (!expected_memory) {
       error = Status::FromError(expected_memory.takeError());
@@ -154,9 +155,9 @@ struct MockProcess : Process {
     std::memcpy(buf, expected_memory->data(), expected_memory->size());
     return size;
   }
-  size_t ReadMemory(addr_t addr, void *buf, size_t size,
+  size_t ReadMemory(const ProcessAddress &process_addr, void *buf, size_t size,
                     Status &status) override {
-    return DoReadMemory(addr, buf, size, status);
+    return DoReadMemory(process_addr, buf, size, status);
   }
   bool CanDebug(lldb::TargetSP, bool) override { return true; }
   Status DoDestroy() override { return Status(); }
