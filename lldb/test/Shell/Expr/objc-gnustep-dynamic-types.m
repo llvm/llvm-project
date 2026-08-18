@@ -1,6 +1,6 @@
 // REQUIRES: objc-gnustep
 //
-// RUN: %build %s --compiler=clang --objc-gnustep --output=%t
+// RUN: %build %inferior_target %s --compiler=clang --objc-gnustep --output=%t
 
 #import "objc/runtime.h"
 
@@ -37,7 +37,7 @@ __attribute__((objc_root_class))
 // GNUstep runtime resolves the dynamic type by reading the class structure
 // from the inferior's memory and attaching the matching type from debug info.
 //
-// RUN: %lldb -b -o "b objc-gnustep-dynamic-types.m:46" -o "run" \
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-dynamic-types.m:46" -o "run" \
 // RUN:          -o "frame variable -d run-target object" \
 // RUN:          -o "frame variable -d no-dynamic-values object" -- %t | FileCheck %s
 //

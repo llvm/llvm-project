@@ -157,6 +157,12 @@ if config.lldb_system_debugserver:
 if config.have_lldb_server:
     config.available_features.add("lldb-server")
 
+
+# Same spelling as lldb/test/Shell/CMakeLists.txt and lldb/test/API/lit.cfg.py.
+def targets_mingw(triple):
+    return re.search(r"windows-gnu|mingw", triple or "") is not None
+
+
 def runtime_exports(directory, symbol):
     """Whether a libobjc2 under `directory` exports `symbol`."""
 
@@ -197,6 +203,50 @@ def runtime_exports(directory, symbol):
                 return True
     return False
 
+
+# A test whose inferior is built for another target says so itself, rather
+# than the suite claiming it for every invocation: most of the suite debugs
+# MSVC binaries, which such a claim would describe wrongly. Both expand to
+# nothing when inferiors are built for the host, so nothing else moves.
+#
+# Underscores, not hyphens: ToolSubst wraps a key in , so %inferior-abi
+# would be eaten by an existing %inferior substitution if one were ever added.
+_test_triple = getattr(config, "test_triple", None)
+config.substitutions.append(
+    (
+        "%inferior_abi",
+        # -O, not -o: the setting only takes effect before a target exists.
+        (
+            '-O "settings set plugin.object-file.pe-coff.abi gnu"'
+            if targets_mingw(_test_triple)
+            else ""
+        ),
+    )
+)
+config.substitutions.append(
+    (
+        "%inferior_target",
+        (
+            "--target=" + _test_triple
+            if _test_triple and _test_triple != config.target_triple
+            else ""
+        ),
+    )
+)
+
+# Windows has no rpath, so a MinGW-built inferior needs its own toolchain's
+# DLLs (libstdc++, libgcc) ahead of any other distribution's on PATH.
+if (
+    platform.system() == "Windows"
+    and config.cmake_sysroot
+    and targets_mingw(getattr(config, "test_triple", None))
+):
+    config.environment["PATH"] = os.path.pathsep.join(
+        (
+            os.path.join(config.cmake_sysroot, "bin"),
+            config.environment.get("PATH", ""),
+        )
+    )
 
 if config.objc_gnustep_dir:
     config.available_features.add("objc-gnustep")

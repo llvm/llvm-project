@@ -1,6 +1,6 @@
 // REQUIRES: objc-gnustep
 //
-// RUN: %build %s --compiler=clang --objc-gnustep --output=%t
+// RUN: %build %inferior_target %s --compiler=clang --objc-gnustep --output=%t
 
 #import "objc/runtime.h"
 
@@ -36,7 +36,7 @@ __attribute__((objc_root_class))
 @implementation Ordinary
 @end
 
-// RUN: %lldb -b -o "b objc-gnustep-tagged-pointers.m:49" -o "run" \
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-tagged-pointers.m:49" -o "run" \
 // RUN:          -o "frame variable -d run-target tagged" \
 // RUN:          -o "frame variable -d run-target ordinary" -- %t | FileCheck %s
 //

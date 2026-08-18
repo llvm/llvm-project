@@ -1,6 +1,6 @@
 // REQUIRES: objc-gnustep
 //
-// RUN: %build %s --compiler=clang --objc-gnustep --output=%t
+// RUN: %build %inferior_target %s --compiler=clang --objc-gnustep --output=%t
 
 #import "objc/runtime.h"
 
@@ -42,7 +42,7 @@ __attribute__((objc_root_class))
 @implementation Derived
 @end
 
-// RUN: %lldb -b -o "b objc-gnustep-class-objects.m:53" -o "run" \
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-class-objects.m:53" -o "run" \
 // RUN:          -o "frame variable -d run-target -T object" \
 // RUN:          -o "frame variable -d run-target -T *object" \
 // RUN:          -o "frame variable -d run-target -T object->isa" \

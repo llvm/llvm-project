@@ -4,10 +4,10 @@
 // half of this program is compiled with -g0, and nothing here declares
 // anything about Hidden beyond its name.
 //
-// RUN: %build %S/Inputs/objc-gnustep-hidden-class.m --compiler=clang --objc-gnustep \
+// RUN: %build %inferior_target %S/Inputs/objc-gnustep-hidden-class.m --compiler=clang --objc-gnustep \
 // RUN:     --no-debug-info --mode=compile --output=%t-hidden.o
-// RUN: %build %s --compiler=clang --objc-gnustep --mode=compile --output=%t-main.o
-// RUN: %build %t-hidden.o %t-main.o --compiler=clang --objc-gnustep --mode=link --output=%t
+// RUN: %build %inferior_target %s --compiler=clang --objc-gnustep --mode=compile --output=%t-main.o
+// RUN: %build %inferior_target %t-hidden.o %t-main.o --compiler=clang --objc-gnustep --mode=link --output=%t
 
 @class Hidden;
 id MakeHidden(void);
@@ -21,7 +21,7 @@ int main() {
 // `image lookup -t` finds nothing and exits non-zero. If this ever starts
 // matching, the rest of the test proves nothing.
 //
-// RUN: not %lldb -b -o "image lookup -t Hidden" -- %t \
+// RUN: not %lldb %inferior_abi -b -o "image lookup -t Hidden" -- %t \
 // RUN:     | FileCheck %s --check-prefix=NODWARF
 //
 // NODWARF-NOT: name = "Hidden"
@@ -29,7 +29,7 @@ int main() {
 // The interface is synthesized from the runtime instead, so the type can be
 // named and its ivars read.
 //
-// RUN: %lldb -b -o "b objc-gnustep-decl-vendor.m:17" -o "run" \
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-decl-vendor.m:17" -o "run" \
 // RUN:     -o "type lookup Hidden" \
 // RUN:     -o "expr -- ((Hidden *)hidden)->_int" \
 // RUN:     -o "expr -- ((Hidden *)hidden)->_float" \

@@ -21,16 +21,6 @@ function(add_python_test_target name test_script args comment)
   add_dependencies(${name} lldb-test-depends)
 endfunction()
 
-if (DEFINED LLVM_TARGET_TRIPLE)
-  set(default_lldb_test_triple ${LLVM_TARGET_TRIPLE})
-else()
-  set(default_lldb_test_triple ${LLVM_HOST_TRIPLE})
-endif()
-
-set(LLDB_TEST_TRIPLE
-  ${default_lldb_test_triple}
-  CACHE STRING "The target triple used to build test inferiors.")
-
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   ""
@@ -93,7 +83,6 @@ set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to
 set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
 set(LLDB_TEST_MAKE "${LLDB_DEFAULT_TEST_MAKE}" CACHE PATH "make tool used for building test executables")
 set(LLDB_TEST_RESOURCE_DIR "" CACHE PATH "Clang resource directory for cross-compiling test inferiors")
-set(LLDB_TEST_SYSROOT "" CACHE PATH "Sysroot for cross-compiling test inferiors")
 
 if ("${LLDB_TEST_COMPILER}" STREQUAL "")
   message(FATAL_ERROR "LLDB test compiler not specified. Tests will not run.")

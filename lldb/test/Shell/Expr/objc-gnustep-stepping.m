@@ -1,6 +1,6 @@
 // REQUIRES: objc-gnustep
 //
-// RUN: %build %s --compiler=clang --objc-gnustep --output=%t
+// RUN: %build %inferior_target %s --compiler=clang --objc-gnustep --output=%t
 
 #import "objc/runtime.h"
 
@@ -35,7 +35,7 @@ __attribute__((objc_root_class))
 // Stepping at a message send has to run through the runtime's dispatch
 // function and land in the method implementation.
 //
-// RUN: %lldb -b -o "b objc-gnustep-stepping.m:53" -o "run" -o "step" \
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-stepping.m:53" -o "run" -o "step" \
 // RUN:     -- %t | FileCheck %s --check-prefix=STEP_IN
 //
 // A message to nil dispatches nowhere, so the step must not try to run to an
@@ -45,7 +45,7 @@ __attribute__((objc_root_class))
 // objc_msgSend.S; asserting on the frame's source location is what catches
 // that, since the function name alone looks plausible either way.
 //
-// RUN: %lldb -b -o "b objc-gnustep-stepping.m:55" -o "run" -o "step" \
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-stepping.m:55" -o "run" -o "step" \
 // RUN:     -o "frame info" -- %t | FileCheck %s --check-prefix=STEP_OVER_NIL
 //
 int main() {

@@ -59,6 +59,20 @@ set(LLDB_TEST_MODULE_CACHE_CLANG "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-clan
 file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_LLDB})
 file(MAKE_DIRECTORY ${LLDB_TEST_MODULE_CACHE_CLANG})
 
+# Set before either add_subdirectory(): both suites build inferiors, and a
+# cache variable set in one only leaks out after that subdirectory has run.
+if (DEFINED LLVM_TARGET_TRIPLE)
+  set(default_lldb_test_triple ${LLVM_TARGET_TRIPLE})
+else()
+  set(default_lldb_test_triple ${LLVM_HOST_TRIPLE})
+endif()
+
+set(LLDB_TEST_TRIPLE
+  ${default_lldb_test_triple}
+  CACHE STRING "The target triple used to build test inferiors.")
+
+set(LLDB_TEST_SYSROOT "" CACHE PATH "Sysroot for cross-compiling test inferiors")
+
 # Windows and Linux have no built-in ObjC runtime. Turn this on in order to run tests with GNUstep.
 option(LLDB_TEST_OBJC_GNUSTEP "Enable ObjC tests with GNUstep libobjc2 on non-Apple platforms" Off)
 set(LLDB_TEST_OBJC_GNUSTEP_DIR "" CACHE PATH "Custom path to the GNUstep shared library")
