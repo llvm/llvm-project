@@ -1271,8 +1271,8 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   if (EarlyExits.empty())
     return true;
 
-  // A scalar epilogue is required if vectorized loop includes countable early
-  // exits.
+  // A countable early exit requires a scalar epilogue. If the middle block
+  // still has a branch to the scalar preheader, force it to always be taken.
   if (MiddleVPBB->getNumSuccessors() == 2) {
     auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
     assert(MiddleVPBB->getSuccessors()[1] == Plan.getScalarPreheader() &&
