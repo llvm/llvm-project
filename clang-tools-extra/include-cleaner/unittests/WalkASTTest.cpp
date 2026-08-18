@@ -1413,7 +1413,7 @@ TEST(WalkAST, ObjCAtSynchronizedStmt) {
       @synchronized([^LockObject sharedLock]) {}
     }
   )objc",
-           {"-x", "objective-c", "-fobjc-exceptions"});
+           {"-x", "objective-c"});
 }
 
 TEST(WalkAST, ObjCEncodeExpr) {
