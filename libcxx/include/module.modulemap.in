@@ -2473,10 +2473,6 @@ module std {
     header "__tree"
     export std.memory.unique_ptr
   }
-  module std_mbstate_t {
-    header "__std_mbstate_t.h"
-    export *
-  }
   module log_hardening_failure {
     header "__log_hardening_failure"
   }

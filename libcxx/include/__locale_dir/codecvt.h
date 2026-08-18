@@ -21,7 +21,7 @@
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 #    include <cwchar>
 #  else
-#    include <__std_mbstate_t.h>
+#    include <wchar.h>
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -15,7 +15,7 @@
 
 #  include <__cstddef/size_t.h>
 #  include <__locale_dir/codecvt.h>
-#  include <__std_mbstate_t.h>
+#  include <wchar.h>
 #  include <stdexcept>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
