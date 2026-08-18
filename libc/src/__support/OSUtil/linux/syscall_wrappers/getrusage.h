@@ -24,8 +24,11 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE ErrorOr<long> getrusage(int who, struct rusage *ru) {
-  return syscall_checked<long>(SYS_getrusage, who, ru);
+// The wrapper returns an int (casting from `long` returned by the syscall)
+// because its libc counterpart returns an int and the set of possible return
+// values fits: 0, -EFAULT (-14) or -EINVAL (-22).
+LIBC_INLINE ErrorOr<int> getrusage(int who, struct rusage *ru) {
+  return syscall_checked<int>(SYS_getrusage, who, ru);
 }
 
 } // namespace linux_syscalls
