@@ -15,27 +15,27 @@ define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %f
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[NFACE]] to i64
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[FACE_CELL]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[NFACE]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[NFACE]], 8
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_BODY_PREHEADER14:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP0]], 2147483644
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP0]], 2147483640
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[FACE_CELL]], i64 [[INDVARS_IV_EPIL]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4, !tbaa [[INT_TBAA0:![0-9]+]], !llvm.access.group [[ACC_GRP4:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP10]], align 4, !tbaa [[INT_TBAA0:![0-9]+]], !llvm.access.group [[ACC_GRP4:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV_EPIL]]
-; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [8 x i8], ptr [[Y]], <4 x i64> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i32> [[WIDE_LOAD12]] to <4 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [8 x i8], ptr [[X]], <4 x i64> [[TMP5]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP4]], <4 x i1> splat (i1 true), <4 x double> poison), !tbaa [[DOUBLE_TBAA5:![0-9]+]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER13:%.*]] = tail call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP6]], <4 x i1> splat (i1 true), <4 x double> poison), !tbaa [[DOUBLE_TBAA5]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fcmp fast olt <4 x double> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER13]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x double> [[WIDE_MASKED_GATHER13]], <4 x double> [[WIDE_MASKED_GATHER]]
-; CHECK-NEXT:    tail call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP8]], <4 x ptr> align 8 [[TMP4]], <4 x i1> splat (i1 true)), !tbaa [[DOUBLE_TBAA5]], !llvm.access.group [[ACC_GRP4]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV_EPIL]], 4
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA0]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i32> [[WIDE_LOAD]] to <8 x i64>
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr [[Y]], <8 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i32> [[WIDE_LOAD12]] to <8 x i64>
+; CHECK-NEXT:    [[WIDE_GEP13:%.*]] = getelementptr inbounds [8 x i8], ptr [[X]], <8 x i64> [[TMP4]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = tail call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 [[WIDE_GEP]], <8 x i1> splat (i1 true), <8 x double> poison), !tbaa [[DOUBLE_TBAA5:![0-9]+]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER14:%.*]] = tail call <8 x double> @llvm.masked.gather.v8f64.v8p0(<8 x ptr> align 8 [[WIDE_GEP13]], <8 x i1> splat (i1 true), <8 x double> poison), !tbaa [[DOUBLE_TBAA5]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp fast olt <8 x double> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER14]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP5]], <8 x double> [[WIDE_MASKED_GATHER14]], <8 x double> [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    tail call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> [[TMP6]], <8 x ptr> align 8 [[WIDE_GEP]], <8 x i1> splat (i1 true)), !tbaa [[DOUBLE_TBAA5]], !llvm.access.group [[ACC_GRP4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV_EPIL]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

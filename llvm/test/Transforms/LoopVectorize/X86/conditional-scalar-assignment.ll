@@ -388,22 +388,59 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; X86-LABEL: define i32 @multi_use_cmp_for_csa_int_select(
 ; X86-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) {
 ; X86-NEXT:  [[ENTRY:.*]]:
+; X86-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; X86-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; X86:       [[VECTOR_PH]]:
+; X86-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
+; X86-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; X86-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+; X86-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; X86-NEXT:    br label %[[LOOP:.*]]
 ; X86:       [[LOOP]]:
-; X86-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; X86-NEXT:    [[DATA_PHI:%.*]] = phi i32 [ -1, %[[ENTRY]] ], [ [[SELECT_DATA:%.*]], %[[LOOP]] ]
-; X86-NEXT:    [[IDX_PHI:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[SELECT_IDX:%.*]], %[[LOOP]] ]
+; X86-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; X86-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; X86-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[LOOP]] ]
+; X86-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
+; X86-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[LOOP]] ]
 ; X86-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
-; X86-NEXT:    [[LD:%.*]] = load i32, ptr [[LD_ADDR]], align 4
+; X86-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[LD_ADDR]], align 4
+; X86-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
+; X86-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
+; X86-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
+; X86-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP3]], <4 x i1> [[TMP1]]
+; X86-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
+; X86-NEXT:    [[TMP8]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI1]]
+; X86-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; X86-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; X86-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; X86-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
+; X86:       [[MIDDLE_BLOCK]]:
+; X86-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP7]], <4 x i1> [[TMP6]], i32 -1)
+; X86-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[TMP8]])
+; X86-NEXT:    [[TMP12:%.*]] = icmp ne i64 [[TMP11]], -9223372036854775808
+; X86-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 [[TMP11]], i64 -1
+; X86-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; X86-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; X86:       [[SCALAR_PH]]:
+; X86-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; X86-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
+; X86-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi i64 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
+; X86-NEXT:    br label %[[LOOP1:.*]]
+; X86:       [[LOOP1]]:
+; X86-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; X86-NEXT:    [[DATA_PHI:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SELECT_DATA:%.*]], %[[LOOP1]] ]
+; X86-NEXT:    [[IDX_PHI:%.*]] = phi i64 [ [[BC_MERGE_RDX2]], %[[SCALAR_PH]] ], [ [[SELECT_IDX:%.*]], %[[LOOP1]] ]
+; X86-NEXT:    [[LD_ADDR1:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV1]]
+; X86-NEXT:    [[LD:%.*]] = load i32, ptr [[LD_ADDR1]], align 4
 ; X86-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD]]
 ; X86-NEXT:    [[SELECT_DATA]] = select i1 [[SELECT_CMP]], i32 [[LD]], i32 [[DATA_PHI]]
-; X86-NEXT:    [[SELECT_IDX]] = select i1 [[SELECT_CMP]], i64 [[IV]], i64 [[IDX_PHI]]
-; X86-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; X86-NEXT:    [[SELECT_IDX]] = select i1 [[SELECT_CMP]], i64 [[IV1]], i64 [[IDX_PHI]]
+; X86-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; X86-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; X86-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT:.*]], label %[[LOOP]]
+; X86-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
 ; X86:       [[EXIT]]:
-; X86-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LOOP]] ]
-; X86-NEXT:    [[SELECT_IDX_LCSSA:%.*]] = phi i64 [ [[SELECT_IDX]], %[[LOOP]] ]
+; X86-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ]
+; X86-NEXT:    [[SELECT_IDX_LCSSA:%.*]] = phi i64 [ [[SELECT_IDX]], %[[LOOP1]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; X86-NEXT:    [[IDX:%.*]] = trunc i64 [[SELECT_IDX_LCSSA]] to i32
 ; X86-NEXT:    [[RES:%.*]] = add i32 [[IDX]], [[SELECT_DATA_LCSSA]]
 ; X86-NEXT:    ret i32 [[RES]]
@@ -411,42 +448,42 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; AVX512-LABEL: define i32 @multi_use_cmp_for_csa_int_select(
 ; AVX512-SAME: i64 [[N:%.*]], ptr [[DATA:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:  [[ENTRY:.*]]:
-; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
+; AVX512-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 32
 ; AVX512-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; AVX512:       [[VECTOR_PH]]:
-; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
+; AVX512-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; AVX512-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[A]], i64 0
-; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX512-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[A]], i64 0
+; AVX512-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; AVX512-NEXT:    br label %[[LOOP:.*]]
 ; AVX512:       [[LOOP]]:
 ; AVX512-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
-; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
-; AVX512-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
-; AVX512-NEXT:    [[TMP0:%.*]] = phi <8 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
-; AVX512-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[LOOP]] ]
+; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; AVX512-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[LOOP]] ]
+; AVX512-NEXT:    [[TMP1:%.*]] = phi <16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
+; AVX512-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[LOOP]] ]
 ; AVX512-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
-; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[LD_ADDR]], align 4
-; AVX512-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
-; AVX512-NEXT:    [[TMP3:%.*]] = freeze <8 x i1> [[TMP2]]
-; AVX512-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP3]])
-; AVX512-NEXT:    [[TMP5]] = select i1 [[TMP4]], <8 x i1> [[TMP2]], <8 x i1> [[TMP0]]
-; AVX512-NEXT:    [[TMP6]] = select i1 [[TMP4]], <8 x i32> [[WIDE_LOAD]], <8 x i32> [[VEC_PHI]]
-; AVX512-NEXT:    [[TMP7]] = select <8 x i1> [[TMP2]], <8 x i64> [[VEC_IND]], <8 x i64> [[VEC_PHI1]]
-; AVX512-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
-; AVX512-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i64> [[VEC_IND]], splat (i64 8)
+; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[LD_ADDR]], align 4
+; AVX512-NEXT:    [[TMP3:%.*]] = icmp slt <16 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
+; AVX512-NEXT:    [[TMP4:%.*]] = freeze <16 x i1> [[TMP3]]
+; AVX512-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP4]])
+; AVX512-NEXT:    [[TMP6]] = select i1 [[TMP5]], <16 x i1> [[TMP3]], <16 x i1> [[TMP1]]
+; AVX512-NEXT:    [[TMP7]] = select i1 [[TMP5]], <16 x i32> [[WIDE_LOAD]], <16 x i32> [[VEC_PHI]]
+; AVX512-NEXT:    [[TMP9]] = select <16 x i1> [[TMP3]], <16 x i64> [[VEC_IND]], <16 x i64> [[VEC_PHI1]]
+; AVX512-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 16
+; AVX512-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <16 x i64> [[VEC_IND]], splat (i64 16)
 ; AVX512-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; AVX512:       [[MIDDLE_BLOCK]]:
-; AVX512-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v8i32(<8 x i32> [[TMP6]], <8 x i1> [[TMP5]], i32 -1)
-; AVX512-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.smax.v8i64(<8 x i64> [[TMP7]])
+; AVX512-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v16i32(<16 x i32> [[TMP7]], <16 x i1> [[TMP6]], i32 -1)
+; AVX512-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.smax.v16i64(<16 x i64> [[TMP9]])
 ; AVX512-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[TMP10]], -9223372036854775808
 ; AVX512-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i64 [[TMP10]], i64 -1
 ; AVX512-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; AVX512-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; AVX512:       [[SCALAR_PH]]:
 ; AVX512-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; AVX512-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
+; AVX512-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
 ; AVX512-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi i64 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ -1, %[[ENTRY]] ]
 ; AVX512-NEXT:    br label %[[LOOP1:.*]]
 ; AVX512:       [[LOOP1]]:
@@ -462,7 +499,7 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; AVX512-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; AVX512-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP9:![0-9]+]]
 ; AVX512:       [[EXIT]]:
-; AVX512-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; AVX512-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; AVX512-NEXT:    [[SELECT_IDX_LCSSA:%.*]] = phi i64 [ [[SELECT_IDX]], %[[LOOP1]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
 ; AVX512-NEXT:    [[IDX:%.*]] = trunc i64 [[SELECT_IDX_LCSSA]] to i32
 ; AVX512-NEXT:    [[RES:%.*]] = add i32 [[IDX]], [[SELECT_DATA_LCSSA]]
@@ -652,7 +689,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; X86-NEXT:    [[TMP11]] = select i1 [[TMP9]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; X86-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; X86-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; X86-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
+; X86-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; X86:       [[MIDDLE_BLOCK]]:
 ; X86-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP11]], <4 x i1> [[TMP10]], i32 -1)
 ; X86-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
@@ -677,7 +714,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; X86-NEXT:    [[SELECT_A]] = select i1 [[SELECT_CMP]], i32 [[LD_A]], i32 [[A_PHI]]
 ; X86-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; X86-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; X86-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
+; X86-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP9:![0-9]+]]
 ; X86:       [[EXIT]]:
 ; X86-NEXT:    [[SELECT_A_LCSSA:%.*]] = phi i32 [ [[SELECT_A]], %[[LOOP1]] ], [ [[TMP13]], %[[MIDDLE_BLOCK]] ]
 ; X86-NEXT:    ret i32 [[SELECT_A_LCSSA]]
@@ -793,7 +830,7 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; X86-NEXT:    [[TMP6]] = select i1 [[TMP4]], <16 x i8> [[WIDE_LOAD]], <16 x i8> [[VEC_PHI]]
 ; X86-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 16
 ; X86-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; X86-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
+; X86-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; X86:       [[MIDDLE_BLOCK]]:
 ; X86-NEXT:    [[TMP8:%.*]] = call i8 @llvm.experimental.vector.extract.last.active.v16i8(<16 x i8> [[TMP6]], <16 x i1> [[TMP5]], i8 -1)
 ; X86-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
@@ -811,7 +848,7 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; X86-NEXT:    [[SELECT_DATA]] = select i1 [[SELECT_CMP]], i8 [[LD]], i8 [[DATA_PHI]]
 ; X86-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; X86-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; X86-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP9:![0-9]+]]
+; X86-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP11:![0-9]+]]
 ; X86:       [[EXIT]]:
 ; X86-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i8 [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ]
 ; X86-NEXT:    ret i8 [[SELECT_DATA_LCSSA]]
@@ -915,7 +952,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; X86-NEXT:    [[TMP13]] = select i1 [[TMP4]], <4 x i32> [[WIDE_LOAD2]], <4 x i32> [[VEC_PHI1]]
 ; X86-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
 ; X86-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; X86-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; X86-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
 ; X86:       [[MIDDLE_BLOCK]]:
 ; X86-NEXT:    [[TMP8:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 -1)
 ; X86-NEXT:    [[TMP16:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP13]], <4 x i1> [[TMP11]], i32 [[TMP8]])
@@ -934,7 +971,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; X86-NEXT:    [[SELECT_DATA]] = select i1 [[SELECT_CMP]], i32 [[LD]], i32 [[DATA_PHI]]
 ; X86-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; X86-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; X86-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP11:![0-9]+]]
+; X86-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP13:![0-9]+]]
 ; X86:       [[EXIT]]:
 ; X86-NEXT:    [[SELECT_DATA_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA]], %[[LOOP1]] ], [ [[TMP16]], %[[MIDDLE_BLOCK]] ]
 ; X86-NEXT:    ret i32 [[SELECT_DATA_LCSSA]]
