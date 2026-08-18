@@ -294,6 +294,12 @@ def LifetimeModeling : Checker<"LifetimeModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
+def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
+  HelpText<"Check for uses of references or pointers that "
+           "outlive their bound object">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<NotDocumented>;
+
 def DanglingPtrDeref : Checker<"DanglingPtrDeref">,
   HelpText<"Check for dereferences of a dangling pointer">,
   Dependencies<[LifetimeModeling]>,
