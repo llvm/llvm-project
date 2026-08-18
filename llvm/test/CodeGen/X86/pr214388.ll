@@ -13,7 +13,9 @@ define i64 @PR214388(i8 %arg)  {
 ; SSE2-NEXT:    movl $20, %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    cmpb $0, -{{[0-9]+}}(%rsp)
@@ -43,7 +45,8 @@ define i64 @PR214388(i8 %arg)  {
 ; SSE42-NEXT:    movl $20, %eax
 ; SSE42-NEXT:    movd %eax, %xmm1
 ; SSE42-NEXT:    psubb %xmm0, %xmm1
-; SSE42-NEXT:    pextrw $0, %xmm1, -{{[0-9]+}}(%rsp)
+; SSE42-NEXT:    pextrb $0, %xmm1, %eax
+; SSE42-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; SSE42-NEXT:    movd %xmm1, %eax
 ; SSE42-NEXT:    testl %eax, %eax
 ; SSE42-NEXT:    je .LBB0_1
@@ -72,7 +75,8 @@ define i64 @PR214388(i8 %arg)  {
 ; AVX-NEXT:    movl $20, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm1
 ; AVX-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; AVX-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    je .LBB0_1
