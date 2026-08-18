@@ -4682,8 +4682,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     } else if (&useUltimate == &BypassGeneric(localUltimate).GetUltimate()) {
       return; // nothing to do; used subprogram is local's specific
     } else if (useUltimate.attrs().test(Attr::INTRINSIC) &&
-        useUltimate.name() == localSymbol->name()) {
-      return; // local generic can extend intrinsic
+        useSymbol.name() == localSymbol->name()) {
+      // Fall through to merge the intrinsic into the generic.
     } else {
       for (const auto &ref : localGeneric->specificProcs()) {
         if (&ref->GetUltimate() == &useUltimate) {
@@ -4705,6 +4705,9 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
           UseDetails{localName, useUltimate})};
       newSymbol.flags() = useSymbol.flags();
       return;
+    } else if (localSymbol->attrs().test(Attr::INTRINSIC) &&
+        useSymbol.name() == localSymbol->name() &&
+        localUltimate.name() != useUltimate.name()) {
     } else {
       for (const auto &ref : useGeneric->specificProcs()) {
         if (&ref->GetUltimate() == &localUltimate) {
@@ -4782,6 +4785,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
           localGeneric->AddSpecificProc(useSpecific, useBindingName);
         }
       }
+    } else if (useUltimate.attrs().test(Attr::INTRINSIC)) {
+      AddGenericUse(*localGeneric, localName, useSymbol);
     }
     localGeneric->clear_derivedType();
     if (combinedDerivedType) {
