@@ -271,9 +271,7 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -343,9 +341,7 @@ define internal void @__omp_offloading_fd02_2044372e_sequential_loop_l5__debug()
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -753,9 +749,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -825,9 +819,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -1253,9 +1245,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -1325,9 +1315,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -1779,9 +1767,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -1851,9 +1837,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_sequential_loop_to_s
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -2300,9 +2284,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; AMDGPU:       [[IS_WORKER_CHECK]]:
-; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; AMDGPU:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -2348,9 +2330,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; NVPTX:       [[IS_WORKER_CHECK]]:
-; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; NVPTX:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -2395,9 +2375,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -2461,9 +2439,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_targe
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -2589,9 +2565,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; AMDGPU:       [[IS_WORKER_CHECK]]:
-; AMDGPU-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; AMDGPU-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; AMDGPU-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; AMDGPU-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; AMDGPU:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -2643,9 +2617,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; NVPTX-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; NVPTX:       [[IS_WORKER_CHECK]]:
-; NVPTX-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; NVPTX-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; NVPTX-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; NVPTX-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; NVPTX:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -2696,9 +2668,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; AMDGPU-DISABLED1:       [[IS_WORKER_CHECK]]:
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; AMDGPU-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; AMDGPU-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; AMDGPU-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; AMDGPU-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; AMDGPU-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:
@@ -2768,9 +2738,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_2044372e_do_not_spmdize_task_
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; NVPTX-DISABLED1:       [[IS_WORKER_CHECK]]:
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; NVPTX-DISABLED1-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
+; NVPTX-DISABLED1-NEXT:    [[BLOCK_SIZE:%.*]] = call i32 @__kmpc_get_max_team_threads()
 ; NVPTX-DISABLED1-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
 ; NVPTX-DISABLED1-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; NVPTX-DISABLED1:       [[WORKER_STATE_MACHINE_BEGIN]]:

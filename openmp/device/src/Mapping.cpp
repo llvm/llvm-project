@@ -175,6 +175,10 @@ extern "C" {
 [[gnu::noinline]] uint32_t __kmpc_get_warp_size() {
   return mapping::getWarpSize();
 }
+
+[[gnu::noinline]] uint32_t __kmpc_get_max_team_threads() {
+  return mapping::getMaxTeamThreads();
+}
 }
 
 #define _TGT_KERNEL_LANGUAGE(NAME, MAPPER_NAME)                                \

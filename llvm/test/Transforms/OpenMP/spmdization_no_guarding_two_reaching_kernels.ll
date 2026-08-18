@@ -78,10 +78,8 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_spmd_l12(ptr %dyn) #0 {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       is_worker_check:
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads()
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[MAX_TEAM_THREADS]]
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.begin:
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
@@ -155,10 +153,8 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #
 ; CHECK-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK:       is_worker_check:
-; CHECK-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; CHECK-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; CHECK-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; CHECK-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads()
+; CHECK-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[MAX_TEAM_THREADS]]
 ; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK:       worker_state_machine.begin:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
@@ -197,10 +193,8 @@ define weak ptx_kernel void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       is_worker_check:
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads()
+; CHECK-DISABLE-SPMDIZATION-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[MAX_TEAM_THREADS]]
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label [[WORKER_STATE_MACHINE_BEGIN:%.*]], label [[WORKER_STATE_MACHINE_FINISHED:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.begin:
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
