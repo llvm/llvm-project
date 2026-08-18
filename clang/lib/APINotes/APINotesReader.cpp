@@ -1018,21 +1018,9 @@ std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
 std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
     uint32_t ParentContextID, llvm::StringRef Name,
     const FunctionSelector &Selector) {
-  auto GetIdentifier = [this](llvm::StringRef S) { return getIdentifier(S); };
-  if (Selector.Parameters) {
-    if (Selector.Object)
-      return getFunctionKeyImpl(
-          ParentContextID, Name,
-          llvm::ArrayRef<std::string>(*Selector.Parameters), *Selector.Object,
-          GetIdentifier);
-    return getFunctionKeyImpl(ParentContextID, Name,
-                              llvm::ArrayRef<std::string>(*Selector.Parameters),
-                              GetIdentifier);
-  }
-  if (Selector.Object)
-    return getFunctionKeyImpl(ParentContextID, Name, *Selector.Object,
-                              GetIdentifier);
-  return getFunctionKeyImpl(ParentContextID, Name, GetIdentifier);
+  return getFunctionKeyImpl(
+      ParentContextID, Name, Selector,
+      [this](llvm::StringRef S) { return getIdentifier(S); });
 }
 
 std::optional<FunctionTableKey> APINotesReader::Implementation::getFunctionKey(
