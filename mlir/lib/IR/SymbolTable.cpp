@@ -499,12 +499,26 @@ static LogicalResult verifyOpTypeSymbolUses(Operation *op,
         if (verify(argument.getType()).wasInterrupted())
           return failure();
 
-  // Verify types nested within the operation's attributes. Route the attribute
-  // dictionary through the same walker, and thus the same visited memo, as the
-  // type positions above, so a type recurring across positions and attributes
-  // is verified only at its first occurrence.
-  if (walker.walk<WalkOrder::PreOrder>(op->getAttrDictionary()).wasInterrupted())
+  // Verify types nested within the operation's attributes, routed through the
+  // same walker (and thus the same visited memo) as the type positions above.
+  // Read the raw stored attribute dictionary rather than getAttrDictionary():
+  // the latter allocates and uniques a fresh DictionaryAttr for every operation
+  // that keeps its inherent attributes in properties. The raw dictionary
+  // already covers inherent attributes for operations that do not use
+  // properties, and the discardable attributes otherwise; the properties-held
+  // inherent attributes are appended into a stack-local NamedAttrList via
+  // populateInherentAttrs and walked separately -- the same coverage
+  // getAttrDictionary() provides, since it calls the same populateInherentAttrs.
+  if (walker.walk<WalkOrder::PreOrder>(op->getRawDictionaryAttrs())
+          .wasInterrupted())
     return failure();
+  if (op->getPropertiesStorageSize()) {
+    NamedAttrList inherentAttrs;
+    op->getName().populateInherentAttrs(op, inherentAttrs);
+    for (const NamedAttribute &namedAttr : inherentAttrs)
+      if (walker.walk<WalkOrder::PreOrder>(namedAttr.getValue()).wasInterrupted())
+        return failure();
+  }
   return success();
 }
 
