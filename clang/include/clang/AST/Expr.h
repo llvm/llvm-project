@@ -562,8 +562,7 @@ public:
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
   std::optional<llvm::APSInt>
-  getIntegerConstantExpr(const ASTContext &Ctx,
-                         bool AllowRelaxedEval = false) const;
+  getIntegerConstantExpr(const ASTContext &Ctx) const;
   bool isIntegerConstantExpr(const ASTContext &Ctx) const;
 
   /// isCXX98IntegralConstantExpr - Return true if this expression is an
@@ -575,8 +574,8 @@ public:
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
-                           bool AllowRelaxedEval = false) const;
+  bool isCXX11ConstantExpr(const ASTContext &Ctx,
+                           APValue *Result = nullptr) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
   /// might be usable in a constant expression in C++11, if it were marked
@@ -639,10 +638,6 @@ public:
     /// (which may include expensive operations like converting APValue objects
     /// to a string representation).
     SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
-
-    /// Location where we spot ptr to int cast or null subobject while
-    /// evaluating constant expression in MS compatibility mode.
-    SmallVectorImpl<PartialDiagnosticAt> *ExtendedDiag = nullptr;
 
     EvalStatus() = default;
 
