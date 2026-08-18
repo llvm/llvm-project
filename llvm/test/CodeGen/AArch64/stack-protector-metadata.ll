@@ -1,9 +1,13 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin < %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-windows < %s -o - | FileCheck %s --check-prefix=WINDOWS
 
 @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 
 ; CHECK-LABEL: test1:
 ; CHECK-NOT: ___stack_chk_guard
+
+; WINDOWS-LABEL: test1:
+; WINDOWS-NOT: __security_cookie
 
 ; Function Attrs: noinline nounwind optnone
 define void @test1(ptr noundef %msg) #0 {
@@ -22,6 +26,9 @@ entry:
 
 ; CHECK-LABEL: test2:
 ; CHECK: ___stack_chk_guard
+
+; WINDOWS-LABEL: test2:
+; WINDOWS: __security_cookie
 
 ; Function Attrs: noinline nounwind optnone
 define void @test2(ptr noundef %msg) #0 {
