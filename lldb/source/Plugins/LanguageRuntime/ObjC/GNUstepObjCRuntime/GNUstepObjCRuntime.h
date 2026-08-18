@@ -143,6 +143,11 @@ public:
 
   ClassDescriptorSP GetClassDescriptorFromISA(ObjCISA isa) override;
 
+  /// Realizes libobjc2's type encodings, which is what makes the ivar and
+  /// method metadata usable as types. Built on first use and kept, because
+  /// the types it returns are only valid in the AST it created them in.
+  EncodingToTypeSP GetEncodingToType() override;
+
   /// Lazily-built FunctionCaller for a utility function that resolves a
   /// method implementation via libobjc2's
   /// `IMP objc_msg_lookup(id receiver, SEL selector)`, used by the
@@ -242,6 +247,8 @@ protected:
   /// `process handle`/`thread exception` to stop where an exception is
   /// raised rather than where it is caught.
   lldb::BreakpointSP m_objc_exception_bp_sp;
+
+  EncodingToTypeSP m_encoding_to_type_sp;
 };
 
 } // namespace lldb_private

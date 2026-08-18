@@ -8,6 +8,7 @@
 
 #include "GNUstepObjCRuntime.h"
 #include "GNUstepObjCClassDescriptor.h"
+#include "GNUstepObjCTypeEncodingParser.h"
 #include "GNUstepThreadPlanStepThroughObjCTrampoline.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -1162,6 +1163,14 @@ GNUstepObjCRuntime::GetClassDescriptor(ValueObject &in_value) {
       m_tagged_pointer_vendor_up->IsPossibleTaggedPointer(ptr))
     return m_tagged_pointer_vendor_up->GetClassDescriptor(ptr);
   return ObjCLanguageRuntime::GetClassDescriptor(in_value);
+}
+
+ObjCLanguageRuntime::EncodingToTypeSP
+GNUstepObjCRuntime::GetEncodingToType() {
+  if (!m_encoding_to_type_sp)
+    m_encoding_to_type_sp = std::make_shared<GNUstepObjCTypeEncodingParser>(
+        GetTargetRef().GetArchitecture().GetTriple(), this);
+  return m_encoding_to_type_sp;
 }
 
 ObjCLanguageRuntime::ClassDescriptorSP

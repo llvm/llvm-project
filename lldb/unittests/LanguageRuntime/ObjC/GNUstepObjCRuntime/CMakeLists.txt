@@ -1,5 +1,6 @@
 add_lldb_unittest(LanguageRuntimeObjCGNUstepTests
   GNUstepObjCClassDescriptorTest.cpp
+  GNUstepObjCTypeEncodingParserTest.cpp
 
   LINK_COMPONENTS
     Support
@@ -10,6 +11,8 @@ add_lldb_unittest(LanguageRuntimeObjCGNUstepTests
     lldbTarget
     lldbUtility
     lldbPluginGNUstepObjCRuntime
+    lldbPluginExpressionParserClang
+    lldbPluginTypeSystemClang
     lldbPluginPlatformLinux
     lldbPluginPlatformWindows
   )
