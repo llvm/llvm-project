@@ -80,8 +80,11 @@ bool Sinker::allUsersDominatedBy(Operation *op, Region *region) {
          "expected op to be defined outside the region");
   return llvm::all_of(op->getUsers(), [&](Operation *user) {
     // The user is dominated by the region if its containing block is dominated
-    // by the region's entry block.
-    return domInfo.dominates(&region->front(), user->getBlock());
+    // by the region's entry block. Additionally, allow users that are in
+    // descendant regions of the region (e.g., nested loops) since those
+    // should still permit sinking into the outer region.
+    return domInfo.dominates(&region->front(), user->getBlock()) ||
+           region->isAncestor(user->getParentRegion());
   });
 }
 
@@ -91,12 +94,13 @@ void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
          << OpWithFlags(user, OpPrintingFlags().skipRegions());
   for (Value value : user->getOperands()) {
     Operation *op = value.getDefiningOp();
-    // Ignore block arguments and ops that are already inside the region.
-    if (!op || op->getParentRegion() == region)
+    // Ignore block arguments and ops already contained in the target region,
+    // including ops in nested regions. Only consider defs outside the target
+    // region.
+    if (!op || region->isAncestor(op->getParentRegion()))
       continue;
     LDBG() << "Try to sink:\n"
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
-
     // If the op's users are all in the region and it can be moved, then do so.
     if (allUsersDominatedBy(op, region) && shouldMoveIntoRegion(op, region)) {
       moveIntoRegion(op, region);
@@ -108,12 +112,11 @@ void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
 }
 
 void Sinker::sinkRegion(Region *region) {
-  // Initialize the work queue with all the ops in the region.
+  // Initialize the work queue with all the ops in the region, including
+  // nested regions. Seed from all operations so that uses in non-entry and
+  // nested blocks trigger sinking.
   std::vector<Operation *> stack;
-  for (Block &block : *region)
-    // Seed from all block so that uses in non-entry blocks and trigger sinking
-    for (Operation &op : block)
-      stack.push_back(&op);
+  region->walk([&](Operation *op) { stack.push_back(op); });
 
   // Process all the ops depth-first. This ensures that nodes of subgraphs are
   // sunk in the correct order.
