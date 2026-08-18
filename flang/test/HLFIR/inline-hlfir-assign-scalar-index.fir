@@ -30,13 +30,21 @@
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK:   }
 // CHECK: } else {
-// CHECK:   %[[EXPR:.*]] = hlfir.as_expr %{{.*}}
+// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
-// CHECK:     hlfir.apply %[[EXPR]], %{{.*}}
+// CHECK:     hlfir.designate
+// CHECK:     fir.load
+// CHECK:     hlfir.designate %[[TEMP]]#0
+// CHECK:     hlfir.assign %{{.*}} to %{{.*}} temporary_lhs : f32, !fir.ref<f32>
+// CHECK:   }
+// CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:     hlfir.designate %[[TEMP]]#0
+// CHECK:     fir.load
 // CHECK:     hlfir.designate
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK:   }
-// CHECK:   hlfir.destroy %[[EXPR]]
+// CHECK:   fir.freemem %{{.*}}
 // CHECK: }
 
 func.func @_QPcopy_row(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "i"}, %arg3: !fir.ref<i32> {fir.bindc_name = "j"}, %arg4: !fir.ref<i32> {fir.bindc_name = "lo1"}, %arg5: !fir.ref<i32> {fir.bindc_name = "hi1"}, %arg6: !fir.ref<i32> {fir.bindc_name = "lo2"}, %arg7: !fir.ref<i32> {fir.bindc_name = "hi2"}) {

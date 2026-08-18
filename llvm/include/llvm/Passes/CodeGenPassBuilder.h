@@ -194,10 +194,15 @@ public:
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
 
-    if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET)
-      Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None
-                                 ? cl::boolOrDefault::BOU_TRUE
-                                 : cl::boolOrDefault::BOU_FALSE;
+    // An explicit RegAlloc choice implies its pipeline: only the fast
+    // allocator uses the unoptimized one.
+    if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET) {
+      bool Optimized = Opt.RegAlloc > RegAllocType::Default
+                           ? Opt.RegAlloc != RegAllocType::Fast
+                           : getOptLevel() != CodeGenOptLevel::None;
+      Opt.OptimizeRegAlloc = Optimized ? cl::boolOrDefault::BOU_TRUE
+                                       : cl::boolOrDefault::BOU_FALSE;
+    }
   }
 
   Error buildPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
@@ -381,9 +386,7 @@ protected:
 
   /// addPreISel - This method should add any "last minute" LLVM->LLVM
   /// passes (which are run just before instruction selector).
-  void addPreISel(PassManagerWrapper &PMW) const {
-    llvm_unreachable("addPreISel is not overridden");
-  }
+  void addPreISel(PassManagerWrapper &PMW) const {}
 
   /// This method should install an IR translator pass, which converts from
   /// LLVM code to machine instructions with possibly generic opcodes.
@@ -517,9 +520,10 @@ protected:
   void addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
 
   /// Add core register allocator passes which do the actual register assignment
-  /// and rewriting.
-  Error addRegAssignmentFast(PassManagerWrapper &PMW) const;
-  Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
+  /// and rewriting. addRegAssignAndRewriteOptimized should return true if any
+  /// passes were added.
+  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) const;
+  Expected<bool> addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) const;
 
   /// Allow the target to disable a specific pass by default.
   /// Backend can declare unwanted passes in constructor.
@@ -620,11 +624,15 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (auto Err = derived().addMachinePasses(PMW))
     return std::move(Err);
 
-  if (!Opt.DisableVerify)
+  if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
     addMachineFunctionPass(MachineVerifierPass(), PMW);
 
+  // We add AsmPrinter regardless if we are emitting MIR or Assembly as the
+  // final output so that -stop-before=<target>-asm-printer works. When printing
+  // MIR as the final output, we never end up running AsmPrinter.
+  derived().addAsmPrinter(PMW);
+
   if (PrintAsm) {
-    derived().addAsmPrinter(PMW);
     flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
     derived().addAsmPrinterEnd(PMW);
   } else {
@@ -1185,7 +1193,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
 }
 
 template <typename Derived, typename TargetMachineT>
-Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentFast(
+Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignAndRewriteFast(
     PassManagerWrapper &PMW) const {
   // TODO: Ensure allocator is default or fast.
   addRegAllocPass(PMW, false);
@@ -1193,7 +1201,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentFast(
 }
 
 template <typename Derived, typename TargetMachineT>
-Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentOptimized(
+Expected<bool>
+CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignAndRewriteOptimized(
     PassManagerWrapper &PMW) const {
   // Add the selected register allocation pass.
   addRegAllocPass(PMW, true);
@@ -1203,13 +1212,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentOptimized(
 
   // Finally rewrite virtual registers.
   addMachineFunctionPass(VirtRegRewriterPass(), PMW);
-  // Perform stack slot coloring and post-ra machine LICM.
-  //
-  // FIXME: Re-enable coloring with register when it's capable of adding
-  // kill markers.
-  addMachineFunctionPass(StackSlotColoringPass(), PMW);
 
-  return Error::success();
+  return true;
 }
 
 /// Add the minimum set of target-independent passes that are required for
@@ -1219,7 +1223,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addFastRegAlloc(
     PassManagerWrapper &PMW) const {
   addMachineFunctionPass(PHIEliminationPass(), PMW);
   addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
-  return derived().addRegAssignmentFast(PMW);
+  return derived().addRegAssignAndRewriteFast(PMW);
 }
 
 /// Add standard target-independent passes that are tightly coupled with
@@ -1269,8 +1273,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   // PreRA instruction scheduling.
   addMachineFunctionPass(MachineSchedulerPass(&TM), PMW);
 
-  if (auto E = derived().addRegAssignmentOptimized(PMW))
-    return std::move(E);
+  Expected<bool> AddedPasses = derived().addRegAssignAndRewriteOptimized(PMW);
+  if (!AddedPasses)
+    return AddedPasses.takeError();
+  if (!AddedPasses.get())
+    return Error::success();
 
   addMachineFunctionPass(StackSlotColoringPass(), PMW);
 

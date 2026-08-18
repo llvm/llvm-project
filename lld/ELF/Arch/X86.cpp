@@ -37,8 +37,9 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override;
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override;
   void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
 
 private:
@@ -176,8 +177,9 @@ void X86::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 template <class ELFT, class RelTy>
-void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                          unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
@@ -291,8 +293,8 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-void X86::scanSection(InputSectionBase &sec) {
-  elf::scanSection1<X86, ELF32LE>(*this, sec);
+void X86::scanSection(InputSectionBase &sec, unsigned shard) {
+  elf::scanSection1<X86, ELF32LE>(*this, sec, shard);
 }
 
 int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {

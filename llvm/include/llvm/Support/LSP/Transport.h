@@ -172,19 +172,9 @@ public:
                                  StringRef PayloadName, StringRef PayloadKind) {
     T Result;
     llvm::json::Path::Root Root;
-    if (fromJSON(Raw, Result, Root))
-      return std::move(Result);
-
-    // Dump the relevant parts of the broken message.
-    std::string Context;
-    llvm::raw_string_ostream Os(Context);
-    Root.printErrorContext(Raw, Os);
-
-    // Report the error (e.g. to the client).
-    return llvm::make_error<LSPError>(
-        llvm::formatv("failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
-                      fmt_consume(Root.getError())),
-        ErrorCode::InvalidParams);
+    if (!fromJSON(Raw, Result, Root))
+      return handleParseError(Raw, PayloadName, PayloadKind, Root);
+    return std::move(Result);
   }
 
   template <typename Param, typename Result, typename ThisT>
@@ -266,6 +256,10 @@ public:
   }
 
 private:
+  LLVM_ABI static llvm::Error
+  handleParseError(const llvm::json::Value &Raw, StringRef PayloadName,
+                   StringRef PayloadKind, const llvm::json::Path::Root &Root);
+
   template <typename HandlerT>
   using HandlerMap = llvm::StringMap<llvm::unique_function<HandlerT>>;
 

@@ -28,7 +28,7 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   vld1_bf16(0); // expected-error {{'__builtin_neon_vld1_v' needs target feature neon}}
   vcvt_f32_bf16(v4bf16); // expected-error {{always_inline function 'vcvt_f32_bf16' requires target feature 'neon'}}
   vcvt_bf16_f32(v4f32); // expected-error {{always_inline function 'vcvt_bf16_f32' requires target feature 'neon'}}
-  vmmlaq_f16_f16(v8f16, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f16_f16' requires target feature 'neon'}}
+  vmmlaq_f16(v8f16, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f16' requires target feature 'neon'}}
   vmmlaq_f32_f16(v4f32, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f32_f16' requires target feature 'neon'}}
   vmull_p64(poly64, poly64);  // expected-error {{always_inline function 'vmull_p64' requires target feature 'neon'}}
   vmull_high_p64(poly64x2, poly64x2);  // expected-error {{always_inline function 'vmull_high_p64' requires target feature 'neon'}}

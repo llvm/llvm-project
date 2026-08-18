@@ -268,8 +268,11 @@ namespace ExplicitLambdaInstancePointer {
   };
   constexpr auto b = [](this K) { return 1; }; // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}} \
                                                // all-error {{unknown type name 'K'}}
-  constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}}
-  static_assert(fp(1) == 1, ""); // expected-error {{not an integral constant expression}}
+  constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{declared here}}
+  static_assert(fp(1) == 1, ""); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{initializer of 'fp' is not a constant expression}}
 }
 
 namespace TwosComplementShifts {
@@ -647,6 +650,19 @@ namespace DynamicCast {
 }
 
 #if __cplusplus >= 202302L
+namespace BrokenContinueLabel {
+  constexpr int test() {
+  bar: {} // all-note {{here}}
+  bar: // all-error {{redefinition of label 'bar'}}
+    for (;;) {
+      continue bar; // all-error {{only supported in C2y}}
+    }
+    return 0;
+  }
+
+  static_assert(test(), ""); // all-error {{not an integral constant expression}}
+}
+
 namespace BrokenShuffleVector {
   typedef float __m128 __attribute__((__vector_size__(16)));
 
@@ -657,5 +673,33 @@ namespace BrokenShuffleVector {
 
   constexpr __m128 kf1{1.0f, 2.0f, 3.0f, 4.0f};
   constexpr __m128 v_mm_cvtps_pd = _mm_cvtps_pd(kf1); // all-error {{must be initialized by a constant expression}}
+}
+
+namespace BrokenExplicitInstanceParam {
+  auto b = [](this C) { return 1; }; // all-error {{unknown type name 'C'}}
+  static_assert( (&decltype(b)::operator())(1) == 1); // expected-error {{not an integral constant expression}}
+}
+
+namespace InvalidRecord {
+  struct S {
+    S();
+  };
+
+  template <typename T> void F(S &, T...);
+
+  struct SS {
+    template <typename T> SS(T &val) { __builtin_dump_struct(&val, F, s); }
+    S s;
+  };
+
+  template <typename T> S foo(const T &t) { return SS(t).s; }
+
+  struct A {
+    S s;
+  };
+
+  struct B : A; // all-error {{expected '{' after base class list}}
+
+  static_assert(foo(B{1, 2, 3}), "");
 }
 #endif

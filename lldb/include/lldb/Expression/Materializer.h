@@ -15,11 +15,24 @@
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
 namespace lldb_private {
 
+/// Materializer packs the variables an expression reads and writes into a
+/// single argument struct, and unpacks them again afterward.
+///
+/// Expressions can't have real addresses for the variables they touch baked
+/// into their IR, since some of those addresses (e.g. frame-relative locals)
+/// aren't known until the moment of execution. IRForTarget rewrites such
+/// accesses into reads from one struct instead, registering an Entity per
+/// variable via AddVariable/AddPersistentVariable/AddResultVariable.
+/// Materialize() lays out and populates that struct against a target
+/// IRMemoryMap, independent of whether the expression is later interpreted or
+/// JIT'd and run; the returned Dematerializer reverses the process afterward,
+/// copying side effects back out and extracting the result.
 class Materializer {
 public:
   Materializer() = default;

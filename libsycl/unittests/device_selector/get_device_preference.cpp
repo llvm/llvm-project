@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <common/device_images.hpp>
+#include <common/scoped_binary_registration.hpp>
 #include <common/unittests_helper.hpp>
 
 #include <detail/device_impl.hpp>
-#include <detail/program_manager.hpp>
-
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/device_selector.hpp>
 #include <sycl/sycl.hpp>
@@ -23,23 +21,6 @@ using namespace sycl;
 using namespace ::testing;
 
 namespace {
-
-class ScopedBinaryRegistration {
-public:
-  explicit ScopedBinaryRegistration(llvm::ArrayRef<llvm::StringRef> KernelNames)
-      : MBinary(sycl::unittest::createSYCLDeviceBinary(KernelNames)) {
-    sycl::detail::ProgramAndKernelManager::getInstance().registerFatBin(
-        MBinary.data(), MBinary.size());
-  }
-
-  ~ScopedBinaryRegistration() {
-    sycl::detail::ProgramAndKernelManager::getInstance().unregisterFatBin(
-        MBinary.data(), MBinary.size());
-  }
-
-private:
-  llvm::SmallString<0> MBinary;
-};
 
 class DeviceSelectorScoreTest : public ::testing::Test {
 protected:
@@ -138,7 +119,7 @@ TEST_F(DeviceSelectorScoreTest, TwoGpusOneCompatibleImage) {
       });
 
   std::array<llvm::StringRef, 1> KernelNames = {"kernel"};
-  ScopedBinaryRegistration Registration{KernelNames};
+  sycl::unittests::ScopedBinaryRegistration Registration{KernelNames};
 
   auto Devices = sycl::device::get_devices();
   ASSERT_EQ(Devices.size(), 2u);

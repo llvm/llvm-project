@@ -34,7 +34,8 @@ struct SlotMapping;
 class SMDiagnostic;
 class SourceMgr;
 class StringRef;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetSubtargetInfo;
 
 struct VRegInfo {

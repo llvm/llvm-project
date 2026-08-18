@@ -98,11 +98,17 @@ math_test(
 math_test(
     name = "ceill",
     hdrs = ["CeilTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
     name = "ceilf128",
     hdrs = ["CeilTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -471,6 +477,9 @@ math_test(
 math_test(
     name = "floorf128",
     hdrs = ["FloorTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1695,6 +1704,13 @@ math_test(name = "exp2f16")
 math_test(name = "exp2m1f16")
 
 math_test(name = "expf16")
+
+math_test(
+    name = "expbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
 
 math_test(name = "expm1f16")
 

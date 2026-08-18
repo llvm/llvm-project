@@ -28,17 +28,12 @@
 #include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
-
-static llvm::cl::opt<bool> useAccReductionCombine(
-    "openacc-use-reduction-combine",
-    llvm::cl::desc("Whether to generate acc.reduction_combine. Does not "
-                   "control reduction for MIN/MAX and logical reductions."),
-    llvm::cl::init(false));
 
 static llvm::cl::opt<bool> useAccReductionCombineAll(
     "openacc-use-reduction-combine-all",
@@ -633,9 +628,10 @@ genDesignateWithTriplets(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::SequenceType::Shape resultTypeShape;
   bool shapeIsConstant = true;
   for (mlir::Value extent : extents) {
-    if (std::optional<std::int64_t> cst_extent =
-            fir::getIntIfConstant(extent)) {
-      resultTypeShape.push_back(*cst_extent);
+    std::optional<llvm::APInt> cstExtent = fir::getIntIfConstant(extent);
+    if (std::optional<std::int64_t> cstExtent64 =
+            cstExtent ? cstExtent->trySExtValue() : std::nullopt) {
+      resultTypeShape.push_back(*cstExtent64);
     } else {
       resultTypeShape.push_back(fir::SequenceType::getUnknownExtent());
       shapeIsConstant = false;
@@ -827,6 +823,15 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   hlfir::genLengthParameters(loc, builder, privatizedVar, typeParams);
   mlir::Type baseType = privatizedVar.getElementOrSequenceType();
   // Step2: Create a temporary allocation for the privatized part.
+
+  // Create a `var_name` attribute with a placeholder value to be
+  // attached to the allocation. ACCRecipeMaterialization will then
+  // propagate the actual variable name to all ops that have this
+  // placeholder while materializing the recipe
+  mlir::NamedAttribute placeholderAttr = builder.getNamedAttr(
+      mlir::acc::getVarNameAttrName(),
+      mlir::acc::VarNameAttr::get(builder.getContext(),
+                                  mlir::acc::getVarNamePlaceholder()));
   mlir::Value alloc;
   if (fir::hasDynamicSize(baseType) ||
       (isPointerOrAllocatable && bounds.empty())) {
@@ -838,11 +843,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     // of POINTER/ALLOCATABLE can use alloca since only part of the data is
     // privatized (it makes no sense to deallocate them).
     alloc = builder.createHeapTemporary(loc, baseType, varName, tempExtents,
-                                        typeParams);
+                                        typeParams, {placeholderAttr});
     needsDestroy = true;
   } else {
     alloc = builder.createTemporary(loc, baseType, varName, tempExtents,
-                                    typeParams);
+                                    typeParams, {placeholderAttr});
   }
   // Step3: Assign the initial value to the privatized part if any.
   if (initVal) {
@@ -1150,8 +1155,6 @@ static bool useAccReductionCombineOp(mlir::Type elementType,
                                      mlir::acc::ReductionOperator op) {
   if (useAccReductionCombineAll)
     return true;
-  if (!useAccReductionCombine)
-    return false;
   // LOGICAL operators do not have mlir operators and requires FIR specific
   // logic to interpret the TRUE and FALSE values from the storage (implemented
   // in fir.convert to i1).

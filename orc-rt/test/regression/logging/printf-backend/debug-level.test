@@ -1,0 +1,13 @@
+# Check the debug level on a build whose ceiling compiles it in: it is emitted
+# when explicitly requested, and suppressed by a higher runtime threshold.
+#
+# REQUIRES: orc-rt-log-level-debug
+# RUN: env ORC_RT_LOG=debug orc-rt-log-check 2>&1 | FileCheck %s
+# RUN: env ORC_RT_LOG=info orc-rt-log-check 2>&1 | FileCheck %s --check-prefix=NARROWED
+
+# CHECK: [orc-rt:General:DEBUG] debug message
+
+# ORC_RT_LOG=info narrows to info and above, so debug must not appear (but info,
+# checked here to keep the assertion non-vacuous, must).
+# NARROWED: [orc-rt:General:INFO] info message
+# NARROWED-NOT: [orc-rt:General:DEBUG] debug message

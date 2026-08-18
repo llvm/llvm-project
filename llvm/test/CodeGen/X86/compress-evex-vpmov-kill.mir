@@ -35,3 +35,33 @@ body:             |
     $eax = KMOVDrk killed $k0
     RET64 $eax
 ...
+
+---
+name:            blendv_live_mask_vec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $xmm0, $xmm1, $xmm2
+    ; $xmm0 is used after the fold, so it must not be killed.
+    ; CHECK-LABEL: name: blendv_live_mask_vec
+    ; CHECK:     $xmm1 = VBLENDVPSrrr killed $xmm1, killed $xmm2, $xmm0
+    ; CHECK-NOT: killed $xmm0
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $xmm1 = VMOVAPSZ128rrk killed $xmm1, killed $k1, killed $xmm2
+    $xmm3 = VMOVAPSrr $xmm0
+    RET64 implicit killed $xmm1, implicit killed $xmm3
+...
+
+---
+name:            blendv_dead_mask_vec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $xmm0, $xmm1, $xmm2
+    ; $xmm0 is dead after the fold, so the kill is preserved.
+    ; CHECK-LABEL: name: blendv_dead_mask_vec
+    ; CHECK:     $xmm1 = VBLENDVPSrrr killed $xmm1, killed $xmm2, killed $xmm0
+    $k1 = VPMOVD2MZ128kr killed $xmm0
+    $xmm1 = VMOVAPSZ128rrk killed $xmm1, killed $k1, killed $xmm2
+    RET64 implicit killed $xmm1
+...

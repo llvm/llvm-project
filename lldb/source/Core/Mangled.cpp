@@ -403,7 +403,7 @@ void Mangled::DumpDebug(Stream *s) const {
   s->Printf("%*p: Mangled mangled = ", static_cast<int>(sizeof(void *) * 2),
             static_cast<const void *>(this));
   m_mangled.DumpDebug(s);
-  s->Printf(", demangled = ");
+  s->PutCString(", demangled = ");
   m_demangled.DumpDebug(s);
 }
 

@@ -197,17 +197,16 @@ func.func @broadcast_vec2d_from_vec0d(%arg0: vector<f32>) -> vector<3x2xf32> {
 // CHECK-LABEL: @broadcast_vec2d_from_vec0d(
 // CHECK-SAME:  %[[A:.*]]: vector<f32>)
 //       CHECK: %[[T0:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<f32> to vector<1xf32>
-//       CHECK: %[[T1:.*]] = ub.poison : vector<3x2xf32>
-//       CHECK: %[[T2:.*]] = builtin.unrealized_conversion_cast %[[T1]] : vector<3x2xf32> to !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[T4:.*]] = llvm.mlir.constant(0 : i64) : i64
-//       CHECK: %[[T5:.*]] = llvm.extractelement %[[T0]][%[[T4]] : i64] : vector<1xf32>
-//       CHECK: %[[T6Insert:.*]] = llvm.insertelement %[[T5]]
-//       CHECK: %[[T6:.*]] = llvm.shufflevector %[[T6Insert]]
-//       CHECK: %[[T7:.*]] = llvm.insertvalue %[[T6]], %[[T2]][0] : !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[T8:.*]] = llvm.insertvalue %[[T6]], %[[T7]][1] : !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[T9:.*]] = llvm.insertvalue %[[T6]], %[[T8]][2] : !llvm.array<3 x vector<2xf32>>
-//       CHECK: %[[T10:.*]] = builtin.unrealized_conversion_cast %[[T9]] : !llvm.array<3 x vector<2xf32>> to vector<3x2xf32>
-//       CHECK: return %[[T10]] : vector<3x2xf32>
+//       CHECK: %[[T1:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK: %[[T2:.*]] = llvm.extractelement %[[T0]][%[[T1]] : i64] : vector<1xf32>
+//       CHECK: %[[T3:.*]] = llvm.mlir.poison : !llvm.array<3 x vector<2xf32>>
+//       CHECK: %[[T4Insert:.*]] = llvm.insertelement %[[T2]]
+//       CHECK: %[[T4:.*]] = llvm.shufflevector %[[T4Insert]]
+//       CHECK: %[[T5:.*]] = llvm.insertvalue %[[T4]], %[[T3]][0] : !llvm.array<3 x vector<2xf32>>
+//       CHECK: %[[T6:.*]] = llvm.insertvalue %[[T4]], %[[T5]][1] : !llvm.array<3 x vector<2xf32>>
+//       CHECK: %[[T7:.*]] = llvm.insertvalue %[[T4]], %[[T6]][2] : !llvm.array<3 x vector<2xf32>>
+//       CHECK: %[[T8:.*]] = builtin.unrealized_conversion_cast %[[T7]] : !llvm.array<3 x vector<2xf32>> to vector<3x2xf32>
+//       CHECK: return %[[T8]] : vector<3x2xf32>
 
 // -----
 
@@ -1499,7 +1498,7 @@ func.func @constant_mask_2d() -> vector<4x4xi1> {
 }
 
 // CHECK-LABEL: func @constant_mask_2d
-// CHECK: %[[VAL_0:.*]] = arith.constant 
+// CHECK: %[[VAL_0:.*]] = arith.constant
 // CHECK-SAME{LITERAL}: dense<[[true, true, false, false], [true, true, false, false], [false, false, false, false], [false, false, false, false]]> : vector<4x4xi1>
 // CHECK: return %[[VAL_0]] : vector<4x4xi1>
 
@@ -1738,24 +1737,6 @@ func.func @deinterleave_2d_scalable(%arg: vector<2x[8]xf32>) -> (vector<2x[4]xf3
     %0, %1 = vector.deinterleave %arg : vector<2x[8]xf32> -> vector<2x[4]xf32>
     return %0, %1 : vector<2x[4]xf32>, vector<2x[4]xf32>
 }
-
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// vector.step
-//===----------------------------------------------------------------------===//
-
-// TODO: Investigate why this wouldn't lower with --convert-to-llvm="filter-dialects=vector"
-
-// CHECK-LABEL: @step
-// CHECK: %[[CST:.+]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
-// CHECK: return %[[CST]] : vector<4xindex>
-func.func @step() -> vector<4xindex> {
-  %0 = vector.step : vector<4xindex>
-  return %0 : vector<4xindex>
-}
-
 
 // -----
 

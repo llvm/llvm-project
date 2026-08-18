@@ -36,7 +36,7 @@ subroutine test_rhs_call()
   !$omp end parallel do
 end subroutine
 
-!CHECK: omp.declare_reduction @_QQFtest_rhs_calladd_t :
+!CHECK: omp.declare_reduction @_QQFtest_rhs_calladd_t_byref_rec__QMmTt :
 !CHECK-SAME: alloc {
 !CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.type<_QMmTt{member:i32}>
 !CHECK:   omp.yield(%[[ALLOCA]] :

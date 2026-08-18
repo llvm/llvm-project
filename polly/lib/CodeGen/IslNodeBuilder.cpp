@@ -28,7 +28,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -74,6 +73,9 @@
 
 using namespace llvm;
 using namespace polly;
+
+// Declared in LoopGenerators.cpp
+extern llvm::cl::opt<bool> PollyVectorizeMetadata;
 
 #define DEBUG_TYPE "polly-codegen"
 
@@ -434,6 +436,55 @@ static bool IsLoopVectorizerDisabled(isl::ast_node_for Node) {
   return false;
 }
 
+/// Returns true if the loop has a dist=1 dependence involving FP operations
+/// (array-carried RAW/WAW or scalar FP reduction). In that case we omit the
+/// vectorize.enable annotation and let the Loop Vectorizer decide.
+static bool hasLoopCarriedDependence(isl::ast_node_for For, const Scop &S) {
+  isl::pw_aff PwaDist = IslAstInfo::getMinimalDependenceDistance(For);
+  if (PwaDist.is_null())
+    return false;
+
+  isl::set Dist = isl::manage(isl_pw_aff_domain(PwaDist.copy()));
+  isl::pw_aff PwaOne = isl::pw_aff(Dist, isl::val::one(S.getIslCtx()));
+  if (isl_pw_aff_is_equal(PwaDist.get(), PwaOne.get()) != isl_bool_true)
+    return false;
+
+  // dist=1: suppress forced vectorization if the body has FP operations.
+  for (isl::set StmtSet :
+       IslAstInfo::getSchedule(For).domain().get_set_list()) {
+    auto *Stmt = static_cast<ScopStmt *>(StmtSet.get_tuple_id().get_user());
+    for (Instruction *Inst : Stmt->getInstructions()) {
+      if (Inst->getType()->isFloatingPointTy() ||
+          (Inst->getNumOperands() > 0 &&
+           Inst->getOperand(0)->getType()->isFloatingPointTy()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+/// Sign-extend or truncate V to Ty.
+///
+/// Returns V unchanged if it already has type Ty, sign-extends it if
+/// Ty is wider, or truncates it if Ty is narrower.
+static Value *castToType(IRBuilderBase &Builder, Value *V, Type *Ty) {
+  if (V->getType() == Ty)
+    return V;
+  return Builder.CreateSExtOrTrunc(V, Ty);
+}
+
+/// Returns true when V is known to fit in IntPtrTy without data loss.
+/// Accepts i64 constants such as 0 and 1 that ISL materialises as i64 even on
+/// 32-bit targets.
+static bool fitsInTy(Value *V, IntegerType *IntTy) {
+  if (V->getType()->getIntegerBitWidth() <= IntTy->getBitWidth())
+    return true;
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getValue().isSignedIntN(IntTy->getBitWidth());
+  return false;
+}
+
 void IslNodeBuilder::createForSequential(isl::ast_node_for For,
                                          bool MarkParallel) {
   Value *ValueLB, *ValueUB, *ValueInc;
@@ -467,20 +518,44 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
   MaxType = ExprBuilder.getWidestType(MaxType, ValueUB->getType());
   MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
 
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueUB->getType())
-    ValueUB = Builder.CreateSExt(ValueUB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
+  // Narrow the IV type to pointer size when all three bounds are known to fit.
+  // On 32-bit targets (e.g. Hexagon) this avoids i64 IVs and the truncations
+  // they cause in loop bodies. This also allows Hexagon to represent loops as
+  // Hardware loops. ISL materializes constants (e.g. LB=0, Inc=1)
+  // as i64 even when they fit in i32, so we accept those via isSignedIntN.
+  // Non-constant variables with a type wider than PtrBits are left unchanged
+  // to avoid an unsafe truncation.
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
+      fitsInTy(ValueLB, IntPtrTy) && fitsInTy(ValueUB, IntPtrTy) &&
+      fitsInTy(ValueInc, IntPtrTy))
+    MaxType = IntPtrTy;
+
+  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+  ValueLB = castToType(Builder, ValueLB, MaxType);
+  ValueUB = castToType(Builder, ValueUB, MaxType);
+  ValueInc = castToType(Builder, ValueInc, MaxType);
 
   // If we can show that LB <Predicate> UB holds at least once, we can
   // omit the GuardBB in front of the loop.
   bool UseGuardBB = !GenSE->isKnownPredicate(Predicate, GenSE->getSCEV(ValueLB),
                                              GenSE->getSCEV(ValueUB));
+
+  // FIXME: This is a workaround for
+  // https://github.com/llvm/llvm-project/issues/198726.
+  // llvm.loop.vectorize.enable=true has an additional property beyond
+  // requesting vectorization — it implicitly allows FP operation reordering.
+  // This is a limitation of the metadata format: there is no way to separate
+  // the request for vectorization from the request for reassociating FP ops.
+  // Once LoopVectorize is fixed to not reorder FP ops without explicit
+  // permission, this workaround can be removed.
+  // For now, skip vectorize.enable for dist=1 FP loops to avoid correctness
+  // failures from FP reassociation.
+  bool SkipVectorizeEnableMetadata = hasLoopCarriedDependence(For, S);
+
   IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, *GenLI, *GenDT,
                   ExitBlock, Predicate, &Annotator, MarkParallel, UseGuardBB,
-                  LoopVectorizerDisabled);
+                  LoopVectorizerDisabled, SkipVectorizeEnableMetadata);
   IDToValue[IteratorID.get()] = IV;
 
   create(Body.release());
@@ -534,12 +609,22 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   MaxType = ExprBuilder.getWidestType(MaxType, ValueUB->getType());
   MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
 
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueUB->getType())
-    ValueUB = Builder.CreateSExt(ValueUB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
+  // Narrow the IV type to pointer size when all three bounds are known to fit.
+  // On 32-bit targets (e.g. Hexagon) this avoids i64 IVs and the truncations
+  // they cause in loop bodies. ISL materializes constants (e.g. LB=0, Inc=1)
+  // as i64 even when they fit in i32, so we accept those via isSignedIntN.
+  // Non-constant variables with a type wider than PtrBits are left unchanged
+  // to avoid an unsafe truncation.
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
+      fitsInTy(ValueLB, IntPtrTy) && fitsInTy(ValueUB, IntPtrTy) &&
+      fitsInTy(ValueInc, IntPtrTy))
+    MaxType = IntPtrTy;
+
+  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+  ValueLB = castToType(Builder, ValueLB, MaxType);
+  ValueUB = castToType(Builder, ValueUB, MaxType);
+  ValueInc = castToType(Builder, ValueInc, MaxType);
 
   BasicBlock::iterator LoopBody;
 
@@ -803,9 +888,17 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
                                      Stmt->getParent()->getContext().release());
       SchedDom = isl_set_intersect_params(
           SchedDom, Stmt->getParent()->getContext().release());
-      assert(isl_set_is_subset(SchedDom, AccDom) &&
+      // Restrict to defined behavior context to match DeLICM's contract:
+      // new read accesses are only required to cover the defined-behavior
+      // subset of the domain.
+      auto *DefinedBehavior =
+          Stmt->getParent()->getBestKnownDefinedBehaviorContext().release();
+      SchedDom =
+          isl_set_intersect_params(SchedDom, isl_set_copy(DefinedBehavior));
+      Dom = isl_set_intersect_params(Dom, DefinedBehavior);
+      assert(isl_set_is_subset(SchedDom, AccDom) != isl_bool_false &&
              "Access relation not defined on full schedule domain");
-      assert(isl_set_is_subset(Dom, AccDom) &&
+      assert(isl_set_is_subset(Dom, AccDom) != isl_bool_false &&
              "Access relation not defined on full domain");
       isl_set_free(AccDom);
       isl_set_free(SchedDom);

@@ -15,8 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
@@ -313,7 +312,10 @@ protected:
       auto constDim = fir::getIntIfConstant(getDim());
       if (!constDim)
         return rewriter.notifyMatchFailure(op, "Nonconstant DIM");
-      dimVal = *constDim;
+      std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+      if (!constDim64)
+        return rewriter.notifyMatchFailure(op, "DIM does not fit in int64_t");
+      dimVal = *constDim64;
 
       if ((dimVal <= 0 || dimVal > getSourceRank()))
         return rewriter.notifyMatchFailure(op,
@@ -1437,7 +1439,11 @@ public:
         if (!constDim)
           return rewriter.notifyMatchFailure(
               op, "Nonconstant DIM for CSHIFT/EOSHIFT");
-        dimVal = *constDim;
+        std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+        if (!constDim64)
+          return rewriter.notifyMatchFailure(
+              op, "DIM does not fit in int64_t for CSHIFT/EOSHIFT");
+        dimVal = *constDim64;
       }
 
     if (dimVal <= 0 || dimVal > arrayRank)
@@ -2507,7 +2513,7 @@ public:
     std::optional<bool> isBack;
     if (back) {
       if (auto backCst = fir::getIntIfConstant(back))
-        isBack = *backCst != 0;
+        isBack = !backCst->isZero();
     } else {
       isBack = false;
     }
@@ -3063,6 +3069,71 @@ private:
   }
 };
 
+static std::optional<bool> getLogicalConstant(mlir::Value value) {
+  if (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
+    value = convertOp.getValue();
+  if (auto cst = fir::getIntIfConstant(value))
+    return *cst != 0;
+  return std::nullopt;
+}
+
+class PackAsReshapeConversion : public mlir::OpRewritePattern<hlfir::PackOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::PackOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::PackOp pack,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (pack.getVector())
+      return rewriter.notifyMatchFailure(pack, "PACK with VECTOR");
+    hlfir::Entity mask{pack.getMask()};
+    if (mask.getRank() != 0)
+      return rewriter.notifyMatchFailure(pack, "non-scalar mask");
+    if (!getLogicalConstant(pack.getMask()).value_or(false))
+      return rewriter.notifyMatchFailure(pack, "mask is not .TRUE.");
+    hlfir::Entity array{pack.getArray()};
+    if (!fir::isa_trivial(array.getFortranElementType()) ||
+        array.isPolymorphic())
+      return rewriter.notifyMatchFailure(pack, "unsupported array type");
+
+    mlir::Location loc = pack.getLoc();
+    fir::FirOpBuilder builder{rewriter, pack.getOperation()};
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nuw);
+
+    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayExtents =
+        hlfir::genExtentsVector(loc, builder, array);
+    mlir::Type indexType = builder.getIndexType();
+    mlir::Value totalSize = builder.createIntegerConstant(loc, indexType, 1);
+    for (mlir::Value extent : arrayExtents)
+      totalSize = mlir::arith::MulIOp::create(
+          builder, loc, totalSize,
+          builder.createConvert(loc, indexType, extent));
+
+    mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
+    mlir::Value unitShape = fir::ShapeOp::create(builder, loc, one);
+    mlir::Type shapeExprType =
+        hlfir::ExprType::get(builder.getContext(), {1}, indexType,
+                             /*polymorphic=*/false);
+
+    auto genShapeKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                              mlir::ValueRange) -> hlfir::Entity {
+      return hlfir::Entity{totalSize};
+    };
+    mlir::Value shapeExpr = hlfir::genElementalOp(
+        loc, builder, indexType, unitShape, /*typeParams=*/{}, genShapeKernel,
+        /*isUnordered=*/true,
+        /*polymorphicMold=*/mlir::Value{}, shapeExprType);
+
+    auto reshape = hlfir::ReshapeOp::create(
+        builder, loc, pack.getType(), pack.getArray(), shapeExpr,
+        /*pad=*/mlir::Value{}, /*order=*/mlir::Value{});
+    rewriter.replaceOp(pack, reshape);
+    rewriter.setInsertionPointAfter(reshape);
+    hlfir::DestroyOp::create(rewriter, loc, shapeExpr);
+    return mlir::success();
+  }
+};
+
 class ReshapeAsElementalConversion
     : public mlir::OpRewritePattern<hlfir::ReshapeOp> {
 public:
@@ -3328,6 +3399,7 @@ public:
       patterns.insert<MatmulConversion<hlfir::MatmulOp>>(context);
 
     patterns.insert<DotProductConversion>(context);
+    patterns.insert<PackAsReshapeConversion>(context);
     patterns.insert<ReshapeAsElementalConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(

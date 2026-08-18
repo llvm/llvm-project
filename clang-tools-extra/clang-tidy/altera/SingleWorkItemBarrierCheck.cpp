@@ -54,7 +54,7 @@ void SingleWorkItemBarrierCheck::check(const MatchFinder::MatchResult &Result) {
     bool IsNDRange = false;
     if (MatchedDecl->hasAttr<ReqdWorkGroupSizeAttr>()) {
       const auto *Attribute = MatchedDecl->getAttr<ReqdWorkGroupSizeAttr>();
-      auto Eval = [&](Expr *E) {
+      const auto Eval = [&](Expr *E) {
         return E->EvaluateKnownConstInt(MatchedDecl->getASTContext())
             .getExtValue();
       };

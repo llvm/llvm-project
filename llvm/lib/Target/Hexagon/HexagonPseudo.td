@@ -335,6 +335,12 @@ let Defs = [R29], hasSideEffects = 1 in
 def PS_alloca: Pseudo <(outs IntRegs:$Rd),
                        (ins IntRegs:$Rs, u32_0Imm:$A), "", []>;
 
+// Probed stack allocation pseudo. Expanded in inlineStackProbe() into a
+// compare-and-branch loop that touches each page.
+let Defs = [R29, P0], Uses = [R29], hasSideEffects = 1, mayStore = 1,
+    isCodeGenOnly = 1 in
+def PS_probed_stackalloc : Pseudo<(outs), (ins IntRegs:$target), "", []>;
+
 // Load predicate.
 let isExtendable = 1, opExtendable = 2, isExtentSigned = 1, opExtentBits = 13,
     isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
@@ -626,8 +632,10 @@ def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
 // misaligned load faults.
 // Defs: R6/R7 default scratch (R8 fallback if AddrReg conflicts), P0 for
 // compare, D13 for the crash load.
+// Size is the worst case: two extenders in the load packet, an uncompounded
+// compare/jump, and the extended crash load.
 let hasSideEffects = 1, mayLoad = 1, isPseudo = 1, isCodeGenOnly = 1,
-    Defs = [R6, R7, R8, P0, D13], Size = 28 in
+    Defs = [R6, R7, R8, P0, D13], Size = 32 in
 def KCFI_CHECK : InstHexagon<(outs), (ins IntRegs:$ptr, i32imm:$type),
                               "", [], "", PSEUDO, TypePSEUDO>;
 

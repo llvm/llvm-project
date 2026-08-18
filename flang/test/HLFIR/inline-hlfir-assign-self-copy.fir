@@ -45,17 +45,29 @@
 // CHECK:     }
 // CHECK:   }
 // CHECK: } else {
-// CHECK:   %[[EXPR:.*]] = hlfir.as_expr %[[RHS]]
+// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?x?x?xf32>{{.*}}
+// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:     fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:       fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
-// CHECK:         %{{.*}} = hlfir.apply %[[EXPR]], %{{.*}}, %{{.*}}, %{{.*}}
+// CHECK:         %{{.*}} = hlfir.designate %[[RHS]] (%{{.*}}, %{{.*}}, %{{.*}})
+// CHECK:         %{{.*}} = fir.load %{{.*}}
+// CHECK:         %{{.*}} = hlfir.designate %[[TEMP]]#0 (%{{.*}}, %{{.*}}, %{{.*}})
+// CHECK:         hlfir.assign %{{.*}} to %{{.*}} temporary_lhs : f32, !fir.ref<f32>
+// CHECK:       }
+// CHECK:     }
+// CHECK:   }
+// CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:     fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:       fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:         %{{.*}} = hlfir.designate %[[TEMP]]#0 (%{{.*}}, %{{.*}}, %{{.*}})
+// CHECK:         %{{.*}} = fir.load %{{.*}}
 // CHECK:         %{{.*}} = hlfir.designate %[[LHS]] (%{{.*}}, %{{.*}}, %{{.*}})
 // CHECK:         hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
 // CHECK:       }
 // CHECK:     }
 // CHECK:   }
-// CHECK:   hlfir.destroy %[[EXPR]]
+// CHECK:   fir.freemem %{{.*}}
 // CHECK: }
 
 func.func @_QPself_copy_ew(%arg0: !fir.ref<!fir.array<?x?x?xf32>> {fir.bindc_name = "field"}, %arg1: !fir.ref<i32> {fir.bindc_name = "xm"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ym"}, %arg3: !fir.ref<i32> {fir.bindc_name = "levs"}, %arg4: !fir.ref<i32> {fir.bindc_name = "xh"}, %arg5: !fir.ref<i32> {fir.bindc_name = "yh"}) {

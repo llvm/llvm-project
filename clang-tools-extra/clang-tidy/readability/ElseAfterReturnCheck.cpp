@@ -127,7 +127,7 @@ static bool containsDeclInScope(const Stmt *Node) {
 static void removeElseAndBrackets(const DiagnosticBuilder &Diag,
                                   ASTContext &Context, const Stmt *Else,
                                   SourceLocation ElseLoc) {
-  auto Remap = [&](SourceLocation Loc) {
+  const auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
   };
 
@@ -190,7 +190,7 @@ static bool hasPreprocessorBranchEndBetweenLocations(
 
   assert(ExpandedStartLoc < ExpandedEndLoc);
 
-  auto Iter = ConditionalBranchMap.find(SM.getFileID(ExpandedEndLoc));
+  const auto Iter = ConditionalBranchMap.find(SM.getFileID(ExpandedEndLoc));
 
   if (Iter == ConditionalBranchMap.end() || Iter->getSecond().empty())
     return false;

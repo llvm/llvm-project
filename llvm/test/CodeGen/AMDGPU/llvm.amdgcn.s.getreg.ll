@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu8.03--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 
 ; GCN-LABEL: {{^}}s_getreg_test:

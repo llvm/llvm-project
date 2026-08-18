@@ -272,7 +272,7 @@ class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class CVLoad_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-              (ins BasePtr:$rs1, simm12_lo:$imm12),
+              (ins BasePtr:$rs1, simm12:$imm12),
               opcodestr, "$rd, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -293,7 +293,7 @@ class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class CVStore_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb),
-              (ins GPR:$rs2, GPR:$rs1, simm12_lo:$imm12),
+              (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -682,8 +682,8 @@ class CVLdrrPat<PatFrag LoadOp, RVInst Inst>
           (Inst CVrr:$regreg)>;
 
 class CVStriPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12_lo:$imm12),
-          (Inst GPR:$rs2, GPR:$rs1, simm12_lo:$imm12)>;
+    : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, simm12:$imm12),
+          (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 class CVStrriPat<PatFrag StoreOp, RVInst Inst>
     : Pat<(StoreOp (i32 GPR:$rs2), GPR:$rs1, GPR:$rs3),
@@ -807,6 +807,11 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 // Patterns for immediate branching operations
 //===----------------------------------------------------------------------===//
 
+// The condition codes supported by Select_GPR_Using_CC_SImm5_CV.
+def XCVbiCond : PatLeaf<(cond), [{
+  return ISD::isIntEqualitySetCC(N->get());
+}]>;
+
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Pat<(riscv_brcc (i32 GPR:$rs1), simm5:$imm5, SETEQ, bb:$imm12),
             (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0_bb:$imm12)>;
@@ -815,14 +820,10 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
 
   defm CC_SImm5_CV : SelectCC_GPR_riirr<GPR, simm5>;
 
-  class Selectbi<CondCode Cond>
-      : Pat<(riscv_selectcc (i32 GPR:$lhs), simm5:$Constant, Cond:$cc,
+  def : Pat<(riscv_selectcc (i32 GPR:$lhs), simm5:$Constant, XCVbiCond:$cc,
                             (i32 GPR:$truev), GPR:$falsev),
             (Select_GPR_Using_CC_SImm5_CV GPR:$lhs, simm5:$Constant,
              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
-
-  def : Selectbi<SETEQ>;
-  def : Selectbi<SETNE>;
 }
 
 class PatCoreVMacGprGprGpr <string intr, string asm>

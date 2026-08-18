@@ -763,6 +763,15 @@ public:
     return true;
   }
 
+  bool VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+    const NamedDecl *ND = cast<NamedDecl>(D->getDeclContext());
+    if (!D->getFriendType() && D->getFriendTemplateName().isNull())
+      ND = D->getFriendDecl();
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      indexTemplateParameters(TPL, ND);
+    return VisitFriendDecl(D);
+  }
+
   bool VisitImportDecl(const ImportDecl *D) {
     return IndexCtx.importedModule(D);
   }

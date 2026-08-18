@@ -21,6 +21,7 @@
 #include "clc/math/math.h"
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_isnan.h"
+#include "clc/relational/clc_select.h"
 
 #ifndef __opencl_c_int64
 #include "clc/integer/clc_mul_hi.h"

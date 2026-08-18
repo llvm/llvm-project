@@ -28,7 +28,7 @@ subroutine target_scope_basic()
 
   !$omp target
     ! CHECK: omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32)
-    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %{{.*}} : !fir.ref<i32>) private({{.*}} -> %[[XARG:.*]] [map_idx=0] : !fir.ref<i32>) {
+    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[XARG:.*]] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[XARG]] {uniq_name = "_QFtarget_scope_basicEx"}
     ! CHECK:   omp.scope {
     !$omp scope
@@ -45,7 +45,7 @@ subroutine target_scope_nowait()
   x = 10
 
   !$omp target
-    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %{{.*}} : !fir.ref<i32>) private({{.*}} -> %[[XARG:.*]] [map_idx=0] : !fir.ref<i32>) {
+    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[XARG:.*]] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[XARG]] {uniq_name = "_QFtarget_scope_nowaitEx"}
     ! CHECK:   omp.scope nowait {
     !$omp scope

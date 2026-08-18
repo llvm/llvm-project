@@ -1075,6 +1075,11 @@ __m128i test_mm_sad_epu8(__m128i A, __m128i B) {
   // CHECK: call {{.*}}<2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_sad_epu8(A, B);
 }
+TEST_CONSTEXPR(match_m128i(_mm_sad_epu8((__m128i)(__v16qu){0, 1, 2, 3, 4, 5, 6, 7,
+                                                          255, 254, 253, 252, 251, 250, 249, 248},
+                                        (__m128i)(__v16qu){7, 6, 5, 4, 3, 2, 1, 0,
+                                                          248, 249, 250, 251, 252, 253, 254, 255}),
+                           32ULL, 32ULL));
 
 __m128i test_mm_set_epi8(char A, char B, char C, char D,
                          char E, char F, char G, char H,

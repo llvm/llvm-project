@@ -9,6 +9,7 @@
 
 #include "HexagonFrameLowering.h"
 #include "HexagonBlockRanges.h"
+#include "HexagonISelLowering.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -162,18 +163,31 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   if (!HST.getFrameLowering()->hasFP(MF))
     return;
 
-  Register SCSPReg = Hexagon::R19;
-  if (!MF.getSubtarget().isRegisterReservedByUser(SCSPReg))
-    report_fatal_error("Must reserve r19 to use shadow call stack on Hexagon");
+  // The shadow call stack pointer has to survive arbitrary calls, so it is
+  // always one of the callee-saved registers R16-R27 (Hexagon ABI, "Register
+  // usage across calls").  It must also be reserved: besides keeping the
+  // register allocator away from it, reserving it keeps it out of the
+  // callee-saved set, so it is never spilled and restored as an ordinary
+  // callee-saved register - which would leave the epilogue below reading the
+  // *caller's* shadow-stack slot.  The spill stubs are handled separately in
+  // useSpillFunction()/useRestoreFunction().
+  Register SCSPReg = HST.getSCSPReg();
+  const auto &HRI = *HST.getRegisterInfo();
+  if (!HST.isRegisterReservedByUser(SCSPReg))
+    // Lower-cased to match the spelling of the -ffixed-<reg> flag the user
+    // needs to pass; TRI names the register "R18".
+    report_fatal_error(Twine("Must reserve ") +
+                       StringRef(HRI.getName(SCSPReg)).lower() +
+                       " to use shadow call stack on Hexagon");
 
   const auto &HII = *HST.getInstrInfo();
 
-  // r19 = add(r19, #4)
+  // SCSPReg = add(SCSPReg, #4)
   BuildMI(MBB, MI, DL, HII.get(Hexagon::A2_addi), SCSPReg)
       .addReg(SCSPReg)
       .addImm(4)
       .setMIFlag(MachineInstr::FrameSetup);
-  // memw(r19 + #-4) = r31
+  // memw(SCSPReg + #-4) = r31
   BuildMI(MBB, MI, DL, HII.get(Hexagon::S2_storeri_io))
       .addReg(SCSPReg)
       .addImm(-4)
@@ -187,8 +201,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   // CFI: DW_CFA_val_expression for the SCS register, DW_OP_bregN -4
   // Tells the unwinder that the SCS register at entry = current value - 4.
-  const auto &TRI = *MF.getSubtarget().getRegisterInfo();
-  unsigned DwarfSCSReg = TRI.getDwarfRegNum(SCSPReg, /*IsEH=*/true);
+  unsigned DwarfSCSReg = HRI.getDwarfRegNum(SCSPReg, /*IsEH=*/true);
   // DW_OP_breg0..DW_OP_breg31 (0x70..0x8f) are 32 opcodes indexed by
   // register number, so the register number must fit in [0, 31].
   assert(DwarfSCSReg < 32 && "SCS register should be < 32");
@@ -215,15 +228,16 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
   if (!MF.getSubtarget<HexagonSubtarget>().getFrameLowering()->hasFP(MF))
     report_fatal_error("SCS epilogue requires a frame");
 
-  Register SCSPReg = Hexagon::R19;
-  const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  Register SCSPReg = HST.getSCSPReg();
+  const auto &HII = *HST.getInstrInfo();
 
-  // r31 = memw(r19 + #-4)
+  // r31 = memw(SCSPReg + #-4)
   BuildMI(MBB, MI, DL, HII.get(Hexagon::L2_loadri_io), Hexagon::R31)
       .addReg(SCSPReg)
       .addImm(-4)
       .setMIFlag(MachineInstr::FrameDestroy);
-  // r19 = add(r19, #-4)
+  // SCSPReg = add(SCSPReg, #-4)
   BuildMI(MBB, MI, DL, HII.get(Hexagon::A2_addi), SCSPReg)
       .addReg(SCSPReg)
       .addImm(-4)
@@ -711,7 +725,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
 
   for (auto *MI : AdjustRegs) {
     assert((MI->getOpcode() == Hexagon::PS_alloca) && "Expected alloca");
-    expandAlloca(MI, HII, SP, MaxCF);
+    expandAlloca(MI, MF, HII, SP, MaxCF);
     MI->eraseFromParent();
   }
 
@@ -844,9 +858,29 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
              .addExternalSymbol("__runtime_stack_check");
   } else if (NumBytes > 0) {
     assert(alignTo(NumBytes, 8) == NumBytes);
-    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), SP)
-      .addReg(SP)
-      .addImm(-int(NumBytes));
+    auto *TLI = HST.getTargetLowering();
+    bool NeedsProbing = TLI->hasInlineStackProbe(MF);
+    unsigned ProbeSize = 0;
+    if (NeedsProbing) {
+      Align StackAlign = getStackAlign();
+      ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+    }
+    if (NeedsProbing && NumBytes > ProbeSize) {
+      // Compute target SP in R28 (caller-saved scratch).
+      BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), Hexagon::R28)
+          .addReg(SP)
+          .addImm(-int(NumBytes))
+          .setMIFlag(MachineInstr::FrameSetup);
+      // Emit pseudo to be expanded by inlineStackProbe().
+      BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::PS_probed_stackalloc))
+          .addReg(Hexagon::R28)
+          .setMIFlag(MachineInstr::FrameSetup);
+    } else {
+      BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), SP)
+          .addReg(SP)
+          .addImm(-int(NumBytes))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
   }
 }
 
@@ -897,9 +931,8 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
 
   // Check for RESTORE_DEALLOC_RET* tail call. Don't emit an extra dealloc-
   // frame instruction if we encounter it.
-  // These spill-stub tail calls include r19 in their save range, but SCS
-  // requires -ffixed-r19, which prevents the allocator from selecting stubs
-  // that cover r19. The two features are therefore mutually exclusive and no
+  // These are restore stubs, which useRestoreFunction() never selects when SCS
+  // is active (they do deallocframe+jumpr, bypassing the SCS epilogue), so no
   // SCS epilogue is needed here.
   if (RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4 ||
       RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC ||
@@ -937,15 +970,14 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   if (!MF.getSubtarget<HexagonSubtarget>().isEnvironmentMusl() ||
       !MF.getFunction().isVarArg()) {
     if (!NeedsDeallocframe) {
-      // RESTORE_DEALLOC_BEFORE_TAILCALL stubs include r19 in their save range,
-      // but SCS requires -ffixed-r19 which prevents the allocator from
-      // selecting stubs that cover r19, so SCS and stubs are mutually
-      // exclusive.  PS_call_nr/PS_callr_nr are noreturn calls so the shadow
-      // stack entry is never read - no SCS epilogue is needed on either path.
+      // RESTORE_DEALLOC_BEFORE_TAILCALL is a restore stub, which
+      // useRestoreFunction() never selects when SCS is active.
+      // PS_call_nr/PS_callr_nr are noreturn calls so the shadow stack entry
+      // is never read - no SCS epilogue is needed on either path.
       if (NeedsSCS && PrevOpc != Hexagon::PS_call_nr &&
           PrevOpc != Hexagon::PS_callr_nr)
         report_fatal_error("SCS with RESTORE_DEALLOC stub: "
-                           "-ffixed-r19 should have prevented this");
+                           "useRestoreFunction() should have prevented this");
       return;
     }
     // If the returning instruction is PS_jmpret, replace it with
@@ -993,9 +1025,9 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), SP)
         .addReg(SP)
         .addImm(RegisterSavedAreaSizePlusPadding);
-    // RESTORE_DEALLOC stubs are mutually exclusive with SCS (-ffixed-r19
-    // prevents stubs that cover r19), so only emit SCS epilogue when we
-    // emitted our own deallocframe above.
+    // RESTORE_DEALLOC stubs are never selected when SCS is active (see
+    // useRestoreFunction()), so only emit the SCS epilogue when we emitted
+    // our own deallocframe above.
     if (NeedsSCS && !HasRestoreStub)
       emitSCSEpilogue(MF, MBB, InsertPt, dl);
   }
@@ -1020,7 +1052,34 @@ void HexagonFrameLowering::insertAllocframe(MachineBasicBlock &MBB,
   DebugLoc dl = MBB.findDebugLoc(InsertPt);
   Register SP = HRI.getStackRegister();
 
-  if (NumBytes >= ALLOCFRAME_MAX) {
+  auto *TLI = HST.getTargetLowering();
+  bool NeedsProbing = TLI->hasInlineStackProbe(MF) && NumBytes > 0;
+  unsigned ProbeSize = 0;
+  if (NeedsProbing) {
+    Align StackAlign = getStackAlign();
+    ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+  }
+
+  if (NeedsProbing && NumBytes > ProbeSize) {
+    // Emit allocframe(#0) to save FP/LR only.
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::S2_allocframe))
+        .addDef(SP)
+        .addReg(SP)
+        .addImm(0)
+        .addMemOperand(MMO)
+        .setMIFlag(MachineInstr::FrameSetup);
+
+    // Compute target SP in R28 (caller-saved scratch).
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), Hexagon::R28)
+        .addReg(SP)
+        .addImm(-int(NumBytes))
+        .setMIFlag(MachineInstr::FrameSetup);
+
+    // Emit pseudo to be expanded by inlineStackProbe().
+    BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::PS_probed_stackalloc))
+        .addReg(Hexagon::R28)
+        .setMIFlag(MachineInstr::FrameSetup);
+  } else if (NumBytes >= ALLOCFRAME_MAX) {
     // Emit allocframe(#0).
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::S2_allocframe))
         .addDef(SP)
@@ -1042,6 +1101,98 @@ void HexagonFrameLowering::insertAllocframe(MachineBasicBlock &MBB,
         .addImm(NumBytes)
         .addMemOperand(MMO)
         .setMIFlag(MachineInstr::FrameSetup);
+  }
+}
+
+void HexagonFrameLowering::inlineStackProbe(
+    MachineFunction &MF, MachineBasicBlock &PrologueMBB) const {
+  // Collect PS_probed_stackalloc pseudos to expand. Collecting first avoids
+  // issues with modifying the block while iterating.
+  SmallVector<MachineInstr *, 2> ToReplace;
+  for (MachineInstr &MI : PrologueMBB)
+    if (MI.getOpcode() == Hexagon::PS_probed_stackalloc)
+      ToReplace.push_back(&MI);
+
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &HII = *HST.getInstrInfo();
+  auto *TLI = HST.getTargetLowering();
+  Align StackAlign = getStackAlign();
+  unsigned ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+  MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
+
+  for (MachineInstr *MI : ToReplace) {
+    MachineBasicBlock::iterator MBBI = MI->getIterator();
+    DebugLoc DL = PrologueMBB.findDebugLoc(MBBI);
+    Register TargetReg = MI->getOperand(0).getReg();
+
+    // Split the block: everything after the pseudo goes into ExitMBB.
+    MachineBasicBlock *MBB = MI->getParent();
+    MachineFunction::iterator InsertPt = std::next(MBB->getIterator());
+    MachineBasicBlock *LoopMBB =
+        MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+    MF.insert(InsertPt, LoopMBB);
+    MachineBasicBlock *ExitMBB =
+        MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+    MF.insert(InsertPt, ExitMBB);
+
+    // Move everything after the pseudo into ExitMBB.
+    ExitMBB->splice(ExitMBB->end(), MBB, std::next(MBBI), MBB->end());
+    ExitMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+    // LoopMBB: probe each page by decrementing SP and storing zero.
+    // When NumBytes is not an exact multiple of ProbeSize the loop
+    // will overshoot by up to ProbeSize-1 bytes; the final r29 = r28
+    // in ExitMBB corrects SP to the true target.
+    //
+    // The store is placed before the compare+branch so that the
+    // packetizer can bundle them into a single VLIW packet.  All
+    // non-predicated instructions in a packet commit unconditionally,
+    // so the probe store executes on every iteration including the
+    // last (when the branch falls through).
+    //
+    //   r29 = add(r29, #-ProbeSize)
+    //   memw(r29+#0) = #0
+    //   p0 = cmp.gtu(r29, r28)
+    //   if (p0) jump LoopMBB
+    BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::A2_addi),
+            Hexagon::R29)
+        .addReg(Hexagon::R29)
+        .addImm(-int(ProbeSize))
+        .setMIFlags(Flags);
+
+    BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::S4_storeiri_io))
+        .addReg(Hexagon::R29)
+        .addImm(0)
+        .addImm(0)
+        .setMIFlags(Flags);
+
+    BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::C2_cmpgtu),
+            Hexagon::P0)
+        .addReg(Hexagon::R29)
+        .addReg(TargetReg)
+        .setMIFlags(Flags);
+
+    BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::J2_jumpt))
+        .addReg(Hexagon::P0)
+        .addMBB(LoopMBB)
+        .setMIFlags(Flags);
+
+    // ExitMBB: set final SP.
+    BuildMI(*ExitMBB, ExitMBB->begin(), DL, HII.get(Hexagon::A2_tfr),
+            Hexagon::R29)
+        .addReg(TargetReg)
+        .setMIFlags(Flags);
+
+    // Set up CFG edges.
+    MBB->addSuccessor(LoopMBB);
+    LoopMBB->addSuccessor(LoopMBB);
+    LoopMBB->addSuccessor(ExitMBB);
+
+    // Remove the pseudo.
+    MI->eraseFromParent();
+
+    // Recompute live-ins for the new blocks.
+    fullyRecomputeLiveIns({ExitMBB, LoopMBB});
   }
 }
 
@@ -2282,7 +2433,7 @@ Register HexagonFrameLowering::findPhysReg(MachineFunction &MF,
     return false;
   };
 
-  for (Register Reg : RC->getRawAllocationOrder(MF)) {
+  for (Register Reg : HRI.getRawAllocationOrder(*RC, MF)) {
     bool Dead = true;
     for (auto R : HexagonBlockRanges::expandToSubRegs({Reg,0}, MRI, HRI)) {
       if (isDead(R.Reg))
@@ -2349,6 +2500,11 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
                       << IndexMap << '\n');
 
     for (auto &In : B) {
+      // Debug instructions do not generate any code, and their operands
+      // (including frame index operands) must not affect the decisions made
+      // by this optimization.
+      if (In.isDebugInstr())
+        continue;
       int LFI, SFI;
       bool Load = HII.isLoadFromStackSlot(In, LFI) && !HII.isPredicated(In);
       bool Store = HII.isStoreToStackSlot(In, SFI) && !HII.isPredicated(In);
@@ -2617,62 +2773,164 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   }
 }
 
-void HexagonFrameLowering::expandAlloca(MachineInstr *AI,
-      const HexagonInstrInfo &HII, Register SP, unsigned CF) const {
+void HexagonFrameLowering::expandAlloca(MachineInstr *AI, MachineFunction &MF,
+                                        const HexagonInstrInfo &HII,
+                                        Register SP, unsigned CF) const {
   MachineBasicBlock &MB = *AI->getParent();
   DebugLoc DL = AI->getDebugLoc();
   unsigned A = AI->getOperand(2).getImm();
-
-  // Have
-  //    Rd  = alloca Rs, #A
-  //
-  // If Rs and Rd are different registers, use this sequence:
-  //    Rd  = sub(r29, Rs)
-  //    r29 = sub(r29, Rs)
-  //    Rd  = and(Rd, #-A)    ; if necessary
-  //    r29 = and(r29, #-A)   ; if necessary
-  //    Rd  = add(Rd, #CF)    ; CF size aligned to at most A
-  // otherwise, do
-  //    Rd  = sub(r29, Rs)
-  //    Rd  = and(Rd, #-A)    ; if necessary
-  //    r29 = Rd
-  //    Rd  = add(Rd, #CF)    ; CF size aligned to at most A
 
   MachineOperand &RdOp = AI->getOperand(0);
   MachineOperand &RsOp = AI->getOperand(1);
   Register Rd = RdOp.getReg(), Rs = RsOp.getReg();
 
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto *TLI = HST.getTargetLowering();
+  bool NeedsProbing = TLI->hasInlineStackProbe(MF);
+
+  if (!NeedsProbing) {
+    // Have
+    //    Rd  = alloca Rs, #A
+    //
+    // If Rs and Rd are different registers, use this sequence:
+    //    Rd  = sub(r29, Rs)
+    //    r29 = sub(r29, Rs)
+    //    Rd  = and(Rd, #-A)    ; if necessary
+    //    r29 = and(r29, #-A)   ; if necessary
+    //    Rd  = add(Rd, #CF)    ; CF size aligned to at most A
+    // otherwise, do
+    //    Rd  = sub(r29, Rs)
+    //    Rd  = and(Rd, #-A)    ; if necessary
+    //    r29 = Rd
+    //    Rd  = add(Rd, #CF)    ; CF size aligned to at most A
+
+    // Rd = sub(r29, Rs)
+    BuildMI(MB, AI, DL, HII.get(Hexagon::A2_sub), Rd).addReg(SP).addReg(Rs);
+    if (Rs != Rd) {
+      // r29 = sub(r29, Rs)
+      BuildMI(MB, AI, DL, HII.get(Hexagon::A2_sub), SP).addReg(SP).addReg(Rs);
+    }
+    if (A > 8) {
+      // Rd  = and(Rd, #-A)
+      BuildMI(MB, AI, DL, HII.get(Hexagon::A2_andir), Rd)
+          .addReg(Rd)
+          .addImm(-int64_t(A));
+      if (Rs != Rd)
+        BuildMI(MB, AI, DL, HII.get(Hexagon::A2_andir), SP)
+            .addReg(SP)
+            .addImm(-int64_t(A));
+    }
+    if (Rs == Rd) {
+      // r29 = Rd
+      BuildMI(MB, AI, DL, HII.get(TargetOpcode::COPY), SP).addReg(Rd);
+    }
+    if (CF > 0) {
+      // Rd = add(Rd, #CF)
+      BuildMI(MB, AI, DL, HII.get(Hexagon::A2_addi), Rd).addReg(Rd).addImm(CF);
+    }
+    return;
+  }
+
+  // Stack probing for dynamic allocation.  The size Rs is a runtime value
+  // so the probe loop is always emitted; it is a no-op when Rs is small.
+  //
+  // Compute the target SP into Rd (with optional alignment), then probe
+  // each page on the way down:
+  //
+  //   Rd  = sub(r29, Rs)
+  //   [Rd = and(Rd, #-A)]   ; if alignment > 8
+  //   LoopMBB:
+  //     r29 = add(r29, #-ProbeSize)
+  //     memw(r29+#0) = #0
+  //     p0 = cmp.gtu(r29, Rd)
+  //     if (p0.new) jump:t LoopMBB
+  //   ExitMBB:
+  //     r29 = Rd
+  //     [Rd = add(Rd, #CF)]  ; if CF > 0
+  //     <rest of original block>
+  //
+  // Rd holds the exact (aligned) target SP throughout the loop, so the
+  // final "r29 = Rd" snaps SP to the correct value even when Rs is not
+  // a multiple of ProbeSize.
+
+  Align StackAlign = getStackAlign();
+  unsigned ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+  MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
+
+  // Emit target-SP computation into Rd before splitting the block.
   // Rd = sub(r29, Rs)
   BuildMI(MB, AI, DL, HII.get(Hexagon::A2_sub), Rd)
       .addReg(SP)
-      .addReg(Rs);
-  if (Rs != Rd) {
-    // r29 = sub(r29, Rs)
-    BuildMI(MB, AI, DL, HII.get(Hexagon::A2_sub), SP)
-        .addReg(SP)
-        .addReg(Rs);
-  }
+      .addReg(Rs)
+      .setMIFlags(Flags);
   if (A > 8) {
-    // Rd  = and(Rd, #-A)
+    // Rd = and(Rd, #-A)
     BuildMI(MB, AI, DL, HII.get(Hexagon::A2_andir), Rd)
         .addReg(Rd)
-        .addImm(-int64_t(A));
-    if (Rs != Rd)
-      BuildMI(MB, AI, DL, HII.get(Hexagon::A2_andir), SP)
-          .addReg(SP)
-          .addImm(-int64_t(A));
+        .addImm(-int64_t(A))
+        .setMIFlags(Flags);
   }
-  if (Rs == Rd) {
-    // r29 = Rd
-    BuildMI(MB, AI, DL, HII.get(TargetOpcode::COPY), SP)
-        .addReg(Rd);
-  }
+
+  // Split the block: everything after AI goes into ExitMBB.
+  MachineFunction::iterator InsertPt = std::next(MB.getIterator());
+  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(MB.getBasicBlock());
+  MF.insert(InsertPt, LoopMBB);
+  MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(MB.getBasicBlock());
+  MF.insert(InsertPt, ExitMBB);
+
+  // Move instructions after AI (exclusive) into ExitMBB.
+  ExitMBB->splice(ExitMBB->end(), &MB, std::next(AI->getIterator()), MB.end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(&MB);
+
+  // LoopMBB: probe each page.
+  //   r29 = add(r29, #-ProbeSize)
+  //   memw(r29+#0) = #0
+  //   p0 = cmp.gtu(r29, Rd)
+  //   if (p0.new) jump:t LoopMBB
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::A2_addi), Hexagon::R29)
+      .addReg(Hexagon::R29)
+      .addImm(-int(ProbeSize))
+      .setMIFlags(Flags);
+
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::S4_storeiri_io))
+      .addReg(Hexagon::R29)
+      .addImm(0)
+      .addImm(0)
+      .setMIFlags(Flags);
+
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::C2_cmpgtu),
+          Hexagon::P0)
+      .addReg(Hexagon::R29)
+      .addReg(Rd)
+      .setMIFlags(Flags);
+
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::J2_jumpt))
+      .addReg(Hexagon::P0)
+      .addMBB(LoopMBB)
+      .setMIFlags(Flags);
+
+  // ExitMBB: snap SP to exact target, then apply CF offset to Rd.
+  //   r29 = Rd
+  //   [Rd = add(Rd, #CF)]
+  MachineBasicBlock::iterator ExitIt = ExitMBB->begin();
+  BuildMI(*ExitMBB, ExitIt, DL, HII.get(Hexagon::A2_tfr), Hexagon::R29)
+      .addReg(Rd)
+      .setMIFlags(Flags);
   if (CF > 0) {
-    // Rd = add(Rd, #CF)
-    BuildMI(MB, AI, DL, HII.get(Hexagon::A2_addi), Rd)
+    BuildMI(*ExitMBB, ExitIt, DL, HII.get(Hexagon::A2_addi), Rd)
         .addReg(Rd)
-        .addImm(CF);
+        .addImm(CF)
+        .setMIFlags(Flags);
   }
+
+  // Wire up CFG edges.
+  MB.addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(ExitMBB);
+
+  // Recompute live-ins for the new blocks.  AI is still in MB at this
+  // point; the caller erases it after expandAlloca returns.
+  fullyRecomputeLiveIns({ExitMBB, LoopMBB});
 }
 
 bool HexagonFrameLowering::needsAligna(const MachineFunction &MF) const {
@@ -2749,6 +3007,25 @@ bool HexagonFrameLowering::useSpillFunction(const MachineFunction &MF,
   if (NumCSI <= 1)
     return false;
 
+  // Every spill stub saves the whole range starting at R16
+  // (__save_r16_through_rNN), so a stub whose range reached the shadow call
+  // stack pointer register would spill it along with the real callee-saved
+  // registers - and since the SCS register is reserved it is absent from CSI,
+  // so the stub's fixed frame layout would not match the one the compiler
+  // assigned.
+  //
+  // shouldInlineCSR() above already makes this unreachable: it only lets a
+  // stub through when CSI is a contiguous run of double registers starting at
+  // D8, and reserving the SCS register always breaks the double it belongs
+  // to, leaving its partner in CSI as a lone single register.  This is a
+  // cheap safety net so the guarantee does not rest on that reasoning alone.
+  if (MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
+    const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+    Register MaxReg = getMaxCalleeSavedReg(CSI, *HST.getRegisterInfo());
+    if (HST.getSCSPReg().id() <= MaxReg.id())
+      return false;
+  }
+
   unsigned Threshold = isOptSize(MF) ? SpillFuncThresholdOs
                                      : SpillFuncThreshold;
   return Threshold < NumCSI;
@@ -2757,6 +3034,9 @@ bool HexagonFrameLowering::useSpillFunction(const MachineFunction &MF,
 bool HexagonFrameLowering::useRestoreFunction(const MachineFunction &MF,
       const CSIVect &CSI) const {
   if (shouldInlineCSR(MF, CSI))
+    return false;
+  // The returning restore stubs do jumpr r31, this breaks ShadowCallStack:
+  if (MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
     return false;
   // The restore functions do a bit more than just restoring registers.
   // The non-returning versions will go back directly to the caller's

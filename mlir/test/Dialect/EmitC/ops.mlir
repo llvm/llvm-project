@@ -148,6 +148,15 @@ func.func @unary(%arg0: i32) {
   return
 }
 
+func.func @inc_dec(%arg0: !emitc.ptr<i32>) {
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  %0 = emitc.pre_increment %v : !emitc.lvalue<i32>
+  %1 = emitc.post_increment %v : !emitc.lvalue<i32>
+  %2 = emitc.pre_decrement %v : !emitc.lvalue<i32>
+  %3 = emitc.post_decrement %v : !emitc.lvalue<i32>
+  return
+}
+
 func.func @test_if(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
      %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32
@@ -175,6 +184,23 @@ func.func @test_if_else(%arg0: i1, %arg1: f32) {
 func.func @test_assign(%arg1: f32) {
   %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
   emitc.assign %arg1 : f32 to %v : !emitc.lvalue<f32>
+  return
+}
+
+// CHECK-LABEL: func.func @compound_assign
+// CHECK: emitc.add_assign
+// CHECK: emitc.sub_assign
+// CHECK: emitc.mul_assign
+// CHECK: emitc.div_assign
+// CHECK: emitc.rem_assign
+func.func @compound_assign(%arg0: i32, %arg1: !emitc.opaque<"number">) {
+  %v = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+  %opaque = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<!emitc.opaque<"number">>
+  emitc.add_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.sub_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.mul_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.div_assign %arg0 : i32 to %v : !emitc.lvalue<i32>
+  emitc.rem_assign %arg1 : !emitc.opaque<"number"> to %opaque : !emitc.lvalue<!emitc.opaque<"number">>
   return
 }
 

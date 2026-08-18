@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -260,7 +261,7 @@ private:
   }
 
   SmallSetVector<Instruction *, 32> UsersToReplace;
-  MapVector<Value *, Value *> WorkMap;
+  DenseMap<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
   Instruction &Root;
   unsigned FromAS;
@@ -412,9 +413,7 @@ void PointerReplacer::replace(Instruction *I) {
   if (auto *LT = dyn_cast<LoadInst>(I)) {
     auto *V = getReplacement(LT->getPointerOperand());
     assert(V && "Operand not replaced");
-    auto *NewI = new LoadInst(LT->getType(), V, "", LT->isVolatile(),
-                              LT->getAlign(), LT->getOrdering(),
-                              LT->getSyncScopeID());
+    auto *NewI = new LoadInst(LT->getType(), V, "", LT->getProperties());
     NewI->takeName(LT);
     NewI->copyMetadata(*LT);
 
@@ -425,15 +424,30 @@ void PointerReplacer::replace(Instruction *I) {
     // replacement (new value).
     WorkMap[NewI] = NewI;
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
-    // Create a new PHI by replacing any incoming value that is a user of the
-    // root pointer and has a replacement.
-    Value *V = WorkMap.lookup(PHI->getIncomingValue(0));
-    PHI->mutateType(V ? V->getType() : PHI->getIncomingValue(0)->getType());
-    for (unsigned int I = 0; I < PHI->getNumIncomingValues(); ++I) {
-      Value *V = WorkMap.lookup(PHI->getIncomingValue(I));
-      PHI->setIncomingValue(I, V ? V : PHI->getIncomingValue(I));
+    Value *FirstIncoming = PHI->getIncomingValue(0);
+    Value *V = WorkMap.lookup(FirstIncoming);
+    Type *NewType = V ? V->getType() : FirstIncoming->getType();
+    if (PHI->getType() == NewType) {
+      for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I) {
+        Value *V = WorkMap.lookup(PHI->getIncomingValue(I));
+        PHI->setIncomingValue(I, V ? V : PHI->getIncomingValue(I));
+      }
+      WorkMap[PHI] = PHI;
+      return;
     }
-    WorkMap[PHI] = PHI;
+
+    auto *NewPHI = PHINode::Create(NewType, PHI->getNumIncomingValues(), "");
+    IC.InsertNewInstWith(NewPHI, PHI->getIterator());
+    NewPHI->takeName(PHI);
+    NewPHI->copyMetadata(*PHI);
+    WorkMap[PHI] = NewPHI;
+    for (auto [IncomingValue, IncomingBlock] :
+         zip_equal(PHI->incoming_values(), PHI->blocks())) {
+      Value *V = WorkMap.lookup(IncomingValue);
+      assert(V && V->getType() == NewType &&
+             "Type-changing PHI incoming value was not replaced");
+      NewPHI->addIncoming(V, IncomingBlock);
+    }
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
     auto *V = getReplacement(GEP->getPointerOperand());
     assert(V && "Operand not replaced");
@@ -602,10 +616,8 @@ LoadInst *InstCombinerImpl::combineLoadToNewType(LoadInst &LI, Type *NewTy,
   assert((!LI.isAtomic() || isSupportedAtomicType(NewTy)) &&
          "can't fold an atomic load to requested type");
 
-  LoadInst *NewLoad =
-      Builder.CreateAlignedLoad(NewTy, LI.getPointerOperand(), LI.getAlign(),
-                                LI.isVolatile(), LI.getName() + Suffix);
-  NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+  LoadInst *NewLoad = Builder.CreateLoad(
+      NewTy, LI.getPointerOperand(), LI.getProperties(), LI.getName() + Suffix);
   copyMetadataForLoad(*NewLoad, LI);
   return NewLoad;
 }
@@ -622,9 +634,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   SI.getAllMetadata(MD);
 
-  StoreInst *NewStore =
-      IC.Builder.CreateAlignedStore(V, Ptr, SI.getAlign(), SI.isVolatile());
-  NewStore->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
+  StoreInst *NewStore = IC.Builder.CreateStore(V, Ptr, SI.getProperties());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -688,6 +698,9 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
   // FIXME: We could probably with some care handle both volatile and ordered
   // atomic loads here but it isn't clear that this is important.
   if (!Load.isUnordered())
+    return nullptr;
+
+  if (Load.isElementwise())
     return nullptr;
 
   if (Load.use_empty())
@@ -1159,17 +1172,15 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
           return Op;
         };
         Value *LoadOp1 = MaybeCastedLoadOperand(SI->getOperand(1));
-        LoadInst *V1 = Builder.CreateLoad(LI.getType(), LoadOp1,
-                                          LoadOp1->getName() + ".val");
+        LoadInst *V1 =
+            Builder.CreateLoad(LI.getType(), LoadOp1, LI.getProperties(),
+                               LoadOp1->getName() + ".val");
 
         Value *LoadOp2 = MaybeCastedLoadOperand(SI->getOperand(2));
-        LoadInst *V2 = Builder.CreateLoad(LI.getType(), LoadOp2,
-                                          LoadOp2->getName() + ".val");
+        LoadInst *V2 =
+            Builder.CreateLoad(LI.getType(), LoadOp2, LI.getProperties(),
+                               LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
-        V1->setAlignment(Alignment);
-        V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
-        V2->setAlignment(Alignment);
-        V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         // It is safe to copy any metadata that does not trigger UB. Copy any
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
@@ -1297,6 +1308,9 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
   // FIXME: We could probably with some care handle both volatile and ordered
   // atomic stores here but it isn't clear that this is important.
   if (!SI.isUnordered())
+    return false;
+
+  if (SI.isElementwise())
     return false;
 
   // swifterror values can't be bitcasted.
@@ -1733,8 +1747,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // Advance to a place where it is safe to insert the new store and insert it.
   BBI = DestBB->getFirstInsertionPt();
   StoreInst *NewSI =
-      new StoreInst(MergedVal, SI.getOperand(1), SI.isVolatile(), SI.getAlign(),
-                    SI.getOrdering(), SI.getSyncScopeID());
+      new StoreInst(MergedVal, SI.getOperand(1), SI.getProperties());
   InsertNewInstBefore(NewSI, BBI);
   NewSI->setDebugLoc(MergedLoc);
   NewSI->mergeDIAssignID({&SI, OtherStore});
@@ -1743,6 +1756,10 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   AAMDNodes AATags = SI.getAAMetadata();
   if (AATags)
     NewSI->setAAMetadata(AATags.merge(OtherStore->getAAMetadata()));
+
+  // If the two stores had access groups, intersect them.
+  NewSI->setMetadata(LLVMContext::MD_access_group,
+                     intersectAccessGroups(&SI, OtherStore));
 
   // Nuke the old stores.
   eraseInstFromFunction(SI);

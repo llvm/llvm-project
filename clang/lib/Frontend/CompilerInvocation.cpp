@@ -260,12 +260,8 @@ CowCompilerInvocation::getMutPreprocessorOutputOpts() {
 
 using ArgumentConsumer = CompilerInvocation::ArgumentConsumer;
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "clang/Options/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 static llvm::StringRef lookupStrInTable(unsigned Offset) {
-  return OptionStrTable[Offset];
+  return getDriverOptTable().getStrTable()[Offset];
 }
 
 #define SIMPLE_ENUM_VALUE_TABLE
@@ -1480,18 +1476,19 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
       Opts.CXXTypeInfoVTablePointer =
           PointerAuthSchema(Key::ASDA, false, Discrimination::None);
 
-    Opts.CXXVTTVTablePointers =
-        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+    if (LangOpts.PointerAuthVTTVTPtrDiscrimination)
+      Opts.CXXVTTVTablePointers = PointerAuthSchema(
+          Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
+          LangOpts.PointerAuthVTPtrTypeDiscrimination ? Discrimination::Type
+                                                      : Discrimination::None);
+    else
+      Opts.CXXVTTVTablePointers =
+          PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+
     Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
     Opts.CXXMemberFunctionPointers =
         PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
-
-    if (LangOpts.PointerAuthInitFini) {
-      Opts.InitFiniPointers = PointerAuthSchema(
-          Key::ASIA, LangOpts.PointerAuthInitFiniAddressDiscrimination,
-          Discrimination::Constant, InitFiniPointerConstantDiscriminator);
-    }
 
     Opts.BlockInvocationFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::None);
@@ -1681,6 +1678,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
 
   if (Opts.SaveTempsFilePrefix == OutputFile)
     GenerateArg(Consumer, OPT_save_temps_EQ, "obj");
+
+  if (!Opts.SaveDynDbgTempsFilePrefix.empty())
+    GenerateArg(Consumer, OPT_save_dynamic_debugging_temps);
 
   StringRef MemProfileBasename("memprof.profraw");
   if (!Opts.MemoryProfileOutput.empty()) {
@@ -2015,6 +2015,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         llvm::StringSwitch<std::string>(A->getValue())
             .Case("obj", OutputFile)
             .Default(llvm::sys::path::filename(OutputFile).str());
+
+  if (Args.getLastArg(OPT_save_dynamic_debugging_temps))
+    Opts.SaveDynDbgTempsFilePrefix = OutputFile;
 
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
@@ -2459,35 +2462,31 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
+static ShowColorsKind parseShowColorsMode(const ArgList &Args,
+                                          bool DefaultColor) {
   // Color diagnostics default to auto ("on" if terminal supports) in the driver
   // but default to off in cc1, needing an explicit OPT_fdiagnostics_color.
   // Support both clang's -f[no-]color-diagnostics and gcc's
   // -f[no-]diagnostics-colors[=never|always|auto].
-  enum {
-    Colors_On,
-    Colors_Off,
-    Colors_Auto
-  } ShowColors = DefaultColor ? Colors_Auto : Colors_Off;
+  ShowColorsKind Mode =
+      DefaultColor ? ShowColorsKind::Auto : ShowColorsKind::Off;
   for (auto *A : Args) {
     const Option &O = A->getOption();
     if (O.matches(options::OPT_fcolor_diagnostics)) {
-      ShowColors = Colors_On;
+      Mode = ShowColorsKind::On;
     } else if (O.matches(options::OPT_fno_color_diagnostics)) {
-      ShowColors = Colors_Off;
+      Mode = ShowColorsKind::Off;
     } else if (O.matches(options::OPT_fdiagnostics_color_EQ)) {
       StringRef Value(A->getValue());
       if (Value == "always")
-        ShowColors = Colors_On;
+        Mode = ShowColorsKind::On;
       else if (Value == "never")
-        ShowColors = Colors_Off;
+        Mode = ShowColorsKind::Off;
       else if (Value == "auto")
-        ShowColors = Colors_Auto;
+        Mode = ShowColorsKind::Auto;
     }
   }
-  return ShowColors == Colors_On ||
-         (ShowColors == Colors_Auto &&
-          llvm::sys::Process::StandardErrHasColors());
+  return Mode;
 }
 
 static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
@@ -2568,8 +2567,16 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     GenerateArg(Consumer, OPT_diagnostic_serialized_file,
                 Opts.DiagnosticSerializationFile);
 
-  if (Opts.ShowColors)
+  switch (Opts.getShowColors()) {
+  case ShowColorsKind::On:
     GenerateArg(Consumer, OPT_fcolor_diagnostics);
+    break;
+  case ShowColorsKind::Off:
+    GenerateArg(Consumer, OPT_fno_color_diagnostics);
+    break;
+  case ShowColorsKind::Auto:
+    break;
+  }
 
   if (Opts.VerifyDiagnostics &&
       llvm::is_contained(Opts.VerifyPrefixes, "expected"))
@@ -2678,7 +2685,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   if (Arg *A =
           Args.getLastArg(OPT_diagnostic_serialized_file, OPT__serialize_diags))
     Opts.DiagnosticSerializationFile = A->getValue();
-  Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
+  Opts.setShowColors(parseShowColorsMode(Args, DefaultDiagColor));
 
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
   Opts.VerifyDirectives = Args.hasArg(OPT_verify_directives);
@@ -2725,7 +2732,8 @@ unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
     if (A->getOption().matches(options::OPT_O0))
       return 0;
 
-    if (A->getOption().matches(options::OPT_Ofast))
+    if (A->getOption().matches(options::OPT_Ofast) ||
+        A->getOption().matches(options::OPT_O4))
       return 3;
 
     assert(A->getOption().matches(options::OPT_O));
@@ -2838,7 +2846,6 @@ static const auto &getFrontendActionTable() {
       {frontend::VerifyPCH, OPT_verify_pch},
       {frontend::PrintPreamble, OPT_print_preamble},
       {frontend::PrintPreprocessedInput, OPT_E},
-      {frontend::TemplightDump, OPT_templight_dump},
       {frontend::RewriteMacros, OPT_rewrite_macros},
       {frontend::RewriteObjC, OPT_rewrite_objc},
       {frontend::RewriteTest, OPT_rewrite_test},
@@ -3179,7 +3186,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
+  if (Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
 #if CLANG_ENABLE_CIR
@@ -3188,6 +3195,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   if (Args.hasArg(OPT_clangir_disable_verifier))
     Opts.ClangIRDisableCIRVerifier = true;
+
+  if (Args.hasArg(OPT_clangir_lib_opt) || Args.hasArg(OPT_clangir_lib_opt_EQ))
+    Opts.ClangIRLibOptEnabled = true;
 #endif // CLANG_ENABLE_CIR
 
   if (Args.hasArg(OPT_aux_target_cpu))
@@ -3592,6 +3602,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
   if (Opts.PointerAuthVTPtrTypeDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuthVTTVTPtrDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtt_vtable_pointer_discrimination);
   if (Opts.PointerAuthTypeInfoVTPtrDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_type_info_vtable_pointer_discrimination);
   if (Opts.PointerAuthFunctionTypeDiscrimination)
@@ -3625,6 +3637,8 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
       Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
   Opts.PointerAuthVTPtrTypeDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthVTTVTPtrDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtt_vtable_pointer_discrimination);
   Opts.PointerAuthTypeInfoVTPtrDiscrimination =
       Args.hasArg(OPT_fptrauth_type_info_vtable_pointer_discrimination);
   Opts.PointerAuthFunctionTypeDiscrimination =
@@ -4129,6 +4143,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Options/Options.inc"
 #undef LANG_OPTION_WITH_MARSHALLING
+
+  // "Modules semantics" (e.g. cross-translation-unit declaration merging) are
+  // needed for both Clang (header) modules and C++20 modules, so enable them
+  // for either.
+  Opts.Modules = Opts.ClangModules || Opts.CPlusPlusModules;
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
@@ -4740,7 +4759,6 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::RewriteObjC:
   case frontend::RewriteTest:
   case frontend::RunAnalysis:
-  case frontend::TemplightDump:
     return false;
 
   case frontend::DumpCompilerOptions:
@@ -4787,7 +4805,6 @@ static bool isCodeGenAction(frontend::ActionKind Action) {
   case frontend::RewriteObjC:
   case frontend::RewriteTest:
   case frontend::RunAnalysis:
-  case frontend::TemplightDump:
   case frontend::DumpCompilerOptions:
   case frontend::DumpRawTokens:
   case frontend::DumpTokens:
@@ -5023,6 +5040,18 @@ static void GenerateTargetArgs(const TargetOptions &Opts,
   if (!Opts.DarwinTargetVariantSDKVersion.empty())
     GenerateArg(Consumer, OPT_darwin_target_variant_sdk_version_EQ,
                 Opts.DarwinTargetVariantSDKVersion.getAsString());
+
+  // Generate AMDGPU xnack and sramecc flags.
+  if (Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled)
+    GenerateArg(Consumer, OPT_mxnack);
+  else if (Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Disabled)
+    GenerateArg(Consumer, OPT_mno_xnack);
+
+  if (Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled)
+    GenerateArg(Consumer, OPT_msramecc);
+  else if (Opts.AMDGPUSramEccState ==
+           TargetOptions::AMDGPUFeatureState::Disabled)
+    GenerateArg(Consumer, OPT_mno_sramecc);
 }
 
 static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
@@ -5052,6 +5081,21 @@ static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
           << A->getAsString(Args) << A->getValue();
     else
       Opts.DarwinTargetVariantSDKVersion = Version;
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mxnack, options::OPT_mno_xnack)) {
+    bool IsEnabled = A->getOption().matches(options::OPT_mxnack);
+    Opts.AMDGPUXnackState = IsEnabled
+                                ? TargetOptions::AMDGPUFeatureState::Enabled
+                                : TargetOptions::AMDGPUFeatureState::Disabled;
+  }
+
+  if (Arg *A =
+          Args.getLastArg(options::OPT_msramecc, options::OPT_mno_sramecc)) {
+    bool IsEnabled = A->getOption().matches(options::OPT_msramecc);
+    Opts.AMDGPUSramEccState = IsEnabled
+                                  ? TargetOptions::AMDGPUFeatureState::Enabled
+                                  : TargetOptions::AMDGPUFeatureState::Disabled;
   }
 
   return Diags.getNumErrors() == NumErrorsBefore;
@@ -5090,8 +5134,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
   ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
   ParseSSAFArgs(Res.getSSAFOpts(), Args, Diags);
-  ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
-                      /*DefaultDiagColor=*/false);
+  ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = Res.getFrontendOpts().DashX;
@@ -5226,15 +5269,22 @@ std::string CompilerInvocation::computeContextHash() const {
   HBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
 
   // Extend the signature with the language options
-  // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
-  using CK = LangOptions::CompatibilityKind;
+  const unsigned LanguageOptionValues[] = {
+#define HASH_LANGOPT_Benign(Value)
+#define HASH_LANGOPT_Compatible(Value) Value,
+#define HASH_LANGOPT_NotCompatible(Value) Value,
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-  if constexpr (CK::Compatibility != CK::Benign)                               \
-    HBuilder.add(LangOpts->Name);
+  HASH_LANGOPT_##Compatibility(LangOpts->Name)
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-  if constexpr (CK::Compatibility != CK::Benign)                               \
-    HBuilder.add(static_cast<unsigned>(LangOpts->get##Name()));
+  HASH_LANGOPT_##Compatibility(static_cast<unsigned>(LangOpts->get##Name()))
 #include "clang/Basic/LangOptions.def"
+  };
+#undef HASH_LANGOPT_Benign
+#undef HASH_LANGOPT_Compatible
+#undef HASH_LANGOPT_NotCompatible
+  // addRangeElements preserves the HBuilder.add sequence and excludes the
+  // LanguageOptionValues element count.
+  HBuilder.addRangeElements(LanguageOptionValues);
 
   HBuilder.addRange(getLangOpts().ModuleFeatures);
 
@@ -5354,85 +5404,87 @@ std::string CompilerInvocation::computeContextHash() const {
   return toString(llvm::APInt(64, Hash), 36, /*Signed=*/false);
 }
 
-void CompilerInvocationBase::visitPathsImpl(
-    llvm::function_ref<bool(std::string &)> Predicate) {
-#define RETURN_IF(PATH)                                                        \
+void CowCompilerInvocation::visitMutPaths(
+    llvm::function_ref<VisitMutResult(StringRef, std::string &)> Cb) {
+  std::string NewValue;
+
+#define RETURN_IF(OPTS, PATH)                                                  \
   do {                                                                         \
-    if (Predicate(PATH))                                                       \
+    VisitMutResult Res = Cb(PATH, NewValue);                                   \
+    if (Res.Replace) {                                                         \
+      (void)ensureOwned(OPTS);                                                 \
+      PATH.clear();                                                            \
+      std::swap(PATH, NewValue);                                               \
+    }                                                                          \
+    if (Res.Terminate)                                                         \
       return;                                                                  \
   } while (0)
 
-#define RETURN_IF_MANY(PATHS)                                                  \
+#define RETURN_IF_MANY(OPTS, PATHS)                                            \
   do {                                                                         \
-    if (llvm::any_of(PATHS, Predicate))                                        \
-      return;                                                                  \
+    for (unsigned I = 0, E = PATHS.size(); I != E; ++I)                        \
+      RETURN_IF(OPTS, PATHS[I]);                                               \
   } while (0)
 
-  auto &HeaderSearchOpts = *this->HSOpts;
   // Header search paths.
-  RETURN_IF(HeaderSearchOpts.Sysroot);
-  for (auto &Entry : HeaderSearchOpts.UserEntries)
+  RETURN_IF(HSOpts, HSOpts->Sysroot);
+  for (auto &Entry : HSOpts->UserEntries)
     if (Entry.IgnoreSysRoot)
-      RETURN_IF(Entry.Path);
-  RETURN_IF(HeaderSearchOpts.ResourceDir);
-  RETURN_IF(HeaderSearchOpts.ModuleCachePath);
-  RETURN_IF(HeaderSearchOpts.ModuleUserBuildPath);
-  for (auto &[Name, File] : HeaderSearchOpts.PrebuiltModuleFiles)
-    RETURN_IF(File);
-  RETURN_IF_MANY(HeaderSearchOpts.PrebuiltModulePaths);
-  RETURN_IF_MANY(HeaderSearchOpts.VFSOverlayFiles);
+      RETURN_IF(HSOpts, Entry.Path);
+  RETURN_IF(HSOpts, HSOpts->ResourceDir);
+  RETURN_IF(HSOpts, HSOpts->ModuleCachePath);
+  RETURN_IF(HSOpts, HSOpts->ModuleUserBuildPath);
+  for (auto &[Name, File] : HSOpts->PrebuiltModuleFiles)
+    RETURN_IF(HSOpts, File);
+  RETURN_IF_MANY(HSOpts, HSOpts->PrebuiltModulePaths);
+  RETURN_IF_MANY(HSOpts, HSOpts->VFSOverlayFiles);
 
   // Preprocessor options.
-  auto &PPOpts = *this->PPOpts;
-  RETURN_IF_MANY(PPOpts.MacroIncludes);
-  RETURN_IF_MANY(PPOpts.Includes);
-  RETURN_IF(PPOpts.ImplicitPCHInclude);
+  RETURN_IF_MANY(PPOpts, PPOpts->MacroIncludes);
+  RETURN_IF_MANY(PPOpts, PPOpts->Includes);
+  RETURN_IF(PPOpts, PPOpts->ImplicitPCHInclude);
 
   // Frontend options.
-  auto &FrontendOpts = *this->FrontendOpts;
-  for (auto &Input : FrontendOpts.Inputs) {
+  for (auto &Input : FrontendOpts->Inputs) {
     if (Input.isBuffer())
       continue;
 
-    RETURN_IF(Input.File);
+    RETURN_IF(FrontendOpts, Input.File);
   }
-  // TODO: Also report output files such as FrontendOpts.OutputFile;
-  RETURN_IF(FrontendOpts.CodeCompletionAt.FileName);
-  RETURN_IF_MANY(FrontendOpts.ModuleMapFiles);
-  RETURN_IF_MANY(FrontendOpts.ModuleFiles);
-  RETURN_IF_MANY(FrontendOpts.ModulesEmbedFiles);
-  RETURN_IF_MANY(FrontendOpts.ASTMergeFiles);
-  RETURN_IF(FrontendOpts.OverrideRecordLayoutsFile);
-  RETURN_IF(FrontendOpts.StatsFile);
+  // TODO: Also report output files such as FrontendOpts->OutputFile;
+  RETURN_IF(FrontendOpts, FrontendOpts->CodeCompletionAt.FileName);
+  RETURN_IF_MANY(FrontendOpts, FrontendOpts->ModuleMapFiles);
+  RETURN_IF_MANY(FrontendOpts, FrontendOpts->ModuleFiles);
+  RETURN_IF_MANY(FrontendOpts, FrontendOpts->ModulesEmbedFiles);
+  RETURN_IF_MANY(FrontendOpts, FrontendOpts->ASTMergeFiles);
+  RETURN_IF(FrontendOpts, FrontendOpts->OverrideRecordLayoutsFile);
+  RETURN_IF(FrontendOpts, FrontendOpts->StatsFile);
 
   // Filesystem options.
-  auto &FileSystemOpts = *this->FSOpts;
-  RETURN_IF(FileSystemOpts.WorkingDir);
+  RETURN_IF(FSOpts, FSOpts->WorkingDir);
 
   // Codegen options.
-  auto &CodeGenOpts = *this->CodeGenOpts;
-  RETURN_IF(CodeGenOpts.DebugCompilationDir);
-  RETURN_IF(CodeGenOpts.CoverageCompilationDir);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->DebugCompilationDir);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->CoverageCompilationDir);
 
   // Sanitizer options.
-  RETURN_IF_MANY(LangOpts->NoSanitizeFiles);
+  RETURN_IF_MANY(LangOpts, LangOpts->NoSanitizeFiles);
 
   // Coverage mappings.
-  RETURN_IF(CodeGenOpts.ProfileInstrumentUsePath);
-  RETURN_IF(CodeGenOpts.SampleProfileFile);
-  RETURN_IF(CodeGenOpts.ProfileRemappingFile);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->ProfileInstrumentUsePath);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->SampleProfileFile);
+  RETURN_IF(CodeGenOpts, CodeGenOpts->ProfileRemappingFile);
 
   // Dependency output options.
   for (auto &ExtraDep : DependencyOutputOpts->ExtraDeps)
-    RETURN_IF(ExtraDep.first);
+    RETURN_IF(DependencyOutputOpts, ExtraDep.first);
 }
 
-void CompilerInvocationBase::visitPaths(
-    llvm::function_ref<bool(StringRef)> Callback) const {
-  // The const_cast here is OK, because visitPathsImpl() itself doesn't modify
-  // the invocation, and our callback takes immutable StringRefs.
-  return const_cast<CompilerInvocationBase *>(this)->visitPathsImpl(
-      [&Callback](std::string &Path) { return Callback(StringRef(Path)); });
+void CowCompilerInvocation::visitPaths(
+    llvm::function_ref<VisitConstResult(StringRef)> Cb) const {
+  // The const_cast here is OK, because our callback never tries to modify.
+  return const_cast<CowCompilerInvocation *>(this)->visitMutPaths(
+      [&Cb](StringRef Path, std::string &) { return Cb(Path); });
 }
 
 void CompilerInvocationBase::generateCC1CommandLine(

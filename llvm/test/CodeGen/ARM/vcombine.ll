@@ -5,18 +5,18 @@
 define <16 x i8> @vcombine8(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombine8:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d16, [r1]
-; CHECK-LE-NEXT:    vldr d17, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d16
-; CHECK-LE-NEXT:    vmov r0, r1, d17
+; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d16, [r0]
+; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: vcombine8:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vldr d16, [r1]
-; CHECK-BE-NEXT:    vldr d17, [r0]
-; CHECK-BE-NEXT:    vrev64.8 d19, d16
-; CHECK-BE-NEXT:    vrev64.8 d18, d17
+; CHECK-BE-NEXT:    vldr d16, [r0]
+; CHECK-BE-NEXT:    vldr d17, [r1]
+; CHECK-BE-NEXT:    vrev64.8 d18, d16
+; CHECK-BE-NEXT:    vrev64.8 d19, d17
 ; CHECK-BE-NEXT:    vrev64.8 q8, q9
 ; CHECK-BE-NEXT:    vmov r1, r0, d16
 ; CHECK-BE-NEXT:    vmov r3, r2, d17
@@ -32,18 +32,18 @@ define <16 x i8> @vcombine8(ptr %A, ptr %B) nounwind {
 define <8 x i16> @vcombine16(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombine16:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d16, [r1]
-; CHECK-LE-NEXT:    vldr d17, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d16
-; CHECK-LE-NEXT:    vmov r0, r1, d17
+; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d16, [r0]
+; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: vcombine16:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vldr d16, [r1]
-; CHECK-BE-NEXT:    vldr d17, [r0]
-; CHECK-BE-NEXT:    vrev64.16 d19, d16
-; CHECK-BE-NEXT:    vrev64.16 d18, d17
+; CHECK-BE-NEXT:    vldr d16, [r0]
+; CHECK-BE-NEXT:    vldr d17, [r1]
+; CHECK-BE-NEXT:    vrev64.16 d18, d16
+; CHECK-BE-NEXT:    vrev64.16 d19, d17
 ; CHECK-BE-NEXT:    vrev64.16 q8, q9
 ; CHECK-BE-NEXT:    vmov r1, r0, d16
 ; CHECK-BE-NEXT:    vmov r3, r2, d17
@@ -59,18 +59,18 @@ define <8 x i16> @vcombine16(ptr %A, ptr %B) nounwind {
 define <4 x i32> @vcombine32(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombine32:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d16, [r1]
-; CHECK-LE-NEXT:    vldr d17, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d16
-; CHECK-LE-NEXT:    vmov r0, r1, d17
+; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d16, [r0]
+; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: vcombine32:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vldr d16, [r1]
-; CHECK-BE-NEXT:    vldr d17, [r0]
-; CHECK-BE-NEXT:    vrev64.32 d19, d16
-; CHECK-BE-NEXT:    vrev64.32 d18, d17
+; CHECK-BE-NEXT:    vldr d16, [r0]
+; CHECK-BE-NEXT:    vldr d17, [r1]
+; CHECK-BE-NEXT:    vrev64.32 d18, d16
+; CHECK-BE-NEXT:    vrev64.32 d19, d17
 ; CHECK-BE-NEXT:    vrev64.32 q8, q9
 ; CHECK-BE-NEXT:    vmov r1, r0, d16
 ; CHECK-BE-NEXT:    vmov r3, r2, d17
@@ -87,18 +87,18 @@ define <4 x i32> @vcombine32(ptr %A, ptr %B) nounwind {
 define <4 x float> @vcombinefloat(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombinefloat:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d16, [r1]
-; CHECK-LE-NEXT:    vldr d17, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d16
-; CHECK-LE-NEXT:    vmov r0, r1, d17
+; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d16, [r0]
+; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: vcombinefloat:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vldr d16, [r1]
-; CHECK-BE-NEXT:    vldr d17, [r0]
-; CHECK-BE-NEXT:    vrev64.32 d19, d16
-; CHECK-BE-NEXT:    vrev64.32 d18, d17
+; CHECK-BE-NEXT:    vldr d16, [r0]
+; CHECK-BE-NEXT:    vldr d17, [r1]
+; CHECK-BE-NEXT:    vrev64.32 d18, d16
+; CHECK-BE-NEXT:    vrev64.32 d19, d17
 ; CHECK-BE-NEXT:    vrev64.32 q8, q9
 ; CHECK-BE-NEXT:    vmov r1, r0, d16
 ; CHECK-BE-NEXT:    vmov r3, r2, d17
@@ -115,18 +115,18 @@ define <4 x float> @vcombinefloat(ptr %A, ptr %B) nounwind {
 define <2 x i64> @vcombine64(ptr %A, ptr %B) nounwind {
 ; CHECK-LE-LABEL: vcombine64:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vldr d16, [r1]
-; CHECK-LE-NEXT:    vldr d17, [r0]
-; CHECK-LE-NEXT:    vmov r2, r3, d16
-; CHECK-LE-NEXT:    vmov r0, r1, d17
+; CHECK-LE-NEXT:    vldr d18, [r1]
+; CHECK-LE-NEXT:    vldr d16, [r0]
+; CHECK-LE-NEXT:    vmov r2, r3, d18
+; CHECK-LE-NEXT:    vmov r0, r1, d16
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: vcombine64:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vldr d16, [r1]
-; CHECK-BE-NEXT:    vldr d17, [r0]
-; CHECK-BE-NEXT:    vmov r3, r2, d16
-; CHECK-BE-NEXT:    vmov r1, r0, d17
+; CHECK-BE-NEXT:    vldr d18, [r1]
+; CHECK-BE-NEXT:    vldr d16, [r0]
+; CHECK-BE-NEXT:    vmov r3, r2, d18
+; CHECK-BE-NEXT:    vmov r1, r0, d16
 ; CHECK-BE-NEXT:    mov pc, lr
 
 
@@ -179,9 +179,9 @@ define <8 x i16> @vcombine_vdup(<8 x i16> %src, ptr nocapture readonly %p) {
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldr r0, [sp]
 ; CHECK-LE-NEXT:    vld1.16 {d16[]}, [r0:16]!
-; CHECK-LE-NEXT:    vld1.16 {d17[]}, [r0:16]
+; CHECK-LE-NEXT:    vld1.16 {d18[]}, [r0:16]
 ; CHECK-LE-NEXT:    vmov r0, r1, d16
-; CHECK-LE-NEXT:    vmov r2, r3, d17
+; CHECK-LE-NEXT:    vmov r2, r3, d18
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: vcombine_vdup:
@@ -202,6 +202,45 @@ define <8 x i16> @vcombine_vdup(<8 x i16> %src, ptr nocapture readonly %p) {
   %b3 = shufflevector <4 x i16> %b2, <4 x i16> undef, <4 x i32> zeroinitializer
   %shuffle = shufflevector <4 x i16> %a3, <4 x i16> %b3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i16> %shuffle
+}
+
+define void @pr200378(i64 %conv2.i, ptr %call.i4) {
+; CHECK-LE-LABEL: pr200378:
+; CHECK-LE:       @ %bb.0: @ %entry
+; CHECK-LE-NEXT:    vmov.32 d17[0], r0
+; CHECK-LE-NEXT:    mov r0, #1
+; CHECK-LE-NEXT:    vmov.32 d17[1], r1
+; CHECK-LE-NEXT:    vmov.32 d16[0], r0
+; CHECK-LE-NEXT:    mov r0, #0
+; CHECK-LE-NEXT:    vmov.32 d16[1], r0
+; CHECK-LE-NEXT:  .LBB8_1: @ %for.body
+; CHECK-LE-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-LE-NEXT:    vst1.64 {d16, d17}, [r2]
+; CHECK-LE-NEXT:    b .LBB8_1
+;
+; CHECK-BE-LABEL: pr200378:
+; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    vmov.32 d17[0], r0
+; CHECK-BE-NEXT:    mov r0, #0
+; CHECK-BE-NEXT:    vmov.32 d17[1], r1
+; CHECK-BE-NEXT:    vrev64.32 q8, q8
+; CHECK-BE-NEXT:    vrev64.32 q8, q8
+; CHECK-BE-NEXT:    vmov.32 d16[0], r0
+; CHECK-BE-NEXT:    mov r0, #1
+; CHECK-BE-NEXT:    vmov.32 d16[1], r0
+; CHECK-BE-NEXT:    vrev64.32 q8, q8
+; CHECK-BE-NEXT:  .LBB8_1: @ %for.body
+; CHECK-BE-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-BE-NEXT:    vst1.64 {d16, d17}, [r2]
+; CHECK-BE-NEXT:    b .LBB8_1
+entry:
+  %0 = insertelement <2 x i64> poison, i64 %conv2.i, i64 1
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %1 = insertelement <2 x i64> %0, i64 1, i64 0
+  store <2 x i64> %1, ptr %call.i4, align 8
+  br label %for.body
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

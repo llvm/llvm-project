@@ -146,12 +146,22 @@ Error DWARFLinkerImpl::link() {
       DWARFDie UnitDie = OrigCU->getUnitDIE();
 
       if (!Language) {
-        if (std::optional<DWARFFormValue> Val =
-                UnitDie.find(dwarf::DW_AT_language)) {
-          uint16_t LangVal = dwarf::toUnsigned(Val, 0);
-          if (isODRLanguage(LangVal))
-            Language = LangVal;
-        }
+        if (std::optional<uint64_t> LangVal = UnitDie.getLanguage())
+          if (isODRLanguage(*LangVal))
+            Language = static_cast<uint16_t>(*LangVal);
+      }
+    }
+
+    // Clang module units decide their ODR availability from their own
+    // language, so they have to be part of this scan as well. A module unit
+    // can be the only ODR unit of a link, and any unit which deduplicates
+    // types requires the artificial type unit to exist.
+    for (const LinkContext::RefModuleUnit &Module :
+         Context->ModulesCompileUnits) {
+      if (!Language) {
+        if (std::optional<uint16_t> LangVal = Module.Unit->getLanguage())
+          if (isODRLanguage(*LangVal))
+            Language = *LangVal;
       }
     }
   }

@@ -2343,20 +2343,19 @@ bool DWARFVerifier::verifyDebugStrOffsets(
     std::string Msg = toString(std::move(E));
     ErrorCategory.Report("String offset error", [&]() {
       error() << formatv("{0}: {1}\n", SectionName, Msg);
-      return false;
     });
   }
   return Success;
 }
 
-void OutputCategoryAggregator::Report(
-    StringRef s, std::function<void(void)> detailCallback) {
-  this->Report(s, "", detailCallback);
+void OutputCategoryAggregator::Report(StringRef s,
+                                      function_ref<void(void)> detailCallback) {
+  Report(s, "", detailCallback);
 }
 
-void OutputCategoryAggregator::Report(
-    StringRef category, StringRef sub_category,
-    std::function<void(void)> detailCallback) {
+void OutputCategoryAggregator::Report(StringRef category,
+                                      StringRef sub_category,
+                                      function_ref<void(void)> detailCallback) {
   std::lock_guard<std::mutex> Lock(WriteMutex);
   ++NumErrors;
   std::string category_str = std::string(category);
@@ -2370,13 +2369,13 @@ void OutputCategoryAggregator::Report(
 }
 
 void OutputCategoryAggregator::EnumerateResults(
-    std::function<void(StringRef, unsigned)> handleCounts) {
+    function_ref<void(StringRef, unsigned)> handleCounts) {
   for (const auto &[name, aggData] : Aggregation) {
     handleCounts(name, aggData.OverallCount);
   }
 }
 void OutputCategoryAggregator::EnumerateDetailedResultsFor(
-    StringRef category, std::function<void(StringRef, unsigned)> handleCounts) {
+    StringRef category, function_ref<void(StringRef, unsigned)> handleCounts) {
   const auto Agg = Aggregation.find(category);
   if (Agg != Aggregation.end()) {
     for (const auto &[name, aggData] : Agg->second.DetailedCounts) {

@@ -219,6 +219,7 @@ set(files
   __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
+  __atomic/clear_padding.h
   __atomic/contention_t.h
   __atomic/fence.h
   __atomic/floating_point_helper.h
@@ -293,6 +294,8 @@ set(files
   __chrono/year_month_day.h
   __chrono/year_month_weekday.h
   __chrono/zoned_time.h
+  __cmath/lerp.h
+  __cmath/special_functions.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
   __compare/compare_strong_order_fallback.h
@@ -343,6 +346,7 @@ set(files
   __configuration/language.h
   __configuration/namespace.h
   __configuration/platform.h
+  __configuration/pstl.h
   __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
@@ -437,6 +441,9 @@ set(files
   __functional/compose.h
   __functional/default_searcher.h
   __functional/function.h
+  __functional/function_ref.h
+  __functional/function_ref_common.h
+  __functional/function_ref_impl.h
   __functional/hash.h
   __functional/identity.h
   __functional/invoke.h
@@ -467,6 +474,7 @@ set(files
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
+  __fwd/optional.h
   __fwd/ostream.h
   __fwd/pair.h
   __fwd/queue.h
@@ -528,9 +536,13 @@ set(files
   __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
-  __locale
   __locale_dir/check_grouping.h
+  __locale_dir/codecvt.h
+  __locale_dir/collate.h
+  __locale_dir/ctype.h
+  __locale_dir/ctype_base.h
   __locale_dir/get_c_locale.h
+  __locale_dir/locale.h
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
@@ -555,6 +567,7 @@ set(files
   __locale_dir/support/openbsd.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
+  __locale_dir/utf8_conversions.h
   __locale_dir/wbuffer_convert.h
   __locale_dir/wstring_convert.h
   __log_hardening_failure
@@ -575,7 +588,6 @@ set(files
   __math/remainder.h
   __math/roots.h
   __math/rounding_functions.h
-  __math/special_functions.h
   __math/traits.h
   __math/trigonometric_functions.h
   __mbstate_t.h
@@ -607,6 +619,7 @@ set(files
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
+  __memory/pstl.h
   __memory/ranges_construct_at.h
   __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
@@ -617,6 +630,7 @@ set(files
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
+  __memory/uninitialized_multidimensional_algorithms.h
   __memory/unique_ptr.h
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
@@ -660,6 +674,14 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __optional/common.h
+  __optional/comparison.h
+  __optional/hash.h
+  __optional/make_optional.h
+  __optional/nullopt_t.h
+  __optional/optional.h
+  __optional/optional_ref.h
+  __optional/swap.h
   __ostream/basic_ostream.h
   __ostream/print.h
   __ostream/put_character_sequence.h
@@ -675,6 +697,10 @@ set(files
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
   __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/mismatch.h
+  __pstl/cpu_algos/reverse.h
+  __pstl/cpu_algos/search.h
+  __pstl/cpu_algos/search_n.h
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
@@ -909,6 +935,7 @@ set(files
   __type_traits/rank.h
   __type_traits/reference_constructs_from_temporary.h
   __type_traits/reference_converts_from_temporary.h
+  __type_traits/register_passable.h
   __type_traits/remove_all_extents.h
   __type_traits/remove_const.h
   __type_traits/remove_const_ref.h
@@ -961,6 +988,7 @@ set(files
   __vector/comparison.h
   __vector/container_traits.h
   __vector/erase.h
+  __vector/layout.h
   __vector/pmr.h
   __vector/swap.h
   __vector/vector.h
@@ -1686,9 +1714,11 @@ set(files
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
-# We generate the modulemap file so that we can include __config_site in it. For now, we don't know how to
-# make __config_site modular when per-target runtime directories are used.
-if (NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+# We generate the main modulemap file so that we can include __config_site in it. When using a target-specific
+# include directory, give it its own modulemap.
+if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  configure_file("target.modulemap" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap" COPYONLY)
+else()
   set(LIBCXX_CONFIG_SITE_MODULE_ENTRY "textual header \"__config_site\"")
 endif()
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
@@ -1696,6 +1726,9 @@ configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.mod
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
+if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap")
+endif()
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1763,6 +1796,14 @@ if (LIBCXX_INSTALL_HEADERS)
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
+
+  # Install the per-target modulemap when we use per-target include dirs.
+  if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap"
+      DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+      COMPONENT cxx-headers)
+  endif()
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
