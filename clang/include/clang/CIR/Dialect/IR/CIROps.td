@@ -6030,7 +6030,7 @@ def CIR_VecTernaryOp : CIR_Op<"vec.ternary", [
   }];
 
   let arguments = (ins
-    CIR_VectorOfIntType:$cond,
+    CIR_VectorOfIntOrBoolType:$cond,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs
   );
