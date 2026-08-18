@@ -111,9 +111,11 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
       if (hasTypedIV)
         canonicalIV =
             fir::ConvertOp::create(rewriter, loc, low.getType(), canonicalIV);
-      // No nsw: the closed form can wrap where an increment by step does not.
-      iv = mlir::arith::MulIOp::create(rewriter, loc, canonicalIV, step);
-      iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv);
+      // Keep the no-wrap flags the stepped increment carried, so a narrow IV
+      // still folds into an affine recurrence.
+      iv = mlir::arith::MulIOp::create(rewriter, loc, canonicalIV, step,
+                                       iofAttr);
+      iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv, iofAttr);
     }
     mlir::Value firIV = doLoopOp.getInductionVar();
     firIV.replaceAllUsesWith(iv);
