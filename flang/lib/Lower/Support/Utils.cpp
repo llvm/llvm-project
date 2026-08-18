@@ -289,7 +289,7 @@ public:
   }
   static unsigned
   getHashValue(const Fortran::evaluate::value::IntegerValue &x) {
-    return static_cast<unsigned>(x.ToSInt());
+    return static_cast<unsigned>(x.ToInt64());
   }
   static unsigned getHashValue(const Fortran::evaluate::NullPointer &x) {
     return ~179u;

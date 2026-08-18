@@ -202,8 +202,7 @@ public:
   static constexpr int Corank() { return 0; }
 
   bool operator==(const Operation &that) const {
-    CHECK(kind() == that.kind());
-    return operand_ == that.operand_;
+    return kind() == that.kind() && operand_ == that.operand_;
   }
 
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
@@ -923,6 +922,11 @@ class Expr<SomeKind<CAT>> : public ExpressionBase<SomeKind<CAT>> {
 public:
   using Result = SomeKind<CAT>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
+
+  int kind() const {
+    return common::visit([](auto v) -> int { return v.kind(); }, u);
+  }
+
   common::MapTemplate<evaluate::Expr, CategoryTypes<CAT>> u;
 };
 

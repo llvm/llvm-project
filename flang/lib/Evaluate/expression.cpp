@@ -228,49 +228,49 @@ bool StructureConstructor::operator==(const StructureConstructor &that) const {
 
 bool Expr<Type<TypeCategory::Integer>>::operator==(
     const Expr<Type<TypeCategory::Integer>> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<Type<TypeCategory::Real>>::operator==(
     const Expr<Type<TypeCategory::Real>> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<Type<TypeCategory::Complex>>::operator==(
     const Expr<Type<TypeCategory::Complex>> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<Type<TypeCategory::Logical>>::operator==(
     const Expr<Type<TypeCategory::Logical>> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<Type<TypeCategory::Character>>::operator==(
     const Expr<Type<TypeCategory::Character>> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<Type<TypeCategory::Unsigned>>::operator==(
     const Expr<Type<TypeCategory::Unsigned>> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 template <TypeCategory CAT>
 bool Expr<SomeKind<CAT>>::operator==(const Expr<SomeKind<CAT>> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<SomeDerived>::operator==(const Expr<SomeDerived> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<SomeCharacter>::operator==(const Expr<SomeCharacter> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 bool Expr<SomeType>::operator==(const Expr<SomeType> &that) const {
-  return u == that.u;
+  return kind() == that.kind() && u == that.u;
 }
 
 DynamicType StructureConstructor::GetType() const { return result_.GetType(); }
