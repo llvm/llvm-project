@@ -396,7 +396,8 @@ def main():
     for name in lines_by_file:
         line_filter_name = str((Path.cwd() / name).resolve())
         line_filter_json = json.dumps(
-            [{"name": line_filter_name, "lines": lines_by_file[name]}], separators=(",", ":"),
+            [{"name": line_filter_name, "lines": lines_by_file[name]}],
+            separators=(",", ":"),
         )
 
         # Run clang-tidy on files containing changes.
