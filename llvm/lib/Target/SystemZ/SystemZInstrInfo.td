@@ -1924,6 +1924,25 @@ let Predicates = [FeatureConcurrentFunctions], Uses = [R0D], Defs = [CC],
 }
 
 //===----------------------------------------------------------------------===//
+// Translate
+//===----------------------------------------------------------------------===//
+
+// Handle variable length data via pseudo
+def TR_VAR 
+  : Pseudo<(outs), (ins GR64:$src, GR64:$tbl, GR32:$len),
+           [(int_s390_translate GR64:$src, GR64:$tbl, GR32:$len)]> {
+  let hasSideEffects = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let Uses = [CC];
+  let Defs = [CC];
+}
+
+// Handle constant length data by pattern matching directly to TR opcode
+def : Pat<(z_tr GR64:$src, imm:$len, GR64:$tbl),
+          (TR GR64:$src, imm:$len, GR64:$tbl)>;
+
+//===----------------------------------------------------------------------===//
 // Translate and convert
 //===----------------------------------------------------------------------===//
 
