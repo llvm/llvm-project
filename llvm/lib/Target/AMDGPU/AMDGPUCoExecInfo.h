@@ -386,7 +386,9 @@ inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
   case V_MFMA_I32_16X16X64_I8_vgprcd_e64:
   case V_MFMA_F32_16X16X32_F16_e64:
   case V_MFMA_F32_16X16X32_F16_vgprcd_e64:
-    // Distinction marker to simplify mapping to the programming guide
+    // GFX9 Shader Programming Guide lists those SMFMAC separately, but for
+    // intended purposes here all those instructions are the same. This comment
+    // is to simplify reverse mapping to the SPG.
   case V_SMFMAC_F32_16X16X64_BF16_e64:
   case V_SMFMAC_I32_16X16X128_I8_e64:
   case V_SMFMAC_F32_16X16X128_BF8_BF8_e64:
