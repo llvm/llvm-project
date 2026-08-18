@@ -624,8 +624,14 @@ entered in the middle wraps that sequence in `.bundle_lock` / `.bundle_unlock`.
 This keeps the whole group within a single bundle, so no masked indirect branch
 can land between its instructions.
 
-**Note**: the masking of indirect branch targets is part of the control flow
-rewrites, which have not been implemented yet.
+Calls are emitted in a `.bundle_lock align_to_end` group, which places the call
+at the end of its bundle. This makes the return address pushed by the call
+bundle-aligned, so that a masked `ret` returns to the instruction following the
+call.
+
+To make sure that indirect branch targets remain reachable after masking, the
+compiler aligns them to a bundle boundary. The targets of direct branches do
+not need to be aligned, since they are resolved statically.
 
 Bundling is specific to X86-64. AArch64 instructions are fixed-width and
 naturally aligned, and the AArch64 LFI target confines indirect branches by
@@ -640,32 +646,6 @@ In the following assembly rewrites, some shorthand is used.
 - `%rN` or `%eN`: refers to any general-purpose non-reserved register.
 - `{a,b,c}`: matches any of `a`, `b`, or `c`.
 - `N(...)`: refers to any memory addressing mode.
-
-#### Bundles
-
-The X86-64 target divides the code region into 32-byte aligned *bundles*.
-Indirect branch targets are masked so that they are always bundle-aligned,
-which restricts the set of reachable instructions to bundle boundaries. For
-this to be sound, two additional properties are required:
-
-- A rewrite sequence must never be split across a bundle boundary, otherwise
-  control could be transferred into the middle of the sequence, skipping the
-  mask.
-- The return address pushed by a call must be bundle-aligned, otherwise a
-  masked `ret` would not return to the instruction following the call.
-
-Both properties are enforced by instruction bundling in the assembler.
-
-**Note**: instruction bundling has not been implemented yet, so the rewrites
-below are currently emitted without it. Until bundling is added, the emitted
-code is not yet a complete sandbox.
-
-To make sure that valid indirect branch targets remain reachable after masking,
-the compiler aligns function entry points, address-taken basic blocks, jump
-table targets, and exception handling landing pads to a bundle boundary.
-
-The targets of direct branches do not need to be aligned, since they are
-resolved at build time.
 
 #### Control flow
 
