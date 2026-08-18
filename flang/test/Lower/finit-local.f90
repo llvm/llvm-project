@@ -470,3 +470,64 @@ end subroutine
 ! HEX-LABEL:  func.func @_QPtest_equivalence
 ! HEX-NOT:  arith.bitcast
 ! HEX: return
+
+! ---------------------------------------------------------------------------
+! CHARACTER(kind=2, len=3) -- fixed-length, higher kind.
+! hex: byte-loop over 3*2=6 bytes using a kind=1 singleton view.
+! zero: fir.zero_bits over the whole type.
+! ---------------------------------------------------------------------------
+subroutine test_char2_fixed(res)
+  character(kind=2, len=3) :: res
+  character(kind=2, len=3) :: x
+  res = x
+end subroutine
+! ZERO-LABEL: func.func @_QPtest_char2_fixed
+! ZERO: fir.zero_bits !fir.char<2,3>
+! ZERO: fir.store {{.*}} : !fir.ref<!fir.char<2,3>>
+
+! HEX-LABEL:  func.func @_QPtest_char2_fixed
+! HEX:        fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          arith.constant {{.*}} : i8
+! HEX:          fir.store {{.*}} : !fir.ref<i8>
+
+! ---------------------------------------------------------------------------
+! CHARACTER(kind=4, len=2) -- fixed-length, wider kind.
+! hex: byte-loop over 2*4=8 bytes using a kind=1 singleton view.
+! ---------------------------------------------------------------------------
+subroutine test_char4_fixed(res)
+  character(kind=4, len=2) :: res
+  character(kind=4, len=2) :: x
+  res = x
+end subroutine
+! ZERO-LABEL: func.func @_QPtest_char4_fixed
+! ZERO: fir.zero_bits !fir.char<4,2>
+! ZERO: fir.store {{.*}} : !fir.ref<!fir.char<4,2>>
+
+! HEX-LABEL:  func.func @_QPtest_char4_fixed
+! HEX:        fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          arith.constant {{.*}} : i8
+! HEX:          fir.store {{.*}} : !fir.ref<i8>
+
+! ---------------------------------------------------------------------------
+! CHARACTER(kind=2, len=n) -- runtime-length, higher kind.
+! hex/zero: byte-loop over n*2 bytes; skipped when n==0.
+! ---------------------------------------------------------------------------
+subroutine test_char2_runtime(res, n)
+  integer, intent(in) :: n
+  character(kind=2, len=n) :: res
+  character(kind=2, len=n) :: x
+  res = x
+end subroutine
+! ZERO-LABEL: func.func @_QPtest_char2_runtime
+! ZERO:       fir.do_loop
+! ZERO:         fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! ZERO:         fir.zero_bits !fir.char<1>
+! ZERO:         fir.store {{.*}} : !fir.ref<!fir.char<1>>
+
+! HEX-LABEL:  func.func @_QPtest_char2_runtime
+! HEX:        fir.do_loop
+! HEX:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
+! HEX:          arith.constant {{.*}} : i8
+! HEX:          fir.store {{.*}} : !fir.ref<i8>

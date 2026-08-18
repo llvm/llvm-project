@@ -1381,7 +1381,7 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
 }
 
 /// Emit a store of the -finit-local= pattern for a single scalar address.
-/// Fixed-length CHARACTER in hex mode: byte-loop over each code unit.
+/// Fixed-length CHARACTER in hex mode: byte-loop over every byte of storage.
 /// LOGICAL stores via a bitcasted integer address to preserve the raw bit
 /// pattern past fir.convert normalization.
 static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -1396,22 +1396,27 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
     if (charTy.getLen() == 0)
       return;
     if (mode == Fortran::lower::InitLocalKind::Hex) {
-      // Loop over each code unit of the character storage. The loop body
-      // stores one i8 per iteration via a singleton fir.char<kind,1>
-      // coordinate, so every byte of every code unit is written.
+      // Loop over every byte of the character storage. For kind=1 each
+      // code unit is one byte; for kind=2/4 (UTF-16/32) each code unit is
+      // kind bytes wide. We use a kind=1 singleton as the view element so
+      // fir.coordinate_of advances exactly one byte per step, and iterate
+      // nUnits * kind times to cover all bytes.
       int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
-      if (nUnits > 0) {
+      int64_t kindBytes = charTy.getFKind();
+      int64_t nBytes = nUnits * kindBytes;
+      if (nBytes > 0) {
         mlir::Type idxTy = builder.getIndexType();
         mlir::Type i8Ty = builder.getIntegerType(8);
-        fir::CharacterType byteTy = fir::CharacterType::getSingleton(
-            builder.getContext(), charTy.getFKind());
+        // Use a kind=1 singleton so fir.coordinate_of strides by 1 byte.
+        fir::CharacterType byteTy =
+            fir::CharacterType::getSingleton(builder.getContext(), 1);
         mlir::Type byteSeqTy = fir::SequenceType::get(
             {fir::SequenceType::getUnknownExtent()}, byteTy);
         mlir::Value byteBase =
             builder.createConvert(loc, builder.getRefType(byteSeqTy), addr);
         mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
         mlir::Value last =
-            builder.createIntegerConstant(loc, idxTy, nUnits - 1);
+            builder.createIntegerConstant(loc, idxTy, nBytes - 1);
         mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
         auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
                                           /*unordered=*/false,
@@ -1424,9 +1429,6 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
                                       byteBase, mlir::ValueRange{iv});
         mlir::Value pat = builder.createIntegerConstant(
             loc, i8Ty, static_cast<int64_t>(hexByte));
-        // Store via i8 pointer so the byte pattern is written verbatim
-        // regardless of character kind (UTF-16/32 code units are also
-        // initialised byte-by-byte).
         mlir::Value i8Addr =
             builder.createConvert(loc, builder.getRefType(i8Ty), byteAddr);
         fir::StoreOp::create(builder, loc, pat, i8Addr);
@@ -1592,8 +1594,16 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::Value lenIdx = builder.createConvert(loc, idxTy, rtLen);
       mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
       mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      // last = lenIdx - 1; the fir.do_loop trip count is lenIdx so the
-      // loop body is skipped entirely when lenIdx == 0 (empty string).
+      // For kind>1 (UTF-16/32) the runtime length is in code units; multiply
+      // by kind to get the total byte count before computing the loop bound.
+      // Use a kind=1 singleton so fir.coordinate_of advances 1 byte per step.
+      int64_t kindBytes = charTy.getFKind();
+      if (kindBytes > 1) {
+        mlir::Value kindCst =
+            builder.createIntegerConstant(loc, idxTy, kindBytes);
+        lenIdx = mlir::arith::MulIOp::create(builder, loc, lenIdx, kindCst);
+      }
+      // last = byteCount - 1; the loop is skipped entirely when byteCount == 0.
       mlir::Value last = mlir::arith::SubIOp::create(builder, loc, lenIdx, one);
       auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
                                         /*unordered=*/false,
@@ -1601,10 +1611,8 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointToStart(loop.getBody());
       mlir::Value iv = loop.getInductionVar();
-      // Treat the storage as an array of singleton characters so that
-      // fir.coordinate_of advances by one code-unit per step.
-      fir::CharacterType byteTy = fir::CharacterType::getSingleton(
-          builder.getContext(), charTy.getFKind());
+      fir::CharacterType byteTy =
+          fir::CharacterType::getSingleton(builder.getContext(), 1);
       mlir::Type byteSeqTy = fir::SequenceType::get(
           {fir::SequenceType::getUnknownExtent()}, byteTy);
       mlir::Value byteBase =
