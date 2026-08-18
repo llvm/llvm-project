@@ -3104,11 +3104,8 @@ const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   ID.AddPointer(LHS);
   ID.AddPointer(RHS);
   void *IP = nullptr;
-  SCEVUDivExpr *S =
-      static_cast<SCEVUDivExpr *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP));
+  SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
   if (!S) {
-    SCEVUse *O = SCEVAllocator.Allocate<SCEVUse>(2);
-    llvm::uninitialized_copy(ArrayRef<SCEVUse>({LHS, RHS}), O);
     S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator), LHS, RHS);
     UniqueSCEVs.InsertNode(S, IP);
     S->computeAndSetCanonical(*this);
