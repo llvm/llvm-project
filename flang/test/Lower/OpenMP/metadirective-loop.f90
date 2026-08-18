@@ -22,18 +22,13 @@ subroutine test_do(n, a)
   end do
 end subroutine
 
-! The score is compared before explicitness, so a higher-scored implicit
-! NOTHING is selected over an explicit DO when its condition is true.
+! A runtime condition cannot raise the rank of an implicit NOTHING.
+! The explicit DO candidate therefore wins unconditionally.
 ! CHECK-LABEL: func.func @_QPtest_implicit_nothing_score(
-! CHECK:         %[[FLAG:.*]] = fir.load {{.*}} : !fir.ref<!fir.logical<4>>
-! CHECK:         %[[COND:.*]] = fir.convert %[[FLAG]]
-! CHECK:         fir.if %[[COND]] {
-! CHECK-NOT:       omp.
-! CHECK:           fir.do_loop
-! CHECK:         } else {
-! CHECK:           omp.wsloop
-! CHECK:             omp.loop_nest
-! CHECK:         }
+! CHECK-NOT:     fir.if
+! CHECK:         omp.wsloop
+! CHECK:           omp.loop_nest
+! CHECK-NOT:     fir.if
 ! CHECK:         return
 subroutine test_implicit_nothing_score(flag, n, a)
   logical, intent(in) :: flag

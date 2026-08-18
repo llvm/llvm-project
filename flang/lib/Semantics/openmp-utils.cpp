@@ -2630,17 +2630,25 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
 
         if (hasMatchAny && isStaticVMIApplicable) {
           // Represent both outcomes: a guarded candidate with the condition's
-          // score and an unguarded candidate with only the static traits.
-          llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
-          addConditionTraitForRanking(conditionTrueVMI);
-          result.candidates.push_back({spec, std::move(conditionTrueVMI),
-              isExplicit, dynamicCondition});
+          // score and an unguarded candidate with only the static traits. An
+          // omitted directive contributes only the unguarded implicit NOTHING.
+          if (isExplicit) {
+            llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
+            addConditionTraitForRanking(conditionTrueVMI);
+            result.candidates.push_back({spec, std::move(conditionTrueVMI),
+                isExplicit, dynamicCondition});
+          }
           result.candidates.push_back({spec, std::move(staticVMI), isExplicit});
           continue;
         }
 
         llvm::omp::VariantMatchInfo rankingVMI{staticVMI};
-        addConditionTraitForRanking(rankingVMI);
+        // Do not let a runtime condition raise the rank of an omitted
+        // directive. Explicit NOTHING remains an ordinary directive variant.
+        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
+          rankingVMI = llvm::omp::VariantMatchInfo();
+        else if (isExplicit)
+          addConditionTraitForRanking(rankingVMI);
         result.candidates.push_back({spec, std::move(rankingVMI), isExplicit,
             dynamicCondition, /*conditionShouldBeTrue=*/!hasMatchNone});
         continue;

@@ -425,19 +425,12 @@ subroutine test_dynamic_user_match_any_static_score(flag)
 #endif
 end subroutine
 
-! An implicit NOTHING keeps its dynamic condition score under match_any as
-! well. The unguarded match_any path has only the static score, so TASKWAIT wins
-! when FLAG is false.
+! An implicit NOTHING does not use its dynamic condition to raise its rank.
+! The explicit TASKWAIT candidate therefore wins unconditionally.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_match_any_implicit_nothing_score(
-! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.logical<4>>
-! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK:         %[[LOAD:.*]] = fir.load %[[DECL]]#0
-! CHECK:         %[[COND:.*]] = fir.convert %[[LOAD]]
-! CHECK:         fir.if %[[COND]] {
-! CHECK-NOT:       omp.
-! CHECK:         } else {
-! CHECK:           omp.taskwait
-! CHECK:         }
+! CHECK-NOT:     fir.if
+! CHECK:         omp.taskwait
+! CHECK-NOT:     fir.if
 ! CHECK:         return
 subroutine test_dynamic_match_any_implicit_nothing_score(flag)
   logical, intent(in) :: flag
@@ -451,17 +444,32 @@ subroutine test_dynamic_match_any_implicit_nothing_score(flag)
 #endif
 end subroutine
 
-! When FLAG is true, the explicit candidate's selector is a strict subset of
-! the implicit candidate's selector and therefore has a lower score. When FLAG
-! is false, only the explicit candidate is compatible.
+! The implicit NOTHING gets an empty ranking when match_any's static traits do
+! not match. The explicit TASKWAIT candidate therefore wins unconditionally.
+! CHECK-LABEL: func.func @_QPtest_match_any_implicit_nothing_mismatch(
+! CHECK-NOT:     fir.if
+! CHECK:         omp.taskwait
+! CHECK-NOT:     fir.if
+! CHECK:         return
+subroutine test_match_any_implicit_nothing_mismatch(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(implementation={extension(match_any), vendor(gnu)}, &
+  !$omp & user={condition(score(100): flag)}:) &
+  !$omp & when(user={condition(score(10): .true.)}: taskwait) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
+! The explicit directive variant wins this tie over the earlier implicit
+! NOTHING candidate.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_tie_break(
-! CHECK:         %[[LOAD:.*]] = fir.load {{.*}} : !fir.ref<!fir.logical<4>>
-! CHECK:         %[[COND:.*]] = fir.convert %[[LOAD]]
-! CHECK:         fir.if %[[COND]] {
-! CHECK-NOT:       omp.
-! CHECK:         } else {
-! CHECK:           omp.barrier
-! CHECK:         }
+! CHECK-NOT:     fir.if
+! CHECK:         omp.barrier
+! CHECK-NOT:     fir.if
 ! CHECK:         return
 subroutine test_dynamic_implicit_nothing_tie_break(flag)
   logical, intent(in) :: flag
