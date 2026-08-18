@@ -73,9 +73,8 @@ cpp::enable_if_t<cpp::is_fixed_point_v<T>, cpp::string> describeValue(T Value) {
 cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-
 cpp::string describeValue(cpp::wstring_view Value) {
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
   LIBC_NAMESPACE::internal::mbstate State;
   LIBC_NAMESPACE::internal::StringConverter<wchar_t> StringConv(
       Value.data(), &State, /* dstlen = */ SIZE_MAX, Value.size());
@@ -90,9 +89,20 @@ cpp::string describeValue(cpp::wstring_view Value) {
     S = cpp::string("<Failed Conversion To UTF-8>");
 
   return S;
-}
+#else  // LIBC_TYPES_WCHAR_T_IS_UTF32
+  if (Value.empty())
+    return "{}";
 
+  cpp::string S;
+  S += '{';
+  for (const wchar_t *Iter = Value.begin(); Iter + 1 != Value.end(); ++Iter) {
+    S += cpp::to_string(*Iter);
+    S += ',';
+  }
+  S += cpp::to_string(Value.back());
+  return S;
 #endif // LIBC_TYPES_WCHAR_T_IS_UTF32
+}
 
 template <typename ValType>
 bool test_impl(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
@@ -242,6 +252,8 @@ namespace internal {
                                 TYPE RHS, const char *LHSStr,                  \
                                 const char *RHSStr, Location Loc)
 
+TEST_SPECIALIZATION(wchar_t);
+
 TEST_SPECIALIZATION(char);
 TEST_SPECIALIZATION(short);
 TEST_SPECIALIZATION(int);
@@ -274,12 +286,8 @@ TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<320>);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string_view);
-TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string);
-
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-TEST_SPECIALIZATION(wchar_t);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::wstring_view);
-#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string);
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 TEST_SPECIALIZATION(short fract);
