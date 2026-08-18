@@ -1677,17 +1677,16 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // Under ieee=1, an snan in src0/src1 selects src2 but an snan in src2
     // yields qnan, so src2 can't swap in freely; ieee=0 is symmetric.
-    auto CanMoveConstantToSrc2 = [&]() {
-      if (fpenvIEEEMode(II) == KnownIEEEMode::Off)
-        return true;
-      return llvm::all_of(std::array{Src0, Src1, Src2}, [&](Value *Op) {
-        return FMF.noNaNs() ||
-               computeKnownFPClass(Op, fcSNan, SQ).isKnownNever(fcSNan);
-      });
-    };
+    bool NoOperandCanBeSNan =
+        FMF.noNaNs() ||
+        (computeKnownFPClass(Src0, fcSNan, SQ).isKnownNever(fcSNan) &&
+         computeKnownFPClass(Src1, fcSNan, SQ).isKnownNever(fcSNan) &&
+         computeKnownFPClass(Src2, fcSNan, SQ).isKnownNever(fcSNan));
+    bool SafeToMoveConstantToSrc2 =
+        fpenvIEEEMode(II) == KnownIEEEMode::Off || NoOperandCanBeSNan;
 
     if (isa<Constant>(Src1) && !isa<Constant>(Src2) &&
-        CanMoveConstantToSrc2()) {
+        SafeToMoveConstantToSrc2) {
       std::swap(Src1, Src2);
       Swap = true;
     }
