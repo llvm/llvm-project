@@ -18,7 +18,10 @@ add_entrypoint_object(
     ../getrusage.h
   DEPENDS
     libc.hdr.types.struct_rusage
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrusage
     libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

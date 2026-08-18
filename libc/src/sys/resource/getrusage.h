@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H_
-#define LVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H_
+#ifndef LVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
+#define LVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
 
 #include "hdr/types/struct_rusage.h"
 #include "src/__support/macros/config.h"
@@ -23,4 +23,4 @@ int getrusage(int who, struct rusage *usage);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif  // LLVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H_
+#endif  // LLVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
