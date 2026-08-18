@@ -265,8 +265,14 @@ PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
   ModuleList::GetSharedModule(module_spec, bin_spec.module_sp, nullptr, nullptr,
                               /*invoke_locate_callback=*/true,
                               /*invoke_symbol_locators=*/false);
+  bool user_interrupted = false;
   if (bin_spec.module_sp &&
-      bin_spec.module_sp->GetSymbolFile(/*can_create=*/true))
+      bin_spec.module_sp->GetSymbolFile(
+          /*can_create=*/true, /*feedback_strm=*/nullptr, &user_interrupted))
+    return std::nullopt;
+  // User interrupted, they do not want us to try other means to
+  // find the debug information.
+  if (user_interrupted)
     return std::nullopt;
 
   SymbolLocator::Request request;

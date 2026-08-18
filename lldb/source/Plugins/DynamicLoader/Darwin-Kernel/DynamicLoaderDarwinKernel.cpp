@@ -829,8 +829,12 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // exists, instead of depending on the DebugSymbols preferences being
       // set.
       Status kernel_search_error;
-      if (IsKernel() &&
-          (!m_module_sp || !m_module_sp->GetSymbolFile(/*can_create=*/true))) {
+      bool user_interrupted = false;
+      if (IsKernel() && (!m_module_sp ||
+                         (!m_module_sp->GetSymbolFile(/*can_create=*/true,
+                                                      /*feedback_strm=*/nullptr,
+                                                      &user_interrupted) &&
+                          !user_interrupted))) {
         if (PluginManager::DownloadObjectAndSymbolFile(
                 module_spec, kernel_search_error, true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {

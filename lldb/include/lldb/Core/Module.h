@@ -618,8 +618,12 @@ public:
   /// can_create is true, this function will find the best SymbolFile plug-in
   /// that can use the current object file. feedback_strm, if not null, is used
   /// to report the details of the search process.
+  /// user_interrupted, if not nullptr, is used to report if a user interrupt
+  /// was received, and no further processing/searching should be done by the
+  /// caller.
   virtual SymbolFile *GetSymbolFile(bool can_create = true,
-                                    Stream *feedback_strm = nullptr);
+                                    Stream *feedback_strm = nullptr,
+                                    bool *user_interrupted = nullptr);
 
   /// Like GetSymbolFile, but the returned handle holds the Module mutex for
   /// its lifetime.
