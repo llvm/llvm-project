@@ -5844,44 +5844,38 @@ let Predicates = [SM90] in {
 def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
-multiclass TCGEN05_ALLOC_INTR<string CtaGroup, Intrinsic Intr> {
-  foreach IsExclusive = [0, -1] in {
-    defvar exclusive = !if(IsExclusive, ".exclusive", "");
-    defvar Pred = !if(IsExclusive,
-                      [hasTcgen05InstSupport, PTX94],
-                      [hasTcgen05InstSupport]);
-    defvar suffix = !if(IsExclusive, "_EXCLUSIVE", "");
+multiclass TCGEN05_ALLOC_INTR<string CtaGroup, Intrinsic Intr, bit IsExclusive = 0> {
+  defvar prefix = "tcgen05.alloc" # !if(IsExclusive, ".exclusive", "") # ".cta_group::" # CtaGroup # ".sync.aligned";
+  defvar Pred = !if(IsExclusive,
+                    [hasTcgen05InstSupport, PTX94],
+                    [hasTcgen05InstSupport]);
 
-    let isConvergent = true, Predicates = Pred in {
-      def suffix # "_GENERIC" : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols),
-          "tcgen05.alloc" # exclusive # ".cta_group::" # CtaGroup # ".sync.aligned.b32",
-          [(IntrinsicInAS<Intr, AddrSpaceGeneric> addr:$dst, B32:$ncols, IsExclusive)]>;
-      def suffix # "_SHARED" : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols),
-          "tcgen05.alloc" # exclusive # ".cta_group::" # CtaGroup # ".sync.aligned.shared::cta.b32",
-          [(IntrinsicInAS<Intr, AddrSpaceShared> addr:$dst, B32:$ncols, IsExclusive)]>;
-    }
+  let isConvergent = true, Predicates = Pred in {
+    def _GENERIC : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols), prefix # ".b32",
+        [(IntrinsicInAS<Intr, AddrSpaceGeneric> addr:$dst, B32:$ncols, !if(IsExclusive, -1, 0))]>;
+    def _SHARED : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols), prefix # ".shared::cta.b32",
+        [(IntrinsicInAS<Intr, AddrSpaceShared> addr:$dst, B32:$ncols, !if(IsExclusive, -1, 0))]>;
   }
 }
-defm TCGEN05_ALLOC_CG1 : TCGEN05_ALLOC_INTR<"1", int_nvvm_tcgen05_alloc_cg1>;
-defm TCGEN05_ALLOC_CG2 : TCGEN05_ALLOC_INTR<"2", int_nvvm_tcgen05_alloc_cg2>;
+defm TCGEN05_ALLOC_CG1           : TCGEN05_ALLOC_INTR<"1", int_nvvm_tcgen05_alloc_cg1>;
+defm TCGEN05_ALLOC_CG2           : TCGEN05_ALLOC_INTR<"2", int_nvvm_tcgen05_alloc_cg2>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG1 : TCGEN05_ALLOC_INTR<"1", int_nvvm_tcgen05_alloc_cg1, 1>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG2 : TCGEN05_ALLOC_INTR<"2", int_nvvm_tcgen05_alloc_cg2, 1>;
 
-multiclass TCGEN05_DEALLOC_INTR<string CtaGroup, Intrinsic Intr> {
-  foreach IsExclusive = [0, -1] in {
-    defvar exclusive = !if(IsExclusive, ".exclusive", "");
-    defvar Pred = !if(IsExclusive,
-                      [hasTcgen05InstSupport, PTX94],
-                      [hasTcgen05InstSupport]);
-    defvar suffix = !if(IsExclusive, "_EXCLUSIVE", "");
+multiclass TCGEN05_DEALLOC_INTR<string CtaGroup, Intrinsic Intr, bit IsExclusive = 0> {
+  defvar Pred = !if(IsExclusive,
+                    [hasTcgen05InstSupport, PTX94],
+                    [hasTcgen05InstSupport]);
 
-    let isConvergent = true, Predicates = Pred in {
-      def suffix : BasicNVPTXInst<(outs), (ins B32:$tmem_addr, B32:$ncols),
-                   "tcgen05.dealloc" # exclusive # ".cta_group::" # CtaGroup # ".sync.aligned.b32",
-                   [(Intr B32:$tmem_addr, B32:$ncols, IsExclusive)]>;
-    }
-  }
+  let isConvergent = true, Predicates = Pred in
+    def "" : BasicNVPTXInst<(outs), (ins B32:$tmem_addr, B32:$ncols),
+        "tcgen05.dealloc" # !if(IsExclusive, ".exclusive", "") # ".cta_group::" # CtaGroup # ".sync.aligned.b32",
+        [(Intr B32:$tmem_addr, B32:$ncols, !if(IsExclusive, -1, 0))]>;
 }
-defm TCGEN05_DEALLOC_CG1 : TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
-defm TCGEN05_DEALLOC_CG2 : TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
+defm TCGEN05_DEALLOC_CG1           : TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
+defm TCGEN05_DEALLOC_CG2           : TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
+defm TCGEN05_DEALLOC_EXCLUSIVE_CG1 : TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1, 1>;
+defm TCGEN05_DEALLOC_EXCLUSIVE_CG2 : TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2, 1>;
 
 let isConvergent = true in {
 let Predicates = [hasTcgen05InstSupport] in {

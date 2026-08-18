@@ -2798,8 +2798,8 @@ For more information on tensor-memory load/store instructions, refer to [PTX ISA
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.alloc.{cg1,cg2}.p0(ptr %dst, i32 %ncols, i1 %is_exclusive)
-declare void @llvm.nvvm.tcgen05.alloc.{cg1,cg2}.p3(ptr addrspace(3) %dst, i32 %ncols, i1 %is_exclusive)
+declare void @llvm.nvvm.tcgen05.alloc.{cg1,cg2}.p0(ptr %dst, i32 %ncols, i1 %is_exclusive_flag)
+declare void @llvm.nvvm.tcgen05.alloc.{cg1,cg2}.p3(ptr addrspace(3) %dst, i32 %ncols, i1 %is_exclusive_flag)
 ```
 
 ##### Overview:
@@ -2815,9 +2815,11 @@ allocations and it must be a multiple of 32 for exclusive allocations. The
 overloaded pointer argument may use generic or shared memory address space;
 a shared pointer emits the `.shared::cta` qualifier. The `.cg1` and `.cg2`
 variants generate `cta_group::1` and `cta_group::2` variants of the instruction
-respectively. When `%is_exclusive` is true, the `.exclusive` variant is emitted,
-which claims ownership of the allocation permit. No other allocation may exist
-at the same time as an exclusive allocation.
+respectively. The last argument to these intrinsics is a boolean flag indicating
+support for exclusive allocation. This flag argument must be a compile-time
+constant. When set, the `.exclusive` variant is emitted, which claims ownership
+of the allocation permit. No other allocation may exist at the same time as an
+exclusive allocation.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 
@@ -2826,7 +2828,7 @@ For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parall
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.dealloc.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i32 %ncols, i1 %is_exclusive)
+declare void @llvm.nvvm.tcgen05.dealloc.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i32 %ncols, i1 %is_exclusive_flag)
 ```
 
 ##### Overview:
@@ -2838,7 +2840,9 @@ address `%tmem_addr`. The operand `%tmem_addr` must point to a previous
 Tensor Memory allocation. The 32-bit operand `%ncols` specifies the number
 of columns to be de-allocated. The `.cg1` and `.cg2` variants generate
 `cta_group::1` and `cta_group::2` variants of the instruction respectively.
-When `%is_exclusive` is true, the `.exclusive` variant is emitted. Memory must
+The last argument to these intrinsics is a boolean flag indicating
+support for exclusive allocation. This flag argument must be a compile-time
+constant. When set, the `.exclusive` variant is emitted. Memory must
 be deallocated with `.exclusive` if and only if it was allocated with
 `.exclusive`.
 
