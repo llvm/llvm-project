@@ -455,6 +455,10 @@ emitCommonNeonSISDBuiltinExpr(CIRGenFunction &cgf,
   case NEON::BI__builtin_neon_vcvtns_s64_f32:
   case NEON::BI__builtin_neon_vcvtns_u32_f32:
   case NEON::BI__builtin_neon_vcvtns_u64_f32:
+  case NEON::BI__builtin_neon_vcvtnd_s32_f64:
+  case NEON::BI__builtin_neon_vcvtnd_s64_f64:
+  case NEON::BI__builtin_neon_vcvtnd_u32_f64:
+  case NEON::BI__builtin_neon_vcvtnd_u64_f64:
   case NEON::BI__builtin_neon_vaddlv_s32:
   case NEON::BI__builtin_neon_vaddlv_u32:
   case NEON::BI__builtin_neon_vaddlvq_s32:
