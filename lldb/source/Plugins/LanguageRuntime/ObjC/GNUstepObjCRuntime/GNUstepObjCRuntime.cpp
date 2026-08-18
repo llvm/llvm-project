@@ -8,6 +8,7 @@
 
 #include "GNUstepObjCRuntime.h"
 #include "GNUstepObjCClassDescriptor.h"
+#include "GNUstepObjCDeclVendor.h"
 #include "GNUstepObjCTypeEncodingParser.h"
 #include "GNUstepThreadPlanStepThroughObjCTrampoline.h"
 
@@ -352,7 +353,15 @@ LanguageRuntime *GNUstepObjCRuntime::CreateInstance(Process *process,
   return new GNUstepObjCRuntime(process);
 }
 
-GNUstepObjCRuntime::~GNUstepObjCRuntime() = default;
+GNUstepObjCRuntime::~GNUstepObjCRuntime() {
+  // The encoding parser caches clang::QualTypes keyed by the TypeSystemClang
+  // that minted them, and one of those ASTs belongs to the decl vendor. A
+  // QualType is a tagged pointer and dropping the cache never dereferences
+  // one, so this is ordering hygiene rather than a live hazard - but state it
+  // here instead of leaving it to depend on member declaration order.
+  m_encoding_to_type_sp.reset();
+  m_decl_vendor_up.reset();
+}
 
 GNUstepObjCRuntime::GNUstepObjCRuntime(Process *process)
     : ObjCLanguageRuntime(process), m_objc_module_sp(nullptr),
@@ -633,8 +642,20 @@ bool GNUstepObjCRuntime::GetDynamicTypeAndAddress(
     if (type_sp)
       objc_class_sp->SetType(type_sp);
   }
-  if (type_sp)
+  if (type_sp) {
     class_type_or_name.SetTypeSP(type_sp);
+  } else if (CompilerType runtime_type = LookupClassTypeInRuntime(class_name)) {
+    // Nothing in the debug info describes this class - it was compiled -g0, or
+    // registered at run time and never had a static definition at all. The
+    // runtime's own metadata still does. Without this the result is a name
+    // with no type, and FixUpDynamicType then pairs that name with the
+    // *static* CompilerType, which ValueObjectDynamicValue::GetTypeName
+    // prefers - so the value displays as its declared type, `id`.
+    //
+    // Last, deliberately: where debug info exists it wins, because runtime
+    // metadata cannot describe members inside a struct-typed ivar.
+    class_type_or_name.SetCompilerType(runtime_type);
+  }
 
   return !class_type_or_name.IsEmpty();
 }
@@ -657,6 +678,23 @@ GNUstepObjCRuntime::LookupClassTypeInDebugInfo(ConstString class_name) {
   }
   m_negative_type_cache.insert(class_name);
   return TypeSP();
+}
+
+CompilerType
+GNUstepObjCRuntime::LookupClassTypeInRuntime(ConstString class_name) {
+  DeclVendor *vendor = GetDeclVendor();
+  if (!vendor)
+    return CompilerType();
+
+  std::vector<CompilerDecl> decls;
+  vendor->FindDecls(class_name, /*append=*/false, /*max_matches=*/1, decls);
+  if (decls.empty())
+    return CompilerType();
+
+  auto *ast = llvm::dyn_cast<TypeSystemClang>(decls[0].GetTypeSystem());
+  if (!ast)
+    return CompilerType();
+  return ast->GetTypeForDecl(decls[0].GetOpaqueDecl());
 }
 
 bool GNUstepObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
@@ -1214,6 +1252,38 @@ GNUstepObjCRuntime::GetTypeBitSize(const CompilerType &compiler_type) {
   if (instance_size == 0)
     return std::nullopt;
   return instance_size * 8;
+}
+
+std::optional<CompilerType>
+GNUstepObjCRuntime::GetRuntimeType(CompilerType base_type) {
+  CompilerType class_type;
+  bool is_pointer_type = false;
+  if (TypeSystemClang::IsObjCObjectPointerType(base_type, &class_type))
+    is_pointer_type = true;
+  else if (TypeSystemClang::IsObjCObjectOrInterfaceType(base_type))
+    class_type = base_type;
+  else
+    return std::nullopt;
+  if (!class_type)
+    return std::nullopt;
+
+  ConstString class_name(class_type.GetTypeName());
+  if (!class_name)
+    return std::nullopt;
+
+  if (TypeSP type_sp = LookupClassTypeInDebugInfo(class_name)) {
+    if (CompilerType complete_type = type_sp->GetFullCompilerType();
+        complete_type.GetCompleteType())
+      return is_pointer_type ? complete_type.GetPointerType() : complete_type;
+  }
+
+  return ObjCLanguageRuntime::GetRuntimeType(base_type);
+}
+
+DeclVendor *GNUstepObjCRuntime::GetDeclVendor() {
+  if (!m_decl_vendor_up)
+    m_decl_vendor_up = std::make_unique<GNUstepObjCDeclVendor>(*this);
+  return m_decl_vendor_up.get();
 }
 
 ObjCLanguageRuntime::EncodingToTypeSP

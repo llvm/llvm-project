@@ -172,6 +172,34 @@ void GNUstepObjCClassDescriptor::Read() {
   m_valid = true;
 }
 
+bool GNUstepObjCClassDescriptor::Describe(
+    std::function<void(ObjCLanguageRuntime::ObjCISA)> const &superclass_func,
+    std::function<bool(const char *, const char *)> const &instance_method_func,
+    std::function<bool(const char *, const char *)> const &class_method_func,
+    std::function<bool(const char *, const char *, lldb::addr_t, uint64_t)> const
+        &ivar_func) const {
+  if (!m_valid)
+    return false;
+
+  // A root class has no superclass to report; libobjc2 leaves the field null
+  // once the class is resolved.
+  if (superclass_func && m_superclass_isa != 0)
+    superclass_func(m_superclass_isa);
+
+  if (ivar_func) {
+    for (const RawIvar &ivar : ReadIvarList()) {
+      // libobjc2 stores a pointer to the offset so it can rewrite it in
+      // place, and that pointer is what Apple's runtime reports here, so
+      // pass the already-resolved offset as the address. Consumers that only
+      // want the value - which is all of them in tree - are unaffected.
+      if (ivar_func(ivar.name.GetCString(), ivar.type_encoding.c_str(),
+                    static_cast<lldb::addr_t>(ivar.offset), ivar.size))
+        break;
+    }
+  }
+  return true;
+}
+
 std::vector<GNUstepObjCClassDescriptor::RawIvar>
 GNUstepObjCClassDescriptor::ReadIvarList() const {
   std::vector<RawIvar> ivars;

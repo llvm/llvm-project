@@ -97,6 +97,25 @@ public:
   /// producer (associate.m).
   bool IsKVO() override { return m_is_hidden; }
 
+  /// Reports this class's superclass and ivars to \p superclass_func and
+  /// \p ivar_func. Any callback may be null.
+  ///
+  /// Methods are not reported yet: after __objc_load, a selector's name field
+  /// holds a numeric dispatch index rather than a string (selector_table.cc),
+  /// so recovering names needs either symbols for the method functions or a
+  /// call into the runtime, and neither belongs in a descriptor that promises
+  /// not to execute code. Returning true with no methods is well defined -
+  /// the callbacks are optional - and lets the interface be completed from
+  /// its ivars alone.
+  bool Describe(std::function<void(ObjCLanguageRuntime::ObjCISA)> const
+                    &superclass_func,
+                std::function<bool(const char *, const char *)> const
+                    &instance_method_func,
+                std::function<bool(const char *, const char *)> const
+                    &class_method_func,
+                std::function<bool(const char *, const char *, lldb::addr_t,
+                                   uint64_t)> const &ivar_func) const override;
+
   size_t GetNumIVars() override;
 
   iVarDescriptor GetIVarAtIndex(size_t idx) override;

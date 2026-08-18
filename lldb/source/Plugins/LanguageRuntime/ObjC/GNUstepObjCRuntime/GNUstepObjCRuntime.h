@@ -27,6 +27,7 @@
 namespace lldb_private {
 
 class GNUstepTaggedPointerVendor;
+class GNUstepObjCDeclVendor;
 
 class GNUstepObjCRuntime : public lldb_private::ObjCLanguageRuntime {
 public:
@@ -148,6 +149,23 @@ public:
   /// the types it returns are only valid in the AST it created them in.
   EncodingToTypeSP GetEncodingToType() override;
 
+  /// Synthesizes Objective-C interface declarations from runtime metadata,
+  /// so a class the debug info does not describe is still usable. Built on
+  /// first use; the decls it owns are copied into the expression parser's
+  /// AST as they are needed.
+  DeclVendor *GetDeclVendor() override;
+
+  /// Resolves \p base_type to the most complete description available.
+  ///
+  /// The inherited implementation consults debug info through
+  /// LookupInCompleteClassCache, which keys on an eSymbolTypeObjCClass
+  /// symbol that only Mach-O produces - so for gnustep-2.x it always misses
+  /// and the runtime-synthesized interface wins by default. That is a
+  /// downgrade wherever debug info exists, because the runtime's metadata
+  /// cannot describe members inside a struct-typed ivar. Prefer debug info
+  /// explicitly, and fall back to the inherited behaviour otherwise.
+  std::optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
+
   /// Size of an Objective-C class, in bits.
   ///
   /// The inherited implementation derives this from the ivar list, as the end
@@ -208,6 +226,12 @@ protected:
   /// symbol is not named after the class).
   lldb::TypeSP LookupClassTypeInDebugInfo(ConstString class_name);
 
+  /// Builds an interface type for \p class_name from runtime metadata, for a
+  /// class the debug info does not describe. The base class keeps its
+  /// equivalent private, and reaches it only from GetRuntimeType - which takes
+  /// a type rather than a name, so the dynamic-value path cannot use it.
+  CompilerType LookupClassTypeInRuntime(ConstString class_name);
+
   /// Lazily-built FunctionCaller for a utility function that reproduces
   /// gnustep-base's `_NSPrintForDebugger` (NSDebug.m) using nothing but
   /// libobjc2's exported API, so `po` works whether or not Foundation is
@@ -260,7 +284,11 @@ protected:
   /// raised rather than where it is caught.
   lldb::BreakpointSP m_objc_exception_bp_sp;
 
+  /// Torn down in an explicit order by the destructor, which see: the parser
+  /// caches types belonging to the vendor's AST.
   EncodingToTypeSP m_encoding_to_type_sp;
+
+  std::unique_ptr<GNUstepObjCDeclVendor> m_decl_vendor_up;
 };
 
 } // namespace lldb_private
