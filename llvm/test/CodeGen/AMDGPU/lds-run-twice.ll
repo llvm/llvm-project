@@ -20,7 +20,7 @@
 @dynlds = external addrspace(3) global [0 x i32], align 4
 
 ; Never lowered, so these survive the first run without an absolute address.
-@const.lds = internal addrspace(3) constant [4 x i32] undef, align 4
+@const.lds = internal addrspace(3) constant [4 x i32] poison, align 4
 @initialized.lds = internal addrspace(3) global i16 0, align 2
 
 ; Escapes into a global initializer, so lowering cannot place it either.
