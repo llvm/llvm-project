@@ -1158,6 +1158,12 @@ const VarDecl *Pointer::getRootVarDecl() const {
   return nullptr;
 }
 
+const Expr *Pointer::getRootExpr() const {
+  if (isBlockPointer())
+    return getDeclDesc()->asExpr();
+  return nullptr;
+}
+
 std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
                                                unsigned Offset) const {
   QualType CurType = getPointeeType();
