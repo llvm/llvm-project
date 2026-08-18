@@ -939,9 +939,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S32, S64)
     .widenScalarToNextPow2(0);
 
-  getActionDefinitionsBuilder(G_FCONSTANT)
-    .legalFor({S32, S64, S16})
-    .clampScalar(0, S16, S64);
+  getActionDefinitionsBuilder(G_FCONSTANT).legalFor({F32, F64, F16, BF16});
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
       .legalIf(isRegisterClassType(ST, 0))
@@ -976,36 +974,50 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BLOCK_ADDR).legalFor({CodePtr});
 
   auto &FPOpActions =
-      getActionDefinitionsBuilder({G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE,
-                                   G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
+      getActionDefinitionsBuilder({G_FADD, G_FMUL, G_FMA}).legalFor({F32, F64});
+  auto &FCanonicalizeActions =
+      getActionDefinitionsBuilder(G_FCANONICALIZE).legalFor({F32, F64});
+  auto &StrictFPOpActions =
+      getActionDefinitionsBuilder({G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
           .legalFor({F32, F64});
   auto &TrigActions =
       getActionDefinitionsBuilder({G_FSIN, G_FCOS}).customFor({F32, F64});
   auto &FDIVActions = getActionDefinitionsBuilder(G_FDIV).customFor({F32, F64});
 
   if (ST.has16BitInsts()) {
-    if (ST.hasVOP3PInsts())
+    if (ST.hasVOP3PInsts()) {
       FPOpActions.legalFor({F16, V2F16});
-    else
+      FCanonicalizeActions.legalFor({F16, V2F16});
+      StrictFPOpActions.legalFor({F16, V2F16});
+    } else {
       FPOpActions.legalFor({F16});
+      FCanonicalizeActions.legalFor({F16});
+      StrictFPOpActions.legalFor({F16});
+    }
 
     TrigActions.customFor({F16});
     FDIVActions.customFor({F16});
   }
 
+  FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
+  FCanonicalizeActions.widenScalarFor({BF16}, changeElementTo(0, F32));
+
   if (ST.hasAnyPackedFP32Ops()) {
     FPOpActions.legalFor({V2F32});
+    FCanonicalizeActions.legalFor({V2F32});
+    StrictFPOpActions.legalFor({V2F32});
     FPOpActions.clampMaxNumElementsStrict(0, F32, 2);
+    FCanonicalizeActions.clampMaxNumElementsStrict(0, F32, 2);
+    StrictFPOpActions.clampMaxNumElementsStrict(0, F32, 2);
   }
 
   if (ST.hasAnyPackedFP64Ops()) {
     FPOpActions.legalFor({V2F64});
+    FCanonicalizeActions.legalFor({V2F64});
+    StrictFPOpActions.legalFor({V2F64});
     FPOpActions.clampMaxNumElementsStrict(0, F64, 2);
-  }
-
-  if (ST.hasAnyPackedFP64Ops()) {
-    FPOpActions.legalFor({V2F64});
-    FPOpActions.clampMaxNumElementsStrict(0, F64, 2);
+    FCanonicalizeActions.clampMaxNumElementsStrict(0, F64, 2);
+    StrictFPOpActions.clampMaxNumElementsStrict(0, F64, 2);
   }
 
   auto &MinNumMaxNumIeee =
@@ -1047,16 +1059,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     MinNumMaxNum.minScalar(0, F32);
   }
 
-  if (ST.hasVOP3PInsts())
+  if (ST.hasVOP3PInsts()) {
     FPOpActions.clampMaxNumElementsStrict(0, F16, 2);
+    FCanonicalizeActions.clampMaxNumElementsStrict(0, F16, 2);
+    StrictFPOpActions.clampMaxNumElementsStrict(0, F16, 2);
+  }
 
   FPOpActions.scalarize(0);
+  FCanonicalizeActions.scalarize(0);
+  StrictFPOpActions.scalarize(0);
   TrigActions.scalarize(0);
   FDIVActions.scalarize(0);
   if (!ST.has16BitInsts()) {
-    FPOpActions.minScalar(0, F32);
-    TrigActions.minScalar(0, F32);
-    FDIVActions.minScalar(0, F32);
+    FPOpActions.widenScalarFor({F16}, changeElementTo(0, F32));
+    FCanonicalizeActions.widenScalarFor({F16}, changeElementTo(0, F32));
+    StrictFPOpActions.widenScalarFor({F16}, changeElementTo(0, F32));
+    TrigActions.widenScalarFor({F16}, changeElementTo(0, F32));
+    FDIVActions.widenScalarFor({F16}, changeElementTo(0, F32));
   }
 
   auto &FNegAbs = getActionDefinitionsBuilder({G_FNEG, G_FABS});
@@ -1072,8 +1091,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(G_FSQRT)
         .legalFor({F16})
+        .legalFor(ST.hasBF16TransInsts(), {BF16})
         .customFor({F32, F64})
         .scalarize(0)
+        .widenScalarFor({BF16}, changeElementTo(0, F32))
         .unsupported();
     getActionDefinitionsBuilder(G_FFLOOR)
         .legalFor({F32, F64, F16})
@@ -1099,6 +1120,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     getActionDefinitionsBuilder(G_FSQRT)
         .customFor({F32, F64, F16})
         .scalarize(0)
+        .widenScalarFor({BF16}, changeElementTo(0, F32))
         .unsupported();
 
     if (ST.hasFractBug()) {
@@ -1348,14 +1370,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
+      .legalFor(ST.hasBF16TransInsts(), {BF16})
       .customFor({F32, F16})
       .scalarize(0)
+      .widenScalarFor({BF16}, changeElementTo(0, F32))
       .lower();
 
   getActionDefinitionsBuilder(G_FEXP2)
       .legalFor(ST.has16BitInsts(), {F16})
+      .legalFor(ST.hasBF16TransInsts(), {BF16})
       .customFor({F32, F64, F16})
       .scalarize(0)
+      .widenScalarFor({BF16}, changeElementTo(0, F32))
       .lower();
 
   getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
@@ -4563,6 +4589,17 @@ void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
             LocalAccum[1] = Unmerge.getReg(1);
         }
 
+        // Every partial product contributing to this destination index was
+        // skipped because an operand half is known zero, so nothing has been
+        // accumulated and the result is zero.
+        if (!LocalAccum[0])
+          LocalAccum[0] = getZero32();
+
+        // A second element is only ever requested when the full 64-bit multiply
+        // block above runs, which always writes it.
+        assert((LocalAccum.size() == 1 || LocalAccum[1]) &&
+               "Uninitialized accumulator part");
+
         return CarryOut;
       };
 
@@ -6362,6 +6399,10 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
   auto ExtStride = B.buildAnyExt(I32, Stride);
 
   if (ST.has45BitNumRecordsBufferResource()) {
+    NumRecords = B.buildZExtOrTrunc(I64, NumRecords).getReg(0);
+    NumRecords =
+        B.buildAnd(I64, NumRecords, B.buildConstant(I64, (1ULL << 45) - 1))
+            .getReg(0);
     Register Zero = B.buildConstant(I32, 0).getReg(0);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.
@@ -6385,7 +6426,7 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
         B.buildOr(I64, CombinedFields, ExtShiftedFlags).getReg(0);
     B.buildMergeValues(Result, {LowHalf, HighHalf});
   } else {
-    NumRecords = B.buildTrunc(I32, NumRecords).getReg(0);
+    NumRecords = B.buildZExtOrTrunc(I32, NumRecords).getReg(0);
     auto Unmerge = B.buildUnmerge(I32, Pointer);
     auto LowHalf = Unmerge.getReg(0);
     auto HighHalf = Unmerge.getReg(1);

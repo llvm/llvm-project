@@ -70,9 +70,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   HasFastHalfType = true;
   HasFloat16 = true;
 
-  // TODO: Make shortptr a proper ABI?
-  DataLayoutString =
-      Triple.computeDataLayout(Opts.NVPTXUseShortPointers ? "shortptr" : "");
+  DataLayoutString = Triple.computeDataLayout();
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.
@@ -158,6 +156,14 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   //   as its double type, but that's not necessarily true on the host.
   //   TODO: nvcc emits a warning when using long double on device; we should
   //   do the same.
+}
+
+bool NVPTXTargetInfo::setABI(const std::string &Name) {
+  if (Name != "shortptr")
+    return false;
+
+  resetDataLayout(getTriple().computeDataLayout(Name));
+  return true;
 }
 
 ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {

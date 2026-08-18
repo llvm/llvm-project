@@ -2703,9 +2703,12 @@ static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
   return RM;
 }
 
-/// Check if the given evaluation result is allowed for constant evaluation.
-static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
-                                     APFloat::opStatus St) {
+/// Check if the given floating-point evaluation result is allowed for
+/// compile-time constant folding during translation (as opposed to mandatory
+/// constant expression evaluation).
+static bool checkFloatingPointResultForConstantFolding(EvalInfo &Info,
+                                                       const Expr *E,
+                                                       APFloat::opStatus St) {
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (Info.InConstantContext)
@@ -2757,7 +2760,7 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
   APFloat Value = Result;
   bool ignored;
   St = Result.convert(Info.Ctx.getFloatTypeSemantics(DestType), RM, &ignored);
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
@@ -2780,7 +2783,7 @@ static bool HandleIntToFloatCast(EvalInfo &Info, const Expr *E,
   Result = APFloat(Info.Ctx.getFloatTypeSemantics(DestType), 1);
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St = Result.convertFromAPInt(Value, Value.isSigned(), RM);
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static bool truncateBitfieldValue(EvalInfo &Info, const Expr *E,
@@ -2978,16 +2981,20 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const BinaryOperator *E,
     break;
   }
 
+  // FIXME: The standard quote below is deleted by P3899R3.
   // [expr.pre]p4:
   //   If during the evaluation of an expression, the result is not
   //   mathematically defined [...], the behavior is undefined.
   // FIXME: C++ rules require us to not conform to IEEE 754 here.
+  // FIXME: The NaN check should not be applied outside of "constant contexts"
+  // because it prevents NaN propagation and the "invalid" status is the
+  // responsibility of checkFloatingPointResultForConstantFolding.
   if (LHS.isNaN()) {
     Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << LHS.isNaN();
     return Info.noteUndefinedBehavior();
   }
 
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static bool handleLogicalOpForVector(const APInt &LHSValue,
@@ -5295,7 +5302,7 @@ struct IncDecSubobjectHandler {
       St = Value.add(One, RM);
     else
       St = Value.subtract(One, RM);
-    return checkFloatingPointResult(Info, E, St);
+    return checkFloatingPointResultForConstantFolding(Info, E, St);
   }
   bool foundPointer(APValue &Subobj, QualType SubobjType) {
     if (!checkConst(SubobjType))
@@ -8735,8 +8742,9 @@ public:
   }
 
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E) {
-    CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::Reinterpret;
+    if (E->getCastKind() != CK_PointerToIntegral)
+      CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << diag::ConstexprInvalidCastKind::Reinterpret;
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
   bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
@@ -20046,7 +20054,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_PointerToIntegral: {
-    CCEDiag(E, diag::note_constexpr_invalid_cast)
+    CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
 
@@ -20055,6 +20063,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
 
     if (LV.getLValueBase()) {
+      CCEDiag(E, diag::note_constexpr_has_lvalue) << E->getSourceRange();
       // Only allow based lvalue casts if they are lossless.
       // FIXME: Allow a larger integer size than the pointer size, and allow
       // narrowing back down to pointer width in subsequent integral casts.
@@ -22037,7 +22046,6 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     // destruction.
     return false;
   }
-
   return true;
 }
 
@@ -22720,14 +22728,15 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 }
 
 /// Evaluate an expression as a C++11 integral constant expression.
-static bool EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx,
-                                                    const Expr *E,
-                                                    llvm::APSInt *Value) {
+static bool
+EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx, const Expr *E,
+                                        llvm::APSInt *Value,
+                                        bool AllowRelaxedEval = false) {
   if (!E->getType()->isIntegralOrUnscopedEnumerationType())
     return false;
 
   APValue Result;
-  if (!E->isCXX11ConstantExpr(Ctx, &Result))
+  if (!E->isCXX11ConstantExpr(Ctx, &Result, AllowRelaxedEval))
     return false;
 
   if (!Result.isInt())
@@ -22753,7 +22762,8 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx) const {
 }
 
 std::optional<llvm::APSInt>
-Expr::getIntegerConstantExpr(const ASTContext &Ctx) const {
+Expr::getIntegerConstantExpr(const ASTContext &Ctx,
+                             bool AllowRelaxedEval) const {
   if (isValueDependent()) {
     // Expression evaluator can't succeed on a dependent expression.
     return std::nullopt;
@@ -22761,7 +22771,8 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx) const {
 
   if (Ctx.getLangOpts().CPlusPlus11) {
     APSInt Value;
-    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value))
+    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value,
+                                                AllowRelaxedEval))
       return Value;
     return std::nullopt;
   }
@@ -22791,7 +22802,8 @@ bool Expr::isCXX98IntegralConstantExpr(const ASTContext &Ctx) const {
   return CheckICE(this, Ctx).Kind == IK_ICE;
 }
 
-bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
+bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
+                               bool AllowRelaxedEval) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -22810,6 +22822,8 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
   // Build evaluation settings.
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+  SmallVector<PartialDiagnosticAt> MSRelaxedDiag;
+  Status.ExtendedDiag = AllowRelaxedEval ? &MSRelaxedDiag : nullptr;
 
   bool IsConstExpr =
       ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&

@@ -434,6 +434,18 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
   // +X / -Y or -X / +Y => -Q
   Known.propagateXorSign(KnownLHS, KnownRHS);
 
+  // Normal and subnormal results require two non-zero finite operands.
+  if ((KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal) &&
+       KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal)) ||
+      (KnownLHS.isKnownNever(fcPosNormal | fcPosSubnormal) &&
+       KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal)))
+    Known.knownNot(fcNegNormal | fcNegSubnormal);
+  if ((KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal) &&
+       KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal)) ||
+      (KnownLHS.isKnownNever(fcPosNormal | fcPosSubnormal) &&
+       KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal)))
+    Known.knownNot(fcPosNormal | fcPosSubnormal);
+
   // 0 / X => 0 or NaN
   if (KnownLHS.isKnownAlways(fcZero))
     Known.knownNot(fcSubnormal | fcNormal | fcInf);
@@ -644,6 +656,9 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
   // asin is bounded to [-pi/2, pi/2], never Inf.
   Known.knownNot(fcInf);
 
+  if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
   // asin is sign-preserving.
   if (KnownSrc.isKnownNever(fcNegative))
     Known.knownNot(fcNegative);
@@ -659,6 +674,9 @@ KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
   // acos is bounded to [0, pi], never Inf or negative.
   Known.knownNot(fcInf);
   Known.knownNot(fcNegative);
+
+  if (KnownSrc.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
 
   // NaN propagates. acos(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].

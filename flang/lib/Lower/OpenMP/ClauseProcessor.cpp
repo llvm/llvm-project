@@ -848,6 +848,10 @@ bool ClauseProcessor::processOrdered(
   return false;
 }
 
+bool ClauseProcessor::processFull() const {
+  return findUniqueClause<omp::clause::Full>() != nullptr;
+}
+
 bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
     if (clause->v.has_value())
@@ -1719,8 +1723,7 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms, inReductionObjects, converter.getSymbolMap(),
-                &semaCtx))
+                inReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
@@ -2138,8 +2141,7 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, reductionObjects, converter.getSymbolMap(),
-                &semaCtx, reductionVarCache))
+                reductionSyms, &semaCtx, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
@@ -2168,8 +2170,7 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms, taskReductionObjects,
-                converter.getSymbolMap(), &semaCtx))
+                taskReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,

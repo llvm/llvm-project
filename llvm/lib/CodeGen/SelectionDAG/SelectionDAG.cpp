@@ -350,7 +350,7 @@ bool ISD::isFreezeUndef(const SDNode *N) {
 }
 
 template <typename ConstNodeType>
-bool ISD::matchUnaryPredicateImpl(SDValue Op,
+bool ISD::matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
                                   std::function<bool(ConstNodeType *)> Match,
                                   bool AllowUndefs, bool AllowTruncation) {
   // FIXME: Add support for scalar UNDEF cases?
@@ -362,8 +362,14 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op,
       ISD::SPLAT_VECTOR != Op.getOpcode())
     return false;
 
+  if (ISD::SPLAT_VECTOR == Op.getOpcode() && !DemandedElts)
+    return true;
+
   EVT SVT = Op.getValueType().getScalarType();
   for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
+    if (ISD::SPLAT_VECTOR != Op.getOpcode() && !DemandedElts[i])
+      continue;
+
     if (AllowUndefs && Op.getOperand(i).isUndef()) {
       if (!Match(nullptr))
         return false;
@@ -379,12 +385,13 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op,
 }
 // Build used template types.
 template bool ISD::matchUnaryPredicateImpl<ConstantSDNode>(
-    SDValue, std::function<bool(ConstantSDNode *)>, bool, bool);
+    SDValue, const APInt &, std::function<bool(ConstantSDNode *)>, bool, bool);
 template bool ISD::matchUnaryPredicateImpl<ConstantFPSDNode>(
-    SDValue, std::function<bool(ConstantFPSDNode *)>, bool, bool);
+    SDValue, const APInt &, std::function<bool(ConstantFPSDNode *)>, bool,
+    bool);
 
 bool ISD::matchBinaryPredicate(
-    SDValue LHS, SDValue RHS,
+    SDValue LHS, SDValue RHS, const APInt &DemandedElts,
     std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
     bool AllowUndefs, bool AllowTypeMismatch) {
   if (!AllowTypeMismatch && LHS.getValueType() != RHS.getValueType())
@@ -401,8 +408,13 @@ bool ISD::matchBinaryPredicate(
        LHS.getOpcode() != ISD::SPLAT_VECTOR))
     return false;
 
+  if (ISD::SPLAT_VECTOR == LHS.getOpcode() && !DemandedElts)
+    return true;
+
   EVT SVT = LHS.getValueType().getScalarType();
   for (unsigned i = 0, e = LHS.getNumOperands(); i != e; ++i) {
+    if (ISD::SPLAT_VECTOR != LHS.getOpcode() && !DemandedElts[i])
+      continue;
     SDValue LHSOp = LHS.getOperand(i);
     SDValue RHSOp = RHS.getOperand(i);
     bool LHSUndef = AllowUndefs && LHSOp.isUndef();
@@ -3395,6 +3407,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
+  case ISD::FREEZE: {
+    if (isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
+                                         UndefPoisonKind::UndefOrPoison))
+      Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    break;
+  }
   case ISD::MERGE_VALUES:
     return computeKnownBits(Op.getOperand(Op.getResNo()), DemandedElts,
                             Depth + 1);
@@ -3452,6 +3470,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         continue;
 
       SDValue SrcOp = Op.getOperand(i);
+      if (SrcOp.getOpcode() == ISD::POISON)
+        continue;
+
       Known2 = computeKnownBits(SrcOp, Depth + 1);
 
       // BUILD_VECTOR can implicitly truncate sources, we must handle this.
@@ -3468,6 +3489,10 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     }
+
+    // If every demanded element was poison, we know nothing.
+    if (Known.hasConflict())
+      Known.resetAll();
     break;
   case ISD::VECTOR_COMPRESS: {
     SDValue Vec = Op.getOperand(0);
@@ -4766,26 +4791,11 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
   };
 
   // Is the constant a known power of 2 or zero?
-  if (ISD::matchUnaryPredicate(Val, IsPowerOfTwoOrZero))
+  if (ISD::matchUnaryPredicate(Val, DemandedElts, IsPowerOfTwoOrZero,
+                               /*AllowUndefs=*/false, /*AllowTruncation=*/true))
     return true;
 
   switch (Val.getOpcode()) {
-  case ISD::BUILD_VECTOR:
-    // Are all operands of a build vector constant powers of two or zero?
-    if (all_of(enumerate(Val->ops()), [&](auto P) {
-          auto *C = dyn_cast<ConstantSDNode>(P.value());
-          return !DemandedElts[P.index()] || (C && IsPowerOfTwoOrZero(C));
-        }))
-      return true;
-    break;
-
-  case ISD::SPLAT_VECTOR:
-    // Is the operand of a splat vector a constant power of two?
-    if (auto *C = dyn_cast<ConstantSDNode>(Val->getOperand(0)))
-      if (IsPowerOfTwoOrZero(C))
-        return true;
-    break;
-
   case ISD::EXTRACT_VECTOR_ELT: {
     SDValue InVec = Val.getOperand(0);
     SDValue EltNo = Val.getOperand(1);
@@ -5245,26 +5255,14 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
       return VTBits;
     break;
   case ISD::ROTL:
-  case ISD::ROTR:
+  case ISD::ROTR: {
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
-
-    // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
-    if (Tmp == VTBits)
-      return VTBits;
-
-    if (ConstantSDNode *C =
-            isConstOrConstSplat(Op.getOperand(1), DemandedElts)) {
-      unsigned RotAmt = C->getAPIntValue().urem(VTBits);
-
-      // Handle rotate right by N like a rotate left by 32-N.
-      if (Opcode == ISD::ROTR)
-        RotAmt = (VTBits - RotAmt) % VTBits;
-
-      // If we aren't rotating out all of the known-in sign bits, return the
-      // number that are left.  This handles rotl(sext(x), 1) for example.
-      if (Tmp > (RotAmt + 1)) return (Tmp - RotAmt);
-    }
+    ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1), DemandedElts);
+    FirstAnswer = SignBitsOps::rot(
+        Tmp, VTBits, C ? std::optional(C->getAPIntValue()) : std::nullopt,
+        Opcode == ISD::ROTR);
     break;
+  }
   case ISD::ADD:
   case ISD::ADDC:
     // TODO: Move Operand 1 check before Operand 0 check
@@ -6587,29 +6585,14 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     return !V.isZero();
   };
 
-  if (ISD::matchUnaryPredicate(Op, IsNeverZero))
+  if (ISD::matchUnaryPredicate(Op, DemandedElts, IsNeverZero,
+                               /*AllowUndefs=*/false, /*AllowTruncation=*/true))
     return true;
 
   // TODO: Recognize more cases here. Most of the cases are also incomplete to
   // some degree.
   switch (Op.getOpcode()) {
   default:
-    break;
-
-  case ISD::BUILD_VECTOR:
-    // Are all operands of a build vector constant non-zero?
-    if (all_of(enumerate(Op->ops()), [&](auto P) {
-          auto *C = dyn_cast<ConstantSDNode>(P.value());
-          return !DemandedElts[P.index()] || (C && IsNeverZero(C));
-        }))
-      return true;
-    break;
-
-  case ISD::SPLAT_VECTOR:
-    // Is the operand of a splat vector a constant non-zero?
-    if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(0)))
-      if (IsNeverZero(C))
-        return true;
     break;
 
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -10052,7 +10035,10 @@ getRuntimeCallSDValueHelper(SDValue Chain, const SDLoc &dl,
 
   TargetLowering::CallLoweringInfo CLI(*DAG);
   bool IsTailCall =
-      isInTailCallPositionWrapper(CI, DAG, /*AllowReturnsFirstArg=*/true);
+      isInTailCallPositionWrapper(CI, DAG, /*AllowReturnsFirstArg=*/true) &&
+      // Lowering doesn't support tail calling inside a function with
+      // a swifterror argument yet.
+      !DAG->hasSwiftErrorArg();
   SDValue Callee =
       DAG->getExternalSymbol(LCImpl, TLI->getPointerTy(DAG->getDataLayout()));
 
@@ -10134,6 +10120,12 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
                                      RTLIB::STRLEN, this, TLI);
 }
 
+bool SelectionDAG::hasSwiftErrorArg() const {
+  return TLI->supportSwiftError() &&
+         MF->getFunction().getAttributes().hasAttrSomewhere(
+             Attribute::SwiftError);
+}
+
 SDValue SelectionDAG::getMemcpy(
     SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
     Align DstAlign, Align SrcAlign, bool isVol, bool AlwaysInline,
@@ -10207,6 +10199,9 @@ SDValue SelectionDAG::getMemcpy(
     bool LowersToMemcpy = MemCpyImpl == RTLIB::impl_memcpy;
     IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemcpy);
   }
+  // Lowering doesn't support tail calling inside a function with a
+  // swifterror argument yet.
+  IsTailCall &= !hasSwiftErrorArg();
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
@@ -10228,6 +10223,10 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
                                       bool isTailCall,
                                       MachinePointerInfo DstPtrInfo,
                                       MachinePointerInfo SrcPtrInfo) {
+  // Lowering doesn't support tail calling inside a function with a
+  // swifterror argument yet.
+  isTailCall &= !hasSwiftErrorArg();
+
   // Emit a library call.
   TargetLowering::ArgListTy Args;
   Type *ArgTy = getDataLayout().getIntPtrType(*getContext());
@@ -10313,6 +10312,9 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
     bool LowersToMemmove = MemmoveImpl == RTLIB::impl_memmove;
     IsTailCall = isInTailCallPositionWrapper(CI, this, LowersToMemmove);
   }
+  // Lowering doesn't support tail calling inside a function with a
+  // swifterror argument yet.
+  IsTailCall &= !hasSwiftErrorArg();
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
@@ -10334,6 +10336,10 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
                                        bool isTailCall,
                                        MachinePointerInfo DstPtrInfo,
                                        MachinePointerInfo SrcPtrInfo) {
+  // Lowering doesn't support tail calling inside a function with a
+  // swifterror argument yet.
+  isTailCall &= !hasSwiftErrorArg();
+
   // Emit a library call.
   TargetLowering::ArgListTy Args;
   Type *IntPtrTy = getDataLayout().getIntPtrType(*getContext());
@@ -10446,9 +10452,12 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // subsequent return doesn't need a value, as bzero doesn't return the first
   // arg unlike memset.
   bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI) && !UseBZero;
-  bool IsTailCall =
-      CI && CI->isTailCall() &&
-      isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg && LowersToMemset);
+  bool IsTailCall = CI && CI->isTailCall() &&
+                    isInTailCallPosition(*CI, getTarget(),
+                                         ReturnsFirstArg && LowersToMemset) &&
+                    // Lowering doesn't support tail calling inside a function
+                    // with a swifterror argument yet.
+                    !hasSwiftErrorArg();
   CLI.setDiscardResult().setTailCall(IsTailCall);
 
   std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
@@ -10460,6 +10469,10 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
                                       Type *SizeTy, unsigned ElemSz,
                                       bool isTailCall,
                                       MachinePointerInfo DstPtrInfo) {
+  // Lowering doesn't support tail calling inside a function with a
+  // swifterror argument yet.
+  isTailCall &= !hasSwiftErrorArg();
+
   // Emit a library call.
   TargetLowering::ArgListTy Args;
   Args.emplace_back(Dst, getDataLayout().getIntPtrType(*getContext()));
@@ -13944,6 +13957,15 @@ bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
         NeutralAF.changeSign();
 
       return ConstFP->isExactlyValue(NeutralAF);
+    }
+    case ISD::FMINIMUM:
+    case ISD::FMAXIMUM: {
+      // Neutral element for fminimum is Inf or FLT_MAX, depending on FMF.
+      const APFloat &VAPF = ConstFP->getValueAPF();
+      bool NeutralNegative = (Opcode == ISD::FMAXIMUM);
+      if (Flags.hasNoInfs())
+        return VAPF.isLargest() && VAPF.isNegative() == NeutralNegative;
+      return VAPF.isInfinity() && VAPF.isNegative() == NeutralNegative;
     }
     }
   }
