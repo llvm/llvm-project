@@ -422,6 +422,20 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   }];
 }
 
+// Base class for an MLIR op that maps to multiple LLVM intrinsics on import.
+// The "enumNames" list contains the LLVM intrinsic IDs that import to this op,
+// and "converter" names the function that builds the op from the LLVM call.
+// Unlike `LLVM_IntrOpBase`, this class sets no "mlirBuilder"; the converter
+// handles import. Ops set their own "llvmBuilder" for export.
+class LLVM_NToOneIntrOpBase<Dialect dialect, string opName,
+                            list<string> enumNames, string converter,
+                            list<Trait> traits = [], int numResults = 0>
+    : LLVM_OpBase<dialect, opName, traits>,
+      Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
+  list<string> llvmEnumNames = enumNames;
+  string llvmIRConverter = converter;
+}
+
 // Base class for LLVM intrinsic operations, should not be used directly. Places
 // the intrinsic into the LLVM dialect and prefixes its name with "intr.".
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
