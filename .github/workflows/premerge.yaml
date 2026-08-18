@@ -24,16 +24,20 @@ concurrency:
 
 jobs:
   premerge-checks-linux:
-    name: Build and Test Linux${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && ' AArch64') || '' }}
+    name: Build and Test Linux${{ (startsWith(matrix.name, 'depot-ubuntu-24.04-arm') && ' AArch64') || '' }}
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
     strategy:
       fail-fast: false
       matrix:
-        runs-on:
-          - depot-ubuntu-24.04-arm-16
-          - llvm-premerge-linux-runners
+        include:
+          - name: depot-ubuntu-24.04-arm-16
+            runs-on: depot-ubuntu-24.04-arm-16
+          - name: llvm-premerge-linux-runners
+            runs-on:
+              labels: llvm-premerge-linux-runners
+              group: llvm-premerge-cluster-us-west
     runs-on: ${{ matrix.runs-on }}
     container:
       # The llvm-premerge agents are already containers and running the
@@ -41,7 +45,7 @@ jobs:
       # job.  The depot containers are running on VMs, so we can use a
       # container.  This helps ensure the build environment is as close
       # as possible on both the depot runners and the llvm-premerge runners.
-      image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
+      image: ${{ (startsWith(matrix.name, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
       # --privileged is needed to run the lldb tests that disable aslr.
       # The SCCACHE environment variables are need to be copied from the host
       # to the container to make sure it is configured correctly to use the
@@ -88,7 +92,7 @@ jobs:
 
           # The linux-premerge runners are hosted on GCP and have a different
           # cache setup than the depot runners.
-          if [[ "${{ matrix.runs-on }}" = "llvm-premerge-linux-runners" ]]; then
+          if [[ "${{ matrix.name }}" = "llvm-premerge-linux-runners" ]]; then
             # This environment variable is passes into the container through the
             # runner pod definition. This differs between our two clusters which
             # why we do not hardcode it.
@@ -121,7 +125,7 @@ jobs:
           include-hidden-files: 'true'
       - name: Upload Comment
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ always() && !startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') }}
+        if: ${{ always() && !startsWith(matrix.name, 'depot-ubuntu-24.04-arm') }}
         continue-on-error: true
         with:
           name: workflow-args-x86-linux
