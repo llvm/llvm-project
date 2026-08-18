@@ -110,8 +110,10 @@ void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
 void Sinker::sinkRegion(Region *region) {
   // Initialize the work queue with all the ops in the region.
   std::vector<Operation *> stack;
-  for (Operation &op : region->getOps())
-    stack.push_back(&op);
+  for (Block &block : *region)
+    // Seed from all block so that uses in non-entry blocks and trigger sinking
+    for (Operation &op : block)
+      stack.push_back(&op);
 
   // Process all the ops depth-first. This ensures that nodes of subgraphs are
   // sunk in the correct order.
