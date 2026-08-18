@@ -18,5 +18,5 @@ class TestSwiftExpressionNoDebugInfo(TestBase):
         self.expect("log enable lldb types -f " + types_log)
         self.expect('expr -l Swift -- 1')
         self.filecheck_log(types_log, __file__)
-        # CHECK: No Swift debug info: prefer target triple.
+        # CHECK: Prefer module triple.
         # CHECK: Using SDK: {{.*}}.sdk
