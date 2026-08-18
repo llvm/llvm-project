@@ -1233,11 +1233,19 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
 
   AddPath({getTriple().str()});
 
-  // Handle the legacy AMDGPU triple case as well.
-  if (getTriple().getArchName() == "amdgcn") {
+  // For AMDGPU, fall back to the subarch-stripped triple path, trying both the
+  // canonical "amdgpu" name and the legacy "amdgcn" name.
+  //
+  // TODO: Also try major subarch?
+  // TODO: Remove this when libc and compiler-rt builds are migrated.
+  if (getTriple().isAMDGCN()) {
     llvm::Triple Canon(getTriple());
-    Canon.setArchName("amdgpu");
-    AddPath({Canon.str()});
+    for (StringRef ArchName : {"amdgpu", "amdgcn"}) {
+      if (ArchName == getTriple().getArchName())
+        continue;
+      Canon.setArchName(ArchName);
+      AddPath({Canon.str()});
+    }
   }
 
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
