@@ -1,0 +1,37 @@
+# A Clang module compile unit decides its ODR availability from its own
+# language, so a module built as C++ places its types in the artificial type
+# unit even when every compile unit of the object files uses a language
+# without ODR. The type unit has to exist for those links as well.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/M.pcm %p/../Inputs/module-odr-language/M.ll
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/1.o %p/../Inputs/module-odr-language/1.ll
+RUN: dsymutil --linker parallel -f \
+RUN:     -y %p/../Inputs/module-odr-language/debug-map.map \
+RUN:     -oso-prepend-path %t -o %t/out.dwarf
+RUN: llvm-dwarfdump --verify %t/out.dwarf
+RUN: llvm-dwarfdump --debug-info %t/out.dwarf | FileCheck %s
+
+# The module's type definition, the member function declaration it holds and
+# the forward declaration all land in the artificial type unit.
+
+CHECK:      DW_AT_name {{.*}}"__artificial_type_unit"
+CHECK:      DW_TAG_module
+CHECK-NEXT:   DW_AT_name {{.*}}"M"
+CHECK:        DW_TAG_structure_type
+CHECK-NEXT:     DW_AT_name {{.*}}"S"
+CHECK-NEXT:     DW_AT_byte_size
+CHECK:          DW_TAG_member
+CHECK-NEXT:       DW_AT_name {{.*}}"value"
+CHECK:          DW_TAG_subprogram
+CHECK:            DW_AT_name {{.*}}"get"
+CHECK:        DW_TAG_structure_type
+CHECK-NEXT:     DW_AT_name {{.*}}"T"
+
+# The compile unit of the object file keeps its own language.
+
+CHECK:      DW_AT_language {{.*}}(DW_LANG_C99)
+CHECK:      DW_TAG_subprogram
+CHECK:        DW_AT_name {{.*}}"main"

@@ -296,6 +296,7 @@ void BlockFrequencyInfoImplBase::clear() {
   IsIrrLoopHeader.clear();
   std::vector<WorkingData>().swap(Working);
   Loops.clear();
+  TopContainsIrreducible = false;
 }
 
 /// Clear all memory not needed downstream.
@@ -309,7 +310,7 @@ static void cleanup(BlockFrequencyInfoImplBase &BFI) {
   BFI.IsIrrLoopHeader = std::move(SavedIsIrrLoopHeader);
 }
 
-bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
+void BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
                                            const LoopData *OuterLoop,
                                            const BlockNode &Pred,
                                            const BlockNode &Succ,
@@ -329,6 +330,7 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
            << " [" << Type << "] weight = " << Weight;
     if (!isLoopHeader(Resolved))
       dbgs() << ", succ = " << getBlockName(Succ);
+    dbgs() << ", pred = " << getBlockName(Pred);
     if (Resolved != Succ)
       dbgs() << ", resolved = " << getBlockName(Resolved);
     dbgs() << "\n";
@@ -339,48 +341,29 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
   if (isLoopHeader(Resolved)) {
     LLVM_DEBUG(debugSuccessor("backedge"));
     Dist.addBackedge(Resolved, Weight);
-    return true;
+    return;
   }
 
   if (Working[Resolved.Index].getContainingLoop() != OuterLoop) {
     LLVM_DEBUG(debugSuccessor("  exit  "));
     Dist.addExit(Resolved, Weight);
-    return true;
+    return;
   }
 
-  if (Resolved < Pred) {
-    if (!isLoopHeader(Pred)) {
-      // If OuterLoop is an irreducible loop, we can't actually handle this.
-      assert((!OuterLoop || !OuterLoop->isIrreducible()) &&
-             "unhandled irreducible control flow");
-
-      // Irreducible backedge.  Abort.
-      LLVM_DEBUG(debugSuccessor("abort!!!"));
-      return false;
-    }
-
-    // If "Pred" is a loop header, then this isn't really a backedge; rather,
-    // OuterLoop must be irreducible.  These false backedges can come only from
-    // secondary loop headers.
-    assert(OuterLoop && OuterLoop->isIrreducible() && !isLoopHeader(Resolved) &&
-           "unhandled irreducible control flow");
-  }
+  // Every irreducible SCC is packaged before mass distribution and an
+  // irreducible package is solved rather than swept, so the only retreating
+  // edge left is the one to OuterLoop's header, handled above.
+  assert(Resolved >= Pred && "unhandled irreducible control flow");
 
   LLVM_DEBUG(debugSuccessor(" local  "));
   Dist.addLocal(Resolved, Weight);
-  return true;
 }
 
-bool BlockFrequencyInfoImplBase::addLoopSuccessorsToDist(
+void BlockFrequencyInfoImplBase::addLoopSuccessorsToDist(
     const LoopData *OuterLoop, LoopData &Loop, Distribution &Dist) {
   // Copy the exit map into Dist.
   for (const auto &I : Loop.Exits)
-    if (!addToDist(Dist, OuterLoop, Loop.getHeader(), I.first,
-                   I.second.getMass()))
-      // Irreducible backedge.
-      return false;
-
-  return true;
+    addToDist(Dist, OuterLoop, Loop.getHeader(), I.first, I.second.getMass());
 }
 
 /// Compute the loop scale for a loop.
@@ -401,10 +384,7 @@ void BlockFrequencyInfoImplBase::computeLoopScale(LoopData &Loop) {
 
   // LoopScale == 1 / ExitMass
   // ExitMass == HeadMass - BackedgeMass
-  BlockMass TotalBackedgeMass;
-  for (auto &Mass : Loop.BackedgeMass)
-    TotalBackedgeMass += Mass;
-  BlockMass ExitMass = BlockMass::getFull() - TotalBackedgeMass;
+  BlockMass ExitMass = BlockMass::getFull() - Loop.BackedgeMass;
 
   // Block scale stores the inverse of the scale. If this is an infinite loop,
   // its exit mass will be zero. In this case, use an arbitrary scale for the
@@ -413,7 +393,7 @@ void BlockFrequencyInfoImplBase::computeLoopScale(LoopData &Loop) {
       ExitMass.isEmpty() ? InfiniteLoopScale : ExitMass.toScaled().inverse();
 
   LLVM_DEBUG(dbgs() << " - exit-mass = " << ExitMass << " ("
-                    << BlockMass::getFull() << " - " << TotalBackedgeMass
+                    << BlockMass::getFull() << " - " << Loop.BackedgeMass
                     << ")\n"
                     << " - scale = " << Loop.Scale << "\n");
 }
@@ -467,7 +447,7 @@ void BlockFrequencyInfoImplBase::distributeMass(const BlockNode &Source,
 
     // Check for a backedge.
     if (W.Type == Weight::Backedge) {
-      OuterLoop->BackedgeMass[OuterLoop->getHeaderIndex(W.TargetNode)] += Taken;
+      OuterLoop->BackedgeMass += Taken;
       LLVM_DEBUG(debugAssign(*this, D, W.TargetNode, Taken, "back"));
       continue;
     }
@@ -677,8 +657,7 @@ template <> struct GraphTraits<IrreducibleGraph> {
 
 } // end namespace llvm
 
-/// Package \c SCC into a loop, headed by the nodes marked in \c IsEntry or
-/// \c Extra.
+/// Package \c SCC into a loop represented by its lowest-RPO member.
 static void
 createIrreducibleLoop(BlockFrequencyInfoImplBase &BFI,
                       const IrreducibleGraph &G, LoopData *OuterLoop,
@@ -687,35 +666,24 @@ createIrreducibleLoop(BlockFrequencyInfoImplBase &BFI,
                       const BitVector &IsEntry, const BitVector &Extra) {
   LLVM_DEBUG(dbgs() << " - found-scc\n");
 
-  LoopData::NodeList Headers;
-  LoopData::NodeList Others;
-  for (const auto *I : SCC)
-    if (IsEntry.test(G.getIndex(I))) {
-      Headers.push_back(I->Node);
-      LLVM_DEBUG(dbgs() << "  => entry = " << BFI.getBlockName(I->Node)
-                        << "\n");
-    }
-  assert(Headers.size() >= 2 &&
-         "Expected irreducible CFG; -loop-info is likely invalid");
-
+  // One representative, not a header set: solving the SCC makes the entries'
+  // relative frequencies fall out of the solve rather than out of an assumed
+  // split.  Take the lowest RPO node so the choice is deterministic.
+  LoopData::NodeList Members;
+  Members.reserve(SCC.size());
   for (const auto *I : SCC) {
-    if (IsEntry.test(G.getIndex(I)))
-      continue;
-    if (Extra.test(G.getIndex(I))) {
-      Headers.push_back(I->Node);
-      LLVM_DEBUG(dbgs() << "  => extra = " << BFI.getBlockName(I->Node)
-                        << "\n");
-    } else {
-      Others.push_back(I->Node);
-      LLVM_DEBUG(dbgs() << "  => other = " << BFI.getBlockName(I->Node)
-                        << "\n");
-    }
+    Members.push_back(I->Node);
+    // The package no longer distinguishes headers; the marking stays because
+    // PGOInstrumentation places counters on isIrrLoopHeader().
+    bool Header = IsEntry.test(G.getIndex(I)) || Extra.test(G.getIndex(I));
+    if (Header)
+      BFI.IsIrrLoopHeader.set(I->Node.Index);
+    LLVM_DEBUG(dbgs() << (Header ? "  => header = " : "  => member = ")
+                      << BFI.getBlockName(I->Node) << "\n");
   }
-  llvm::sort(Headers);
-  llvm::sort(Others);
+  llvm::sort(Members);
 
-  auto Loop = BFI.Loops.emplace(Insert, OuterLoop, Headers.begin(),
-                                Headers.end(), Others.begin(), Others.end());
+  auto Loop = BFI.Loops.emplace(Insert, OuterLoop, std::move(Members));
 
   // Update loop hierarchy.
   for (const auto &N : Loop->Nodes)
@@ -746,7 +714,8 @@ BlockFrequencyInfoImplBase::analyzeIrreducible(
 
   // A node is an entry if an edge from another SCC reaches it, and an extra
   // header if a backedge within its SCC targets it.  Backedges from entries
-  // can have inverted ordering, so they do not make a header.
+  // can have inverted ordering, so they do not make a header.  Mass no longer
+  // depends on this split; it only decides isIrrLoopHeader().
   BitVector IsEntry(G.Nodes.size());
   BitVector Extra(G.Nodes.size());
   for (const auto &U : G.Nodes)
@@ -767,64 +736,4 @@ BlockFrequencyInfoImplBase::analyzeIrreducible(
   if (OuterLoop)
     return make_range(std::next(Prev), Insert);
   return make_range(Loops.begin(), Insert);
-}
-
-void
-BlockFrequencyInfoImplBase::updateLoopWithIrreducible(LoopData &OuterLoop) {
-  OuterLoop.Exits.clear();
-  for (auto &Mass : OuterLoop.BackedgeMass)
-    Mass = BlockMass::getEmpty();
-  auto O = OuterLoop.Nodes.begin() + 1;
-  for (auto I = O, E = OuterLoop.Nodes.end(); I != E; ++I)
-    if (!Working[I->Index].isPackaged())
-      *O++ = *I;
-  OuterLoop.Nodes.erase(O, OuterLoop.Nodes.end());
-}
-
-void BlockFrequencyInfoImplBase::adjustLoopHeaderMass(LoopData &Loop) {
-  assert(Loop.isIrreducible() && "this only makes sense on irreducible loops");
-
-  // Since the loop has more than one header block, the mass flowing back into
-  // each header will be different. Adjust the mass in each header loop to
-  // reflect the masses flowing through back edges.
-  //
-  // To do this, we distribute the initial mass using the backedge masses
-  // as weights for the distribution.
-  BlockMass LoopMass = BlockMass::getFull();
-  Distribution Dist;
-
-  LLVM_DEBUG(dbgs() << "adjust-loop-header-mass:\n");
-  for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
-    auto &HeaderNode = Loop.Nodes[H];
-    auto &BackedgeMass = Loop.BackedgeMass[H];
-    LLVM_DEBUG(dbgs() << " - Add back edge mass for node "
-                      << getBlockName(HeaderNode) << ": " << BackedgeMass
-                      << "\n");
-    if (BackedgeMass.getMass() > 0)
-      Dist.addLocal(HeaderNode, BackedgeMass.getMass());
-    else
-      LLVM_DEBUG(dbgs() << "   Nothing added. Back edge mass is zero\n");
-  }
-
-  DitheringDistributer D(Dist, LoopMass);
-
-  LLVM_DEBUG(dbgs() << " Distribute loop mass " << LoopMass
-                    << " to headers using above weights\n");
-  for (const Weight &W : Dist.Weights) {
-    BlockMass Taken = D.takeMass(W.Amount);
-    assert(W.Type == Weight::Local && "all weights should be local");
-    Working[W.TargetNode.Index].getMass() = Taken;
-    LLVM_DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
-  }
-}
-
-void BlockFrequencyInfoImplBase::distributeIrrLoopHeaderMass(Distribution &Dist) {
-  BlockMass LoopMass = BlockMass::getFull();
-  DitheringDistributer D(Dist, LoopMass);
-  for (const Weight &W : Dist.Weights) {
-    BlockMass Taken = D.takeMass(W.Amount);
-    assert(W.Type == Weight::Local && "all weights should be local");
-    Working[W.TargetNode.Index].getMass() = Taken;
-    LLVM_DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
-  }
 }

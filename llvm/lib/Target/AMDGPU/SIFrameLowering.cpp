@@ -410,14 +410,14 @@ class PrologEpilogSGPRSpillBuilder {
       ArrayRef<int16_t> DstSplitParts = TRI.getRegSplitParts(RC, EltSize);
       assert(NumSubRegs == (DstSplitParts.empty() ? 1 : DstSplitParts.size()));
       MCRegister CFISuperReg = getCFISuperReg();
-      if (NumSubRegs == 1) {
-        TFI->buildCFI(
-            MBB, MI, DL,
-            MCCFIInstruction::createRegister(
-                nullptr,
-                MCRI->getDwarfRegNum(
-                    CFISuperReg ? CFISuperReg : SuperReg.asMCReg(), false),
-                MCRI->getDwarfRegNum(DstReg, false)));
+      if (!CFISuperReg)
+        CFISuperReg = SuperReg;
+      int64_t DwarfCFISuperReg = MCRI->getDwarfRegNum(CFISuperReg, false);
+      int64_t DwarfDstSuperReg = MCRI->getDwarfRegNum(DstReg, false);
+      if (DwarfCFISuperReg >= 0 && DwarfDstSuperReg >= 0) {
+        TFI->buildCFI(MBB, MI, DL,
+                      MCCFIInstruction::createRegister(
+                          nullptr, DwarfCFISuperReg, DwarfDstSuperReg));
       } else if (isExec(CFISuperReg)) {
         assert(NumSubRegs == 2 && "EXEC larger than 64-bit");
         TFI->buildCFIForRegToSGPRPairSpill(MBB, MI, DL, CFISuperReg, DstReg);
@@ -1135,7 +1135,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
       return;
     if (IsCalleeSaved.test(Reg) || !MRI.isPhysRegModified(Reg))
       return;
-    MCRegister DwarfReg = MCRI->getDwarfRegNum(Reg, false);
+    unsigned DwarfReg = MCRI->getDwarfRegNum(Reg, false);
     buildCFI(MBB, MBBI, DL,
              MCCFIInstruction::createUndefined(nullptr, DwarfReg));
   };
@@ -2546,7 +2546,7 @@ MachineInstr *SIFrameLowering::buildCFIForVRegToVRegSpill(
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  MCRegister MaskReg = MCRI.getDwarfRegNum(
+  unsigned MaskReg = MCRI.getDwarfRegNum(
       ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
   auto CFIInst = MCCFIInstruction::createLLVMVectorRegisterMask(
       nullptr, MCRI.getDwarfRegNum(Reg, false),
@@ -2626,7 +2626,7 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
   assert(DwarfVGPR != -1);
 
-  MCRegister MaskReg = MCRI.getDwarfRegNum(
+  unsigned MaskReg = MCRI.getDwarfRegNum(
       ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
   auto CFIInst = MCCFIInstruction::createLLVMVectorOffset(
       nullptr, DwarfVGPR, VGPRLaneBitSize, MaskReg, ST.getWavefrontSize(),

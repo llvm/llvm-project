@@ -501,13 +501,14 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
   const auto Parents = Context->getParents(*E);
   if (Parents.size() != 1)
     return true;
-  if (const auto *Cast = Parents[0].get<ImplicitCastExpr>()) {
-    if ((Cast->getCastKind() == CK_NoOp &&
-         ASTContext::hasSameType(Cast->getType(), E->getType().withConst())) ||
-        (Cast->getCastKind() == CK_LValueToRValue &&
-         !Cast->getType().isNull() && Cast->getType()->isFundamentalType()))
-      return false;
-  }
+  if (const auto *Cast = Parents[0].get<ImplicitCastExpr>();
+      Cast &&
+      ((Cast->getCastKind() == CK_NoOp &&
+        ASTContext::hasSameType(Cast->getType(), E->getType().withConst())) ||
+       (Cast->getCastKind() == CK_LValueToRValue && !Cast->getType().isNull() &&
+        Cast->getType()->isFundamentalType())))
+    return false;
+
   // FIXME: Make this function more generic.
   return true;
 }
@@ -755,7 +756,8 @@ void LoopConvertCheck::doConversion(
                      Parents[0].getSourceRange().getBegin()))) {
               Range = Paren->getSourceRange();
             }
-          } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
+          } else if (const auto *UOP = Parents[0].get<UnaryOperator>();
+                     UOP && UOP->getOpcode() == UO_AddrOf) {
             // If we are taking the address of the loop variable, then we must
             // not use a copy, as it would mean taking the address of the loop's
             // local index instead.
@@ -763,8 +765,7 @@ void LoopConvertCheck::doConversion(
             // of the loop's body (for instance, in a function that got the
             // loop's index as a const reference parameter), or where we take
             // the address of a member (like "&Arr[i].A.B.C").
-            if (UOP->getOpcode() == UO_AddrOf)
-              CanCopy = false;
+            CanCopy = false;
           }
         }
       } else {
@@ -851,9 +852,9 @@ StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
   } else {
     // For CXXOperatorCallExpr such as vector_ptr->size() we want the class
     // object vector_ptr, but for vector[2] we need the whole expression.
-    if (const auto *E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr))
-      if (E->getOperator() != OO_Subscript)
-        ContainerExpr = E->getArg(0);
+    if (const auto *E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr);
+        E && E->getOperator() != OO_Subscript)
+      ContainerExpr = E->getArg(0);
     ContainerString =
         getStringFromRange(Context->getSourceManager(), Context->getLangOpts(),
                            ContainerExpr->getSourceRange());
@@ -991,11 +992,11 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
       return false;
 
   } else if (FixerKind == LFK_PseudoArray) {
-    if (const auto *EndCall = Nodes.getNodeAs<CXXMemberCallExpr>(EndCallName)) {
+    if (const auto *EndCall = Nodes.getNodeAs<CXXMemberCallExpr>(EndCallName);
+        EndCall && !isa<MemberExpr>(EndCall->getCallee()))
       // This call is required to obtain the container.
-      if (!isa<MemberExpr>(EndCall->getCallee()))
-        return false;
-    }
+      return false;
+
     return Nodes.getNodeAs<CallExpr>(EndCallName) != nullptr;
   }
   return true;

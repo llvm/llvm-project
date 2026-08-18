@@ -802,8 +802,17 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
   return false;
 }
 
-static Constant *getConstantFloatVector(const ArrayRef<APFloat> Values,
-                                        const Type *Ty) {
+static Constant *getConstantFloat(const ArrayRef<APFloat> Values,
+                                  const Type *Ty) {
+
+  assert(Ty->isSingleValueType() &&
+         "Type must either be a scalar or a vector.");
+  assert((!Ty->isVectorTy() || Ty->isScalableTy() ||
+          Values.size() == cast<FixedVectorType>(Ty)->getNumElements()) &&
+         "Unexpected number of constant values.");
+  assert((Ty->isVectorTy() || Values.size() == 1) &&
+         "Expected exactly one constant value");
+
   Type *ElemTy = Ty->getScalarType();
   const fltSemantics &FltSem = ElemTy->getFltSemantics();
 
@@ -814,7 +823,8 @@ static Constant *getConstantFloatVector(const ArrayRef<APFloat> Values,
     APF.convert(FltSem, APFloat::rmNearestTiesToEven, &Unused);
     ConstValues.push_back(ConstantFP::get(ElemTy, APF));
   }
-  return ConstantVector::get(ConstValues);
+
+  return Ty->isVectorTy() ? ConstantVector::get(ConstValues) : ConstValues[0];
 }
 
 bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
@@ -843,7 +853,7 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
           return false;
         Values.push_back(APFloat(MatchingRow->result));
       }
-      Constant *NewValues = getConstantFloatVector(Values, CI->getType());
+      Constant *NewValues = getConstantFloat(Values, CI->getType());
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *NewValues << "\n");
       replaceCall(CI, NewValues);
       return true;
@@ -1998,7 +2008,6 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   // max vector size is 16, and sincos will generate two results.
   SmallVector<APFloat, 16> Val0, Val1;
   int FuncVecSize = getVecSize(FInfo);
-  bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
   if (FuncVecSize == 1) {
     if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
                                 Val1.emplace_back(0.0), copr0, copr1)) {
@@ -2017,21 +2026,11 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     }
   }
 
-  Constant *nval0 = nullptr, *nval1 = nullptr;
-  if (FuncVecSize == 1) {
-    nval0 = ConstantFP::get(aCI->getType(), Val0[0]);
-    if (hasTwoResults)
-      nval1 = ConstantFP::get(aCI->getType(), Val1[0]);
-  } else {
-    nval0 = getConstantFloatVector(Val0, aCI->getType());
-    if (hasTwoResults)
-      nval1 = getConstantFloatVector(Val1, aCI->getType());
-  }
+  Constant *nval0 = getConstantFloat(Val0, aCI->getType());
 
-  if (hasTwoResults) {
-    // sincos
-    assert(FInfo.getId() == AMDGPULibFunc::EI_SINCOS &&
-           "math function with ptr arg not supported yet");
+  // sincos
+  if (FInfo.getId() == AMDGPULibFunc::EI_SINCOS) {
+    Constant *nval1 = getConstantFloat(Val1, aCI->getType());
     new StoreInst(nval1, aCI->getArgOperand(1), aCI->getIterator());
   }
 

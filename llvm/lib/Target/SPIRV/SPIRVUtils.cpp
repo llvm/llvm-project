@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <queue>
 #include <vector>
 
@@ -448,18 +449,27 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
-SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+uint32_t getMemSemanticsWithStorageClass(const Triple &TT, uint32_t OrderSem,
+                                         uint32_t StorageClassSem) {
+  bool DropStorageClass =
+      TT.isVulkanOS() &&
+      OrderSem == static_cast<uint32_t>(SPIRV::MemorySemantics::None);
+  return OrderSem | (DropStorageClass ? 0 : StorageClassSem);
+}
+
+SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
+                                SyncScope::ID Id) {
   // Named by
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
   // We don't need aliases for Invocation and CrossDevice, as we already have
   // them covered by "singlethread" and "" strings respectively (see
   // implementation of LLVMContext::LLVMContext()).
-  static const llvm::SyncScope::ID SubGroup =
-      Ctx.getOrInsertSyncScopeID("subgroup");
-  static const llvm::SyncScope::ID WorkGroup =
-      Ctx.getOrInsertSyncScopeID("workgroup");
-  static const llvm::SyncScope::ID Device =
-      Ctx.getOrInsertSyncScopeID("device");
+  auto ScopeID = [&](AtomicScope Scope) {
+    return Ctx.getOrInsertSyncScopeID(*getAtomicScopeIRString(TT, Scope));
+  };
+  static const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
+  static const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
+  static const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
@@ -1254,12 +1264,17 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
     return std::nullopt;
 
   if (GV.isDeclarationForLinker()) {
-    // Interface variables must not get Import linkage.
     if (const auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
       auto SC = addressSpaceToStorageClass(GVar->getAddressSpace(), ST);
+      // Interface variables must not get Import linkage.
       if (SC == SPIRV::StorageClass::Input ||
           SC == SPIRV::StorageClass::Output ||
           SC == SPIRV::StorageClass::PushConstant)
+        return std::nullopt;
+      // Shaders have no linker, so module-internal storage
+      // (e.g. HLSL groupshared) can't be imported
+      if (ST.isShader() && (SC == SPIRV::StorageClass::Workgroup ||
+                            SC == SPIRV::StorageClass::Private))
         return std::nullopt;
     }
     return SPIRV::LinkageType::Import;

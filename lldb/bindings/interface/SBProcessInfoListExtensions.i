@@ -8,7 +8,9 @@
     def __iter__(self):
       '''Iterate over all the process info in a lldb.SBProcessInfoListExtensions object.'''
       for i in range(self.GetSize()):
-          yield self.GetProcessInfoAtIndex(i)
+          p = SBProcessInfo()
+          self.GetProcessInfoAtIndex(i, p)
+          yield p
 
     def __getitem__(self, idx):
       '''Get the process info at a given index in an lldb.SBProcessInfoList object.'''
@@ -18,7 +20,9 @@
       if not (-count <= idx < count):
         raise IndexError("list index out of range")
       idx %= count
-      return self.GetProcessInfoAtIndex(idx)
+      p = SBProcessInfo()
+      self.GetProcessInfoAtIndex(idx, p)
+      return p
     %}
 #endif
 }
