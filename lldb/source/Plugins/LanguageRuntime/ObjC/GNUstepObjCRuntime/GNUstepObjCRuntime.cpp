@@ -28,6 +28,8 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrameRecognizer.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
@@ -39,6 +41,8 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/IRBuilder.h"
@@ -157,6 +161,81 @@ public:
 };
 
 char GNUstepObjCSelectorRegistrationPass::ID = 0;
+
+/// Presents the object being thrown as an `exception` argument on a frame
+/// stopped at libobjc2's throw entry point, which is what `thread exception`
+/// and lldb-dap's exception view read.
+class GNUstepObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
+public:
+  explicit GNUstepObjCExceptionRecognizedStackFrame(StackFrameSP frame_sp) {
+    ThreadSP thread_sp = frame_sp->GetThread();
+    if (!thread_sp)
+      return;
+    ProcessSP process_sp = thread_sp->GetProcess();
+    if (!process_sp)
+      return;
+
+    const ABISP &abi = process_sp->GetABI();
+    if (!abi)
+      return;
+
+    TypeSystemClangSP scratch_ts_sp =
+        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
+    if (!scratch_ts_sp)
+      return;
+    CompilerType void_ptr_type =
+        scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+
+    // `void objc_exception_throw(id object)` on every libobjc2 exception
+    // back-end, so the thrown object is argument 0 regardless of how the
+    // unwinder is implemented on this platform.
+    ValueList args;
+    Value input_value;
+    input_value.SetCompilerType(void_ptr_type);
+    args.PushValue(input_value);
+    if (!abi->GetArgumentValues(*thread_sp, args))
+      return;
+
+    Value value(args.GetValueAtIndex(0)->GetScalar().ULongLong());
+    value.SetCompilerType(void_ptr_type);
+    m_exception_sp = ValueObjectConstResult::Create(frame_sp.get(), value,
+                                                    ConstString("exception"));
+    m_exception_sp = ValueObjectRecognizerSynthesizedValue::Create(
+        *m_exception_sp, eValueTypeVariableArgument);
+    m_exception_sp = m_exception_sp->GetDynamicValue(eDynamicDontRunTarget);
+
+    m_arguments = std::make_shared<ValueObjectList>();
+    m_arguments->Append(m_exception_sp);
+    m_stop_desc = "hit Objective-C exception";
+  }
+
+  ValueObjectSP GetExceptionObject() override { return m_exception_sp; }
+
+private:
+  ValueObjectSP m_exception_sp;
+};
+
+class GNUstepObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
+  RecognizedStackFrameSP RecognizeFrame(StackFrameSP frame) override {
+    return std::make_shared<GNUstepObjCExceptionRecognizedStackFrame>(frame);
+  }
+  std::string GetName() override {
+    return "GNUstep ObjC Exception Throw StackFrame Recognizer";
+  }
+};
+
+/// The runtime library's file name differs by platform (libobjc.so.4.6,
+/// objc.dll, ...), so the recognizer is registered without a module filter
+/// and matched on the symbol alone; an empty module ConstString matches any
+/// module (StackFrameRecognizer.cpp).
+void RegisterGNUstepObjCExceptionRecognizer(Process *process) {
+  static const std::vector<ConstString> g_symbols = {
+      ConstString("objc_exception_throw")};
+  process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
+      std::make_shared<GNUstepObjCExceptionThrowFrameRecognizer>(),
+      ConstString(), g_symbols, Mangled::NamePreference::ePreferDemangled,
+      /*first_instruction_only=*/true);
+}
 } // namespace
 
 char GNUstepObjCRuntime::ID = 0;
@@ -164,7 +243,8 @@ char GNUstepObjCRuntime::ID = 0;
 void GNUstepObjCRuntime::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "GNUstep Objective-C Language Runtime - libobjc2",
-      CreateInstance);
+      CreateInstance, /*command_callback=*/nullptr,
+      GetBreakpointExceptionPrecondition);
 }
 
 void GNUstepObjCRuntime::Terminate() {
@@ -237,6 +317,7 @@ LanguageRuntime *GNUstepObjCRuntime::CreateInstance(Process *process,
   if (!FindGNUstepObjCRuntimeModule(target.GetImages()))
     return nullptr;
 
+  RegisterGNUstepObjCExceptionRecognizer(process);
   return new GNUstepObjCRuntime(process);
 }
 
@@ -600,15 +681,129 @@ GNUstepObjCRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
 BreakpointResolverSP
 GNUstepObjCRuntime::CreateExceptionResolver(const BreakpointSP &bkpt,
                                             bool catch_bp, bool throw_bp) {
-  BreakpointResolverSP resolver_sp;
-
+  std::vector<std::string> names;
   if (throw_bp)
-    resolver_sp = std::make_shared<BreakpointResolverName>(
-        bkpt, "objc_exception_throw", eFunctionNameTypeBase,
-        eLanguageTypeUnknown, Breakpoint::Exact, 0,
-        /*offset_is_insn_count = */ false, eLazyBoolNo);
+    names.emplace_back("objc_exception_throw");
 
-  return resolver_sp;
+  // Unlike Apple's runtime, libobjc2 has an entry point for entering a
+  // handler - but only where exceptions unwind through the Itanium ABI. The
+  // MSVC build raises a native SEH exception instead (eh_win32_msvc.cc) and
+  // catch is a __CxxFrameHandler3 funclet with no symbol to break on, so ask
+  // the runtime module rather than the target triple.
+  if (catch_bp && ModuleDefinesFunction(m_objc_module_sp, "objc_begin_catch")) {
+    names.emplace_back("objc_begin_catch");
+    // For gnustep-2.x on MinGW clang routes @catch through the C++ ABI
+    // instead (CGObjCGNU.cpp, usesCxxExceptions), leaving libobjc2's entry
+    // point exported but never reached. Which one a program calls depends on
+    // how it was compiled, so offer both; the unused name never resolves.
+    // That entry point is shared with C++ catch, so on MinGW this stops on
+    // those too.
+    //
+    // isOSWindows(), not the environment: LLDB reports a MinGW PE as msvc
+    // unless plugin.object-file.pe-coff.abi says otherwise.
+    if (GetTargetRef().GetArchitecture().GetTriple().isOSWindows())
+      names.emplace_back("__cxa_begin_catch");
+  }
+
+  if (names.empty())
+    return {};
+
+  return std::make_shared<BreakpointResolverName>(
+      bkpt, names, eFunctionNameTypeBase, eLanguageTypeUnknown,
+      /*offset=*/0, /*skip_prologue=*/eLazyBoolNo);
+}
+
+void GNUstepObjCRuntime::SetExceptionBreakpoints() {
+  if (!m_process)
+    return;
+
+  const bool catch_bp = false;
+  const bool throw_bp = true;
+  const bool is_internal = true;
+
+  if (!m_objc_exception_bp_sp) {
+    m_objc_exception_bp_sp = LanguageRuntime::CreateExceptionBreakpoint(
+        m_process->GetTarget(), GetLanguageType(), catch_bp, throw_bp,
+        is_internal);
+    if (m_objc_exception_bp_sp)
+      m_objc_exception_bp_sp->SetBreakpointKind("ObjC exception");
+  } else {
+    m_objc_exception_bp_sp->SetEnabled(true);
+  }
+}
+
+void GNUstepObjCRuntime::ClearExceptionBreakpoints() {
+  if (!m_process)
+    return;
+
+  if (m_objc_exception_bp_sp)
+    m_objc_exception_bp_sp->SetEnabled(false);
+}
+
+bool GNUstepObjCRuntime::ExceptionBreakpointsAreSet() {
+  return m_objc_exception_bp_sp && m_objc_exception_bp_sp->IsEnabled();
+}
+
+bool GNUstepObjCRuntime::ExceptionBreakpointsExplainStop(
+    StopInfoSP stop_reason) {
+  if (!m_process || !m_objc_exception_bp_sp)
+    return false;
+
+  if (!stop_reason || stop_reason->GetStopReason() != eStopReasonBreakpoint)
+    return false;
+
+  const uint64_t break_site_id = stop_reason->GetValue();
+  return m_process->GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
+      break_site_id, m_objc_exception_bp_sp->GetID());
+}
+
+ValueObjectSP
+GNUstepObjCRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
+  if (!thread_sp || !thread_sp->SafeToCallFunctions())
+    return {};
+
+  // Stopped at the throw itself the object is simply argument 0, which holds
+  // on every one of libobjc2's exception back-ends and is where the frame
+  // recognizer already presents it. That is the path that works.
+  //
+  // Further into the unwind there is nothing runtime-independent to read, so
+  // ask the C++ runtime - which currently recovers nothing on either
+  // back-end that reaches here, for two different reasons. On ELF libobjc2
+  // raises with its own exception class rather than through __cxa_throw, so
+  // libstdc++ never records it and __cxa_current_exception_type() is null. On
+  // MinGW it does record it, but ItaniumABIRuntime reads the word before the
+  // type_info, which only locates the object for Apple's runtime - objc4
+  // embeds the type_info in the same allocation. libobjc2 shares one exported
+  // type_info, so that word is an unrelated global. `thread exception` is
+  // therefore reliable at the throw site and empty elsewhere.
+  if (StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0)) {
+    if (RecognizedStackFrameSP recognized_sp = frame_sp->GetRecognizedFrame()) {
+      if (ValueObjectSP exception_sp = recognized_sp->GetExceptionObject())
+        return exception_sp;
+    }
+  }
+
+  auto *cpp_runtime = m_process->GetLanguageRuntime(eLanguageTypeC_plus_plus);
+  if (!cpp_runtime)
+    return {};
+  ValueObjectSP cpp_exception_sp =
+      cpp_runtime->GetExceptionObjectForThread(thread_sp);
+  if (!cpp_exception_sp)
+    return {};
+
+  // An ObjC exception raised through the Itanium ABI is indistinguishable
+  // from a C++ one at this level, so confirm the thrown object really is an
+  // NSException (or a subclass) before claiming it.
+  ClassDescriptorSP descriptor_sp = GetClassDescriptor(*cpp_exception_sp);
+  if (!descriptor_sp || !descriptor_sp->IsValid())
+    return {};
+
+  static const ConstString g_NSException("NSException");
+  for (; descriptor_sp; descriptor_sp = descriptor_sp->GetSuperclass()) {
+    if (descriptor_sp->GetClassName() == g_NSException)
+      return cpp_exception_sp;
+  }
+  return {};
 }
 
 llvm::Expected<std::unique_ptr<UtilityFunction>>
