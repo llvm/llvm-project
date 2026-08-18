@@ -853,9 +853,8 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
 // Y = A + 2
 // Z = A + 3
 // Return the delta info for C aginst the new Basis
-auto StraightLineStrengthReduce::compressPath(Candidate &C,
-                                              Candidate *Basis) const
-    -> DeltaInfo {
+StraightLineStrengthReduce::DeltaInfo
+StraightLineStrengthReduce::compressPath(Candidate &C, Candidate *Basis) const {
   if (!Basis || !Basis->Basis || C.CandidateKind == Candidate::Mul)
     return {};
   Candidate *Root = Basis;
@@ -968,8 +967,8 @@ void StraightLineStrengthReduce::sortCandidateInstructions() {
          "Dependency graph should not have cycles");
 }
 
-auto StraightLineStrengthReduce::pickRewriteCandidate(Instruction *I) const
-    -> Candidate * {
+StraightLineStrengthReduce::Candidate *
+StraightLineStrengthReduce::pickRewriteCandidate(Instruction *I) const {
   // Return the candidate of instruction I that has the highest profit.
   auto It = RewriteCandidates.find(I);
   if (It == RewriteCandidates.end())
