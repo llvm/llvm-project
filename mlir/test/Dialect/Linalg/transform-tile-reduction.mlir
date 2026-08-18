@@ -1141,61 +1141,42 @@ module {
 
 // -----
 
-// A subtracting accumulation carrying integer overflow flags is not tiled: the
-// flags assert that the original accumulation does not wrap, which does not
-// hold for partial results accumulated from the neutral element. `0 - x`
-// already wraps for the minimum signed value under `nsw`.
+// The integer overflow flags of the subtraction carry over to the addition
+// combining the partial results, matching how the other combiners are cloned
+// with their flags.
 
-#map = affine_map<(d0, d1) -> (d0, d1)>
-#map1 = affine_map<(d0, d1) -> (d0)>
-
-module {
-  func.func @fail_for_nsw_overflow_flag(%arg0: tensor<?x?xi32>, %arg1: tensor<?xi32>) -> tensor<?xi32> {
-    // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
-    %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xi32>) outs(%arg1 : tensor<?xi32>) {
-    ^bb0(%in: i32, %out: i32):
-      %1 = arith.subi %out, %in overflow<nsw> : i32
+func.func @reduction_tile_negated_sum_overflow_flags(%arg0: tensor<?x?xi32>, %out: tensor<?xi32>) -> tensor<?xi32> {
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+   iterator_types = ["parallel", "reduction"]}
+   ins(%arg0 : tensor<?x?xi32>)
+   outs(%out : tensor<?xi32>) {
+    ^bb0(%arg7: i32, %arg9: i32):
+      %1 = arith.subi %arg9, %arg7 overflow<nsw, nuw> : i32
       linalg.yield %1 : i32
     } -> tensor<?xi32>
-    return %0 : tensor<?xi32>
-  }
-  module attributes {transform.with_named_sequence} {
-    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-      %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{failed to tile using partial reduction}}
-      %fill_op, %split_linalg_op, %combining_linalg_op, %for_op = transform.structured.tile_reduction_using_for %0 by tile_sizes = [0, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+  return %red : tensor<?xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %2, %3, %loop = transform.structured.tile_reduction_using_for %0
+      by tile_sizes = [0, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
-    }
   }
 }
 
-// -----
-
-// Same for `nuw`, where the assertion is broken even more readily: `0 - x`
-// wraps for every non-zero `x`.
-
-#map = affine_map<(d0, d1) -> (d0, d1)>
-#map1 = affine_map<(d0, d1) -> (d0)>
-
-module {
-  func.func @fail_for_nuw_overflow_flag(%arg0: tensor<?x?xi32>, %arg1: tensor<?xi32>) -> tensor<?xi32> {
-    // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
-    %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xi32>) outs(%arg1 : tensor<?xi32>) {
-    ^bb0(%in: i32, %out: i32):
-      %1 = arith.subi %out, %in overflow<nuw> : i32
-      linalg.yield %1 : i32
-    } -> tensor<?xi32>
-    return %0 : tensor<?xi32>
-  }
-  module attributes {transform.with_named_sequence} {
-    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-      %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{failed to tile using partial reduction}}
-      %fill_op, %split_linalg_op, %combining_linalg_op, %for_op = transform.structured.tile_reduction_using_for %0 by tile_sizes = [0, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-      transform.yield
-    }
-  }
-}
+// CHECK-LABEL: func @reduction_tile_negated_sum_overflow_flags
+//       CHECK:   linalg.generic
+//       CHECK:   ^bb0(%[[IN:.+]]: i32, %[[ACC:.+]]: i32):
+//       CHECK:     %[[SUB:.+]] = arith.subi %[[ACC]], %[[IN]] overflow<nsw, nuw> : i32
+//       CHECK:     linalg.yield %[[SUB]] : i32
+//       CHECK:   linalg.reduce
+//       CHECK:     (%[[PARTIAL:.+]]: i32, %[[INIT:.+]]: i32) {
+//       CHECK:       %[[ADD:.+]] = arith.addi %[[PARTIAL]], %[[INIT]] overflow<nsw, nuw> : i32
+//       CHECK:       linalg.yield %[[ADD]] : i32
+//       CHECK:   return
 
 // -----
 

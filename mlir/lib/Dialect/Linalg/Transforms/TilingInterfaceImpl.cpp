@@ -545,31 +545,27 @@ static bool isSubtractingAccumulation(Operation *combinerOp,
                                       Value accumulator) {
   if (!isa<arith::SubFOp, arith::SubIOp>(combinerOp))
     return false;
-  // Do not tile when the subtraction carries overflow flags: they assert that
-  // the original accumulation does not wrap, which no longer holds once the
-  // partial results accumulate from the neutral element instead.
-  //   `nuw`: `0 - x` wraps for every non-zero `x`, the result being negative.
-  //   `nsw`: `0 - x` wraps for the minimum signed `x`, as `-x` is then not
-  //          representable.
-  auto subIOp = dyn_cast<arith::SubIOp>(combinerOp);
-  if (subIOp && subIOp.getOverflowFlags() != arith::IntegerOverflowFlags::none)
-    return false;
   return combinerOp->getOperand(0) == accumulator;
 }
 
 /// Creates the operation combining two partial results of the subtracting
-/// accumulation performed by `combinerOp`, preserving its fast-math flags and
-/// rounding mode. The integer addition carries no overflow flags, since
-/// `isSubtractingAccumulation` only accepts subtractions that have none.
+/// accumulation performed by `combinerOp`, preserving its fast-math flags,
+/// rounding mode and integer overflow flags.
+///
+/// Note that the overflow flags assert that the original accumulation does not
+/// wrap, which may not hold for partial results since they are subtractions
+/// from zero. The flags are propagated nonetheless, for consistency with the
+/// other combiners, which are cloned with their flags. This behaviour should
+/// be revisited.
 static Value createSubtractingAccumulationMerge(OpBuilder &b, Location loc,
                                                 Operation *combinerOp,
                                                 Value lhs, Value rhs) {
   if (auto subFOp = dyn_cast<arith::SubFOp>(combinerOp))
     return arith::AddFOp::create(b, loc, lhs, rhs, subFOp.getFastmathAttr(),
                                  subFOp.getRoundingmodeAttr());
-  assert(isa<arith::SubIOp>(combinerOp) &&
-         "expected a subtracting accumulation combiner");
-  return arith::AddIOp::create(b, loc, lhs, rhs);
+  auto subIOp = dyn_cast<arith::SubIOp>(combinerOp);
+  assert(subIOp && "expected a subtracting accumulation combiner");
+  return arith::AddIOp::create(b, loc, lhs, rhs, subIOp.getOverflowFlags());
 }
 
 /// Describes how a reduction is split into partial results.
