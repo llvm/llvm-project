@@ -28683,29 +28683,35 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     // may still be part of the same tree when they are local carry deps
     // (cmp/add in the same block); reject 3+ outside users or 2 non-local
     // outside users.
-    auto IsBenignOutsideUser = [](Instruction *V, User *U) {
+    auto IsBenignOutsideUser = [](Instruction *I, User *U) {
       auto *UI = dyn_cast<Instruction>(U);
-      if (!UI || UI->getParent() != V->getParent())
+      if (!UI || UI->getParent() != I->getParent())
         return false;
-      return isa<CmpInst>(UI) || isa<BinaryOperator>(UI) || isa<SelectInst>(UI);
+      return isa<CmpInst, BinaryOperator, SelectInst>(UI);
     };
-    auto HasTooManyOutsideUsers = [&](Value *V) {
+    auto HasTooManyOutsideUsers = [&](Instruction *I) {
+      // Cap the walk: more than one store use + two outside users is enough to
+      // reject, so skip values with clearly too many uses.
+      if (I->hasNUsesOrMore(Stores.size() + 3))
+        return true;
       unsigned Outside = 0;
       bool HasNonBenign = false;
-      for (User *U : V->users()) {
+      for (User *U : I->users()) {
         if (Stores.contains(U))
           continue;
         ++Outside;
-        if (!IsBenignOutsideUser(cast<Instruction>(V), U))
+        if (Outside > 2)
+          return true;
+        if (!IsBenignOutsideUser(I, U))
           HasNonBenign = true;
       }
-      return Outside > 2 || (Outside == 2 && HasNonBenign);
+      return Outside == 2 && HasNonBenign;
     };
     if (S && S.getOpcode() != Instruction::Load &&
         all_of(ValOps.getArrayRef(), [&](Value *V) {
-          return none_of(cast<Instruction>(V)->operand_values(),
-                         IsaPred<LoadInst>) &&
-                 HasTooManyOutsideUsers(V);
+          auto *I = cast<Instruction>(V);
+          return none_of(I->operand_values(), IsaPred<LoadInst>) &&
+                 HasTooManyOutsideUsers(I);
         })) {
       Size = 1;
       return false;
