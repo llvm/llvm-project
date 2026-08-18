@@ -3126,28 +3126,6 @@ void f() {
   EXPECT_TRUE(notMatchesWithOpenMP60(ParallelOnly, Matcher));
 }
 
-// OpenMP 6 flatten directive
-TEST(ASTMatchersTestOpenMP, OMPFlattenDirective) {
-  auto Matcher = stmt(ompFlattenDirective());
-
-  StringRef FlattenOk = R"(
-void f() {
-#pragma omp flatten
-  for (int i = 0; i < 10; ++i)
-    for (int j = 0; j < 10; ++j) {}
-}
-)";
-  EXPECT_TRUE(matchesWithOpenMP60(FlattenOk, Matcher));
-
-  StringRef ParallelOnly = R"(
-void f() {
-#pragma omp parallel
-  ;
-}
-)";
-  EXPECT_TRUE(notMatchesWithOpenMP60(ParallelOnly, Matcher));
-}
-
 TEST(ASTMatchersTestOpenMP, OMPSplitDirective_HasCountsClause) {
   auto Matcher = stmt(ompSplitDirective(hasAnyClause(ompCountsClause())));
 

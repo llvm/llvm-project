@@ -8842,20 +8842,6 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt,
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, OMPSplitDirective>
     ompSplitDirective;
 
-/// Matches OpenMP ``flatten`` directive.
-///
-/// Given
-///
-/// \code
-///   #pragma omp flatten
-///   for (int i = 0; i < m; ++i)
-///     for (int j = 0; j < n; ++j) {}
-/// \endcode
-///
-/// ``ompFlattenDirective()`` matches the flatten directive.
-extern const internal::VariadicDynCastAllOfMatcher<Stmt, OMPFlattenDirective>
-    ompFlattenDirective;
-
 /// Matches OpenMP ``counts`` clause used by ``#pragma omp split``.
 ///
 /// Given ``#pragma omp split counts(1, 2, omp_fill)``, ``ompCountsClause()``
