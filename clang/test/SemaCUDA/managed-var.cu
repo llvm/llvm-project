@@ -52,3 +52,25 @@ typedef __managed__ int managed_int;
 
 __managed__ A a;
 // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+
+namespace gh198079 {
+__managed__ int x = 0;
+template <int *P> int *get() { return P; } // expected-note {{ ignored: non-type template argument is not a constant expression}}
+
+void foo() {
+  static constexpr auto a = &x; // expected-error {{constexpr variable 'a' must be initialized by a constant expression}}
+  get<&x>(); // expected-error {{no matching function for call to 'get'}}
+
+}
+
+template <int *PP>
+class boop {
+public:
+  static constexpr auto B = PP;
+};
+
+__device__ void bar() {
+  static constexpr auto A = boop<&x>::B; // expected-error {{non-type template argument is not a constant expression}}
+}
+
+}
