@@ -13991,6 +13991,12 @@ unsigned BoUpSLP::getNumVectorInsts() const {
       continue;
     if (EU.User && EphValues.count(EU.User))
       continue;
+    // Vector-typed scalars are consumed as whole vectors, no extract
+    // instruction is emitted for them.
+    if (isVectorizedTy(EU.Scalar->getType()) &&
+        (!SLPReVec ||
+         (EU.E.hasState() && EU.E.getOpcode() == Instruction::InsertElement)))
+      continue;
     if (ExternalUsesAsOriginalScalar.contains(EU.Scalar))
       continue;
     if (!CountedExtracts.insert(EU.Scalar).second)
@@ -19457,8 +19463,17 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     return Cost;
   // The narrow non-profitable tree in loop? Skip, may cause regressions.
   constexpr unsigned PartLimit = 2;
-  const unsigned Sz =
-      getVectorElementSize(VectorizableTree.front()->Scalars.front());
+  // Measure the narrowness by the width the tree is vectorized at.
+  const TreeEntry *RootTE = VectorizableTree.front().get();
+  unsigned Sz;
+  if (auto It = MinBWs.find(RootTE); It != MinBWs.end()) {
+    Sz = It->second.first;
+  } else {
+    Sz = std::max<unsigned>(
+        getVectorElementSize(RootTE->Scalars.front()),
+        DL->getTypeSizeInBits(
+            getValueType(RootTE->Scalars.front())->getScalarType()));
+  }
   const unsigned MinVF = getMinVF(Sz);
   if (Cost >= -SLPCostThreshold &&
       VectorizableTree.front()->Scalars.size() * PartLimit <= MinVF &&
