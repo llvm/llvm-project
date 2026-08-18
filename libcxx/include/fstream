@@ -217,7 +217,7 @@ typedef basic_fstream<wchar_t> wfstream;
 #      pragma GCC system_header
 #    endif
 
-#    if _AIX
+#    if defined(_AIX)
 // On AIX, fopen64/fseeko64/ftello64 are not guaranteed to always be declared, so we declare them
 // here. They are not POSIX-reserved names, so we use __asm__ to guard them against a user #define.
 extern "C" FILE* __libcpp_fopen64(const char*, const char*) __asm__("fopen64");
