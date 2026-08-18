@@ -38,8 +38,16 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "exclaim";
   case Kind::eof:
     return "eof";
+  case Kind::equalequal:
+    return "equalequal";
+  case Kind::exclaimequal:
+    return "exclaimequal";
   case Kind::float_constant:
     return "float_constant";
+  case Kind::greater:
+    return "greater";
+  case Kind::greaterequal:
+    return "greaterequal";
   case Kind::greatergreater:
     return "greatergreater";
   case Kind::identifier:
@@ -54,6 +62,10 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "l_paren";
   case Kind::l_square:
     return "l_square";
+  case Kind::less:
+    return "less";
+  case Kind::lessequal:
+    return "lessequal";
   case Kind::lessless:
     return "lessless";
   case Kind::minus:
@@ -210,18 +222,36 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   // be ordered longest-to-shortest in the list below. E.g. '::' must come
   // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::ampamp, "&&"},     {Token::arrow, "->"},
-      {Token::coloncolon, "::"}, {Token::greatergreater, ">>"},
-      {Token::lessless, "<<"},   {Token::minusequal, "-="},
-      {Token::pipepipe, "||"},   {Token::plusequal, "+="},
-      {Token::amp, "&"},         {Token::caret, "^"},
-      {Token::colon, ":"},       {Token::equal, "="},
-      {Token::exclaim, "!"},     {Token::l_paren, "("},
-      {Token::l_square, "["},    {Token::minus, "-"},
-      {Token::percent, "%"},     {Token::period, "."},
-      {Token::pipe, "|"},        {Token::plus, "+"},
-      {Token::r_paren, ")"},     {Token::r_square, "]"},
-      {Token::slash, "/"},       {Token::star, "*"},
+      {Token::ampamp, "&&"},
+      {Token::arrow, "->"},
+      {Token::coloncolon, "::"},
+      {Token::equalequal, "=="},
+      {Token::exclaimequal, "!="},
+      {Token::greaterequal, ">="},
+      {Token::greatergreater, ">>"},
+      {Token::lessequal, "<="},
+      {Token::lessless, "<<"},
+      {Token::minusequal, "-="},
+      {Token::pipepipe, "||"},
+      {Token::plusequal, "+="},
+      {Token::amp, "&"},
+      {Token::caret, "^"},
+      {Token::colon, ":"},
+      {Token::equal, "="},
+      {Token::exclaim, "!"},
+      {Token::greater, ">"},
+      {Token::l_paren, "("},
+      {Token::l_square, "["},
+      {Token::less, "<"},
+      {Token::minus, "-"},
+      {Token::percent, "%"},
+      {Token::period, "."},
+      {Token::pipe, "|"},
+      {Token::plus, "+"},
+      {Token::r_paren, ")"},
+      {Token::r_square, "]"},
+      {Token::slash, "/"},
+      {Token::star, "*"},
       {Token::tilde, "~"},
   };
   for (auto [kind, str] : operators) {

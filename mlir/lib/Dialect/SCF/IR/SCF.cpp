@@ -277,6 +277,11 @@ void ExecuteRegionOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(getOperation()));
 }
 
+void ExecuteRegionOp::getRegionInvocationBounds(
+    ArrayRef<Attribute>, SmallVectorImpl<InvocationBounds> &bounds) {
+  bounds.emplace_back(/*lb=*/1, /*ub=*/1);
+}
+
 ValueRange ExecuteRegionOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getOperation()->getResults())
                                  : ValueRange();
