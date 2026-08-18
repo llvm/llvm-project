@@ -2016,6 +2016,134 @@ entry:
 ; CHECK-LABEL: atomic128_nand_seq_cst
 ; CHECK: call i128 @__tsan_atomic128_fetch_nand(ptr %a, i128 0, i32 5), !dbg
 
+define void @atomic8_max_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw max ptr %a, i8 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic8_max_monotonic
+; CHECK: call i8 @__tsan_atomic8_fetch_max(ptr %a, i8 0, i32 0), !dbg
+
+define void @atomic16_max_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw max ptr %a, i16 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic16_max_monotonic
+; CHECK: call i16 @__tsan_atomic16_fetch_max(ptr %a, i16 0, i32 0), !dbg
+
+define void @atomic32_max_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw max ptr %a, i32 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic32_max_monotonic
+; CHECK: call i32 @__tsan_atomic32_fetch_max(ptr %a, i32 0, i32 0), !dbg
+
+define void @atomic64_max_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw max ptr %a, i64 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic64_max_monotonic
+; CHECK: call i64 @__tsan_atomic64_fetch_max(ptr %a, i64 0, i32 0), !dbg
+
+define void @atomic32_max_seq_cst(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw max ptr %a, i32 0 seq_cst, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic32_max_seq_cst
+; CHECK: call i32 @__tsan_atomic32_fetch_max(ptr %a, i32 0, i32 5), !dbg
+
+define void @atomic64_max_seq_cst(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw max ptr %a, i64 0 seq_cst, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic64_max_seq_cst
+; CHECK: call i64 @__tsan_atomic64_fetch_max(ptr %a, i64 0, i32 5), !dbg
+
+define void @atomic32_min_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw min ptr %a, i32 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic32_min_monotonic
+; CHECK: call i32 @__tsan_atomic32_fetch_min(ptr %a, i32 0, i32 0), !dbg
+
+define void @atomic64_min_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw min ptr %a, i64 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic64_min_monotonic
+; CHECK: call i64 @__tsan_atomic64_fetch_min(ptr %a, i64 0, i32 0), !dbg
+
+define void @atomic32_umax_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw umax ptr %a, i32 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic32_umax_monotonic
+; CHECK: call i32 @__tsan_atomic32_fetch_umax(ptr %a, i32 0, i32 0), !dbg
+
+define void @atomic64_umax_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw umax ptr %a, i64 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic64_umax_monotonic
+; CHECK: call i64 @__tsan_atomic64_fetch_umax(ptr %a, i64 0, i32 0), !dbg
+
+define void @atomic32_umin_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw umin ptr %a, i32 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic32_umin_monotonic
+; CHECK: call i32 @__tsan_atomic32_fetch_umin(ptr %a, i32 0, i32 0), !dbg
+
+define void @atomic64_umin_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw umin ptr %a, i64 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic64_umin_monotonic
+; CHECK: call i64 @__tsan_atomic64_fetch_umin(ptr %a, i64 0, i32 0), !dbg
+
+define void @atomic128_max_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw max ptr %a, i128 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic128_max_monotonic
+; CHECK: call i128 @__tsan_atomic128_fetch_max(ptr %a, i128 0, i32 0), !dbg
+
+define void @atomic128_min_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw min ptr %a, i128 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic128_min_monotonic
+; CHECK: call i128 @__tsan_atomic128_fetch_min(ptr %a, i128 0, i32 0), !dbg
+
+define void @atomic128_umax_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw umax ptr %a, i128 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic128_umax_monotonic
+; CHECK: call i128 @__tsan_atomic128_fetch_umax(ptr %a, i128 0, i32 0), !dbg
+
+define void @atomic128_umin_monotonic(ptr %a) nounwind uwtable {
+entry:
+  atomicrmw umin ptr %a, i128 0 monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic128_umin_monotonic
+; CHECK: call i128 @__tsan_atomic128_fetch_umin(ptr %a, i128 0, i32 0), !dbg
+
 define void @atomic128_cas_monotonic(ptr %a) nounwind uwtable {
 entry:
   cmpxchg ptr %a, i128 0, i128 1 monotonic monotonic, !dbg !7
@@ -2120,10 +2248,40 @@ entry:
 ; CHECK-LABEL: atomic_thread_fence_seq_cst
 ; CHECK: call void @__tsan_atomic_thread_fence(i32 5), !dbg
 
+; CHECK:    declare i8 @__tsan_atomic8_fetch_max(ptr, i8, i32)
+; EXT:      declare signext i8 @__tsan_atomic8_fetch_max(ptr, i8 signext, i32 signext)
+; MIPS_EXT: declare i8 @__tsan_atomic8_fetch_max(ptr, i8 signext, i32 signext)
+; LA_EXT:   declare signext i8 @__tsan_atomic8_fetch_max(ptr, i8 signext, i32 signext)
+
+; CHECK:    declare i16 @__tsan_atomic16_fetch_max(ptr, i16, i32)
+; EXT:      declare signext i16 @__tsan_atomic16_fetch_max(ptr, i16 signext, i32 signext)
+; MIPS_EXT: declare i16 @__tsan_atomic16_fetch_max(ptr, i16 signext, i32 signext)
+; LA_EXT:   declare signext i16 @__tsan_atomic16_fetch_max(ptr, i16 signext, i32 signext)
+
 ; CHECK:    declare void @__tsan_atomic32_store(ptr, i32, i32)
 ; EXT:      declare void @__tsan_atomic32_store(ptr, i32 signext, i32 signext)
 ; MIPS_EXT: declare void @__tsan_atomic32_store(ptr, i32 signext, i32 signext)
 ; LA_EXT:   declare void @__tsan_atomic32_store(ptr, i32 signext, i32 signext)
+
+; CHECK:    declare i32 @__tsan_atomic32_fetch_max(ptr, i32, i32)
+; EXT:      declare signext i32 @__tsan_atomic32_fetch_max(ptr, i32 signext, i32 signext)
+; MIPS_EXT: declare i32 @__tsan_atomic32_fetch_max(ptr, i32 signext, i32 signext)
+; LA_EXT:   declare signext i32 @__tsan_atomic32_fetch_max(ptr, i32 signext, i32 signext)
+
+; CHECK:    declare i32 @__tsan_atomic32_fetch_min(ptr, i32, i32)
+; EXT:      declare signext i32 @__tsan_atomic32_fetch_min(ptr, i32 signext, i32 signext)
+; MIPS_EXT: declare i32 @__tsan_atomic32_fetch_min(ptr, i32 signext, i32 signext)
+; LA_EXT:   declare signext i32 @__tsan_atomic32_fetch_min(ptr, i32 signext, i32 signext)
+
+; CHECK:    declare i32 @__tsan_atomic32_fetch_umax(ptr, i32, i32)
+; EXT:      declare signext i32 @__tsan_atomic32_fetch_umax(ptr, i32 signext, i32 signext)
+; MIPS_EXT: declare i32 @__tsan_atomic32_fetch_umax(ptr, i32 signext, i32 signext)
+; LA_EXT:   declare signext i32 @__tsan_atomic32_fetch_umax(ptr, i32 signext, i32 signext)
+
+; CHECK:    declare i32 @__tsan_atomic32_fetch_umin(ptr, i32, i32)
+; EXT:      declare signext i32 @__tsan_atomic32_fetch_umin(ptr, i32 signext, i32 signext)
+; MIPS_EXT: declare i32 @__tsan_atomic32_fetch_umin(ptr, i32 signext, i32 signext)
+; LA_EXT:   declare signext i32 @__tsan_atomic32_fetch_umin(ptr, i32 signext, i32 signext)
 
 ; CHECK:    declare i32 @__tsan_atomic32_compare_exchange_val(ptr, i32, i32, i32, i32)
 ; EXT:      declare signext i32 @__tsan_atomic32_compare_exchange_val(ptr, i32 signext, i32 signext, i32 signext, i32 signext)
@@ -2145,10 +2303,50 @@ entry:
 ; MIPS_EXT: declare i64 @__tsan_atomic64_fetch_add(ptr, i64, i32 signext)
 ; LA_EXT:   declare i64 @__tsan_atomic64_fetch_add(ptr, i64, i32 signext)
 
+; CHECK:    declare i64 @__tsan_atomic64_fetch_max(ptr, i64, i32)
+; EXT:      declare i64 @__tsan_atomic64_fetch_max(ptr, i64, i32 signext)
+; MIPS_EXT: declare i64 @__tsan_atomic64_fetch_max(ptr, i64, i32 signext)
+; LA_EXT:   declare i64 @__tsan_atomic64_fetch_max(ptr, i64, i32 signext)
+
+; CHECK:    declare i64 @__tsan_atomic64_fetch_min(ptr, i64, i32)
+; EXT:      declare i64 @__tsan_atomic64_fetch_min(ptr, i64, i32 signext)
+; MIPS_EXT: declare i64 @__tsan_atomic64_fetch_min(ptr, i64, i32 signext)
+; LA_EXT:   declare i64 @__tsan_atomic64_fetch_min(ptr, i64, i32 signext)
+
+; CHECK:    declare i64 @__tsan_atomic64_fetch_umax(ptr, i64, i32)
+; EXT:      declare i64 @__tsan_atomic64_fetch_umax(ptr, i64, i32 signext)
+; MIPS_EXT: declare i64 @__tsan_atomic64_fetch_umax(ptr, i64, i32 signext)
+; LA_EXT:   declare i64 @__tsan_atomic64_fetch_umax(ptr, i64, i32 signext)
+
+; CHECK:    declare i64 @__tsan_atomic64_fetch_umin(ptr, i64, i32)
+; EXT:      declare i64 @__tsan_atomic64_fetch_umin(ptr, i64, i32 signext)
+; MIPS_EXT: declare i64 @__tsan_atomic64_fetch_umin(ptr, i64, i32 signext)
+; LA_EXT:   declare i64 @__tsan_atomic64_fetch_umin(ptr, i64, i32 signext)
+
 ; CHECK:    declare i64 @__tsan_atomic64_compare_exchange_val(ptr, i64, i64, i32, i32)
 ; EXT:      declare i64 @__tsan_atomic64_compare_exchange_val(ptr, i64, i64, i32 signext, i32 signext)
 ; MIPS_EXT: declare i64 @__tsan_atomic64_compare_exchange_val(ptr, i64, i64, i32 signext, i32 signext)
 ; LA_EXT:   declare i64 @__tsan_atomic64_compare_exchange_val(ptr, i64, i64, i32 signext, i32 signext)
+
+; CHECK:    declare i128 @__tsan_atomic128_fetch_max(ptr, i128, i32)
+; EXT:      declare i128 @__tsan_atomic128_fetch_max(ptr, i128, i32 signext)
+; MIPS_EXT: declare i128 @__tsan_atomic128_fetch_max(ptr, i128, i32 signext)
+; LA_EXT:   declare i128 @__tsan_atomic128_fetch_max(ptr, i128, i32 signext)
+
+; CHECK:    declare i128 @__tsan_atomic128_fetch_min(ptr, i128, i32)
+; EXT:      declare i128 @__tsan_atomic128_fetch_min(ptr, i128, i32 signext)
+; MIPS_EXT: declare i128 @__tsan_atomic128_fetch_min(ptr, i128, i32 signext)
+; LA_EXT:   declare i128 @__tsan_atomic128_fetch_min(ptr, i128, i32 signext)
+
+; CHECK:    declare i128 @__tsan_atomic128_fetch_umax(ptr, i128, i32)
+; EXT:      declare i128 @__tsan_atomic128_fetch_umax(ptr, i128, i32 signext)
+; MIPS_EXT: declare i128 @__tsan_atomic128_fetch_umax(ptr, i128, i32 signext)
+; LA_EXT:   declare i128 @__tsan_atomic128_fetch_umax(ptr, i128, i32 signext)
+
+; CHECK:    declare i128 @__tsan_atomic128_fetch_umin(ptr, i128, i32)
+; EXT:      declare i128 @__tsan_atomic128_fetch_umin(ptr, i128, i32 signext)
+; MIPS_EXT: declare i128 @__tsan_atomic128_fetch_umin(ptr, i128, i32 signext)
+; LA_EXT:   declare i128 @__tsan_atomic128_fetch_umin(ptr, i128, i32 signext)
 
 ; CHECK:    declare void @__tsan_atomic_thread_fence(i32)
 ; EXT:      declare void @__tsan_atomic_thread_fence(i32 signext)

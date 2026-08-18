@@ -159,6 +159,62 @@ __tsan_atomic128 SANITIZER_CDECL __tsan_atomic128_fetch_nand(
     volatile __tsan_atomic128 *a, __tsan_atomic128 v, int mo);
 #endif
 
+__tsan_atomic8 SANITIZER_CDECL
+__tsan_atomic8_fetch_max(volatile __tsan_atomic8 *a, __tsan_atomic8 v, int mo);
+__tsan_atomic16 SANITIZER_CDECL __tsan_atomic16_fetch_max(
+    volatile __tsan_atomic16 *a, __tsan_atomic16 v, int mo);
+__tsan_atomic32 SANITIZER_CDECL __tsan_atomic32_fetch_max(
+    volatile __tsan_atomic32 *a, __tsan_atomic32 v, int mo);
+__tsan_atomic64 SANITIZER_CDECL __tsan_atomic64_fetch_max(
+    volatile __tsan_atomic64 *a, __tsan_atomic64 v, int mo);
+#if __TSAN_HAS_INT128
+__tsan_atomic128
+    SANITIZER_CDECL __tsan_atomic128_fetch_max(volatile __tsan_atomic128 *a,
+                                               __tsan_atomic128 v, int mo);
+#endif
+
+__tsan_atomic8 SANITIZER_CDECL
+__tsan_atomic8_fetch_min(volatile __tsan_atomic8 *a, __tsan_atomic8 v, int mo);
+__tsan_atomic16 SANITIZER_CDECL __tsan_atomic16_fetch_min(
+    volatile __tsan_atomic16 *a, __tsan_atomic16 v, int mo);
+__tsan_atomic32 SANITIZER_CDECL __tsan_atomic32_fetch_min(
+    volatile __tsan_atomic32 *a, __tsan_atomic32 v, int mo);
+__tsan_atomic64 SANITIZER_CDECL __tsan_atomic64_fetch_min(
+    volatile __tsan_atomic64 *a, __tsan_atomic64 v, int mo);
+#if __TSAN_HAS_INT128
+__tsan_atomic128
+    SANITIZER_CDECL __tsan_atomic128_fetch_min(volatile __tsan_atomic128 *a,
+                                               __tsan_atomic128 v, int mo);
+#endif
+
+__tsan_atomic8 SANITIZER_CDECL
+__tsan_atomic8_fetch_umax(volatile __tsan_atomic8 *a, __tsan_atomic8 v, int mo);
+__tsan_atomic16 SANITIZER_CDECL __tsan_atomic16_fetch_umax(
+    volatile __tsan_atomic16 *a, __tsan_atomic16 v, int mo);
+__tsan_atomic32 SANITIZER_CDECL __tsan_atomic32_fetch_umax(
+    volatile __tsan_atomic32 *a, __tsan_atomic32 v, int mo);
+__tsan_atomic64 SANITIZER_CDECL __tsan_atomic64_fetch_umax(
+    volatile __tsan_atomic64 *a, __tsan_atomic64 v, int mo);
+#if __TSAN_HAS_INT128
+__tsan_atomic128
+    SANITIZER_CDECL __tsan_atomic128_fetch_umax(volatile __tsan_atomic128 *a,
+                                                __tsan_atomic128 v, int mo);
+#endif
+
+__tsan_atomic8 SANITIZER_CDECL
+__tsan_atomic8_fetch_umin(volatile __tsan_atomic8 *a, __tsan_atomic8 v, int mo);
+__tsan_atomic16 SANITIZER_CDECL __tsan_atomic16_fetch_umin(
+    volatile __tsan_atomic16 *a, __tsan_atomic16 v, int mo);
+__tsan_atomic32 SANITIZER_CDECL __tsan_atomic32_fetch_umin(
+    volatile __tsan_atomic32 *a, __tsan_atomic32 v, int mo);
+__tsan_atomic64 SANITIZER_CDECL __tsan_atomic64_fetch_umin(
+    volatile __tsan_atomic64 *a, __tsan_atomic64 v, int mo);
+#if __TSAN_HAS_INT128
+__tsan_atomic128
+    SANITIZER_CDECL __tsan_atomic128_fetch_umin(volatile __tsan_atomic128 *a,
+                                                __tsan_atomic128 v, int mo);
+#endif
+
 int SANITIZER_CDECL __tsan_atomic8_compare_exchange_weak(
     volatile __tsan_atomic8 *a, __tsan_atomic8 *c, __tsan_atomic8 v, int mo,
     int fail_mo);
