@@ -7184,7 +7184,8 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
-static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID) {
+static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID,
+                                     APFloat::roundingMode RM) {
   const bool IsFTZ = nvvm::FAddShouldFTZ(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
@@ -7196,7 +7197,7 @@ static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID) {
   case MVT::f32:
     if (!VT.isVector() || nvvm::FAddShouldSaturate(IID))
       return 0;
-    switch (nvvm::GetFAddRoundingMode(IID)) {
+    switch (RM) {
     case APFloat::rmNearestTiesToEven:
       return IsFTZ ? NVPTXISD::SUB_RN_FTZ : NVPTXISD::SUB_RN;
     case APFloat::rmTowardZero:
@@ -7214,9 +7215,10 @@ static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID) {
 }
 
 static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
-                                  Intrinsic::ID AddIntrinsicID) {
+                                  Intrinsic::ID AddIntrinsicID,
+                                  APFloat::roundingMode RM) {
   const EVT VT = N->getValueType(0);
-  const unsigned Opc = getFAddWithNegOpcode(VT, AddIntrinsicID);
+  const unsigned Opc = getFAddWithNegOpcode(VT, AddIntrinsicID, RM);
   if (!Opc)
     return SDValue();
 
@@ -7238,7 +7240,7 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, SDLoc(N), VT, SubOp1, SubOp2);
 }
 
-static bool isSupportedFAdd(EVT VT, Intrinsic::ID IID,
+static bool isSupportedFAdd(EVT VT, Intrinsic::ID IID, APFloat::roundingMode RM,
                             const NVPTXSubtarget &STI) {
   if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
     return false;
@@ -7246,11 +7248,10 @@ static bool isSupportedFAdd(EVT VT, Intrinsic::ID IID,
   const bool IsSat = nvvm::FAddShouldSaturate(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
-    return nvvm::GetFAddRoundingMode(IID) == APFloat::rmNearestTiesToEven;
+    return RM == APFloat::rmNearestTiesToEven;
   case MVT::bf16:
-    return nvvm::GetFAddRoundingMode(IID) == APFloat::rmNearestTiesToEven &&
-           !IsSat && !nvvm::FAddShouldFTZ(IID) &&
-           STI.hasNativeBF16Support(ISD::FADD);
+    return RM == APFloat::rmNearestTiesToEven && !IsSat &&
+           !nvvm::FAddShouldFTZ(IID) && STI.hasNativeBF16Support(ISD::FADD);
   case MVT::f32:
     return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
   case MVT::f64:
@@ -7261,15 +7262,16 @@ static bool isSupportedFAdd(EVT VT, Intrinsic::ID IID,
 }
 
 static SDValue diagnoseInvalidFAdd(SDNode *N, SelectionDAG &DAG,
-                                   Intrinsic::ID IID,
+                                   Intrinsic::ID IID, APFloat::roundingMode RM,
                                    const NVPTXSubtarget &STI) {
   const EVT VT = N->getValueType(0);
-  if (isSupportedFAdd(VT, IID, STI))
+  if (isSupportedFAdd(VT, IID, RM, STI))
     return SDValue();
 
   DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
       DAG.getMachineFunction().getFunction(),
-      Twine(Intrinsic::getBaseName(IID)) + " with operand type " +
+      Twine(Intrinsic::getBaseName(IID)) + " with rounding mode " +
+          nvvm::GetRoundingModeName(RM) + " and operand type " +
           VT.getEVTString() + " is not supported on this target",
       SDLoc(N).getDebugLoc()));
   return DAG.getPOISON(VT);
@@ -7284,25 +7286,16 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   switch (IID) {
   default:
     break;
-  case Intrinsic::nvvm_fadd_rm:
-  case Intrinsic::nvvm_fadd_rn:
-  case Intrinsic::nvvm_fadd_rp:
-  case Intrinsic::nvvm_fadd_rz:
-  case Intrinsic::nvvm_fadd_rm_ftz:
-  case Intrinsic::nvvm_fadd_rn_ftz:
-  case Intrinsic::nvvm_fadd_rp_ftz:
-  case Intrinsic::nvvm_fadd_rz_ftz:
-  case Intrinsic::nvvm_fadd_rm_sat:
-  case Intrinsic::nvvm_fadd_rn_sat:
-  case Intrinsic::nvvm_fadd_rp_sat:
-  case Intrinsic::nvvm_fadd_rz_sat:
-  case Intrinsic::nvvm_fadd_rm_ftz_sat:
-  case Intrinsic::nvvm_fadd_rn_ftz_sat:
-  case Intrinsic::nvvm_fadd_rp_ftz_sat:
-  case Intrinsic::nvvm_fadd_rz_ftz_sat:
-    if (SDValue V = diagnoseInvalidFAdd(N, DCI.DAG, IID, STI))
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fadd_ftz_sat: {
+    const auto RM = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(3).getSExtValue());
+    if (SDValue V = diagnoseInvalidFAdd(N, DCI.DAG, IID, RM, STI))
       return V;
-    return combineFAddWithNeg(N, DCI.DAG, IID);
+    return combineFAddWithNeg(N, DCI.DAG, IID, RM);
+  }
   }
   return SDValue();
 }

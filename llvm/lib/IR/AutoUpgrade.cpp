@@ -1421,6 +1421,29 @@ static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
   return F->getIntrinsicID();
 }
 
+static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
+getNVVMFAddUpgrade(StringRef Modifiers) {
+  std::optional<RoundingMode> RM =
+      StringSwitch<std::optional<RoundingMode>>(Modifiers.take_front(2))
+          .Case("rn", RoundingMode::NearestTiesToEven)
+          .Case("rz", RoundingMode::TowardZero)
+          .Case("rm", RoundingMode::TowardNegative)
+          .Case("rp", RoundingMode::TowardPositive)
+          .Default(std::nullopt);
+  if (!RM)
+    return std::nullopt;
+
+  Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Modifiers.drop_front(2))
+                          .Case("", Intrinsic::nvvm_fadd)
+                          .Case(".ftz", Intrinsic::nvvm_fadd_ftz)
+                          .Case(".sat", Intrinsic::nvvm_fadd_sat)
+                          .Case(".ftz.sat", Intrinsic::nvvm_fadd_ftz_sat)
+                          .Default(Intrinsic::not_intrinsic);
+  if (IID == Intrinsic::not_intrinsic)
+    return std::nullopt;
+  return std::make_pair(IID, *RM);
+}
+
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
   return Name.consume_front("local") || Name.consume_front("shared") ||
          Name.consume_front("global") || Name.consume_front("constant") ||
@@ -1994,18 +2017,17 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       // Upgrade the FP add intrinsics, which are overloaded on the operand type
+      // and take the rounding mode as an operand:
       // llvm.nvvm.add.<rnd>{.ftz}{.sat}.<type> =>
-      //     llvm.nvvm.fadd.<rnd>{.ftz}{.sat}.<mangled type>
+      //     llvm.nvvm.fadd{.ftz}{.sat}.<mangled type>
+      // The extra operand means these are expanded in UpgradeIntrinsicCall.
       if (Name.starts_with("add.")) {
         auto [Base, TypeSuffix] = Name.rsplit('.');
-        if (TypeSuffix == "f" || TypeSuffix == "d" || TypeSuffix == "f16" ||
-            TypeSuffix == "v2f16") {
-          IID = Intrinsic::lookupIntrinsicID(("llvm.nvvm.f" + Base).str());
-          if (IID != Intrinsic::not_intrinsic) {
-            NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                      {F->getReturnType()});
-            return true;
-          }
+        if ((TypeSuffix == "f" || TypeSuffix == "d" || TypeSuffix == "f16" ||
+             TypeSuffix == "v2f16") &&
+            getNVVMFAddUpgrade(Base.drop_front(strlen("add.")))) {
+          NewFn = nullptr;
+          return true;
         }
       }
 
@@ -3100,6 +3122,13 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Intrinsic::ID IID = (Name == "fabs.ftz.f") ? Intrinsic::nvvm_fabs_ftz
                                                : Intrinsic::nvvm_fabs;
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
+  } else if (Name.consume_front("add.")) {
+    // nvvm.add.<rnd>[.ftz][.sat].{f,d,f16,v2f16}
+    auto [IID, RM] = *getNVVMFAddUpgrade(Name.rsplit('.').first);
+    Value *A = CI->getArgOperand(0);
+    Rep = Builder.CreateIntrinsic(
+        A->getType(), IID,
+        {A, CI->getArgOperand(1), Builder.getInt32(static_cast<int>(RM))});
   } else if (Name.consume_front("ex2.approx.")) {
     // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz

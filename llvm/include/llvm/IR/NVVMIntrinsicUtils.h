@@ -178,6 +178,7 @@ LLVM_ABI void printTensormapSwizzleAtomicity(raw_ostream &OS,
                                              const Constant *ImmArgVal);
 LLVM_ABI void printTensormapFillMode(raw_ostream &OS,
                                      const Constant *ImmArgVal);
+LLVM_ABI void printFAddRoundingMode(raw_ostream &OS, const Constant *ImmArgVal);
 
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
@@ -612,24 +613,12 @@ inline DenormalMode GetNVVMDenormMode(bool ShouldFTZ) {
 
 inline bool FAddShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
-  case Intrinsic::nvvm_fadd_rm_ftz:
-  case Intrinsic::nvvm_fadd_rn_ftz:
-  case Intrinsic::nvvm_fadd_rp_ftz:
-  case Intrinsic::nvvm_fadd_rz_ftz:
-  case Intrinsic::nvvm_fadd_rm_ftz_sat:
-  case Intrinsic::nvvm_fadd_rn_ftz_sat:
-  case Intrinsic::nvvm_fadd_rp_ftz_sat:
-  case Intrinsic::nvvm_fadd_rz_ftz_sat:
+  case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fadd_ftz_sat:
     return true;
 
-  case Intrinsic::nvvm_fadd_rm:
-  case Intrinsic::nvvm_fadd_rn:
-  case Intrinsic::nvvm_fadd_rp:
-  case Intrinsic::nvvm_fadd_rz:
-  case Intrinsic::nvvm_fadd_rm_sat:
-  case Intrinsic::nvvm_fadd_rn_sat:
-  case Intrinsic::nvvm_fadd_rp_sat:
-  case Intrinsic::nvvm_fadd_rz_sat:
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_sat:
     return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid NVVM add intrinsic");
@@ -637,53 +626,35 @@ inline bool FAddShouldFTZ(Intrinsic::ID IntrinsicID) {
 
 inline bool FAddShouldSaturate(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
-  case Intrinsic::nvvm_fadd_rm_sat:
-  case Intrinsic::nvvm_fadd_rn_sat:
-  case Intrinsic::nvvm_fadd_rp_sat:
-  case Intrinsic::nvvm_fadd_rz_sat:
-  case Intrinsic::nvvm_fadd_rm_ftz_sat:
-  case Intrinsic::nvvm_fadd_rn_ftz_sat:
-  case Intrinsic::nvvm_fadd_rp_ftz_sat:
-  case Intrinsic::nvvm_fadd_rz_ftz_sat:
+  case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fadd_ftz_sat:
     return true;
 
-  case Intrinsic::nvvm_fadd_rm:
-  case Intrinsic::nvvm_fadd_rn:
-  case Intrinsic::nvvm_fadd_rp:
-  case Intrinsic::nvvm_fadd_rz:
-  case Intrinsic::nvvm_fadd_rm_ftz:
-  case Intrinsic::nvvm_fadd_rn_ftz:
-  case Intrinsic::nvvm_fadd_rp_ftz:
-  case Intrinsic::nvvm_fadd_rz_ftz:
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
     return false;
   }
   llvm_unreachable("Checking sat flag for invalid NVVM add intrinsic");
 }
 
-inline APFloat::roundingMode GetFAddRoundingMode(Intrinsic::ID IntrinsicID) {
-  switch (IntrinsicID) {
-  case Intrinsic::nvvm_fadd_rm:
-  case Intrinsic::nvvm_fadd_rm_ftz:
-  case Intrinsic::nvvm_fadd_rm_sat:
-  case Intrinsic::nvvm_fadd_rm_ftz_sat:
-    return APFloat::rmTowardNegative;
-  case Intrinsic::nvvm_fadd_rn:
-  case Intrinsic::nvvm_fadd_rn_ftz:
-  case Intrinsic::nvvm_fadd_rn_sat:
-  case Intrinsic::nvvm_fadd_rn_ftz_sat:
-    return APFloat::rmNearestTiesToEven;
-  case Intrinsic::nvvm_fadd_rp:
-  case Intrinsic::nvvm_fadd_rp_ftz:
-  case Intrinsic::nvvm_fadd_rp_sat:
-  case Intrinsic::nvvm_fadd_rp_ftz_sat:
-    return APFloat::rmTowardPositive;
-  case Intrinsic::nvvm_fadd_rz:
-  case Intrinsic::nvvm_fadd_rz_ftz:
-  case Intrinsic::nvvm_fadd_rz_sat:
-  case Intrinsic::nvvm_fadd_rz_ftz_sat:
-    return APFloat::rmTowardZero;
+inline APFloat::roundingMode GetFAddRoundingMode(const Value *ImmArgVal) {
+  return static_cast<APFloat::roundingMode>(
+      cast<ConstantInt>(ImmArgVal)->getSExtValue());
+}
+
+inline StringRef GetRoundingModeName(APFloat::roundingMode RM) {
+  switch (RM) {
+  case APFloat::rmNearestTiesToEven:
+    return "rn";
+  case APFloat::rmTowardZero:
+    return "rz";
+  case APFloat::rmTowardNegative:
+    return "rm";
+  case APFloat::rmTowardPositive:
+    return "rp";
+  default:
+    return "";
   }
-  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM add");
 }
 
 inline bool FMulShouldFTZ(Intrinsic::ID IntrinsicID) {

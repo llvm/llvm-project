@@ -1995,14 +1995,8 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
     return !IsStrictFP;
 
   // NVVM add intrinsics with explicit rounding modes
-  case Intrinsic::nvvm_fadd_rm:
-  case Intrinsic::nvvm_fadd_rn:
-  case Intrinsic::nvvm_fadd_rp:
-  case Intrinsic::nvvm_fadd_rz:
-  case Intrinsic::nvvm_fadd_rm_ftz:
-  case Intrinsic::nvvm_fadd_rn_ftz:
-  case Intrinsic::nvvm_fadd_rp_ftz:
-  case Intrinsic::nvvm_fadd_rz_ftz:
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
 
   // NVVM div intrinsics with explicit rounding modes
   case Intrinsic::nvvm_div_rm_d:
@@ -3614,33 +3608,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantFP::get(Ty, Res);
       }
 
-      case Intrinsic::nvvm_fadd_rm:
-      case Intrinsic::nvvm_fadd_rn:
-      case Intrinsic::nvvm_fadd_rp:
-      case Intrinsic::nvvm_fadd_rz:
-      case Intrinsic::nvvm_fadd_rm_ftz:
-      case Intrinsic::nvvm_fadd_rn_ftz:
-      case Intrinsic::nvvm_fadd_rp_ftz:
-      case Intrinsic::nvvm_fadd_rz_ftz: {
-
-        bool IsFTZ = nvvm::FAddShouldFTZ(IntrinsicID);
-        APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
-        APFloat B = IsFTZ ? FTZPreserveSign(Op2V) : Op2V;
-
-        APFloat::roundingMode RoundMode =
-            nvvm::GetFAddRoundingMode(IntrinsicID);
-
-        APFloat Res = A;
-        APFloat::opStatus Status = Res.add(B, RoundMode);
-
-        if (!Res.isNaN() &&
-            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
-          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
-          return ConstantFP::get(Ty, Res);
-        }
-        return nullptr;
-      }
-
       case Intrinsic::nvvm_mul_rm_f:
       case Intrinsic::nvvm_mul_rn_f:
       case Intrinsic::nvvm_mul_rp_f:
@@ -4191,6 +4158,31 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
     }
   }
 
+  if (IntrinsicID == Intrinsic::nvvm_fadd ||
+      IntrinsicID == Intrinsic::nvvm_fadd_ftz) {
+    const auto *Op1 = dyn_cast<ConstantFP>(Operands[0]);
+    const auto *Op2 = dyn_cast<ConstantFP>(Operands[1]);
+    if (!Op1 || !Op2)
+      return nullptr;
+
+    bool IsFTZ = nvvm::FAddShouldFTZ(IntrinsicID);
+    APFloat A =
+        IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
+    APFloat B =
+        IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
+
+    APFloat Res = A;
+    APFloat::opStatus Status =
+        Res.add(B, nvvm::GetFAddRoundingMode(Operands[2]));
+
+    if (!Res.isNaN() &&
+        (Status == APFloat::opOK || Status == APFloat::opInexact)) {
+      Res = IsFTZ ? FTZPreserveSign(Res) : Res;
+      return ConstantFP::get(Ty, Res);
+    }
+    return nullptr;
+  }
+
   if (IntrinsicID == Intrinsic::smul_fix ||
       IntrinsicID == Intrinsic::smul_fix_sat) {
     const APInt *C0, *C1;
@@ -4474,6 +4466,12 @@ static Constant *ConstantFoldFixedVectorCall(
 
     return ConstantVector::get(Result);
   }
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
+    // The rounding mode operand is a scalar, so the lane-wise folding below
+    // does not apply.
+    // TODO: Fold these by passing the rounding mode through to every lane.
+    return nullptr;
   default:
     break;
   }

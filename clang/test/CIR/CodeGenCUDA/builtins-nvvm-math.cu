@@ -65,25 +65,25 @@ __device__ float test_ex2_approx_ftz_f(float x) {
 }
 
 // CIR-LABEL: @_Z13test_add_rn_fff
-// CIR: cir.call_llvm_intrinsic "nvvm.fadd.rn" {{.*}} : (!cir.float, !cir.float) -> !cir.float
+// CIR: cir.call_llvm_intrinsic "nvvm.fadd" {{.*}} : (!cir.float, !cir.float, !s32i) -> !cir.float
 // LLVM-LABEL: @_Z13test_add_rn_fff
-// LLVM: call {{.*}}float @llvm.nvvm.fadd.rn.f32(float
+// LLVM: call {{.*}}float @llvm.nvvm.fadd.f32(float {{.*}}, float {{.*}}, /* rnd=rn */ i32 1)
 __device__ float test_add_rn_f(float x, float y) {
   return __nvvm_add_rn_f(x, y);
 }
 
 // CIR-LABEL: @_Z13test_add_rz_ddd
-// CIR: cir.call_llvm_intrinsic "nvvm.fadd.rz" {{.*}} : (!cir.double, !cir.double) -> !cir.double
+// CIR: cir.call_llvm_intrinsic "nvvm.fadd" {{.*}} : (!cir.double, !cir.double, !s32i) -> !cir.double
 // LLVM-LABEL: @_Z13test_add_rz_ddd
-// LLVM: call {{.*}}double @llvm.nvvm.fadd.rz.f64(double
+// LLVM: call {{.*}}double @llvm.nvvm.fadd.f64(double {{.*}}, double {{.*}}, /* rnd=rz */ i32 0)
 __device__ double test_add_rz_d(double x, double y) {
   return __nvvm_add_rz_d(x, y);
 }
 
 // CIR-LABEL: @_Z21test_add_rm_ftz_sat_fff
-// CIR: cir.call_llvm_intrinsic "nvvm.fadd.rm.ftz.sat" {{.*}} : (!cir.float, !cir.float) -> !cir.float
+// CIR: cir.call_llvm_intrinsic "nvvm.fadd.ftz.sat" {{.*}} : (!cir.float, !cir.float, !s32i) -> !cir.float
 // LLVM-LABEL: @_Z21test_add_rm_ftz_sat_fff
-// LLVM: call {{.*}}float @llvm.nvvm.fadd.rm.ftz.sat.f32(float
+// LLVM: call {{.*}}float @llvm.nvvm.fadd.ftz.sat.f32(float {{.*}}, float {{.*}}, /* rnd=rm */ i32 3)
 __device__ float test_add_rm_ftz_sat_f(float x, float y) {
   return __nvvm_add_rm_ftz_sat_f(x, y);
 }

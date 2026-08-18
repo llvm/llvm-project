@@ -13,7 +13,7 @@ define bfloat @add_rn_bf16(bfloat %a, bfloat %b) {
 ; CHECK-NEXT:    add.rn.bf16 %rs3, %rs1, %rs2;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; CHECK-NEXT:    ret;
-  %1 = call bfloat @llvm.nvvm.fadd.rn.bf16(bfloat %a, bfloat %b)
+  %1 = call bfloat @llvm.nvvm.fadd.bf16(bfloat %a, bfloat %b, i32 1)
   ret bfloat %1
 }
 
@@ -28,6 +28,6 @@ define <2 x bfloat> @add_rn_bf16x2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; CHECK-NEXT:    add.rn.bf16x2 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %1 = call <2 x bfloat> @llvm.nvvm.fadd.rn.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
+  %1 = call <2 x bfloat> @llvm.nvvm.fadd.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, i32 1)
   ret <2 x bfloat> %1
 }

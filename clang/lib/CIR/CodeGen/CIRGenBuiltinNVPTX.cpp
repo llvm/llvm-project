@@ -49,17 +49,20 @@ static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
       .getResult();
 }
 
-/// Emit a CIR LLVMIntrinsicCallOp for a binary NVVM intrinsic.
-/// The result type is inferred from the first argument.
-static mlir::Value emitBinaryNVVMIntrinsic(CIRGenFunction &cgf,
-                                           const CallExpr *expr,
-                                           llvm::StringRef intrinsicName) {
+/// Emit a CIR LLVMIntrinsicCallOp for an NVVM fadd intrinsic, which takes the
+/// rounding mode as a trailing operand.
+static mlir::Value emitNVVMFAdd(CIRGenFunction &cgf, const CallExpr *expr,
+                                llvm::StringRef intrinsicName,
+                                llvm::APFloat::roundingMode rm) {
   auto &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
   mlir::Value lhs = cgf.emitScalarExpr(expr->getArg(0));
   mlir::Value rhs = cgf.emitScalarExpr(expr->getArg(1));
-  return cir::LLVMIntrinsicCallOp::create(
-             builder, cgf.getLoc(expr->getExprLoc()),
-             builder.getStringAttr(intrinsicName), lhs.getType(), {lhs, rhs})
+  mlir::Value rnd =
+      builder.getConstInt(loc, builder.getSInt32Ty(), static_cast<int>(rm));
+  return cir::LLVMIntrinsicCallOp::create(builder, loc,
+                                          builder.getStringAttr(intrinsicName),
+                                          lhs.getType(), {lhs, rhs, rnd})
       .getResult();
 }
 
@@ -810,44 +813,59 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
     return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.ex2.approx.ftz");
   case NVPTX::BI__nvvm_add_rn_f:
   case NVPTX::BI__nvvm_add_rn_d:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rn");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
+                        llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_f:
   case NVPTX::BI__nvvm_add_rz_d:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rz");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd", llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_f:
   case NVPTX::BI__nvvm_add_rm_d:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rm");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
+                        llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_f:
   case NVPTX::BI__nvvm_add_rp_d:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rp");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
+                        llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_add_rn_ftz_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rn.ftz");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
+                        llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_ftz_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rz.ftz");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
+                        llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_ftz_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rm.ftz");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
+                        llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_ftz_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rp.ftz");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
+                        llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_add_rn_sat_f:
   case NVPTX::BI__nvvm_add_rn_sat_f16:
   case NVPTX::BI__nvvm_add_rn_sat_v2f16:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rn.sat");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
+                        llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_sat_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rz.sat");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
+                        llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_sat_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rm.sat");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
+                        llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_sat_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rp.sat");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
+                        llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_add_rn_ftz_sat_f:
   case NVPTX::BI__nvvm_add_rn_ftz_sat_f16:
   case NVPTX::BI__nvvm_add_rn_ftz_sat_v2f16:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rn.ftz.sat");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
+                        llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_add_rz_ftz_sat_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rz.ftz.sat");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
+                        llvm::APFloat::rmTowardZero);
   case NVPTX::BI__nvvm_add_rm_ftz_sat_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rm.ftz.sat");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
+                        llvm::APFloat::rmTowardNegative);
   case NVPTX::BI__nvvm_add_rp_ftz_sat_f:
-    return emitBinaryNVVMIntrinsic(*this, expr, "nvvm.fadd.rp.ftz.sat");
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
+                        llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
     cgm.errorNYI(expr->getSourceRange(),

@@ -161,6 +161,11 @@ void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
   }
 }
 
+void nvvm::printFAddRoundingMode(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (isa<ConstantInt>(ImmArgVal))
+    OS << nvvm::GetRoundingModeName(nvvm::GetFAddRoundingMode(ImmArgVal));
+}
+
 void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();

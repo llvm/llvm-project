@@ -21,28 +21,28 @@ define <2 x float> @sub_f32x2(<2 x float> %a, <2 x float> %b) {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd10;
 ; CHECK-NEXT:    ret;
   %f0 = fneg <2 x float> %b
-  %r1 = call <2 x float> @llvm.nvvm.fadd.rn.v2f32(<2 x float> %a, <2 x float> %f0)
+  %r1 = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %a, <2 x float> %f0, i32 1)
 
   %f1 = fneg <2 x float> %r1
-  %r2 = call <2 x float> @llvm.nvvm.fadd.rn.ftz.v2f32(<2 x float> %a, <2 x float> %f1)
+  %r2 = call <2 x float> @llvm.nvvm.fadd.ftz.v2f32(<2 x float> %a, <2 x float> %f1, i32 1)
 
   %f2 = fneg <2 x float> %r2
-  %r3 = call <2 x float> @llvm.nvvm.fadd.rz.v2f32(<2 x float> %a, <2 x float> %f2)
+  %r3 = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %a, <2 x float> %f2, i32 0)
 
   %f3 = fneg <2 x float> %r3
-  %r4 = call <2 x float> @llvm.nvvm.fadd.rz.ftz.v2f32(<2 x float> %a, <2 x float> %f3)
+  %r4 = call <2 x float> @llvm.nvvm.fadd.ftz.v2f32(<2 x float> %a, <2 x float> %f3, i32 0)
 
   %f4 = fneg <2 x float> %r4
-  %r5 = call <2 x float> @llvm.nvvm.fadd.rm.v2f32(<2 x float> %a, <2 x float> %f4)
+  %r5 = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %a, <2 x float> %f4, i32 3)
 
   %f5 = fneg <2 x float> %r5
-  %r6 = call <2 x float> @llvm.nvvm.fadd.rm.ftz.v2f32(<2 x float> %a, <2 x float> %f5)
+  %r6 = call <2 x float> @llvm.nvvm.fadd.ftz.v2f32(<2 x float> %a, <2 x float> %f5, i32 3)
 
   %f6 = fneg <2 x float> %r6
-  %r7 = call <2 x float> @llvm.nvvm.fadd.rp.v2f32(<2 x float> %a, <2 x float> %f6)
+  %r7 = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %a, <2 x float> %f6, i32 2)
 
   %f7 = fneg <2 x float> %r7
-  %r8 = call <2 x float> @llvm.nvvm.fadd.rp.ftz.v2f32(<2 x float> %a, <2 x float> %f7)
+  %r8 = call <2 x float> @llvm.nvvm.fadd.ftz.v2f32(<2 x float> %a, <2 x float> %f7, i32 2)
 
   ret <2 x float> %r8
 }
@@ -59,6 +59,6 @@ define <2 x float> @sub_f32x2_negated_lhs(<2 x float> %a, <2 x float> %b) {
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %f = fneg <2 x float> %a
-  %r = call <2 x float> @llvm.nvvm.fadd.rz.v2f32(<2 x float> %f, <2 x float> %b)
+  %r = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %f, <2 x float> %b, i32 0)
   ret <2 x float> %r
 }

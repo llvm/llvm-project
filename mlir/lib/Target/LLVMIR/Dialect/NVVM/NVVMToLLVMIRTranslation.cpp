@@ -465,7 +465,9 @@ createScalarizedIntrinsicCall(llvm::IRBuilderBase &builder,
       llvm::SmallVector<llvm::Value *> scalarArgs;
       for (llvm::Value *op : operands)
         scalarArgs.push_back(
-            builder.CreateExtractElement(op, builder.getInt32(i)));
+            op->getType()->isVectorTy()
+                ? builder.CreateExtractElement(op, builder.getInt32(i))
+                : op);
       llvm::Value *res = createIntrinsicCall(builder, IID, retType, scalarArgs);
       result = builder.CreateInsertElement(result, res, builder.getInt32(i));
     }
@@ -483,23 +485,18 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
   llvm::Type *opTypeLLVM = argLHS->getType();
   bool isSat = satMode != NVVM::SaturationMode::NONE;
 
-  static constexpr llvm::Intrinsic::ID addIDs[2][2][5] = {
-      {{llvm::Intrinsic::nvvm_fadd_rn, llvm::Intrinsic::nvvm_fadd_rn,
-        llvm::Intrinsic::nvvm_fadd_rm, llvm::Intrinsic::nvvm_fadd_rp,
-        llvm::Intrinsic::nvvm_fadd_rz},
-       {llvm::Intrinsic::nvvm_fadd_rn_sat, llvm::Intrinsic::nvvm_fadd_rn_sat,
-        llvm::Intrinsic::nvvm_fadd_rm_sat, llvm::Intrinsic::nvvm_fadd_rp_sat,
-        llvm::Intrinsic::nvvm_fadd_rz_sat}},
-      {{llvm::Intrinsic::nvvm_fadd_rn_ftz, llvm::Intrinsic::nvvm_fadd_rn_ftz,
-        llvm::Intrinsic::nvvm_fadd_rm_ftz, llvm::Intrinsic::nvvm_fadd_rp_ftz,
-        llvm::Intrinsic::nvvm_fadd_rz_ftz},
-       {llvm::Intrinsic::nvvm_fadd_rn_ftz_sat,
-        llvm::Intrinsic::nvvm_fadd_rn_ftz_sat,
-        llvm::Intrinsic::nvvm_fadd_rm_ftz_sat,
-        llvm::Intrinsic::nvvm_fadd_rp_ftz_sat,
-        llvm::Intrinsic::nvvm_fadd_rz_ftz_sat}}};
+  static constexpr llvm::Intrinsic::ID addIDs[2][2] = {
+      {llvm::Intrinsic::nvvm_fadd, llvm::Intrinsic::nvvm_fadd_sat},
+      {llvm::Intrinsic::nvvm_fadd_ftz, llvm::Intrinsic::nvvm_fadd_ftz_sat}};
 
-  llvm::Intrinsic::ID id = addIDs[isFTZ][isSat][static_cast<unsigned>(rndMode)];
+  static constexpr llvm::RoundingMode roundingModes[5] = {
+      llvm::RoundingMode::NearestTiesToEven,
+      llvm::RoundingMode::NearestTiesToEven, llvm::RoundingMode::TowardNegative,
+      llvm::RoundingMode::TowardPositive, llvm::RoundingMode::TowardZero};
+
+  llvm::Intrinsic::ID id = addIDs[isFTZ][isSat];
+  llvm::Value *rnd = builder.getInt32(
+      static_cast<int>(roundingModes[static_cast<unsigned>(rndMode)]));
 
   // For f64 vector addition, and f32 vector addition with saturation,
   // we need to scalarize the intrinsic call.
@@ -507,13 +504,13 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
   if (opTypeLLVM->isVectorTy() && (scalarTypeLLVM->isDoubleTy() ||
                                    (isSat && scalarTypeLLVM->isFloatTy()))) {
     mt.mapValue(res, createScalarizedIntrinsicCall(builder, id, opTypeLLVM,
-                                                   {argLHS, argRHS},
+                                                   {argLHS, argRHS, rnd},
                                                    scalarTypeLLVM));
     return;
   }
 
-  mt.mapValue(res,
-              createIntrinsicCall(builder, id, opTypeLLVM, {argLHS, argRHS}));
+  mt.mapValue(
+      res, createIntrinsicCall(builder, id, opTypeLLVM, {argLHS, argRHS, rnd}));
 }
 
 void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
