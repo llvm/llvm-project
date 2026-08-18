@@ -148,8 +148,14 @@ struct CIRRecordLowering final {
     return cirGenTypes.isZeroInitializable(rd);
   }
 
-  static cir::RecordMemberKind makeMemberKind(bool holdsData, bool isUnit) {
-    if (isUnit)
+  /// The mark for a member, given whether it holds data for argument passing
+  /// and whether it is a bit-field access unit.  A run of bit-fields is
+  /// allocated as a single storage type, and that storage is the access unit,
+  /// so its width is ours to choose and can be narrower than the declared type
+  /// of the bit-fields it holds.
+  static cir::RecordMemberKind makeMemberKind(bool holdsData,
+                                              bool isBitFieldAccessUnit) {
+    if (isBitFieldAccessUnit)
       return holdsData ? cir::RecordMemberKind::BitField
                        : cir::RecordMemberKind::EmptyBitField;
     return holdsData ? cir::RecordMemberKind::Data
@@ -159,7 +165,7 @@ struct CIRRecordLowering final {
   /// The mark for a field.
   cir::RecordMemberKind getFieldMemberKind(const FieldDecl *fd) {
     return makeMemberKind(/*holdsData=*/!isEmptyFieldForABI(astContext, fd),
-                          /*isUnit=*/fd->isBitField());
+                          /*isBitFieldAccessUnit=*/fd->isBitField());
   }
 
   /// The mark for a base subobject.  A base contributes no ABI data when it is
@@ -1008,7 +1014,8 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     // variant marks.
     const cir::RecordMemberKind storageKind = makeMemberKind(
         /*holdsData=*/llvm::any_of(getFieldKinds(), cir::holdsDataForABI),
-        /*isUnit=*/llvm::any_of(getFieldKinds(), cir::isBitFieldUnit));
+        /*isBitFieldAccessUnit=*/llvm::any_of(getFieldKinds(),
+                                              cir::isBitFieldAccessUnit));
     clearFields();
     addField(storageType, storageKind);
     CharUnits padding = layoutSize - getSize(storageType);
