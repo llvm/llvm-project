@@ -365,7 +365,7 @@ class AdvDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable quite_nested",
             matching=True,
-            substrs=["five ={...}", warning],
+            substrs=["five = {...}", warning],
         )
         self.expect(
             "frame variable quite_nested",

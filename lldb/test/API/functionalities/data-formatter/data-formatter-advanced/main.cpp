@@ -192,6 +192,8 @@ int main (int argc, const char * argv[])
     VeryLong a_long_guy;
     auto *unused = &a_long_guy; // ensure a_long_guy isn't optimized out
 
+    QuiteNested quite_nested;
+
     std::string some_string = "012345678901234567890123456789"
                               "012345678901234567890123456789"
                               "012345678901234567890123456789"
