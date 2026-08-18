@@ -23828,6 +23828,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
              "Cannot vectorize Instruction::Select");
       Value *V =
           Builder.CreateSelectWithUnknownProfile(Cond, True, False, DEBUG_TYPE);
+      V = PropagateIRFlags(V);
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
