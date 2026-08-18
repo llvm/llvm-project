@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/CallProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -29,7 +29,7 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
+  if (auto Err = callSPSWrapper<rt::sps_ci::CallMain::SPSSig>(
           RunAsMainAddr, Result, MainFnAddr, Args))
     return std::move(Err);
   return Result;
@@ -73,20 +73,17 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 SimpleRemoteEPC::createDefaultMemoryManager() {
-  return EPCGenericJITLinkMemoryManager::Create(getExecutionSession());
+  return sps::createEPCGenericJITLinkMemoryManager(getExecutionSession());
 }
 
 Expected<std::unique_ptr<DylibManager>>
 SimpleRemoteEPC::createDefaultDylibMgr() {
-  auto DM = EPCGenericDylibManager::Create(getExecutionSession());
-  if (!DM)
-    return DM.takeError();
-  return std::make_unique<EPCGenericDylibManager>(std::move(*DM));
+  return sps::createEPCGenericDylibManager(getExecutionSession());
 }
 
 Expected<std::unique_ptr<MemoryAccess>>
 SimpleRemoteEPC::createDefaultMemoryAccess() {
-  return EPCGenericMemoryAccess::Create(getExecutionSession());
+  return sps::createEPCGenericMemoryAccess(getExecutionSession());
 }
 
 Error SimpleRemoteEPC::disconnect() {
@@ -298,7 +295,7 @@ Error SimpleRemoteEPC::setup() {
       BootstrapSymbols[ExecutorSessionObjectName];
 
   if (auto Err =
-          getBootstrapSymbols({{RunAsMainAddr, rt::sps::CallMainCIName}}))
+          getBootstrapSymbols({{RunAsMainAddr, rt::sps_ci::CallMain::Name}}))
     return Err;
 
   return Error::success();

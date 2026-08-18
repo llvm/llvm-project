@@ -217,6 +217,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
+    libc.src.stdlib.realpath
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
@@ -528,6 +529,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceilf128
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
@@ -564,6 +566,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fdiml
     libc.src.math.floor
     libc.src.math.floorf
+    libc.src.math.floorf128
     libc.src.math.floorl
     libc.src.math.fma
     libc.src.math.fmabf16
@@ -879,7 +882,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2f128
     libc.src.math.canonicalizef128
-    libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
@@ -892,7 +894,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fdimf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
-    libc.src.math.floorf128
     libc.src.math.fmaxf128
     libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_magf128

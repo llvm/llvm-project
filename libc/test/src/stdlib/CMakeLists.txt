@@ -391,6 +391,7 @@ add_libc_test(
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.utility
+    libc.src.__support.c_string
     libc.src.__support.fixedvector
     libc.src.__support.libc_assert
     libc.src.__support.libc_errno

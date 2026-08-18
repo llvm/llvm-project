@@ -616,6 +616,7 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceilf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -749,6 +750,7 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 

@@ -2905,10 +2905,11 @@ void ProcessGDBRemote::WillPublicStop() {
 }
 
 // Process Memory
-size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                      Status &error) {
+size_t ProcessGDBRemote::DoReadMemory(const ProcessAddress &process_addr,
+                                      void *buf, size_t size, Status &error) {
   using xPacketState = GDBRemoteCommunicationClient::xPacketState;
 
+  lldb::addr_t addr = process_addr.GetValue();
   GetMaxMemorySize();
   xPacketState x_state = m_gdb_comm.GetxPacketState();
 

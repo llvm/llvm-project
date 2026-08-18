@@ -2142,8 +2142,9 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
 
-  bool MadeChange = replaceMaskWithCompare(Plan, BestVF);
-  MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
+  bool MadeChange =
+      simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
+  MadeChange |= replaceMaskWithCompare(Plan, BestVF);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
 
   if (MadeChange) {
@@ -4719,8 +4720,9 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
     auto *Min = Builder.insert(
         new VPWidenIntrinsicRecipe(IsSigned ? Intrinsic::smin : Intrinsic::umin,
                                    {FreezeX, FreezeY}, SrcTy));
-    auto *AbsDiff =
-        Builder.insert(new VPWidenRecipe(Instruction::Sub, {Max, Min}));
+    auto *AbsDiff = Builder.insert(
+        new VPWidenRecipe(Instruction::Sub, {Max, Min},
+                          VPIRFlags::getDefaultFlags(Instruction::Sub)));
     return Builder.createWidenCast(Instruction::CastOps::ZExt, AbsDiff,
                                    Op->getScalarType());
   }
@@ -4849,12 +4851,14 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     VPWidenRecipe *NegRecipe;
     if (WidenRecipe->getOpcode() == Instruction::FSub) {
       NegRecipe =
-          new VPWidenRecipe(Instruction::FNeg, {ExtendedOp}, VPIRFlags(),
+          new VPWidenRecipe(Instruction::FNeg, {ExtendedOp},
+                            VPIRFlags::getDefaultFlags(Instruction::FNeg),
                             VPIRMetadata(), DebugLoc::getUnknown());
     } else {
       auto *Zero = Plan.getZero(ElemTy);
       NegRecipe =
-          new VPWidenRecipe(Instruction::Sub, {Zero, ExtendedOp}, VPIRFlags(),
+          new VPWidenRecipe(Instruction::Sub, {Zero, ExtendedOp},
+                            VPIRFlags::getDefaultFlags(Instruction::Sub),
                             VPIRMetadata(), DebugLoc::getUnknown());
     }
     Builder.insert(NegRecipe);
