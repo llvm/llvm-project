@@ -13,6 +13,7 @@
 #include "flang/Lower/OpenACC.h"
 
 #include "flang/Common/idioms.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
@@ -726,6 +727,75 @@ extractComponentFromDesignator(
   return componentRef;
 }
 
+/// True when \p triplet covers the full extent of \p base's \p dimension:
+/// omitted bounds, or explicit bounds that fold to the declared LBOUND/UBOUND,
+/// with unit stride.
+static bool
+isWholeDimensionTriplet(const Fortran::evaluate::Triplet &triplet,
+                        const Fortran::evaluate::NamedEntity &base,
+                        int dimension,
+                        Fortran::evaluate::FoldingContext &foldingContext) {
+  if (Fortran::evaluate::ToInt64(triplet.GetStride()) != 1)
+    return false;
+
+  auto matchesBound =
+      [&](const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>
+              *sectionBound,
+          Fortran::evaluate::MaybeExtentExpr declaredBound) {
+        // Omitted section bound means the declared bound of that dimension.
+        if (!sectionBound)
+          return true;
+        if (!declaredBound)
+          return false;
+        std::optional<std::int64_t> sectionVal =
+            Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
+                foldingContext,
+                Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>{
+                    *sectionBound}));
+        std::optional<std::int64_t> declaredVal = Fortran::evaluate::ToInt64(
+            Fortran::evaluate::Fold(foldingContext, std::move(*declaredBound)));
+        return sectionVal && declaredVal && *sectionVal == *declaredVal;
+      };
+
+  return matchesBound(
+             triplet.GetLower(),
+             Fortran::evaluate::GetLBOUND(foldingContext, base, dimension)) &&
+         matchesBound(triplet.GetUpper(), Fortran::evaluate::GetUBOUND(
+                                              foldingContext, base, dimension));
+}
+
+/// Return the base array designator when \p designator is a whole-array
+/// section, such as `x(:)`, `x(:,:)`, or `x(1:10)` on `x(10)`.
+static Fortran::semantics::MaybeExpr
+getWholeArrayBase(const Fortran::semantics::MaybeExpr &designator,
+                  Fortran::semantics::SemanticsContext &semanticsContext) {
+  if (!designator)
+    return std::nullopt;
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      Fortran::evaluate::ExtractDataRef(*designator);
+  if (!dataRef)
+    return std::nullopt;
+  const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef || arrayRef->subscript().empty())
+    return std::nullopt;
+
+  const Fortran::evaluate::NamedEntity &base = arrayRef->base();
+  Fortran::evaluate::FoldingContext &foldingContext =
+      semanticsContext.foldingContext();
+  for (auto [dimension, subscript] : llvm::enumerate(arrayRef->subscript())) {
+    const auto *triplet = std::get_if<Fortran::evaluate::Triplet>(&subscript.u);
+    if (!triplet ||
+        !isWholeDimensionTriplet(*triplet, base, static_cast<int>(dimension),
+                                 foldingContext))
+      return std::nullopt;
+  }
+
+  Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
+  if (const auto *symbol = base.UnwrapSymbolRef())
+    return ea.Designate(Fortran::evaluate::DataRef{*symbol});
+  return std::nullopt;
+}
+
 template <typename Op>
 static void
 genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
@@ -751,6 +821,10 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
 
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    if (dataClause == mlir::acc::DataClause::acc_reduction)
+      if (Fortran::semantics::MaybeExpr wholeArray =
+              getWholeArrayBase(designator, semanticsContext))
+        designator = std::move(wholeArray);
     std::optional<Fortran::evaluate::Component> componentRef =
         extractComponentFromDesignator(designator);
 
@@ -1148,6 +1222,9 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    if (Fortran::semantics::MaybeExpr wholeArray =
+            getWholeArrayBase(designator, semanticsContext))
+      designator = std::move(wholeArray);
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
