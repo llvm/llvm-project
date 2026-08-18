@@ -164,9 +164,11 @@ void X86::X86MCLFIRewriter::emitSandboxBranchReg(MCRegister Reg,
 //
 // jmpq *%rX
 // ->
+// .bundle_lock
 // andl $-32, %eX
 // addq %r14, %rX
 // jmpq *%rX
+// .bundle_unlock
 //
 // A branch through memory loads its target into the scratch register first,
 // and then dispatches through it.
@@ -174,9 +176,11 @@ void X86::X86MCLFIRewriter::emitSandboxBranchReg(MCRegister Reg,
 // jmpq *(%rdi)
 // ->
 // movq (%rdi), %r11
+// .bundle_lock
 // andl $-32, %r11d
 // addq %r14, %r11
 // jmpq *%r11
+// .bundle_unlock
 void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
                                                   MCStreamer &Out,
                                                   const MCSubtargetInfo &STI) {
@@ -199,6 +203,8 @@ void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
       return error(Inst, "indirect branch through reserved register");
   }
 
+  Out.emitBundleLock(/*AlignToEnd=*/isCall(Inst), STI);
+
   emitSandboxBranchReg(Target, Out, STI);
 
   MCInst Branch;
@@ -207,14 +213,28 @@ void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
   if (hasNoTrackPrefix(Inst, *InstInfo))
     Branch.setFlags(Branch.getFlags() | X86::IP_HAS_NOTRACK);
   Out.emitInstruction(Branch, STI);
+
+  Out.emitBundleUnlock(STI);
+}
+
+// Direct calls are not rewritten, but must be placed at the end of a bundle
+// so that the return address they push is bundle-aligned.
+void X86::X86MCLFIRewriter::rewriteDirectCall(const MCInst &Inst,
+                                              MCStreamer &Out,
+                                              const MCSubtargetInfo &STI) {
+  Out.emitBundleLock(/*AlignToEnd=*/true, STI);
+  Out.emitInstruction(Inst, STI);
+  Out.emitBundleUnlock(STI);
 }
 
 // ret
 // ->
 // popq %r11
+// .bundle_lock
 // andl $-32, %r11d
 // addq %r14, %r11
 // jmpq *%r11
+// .bundle_unlock
 void X86::X86MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
                                           const MCSubtargetInfo &STI) {
   if (Inst.getOpcode() != X86::RET64 && Inst.getOpcode() != X86::RETI64)
@@ -236,12 +256,16 @@ void X86::X86MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
     doRewriteInst(Add, Out, STI);
   }
 
+  Out.emitBundleLock(/*AlignToEnd=*/false, STI);
+
   emitSandboxBranchReg(LFIScratchReg, Out, STI);
 
   MCInst Jmp;
   Jmp.setOpcode(X86::JMP64r);
   Jmp.addOperand(MCOperand::createReg(LFIScratchReg));
   Out.emitInstruction(Jmp, STI);
+
+  Out.emitBundleUnlock(STI);
 }
 
 // Emit: movq TPOffset(%r15), %Reg
@@ -370,7 +394,10 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
   if (isReturn(Inst))
     return rewriteReturn(Inst, Out, STI);
 
-  if ((isIndirectBranch(Inst) || isCall(Inst)) && !isDirectCall(Inst)) {
+  if (isDirectCall(Inst))
+    return rewriteDirectCall(Inst, Out, STI);
+
+  if (isIndirectBranch(Inst) || isCall(Inst)) {
     if (!isSupportedIndirectBranch(Inst))
       return error(Inst, "unsupported indirect branch");
     return rewriteIndirectBranch(Inst, Out, STI);

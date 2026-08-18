@@ -53,6 +53,8 @@ private:
 
   void rewriteIndirectBranch(const MCInst &Inst, MCStreamer &Out,
                              const MCSubtargetInfo &STI);
+  void rewriteDirectCall(const MCInst &Inst, MCStreamer &Out,
+                         const MCSubtargetInfo &STI);
   void rewriteReturn(const MCInst &Inst, MCStreamer &Out,
                      const MCSubtargetInfo &STI);
 
