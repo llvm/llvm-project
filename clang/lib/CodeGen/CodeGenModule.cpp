@@ -352,6 +352,9 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
+  if (T.getArch() == llvm::Triple::aarch64 && !T.isOSWindows())
+    return true;
+
   if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() && !T.isUEFI() &&
       !T.isOSDarwin() && !T.isOSCygMing()) {
     switch (CallingConv) {
@@ -382,12 +385,30 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     return *TheLLVMABITargetInfo;
 
   const llvm::Triple &T = getTriple();
-  if (T.isBPF()) {
-    TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
+
+  switch (T.getArch()) {
+  default:
+    llvm_unreachable("LLVMABI lowering requested for an unsupported target");
+
+  case llvm::Triple::aarch64: {
+    StringRef ABI = getTarget().getABI();
+    llvm::abi::AArch64ABIKind Kind = llvm::abi::AArch64ABIKind::AAPCS;
+    if (ABI == "darwinpcs")
+      Kind = llvm::abi::AArch64ABIKind::DarwinPCS;
+    else if (T.isOSWindows())
+      Kind = llvm::abi::AArch64ABIKind::Win64;
+    else if (ABI == "aapcs-soft")
+      Kind = llvm::abi::AArch64ABIKind::AAPCSSoft;
+    TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Kind);
     return *TheLLVMABITargetInfo;
   }
 
-  if (T.getArch() == llvm::Triple::x86_64) {
+  case llvm::Triple::bpfeb:
+  case llvm::Triple::bpfel:
+    TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
+    return *TheLLVMABITargetInfo;
+
+  case llvm::Triple::x86_64: {
     StringRef ABI = getTarget().getABI();
     llvm::abi::X86AVXABILevel AVXLevel =
         ABI == "avx512" ? llvm::abi::X86AVXABILevel::AVX512
@@ -414,8 +435,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
         TB, AVXLevel, Has64BitPointers, CompatInfo);
     return *TheLLVMABITargetInfo;
   }
-
-  llvm_unreachable("LLVMABI lowering requested for an unsupported target");
+  }
 }
 
 static void checkDataLayoutConsistency(const TargetInfo &Target,
