@@ -1,6 +1,6 @@
 # The PDB Serialized Hash Table Format
 
-(hash-intro)=
+(hash_intro)=
 
 # Introduction
 
@@ -56,7 +56,7 @@ file hash table, the appropriate hash function is being used.
   state of each bucket (valid, empty, deleted) can be determined by examining
   the present and deleted bit vectors.
 
-(hash-bit-vectors)=
+(hash_bit_vectors)=
 
 # Present and Deleted Bit Vectors
 
@@ -89,4 +89,3 @@ with the following layout:
 
 where the k'th bit of this bit vector represents the status of the k'th bucket
 in the hash table.
-

@@ -1,6 +1,6 @@
 # The MSF File Format
 
-(msf-layout)=
+(msf_layout)=
 
 ## File Layout
 
@@ -36,7 +36,7 @@ LLVM only supports 4096 byte blocks (sometimes referred to as the "BigMsf"
 variant), so the rest of this document will assume a block size of 4096.
 :::
 
-(msf-superblock)=
+(msf_superblock)=
 
 ## The Superblock
 
@@ -81,7 +81,7 @@ struct SuperBlock {
   `ulittle32_t`'s in this array is given by `ceil(NumDirectoryBytes /
   BlockSize)`.
 
-(msf-freeblockmap)=
+(msf_freeblockmap)=
 
 ## The Free Block Map
 
@@ -171,4 +171,3 @@ accordingly. In the aforementioned example, the high byte of the `uint16`
 would be written to the last byte of block N, and the low byte would be written
 to the first byte of block N+1, which could be tens of thousands of bytes later
 (or even earlier!) in the file, depending on what the stream directory says.
-

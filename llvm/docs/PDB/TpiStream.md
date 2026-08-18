@@ -1,6 +1,6 @@
 # The PDB TPI and IPI Streams
 
-(tpi-intro)=
+(tpi_intro)=
 
 ## Introduction
 
@@ -21,7 +21,7 @@ pass.
 Type records form a topologically sorted DAG (directed acyclic graph).
 :::
 
-(tpi-ipi)=
+(tpi_ipi)=
 
 ## TPI vs IPI Stream
 
@@ -58,7 +58,7 @@ appear in each one, summarized by the following table:
 The usage of these records is described in more detail in
 {doc}`CodeView Type Records <CodeViewTypes>`.
 
-(type-indices)=
+(type_indices)=
 
 ## Type Indices
 
@@ -170,7 +170,7 @@ By convention, the type index for `std::nullptr_t` is constructed the same
 way as the type index for `void*`, but using the bitless enumeration value
 `NearPointer`.
 
-(tpi-header)=
+(tpi_header)=
 
 ## Stream Header
 
@@ -262,7 +262,7 @@ accurate.
   references that point to the old version to now point to the new version.
   The layout of this hash table is described in {doc}`HashTable`.
 
-(tpi-records)=
+(tpi_records)=
 
 ## CodeView Type Record List
 
@@ -274,4 +274,3 @@ Header.TypeIndexBegin`.
 
 O(log(n)) access is provided by way of the Type Index Offsets array (if
 present) described previously.
-

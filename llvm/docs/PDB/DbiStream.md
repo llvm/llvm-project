@@ -1,6 +1,6 @@
 # The PDB DBI (Debug Info) Stream
 
-(dbi-intro)=
+(dbi_intro)=
 
 ## Introduction
 
@@ -13,7 +13,7 @@ detailed information about each compiland, such as the CodeView symbol records
 contained within each compiland and the source and line information for
 functions and other symbols within each compiland.
 
-(dbi-header)=
+(dbi_header)=
 
 ## Stream Header
 
@@ -126,11 +126,11 @@ of each of the following `7` fields.
 - **OptionalDbgHeaderSize** - The length of the {ref}`dbi_optional_dbg_stream`.
 - **ECSubstreamSize** - The length of the {ref}`dbi_ec_substream`.
 
-(dbi-substreams)=
+(dbi_substreams)=
 
 ## Substreams
 
-(dbi-mod-info-substream)=
+(dbi_mod_info_substream)=
 
 ### Module Info Substream
 
@@ -222,7 +222,7 @@ uint16_t TSM : 8;
   In the case of a module that comes from an archive, this is usually the full
   path to the archive.
 
-(dbi-sec-contr-substream)=
+(dbi_sec_contr_substream)=
 
 ### Section Contribution Substream
 
@@ -254,7 +254,7 @@ The purpose of the second field is not well understood. The name implies that
 is the index of the COFF section, but this also describes the existing field
 `SectionContribEntry::Section`.
 
-(dbi-section-map-substream)=
+(dbi_section_map_substream)=
 
 ### Section Map Substream
 
@@ -293,7 +293,7 @@ enum class SectionMapEntryFlags : uint16_t {
 
 Many of these fields are not well understood, so will not be discussed further.
 
-(dbi-file-info-substream)=
+(dbi_file_info_substream)=
 
 ### File Info Substream
 
@@ -347,7 +347,7 @@ each integer is an offset into **NamesBuffer** pointing to a null terminated str
 **NamesBuffer** - An array of null terminated strings containing the actual source
 file names.
 
-(dbi-type-server-map-substream)=
+(dbi_type_server_map_substream)=
 
 ### Type Server Map Substream
 
@@ -357,7 +357,7 @@ nor the layout of this substream is understood, although it is assumed to
 related somehow to the usage of `/Zi` and `mspdbsrv.exe`. This substream
 will not be discussed further.
 
-(dbi-ec-substream)=
+(dbi_ec_substream)=
 
 ### EC Substream
 
@@ -367,7 +367,7 @@ Begins at offset `0` immediately after the
 Continue support in MSVC. LLVM does not support Edit & Continue, so this
 stream will not be discussed further.
 
-(dbi-optional-dbg-stream)=
+(dbi_optional_dbg_stream)=
 
 ### Optional Debug Header Stream
 
@@ -428,4 +428,3 @@ and cl object files are linked into the same program.
 `DbgStreamArray[5]`, but contains the section headers before any binary translation
 has been performed. This can be used in conjunction with `DebugStreamArray[3]`
 and `DbgStreamArray[4]` to map instrumented and uninstrumented addresses.
-

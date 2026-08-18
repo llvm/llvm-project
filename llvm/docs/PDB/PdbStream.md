@@ -1,6 +1,6 @@
 # The PDB Info Stream (aka the PDB Stream)
 
-(pdb-stream-header)=
+(pdb_stream_header)=
 
 ## Stream Header
 
@@ -50,7 +50,7 @@ the other streams, will change if the value is something other than `VC70`.
   [UuidCreate](<https://msdn.microsoft.com/en-us/library/windows/desktop/aa379205(v=vs.85).aspx>),
   although LLVM cannot rely on that, as it must work on non-Windows platforms.
 
-(pdb-named-stream-map)=
+(pdb_named_stream_map)=
 
 ## Named Stream Map
 
@@ -87,7 +87,7 @@ The on-disk layout of the serialized hash table is described at {doc}`HashTable`
 Note that the entire Named Stream Map is not length-prefixed, so the only way to
 get to the data following it is to de-serialize it in its entirety.
 
-(pdb-stream-features)=
+(pdb_stream_features)=
 
 ## PDB Feature Codes
 
@@ -105,17 +105,23 @@ enum class PdbRaw_FeatureSig : uint32_t {
 
 The meaning of these values is summarized by the following table:
 
-| Flag             | Meaning                                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------------------- |
-| VC110            | - No other features flags are present
-- PDB contains an 
-  {doc}`IPI Stream <TpiStream>`                                                                                                         |
-| VC140            | - Other feature flags may be present
-- PDB contains an 
-  {doc}`IPI Stream <TpiStream>`                                                                                                         |
-| NoTypeMerge      | - Presumably duplicate types can appear in the TPI Stream, although it's unclear why this might happen. |
-| MinimalDebugInfo | - Program was linked with /DEBUG:FASTLINK
-- There is no TPI / IPI stream, all type info is contained in the original object files.                                                                                                         |
+:::{list-table}
+:header-rows: 1
+
+* - Flag
+  - Meaning
+* - VC110
+  - - No other features flags are present
+    - PDB contains an {doc}`IPI Stream <TpiStream>`
+* - VC140
+  - - Other feature flags may be present
+    - PDB contains an {doc}`IPI Stream <TpiStream>`
+* - NoTypeMerge
+  - - Presumably duplicate types can appear in the TPI Stream, although it's unclear why this might happen.
+* - MinimalDebugInfo
+  - - Program was linked with /DEBUG:FASTLINK
+    - There is no TPI / IPI stream, all type info is contained in the original object files.
+:::
 
 ## Matching a PDB to its executable
 
@@ -137,4 +143,3 @@ For this particular case, the linker emits a debug directory of type
 that it includes the same `Guid` and `Age` fields. At runtime, a
 debugger or tool can scan the COFF executable image for the presence of
 a debug directory of the correct type and verify that the Guid and Age match.
-

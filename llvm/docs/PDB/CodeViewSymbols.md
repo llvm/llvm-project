@@ -1,6 +1,6 @@
 # CodeView Symbol Records
 
-(symbols-intro)=
+(symbols_intro)=
 
 ## Introduction
 
@@ -38,7 +38,7 @@ to appear in a PDB file. Public Symbols (which appear only in the
 {doc}`globals stream <GlobalStream>`) and module symbols (which appear in the
 {doc}`module info stream <ModiStream>`).
 
-(public-symbols)=
+(public_symbols)=
 
 ### Public Symbols
 
@@ -57,7 +57,7 @@ the symbol's address. The {ref}`dbi_section_map_substream` of the
 corresponds to, and from there that module's {doc}`module debug stream <ModiStream>`
 can be consulted to locate full information for the symbol with the given address.
 
-(global-symbols)=
+(global_symbols)=
 
 ### Global Symbols
 
@@ -96,7 +96,7 @@ qualified name is not possible.
 
 #### S_GMANDATA (0x111d)
 
-(module-symbols)=
+(module_symbols)=
 
 ### Module Symbols
 
@@ -142,7 +142,7 @@ qualified name is not possible.
 
 #### S_ENVBLOCK (0x113d)
 
-(s-local)=
+(s_local)=
 
 #### S_LOCAL (0x113e)
 
@@ -178,8 +178,8 @@ enum class LocalSymFlags : uint16_t {
 All `S_DEFRANGE*` records consist of a header followed by
 `LocalVariableAddrRange` and a list of `LocalVariableAddrGap` (until the
 record length is reached) except for the
-[S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE](_defrange_framepointer_rel_full_scope)
-record.
+{ref}`S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
+<defrange_framepointer_rel_full_scope>` record.
 
 ```cpp
 /// A live range of a variable.
@@ -270,7 +270,7 @@ struct DefrangeSubfieldRegisterSymHeader {
 };
 ```
 
-(defrange-framepointer-rel-full-scope)=
+(defrange_framepointer_rel_full_scope)=
 
 #### S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE (0x1144)
 
@@ -381,7 +381,7 @@ The `S_REGREL32_INDIR` symbol for `y` from above looks like this:
 | `08000000` | `74000000` | `04000000`  | `4F01`   | `7900` |
 | 8          | int        | 4           | RSP      | "a"    |
 
-(module-and-global-symbols)=
+(module_and_global_symbols)=
 
 ### Symbols which can go in either/both of the module info stream & global stream
 
@@ -396,4 +396,3 @@ The `S_REGREL32_INDIR` symbol for `y` from above looks like this:
 #### S_LMANDATA (0x111c)
 
 #### S_MANCONSTANT (0x112d)
-

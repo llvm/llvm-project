@@ -88,34 +88,34 @@ used by DXC and FXC. Not all compiled shaders contain all parts. In the list
 below parts generated only by DXC are marked with †, and parts generated only by
 FXC are marked with \*.
 
-01. [DXIL]† - Stores the DXIL bytecode.
-02. [HASH]† - Stores the shader MD5 hash.
-03. [ILDB]† - Stores the DXIL bytecode with LLVM Debug Information embedded in the module.
-04. [ILDN]† - Stores shader debug name for external debug information.
-05. [ISG1] - Stores the input signature for Shader Model 5.1+.
+01. {ref}`DXIL <DXIL>`† - Stores the DXIL bytecode.
+02. {ref}`HASH <HASH>`† - Stores the shader MD5 hash.
+03. {ref}`ILDB <ILDB>`† - Stores the DXIL bytecode with LLVM Debug Information embedded in the module.
+04. {ref}`ILDN <ILDN>`† - Stores shader debug name for external debug information.
+05. {ref}`ISG1 <ISG1>` - Stores the input signature for Shader Model 5.1+.
 06. ISGN\* - Stores the input signature for Shader Model 4 and earlier.
-07. [OSG1] - Stores the output signature for Shader Model 5.1+.
+07. {ref}`OSG1 <OSG1>` - Stores the output signature for Shader Model 5.1+.
 08. OSG5\* - Stores the output signature for Shader Model 5.
 09. OSGN\* - Stores the output signature for Shader Model 4 and earlier.
 10. PCSG\* - Stores the patch constant signature for Shader Model 5.1 and earlier.
 11. PDBI† - Stores PDB information.
-12. [PRIV]† - Stores private data, including embedded companion PDB files.
-13. [PSG1] - Stores the patch constant signature for Shader Model 6+.
-14. [PSV0] - Stores Pipeline State Validation data.
+12. {ref}`PRIV <PRIV>`† - Stores private data, including embedded companion PDB files.
+13. {ref}`PSG1 <PSG1>` - Stores the patch constant signature for Shader Model 6+.
+14. {ref}`PSV0 <PSV0>` - Stores Pipeline State Validation data.
 15. RDAT† - Stores Runtime Data.
 16. RDEF\* - Stores resource definitions.
-17. [RTS0] - Stores compiled root signature.
-18. [SFI0] - Stores shader feature flags.
+17. {ref}`RTS0 <RTS0>` - Stores compiled root signature.
+18. {ref}`SFI0 <SFI0>` - Stores shader feature flags.
 19. SHDR\* - Stores compiled DXBC bytecode.
 20. SHEX\* - Stores compiled DXBC bytecode.
 21. DXBC\* - Stores compiled DXBC bytecode.
-22. [SRCI]† - Stores shader source information.
+22. {ref}`SRCI <SRCI>`† - Stores shader source information.
 23. STAT† - Stores shader statistics.
-24. [VERS]† - Stores shader compiler version information.
+24. {ref}`VERS <VERS>`† - Stores shader compiler version information.
 
 ### DXIL Part
 
-(dxil)=
+(DXIL)=
 
 The DXIL part is comprised of three data structures: the `ProgramHeader`, the
 `BitcodeHeader` and the bitcode serialized LLVM 3.7 IR Module.
@@ -129,7 +129,7 @@ start of the bitcode data.
 
 ### HASH Part
 
-(hash)=
+(HASH)=
 
 The HASH part contains a 32-bit unsigned integer with the shader hash flags, and
 a 128-bit MD5 hash digest. The flags field can either have the value `0` to
@@ -139,9 +139,9 @@ including the source code that produced the binary. See {ref}`Compiler Flags
 
 ### ILDB Part
 
-(ildb)=
+(ILDB)=
 
-The ILDB part follows the structure of the [DXIL] part. It stores the
+The ILDB part follows the structure of the {ref}`DXIL <DXIL>` part. It stores the
 unstripped DXIL bitcode module with debug information embedded.
 
 The ILDB part is emitted when the shader is compiled with full debug information
@@ -150,7 +150,7 @@ See {ref}`Compiler Flags <compiler_flags>` for how `/Qembed_debug`,
 `/Qstrip_debug`, `/Fd`, and `/Zs` control whether it appears in the main
 output, the companion PDB, or both.
 
-The stripped [DXIL] part has the `Dwarf Version` and `Debug Info Version`
+The stripped {ref}`DXIL <DXIL>` part has the `Dwarf Version` and `Debug Info Version`
 module flags removed, and `dx.source` metadata nodes are stripped from it.
 Those nodes are preserved in the ILDB module when `/Qsource_in_debug_module`
 is used; otherwise they are replaced with empty placeholder values in the ILDB
@@ -174,7 +174,7 @@ to access it (see {doc}`llvm-pdbutil <../CommandGuide/llvm-pdbutil>`).
 
 ### ILDN Part
 
-(ildn)=
+(ILDN)=
 
 The ILDN part stores the name of the companion PDB file used for external
 debug information. It is always emitted when the shader is compiled with debug
@@ -196,7 +196,7 @@ of the debug file name in bytes, not including the null terminator.
 
 If no PDB output path is specified, the debug file name defaults to
 `<MD5 hash>.pdb`, where `<MD5 hash>` is the stringified MD5 digest from the
-[HASH] part. See {ref}`Compiler Flags <compiler_flags>` for how `/Fd`, `/Zss`,
+{ref}`HASH <HASH>` part. See {ref}`Compiler Flags <compiler_flags>` for how `/Fd`, `/Zss`,
 and `/Zsb` affect the debug file name and hash computation.
 
 ```{rubric} Reading this part
@@ -207,7 +207,7 @@ it under a `DebugName` mapping.
 
 ### PRIV Part
 
-(priv)=
+(PRIV)=
 
 The PRIV part stores opaque binary data. DXC may emit it when the `/Qpdb_in_private`
 flag is used to embed the companion debug info PDB file in the main DXContainer output.
@@ -234,7 +234,7 @@ llvm-objcopy --dump-section=PRIV=output.priv shader.dxbc
 
 ### SRCI Part
 
-(srci)=
+(SRCI)=
 
 The SRCI part stores shader source information extracted from `dx.source`
 metadata in the LLVM module. It is emitted when source information is available.
@@ -384,7 +384,7 @@ To read SRCI part from a companion PDB file, use {program}`llvm-pdbutil`.
 
 ### VERS Part
 
-(vers)=
+(VERS)=
 
 The VERS part stores compiler version information. It is emitted when the
 shader is compiled with debug information. When a companion PDB file is produced,
@@ -433,11 +433,11 @@ To read VERS part from a companion PDB file, use {program}`llvm-pdbutil`.
 
 ### Program Signature (SG1) Parts
 
-(isg1)=
+(ISG1)=
 
-(osg1)=
+(OSG1)=
 
-(psg1)=
+(PSG1)=
 
 ```c
 struct ProgramSignatureHeader {
@@ -469,7 +469,7 @@ requirements.
 
 ### PSV0 Part
 
-(psv0)=
+(PSV0)=
 
 The Pipeline State Validation data encodes versioned runtime information
 structures. These structures use a scheme where in lieu of encoding a version
@@ -684,7 +684,7 @@ input.
 
 ### Root Signature (RTS0) Part
 
-(rts0)=
+(RTS0)=
 
 The Root Signature data defines the shader's resource interface with Direct3D
 12, specifying what resources the shader needs to access and how they're
@@ -699,13 +699,33 @@ The table below summarizes the data being serialized as well as it's size. The
 details of it part will be discussed in further details on the next sections
 of this document.
 
-| Part Name              | Size In Bytes | Maximum number of Instances |
-| ---------------------- | ------------- | --------------------------- |
-| Root Signature Header  | 24            | 1                           |
-| Root Parameter Headers | 12            | Many                        |
-| Root Parameter         | ```{eval-rst}
-================================ === Root Constants                   12 Root Descriptor Version 1.0      8 Root Descriptor Version 1.1      12 Descriptors Tables Version 1.0   20 Descriptors Tables Version 1.1   24 ================================ === ```               | Many                        |
-| Static Samplers        | 52            | Many                        |
+:::{list-table}
+:header-rows: 1
+
+* - Part Name
+  - Size In Bytes
+  - Maximum number of Instances
+* - Root Signature Header
+  - 24
+  - 1
+* - Root Parameter Headers
+  - 12
+  - Many
+* - Root Parameter
+  - Root Constants: 12
+
+    Root Descriptor Version 1.0: 8
+
+    Root Descriptor Version 1.1: 12
+
+    Descriptors Tables Version 1.0: 20
+
+    Descriptors Tables Version 1.1: 24
+  - Many
+* - Static Samplers
+  - 52
+  - Many
+:::
 
 #### Root Signature Header
 
@@ -853,7 +873,7 @@ struct StaticSamplerDesc {
 
 ### SFI0 Part
 
-(sfi0)=
+(SFI0)=
 
 The SFI0 part encodes a 64-bit unsigned integer bitmask of the feature flags.
 This denotes which optional features the shader requires. The flag values are
@@ -861,12 +881,12 @@ defined in [llvm/include/llvm/BinaryFormat/DXContainerConstants.def](https://git
 
 ## Compiler Flags
 
-(compiler-flags-1)=
+(compiler_flags)=
 
 When compiling HLSL with {program}`dxc`, several flags control whether
 debug information is embedded in the main DXContainer output, written to a
 companion PDB file, or both. Use `/Zi` for full debug output or `/Zs` for
-slim debug output without an [ILDB] part. In {program}`clang-dxc`, most
+slim debug output without an {ref}`ILDB <ILDB>` part. In {program}`clang-dxc`, most
 dxc-style flags are forwarded to {program}`llc` as `-mllvm` options.
 
 ### Debug Output Locations
@@ -874,42 +894,42 @@ dxc-style flags are forwarded to {program}`llc` as `-mllvm` options.
 Debug information is enabled with either `/Zi` (full debug) or `/Zs` (slim
 debug). The two flags are mutually exclusive.
 
-**Full debug with \`\`/Zi\`\`**
+**Full debug with `/Zi`**
 
-When `/Zi` is enabled, the [ILDB] part can appear in the main DXContainer
+When `/Zi` is enabled, the {ref}`ILDB <ILDB>` part can appear in the main DXContainer
 output, in a companion PDB, or both:
 
-- **Embedded in the main DXContainer output.** The [ILDB] part holds the
+- **Embedded in the main DXContainer output.** The {ref}`ILDB <ILDB>` part holds the
   unstripped DXIL module with debug information. It is included when
-  `/Qembed_debug` is used. The main output always contains the stripped [DXIL]
-  part alongside other parts such as [HASH], [ILDN], and [VERS].
+  `/Qembed_debug` is used. The main output always contains the stripped {ref}`DXIL <DXIL>`
+  part alongside other parts such as {ref}`HASH <HASH>`, {ref}`ILDN <ILDN>`, and {ref}`VERS <VERS>`.
 - **Omitted from the main DXContainer output.** When `/Qstrip_debug` is used,
-  the [ILDB] part is not written to the main output. Other debug-related parts
-  such as [ILDN] are still emitted. If `/Fd` is also specified, the [ILDB]
+  the {ref}`ILDB <ILDB>` part is not written to the main output. Other debug-related parts
+  such as {ref}`ILDN <ILDN>` are still emitted. If `/Fd` is also specified, the {ref}`ILDB <ILDB>`
   part is still written to the companion PDB. `/Qstrip_debug` takes precedence
   over the default `/Qembed_debug` behavior when `/Zi` is used without
   `/Fd`. If both `/Qstrip_debug` and `/Qembed_debug` are specified,
-  `/Qstrip_debug` is ignored and the [ILDB] part is embedded.
+  `/Qstrip_debug` is ignored and the {ref}`ILDB <ILDB>` part is embedded.
 - **In a companion PDB file.** A sidecar `.pdb` stores a DXContainer stream
-  with debug-related parts including [ILDB], [SRCI], and [VERS]. This is
+  with debug-related parts including {ref}`ILDB <ILDB>`, {ref}`SRCI <SRCI>`, and {ref}`VERS <VERS>`. This is
   produced when `/Fd` names an output path. Use {program}`llvm-pdbutil` to
   inspect or extract that stream (see
   {doc}`llvm-pdbutil <../CommandGuide/llvm-pdbutil>`).
 - **Embedded in the private data of the main output.** When
   `/Qpdb_in_private` is used, a copy of the companion PDB file is stored as
-  opaque bytes in [PRIV]. This can be used with or without `/Fd`; without
+  opaque bytes in {ref}`PRIV <PRIV>`. This can be used with or without `/Fd`; without
   `/Fd`, the PDB is not retained as a separate file on disk. After extraction,
   tools treat the bytes as a standalone `.pdb` file.
 
 `/Fd` can be combined with `/Qembed_debug` or `/Qpdb_in_private` to
 write full debug information to more than one location.
 
-**Slim debug with \`\`/Zs\`\`**
+**Slim debug with `/Zs`**
 
-When `/Zs` is enabled, slim debug information is emitted. The [ILDB] part is
-omitted from the main DXContainer output and from any companion PDB or [PRIV]
-embedding, but other debug-related parts such as [HASH], [ILDN], [SRCI], and
-[VERS] are still emitted. A companion PDB from `/Fd` or a [PRIV] embedding
+When `/Zs` is enabled, slim debug information is emitted. The {ref}`ILDB <ILDB>` part is
+omitted from the main DXContainer output and from any companion PDB or {ref}`PRIV <PRIV>`
+embedding, but other debug-related parts such as {ref}`HASH <HASH>`, {ref}`ILDN <ILDN>`, {ref}`SRCI <SRCI>`, and
+{ref}`VERS <VERS>` are still emitted. A companion PDB from `/Fd` or a {ref}`PRIV <PRIV>` embedding
 from `/Qpdb_in_private` therefore contains slim debug data only.
 
 `/Zs` cannot be combined with `/Qembed_debug` or `/Qsource_in_debug_module`.
@@ -1042,4 +1062,3 @@ preconditions are met.
      - No
      - Holds a copy of the companion PDB file.
 ```
-

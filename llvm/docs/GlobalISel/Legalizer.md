@@ -302,10 +302,11 @@ legal for all type combinations that change the bit pattern in the value.
 
 There are no legality requirements for `G_BUILD_VECTOR`, or `G_BUILD_VECTOR_TRUNC`
 since these can be handled by:
-\* Declaring them legal.
-\* Scalarizing them.
-\* Lowering them to ``` G_TRUNC``+``G_ANYEXT ``` and some legalizable instructions.
-\* Lowering them to target instructions which are legal by definition.
+
+* Declaring them legal.
+* Scalarizing them.
+* Lowering them to `G_TRUNC`+`G_ANYEXT` and some legalizable instructions.
+* Lowering them to target instructions which are legal by definition.
 
 The same reasoning also allows `G_UNMERGE_VALUES` to lack legality requirements
 for vector inputs.
@@ -331,4 +332,3 @@ operations have requirements:
 
 There are many other operations you'd expect to have legality requirements, but
 they can be lowered to target instructions which are legal by definition.
-

@@ -1,6 +1,6 @@
 # The Module Information Stream
 
-(modi-stream-intro)=
+(modi_stream_intro)=
 
 ## Introduction
 
@@ -13,7 +13,7 @@ for a single module contains line information for the compiland, as well as
 all CodeView information for the symbols defined in the compiland. Finally,
 there is a "global refs" substream which is not well understood.
 
-(modi-stream-layout)=
+(modi_stream_layout)=
 
 ## Stream Layout
 
@@ -55,7 +55,7 @@ struct ModiStream {
   information is not present.
 - **GlobalRefs** - The meaning of this substream is not understood.
 
-(modi-symbol-substream)=
+(modi_symbol_substream)=
 
 ## The CodeView Symbol Substream
 
@@ -65,4 +65,3 @@ and other symbols defined in the compiland. The entire array consumes
 `SymbolSize-4` bytes. The format of a CodeView Symbol Record (and
 thusly, an array of CodeView Symbol Records) is described in
 {doc}`CodeViewSymbols`.
-

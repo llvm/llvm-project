@@ -1,4 +1,4 @@
-(other-resources)=
+(other_resources)=
 
 # Resources
 
@@ -8,4 +8,3 @@
 - [GlobalISel: Past, Present, and Future by Quentin Colombet and Ahmed Bougacha @LLVMDevMeeting 2017](https://www.llvm.org/devmtg/2017-10/#talk11)
 - [Head First into GlobalISel by Daniel Sanders, Aditya Nandakumar, and Justin Bogner @LLVMDevMeeting 2017](https://www.llvm.org/devmtg/2017-10/#tutorial2)
 - [Generating Optimized Code with GlobalISel by Volkan Keles, Daniel Sanders @LLVMDevMeeting 2019](https://www.llvm.org/devmtg/2019-10/talk-abstracts.html#keynote1)
-

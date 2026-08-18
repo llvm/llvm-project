@@ -1,10 +1,8 @@
-﻿=====================================
-CodeView Type Records
-\=====================================
+# CodeView Type Records
 
-(types-intro)=
+(types_intro)=
 
-# Introduction
+## Introduction
 
 This document describes the usage and serialization format of the various
 CodeView type records that LLVM understands. This document does not describe
@@ -17,7 +15,7 @@ made obsolete by newer records, or any number of other reasons. However, the
 records we describe here should cover 99% of type records that one can expect
 to encounter when dealing with modern C++ toolchains.
 
-# Record Categories
+## Record Categories
 
 We can think of a sequence of CodeView type records as an array of variable length
 `leaf records`. Each such record describes its own length as part of a fixed-size
@@ -32,9 +30,9 @@ The final category of record is a `member record`. One particular leaf type --
 `LF_FIELDLIST` describes its length (like any other leaf record), the embedded
 records -- called `member records` do not.
 
-(leaf-types)=
+(leaf_types)=
 
-## Leaf Records
+### Leaf Records
 
 All leaf records begin with the following 4-byte prefix:
 
@@ -45,7 +43,7 @@ struct RecordHeader {
 };
 ```
 
-### LF_POINTER (0x1002)
+#### LF_POINTER (0x1002)
 
 **Usage:** Describes a pointer to another type.
 
@@ -123,89 +121,88 @@ attributes indicate that this is a pointer to member.
 Note that "plain" pointers to primitive types are not represented by `LF_POINTER`
 records, they are indicated by special reserved {ref}`TypeIndex values <type_indices>`.
 
-### LF_MODIFIER (0x1001)
+#### LF_MODIFIER (0x1001)
 
-### LF_PROCEDURE (0x1008)
+#### LF_PROCEDURE (0x1008)
 
-### LF_MFUNCTION (0x1009)
+#### LF_MFUNCTION (0x1009)
 
-### LF_LABEL (0x000e)
+#### LF_LABEL (0x000e)
 
-### LF_ARGLIST (0x1201)
+#### LF_ARGLIST (0x1201)
 
-### LF_FIELDLIST (0x1203)
+#### LF_FIELDLIST (0x1203)
 
-### LF_ARRAY (0x1503)
+#### LF_ARRAY (0x1503)
 
-### LF_CLASS (0x1504)
+#### LF_CLASS (0x1504)
 
-### LF_STRUCTURE (0x1505)
+#### LF_STRUCTURE (0x1505)
 
-### LF_INTERFACE (0x1519)
+#### LF_INTERFACE (0x1519)
 
-### LF_UNION (0x1506)
+#### LF_UNION (0x1506)
 
-### LF_ENUM (0x1507)
+#### LF_ENUM (0x1507)
 
-### LF_TYPESERVER2 (0x1515)
+#### LF_TYPESERVER2 (0x1515)
 
-### LF_VFTABLE (0x151d)
+#### LF_VFTABLE (0x151d)
 
-### LF_VTSHAPE (0x000a)
+#### LF_VTSHAPE (0x000a)
 
-### LF_BITFIELD (0x1205)
+#### LF_BITFIELD (0x1205)
 
-### LF_FUNC_ID (0x1601)
+#### LF_FUNC_ID (0x1601)
 
-### LF_MFUNC_ID (0x1602)
+#### LF_MFUNC_ID (0x1602)
 
-### LF_BUILDINFO (0x1603)
+#### LF_BUILDINFO (0x1603)
 
-### LF_SUBSTR_LIST (0x1604)
+#### LF_SUBSTR_LIST (0x1604)
 
-### LF_STRING_ID (0x1605)
+#### LF_STRING_ID (0x1605)
 
-### LF_UDT_SRC_LINE (0x1606)
+#### LF_UDT_SRC_LINE (0x1606)
 
-### LF_UDT_MOD_SRC_LINE (0x1607)
+#### LF_UDT_MOD_SRC_LINE (0x1607)
 
-### LF_METHODLIST (0x1206)
+#### LF_METHODLIST (0x1206)
 
-### LF_PRECOMP (0x1509)
+#### LF_PRECOMP (0x1509)
 
-### LF_ENDPRECOMP (0x0014)
+#### LF_ENDPRECOMP (0x0014)
 
-(member-types)=
+(member_types)=
 
-## Member Records
+### Member Records
 
-### LF_BCLASS (0x1400)
+#### LF_BCLASS (0x1400)
 
-### LF_BINTERFACE (0x151a)
+#### LF_BINTERFACE (0x151a)
 
-### LF_VBCLASS (0x1401)
+#### LF_VBCLASS (0x1401)
 
-### LF_IVBCLASS (0x1402)
+#### LF_IVBCLASS (0x1402)
 
-### LF_VFUNCTAB (0x1409)
+#### LF_VFUNCTAB (0x1409)
 
-### LF_STMEMBER (0x150e)
+#### LF_STMEMBER (0x150e)
 
-### LF_METHOD (0x150f)
+#### LF_METHOD (0x150f)
 
-### LF_MEMBER (0x150d)
+#### LF_MEMBER (0x150d)
 
-### LF_NESTTYPE (0x1510)
+#### LF_NESTTYPE (0x1510)
 
-### LF_ONEMETHOD (0x1511)
+#### LF_ONEMETHOD (0x1511)
 
-### LF_ENUMERATE (0x1502)
+#### LF_ENUMERATE (0x1502)
 
-### LF_INDEX (0x1404)
+#### LF_INDEX (0x1404)
 
-(padding-records)=
+(padding_records)=
 
-## Padding Records
+### Padding Records
 
-### LF_PADn (0xf0 + n)
-
+#### LF_PADn (0xf0 + n)
