@@ -53,10 +53,6 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
     assert(low && high && "must be a Value");
     mlir::Value step = doLoopOp.getStep();
     bool hasTypedIV = !low.getType().isIndex();
-    // A typed (non-index) induction variable does not have to be loop-carried:
-    // it is recomputed below in closed form from the canonical induction
-    // variable. Carrying it would give the loop an extra result that
-    // loop-level analyses (e.g. reduction recognition) cannot look past.
     mlir::SmallVector<mlir::Value> iterArgs;
     if (hasFinalValue)
       iterArgs.push_back(low);
@@ -112,11 +108,10 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
       iv = scfLoopLikeOp.getRegionIterArgs().front();
     } else {
       mlir::Value canonicalIV = scfLoopLikeOp.getSingleInductionVar().value();
-      // Recompute the original induction variable in its own type. No nsw here:
-      // the closed form can wrap where the step-by-step increment does not.
       if (hasTypedIV)
         canonicalIV =
             fir::ConvertOp::create(rewriter, loc, low.getType(), canonicalIV);
+      // No nsw: the closed form can wrap where an increment by step does not.
       iv = mlir::arith::MulIOp::create(rewriter, loc, canonicalIV, step);
       iv = mlir::arith::AddIOp::create(rewriter, loc, low, iv);
     }
