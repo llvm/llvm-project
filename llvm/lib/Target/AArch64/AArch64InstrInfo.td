@@ -4344,6 +4344,8 @@ let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
             (LDURDi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(v4f16 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
             (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v4bf16 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
 }
 def : Pat<(v1f64 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
           (LDURDi GPR64sp:$Rn, simm9:$offset)>;
@@ -4360,6 +4362,8 @@ let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
   def : Pat<(v8i8 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
             (LDURDi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(v4f16 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v4bf16 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
             (LDURDi GPR64sp:$Rn, simm9:$offset)>;
 }
 
@@ -4379,6 +4383,8 @@ let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
             (LDURQi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(v8f16 (load (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
             (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v8bf16 (load (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
 }
 
 let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
@@ -4395,6 +4401,8 @@ let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
   def : Pat<(v16i8 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
             (LDURQi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(v8f16 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v8bf16 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
             (LDURQi GPR64sp:$Rn, simm9:$offset)>;
 }
 } // AddedComplexity = 10
