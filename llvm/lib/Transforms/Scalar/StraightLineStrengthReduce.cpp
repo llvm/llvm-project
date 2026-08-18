@@ -911,6 +911,7 @@ auto StraightLineStrengthReduce::compressPath(Candidate &C,
                                 cast<GetElementPtrInst>(NextRoot->Ins), DL))
       break;
 
+    ++NumSCEVCandidateDifferences;
     if (auto DeltaVal =
             dyn_cast<SCEVConstant>(SE->getMinusSCEV(CandPart, BasisPart))) {
       Root = NextRoot;

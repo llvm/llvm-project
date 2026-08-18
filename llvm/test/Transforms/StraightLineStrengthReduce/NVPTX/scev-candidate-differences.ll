@@ -2,7 +2,10 @@
 ; RUN: opt -mtriple=nvptx64-nvidia-cuda -mcpu=sm_100 -passes=slsr -stats \
 ; RUN:   -disable-output < %s 2>&1 | FileCheck %s
 
-; CHECK: 2 slsr - Number of SCEV candidate differences computed by SLSR
+; The third candidate uses the second as its basis, then compressPath examines
+; the deeper basis. Count both basis selection and path compression.
+;
+; CHECK: 8 slsr - Number of SCEV candidate differences computed by SLSR
 
 declare i64 @source(i32)
 declare void @use(ptr)
@@ -18,5 +21,11 @@ define void @base_delta(ptr %root, i64 %common) {
   %base.1 = getelementptr i8, ptr %root, i64 %offset.1
   %candidate.1 = getelementptr i8, ptr %base.1, i64 %common
   call void @use(ptr %candidate.1)
+
+  %delta.2 = call i64 @source(i32 2)
+  %offset.2 = add i64 %offset.1, %delta.2
+  %base.2 = getelementptr i8, ptr %root, i64 %offset.2
+  %candidate.2 = getelementptr i8, ptr %base.2, i64 %common
+  call void @use(ptr %candidate.2)
   ret void
 }
