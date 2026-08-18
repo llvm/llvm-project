@@ -807,7 +807,7 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const char*
   if (!__mdstr)
     return nullptr;
 
-  return __adopt_file(std::__fopen(__s, __mdstr), __mode);
+  return __adopt_file(__fopen(__s, __mdstr), __mode);
 }
 
 template <class _CharT, class _Traits>
