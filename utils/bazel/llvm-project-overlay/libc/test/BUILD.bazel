@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//libc:libc_build_rules.bzl", "libc_release_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -26,4 +27,24 @@ libc_release_library(
 build_test(
     name = "libc_release_build_test",
     targets = [":libc_release_test"],
+)
+
+# Dependencies that are injected into every hermetic libc_test.
+# These are grouped into their own cc_library instead of directly adding them
+# to the "deps" of each test rule to avoid hitting duplicate label errors.
+cc_library(
+    name = "hermetic_test_codegen_deps",
+    deps = select({
+        "//libc:full_build": [
+            "//libc:__stack_chk_fail",
+            "//libc:atexit",
+            "//libc:bcmp",
+            "//libc:bzero",
+            "//libc:memcmp",
+            "//libc:memcpy",
+            "//libc:memmove",
+            "//libc:memset",
+        ],
+        "//conditions:default": [],
+    }),
 )

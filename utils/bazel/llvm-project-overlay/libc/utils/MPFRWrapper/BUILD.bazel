@@ -15,8 +15,11 @@ cc_library(
     name = "mpfr_impl",
     hdrs = ["mpfr_inc.h"],
     target_compatible_with = select({
-        "//conditions:default": [],
         "//libc:mpfr_disable": ["@platforms//:incompatible"],
+        # In full build mode, the MPFR library should be built
+        # using our own facilities, which is currently not possible.
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
     }),
     deps = select(
         {

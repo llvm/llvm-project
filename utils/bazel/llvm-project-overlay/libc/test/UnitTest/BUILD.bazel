@@ -38,7 +38,12 @@ libc_test_library(
         "LibcDeathTestExecutors.cpp",
         "LibcTest.cpp",
         "LibcTestMain.cpp",
-    ],
+    ] + select({
+        "//libc:full_build": [
+            "HermeticTestUtils.cpp",
+        ],
+        "//conditions:default": [],
+    }),
     hdrs = [
         "ErrnoCheckingTest.h",
         "ErrnoSetterMatcher.h",
@@ -49,6 +54,7 @@ libc_test_library(
     deps = [
         ":test_logger",
         "//libc:__support_c_string",
+        "//libc:__support_common",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
         "//libc:__support_cpp_limits",
@@ -76,8 +82,33 @@ libc_test_library(
         "//libc:func_realloc",
         "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_macros_stdfix_macros",
-        "//llvm:Support",
-    ],
+    ] + select({
+        "//libc:full_build": [
+            "//libc:access",
+            "//libc:clock",
+            "//libc:close",
+            "//libc:exit",
+            "//libc:fflush",
+            "//libc:fork",
+            "//libc:getenv",
+            "//libc:kill",
+            "//libc:llvm_libc_macros_poll_macros",
+            "//libc:llvm_libc_macros_signal_macros",
+            "//libc:llvm_libc_macros_sys_wait_macros",
+            "//libc:llvm_libc_types_pid_t",
+            "//libc:llvm_libc_types_struct_pollfd",
+            "//libc:pipe",
+            "//libc:poll",
+            "//libc:readlink",
+            "//libc:stderr",
+            "//libc:stdout",
+            "//libc:strsignal",
+            "//libc:symlink",
+            "//libc:unlink",
+            "//libc:waitpid",
+        ],
+        "//conditions:default": [],
+    }),
     # Force linking in this library's `main()` to surface
     # a duplicate symbol error if a test defines its own main.
     alwayslink = True,
@@ -89,7 +120,7 @@ libc_test_library(
     hdrs = ["LibcCTest.h"],
     deps = [
         ":LibcUnitTest",
-        "//libc:public_headers_deps",
+        "//libc:llvm_libc_common_h",
     ],
 )
 
