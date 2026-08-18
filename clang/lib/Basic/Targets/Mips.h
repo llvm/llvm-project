@@ -430,6 +430,18 @@ public:
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasBitIntType() const override { return true; }
 
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_C:
+    case CC_Swift:
+      return CCCR_OK;
+    case CC_SwiftAsync:
+      return CCCR_Error;
+    default:
+      return CCCR_Warning;
+    }
+  }
+
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
   }
