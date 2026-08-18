@@ -398,7 +398,7 @@ inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
   case V_SMFMAC_F32_16X16X64_F16_e64:
     Res.TotalWindow = 8;
     AllowCoExec(Res, CoExecMask::SALU, 1);
-    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU, 2);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
     AllowCoExec(Res, CoExecMask::WMMA, 4);
     return Res;
 
@@ -415,7 +415,7 @@ inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
   case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64:
     Res.TotalWindow = 12;
     AllowCoExec(Res, CoExecMask::SALU, 1);
-    AllowCoExec(Res, CoExecMask::DS, 2);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
     AllowCoExec(Res, CoExecMask::VALU, 3);
     AllowCoExec(Res, CoExecMask::WMMA, 8);
     return Res;
@@ -451,7 +451,7 @@ inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
   case V_MFMA_F32_32X32X16_F16_vgprcd_e64:
     Res.TotalWindow = 8;
     AllowCoExec(Res, CoExecMask::SALU, 1);
-    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU, 2);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
     AllowCoExec(Res, CoExecMask::WMMA, 4);
     return Res;
 
@@ -478,7 +478,7 @@ inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
   case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64:
     Res.TotalWindow = 20;
     AllowCoExec(Res, CoExecMask::SALU, 1);
-    AllowCoExec(Res, CoExecMask::DS, 2);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
     AllowCoExec(Res, CoExecMask::VALU, 3);
     AllowCoExec(Res, CoExecMask::WMMA, 16);
     return Res;
@@ -493,7 +493,7 @@ inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
   case V_SMFMAC_F32_32X32X32_F16_e64:
     Res.TotalWindow = 12;
     AllowCoExec(Res, CoExecMask::SALU, 1);
-    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU, 4);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 4);
     AllowCoExec(Res, CoExecMask::WMMA, 9);
     return Res;
 
@@ -503,7 +503,7 @@ inline CoExecInfo getMFMACoExecInfo(const MachineInstr &MI) {
   case V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
   case V_MFMA_F64_16X16X4F64_vgprcd_e64:
     Res.TotalWindow = 19;
-    AllowCoExec(Res, CoExecMask::DS | CoExecMask::SALU, 0);
+    AllowCoExec(Res, CoExecMask::DS | CoExecMask::SALU | CoExecMask::VMEM, 0);
     AllowCoExec(Res, CoExecMask::WMMA | CoExecMask::VALU, 18);
     return Res;
 
