@@ -1885,6 +1885,7 @@ void LoweringPreparePass::buildCXXGlobalTlsFunc() {
 static std::string getPrioritySuffix(unsigned priority) {
   assert(priority <= 65535 && "Priority should always be <= 65535.");
   std::string prioritySuffix = llvm::utostr(priority);
+  assert(prioritySuffix.size() < 6);
   prioritySuffix = std::string(6 - prioritySuffix.size(), '0') + prioritySuffix;
   return prioritySuffix;
 }
