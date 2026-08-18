@@ -11,6 +11,7 @@
 #include "AffineMapDetail.h"
 #include "AttributeDetail.h"
 #include "IntegerSetDetail.h"
+#include "SymbolRefContainmentCache.h"
 #include "TypeDetail.h"
 #include "mlir/IR/Action.h"
 #include "mlir/IR/AffineExpr.h"
@@ -279,6 +280,11 @@ public:
     llvm::DenseMap<StringRef, size_t> baseDialectReferencingStrAttrCounts;
   };
   std::unique_ptr<TransientScopeState> transientState;
+
+  /// Cache recording, per uniqued type and attribute, whether it may
+  /// transitively contain a SymbolRefAttr. Filled lazily by symbol-table
+  /// verification and never invalidated; see SymbolRefContainmentCache.h.
+  SymbolRefContainmentCache symbolRefContainmentCache;
 
 public:
   MLIRContextImpl(bool threadingIsEnabled)
@@ -1267,6 +1273,11 @@ DistinctAttrStorage *
 detail::DistinctAttributeUniquer::allocateStorage(MLIRContext *context,
                                                   Attribute referencedAttr) {
   return context->getImpl().distinctAttributeAllocator.allocate(referencedAttr);
+}
+
+detail::SymbolRefContainmentCache &
+detail::getSymbolRefContainmentCache(MLIRContext *ctx) {
+  return ctx->getImpl().symbolRefContainmentCache;
 }
 
 /// Return empty dictionary.

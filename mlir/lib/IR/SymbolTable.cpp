@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/SymbolTable.h"
+#include "SymbolRefContainmentCache.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/SetVector.h"
@@ -473,6 +474,62 @@ raw_ostream &mlir::operator<<(raw_ostream &os,
 }
 
 //===----------------------------------------------------------------------===//
+// SymbolRefAttr containment query
+//===----------------------------------------------------------------------===//
+
+static bool computeMayContainSymbolRefs(Type type);
+static bool computeMayContainSymbolRefs(Attribute attr);
+
+/// Fill (once) and return the "may transitively contain a SymbolRefAttr" fact
+/// for a uniqued type or attribute `obj`, seeded by `selfIsRef` for an object
+/// that is itself a symbol reference. The answer is computed entirely outside
+/// the cache lock -- which is taken only for the write-once insert -- so no
+/// lock is held across the recursion and a racing duplicate fill computes the
+/// same fact idempotently. A mutable-storage kind may gain sub-elements after
+/// this point, so its contents are never read; it and its containers report
+/// may-contain conservatively.
+template <typename T>
+static bool fillMayContainSymbolRefs(T obj, bool selfIsRef) {
+  MLIRContext *ctx = obj.getContext();
+  bool lock = ctx->isMultithreadingEnabled();
+  detail::SymbolRefContainmentCache &cache =
+      detail::getSymbolRefContainmentCache(ctx);
+  if (std::optional<bool> cached = cache.lookup(obj, lock))
+    return *cached;
+
+  bool mayContain =
+      selfIsRef || obj.template hasTrait<detail::StorageUserTrait::IsMutable>();
+  // The recursion needs no in-progress guard: immutable objects form a DAG
+  // (sub-elements are interned before their parents), so every cycle passes
+  // through a mutable kind, where the fill stops above before descending.
+  if (!mayContain)
+    obj.walkImmediateSubElements(
+        [&](Attribute sub) {
+          mayContain |= sub && computeMayContainSymbolRefs(sub);
+        },
+        [&](Type sub) {
+          mayContain |= sub && computeMayContainSymbolRefs(sub);
+        });
+  return cache.insert(obj, mayContain, lock);
+}
+
+// A type is never itself a SymbolRefAttr; an attribute is one exactly when
+// isa<SymbolRefAttr> holds (covering FlatSymbolRefAttr).
+static bool computeMayContainSymbolRefs(Type type) {
+  return fillMayContainSymbolRefs(type, /*selfIsRef=*/false);
+}
+static bool computeMayContainSymbolRefs(Attribute attr) {
+  return fillMayContainSymbolRefs(attr, /*selfIsRef=*/isa<SymbolRefAttr>(attr));
+}
+
+bool SymbolTable::mayContainSymbolRefs(Type type) {
+  return computeMayContainSymbolRefs(type);
+}
+bool SymbolTable::mayContainSymbolRefs(Attribute attr) {
+  return computeMayContainSymbolRefs(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
@@ -485,7 +542,18 @@ raw_ostream &mlir::operator<<(raw_ostream &os,
 /// Verification fails fast on the first invalid symbol use.
 static LogicalResult verifyOpTypeSymbolUses(Operation *op,
                                             AttrTypeWalker &walker) {
-  auto verify = [&](Type type) { return walker.walk<WalkOrder::PreOrder>(type); };
+  // A root that provably contains no SymbolRefAttr is not worth entering; the
+  // walker's callbacks prune interior subtrees the same way.
+  auto verify = [&](Type type) {
+    if (!SymbolTable::mayContainSymbolRefs(type))
+      return WalkResult::advance();
+    return walker.walk<WalkOrder::PreOrder>(type);
+  };
+  auto verifyAttr = [&](Attribute attr) {
+    if (!attr || !SymbolTable::mayContainSymbolRefs(attr))
+      return WalkResult::advance();
+    return walker.walk<WalkOrder::PreOrder>(attr);
+  };
 
   for (Type type : op->getOperandTypes())
     if (verify(type).wasInterrupted())
@@ -508,15 +576,15 @@ static LogicalResult verifyOpTypeSymbolUses(Operation *op,
   // properties, and the discardable attributes otherwise; the properties-held
   // inherent attributes are appended into a stack-local NamedAttrList via
   // populateInherentAttrs and walked separately -- the same coverage
-  // getAttrDictionary() provides, since it calls the same populateInherentAttrs.
-  if (walker.walk<WalkOrder::PreOrder>(op->getRawDictionaryAttrs())
-          .wasInterrupted())
+  // getAttrDictionary() provides, since it calls the same
+  // populateInherentAttrs.
+  if (verifyAttr(op->getRawDictionaryAttrs()).wasInterrupted())
     return failure();
   if (op->getPropertiesStorageSize()) {
     NamedAttrList inherentAttrs;
     op->getName().populateInherentAttrs(op, inherentAttrs);
     for (const NamedAttribute &namedAttr : inherentAttrs)
-      if (walker.walk<WalkOrder::PreOrder>(namedAttr.getValue()).wasInterrupted())
+      if (verifyAttr(namedAttr.getValue()).wasInterrupted())
         return failure();
   }
   return success();
@@ -570,9 +638,21 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
   Operation *typeSymbolUseAnchor = nullptr;
   AttrTypeWalker typeWalker;
   typeWalker.addWalk([&](Type type) -> WalkResult {
+    // Prune subtrees that provably hold no SymbolRefAttr: a conforming
+    // SymbolUserTypeInterface spells its references as SymbolRefAttr
+    // sub-elements, so such a type has a vacuous verifySymbolUses.
+    if (!SymbolTable::mayContainSymbolRefs(type))
+      return WalkResult::skip();
     if (auto user = dyn_cast<SymbolUserTypeInterface>(type))
       if (failed(user.verifySymbolUses(typeSymbolUseAnchor, symbolTable)))
         return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  typeWalker.addWalk([&](Attribute attr) -> WalkResult {
+    // Prune reference-free attribute subtrees so the walk descends only where a
+    // SymbolRefAttr, and thus a symbol-using type, may live.
+    if (!SymbolTable::mayContainSymbolRefs(attr))
+      return WalkResult::skip();
     return WalkResult::advance();
   });
 

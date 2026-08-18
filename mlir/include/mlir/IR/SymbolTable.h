@@ -242,6 +242,19 @@ public:
   static bool symbolKnownUseEmpty(StringAttr symbol, Region *from);
   static bool symbolKnownUseEmpty(Operation *symbol, Region *from);
 
+  /// Return whether the given type or attribute may transitively contain a
+  /// `SymbolRefAttr`, i.e. whether one is reachable through its sub-element
+  /// tree by recursive application of `walkImmediateSubElements`. A false
+  /// answer is authoritative: the object provably references no symbol, so a
+  /// SymbolUserTypeInterface / SymbolUserAttrInterface implementation that
+  /// honors its contract has a vacuous `verifySymbolUses` and need never be
+  /// visited. A true answer is conservative: mutable-storage kinds, and
+  /// anything containing them, always report true. The answer is a pure
+  /// function of the uniqued, immutable structure, computed once per object and
+  /// cached on the context for its lifetime.
+  static bool mayContainSymbolRefs(Type type);
+  static bool mayContainSymbolRefs(Attribute attr);
+
   /// Attempt to replace all uses of the given symbol 'oldSymbol' with the
   /// provided symbol 'newSymbol' that are nested within the given operation
   /// 'from'. This does not traverse into any nested symbol tables. If there are
