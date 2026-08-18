@@ -1097,6 +1097,408 @@ static bool isApplicableToPLIOrPLUI(int Val) {
          Bit15To8 == Bit7To0;
 }
 
+// --------------------------------------------------------------------------
+// cv.extractu: unsigned bitfield extract
+//
+// Matches:
+//   (and (srl X, C_offset), C_mask)  where C_mask = (1 << width) - 1
+//   (and X, C_mask)                  where C_mask = (1 << width) - 1 (offset=0)
+//
+// Emits: CV_EXTRACTU rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.extractu semantics is Is3+1 bits, so we encode width-1)
+//
+// Excludes: mask=0xFF (already cv.extbz) and mask=0xFFFF (already cv.exthz)
+//           when offset=0, to avoid stealing existing patterns.
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipExtractU(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::AND);
+  SDLoc DL(Node);
+
+  // Bail out if the AND result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
+
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+
+  // Canonicalize: constant on the right
+  auto *MaskC = dyn_cast<ConstantSDNode>(RHS);
+  if (!MaskC) {
+    std::swap(LHS, RHS);
+    MaskC = dyn_cast<ConstantSDNode>(RHS);
+  }
+  if (!MaskC)
+    return false;
+
+  // Heuristic: if LHS is (srl X, c) and the shift is reused, folding into
+  // cv.extractu recomputes the shift, so keep the generic SRLI + ANDI instead.
+  if (LHS.getOpcode() == ISD::SRL && !LHS.hasOneUse())
+    return false;
+
+  uint32_t Mask = MaskC->getZExtValue();
+
+  // Mask must be a contiguous run of 1s starting from bit 0: (1 << w) - 1
+  if (!isMask_32(Mask))
+    return false;
+
+  unsigned Width = llvm::countr_one(Mask);
+  unsigned Offset = 0;
+  SDValue Base = LHS;
+
+  // Check if LHS is (srl X, C_offset)
+  if (LHS.getOpcode() == ISD::SRL) {
+    if (auto *ShiftC = dyn_cast<ConstantSDNode>(LHS.getOperand(1))) {
+      Offset = ShiftC->getZExtValue();
+      Base = LHS.getOperand(0);
+    }
+  }
+
+  // Skip cases already handled by cv.extbz / cv.exthz
+  if (Offset == 0 && (Mask == 0xFF || Mask == 0xFFFF))
+    return false;
+
+  // Validate: IS3 in [1,32], IS2 in [0,31], width + offset <= 32
+  if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+    return false;
+
+  SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+  SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+  CurDAG->SelectNodeTo(Node, RISCV::CV_EXTRACTU, MVT::i32, Base, IS3, IS2);
+  return true;
+}
+
+// --------------------------------------------------------------------------
+// cv.extract: signed bitfield extract
+//
+// Matches:
+//   (sra (shl X, C1), C2)
+//   where: width = 32 - C2, offset = C2 - C1
+//          C1 = 32 - width - offset, C2 = 32 - width
+//
+// Emits: CV_EXTRACT rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.extract semantics is Is3+1 bits, so we encode width-1)
+//
+// Excludes: (sra (shl X, 16), 16) → already sext_inreg i16 → cv.exths
+//           (sra (shl X, 24), 24) → already sext_inreg i8  → cv.extbs
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipExtract(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::SRA);
+  SDLoc DL(Node);
+
+  // Bail out if the SRA result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
+
+  // Check: (sra (shl X, C1), C2)
+  SDValue ShlNode = Node->getOperand(0);
+  if (ShlNode.getOpcode() != ISD::SHL)
+    return false;
+
+  // Do not steal the SHL value from other users.
+  if (!ShlNode.hasOneUse())
+    return false;
+
+  auto *C2Node = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+  auto *C1Node = dyn_cast<ConstantSDNode>(ShlNode.getOperand(1));
+  if (!C2Node || !C1Node)
+    return false;
+
+  unsigned C1 = C1Node->getZExtValue();
+  unsigned C2 = C2Node->getZExtValue();
+
+  // C2 >= C1 required (otherwise offset would be negative)
+  if (C2 < C1 || C2 >= 32 || C1 >= 32)
+    return false;
+
+  unsigned Width = 32 - C2;
+  unsigned Offset = C2 - C1;
+
+  // Skip cases already handled by cv.extbs (width=8, offset=0) and
+  // cv.exths (width=16, offset=0) via sext_inreg patterns
+  if (Offset == 0 && (Width == 8 || Width == 16))
+    return false;
+
+  // Validate ranges
+  if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+    return false;
+
+  SDValue Base = ShlNode.getOperand(0);
+  SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+  SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+  CurDAG->SelectNodeTo(Node, RISCV::CV_EXTRACT, MVT::i32, Base, IS3, IS2);
+  return true;
+}
+
+// --------------------------------------------------------------------------
+// cv.bclr: clear a contiguous range of bits
+//
+// Matches:
+//   (and X, C) where ~C is a shifted mask: ~C = ((1 << width) - 1) << offset
+//
+// Emits: CV_BCLR rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.bclr semantics is Is3+1 bits, so we encode width-1)
+//
+// Excludes: C = 0xFF (cv.extbz), C = 0xFFFF (cv.exthz), C = 0 (no-op)
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipBClr(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::AND);
+  SDLoc DL(Node);
+
+  // Bail out if the AND result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
+
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+
+  // Canonicalize: constant on the right
+  auto *MaskC = dyn_cast<ConstantSDNode>(RHS);
+  if (!MaskC) {
+    std::swap(LHS, RHS);
+    MaskC = dyn_cast<ConstantSDNode>(RHS);
+  }
+  if (!MaskC)
+    return false;
+
+  uint32_t Mask = MaskC->getZExtValue();
+  uint32_t InvMask = ~Mask;
+
+  // If mask is all-ones (invmask = 0), nothing to clear
+  if (InvMask == 0)
+    return false;
+
+  // Skip cases where the mask itself is a low mask (extractu/extbz/exthz handle
+  // those)
+  if (isMask_32(Mask))
+    return false;
+
+  // ~C must be a shifted mask: contiguous 1s at some offset
+  if (!isShiftedMask_32(InvMask))
+    return false;
+
+  unsigned Width = llvm::popcount(InvMask);
+  unsigned Offset = llvm::countr_zero(InvMask);
+
+  // Skip if LHS is itself a shift — let extractu handle (srl X, C) & mask
+  // patterns
+  if (LHS.getOpcode() == ISD::SRL)
+    return false;
+
+  // Validate ranges
+  if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+    return false;
+
+  SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+  SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+  CurDAG->SelectNodeTo(Node, RISCV::CV_BCLR, MVT::i32, LHS, IS3, IS2);
+  return true;
+}
+
+// --------------------------------------------------------------------------
+// cv.bset: set a contiguous range of bits to 1
+//
+// Matches:
+//   (or X, C) where C is a shifted mask: C = ((1 << width) - 1) << offset
+//
+// Emits: CV_BSET rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.bset semantics is Is3+1 bits, so we encode width-1)
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipBSet(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::OR);
+  SDLoc DL(Node);
+
+  // Bail out if the OR result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
+
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+
+  // Canonicalize: constant on the right
+  auto *ValC = dyn_cast<ConstantSDNode>(RHS);
+  if (!ValC) {
+    std::swap(LHS, RHS);
+    ValC = dyn_cast<ConstantSDNode>(RHS);
+  }
+  if (!ValC)
+    return false;
+
+  uint32_t Val = ValC->getZExtValue();
+
+  // Must be a non-zero shifted mask: contiguous 1s at some offset
+  if (Val == 0 || !isShiftedMask_32(Val))
+    return false;
+
+  unsigned Width = llvm::popcount(Val);
+  unsigned Offset = llvm::countr_zero(Val);
+
+  // Validate ranges
+  if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+    return false;
+
+  SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+  SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+  CurDAG->SelectNodeTo(Node, RISCV::CV_BSET, MVT::i32, LHS, IS3, IS2);
+  return true;
+}
+
+// --------------------------------------------------------------------------
+// cv.insert: replace a contiguous bitfield in rd with low bits of rs1
+//
+// C idiom:  reg = (reg & ~(mask << offset)) | ((val & mask) << offset)
+//   where mask = (1 << width) - 1
+//
+// This is a two-input, multi-node DAG shape. The compiler can produce
+// several forms after DAG combining:
+//
+// Form 1 (most common, offset > 0):
+//   (or (and rd, ClearMask), (shl (and rs1, LowMask), Offset))
+//   where ClearMask = ~(LowMask << Offset)
+//
+// Form 2 (offset > 0, mask applied after shift):
+//   (or (and rd, ClearMask), (and (shl rs1, Offset), ShiftedMask))
+//   where ShiftedMask = LowMask << Offset
+//
+// Form 3 (offset = 0, no shift):
+//   (or (and rd, ClearMask), (and rs1, LowMask))
+//
+// Emit: CV_INSERT rd, rs1, IS3=width-1, IS2=offset
+//        (note: cv.insert semantics is Is3+1 bits, so we encode width-1)
+// --------------------------------------------------------------------------
+bool RISCVDAGToDAGISel::tryCVBitManipInsert(SDNode *Node) {
+  if (!Subtarget->hasVendorXCVbitmanip() || Subtarget->is64Bit())
+    return false;
+
+  assert(Node->getOpcode() == ISD::OR);
+  SDLoc DL(Node);
+
+  // Bail out if the OR result is consumed by more than one user.
+  if (!Node->hasOneUse())
+    return false;
+
+  // Try both orderings of the OR operands since OR is commutative.
+  // One side must be (and rd, ClearMask), the other provides the value.
+  for (unsigned Swap = 0; Swap < 2; ++Swap) {
+    SDValue ClearSide = Node->getOperand(Swap);
+    SDValue ValueSide = Node->getOperand(1 - Swap);
+
+    // ClearSide must be (and rd, ClearMask)
+    if (ClearSide.getOpcode() != ISD::AND)
+      continue;
+
+    // Find the constant in the AND (could be on either side)
+    auto *ClearC = dyn_cast<ConstantSDNode>(ClearSide.getOperand(1));
+    SDValue RD = ClearSide.getOperand(0);
+    if (!ClearC) {
+      ClearC = dyn_cast<ConstantSDNode>(ClearSide.getOperand(0));
+      RD = ClearSide.getOperand(1);
+    }
+    if (!ClearC)
+      continue;
+
+    uint32_t ClearMask = ClearC->getZExtValue();
+    uint32_t FieldMask = ~ClearMask;
+
+    // FieldMask = ~ClearMask must be a shifted mask (the hole being filled)
+    if (FieldMask == 0 || !isShiftedMask_32(FieldMask))
+      continue;
+
+    unsigned Width = llvm::popcount(FieldMask);
+    unsigned Offset = llvm::countr_zero(FieldMask);
+
+    if (Width == 0 || Width > 32 || Offset > 31 || (Width + Offset) > 32)
+      continue;
+
+    uint32_t LowMask = (1u << Width) - 1; // (1 << width) - 1
+    SDValue RS1;
+
+    // --- Form 1: (shl (and rs1, LowMask), Offset) ---
+    // This is the most common form from: ((val & mask) << offset)
+    if (ValueSide.getOpcode() == ISD::SHL) {
+      auto *ShiftC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(1));
+      if (ShiftC && ShiftC->getZExtValue() == Offset) {
+        SDValue ShiftInput = ValueSide.getOperand(0);
+        if (ShiftInput.getOpcode() == ISD::AND) {
+          auto *MC = dyn_cast<ConstantSDNode>(ShiftInput.getOperand(1));
+          SDValue Base = ShiftInput.getOperand(0);
+          if (!MC) {
+            MC = dyn_cast<ConstantSDNode>(ShiftInput.getOperand(0));
+            Base = ShiftInput.getOperand(1);
+          }
+          if (MC && MC->getZExtValue() == LowMask)
+            RS1 = Base;
+        }
+      }
+    }
+
+    // --- Form 2: (and (shl rs1, Offset), ShiftedMask) ---
+    // This form appears when the compiler applies the mask after the shift.
+    if (!RS1 && ValueSide.getOpcode() == ISD::AND) {
+      auto *MC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(1));
+      SDValue Inner = ValueSide.getOperand(0);
+      if (!MC) {
+        MC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(0));
+        Inner = ValueSide.getOperand(1);
+      }
+      if (MC && MC->getZExtValue() == FieldMask &&
+          Inner.getOpcode() == ISD::SHL) {
+        auto *ShiftC = dyn_cast<ConstantSDNode>(Inner.getOperand(1));
+        if (ShiftC && ShiftC->getZExtValue() == Offset)
+          RS1 = Inner.getOperand(0);
+      }
+    }
+
+    // --- Form 3: (and rs1, LowMask) when Offset == 0 ---
+    // No shift needed: reg = (reg & ~mask) | (val & mask)
+    if (!RS1 && Offset == 0 && ValueSide.getOpcode() == ISD::AND) {
+      auto *MC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(1));
+      SDValue Base = ValueSide.getOperand(0);
+      if (!MC) {
+        MC = dyn_cast<ConstantSDNode>(ValueSide.getOperand(0));
+        Base = ValueSide.getOperand(1);
+      }
+      if (MC && MC->getZExtValue() == LowMask)
+        RS1 = Base;
+    }
+
+    if (!RS1)
+      continue;
+
+    // Heuristic: require single use of the OR inputs (ClearSide/ValueSide and
+    // the AND inside ClearSide); otherwise the tied CV_INSERT forces a copy
+    // of rd and saves nothing.
+    if (!ClearSide.hasOneUse() || !ValueSide.hasOneUse())
+      continue;
+
+    // Emit: CV_INSERT rd, rs1, IS3=width, IS2=offset
+    // rd is both input and output (tied operand)
+    SDValue IS3 = CurDAG->getTargetConstant(Width - 1, DL, MVT::i32);
+    SDValue IS2 = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+
+    SmallVector<SDValue, 4> Ops = {RD, RS1, IS3, IS2};
+    CurDAG->SelectNodeTo(Node, RISCV::CV_INSERT, MVT::i32, Ops);
+    return true;
+  }
+
+  return false;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1424,6 +1826,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SRA: {
+    if (tryCVBitManipExtract(Node))
+      return;
+
     if (trySignedBitfieldExtract(Node))
       return;
 
@@ -1493,6 +1898,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::OR: {
+    if (tryCVBitManipBSet(Node))
+      return;
+
+    if (tryCVBitManipInsert(Node))
+      return;
+
     if (tryShrinkShlLogicImm(Node))
       return;
 
@@ -1504,6 +1915,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     break;
   case ISD::AND: {
+    // xcvbitmanip: try extractu first
+    if (tryCVBitManipExtractU(Node))
+      return;
+    // xcvbitmanip: then try bclr
+    if (tryCVBitManipBClr(Node))
+      return;
+
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
     if (!N1C)
       break;
