@@ -121,8 +121,8 @@ endfunction(check_hwcap)
 #   emulator_exec
 # )
 #
-# mlir_e2e_tests  - MLIR CMake variables corresponding to the group of e2e tests
-#                   to check
+# mlir_e2e_tests  - Name of the MLIR CMake variable to gate on; also used to
+#                   name the flag in the error message below.
 # hwcap_spec      - HWCAP value to check. This should correspond to the hardware
 #                   capabilities required by the tests to be checked. Possible
 #                   values are defined in hwcap.h in the Linux kernel.
