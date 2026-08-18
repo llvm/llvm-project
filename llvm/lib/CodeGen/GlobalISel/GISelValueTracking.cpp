@@ -1122,12 +1122,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       break;
     Register SrcReg = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
+    // Ignore bitcasts from untyped sources.
+    if (SrcTy.isAnyScalar() || SrcTy.isAnyVector())
+      break;
+
     unsigned SrcBitWidth = SrcTy.getScalarSizeInBits();
     unsigned NumElts = DemandedElts.getBitWidth();
-    // Ignore bitcasts from unsupported types.
-    if (!(SrcTy.isInteger() || SrcTy.isIntegerVector() ||
-          SrcTy.isFloatOrFloatVector()))
-      break;
 
     // Fast handling of 'identity' bitcasts.
     if (BitWidth == SrcBitWidth) {
