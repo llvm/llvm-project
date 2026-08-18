@@ -17,59 +17,44 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/math/expf.h"
 #include "src/__support/math/expf_integer_eval.h"
-#include "src/math/expf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcExpfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using LlvmLibcExpfStaticRoundingTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-// TODO: add tests
+namespace static_rounding = LIBC_NAMESPACE::shared::math::static_rounding;
+namespace math = LIBC_NAMESPACE::math;
 
-// TEST_F(LlvmLibcExpfTest, SpecialNumbers) {
-//   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::expf(sNaN));
-//   EXPECT_MATH_ERRNO(0);
+TEST_F(LlvmLibcExpfStaticRoundingTest, SpecialNumbers) {
+  using LIBC_NAMESPACE::fputil::testing::get_fe_rounding;
 
-//   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::expf(aNaN));
-//   EXPECT_MATH_ERRNO(0);
+  constexpr float VALUES[] = {sNaN, aNaN, inf, neg_inf, 0.0f, -0.0f};
 
-//   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::expf(inf));
-//   EXPECT_MATH_ERRNO(0);
+  for (auto rounding : ROUNDING_MODES) {
+    const int fenv_rounding = get_fe_rounding(rounding);
 
-//   EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::expf(neg_inf));
-//   EXPECT_MATH_ERRNO(0);
+    for (auto x : VALUES) {
+      EXPECT_FP_EQ_ROUNDING_MODE(
+          math::expf(x), static_rounding::expf(x, fenv_rounding), rounding);
+      EXPECT_MATH_ERRNO(0);
+    }
+  }
+}
 
-//   EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::expf(0.0f));
-//   EXPECT_MATH_ERRNO(0);
+TEST_F(LlvmLibcExpfStaticRoundingTest, Overflow) {
+  using LIBC_NAMESPACE::fputil::testing::get_fe_rounding;
 
-//   EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::expf(-0.0f));
-//   EXPECT_MATH_ERRNO(0);
-// }
+  constexpr float VALUES[] = {FPBits(0x7f7fffffU).get_val(),
+                              FPBits(0x42cffff8U).get_val(),
+                              FPBits(0x42d00008U).get_val()};
 
-// TEST_F(LlvmLibcExpfTest, Overflow) {
-//   using LIBC_NAMESPACE::shared::math::static_rounding::expf;
-//   EXPECT_FP_EQ_ALL_ROUNDING(
-//       inf, LIBC_NAMESPACE::expf(FPBits(0x7f7fffffU).get_val()));
-//   EXPECT_MATH_ERRNO(0);
+  for (auto rounding : ROUNDING_MODES) {
+    const int fenv_rounding = get_fe_rounding(rounding);
 
-//   EXPECT_FP_EQ_ALL_ROUNDING(
-//       inf, LIBC_NAMESPACE::expf(FPBits(0x42cffff8U).get_val()));
-//   EXPECT_MATH_ERRNO(0);
-
-//   EXPECT_FP_EQ_ALL_ROUNDING(
-//       inf, LIBC_NAMESPACE::expf(FPBits(0x42d00008U).get_val()));
-//   EXPECT_MATH_ERRNO(0);
-
-//   constexpr float X = FPBits(0xC2CF'F1B2U).get_val();
-//   EXPECT_FP_EQ_ROUNDING_NEAREST(
-//     LIBC_NAMESPACE::expf(X), expf(X, FE_TONEAREST)
-//   );
-//   EXPECT_MATH_ERRNO(0);
-// }
-
-TEST_F(LlvmLibcExpfTest, Special) {
-  float x = FPBits(3266354647U).get_val();
-  EXPECT_FP_EQ_ROUNDING_NEAREST(
-      LIBC_NAMESPACE::math::expf(x),
-      LIBC_NAMESPACE::shared::math::static_rounding::expf(x, FE_TONEAREST));
-  EXPECT_MATH_ERRNO(0);
+    for (auto x : VALUES) {
+      EXPECT_FP_EQ_ROUNDING_MODE(
+          math::expf(x), static_rounding::expf(x, fenv_rounding), rounding);
+      EXPECT_MATH_ERRNO(ERANGE);
+    }
+  }
 }

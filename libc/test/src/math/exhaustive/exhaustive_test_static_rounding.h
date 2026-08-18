@@ -53,7 +53,6 @@ struct StaticallyRoundedUnaryOpChecker
 
     // ForceRoundingMode already checks for valid FE_* rounding mode
     using LIBC_NAMESPACE::fputil::testing::get_fe_rounding;
-    using LIBC_NAMESPACE::testing::tlog;
     const int fenv_rounding = get_fe_rounding(rounding);
 
     StorageType bits = start;
@@ -66,9 +65,8 @@ struct StaticallyRoundedUnaryOpChecker
       failed += (!correct);
       // Uncomment to print out failed values.
       if (!correct) {
-        tlog << xbits.uintval() << '\n';
-        // EXPECT_FP_EQ_ROUNDING_MODE(BaselineFunc(x), Func(x, fenv_rounding),
-        // rounding);
+        EXPECT_FP_EQ_ROUNDING_MODE(BaselineFunc(x), Func(x, fenv_rounding),
+                                   rounding);
       }
     } while (bits++ < stop);
 

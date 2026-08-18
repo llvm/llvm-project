@@ -29,24 +29,11 @@ using RoundingMode = LIBC_NAMESPACE::fputil::testing::RoundingMode;
 namespace static_rounding = LIBC_NAMESPACE::shared::math::static_rounding;
 namespace math = LIBC_NAMESPACE::math;
 
-LIBC_INLINE constexpr int
-rounding_mode_to_fenv_rounding_mode(RoundingMode rounding) {
-  switch (rounding) {
-  case RoundingMode::Nearest:
-    return FE_TONEAREST;
-  case RoundingMode::Downward:
-    return FE_DOWNWARD;
-  case RoundingMode::Upward:
-    return FE_UPWARD;
-  case RoundingMode::TowardZero:
-    return FE_TOWARDZERO;
-  }
-  return FE_TONEAREST; // Default case, should not happen
-}
-
 TEST_F(LlvmLibcExpfStaticRoundingTest, SpecialNumbers) {
+  using LIBC_NAMESPACE::fputil::testing::get_fe_rounding;
+
   for (auto rounding : ROUNDING_MODES) {
-    const int fenv_rounding = rounding_mode_to_fenv_rounding_mode(rounding);
+    const int fenv_rounding = get_fe_rounding(rounding);
     EXPECT_FP_EQ_ROUNDING_MODE(
         math::expf(aNaN), static_rounding::expf(aNaN, fenv_rounding), rounding);
     EXPECT_MATH_ERRNO(0);
@@ -77,7 +64,7 @@ TEST_F(LlvmLibcExpfStaticRoundingTest, Overflow) {
                               FPBits(0x42d00008U).get_val()};
 
   for (auto rounding : ROUNDING_MODES) {
-    const int fenv_rounding = rounding_mode_to_fenv_rounding_mode(rounding);
+    const int fenv_rounding = get_fe_rounding(rounding);
 
     // Statically rounded expf doesn't raise exceptions
 
@@ -89,12 +76,14 @@ TEST_F(LlvmLibcExpfStaticRoundingTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExpfStaticRoundingTest, Underflow) {
+  using LIBC_NAMESPACE::fputil::testing::get_fe_rounding;
+
   constexpr float VALUES[] = {FPBits(0xff7fffffU).get_val(),
                               FPBits(0xc2cffff8U).get_val(),
                               FPBits(0xc2d00008U).get_val()};
 
   for (auto rounding : ROUNDING_MODES) {
-    const int fenv_rounding = rounding_mode_to_fenv_rounding_mode(rounding);
+    const int fenv_rounding = get_fe_rounding(rounding);
 
     // Statically rounded expf doesn't raise exceptions
     for (auto x : VALUES) {
@@ -107,22 +96,17 @@ TEST_F(LlvmLibcExpfStaticRoundingTest, Underflow) {
 // Test with inputs which are the borders of underflow/overflow but still
 // produce valid results without setting errno.
 TEST_F(LlvmLibcExpfStaticRoundingTest, Borderline) {
+  using LIBC_NAMESPACE::fputil::testing::get_fe_rounding;
+
   constexpr float VALUES[] = {
       FPBits(0x42affff8U).get_val(), FPBits(0x42b00008U).get_val(),
       FPBits(0xc2affff8U).get_val(), FPBits(0xc2b00008U).get_val(),
       FPBits(0xc236bd8cU).get_val()};
 
   for (auto rounding : ROUNDING_MODES) {
-    const int fenv_rounding = rounding_mode_to_fenv_rounding_mode(rounding);
+    const int fenv_rounding = get_fe_rounding(rounding);
 
     for (auto x : VALUES) {
-      // printf(
-      //     "mode = %d, 0x%X, math::expf = 0x%X, static_rounding::expf =
-      //     0x%X\n", fenv_rounding, FPBits(x).uintval(),
-      //     FPBits(math::expf(x)).uintval(), FPBits(static_rounding::expf(x,
-      //     fenv_rounding)).uintval());
-      // TODO: fix failing case:
-      // 0xC2B00008, math::expf = 0x41ECBD, static_rounding::expf = 0x41ECBC
       EXPECT_FP_EQ_ROUNDING_MODE(
           math::expf(x), static_rounding::expf(x, fenv_rounding), rounding);
     }
@@ -130,10 +114,12 @@ TEST_F(LlvmLibcExpfStaticRoundingTest, Borderline) {
 }
 
 TEST_F(LlvmLibcExpfStaticRoundingTest, InFloatRange) {
+  using LIBC_NAMESPACE::fputil::testing::get_fe_rounding;
+
   constexpr uint32_t COUNT = 1'231;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (auto rounding : ROUNDING_MODES) {
-    const int fenv_rounding = rounding_mode_to_fenv_rounding_mode(rounding);
+    const int fenv_rounding = get_fe_rounding(rounding);
 
     for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       float x = FPBits(v).get_val();
