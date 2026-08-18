@@ -5934,6 +5934,24 @@ static bool printLLVMOMPOFFLOADNote(raw_ostream &OS, uint32_t NoteType,
   return true;
 }
 
+struct FDONote {
+  std::string Type;
+  std::string Value;
+};
+
+template <typename ELFT>
+static std::optional<FDONote> getFDONote(typename ELFT::Word NoteType,
+                                         ArrayRef<uint8_t> Desc) {
+  switch (NoteType) {
+  case ELF::FDO_PACKAGING_METADATA:
+    return FDONote{"Packaging Metadata", toStringRef(Desc).rtrim('\0').str()};
+  case ELF::NT_FDO_DLOPEN_METADATA:
+    return FDONote{"Dlopen Metadata", toStringRef(Desc).rtrim('\0').str()};
+  default:
+    return std::nullopt;
+  }
+}
+
 constexpr EnumStringDef<unsigned> FreeBSDFeatureCtlFlagsDefs[] = {
     {{"ASLR_DISABLE"}, NT_FREEBSD_FCTL_ASLR_DISABLE},
     {{"PROTMAX_DISABLE"}, NT_FREEBSD_FCTL_PROTMAX_DISABLE},
@@ -6220,6 +6238,11 @@ const NoteType GNUNoteTypes[] = {
     {ELF::NT_GNU_PROPERTY_TYPE_0, "NT_GNU_PROPERTY_TYPE_0 (property note)"},
 };
 
+const NoteType FDONoteTypes[] = {
+    {ELF::FDO_PACKAGING_METADATA, "FDO_PACKAGING_METADATA"},
+    {ELF::NT_FDO_DLOPEN_METADATA, "FDO_DLOPEN_METADATA"},
+};
+
 const NoteType FreeBSDCoreNoteTypes[] = {
     {ELF::NT_FREEBSD_THRMISC, "NT_THRMISC (thrmisc structure)"},
     {ELF::NT_FREEBSD_PROCSTAT_PROC, "NT_PROCSTAT_PROC (proc data)"},
@@ -6379,6 +6402,8 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
   StringRef Name = Note.getName();
   if (Name == "GNU")
     return FindNote(GNUNoteTypes);
+  if (Name == "FDO")
+    return FindNote(FDONoteTypes);
   if (Name == "FreeBSD") {
     if (ELFType == ELF::ET_CORE) {
       // FreeBSD also places the generic core notes in the FreeBSD namespace.
@@ -6532,6 +6557,11 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
     if (Name == "GNU") {
       if (printGNUNote<ELFT>(OS, Type, Descriptor, EMachine))
         return Error::success();
+    } else if (Name == "FDO") {
+      if (std::optional<FDONote> N = getFDONote<ELFT>(Type, Descriptor)) {
+        OS << "    " << N->Type << ": " << N->Value << '\n';
+        return Error::success();
+      }
     } else if (Name == "FreeBSD") {
       if (std::optional<FreeBSDNote> N =
               getFreeBSDNote<ELFT>(Type, Descriptor, IsCore)) {
@@ -8733,6 +8763,19 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
     if (Name == "GNU") {
       if (printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W, EMachine))
         return Error::success();
+    } else if (Name == "FDO") {
+      if (std::optional<FDONote> N = getFDONote<ELFT>(Type, Descriptor)) {
+        auto JsonValue = llvm::json::parse(N->Value);
+        if (JsonValue)
+          W.printObject(N->Type, JsonValue.get());
+        else {
+          // Don't care why the embedded json failed to parse, just output it
+          // as a raw string.
+          consumeError(JsonValue.takeError());
+          W.printString(N->Type, N->Value);
+        }
+        return Error::success();
+      }
     } else if (Name == "FreeBSD") {
       if (std::optional<FreeBSDNote> N =
               getFreeBSDNote<ELFT>(Type, Descriptor, IsCore)) {
