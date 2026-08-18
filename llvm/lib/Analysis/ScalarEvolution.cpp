@@ -4623,6 +4623,30 @@ bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
   return FoundAddRec;
 }
 
+bool ScalarEvolution::hasSameSCEVUnknowns(const SCEV *A, const SCEV *B) {
+  auto CacheUnknowns = [&](const SCEV *Root) {
+    auto [It, Inserted] = SCEVUnknownsCache.try_emplace(Root);
+    if (!Inserted)
+      return;
+
+    struct Collector {
+      SCEVUnknownSet &Unknowns;
+
+      bool follow(const SCEV *S) {
+        if (auto *Unknown = dyn_cast<SCEVUnknown>(S))
+          Unknowns.insert(Unknown);
+        return true;
+      }
+      bool isDone() const { return false; }
+    } C{It->second};
+    visitAll(Root, C);
+  };
+  CacheUnknowns(A);
+  CacheUnknowns(B);
+
+  return SCEVUnknownsCache.find(A)->second == SCEVUnknownsCache.find(B)->second;
+}
+
 /// Return the ValueOffsetPair set for \p S. \p S can be represented
 /// by the value and offset from any ValueOffsetPair in the set.
 ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
@@ -8726,6 +8750,7 @@ void ScalarEvolution::forgetAllLoops() {
   SignedRanges.clear();
   ExprValueMap.clear();
   HasRecMap.clear();
+  SCEVUnknownsCache.clear();
   ConstantMultipleCache.clear();
   PredicatedSCEVRewrites.clear();
   FoldCache.clear();
@@ -14150,6 +14175,7 @@ ScalarEvolution::~ScalarEvolution() {
   ExprValueMap.clear();
   ValueExprMap.clear();
   HasRecMap.clear();
+  SCEVUnknownsCache.clear();
   BackedgeTakenCounts.clear();
   PredicatedBackedgeTakenCounts.clear();
 
@@ -14697,6 +14723,7 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   UnsignedRanges.erase(S);
   SignedRanges.erase(S);
   HasRecMap.erase(S);
+  SCEVUnknownsCache.erase(S);
   ConstantMultipleCache.erase(S);
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(S)) {
