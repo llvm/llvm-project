@@ -1,5 +1,6 @@
 ! RUN: split-file %s %t
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task.f90 | FileCheck %s --check-prefix=TASK --implicit-check-not=not\ yet\ implemented --implicit-check-not=Ea_firstprivate
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-default.f90 | FileCheck %s --check-prefix=TASK-DEFAULT --implicit-check-not=not\ yet\ implemented --implicit-check-not=Ea_firstprivate --implicit-check-not=Ea_private
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop.f90 | FileCheck %s --check-prefix=TASKLOOP --implicit-check-not=not\ yet\ implemented --implicit-check-not=Ea_firstprivate
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop.f90 | FileCheck %s --check-prefix=TASKLOOP --implicit-check-not=not\ yet\ implemented --implicit-check-not=Ea_firstprivate
 
@@ -18,6 +19,26 @@
 ! TASK: %[[TASK_ELEMENT:.*]] = hlfir.designate %[[TASK_SECTION]]
 ! TASK: %[[TASK_VALUE:.*]] = fir.load %[[TASK_ELEMENT]]
 ! TASK: arith.addi %[[TASK_VALUE]]
+
+! TASK-DEFAULT-LABEL: func.func @_QPtask_default_firstprivate_full_section
+! TASK-DEFAULT: omp.task in_reduction(byref @add_reduction_byref_box_4xi32 {{.*}} -> %[[FIRSTPRIVATE_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+! TASK-DEFAULT: %[[FIRSTPRIVATE_DECL:.*]]:2 = hlfir.declare %[[FIRSTPRIVATE_ARG]]
+! TASK-DEFAULT: %[[FIRSTPRIVATE_BOX:.*]] = fir.load %[[FIRSTPRIVATE_DECL]]#0
+! TASK-DEFAULT: %[[FIRSTPRIVATE_SECTION:.*]] = hlfir.designate %[[FIRSTPRIVATE_BOX]]
+! TASK-DEFAULT: hlfir.elemental
+! TASK-DEFAULT: %[[FIRSTPRIVATE_ELEMENT:.*]] = hlfir.designate %[[FIRSTPRIVATE_SECTION]]
+! TASK-DEFAULT: %[[FIRSTPRIVATE_VALUE:.*]] = fir.load %[[FIRSTPRIVATE_ELEMENT]]
+! TASK-DEFAULT: arith.addi %[[FIRSTPRIVATE_VALUE]]
+
+! TASK-DEFAULT-LABEL: func.func @_QPtask_default_private_full_section
+! TASK-DEFAULT: omp.task in_reduction(byref @add_reduction_byref_box_4xi32 {{.*}} -> %[[PRIVATE_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+! TASK-DEFAULT: %[[PRIVATE_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ARG]]
+! TASK-DEFAULT: %[[PRIVATE_BOX:.*]] = fir.load %[[PRIVATE_DECL]]#0
+! TASK-DEFAULT: %[[PRIVATE_SECTION:.*]] = hlfir.designate %[[PRIVATE_BOX]]
+! TASK-DEFAULT: hlfir.elemental
+! TASK-DEFAULT: %[[PRIVATE_ELEMENT:.*]] = hlfir.designate %[[PRIVATE_SECTION]]
+! TASK-DEFAULT: %[[PRIVATE_VALUE:.*]] = fir.load %[[PRIVATE_ELEMENT]]
+! TASK-DEFAULT: arith.addi %[[PRIVATE_VALUE]]
 
 ! TASKLOOP-LABEL: func.func @_QPtaskloop_in_full_section
 ! TASKLOOP: omp.taskloop.context in_reduction(byref @add_reduction_byref_box_4xi32 {{.*}} -> %[[IN_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<4xi32>>>)
@@ -54,6 +75,25 @@ subroutine task_full_section(a)
   integer :: a(-2:1)
   !$omp taskgroup task_reduction(+: a(:))
   !$omp task in_reduction(+: a(:))
+  a(:) = a(:) + 1
+  !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+!--- task-default.f90
+subroutine task_default_firstprivate_full_section(a)
+  integer :: a(-2:1)
+  !$omp taskgroup task_reduction(+: a(:))
+  !$omp task default(firstprivate) in_reduction(+: a(:))
+  a(:) = a(:) + 1
+  !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+subroutine task_default_private_full_section(a)
+  integer :: a(-2:1)
+  !$omp taskgroup task_reduction(+: a(:))
+  !$omp task default(private) in_reduction(+: a(:))
   a(:) = a(:) + 1
   !$omp end task
   !$omp end taskgroup

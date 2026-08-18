@@ -558,10 +558,13 @@ void DataSharingProcessor::collectPrivatizedSymbols(
     const llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions,
     llvm::SetVector<const semantics::Symbol *> *symbols) {
   // Filter-out symbols that must not be privatized.
+  bool collectDefaultPrivate = false;
   bool collectImplicit = false;
   bool collectPreDetermined = false;
   bool collectIndirectRefs = !flag.has_value();
   if (!collectIndirectRefs) {
+    collectDefaultPrivate = *flag == semantics::Symbol::Flag::OmpPrivate ||
+                            *flag == semantics::Symbol::Flag::OmpFirstPrivate;
     collectImplicit = *flag == semantics::Symbol::Flag::OmpImplicit;
     collectPreDetermined = *flag == semantics::Symbol::Flag::OmpPreDetermined;
   }
@@ -578,13 +581,16 @@ void DataSharingProcessor::collectPrivatizedSymbols(
     if (sym->test(semantics::Symbol::Flag::OmpLinear) && !inTarget)
       return false;
 
-    if (collectImplicit) {
-      // A full-extent section is lowered through the same descriptor as its
-      // base array. Do not create a second implicit firstprivate descriptor;
-      // the reduction region argument must be the binding used in the body.
-      if (wholeArrayReductionSymbols.contains(&sym->GetUltimate()))
-        return false;
+    // A full-extent section is lowered through the same descriptor as its base
+    // array. Do not create a second private descriptor when privatization is
+    // selected implicitly or by a default clause; the reduction region
+    // argument must be the binding used in the body. Explicit private clauses
+    // are collected separately in collectSymbolsForPrivatization().
+    if ((collectImplicit || collectDefaultPrivate) &&
+        wholeArrayReductionSymbols.contains(&sym->GetUltimate()))
+      return false;
 
+    if (collectImplicit) {
       // If we're a combined construct with a target region, implicit
       // firstprivate captures, should only belong to the target region
       // and not be added/captured by later directives. Parallel regions
