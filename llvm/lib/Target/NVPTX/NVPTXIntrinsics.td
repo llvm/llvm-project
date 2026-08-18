@@ -6774,9 +6774,7 @@ class Tcgen05MMADecompressBase<string ASpace, string Kind, int CtaGroup,
                        CollectorUsageA, CollectorUsageB> {
   let Predicates = [hasRubinFamilySupport];
 
-  let KindVal = !cond(
-                  !eq(Kind, "f8f6f4") : 0
-                );
+  let KindVal = !cond(!eq(Kind, "f8f6f4") : 0);
 
   dag DecompressBaseInOperandList = !con(BaseInOperandList,
                                          (ins B32:$decompress_b));
@@ -6910,9 +6908,7 @@ class Tcgen05MMADecompressBlockScaleInst<string ASpace, string Kind,
                             ASpace, Kind, ScaleVecSize>.record_name
                      );
 
-  let KindVal = !cond(
-                  !eq(Kind, "mxf8f6f4") : 0
-                );
+  let KindVal = !cond(!eq(Kind, "mxf8f6f4") : 0);
 
   let InOperandList = !con(BaseInOperandList,
                            (ins B32:$scale_a, B32:$scale_b,
