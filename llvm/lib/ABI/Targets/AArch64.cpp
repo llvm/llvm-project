@@ -57,7 +57,9 @@ std::unique_ptr<TargetInfo> createAArch64TargetInfo(TypeBuilder &TB,
 }
 
 static void reportNYI(StringRef Feature) {
-  WithColor::warning() << Feature << " is not yet implemented for AArch64 in the LLVM ABI library.\n";
+  WithColor::warning()
+      << Feature
+      << " is not yet implemented for AArch64 in the LLVM ABI library.\n";
 }
 
 ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
