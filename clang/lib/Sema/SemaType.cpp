@@ -6343,21 +6343,16 @@ namespace {
   };
 } // end anonymous namespace
 
-static void
-fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
-                                 const Declarator &D,
-                                 const DeclaratorChunk &Chunk) {
-  // An attribute written after the declarator-id appertains to the declared
-  // entity and is applied to the outermost type rather than to a chunk, so
-  // every attribute list of the declarator has to be searched.
-  const ParsedAttributesView *AttrLists[] = {
-      &Chunk.getAttrs(), &D.getAttributes(), &D.getDeclSpec().getAttributes(),
-      &D.getDeclarationAttributes()};
+static void fillDependentAddressSpaceTypeLoc(
+    DependentAddressSpaceTypeLoc DASTL,
+    ArrayRef<const ParsedAttributesView *> AttrLists) {
   for (const ParsedAttributesView *Attrs : AttrLists) {
     for (const ParsedAttr &AL : *Attrs) {
-      // Invalid or malformed attributes never produce a type.
-      if (AL.getKind() != ParsedAttr::AT_AddressSpace || AL.isInvalid() ||
-          AL.getNumArgs() != 1 || !AL.isArgExpr(0))
+      if (AL.getKind() != ParsedAttr::AT_AddressSpace)
+        continue;
+      // Skip an attribute that did not produce a type: one diagnosed as
+      // invalid, or one whose argument is missing or is not an expression.
+      if (AL.isInvalid() || AL.getNumArgs() != 1 || !AL.isArgExpr(0))
         continue;
       DASTL.setAttrNameLoc(AL.getLoc());
       DASTL.setAttrExprOperand(AL.getArgAsExpr(0));
@@ -6433,7 +6428,14 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
 
       case TypeLoc::DependentAddressSpace: {
         auto TL = CurrTL.castAs<DependentAddressSpaceTypeLoc>();
-        fillDependentAddressSpaceTypeLoc(TL, D, D.getTypeObject(i));
+        // An attribute written after the declarator-id appertains to the
+        // declared entity and is applied to the outermost type rather than
+        // to a chunk, so every attribute list of the declarator has to be
+        // searched.
+        fillDependentAddressSpaceTypeLoc(TL, {&D.getTypeObject(i).getAttrs(),
+                                              &D.getAttributes(),
+                                              &D.getDeclSpec().getAttributes(),
+                                              &D.getDeclarationAttributes()});
         CurrTL = TL.getPointeeTypeLoc().getUnqualifiedLoc();
         break;
       }
