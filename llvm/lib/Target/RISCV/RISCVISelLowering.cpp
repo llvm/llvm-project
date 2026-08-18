@@ -18784,8 +18784,7 @@ static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
   // Canonicalize the comparison.
   if (CC == ISD::SETUGT || CC == ISD::SETGT) {
     std::swap(LHS, RHS);
-    // Flip the 'L' and 'G' bits.
-    CC = ISD::CondCode(static_cast<unsigned>(CC) ^ 6);
+    CC = ISD::getSetCCSwappedOperands(CC);
   }
   bool IsSigned = ISD::isSignedIntSetCC(CC);
 
