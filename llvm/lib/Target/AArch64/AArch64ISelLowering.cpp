@@ -1442,6 +1442,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VECREDUCE_OR, MVT::v2i64, Custom);
     setOperationAction(ISD::VECREDUCE_XOR, MVT::v2i64, Custom);
 
+    for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v2i32, MVT::v4i32})
+      setOperationAction(ISD::SMULFIXSAT, VT, Custom);
+
     setOperationAction(ISD::ANY_EXTEND, MVT::v4i32, Legal);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
     // Likewise, narrowing and extending vector loads/stores aren't handled
@@ -1537,6 +1540,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // FADDP custom lowering
     for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
       setOperationAction(ISD::FADD, VT, Custom);
+
+    // Two-way integer ``pure'' add reductions lower to a [SU]ADALP.
+    {
+      static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                        ISD::PARTIAL_REDUCE_UMLA};
+      setPartialReduceMLAAction(MLAOps, MVT::v4i16, MVT::v8i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v4i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v1i64, MVT::v2i32, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+    }
 
     if (Subtarget->hasDotProd()) {
       static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
@@ -2197,6 +2212,36 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CLMUL, MVT::nxv2i64, Custom);
   }
 
+  if (Subtarget->isSVEAvailable() ||
+      (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())) {
+    // We can lower types that have <vscale x {2|4}> elements to compact.
+    for (auto VT :
+         {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+
+    // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
+    // bits of the SVE register.
+    for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
+                    MVT::v2f64})
+      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+
+    if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
+      // With +sve2p2/+sme2p2 the full range of vector types are supported.
+      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
+        setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+
+      for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
+                      MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
+        setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+    } else {
+      // Promote v4i16/f16 to v4i32/f32 as the SVE container for v4i16 is nxv8,
+      // which is not supported with for compact (with only +sve).
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4bf16, MVT::v4i16);
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4f16, MVT::v4i16);
+      setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4i16, MVT::v4i32);
+    }
+  }
+
   // Handle non-aliasing elements mask
   if (Subtarget->hasSVE2() ||
       (Subtarget->hasSME() && Subtarget->isStreaming())) {
@@ -2229,23 +2274,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::nxv4f32, MVT::nxv2f64, MVT::v4f16, MVT::v8f16,
                     MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
-
-    // We can lower types that have <vscale x {2|4}> elements to compact.
-    for (auto VT :
-         {MVT::nxv4i32, MVT::nxv2i64, MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64})
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
-
-    // If we have SVE, we can use SVE logic for legal NEON vectors in the lowest
-    // bits of the SVE register.
-    for (auto VT : {MVT::v2i32, MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32,
-                    MVT::v2f64})
-      setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
-
-    // Promote v4i16/f16 to v4i32/f32 as the SVE container for v4i16 is nxv8,
-    // which is not supported with for compact (with only +sve).
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4bf16, MVT::v4i16);
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4f16, MVT::v4i16);
-    setOperationPromotedToType(ISD::VECTOR_COMPRESS, MVT::v4i16, MVT::v4i32);
 
     for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64,
                     MVT::nxv2f32, MVT::nxv2f64, MVT::nxv4i8, MVT::nxv4i16,
@@ -6484,18 +6512,10 @@ static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   EVT Op1VT = Op1.getValueType();
   EVT Op2VT = Op2.getValueType();
   EVT ResVT = Op.getValueType();
-  unsigned SearchSize = Op2VT.getVectorNumElements();
 
   assert((Op1VT.getVectorElementType() == MVT::i8 ||
           Op1VT.getVectorElementType() == MVT::i16) &&
          "Expected 8-bit or 16-bit characters.");
-
-  if ((Op1VT == MVT::nxv8i16 || Op1VT == MVT::v8i16) && SearchSize != 8)
-    return SDValue();
-
-  if ((Op1VT == MVT::nxv16i8 || Op1VT == MVT::v16i8 || Op1VT == MVT::v8i8) &&
-      SearchSize != 8 && SearchSize != 16)
-    return SDValue();
 
   SDValue ID =
       DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
@@ -8128,9 +8148,6 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorCompressToSVE(
 SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
                                                     SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  if (!Subtarget->isSVEAvailable())
-    return SDValue();
-
   if (VT.isFixedLengthVector())
     return LowerFixedLengthVectorCompressToSVE(Op, DAG);
 
@@ -8161,6 +8178,21 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
 
   return DAG.getNode(ISD::VSELECT, DL, VT, CompressedMask, Compressed,
                      Passthru);
+}
+
+SDValue AArch64TargetLowering::LowerSMULFIXSAT(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert((VT == MVT::v4i16 || VT == MVT::v8i16 || VT == MVT::v2i32 ||
+          VT == MVT::v4i32) &&
+         "Unexpected type for SMULFIXSAT lowering");
+
+  unsigned Scale = Op.getConstantOperandVal(2);
+  if (Scale != VT.getScalarSizeInBits() - 1)
+    return SDValue();
+
+  return DAG.getNode(AArch64ISD::SQDMULH, SDLoc(Op), VT, Op.getOperand(0),
+                     Op.getOperand(1));
 }
 
 // Generate SUBS and CSEL for integer abs.
@@ -8910,6 +8942,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFixedLengthVectorSelectToSVE(Op, DAG);
   case ISD::ABS:
     return LowerABS(Op, DAG);
+  case ISD::SMULFIXSAT:
+    return LowerSMULFIXSAT(Op, DAG);
   case ISD::ABDS:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
   case ISD::ABDU:
@@ -11503,10 +11537,7 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
     // add   x0, x0, :tprel_lo12:a
     SDValue Var = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, ThreadBase,
-                                      Var,
-                                      DAG.getTargetConstant(0, DL, MVT::i32)),
-                   0);
+    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ThreadBase, Var);
   }
 
   case 24: {
@@ -11522,10 +11553,10 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
                                       HiVar,
                                       DAG.getTargetConstant(0, DL, MVT::i32)),
                    0);
-    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr,
-                                      LoVar,
-                                      DAG.getTargetConstant(0, DL, MVT::i32)),
-                   0);
+    // Emit the low part as an ADDlow so that it can be folded into the
+    // addressing mode of a following load or store, turning the add into a
+    // :tprel_lo12_nc: relocation on the memory access itself.
+    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, Addr, LoVar);
   }
 
   case 32: {
@@ -13841,7 +13872,6 @@ bool AArch64TargetLowering::isFPImmLegalAsFMov(const APFloat &Imm,
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                          bool OptForSize) const {
   bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
-  const APInt ImmInt = Imm.bitcastToAPInt();
 
   // If we can not materialize in immediate field for fmov, check if the
   // value can be encoded as the immediate operand of a logical instruction.
@@ -13856,15 +13886,34 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // movw+movk is fused). So by default we limit up to 2 instructions
     // or 4 with hasFuseLiterals.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
+    const APInt ImmInt = Imm.bitcastToAPInt();
     AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
     assert(Insn.size() <= 4 &&
            "Should be able to build any value with at most 4 moves");
-    unsigned Limit = (OptForSize ? 1 : (Subtarget->hasFuseLiterals() ? 4 : 2));
+
+    unsigned Limit = OptForSize ? 1 : 2;
+
+    if (!OptForSize && Insn.size() > Limit && Subtarget->hasFuseLiterals()) {
+      // Relax the limit based on subtarget fusion capabilites
+      for (unsigned I = 0; I + 1 < Insn.size(); ++I) {
+        const AArch64_IMM::ImmInsnModel &First = Insn[I];
+        const AArch64_IMM::ImmInsnModel &Second = Insn[I + 1];
+        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2, Second.Opcode,
+                                       Second.Op2)) {
+          ++Limit;
+          // An instruction can only be fused once, so the 2nd one of the pair
+          // cannot start another pair and is skipped.
+          ++I;
+        }
+      }
+    }
+
     IsLegal = Insn.size() <= Limit;
   }
 
   LLVM_DEBUG(dbgs() << (IsLegal ? "Legal " : "Illegal ") << VT
-                    << " imm value: "; Imm.dump(););
+                    << " imm value: ";
+             Imm.dump(););
   return IsLegal;
 }
 
@@ -16993,8 +17042,16 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
-                      cast<BuildVectorSDNode>(Op)->isArithmeticSequence();
+  bool OverrideNEON = !Subtarget->isNeonAvailable();
+  if (!OverrideNEON && Subtarget->isSVEorStreamingSVEAvailable()) {
+    if (auto Seq = cast<BuildVectorSDNode>(Op)->isArithmeticSequence()) {
+      // Only attempt to use the SVE index instruction if both operands are
+      // immediate, otherwise it's better to load a literal.
+      if (Seq->first.sge(-16) && Seq->first.slt(16) && Seq->second.sge(-16) &&
+          Seq->second.slt(16))
+        OverrideNEON = true;
+    }
+  }
   if (useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
@@ -20254,6 +20311,11 @@ AArch64TargetLowering::getScratchRegisters(CallingConv::ID) const {
 ArrayRef<MCPhysReg> AArch64TargetLowering::getRoundingControlRegisters() const {
   static const MCPhysReg RCRegs[] = {AArch64::FPCR};
   return RCRegs;
+}
+
+bool AArch64TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                                  EVT DestVT) const {
+  return isTypeLegal(DestVT) && DestVT.isVector();
 }
 
 bool
@@ -28365,6 +28427,9 @@ bool checkValueWidth(SDValue V, unsigned width, ISD::LoadExtType &ExtType) {
     LoadSDNode *LoadNode = cast<LoadSDNode>(V.getNode());
     if ((LoadNode->getMemoryVT() == MVT::i8 && width == 8)
        || (LoadNode->getMemoryVT() == MVT::i16 && width == 16)) {
+      if (LoadNode->getExtensionType() != ISD::SEXTLOAD &&
+          LoadNode->getExtensionType() != ISD::ZEXTLOAD)
+        return false;
       ExtType = LoadNode->getExtensionType();
       return true;
     }
@@ -29238,6 +29303,17 @@ static SDValue performSETCCCombine(SDNode *N,
       ISD::isConstantSplatVector(LHS.getNode(), SplatLHSVal) &&
       SplatLHSVal.isOne())
     return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, CmpVT), RHS, ISD::SETGE);
+
+  // Fold setcc(and(X, Y), 0, seteq) --> NOT(AArch64ISD::CMTST(X, Y)).
+  // SETNE will have been legalized to SETEQ by this point.
+  // The NOT folds away when the result feeds a BSP.
+  if (DCI.isAfterLegalizeDAG() && CmpVT.isFixedLengthVector() &&
+      Cond == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
+      isZerosVector(RHS.getNode())) {
+    SDValue CMTSTNode = DAG.getNode(AArch64ISD::CMTST, DL, CmpVT,
+                                    LHS.getOperand(0), LHS.getOperand(1));
+    return DAG.getNOT(DL, CMTSTNode, CmpVT);
+  }
 
   return SDValue();
 }
@@ -33041,7 +33117,7 @@ Value *AArch64TargetLowering::getSafeStackPointerLocation(
 /// If a physical register, this returns the register that receives the
 /// exception address on entry to an EH pad.
 Register AArch64TargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // FIXME: This is a guess. Has this been defined yet?
   return AArch64::X0;
 }
@@ -33049,7 +33125,7 @@ Register AArch64TargetLowering::getExceptionPointerRegister(
 /// If a physical register, this returns the register that receives the
 /// exception typeid on entry to a landing pad.
 Register AArch64TargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // FIXME: This is a guess. Has this been defined yet?
   return AArch64::X1;
 }
@@ -34854,6 +34930,29 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   EVT ResultVT = Op.getValueType();
   EVT OrigResultVT = ResultVT;
   EVT OpVT = LHS.getValueType();
+
+  // Two-way fixed-length integer add reductions.
+  if ((Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA ||
+       Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA) &&
+      Subtarget->isNeonAvailable() &&
+      (OpVT.is64BitVector() || OpVT.is128BitVector()) &&
+      ResultVT.getScalarSizeInBits() == OpVT.getScalarSizeInBits() * 2 &&
+      ResultVT.getVectorNumElements() * 2 == OpVT.getVectorNumElements()) {
+    // A pure partial reduction can lower to [SU]ADALP via patterns.
+    if (isOneVector(RHS))
+      return Op;
+    // Otherwise, expand operations without efficient SVE lowering.
+    if (OpVT.getScalarType() == MVT::i8 &&
+        !(Subtarget->isSVEorStreamingSVEAvailable() &&
+          (Subtarget->hasSVE2p3() || Subtarget->hasSME2p3())))
+      return SDValue();
+    if (OpVT.getScalarType() == MVT::i16 &&
+        !(Subtarget->isSVEorStreamingSVEAvailable() &&
+          (Subtarget->hasSVE2p1() || Subtarget->hasSME2())))
+      return SDValue();
+    if (OpVT.getScalarType() == MVT::i32)
+      return SDValue();
+  }
 
   // We can handle this case natively by accumulating into a wider
   // zero-padded vector.

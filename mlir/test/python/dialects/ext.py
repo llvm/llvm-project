@@ -987,8 +987,8 @@ def testExtDialectWithInterfaces():
 
     class NoMemoryEffectModel(ir.MemoryEffectsOpInterface):
         @staticmethod
-        def get_effects(op, effects):
-            pass
+        def get_effects(op):
+            return []
 
     class AlwaysSpeculatableModel(ir.ConditionallySpeculatable):
         @staticmethod

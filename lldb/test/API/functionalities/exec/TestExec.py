@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireNotWasm  # no exec() on WebAssembly
+@requireNotWasm("no exec() on WebAssembly")
 class ExecTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

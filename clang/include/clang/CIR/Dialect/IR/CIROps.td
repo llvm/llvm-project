@@ -3301,12 +3301,22 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
-def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
+def CIR_TLSModel : CIR_I32EnumAttr<"TLSModel", "TLS model", [
   I32EnumAttrCase<"GeneralDynamic", 1, "tls_dyn">,
   I32EnumAttrCase<"LocalDynamic", 2, "tls_local_dyn">,
   I32EnumAttrCase<"InitialExec", 3, "tls_init_exec">,
   I32EnumAttrCase<"LocalExec", 4, "tls_local_exec">
-]>;
+  ]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
+  let summary = "TLS Model attribute";
+  let description = [{
+     The TLS mode for the global, which comes from either the
+    `tls_model` attribute, or `-ftls-model` flag.
+  }];
+}
 
 def CIR_GlobalOp : CIR_Op<"global", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
@@ -3347,8 +3357,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
                        OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
-                       OptionalAttr<CIR_TLSModel>:$tls_model,
-                       OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$dyn_tls_refs,
+                       OptionalAttr<CIR_TLSModelAttr>:$tls_model,
+                       OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$tls_refs,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitProp:$comdat,
                        UnitProp:$constant,
@@ -3371,8 +3381,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`constant` $constant^)?
     $linkage
     (`comdat` $comdat^)?
-    ($tls_model^)?
-    (`dyn_tls_refs` `=` $dyn_tls_refs^)?
+    (`tls_model` `=` $tls_model^)?
+    (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
     (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
@@ -3751,8 +3761,8 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 
     ```
     // 'e' is in the storage with the index 1
-    !record_type = !cir.record<struct "S" packed padded {!u64i, !u16i,
-                               !cir.array<!u8i x 2>} #cir.record.decl.ast>
+    !record_type = !cir.struct<"S" packed {!u64i, !u16i,
+                                           pad !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
                                 offset = 0, is_signed = true>
 
@@ -3842,7 +3852,8 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     ```
     // 'e' is in the storage with the index 1
-    !cir.record<struct "S" packed padded {!u64i, !u16i, !cir.array<!u8i x 2>}>
+    !cir.struct<"S" packed {!u64i, !u16i,
+                            pad !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
                                 offset = 0, is_signed = true>
 
@@ -6714,9 +6725,7 @@ def CIR_BitParityOp : CIR_BitOpBase<"parity", CIR_UIntOfWidths<[32, 64]>> {
   }];
 }
 
-def CIR_BitPopcountOp : CIR_BitOpBase<"popcount",
-  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
-> {
+def CIR_BitPopcountOp : CIR_BitOpBase<"popcount", CIR_AnyUIntType > {
   let summary = "Get the number of 1-bits in input";
   let description = [{
     Compute the number of 1-bits in the input.
@@ -9219,6 +9228,44 @@ def CIR_LaunderOp : CIR_Op<"launder", [SameOperandsAndResultType]> {
   }];
 
   let llvmOp = "LaunderInvariantGroupOp";
+}
+
+//===----------------------------------------------------------------------===//
+// ClearPaddingOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ClearPaddingOp : CIR_Op<"clear_padding", []> {
+  let summary = "Clear Padding Operation";
+  let description = [{
+    This operation represents a `__builtin_clear_padding` call, which sets all
+    padding bits in the pointee `arg` to zero. The `arg`'s alignment is also
+    stored in this operation so we can properly emit the stores/loads later.
+
+    Offsets into the variable are stored as an `OffsetPairAttr`.
+
+    During LLVM-IR lowering, this is converted into `getelementptr` and `store`
+    operations.
+
+    Example:
+
+    ```
+    cir.clear_padding(align(1) %1,
+                      [#cir.offset_pair<0, 2>, #cir.offset_pair<6, 8>])
+                      : <rec_Type> -> ()
+    ```
+  }];
+
+  let arguments = (ins
+      Arg<CIR_PointerType, "", [MemWrite]> : $arg,
+      ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
+      CIR_TypedArrayAttrBase<CIR_OffsetPairAttr,
+                             "array of padding locations">:$padding
+      );
+
+  let assemblyFormat = [{
+    `(` `align` `(` $alignment `)` $arg `,`
+        $padding `)` `:` type($arg) `->` `(` `)` attr-dict
+  }];
 }
 
 include "clang/CIR/Dialect/IR/CIRStdOps.td"

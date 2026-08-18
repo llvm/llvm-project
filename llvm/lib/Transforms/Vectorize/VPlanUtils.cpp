@@ -59,25 +59,18 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   return Expanded;
 }
 
-/// Returns true if \p R propagates poison from any operand to its result.
-static bool propagatesPoisonFromRecipeOp(const VPRecipeBase *R) {
-  return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case<VPWidenGEPRecipe, VPWidenCastRecipe>(
-          [](const VPRecipeBase *) { return true; })
-      .Case([](const VPReplicateRecipe *Rep) {
-        // GEP and casts propagate poison from all operands.
-        unsigned Opcode = Rep->getOpcode();
-        return Opcode == Instruction::GetElementPtr ||
-               Instruction::isCast(Opcode);
-      })
-      .Default([](const VPRecipeBase *) { return false; });
-}
-
 /// Returns true if \p V being poison is guaranteed to trigger UB because it
 /// propagates to the address of a memory recipe.
 static bool poisonGuaranteesUB(const VPValue *V) {
   SmallPtrSet<const VPValue *, 8> Visited;
   SmallVector<const VPValue *, 16> Worklist;
+
+  auto PropagatesPoisonFromRecipeOp = [](const VPRecipeBase *R) {
+    if (!isa<VPSingleDefRecipe>(R))
+      return false;
+    unsigned Opcode = vputils::getOpcode(R->getVPSingleValue());
+    return Instruction::isCast(Opcode) || Opcode == Instruction::GetElementPtr;
+  };
 
   Worklist.push_back(V);
 
@@ -88,7 +81,8 @@ static bool poisonGuaranteesUB(const VPValue *V) {
 
     for (VPUser *U : Current->users()) {
       // Check if Current is used as an address operand for load/store.
-      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(U))) {
+      auto *R = cast<VPRecipeBase>(U);
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(R)) {
         if (MemR->getAddr() == Current)
           return true;
         continue;
@@ -101,9 +95,8 @@ static bool poisonGuaranteesUB(const VPValue *V) {
       }
 
       // Check if poison propagates through this recipe to any of its users.
-      auto *R = cast<VPRecipeBase>(U);
       for (const VPValue *Op : R->operands()) {
-        if (Op == Current && propagatesPoisonFromRecipeOp(R)) {
+        if (Op == Current && PropagatesPoisonFromRecipeOp(R)) {
           Worklist.push_back(R->getVPSingleValue());
           break;
         }
@@ -465,13 +458,13 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   const VPRecipeBase *R = V->getDefiningRecipe();
   const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
   const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
-  if (VPBB) {
-    if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-      if (match(V->getDefiningRecipe(),
-                m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
-        return false;
-      return all_of(R->operands(), isUniformAcrossVFsAndUFs);
-    }
+  if (VPBB &&
+      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
+    if (match(R,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
+        match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
+      return false;
+    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)

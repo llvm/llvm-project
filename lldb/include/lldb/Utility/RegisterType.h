@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_REGISTERTYPE_H
 #define LLDB_UTILITY_REGISTERTYPE_H
 
+#include <cstdint>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -27,8 +28,11 @@ public:
 
   RegisterTypeKind getKind() const { return m_kind; }
 
-  RegisterType(RegisterTypeKind kind, std::string id)
-      : m_kind(kind), m_id(std::move(id)) {}
+  RegisterType(RegisterTypeKind kind, std::string id);
+  RegisterType(const RegisterType &) = delete;
+  RegisterType &operator=(const RegisterType &) = delete;
+  RegisterType(RegisterType &&) = delete;
+  RegisterType &operator=(RegisterType &&) = delete;
 
   /// Output XML that describes this type, to be inserted into a target XML
   /// file. Reserved characters like "<" are replaced with their XML safe
@@ -47,6 +51,11 @@ public:
 
   const std::string &GetID() const { return m_id; }
 
+  /// Return an identifier unique among all RegisterType instances constructed
+  /// during the lifetime of the LLDB host process. The identifier is not
+  /// reused after this instance is destroyed.
+  uint64_t GetUID() const { return m_uid; }
+
   void SetDependencies(std::vector<const RegisterType *> dependencies) {
     m_dependencies = dependencies;
   }
@@ -54,6 +63,7 @@ public:
 private:
   const RegisterTypeKind m_kind;
   const std::string m_id;
+  const uint64_t m_uid;
   std::vector<const RegisterType *> m_dependencies;
 };
 
