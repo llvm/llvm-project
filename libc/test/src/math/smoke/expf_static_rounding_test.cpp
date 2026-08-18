@@ -36,7 +36,9 @@ TEST_F(LlvmLibcExpfStaticRoundingTest, SpecialNumbers) {
     for (auto x : VALUES) {
       EXPECT_FP_EQ_ROUNDING_MODE(
           math::expf(x), static_rounding::expf(x, fenv_rounding), rounding);
-      EXPECT_MATH_ERRNO(0);
+      // Statically rounded expf doesn't raise exceptions, but the baseline
+      // expf may raise overflow exception.
+      // So, we won't check for that here.
     }
   }
 }
@@ -54,7 +56,7 @@ TEST_F(LlvmLibcExpfStaticRoundingTest, Overflow) {
     for (auto x : VALUES) {
       EXPECT_FP_EQ_ROUNDING_MODE(
           math::expf(x), static_rounding::expf(x, fenv_rounding), rounding);
-      EXPECT_MATH_ERRNO(0);
+      // The same reason above, in the SpecialNumbers smoke test suite
     }
   }
 }
