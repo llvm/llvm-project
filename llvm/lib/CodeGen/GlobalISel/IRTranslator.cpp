@@ -4259,7 +4259,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   bool EnableCSE = EnableCSEInIRTranslator.getNumOccurrences()
                        ? EnableCSEInIRTranslator
-                       : TPC->isGISelCSEEnabled();
+                       : true;
 
   const TargetSubtargetInfo &Subtarget = MF->getSubtarget();
   TLI = Subtarget.getTargetLowering();
