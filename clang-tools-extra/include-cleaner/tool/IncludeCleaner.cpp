@@ -34,7 +34,7 @@ namespace include_cleaner {
 namespace {
 namespace cl = llvm::cl;
 
-llvm::StringRef Overview = llvm::StringLiteral(R"(
+constexpr char* const Overview = R"(
 clang-include-cleaner analyzes the #include directives in source code.
 
 It suggests removing headers that the code is not using.
@@ -45,8 +45,7 @@ easier to reason about and modify.
 The tool operates on *working* source code. This means it can suggest including
 headers that are only indirectly included, but cannot suggest those that are
 missing entirely. (clang-include-fixer can do this).
-)")
-                               .trim();
+)";
 
 cl::OptionCategory IncludeCleaner("clang-include-cleaner");
 
@@ -359,8 +358,8 @@ int main(int argc, const char **argv) {
   using namespace clang::include_cleaner;
 
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
-  auto OptionsParser =
-      clang::tooling::CommonOptionsParser::create(argc, argv, IncludeCleaner);
+  auto OptionsParser = clang::tooling::CommonOptionsParser::create(
+      argc, argv, IncludeCleaner, cl::OneOrMore, Overview);
   if (!OptionsParser) {
     llvm::errs() << toString(OptionsParser.takeError());
     return 1;
