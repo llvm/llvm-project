@@ -914,7 +914,7 @@ define <2 x i8> @srem_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %
   ret <2 x i8> %r
 }
 
-; negative test - must have constant dividend
+; a variable dividend splits into a constant division per arm
 
 define i32 @srem_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @srem_select_of_constants_divisor(
@@ -924,6 +924,29 @@ define i32 @srem_select_of_constants_divisor(i1 %b, i32 %x) {
 ;
   %s = select i1 %b, i32 12, i32 -3
   %r = srem i32 %x, %s
+  ret i32 %r
+}
+
+
+define i32 @srem_select_of_constants_divisor_minus_one_arm(i1 %b, i32 %x) {
+; CHECK-LABEL: @srem_select_of_constants_divisor_minus_one_arm(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 -2, i32 -1
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %b, i32 -2, i32 -1
+  %r = srem i32 %x, %s
+  ret i32 %r
+}
+
+define i32 @urem_select_of_constants_divisor_high_bits(i1 %b, i32 %x) {
+; CHECK-LABEL: @urem_select_of_constants_divisor_high_bits(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 -2, i32 -1
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = select i1 %b, i32 -2, i32 -1
+  %r = urem i32 %x, %s
   ret i32 %r
 }
 
@@ -1021,7 +1044,7 @@ define <2 x i8> @urem_constant_dividend_select_of_constants_divisor_vec_ub2(i1 %
   ret <2 x i8> %r
 }
 
-; negative test - must have constant dividend
+; a variable dividend splits into a constant division per arm
 
 define i32 @urem_select_of_constants_divisor(i1 %b, i32 %x) {
 ; CHECK-LABEL: @urem_select_of_constants_divisor(
@@ -1033,6 +1056,10 @@ define i32 @urem_select_of_constants_divisor(i1 %b, i32 %x) {
   %r = urem i32 %x, %s
   ret i32 %r
 }
+
+
+
+
 
 ; https://alive2.llvm.org/ce/z/bh2KHm
 define <2 x i32> @PR62401(<2 x i1> %x, <2 x i32> %y) {
