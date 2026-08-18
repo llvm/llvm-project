@@ -1241,7 +1241,7 @@ static ExprResult formImmediatelyDeclaredConstraint(
     assert(SS.isEmpty() && "template parameter with a scope specifier?");
     auto *CDT = dyn_cast<TemplateTemplateParmDecl>(NamedConcept);
     ImmediatelyDeclaredConstraint = S.CheckVarOrConceptTemplateTemplateId(
-        NameInfo, CDT, SourceLocation(), &ConstraintArgs);
+        NameInfo, CDT, &ConstraintArgs);
   }
   if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
     return ImmediatelyDeclaredConstraint;
@@ -4832,7 +4832,7 @@ ExprResult Sema::CheckVarTemplateId(
 
 ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
     const DeclarationNameInfo &NameInfo, TemplateTemplateParmDecl *Template,
-    SourceLocation TemplateLoc, const TemplateArgumentListInfo *TemplateArgs) {
+    const TemplateArgumentListInfo *TemplateArgs) {
   assert(Template && "A variable template id without template?");
 
   if (Template->templateParameterKind() != TemplateNameKind::TNK_Var_template &&
@@ -4843,7 +4843,7 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
   // Check that the template argument list is well-formed for this template.
   CheckTemplateArgumentInfo CTAI;
   if (CheckTemplateArgumentList(
-          Template, TemplateLoc,
+          Template, /*Template kw loc=*/{},
           // FIXME: TemplateArgs will not be modified because
           // UpdateArgsWithConversions is false, however, we should
           // CheckTemplateArgumentList to be const-correct.
@@ -4852,7 +4852,7 @@ ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
           /*UpdateArgsWithConversions=*/false))
     return true;
 
-  return DependentTemplateIdExpr::Create(getASTContext(), TemplateLoc, NameInfo,
+  return DependentTemplateIdExpr::Create(getASTContext(), NameInfo,
                                          TemplateName(Template), *TemplateArgs);
 }
 
@@ -4983,6 +4983,7 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   R.suppressDiagnostics();
 
   if (R.getAsSingle<ConceptDecl>()) {
+    assert(TemplateKWLoc.isInvalid() && "template keyword in front of a concept id?");
     return CheckConceptTemplateId(SS, TemplateKWLoc, R.getLookupNameInfo(),
                                   R.getRepresentativeDecl(),
                                   R.getAsSingle<ConceptDecl>(), TemplateArgs);
@@ -4993,9 +4994,10 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   UnresolvedLookupExpr *ULE;
   if (R.getAsSingle<TemplateTemplateParmDecl>()) {
     assert(SS.isEmpty() && "template parameter with a scope specifier?");
+    assert(TemplateKWLoc.isInvalid() && "template keyword in front of a template parameter?");
     return CheckVarOrConceptTemplateTemplateId(
         R.getLookupNameInfo(), R.getAsSingle<TemplateTemplateParmDecl>(),
-        TemplateKWLoc, TemplateArgs);
+        TemplateArgs);
   }
 
   // Function templates

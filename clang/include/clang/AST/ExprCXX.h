@@ -3475,7 +3475,6 @@ class DependentTemplateIdExpr final
   ASTTemplateKWAndArgsInfo KWAndArgs;
 
   DependentTemplateIdExpr(const ASTContext &Context,
-                          SourceLocation TemplateKWLoc,
                           const DeclarationNameInfo &NameInfo,
                           TemplateName Name,
                           const TemplateArgumentListInfo &TemplateArgs);
@@ -3484,7 +3483,7 @@ class DependentTemplateIdExpr final
 
 public:
   static DependentTemplateIdExpr *
-  Create(const ASTContext &Context, SourceLocation TemplateKWLoc,
+  Create(const ASTContext &Context,
          const DeclarationNameInfo &NameInfo, TemplateName Name,
          const TemplateArgumentListInfo &TemplateArgs);
 
@@ -3505,9 +3504,6 @@ public:
     return getParameter()->templateParameterKind() == TNK_Concept_template;
   }
 
-  SourceLocation getTemplateKeywordLoc() const {
-    return KWAndArgs.TemplateKWLoc;
-  }
   SourceLocation getLAngleLoc() const { return KWAndArgs.LAngleLoc; }
   SourceLocation getRAngleLoc() const { return KWAndArgs.RAngleLoc; }
 
@@ -3518,16 +3514,11 @@ public:
   }
 
   SourceLocation getBeginLoc() const {
-    if (SourceLocation TemplateKWLoc = getTemplateKeywordLoc();
-        TemplateKWLoc.isValid())
-      return TemplateKWLoc;
     return getNameLoc();
   }
 
   SourceLocation getEndLoc() const {
-    if (SourceLocation RAngleLoc = getRAngleLoc(); RAngleLoc.isValid())
-      return RAngleLoc;
-    return NameInfo.getEndLoc();
+    return getRAngleLoc();
   }
 
   child_range children() {

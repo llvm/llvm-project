@@ -8829,7 +8829,6 @@ ExpectedStmt ASTNodeImporter::VisitCXXDependentScopeMemberExpr(
 ExpectedStmt
 ASTNodeImporter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
   Error Err = Error::success();
-  auto ToTemplateKeywordLoc = importChecked(Err, E->getTemplateKeywordLoc());
   auto ToName = importChecked(Err, E->getTemplateName());
   auto ToDeclName = importChecked(Err, E->getName());
   auto ToNameLoc = importChecked(Err, E->getNameLoc());
@@ -8847,7 +8846,7 @@ ASTNodeImporter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
     return std::move(Err);
 
   return DependentTemplateIdExpr::Create(Importer.getToContext(),
-                                         ToTemplateKeywordLoc, ToNameInfo,
+                                         ToNameInfo,
                                          ToName, ToTAInfo);
 }
 

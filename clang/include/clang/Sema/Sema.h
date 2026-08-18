@@ -11820,7 +11820,7 @@ public:
 
   ExprResult CheckVarOrConceptTemplateTemplateId(
       const DeclarationNameInfo &NameInfo, TemplateTemplateParmDecl *Template,
-      SourceLocation TemplateLoc, const TemplateArgumentListInfo *TemplateArgs);
+      const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult
   CheckConceptTemplateId(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
