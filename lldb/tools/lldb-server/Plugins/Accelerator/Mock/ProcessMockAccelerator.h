@@ -30,6 +30,10 @@ public:
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
+
+    Extension GetSupportedExtensions() const override {
+      return Extension::address_spaces;
+    }
   };
 
   ProcessMockAccelerator(lldb::pid_t pid, NativeDelegate &delegate);
@@ -59,6 +63,8 @@ public:
                                  FileSpec &file_spec) override;
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
+
+  std::vector<AddressSpaceInfo> GetAddressSpaces() override;
 
 private:
   mutable ArchSpec m_arch;
