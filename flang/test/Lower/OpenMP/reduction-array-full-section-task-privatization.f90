@@ -1,8 +1,8 @@
 ! RUN: split-file %s %t
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task.f90 | FileCheck %s --check-prefix=TASK --implicit-check-not=not\ yet\ implemented --implicit-check-not=Ea_firstprivate
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-default.f90 | FileCheck %s --check-prefix=TASK-DEFAULT --implicit-check-not=not\ yet\ implemented --implicit-check-not=Ea_firstprivate --implicit-check-not=Ea_private
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop.f90 | FileCheck %s --check-prefix=TASKLOOP --implicit-check-not=not\ yet\ implemented --implicit-check-not=Ea_firstprivate
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop.f90 | FileCheck %s --check-prefix=TASKLOOP --implicit-check-not=not\ yet\ implemented --implicit-check-not=Ea_firstprivate
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task.f90 | FileCheck %s --check-prefix=TASK --implicit-check-not="not yet implemented" --implicit-check-not=Ea_firstprivate
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-default.f90 | FileCheck %s --check-prefix=TASK-DEFAULT --implicit-check-not="not yet implemented" --implicit-check-not=Ea_firstprivate --implicit-check-not=Ea_private
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop.f90 | FileCheck %s --check-prefix=TASKLOOP --implicit-check-not="not yet implemented" --implicit-check-not=Ea_firstprivate
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop.f90 | FileCheck %s --check-prefix=TASKLOOP --implicit-check-not="not yet implemented" --implicit-check-not=Ea_firstprivate
 
 ! A full-extent section uses the same descriptor as its base array. Check that
 ! it is bound only to the reduction argument, rather than also being captured
