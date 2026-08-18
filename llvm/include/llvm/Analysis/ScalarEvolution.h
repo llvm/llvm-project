@@ -2515,6 +2515,9 @@ private:
   const SCEV *getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops, const Loop *L,
                                     SCEV::NoWrapFlags Flags);
 
+  // Get UDiv expression already created or create a new one.
+  const SCEV *getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS);
+
   /// Return x if \p Val is f(x) where f is a 1-1 function.
   const SCEV *stripInjectiveFunctions(const SCEV *Val) const;
 
@@ -2756,9 +2759,9 @@ void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
   getPointer()->print(OS);
   SCEV::NoWrapFlags Flags = getUseNoWrapFlags();
   if (any(Flags & SCEV::FlagNUW))
-    OS << "(u nuw)";
+    OS << "<u nuw>";
   if (any(Flags & SCEV::FlagNSW))
-    OS << "(u nsw)";
+    OS << "<u nsw>";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
