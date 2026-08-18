@@ -90,3 +90,15 @@ define x86_fp80 @test_log10_finite(x86_fp80 %x) nounwind {
   %r = call nnan ninf x86_fp80 @llvm.log10.f80(x86_fp80 %x)
   ret x86_fp80 %r
 }
+
+; CHECK: error: no libcall available for fldexp
+define x86_fp80 @test_ldexp(x86_fp80 %x, i32 %exp) nounwind {
+  %r = call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %x, i32 %exp)
+  ret x86_fp80 %r
+}
+
+; CHECK: error: no libcall available for ffrexp
+define { x86_fp80, i32 } @test_frexp(x86_fp80 %x) nounwind {
+  %r = call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %x)
+  ret { x86_fp80, i32 } %r
+}
