@@ -1087,8 +1087,10 @@ bool ScriptInterpreterPythonImpl::RedirectTerminalHandleThroughLock(
   // terminal) promptly: the pipe descriptor is not a tty, so the default
   // buffering would hold output back until the buffer filled.
   PyObject *pipe_file = PyFile_FromFd(
-      redirect->GetWriteDescriptor(), nullptr, mode, /*buffering=*/1,
-      /*encoding=*/nullptr, /*errors=*/"ignore", /*newline=*/nullptr,
+      PythonFile::TranslateFdToPython(redirect->GetWriteDescriptor()), nullptr,
+      mode, /*buffering=*/1,
+      /*encoding=*/nullptr, /*errors=*/"ignore",
+      /*newline=*/nullptr,
       /*closefd=*/0);
   if (!pipe_file) {
     // Fall back to the raw descriptor. That reopens the statusline race, so
