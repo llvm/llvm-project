@@ -3379,8 +3379,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::FunctionalCast:
       if (isa<DeducedTemplateSpecializationType>(Deduced))
         break;
-      if (SemaRef.getLangOpts().CPlusPlus23 && IsCXXAutoType &&
-          !Auto->isDecltypeAuto())
+      if (IsCXXAutoType && !Auto->isDecltypeAuto())
         break; // auto(x)
       [[fallthrough]];
     case DeclaratorContext::TypeName:
@@ -9353,7 +9352,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
     case ParsedAttr::AT_HLSLResourceClass:
     case ParsedAttr::AT_HLSLResourceDimension:
-    case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLIsROV:
     case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLIsArray:
     case ParsedAttr::AT_HLSLIsMultiSampled:

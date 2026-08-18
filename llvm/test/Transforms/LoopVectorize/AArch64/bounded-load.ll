@@ -515,7 +515,7 @@ attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 !3 = distinct !{!3, !4, !5}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}
-!5 = !{!"llvm.loop.interleave.count", i32 8}!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!5 = !{!"llvm.loop.interleave.count", i32 8}!2 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 
 ; Loop combining a bounded (i % 4) load with a reverse-stride load.

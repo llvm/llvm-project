@@ -353,38 +353,17 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   // zve32x is broken for partial_reduce_umla, but let's make sure we
   // don't generate them.
-  // vdot4a* reduces four i8 products into an i32 result; an i64 accumulator is
-  // additionally supported by widening the i32 partial sums to i64 (see
-  // lowerPARTIAL_REDUCE_MLA). \p VF is the number of i8 input elements, so the
-  // reduction factor is AccumBits / 8 (4 for i32, 8 for i64).
   if (!ST->hasStdExtZvdot4a8i() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
-      (!AccumType->isIntegerTy(32) && !AccumType->isIntegerTy(64)))
+      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
     return InstructionCost::getInvalid();
 
-  unsigned Ratio = AccumType->getScalarSizeInBits() / 8;
-  if (!VF.isKnownMultipleOf(Ratio))
-    return InstructionCost::getInvalid();
-
-  // Cost of the vdot4a* itself, which operates on the i32 intermediate type
-  // holding VF/4 elements.
-  Type *DotTp = VectorType::get(Type::getInt32Ty(AccumType->getContext()),
-                                VF.divideCoefficientBy(4));
-  std::pair<InstructionCost, MVT> DotLT = getTypeLegalizationCost(DotTp);
+  Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   // Note: Asuming all vdot4a* variants are equal cost
-  InstructionCost Cost =
-      DotLT.first *
-      getRISCVInstructionCost(RISCV::VDOT4A_VV, DotLT.second, CostKind);
-
-  // Account for the widening extend + accumulate needed for an i64 result.
-  if (AccumType->isIntegerTy(64)) {
-    Type *AccTp = VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
-    std::pair<InstructionCost, MVT> AccLT = getTypeLegalizationCost(AccTp);
-    Cost += AccLT.first * 2;
-  }
-
-  return Cost;
+  return LT.first *
+         getRISCVInstructionCost(RISCV::VDOT4A_VV, LT.second, CostKind);
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
@@ -1735,12 +1714,17 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::experimental_cttz_elts: {
-    Type *ArgTy = ICA.getArgTypes()[0];
-    EVT ArgType = TLI->getValueType(DL, ArgTy, true);
-    if (getTLI()->shouldExpandCttzElements(ArgType))
+    if (getTLI()->shouldExpandCttzElements({}))
       break;
-    InstructionCost Cost = getRISCVInstructionCost(
-        RISCV::VFIRST_M, getTypeLegalizationCost(ArgTy).second, CostKind);
+    InstructionCost Cost = 0;
+    Type *ArgTy = ICA.getArgTypes()[0];
+    auto LT = getTypeLegalizationCost(ArgTy);
+
+    // If the element type is not i1, do a comparison with all-zeros.
+    if (LT.second.getVectorElementType() != MVT::i1)
+      Cost += getRISCVInstructionCost(RISCV::VMSNE_VI, LT.second, CostKind);
+
+    Cost += getRISCVInstructionCost(RISCV::VFIRST_M, LT.second, CostKind);
 
     // If zero_is_poison is false, then we will generate additional
     // cmp + select instructions to convert -1 to EVL.
@@ -1752,7 +1736,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
               getCmpSelInstrCost(Instruction::Select, RetTy, BoolTy,
                                  CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
-    return Cost;
+    return LT.first * Cost;
   }
   case Intrinsic::experimental_vp_splice: {
     // To support type-based query from vectorizer, set the index to 0.
