@@ -446,7 +446,8 @@ def warn_ssaf_source_transformation_unknown_name :
 def warn_ssaf_source_transformation_requires :
   Warning<"option '--ssaf-source-transformation=' requires "
           "'%select{--ssaf-global-scope-analysis-result=|--ssaf-src-edit-file=|"
-          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=}0' "
+          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=|"
+          "--ssaf-link-unit-id=}0' "
           "to be set">,
   InGroup<ScalableStaticAnalysis>, DefaultError;
 

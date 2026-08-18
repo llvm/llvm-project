@@ -98,6 +98,7 @@ enum SourceTransformationCompanion {
   STCompanion_EditFile,          // --ssaf-src-edit-file=
   STCompanion_ReportFile,        // --ssaf-transformation-report-file=
   STCompanion_CompilationUnitId, // --ssaf-compilation-unit-id=
+  STCompanion_LinkUnitId,        // --ssaf-link-unit-id=
 };
 
 /// Options that depend on `--ssaf-source-transformation=` being set. Values
@@ -134,6 +135,11 @@ static bool reportOrphanOptionMisuse(DiagnosticsEngine &Diags,
     if (Opts.CompilationUnitId.empty()) {
       Diags.Report(diag::warn_ssaf_source_transformation_requires)
           << STCompanion_CompilationUnitId;
+      Reported = true;
+    }
+    if (Opts.LinkUnitId.empty()) {
+      Diags.Report(diag::warn_ssaf_source_transformation_requires)
+          << STCompanion_LinkUnitId;
       Reported = true;
     }
   } else {

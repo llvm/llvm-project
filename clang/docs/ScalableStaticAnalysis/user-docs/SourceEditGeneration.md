@@ -12,11 +12,12 @@ and emits two per-translation-unit artifacts:
 
 ## Driver options
 
-Four options control the pipeline; they are all both `--ssaf-…` driver
+Five options control the pipeline; they are all both `--ssaf-…` driver
 options and `cc1` options. The compilation-unit identifier is shared
 with the summary extraction step. A given compilation unit needs to
 receive the same identifier for both summary extraction and source
-edit generation.
+edit generation. The link-unit identifier must match the namespace
+name the compilation unit's `WPASuite` result was linked into.
 
 ```{eval-rst}
 .. list-table::
@@ -38,6 +39,9 @@ edit generation.
    * - ``--ssaf-compilation-unit-id=<id>``
      - Stable identifier for this translation unit (also required by
        the summary extraction).
+   * - ``--ssaf-link-unit-id=<id>``
+     - Stable identifier of the link unit this translation unit was
+       linked into.
 ```
 
 When `--ssaf-source-transformation=` is non-empty the framework wraps
@@ -54,7 +58,8 @@ $ clang -c foo.cpp \
     --ssaf-global-scope-analysis-result=wpa.json \
     --ssaf-src-edit-file=foo.yaml \
     --ssaf-transformation-report-file=foo.sarif \
-    --ssaf-compilation-unit-id=cu-foo
+    --ssaf-compilation-unit-id=cu-foo \
+    --ssaf-link-unit-id=lu-foo
 $ clang-apply-replacements --remove-change-desc-files <dir-with-yaml>
 ```
 

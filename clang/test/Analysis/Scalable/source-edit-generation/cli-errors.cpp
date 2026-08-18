@@ -1,16 +1,17 @@
 // CLI errors for the source-edit-generation pipeline. Every misuse of the
-// four `--ssaf-{source-transformation,global-scope-analysis-result,
-// src-edit-file,transformation-report-file}=` options emits a default-error
-// diagnostic under `-Wscalable-static-analysis-framework`. The runner
-// produces no edit/report files and the rest of the compile pipeline is
-// untouched.
+// six `--ssaf-{source-transformation,global-scope-analysis-result,
+// src-edit-file,transformation-report-file,compilation-unit-id,
+// link-unit-id}=` options emits a default-error diagnostic under
+// `-Wscalable-static-analysis-framework`. The runner produces no edit/report
+// files and the rest of the compile pipeline is untouched.
 
 // DEFINE: %{filecheck} = FileCheck %s --match-full-lines --check-prefix
 // DEFINE: %{base} = --ssaf-source-transformation=does-not-exist \
 // DEFINE:   --ssaf-global-scope-analysis-result=%S/Inputs/empty-suite.json \
 // DEFINE:   --ssaf-src-edit-file=%t/edits.yaml \
 // DEFINE:   --ssaf-transformation-report-file=%t/report.sarif \
-// DEFINE:   --ssaf-compilation-unit-id=cu
+// DEFINE:   --ssaf-compilation-unit-id=cu \
+// DEFINE:   --ssaf-link-unit-id=lu
 
 // =============================================================================
 // 1. Unknown transformation name.
@@ -33,6 +34,7 @@
 // ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-src-edit-file=' to be set [-Wscalable-static-analysis-framework]
 // ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-transformation-report-file=' to be set [-Wscalable-static-analysis-framework]
 // ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-compilation-unit-id=' to be set [-Wscalable-static-analysis-framework]
+// ORPHAN-COMPANIONS-DAG: error: option '--ssaf-source-transformation=' requires '--ssaf-link-unit-id=' to be set [-Wscalable-static-analysis-framework]
 
 // =============================================================================
 // 3. Reverse orphans: edit/report file set without transformation option.
