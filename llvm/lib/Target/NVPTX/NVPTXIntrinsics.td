@@ -6773,18 +6773,15 @@ class Tcgen05MMADecompressBase<string ASpace, string Kind, int CtaGroup,
         Tcgen05MMABase</*IsSparse=*/ 0, ASpace, Kind, CtaGroup,
                        CollectorUsageA, CollectorUsageB> {
   let Predicates = [hasRubinFamilySupport];
-
   let KindVal = !cond(!eq(Kind, "f8f6f4") : 0);
 
   dag DecompressBaseInOperandList = !con(BaseInOperandList,
                                          (ins B32:$decompress_b));
-
   dag DecompressBasePatternArgs = !con(BasePatternArgs, (ins i32:$decompress_b));
 
   string DecompressBaseOperandsStr = BaseOperandsCommonStr
                                      # ", [$decompress_b]"
                                      # IDescStr;
-
   string DecompressPrefix = Prefix # SpCtaKindStr;
   string DecompressLutStr = ".decompress::lut::b";
   string DecompressCollectorStr = ".collector::a::" # CollectorUsageA
@@ -6797,11 +6794,9 @@ class Tcgen05MMADecompressInst<string ASpace, string Kind, int CtaGroup,
     Tcgen05MMADecompressBase<ASpace, Kind, CtaGroup, CollectorUsageA,
                              CollectorUsageB> {
   Intrinsic Intrin = !cast<Intrinsic>(
-                        NVVM_TCGEN05_MMA_DECOMPRESS<ASpace, Kind>.record_name
-                     );
+                        NVVM_TCGEN05_MMA_DECOMPRESS<ASpace, Kind>.record_name);
 
   let InOperandList = DecompressBaseInOperandList;
-
   let AsmString = DecompressPrefix
                   # DecompressLutStr
                   # DecompressCollectorStr
@@ -6810,7 +6805,6 @@ class Tcgen05MMADecompressInst<string ASpace, string Kind, int CtaGroup,
                   # ";";
 
   dag IntrinsicPattern = !foreach(tmp, DecompressBasePatternArgs, !subst(ins, Intrin, tmp));
-
   dag FlagOperands = (Intrin (i32 CtaGroup), (i32 CollectorUsageAVal),
                              (i32 CollectorUsageBVal));
 
@@ -6843,30 +6837,22 @@ class Tcgen05MMADecompressDisableOutputLaneInst<string ASpace, string Kind,
 
   // disable output lane
   int DisableOutputLaneVecSize = !mul(4, CtaGroup);
+  list<string> DisableOutputLaneNames =
+      !foreach(x, !range(DisableOutputLaneVecSize),
+               "disable_output_lane" # x);
 
   dag DisableOutputLaneIns = !dag(ins,
-                              !listsplat(B32, DisableOutputLaneVecSize),
-                              !foreach(x,
-                                      !range(DisableOutputLaneVecSize),
-                                      "disable_output_lane" # x));
-
+                                  !listsplat(B32, DisableOutputLaneVecSize),
+                                  DisableOutputLaneNames);
   dag DisableOutputLaneInput = !dag(Opcode,
-                                !listsplat(i32, DisableOutputLaneVecSize),
-                                !foreach(x,
-                                         !range(DisableOutputLaneVecSize),
-                                         "disable_output_lane" # x));
+                                    !listsplat(i32, DisableOutputLaneVecSize),
+                                    DisableOutputLaneNames);
 
-  string DisableOutputLaneStr = "{{" #
-                                  !interleave(
-                                    !foreach(x,
-                                      !range(DisableOutputLaneVecSize),
-                                              "$disable_output_lane" # x),
-                                    ", ")
+  string DisableOutputLaneStr = "{{$"
+                                # !interleave(DisableOutputLaneNames, ", $")
                                 # "}}";
 
-  let InOperandList = !con(DecompressBaseInOperandList,
-                           DisableOutputLaneIns);
-
+  let InOperandList = !con(DecompressBaseInOperandList, DisableOutputLaneIns);
   let AsmString = DecompressPrefix
                   # DecompressLutStr
                   # DecompressCollectorStr
@@ -6877,7 +6863,6 @@ class Tcgen05MMADecompressDisableOutputLaneInst<string ASpace, string Kind,
 
   dag IntrinsicPattern = !con(!foreach(tmp, DecompressBasePatternArgs, !subst(ins, Opcode, tmp)),
                               DisableOutputLaneInput);
-
   dag FlagOperands = (Opcode (i32 CollectorUsageAVal),
                              (i32 CollectorUsageBVal));
 
@@ -6905,15 +6890,12 @@ class Tcgen05MMADecompressBlockScaleInst<string ASpace, string Kind,
                              CollectorUsageB> {
   Intrinsic Intrin = !cast<Intrinsic>(
                         NVVM_TCGEN05_MMA_DECOMPRESS_BLOCKSCALE<
-                            ASpace, Kind, ScaleVecSize>.record_name
-                     );
+                            ASpace, Kind, ScaleVecSize>.record_name);
 
   let KindVal = !cond(!eq(Kind, "mxf8f6f4") : 0);
-
   let InOperandList = !con(BaseInOperandList,
                            (ins B32:$scale_a, B32:$scale_b,
                                 B32:$decompress_b));
-
   let AsmString = DecompressPrefix
                   # ".block_scale"
                   # DecompressLutStr
@@ -6926,7 +6908,6 @@ class Tcgen05MMADecompressBlockScaleInst<string ASpace, string Kind,
 
   dag IntrinsicPattern = !con(!foreach(tmp, BasePatternArgs, !subst(ins, Intrin, tmp)),
                               (Intrin i32:$scale_a, i32:$scale_b, i32:$decompress_b));
-
   dag FlagOperands = (Intrin (i32 CtaGroup),
                              (i32 CollectorUsageAVal),
                              (i32 CollectorUsageBVal));
