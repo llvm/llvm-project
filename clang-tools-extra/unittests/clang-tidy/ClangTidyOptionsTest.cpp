@@ -75,6 +75,7 @@ TEST(ParseLineFilter, ValidFilter) {
   EXPECT_EQ(1000u, Options.LineFilter[2].LineRanges[0].second);
 }
 
+#ifdef _WIN32
 TEST(ParseLineFilter, NormalizesWindowsPathSeparators) {
   ClangTidyGlobalOptions Options;
   EXPECT_FALSE(
@@ -82,6 +83,7 @@ TEST(ParseLineFilter, NormalizesWindowsPathSeparators) {
   ASSERT_EQ(1u, Options.LineFilter.size());
   EXPECT_EQ("project/src/input.cc", Options.LineFilter[0].Name);
 }
+#endif // _WIN32
 
 TEST(ParseConfiguration, ValidConfiguration) {
   llvm::ErrorOr<ClangTidyOptions> Options =
