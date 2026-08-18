@@ -8,9 +8,6 @@
 
 // bool signbit(floating-point-type x); // constexpr since C++23
 
-// We don't control the implementation on windows
-// UNSUPPORTED: windows
-
 // GCC warns about signbit comparing `bool_v < 0`, which we're testing
 // ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 

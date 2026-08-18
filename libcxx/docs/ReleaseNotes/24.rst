@@ -51,6 +51,10 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- On Windows, ``std::isfinite``, ``std::isinf``, ``std::isnan``, ``std::isnormal`` and ``std::signbit`` are now usable
+  in constant expressions in C++23, as required by P0533R9. They previously resolved to the UCRT's non-``constexpr``
+  declarations (`Github <https://github.com/llvm/llvm-project/issues/214358>`__).
+
 Deprecations and Removals
 -------------------------
 
