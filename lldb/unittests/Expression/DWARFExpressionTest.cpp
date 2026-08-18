@@ -853,6 +853,16 @@ TEST(DWARFExpression, DW_OP_addr) {
       ExpectScalar(uint32_t{0x40302010}));
 }
 
+TEST(DWARFExpression, DW_OP_addr_address_size) {
+  // Address arithmetic wraps at the target address size. In particular,
+  // 0xffffffff + 1 is zero on this 32-bit target.
+  auto result = Evaluate({DW_OP_addr, 0x2a, 0x00, 0x00, 0x00, DW_OP_const4u,
+                          0xff, 0xff, 0xff, 0xff, DW_OP_plus, DW_OP_lit1,
+                          DW_OP_plus, DW_OP_stack_value});
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x2a, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
 TEST(DWARFExpression, DW_OP_addr_big_endian) {
   // Same operand bytes, big-endian extractor: the address must be read in
   // target byte order.

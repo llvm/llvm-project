@@ -1440,7 +1440,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     switch (opcode) {
     case DW_OP_addr:
-      stack.push_back(Scalar(op->getRawOperand(0)));
+      stack.push_back(to_generic(op->getRawOperand(0)));
       stack.back().SetValueType(Value::ValueType::FileAddress);
       break;
 
