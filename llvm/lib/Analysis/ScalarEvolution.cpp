@@ -277,7 +277,7 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
   SmallVector<SCEVUse, 4> CanonOps;
   for (SCEVUse Op : operands()) {
     CanonOps.push_back(Op->getCanonical());
-    Changed |= CanonOps.back() != Op.getPointer() || Op.hasUseFlags();
+    Changed |= CanonOps.back() != Op;
   }
 
   if (!Changed) {
