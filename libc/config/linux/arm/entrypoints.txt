@@ -460,6 +460,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogbf
     libc.src.math.ilogbl
     libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl

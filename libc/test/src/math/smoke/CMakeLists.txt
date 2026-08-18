@@ -554,6 +554,7 @@ add_fp_unittest(
   HDRS
     IsNanTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.isnanf128
 )
 
