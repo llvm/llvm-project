@@ -242,10 +242,6 @@ namespace internal {
                                 TYPE RHS, const char *LHSStr,                  \
                                 const char *RHSStr, Location Loc)
 
-#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-TEST_SPECIALIZATION(wchar_t);
-#endif
-
 TEST_SPECIALIZATION(char);
 TEST_SPECIALIZATION(short);
 TEST_SPECIALIZATION(int);
@@ -278,8 +274,12 @@ TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<320>);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string_view);
-TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::wstring_view);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::string);
+
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+TEST_SPECIALIZATION(wchar_t);
+TEST_SPECIALIZATION(LIBC_NAMESPACE::cpp::wstring_view);
+#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 TEST_SPECIALIZATION(short fract);

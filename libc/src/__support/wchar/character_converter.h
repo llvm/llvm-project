@@ -200,10 +200,6 @@ template <> LIBC_INLINE ErrorOr<char32_t> CharacterConverter::pop() {
   return pop_utf32();
 }
 
-template <> LIBC_INLINE ErrorOr<wchar_t> CharacterConverter::pop() {
-  return pop_wchar();
-}
-
 template <> LIBC_INLINE size_t CharacterConverter::sizeAs<char8_t>() {
   return state->total_bytes;
 }
@@ -223,6 +219,10 @@ LIBC_INLINE ErrorOr<wchar_t> CharacterConverter::pop_wchar() {
   if (!Result)
     return Error(Result.error());
   return static_cast<wchar_t>(*Result);
+}
+
+template <> LIBC_INLINE ErrorOr<wchar_t> CharacterConverter::pop() {
+  return pop_wchar();
 }
 
 template <> LIBC_INLINE size_t CharacterConverter::sizeAs<wchar_t>() {
