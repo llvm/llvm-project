@@ -136,6 +136,10 @@ def relocatable : Flag<["--", "-"], "relocatable">,
     HelpText<"Link device code to create a relocatable offloading application">;
 def r : Flag<["-"], "r">, Alias<relocatable>;
 
+// ld64-style linker options, defined so they are not parsed as -l or -o.
+def lto_library : Separate<["-"], "lto_library">, Flags<[HelpHidden]>;
+def object_path_lto : Separate<["-"], "object_path_lto">, Flags<[HelpHidden]>;
+
 // link.exe-style linker options.
 def out : Joined<["/", "-", "/?", "-?"], "out:">, Flags<[HelpHidden]>;
 def libpath : Joined<["/", "-", "/?", "-?"], "libpath:">, Flags<[HelpHidden]>;
