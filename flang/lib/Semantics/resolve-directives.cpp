@@ -61,6 +61,7 @@ protected:
     Scope &scope;
     Symbol::Flag defaultDSA{Symbol::Flag::AccShared}; // TODOACC
     std::map<const Symbol *, Symbol::Flag> objectWithDSA;
+    std::map<const Symbol *, Symbol::Flag> commonBlockClauseFlags;
     std::map<parser::OmpVariableCategory::Value,
         parser::OmpDefaultmapClause::ImplicitBehavior>
         defaultMap;
@@ -3194,7 +3195,30 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
   Symbol *originalCB{ResolveOmpCommonBlockName(&cbName)};
   if (auto *symbol{cbResolved ? name.symbol : originalCB}) {
     if (!dataCopyingAttributeFlags.test(ompFlag)) {
-      CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
+      auto isMapFlag{[](Symbol::Flag flag) {
+        return flag == Symbol::Flag::OmpMapTo ||
+            flag == Symbol::Flag::OmpMapFrom ||
+            flag == Symbol::Flag::OmpMapToFrom ||
+            flag == Symbol::Flag::OmpMapStorage ||
+            flag == Symbol::Flag::OmpMapDelete;
+      }};
+      const Symbol *commonBlock{&symbol->GetUltimate()};
+      auto [it, inserted]{GetContext().commonBlockClauseFlags.try_emplace(
+          commonBlock, ompFlag)};
+      bool mapUseDeviceAddrPair{
+          GetContext().directive == llvm::omp::Directive::OMPD_target_data &&
+          !inserted &&
+          ((isMapFlag(it->second) &&
+               ompFlag == Symbol::Flag::OmpUseDeviceAddr) ||
+              (it->second == Symbol::Flag::OmpUseDeviceAddr &&
+                  isMapFlag(ompFlag)))};
+      if (mapUseDeviceAddrPair) {
+        // Mark the one permitted overlap as consumed so a third appearance is
+        // still diagnosed.
+        it->second = Symbol::Flag::OmpCommonBlock;
+      } else {
+        CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
+      }
     }
     // 2.15.3 When a named common block appears in a list, it has the
     // same meaning as if every explicit member of the common block
