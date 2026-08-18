@@ -52,9 +52,12 @@
 // CHECK-INTERCHANGE-LOOPS: "-floop-interchange"
 // CHECK-NO-INTERCHANGE-LOOPS: "-fno-loop-interchange"
 //
-// Loop interchange is enabled by default only at -O3.
+// Loop interchange matches the LLVM pipeline default: on whenever the
+// optimization pipeline runs (-O1 and above), off with an explicit
+// -fno-loop-interchange.
+// RUN: %clang -c -mllvm -print-pipeline-passes -O1 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
+// RUN: %clang -c -mllvm -print-pipeline-passes -O2 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
 // RUN: %clang -c -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-ON %s
-// RUN: %clang -c -mllvm -print-pipeline-passes -O2 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-OFF %s
 // RUN: %clang -c -fno-loop-interchange -mllvm -print-pipeline-passes -O3 %s -o /dev/null 2>&1 | FileCheck --check-prefixes=INTERCHANGE-OFF %s
 // INTERCHANGE-ON: loop-interchange
 // INTERCHANGE-OFF-NOT: loop-interchange

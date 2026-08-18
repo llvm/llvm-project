@@ -320,9 +320,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_fp_sum_reassociation, false))
     opts.SplitSumExpressionTree = 1;
 
-  opts.InterchangeLoops = args.hasFlag(clang::options::OPT_floop_interchange,
-                                       clang::options::OPT_fno_loop_interchange,
-                                       opts.OptimizationLevel == 3);
+  // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
+  // which enables the pass whenever the optimization pipeline runs.
+  opts.InterchangeLoops =
+      args.hasFlag(clang::options::OPT_floop_interchange,
+                   clang::options::OPT_fno_loop_interchange, true);
 
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
