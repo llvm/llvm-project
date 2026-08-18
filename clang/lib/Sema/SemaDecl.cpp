@@ -2054,7 +2054,7 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
 
   // Except for labels, we only care about unused decls that are local to
   // functions.
-  bool WithinFunction = D->getDeclContext()->isFunctionOrMethod();
+  bool WithinFunction = D->getDeclContext()->isInsideFunctionOrMethod();
   if (const auto *R = dyn_cast<CXXRecordDecl>(D->getDeclContext()))
     // For dependent types, the diagnostic is deferred.
     WithinFunction =
@@ -6410,6 +6410,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   // declaration. For a template-id, we perform the checks in
   // CheckTemplateSpecializationScope.
   if (!Cur->Encloses(DC) && !(TemplateId || IsMemberSpecialization)) {
+    Cur = Cur->getEnclosingNonExpansionStatementContext();
     if (Cur->isRecord())
       Diag(Loc, diag::err_member_qualification)
         << Name << SS.getRange();
@@ -8115,7 +8116,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (!getLangOpts().CPlusPlus) {
       Diag(D.getDeclSpec().getInlineSpecLoc(), diag::err_inline_non_function)
           << 0;
-    } else if (CurContext->isFunctionOrMethod()) {
+    } else if (CurContext->isInsideFunctionOrMethod()) {
       // 'inline' is not allowed on block scope variable declaration.
       Diag(D.getDeclSpec().getInlineSpecLoc(),
            diag::err_inline_declaration_block_scope) << Name
@@ -8153,7 +8154,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (NewVD->hasLocalStorage() &&
         (SCSpec != DeclSpec::SCS_unspecified ||
          TSCS != DeclSpec::TSCS_thread_local ||
-         !DC->isFunctionOrMethod()))
+         !DC->isInsideFunctionOrMethod()))
       Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
            diag::err_thread_non_global)
         << DeclSpec::getSpecifierName(TSCS);
@@ -9592,7 +9593,7 @@ static StorageClass getFunctionStorageClass(Sema &SemaRef, Declarator &D) {
       return SC_None;
     return SC_Extern;
   case DeclSpec::SCS_static: {
-    if (SemaRef.CurContext->getRedeclContext()->isFunctionOrMethod()) {
+    if (SemaRef.CurContext->getRedeclContext()->isInsideFunctionOrMethod()) {
       // C99 6.7.1p5:
       //   The declaration of an identifier for a function that has
       //   block scope shall have no explicit storage-class specifier
@@ -10423,7 +10424,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     //  The inline specifier shall not appear on a block scope function
     //  declaration.
     if (isInline && !NewFD->isInvalidDecl()) {
-      if (CurContext->isFunctionOrMethod()) {
+      if (CurContext->isInsideFunctionOrMethod()) {
         // 'inline' is not allowed on block scope function declaration.
         Diag(D.getDeclSpec().getInlineSpecLoc(),
              diag::err_inline_declaration_block_scope) << Name

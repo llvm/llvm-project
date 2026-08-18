@@ -3551,7 +3551,7 @@ static void warnAboutAmbiguousFunction(Sema &S, Declarator &D,
   // doesn't have a storage class (such as 'extern') specified.
   if (!D.isFunctionDeclarator() ||
       D.getFunctionDefinitionKind() != FunctionDefinitionKind::Declaration ||
-      !S.CurContext->isFunctionOrMethod() ||
+      !S.CurContext->isInsideFunctionOrMethod() ||
       D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_unspecified)
     return;
 

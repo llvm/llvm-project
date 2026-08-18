@@ -2188,6 +2188,30 @@ public:
     }
   }
 
+  /// Test whether we're directly inside a function or method, but ignoring
+  /// any intervening expansion statements.
+  bool isInsideFunctionOrMethod() const {
+    return getEnclosingNonExpansionStatementContext()->isFunctionOrMethod();
+  }
+
+  /// Cast this to a FunctionDecl if it is one, ignoring any intervening
+  /// expansion statements. Returns nullptr if this is not a function.
+  FunctionDecl *getAsFunctionDecl() {
+    return dyn_cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+  }
+
+  const FunctionDecl *getAsFunctionDecl() const {
+    return dyn_cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+  }
+
+  FunctionDecl *castAsFunctionDecl() {
+    return cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+  }
+
+  const FunctionDecl *castAsFunctionDecl() const {
+    return cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+  }
+
   /// Test whether the context supports looking up names.
   bool isLookupContext() const {
     return !isFunctionOrMethod() && getDeclKind() != Decl::LinkageSpec &&

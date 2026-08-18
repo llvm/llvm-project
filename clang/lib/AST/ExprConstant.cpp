@@ -19007,8 +19007,8 @@ bool DataRecursiveIntBinOpEvaluator::
     if (!LHSAddrExpr || !RHSAddrExpr)
       return false;
     // Make sure both labels come from the same function.
-    if (LHSAddrExpr->getLabel()->getDeclContext() !=
-        RHSAddrExpr->getLabel()->getDeclContext())
+    if (LHSAddrExpr->getLabel()->getDeclContext()->getAsFunctionDecl() !=
+        RHSAddrExpr->getLabel()->getDeclContext()->getAsFunctionDecl())
       return false;
     Result = APValue(LHSAddrExpr, RHSAddrExpr);
     return true;
