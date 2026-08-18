@@ -107,6 +107,13 @@ private:
                                                        lldb::ValueObjectSP rhs,
                                                        CompilerType result_type,
                                                        uint32_t location);
+  llvm::Error ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
+                                 lldb::ValueObjectSP &rhs, bool lhs_is_literal,
+                                 bool rhs_is_literal, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateComparison(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                     lldb::ValueObjectSP rhs, bool lhs_is_literal,
+                     bool rhs_is_literal, uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                       lldb::ValueObjectSP rhs, uint32_t location);
