@@ -285,7 +285,7 @@ jobs:
 
     - name: Install Wix (Windows ARM64)
       if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      run: dotnet tool install --global wix
+      run: Install-ChocoPackage wixtoolset -ArgumentList "--force" 
 
     - name: Build Windows
       id: build-windows
