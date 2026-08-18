@@ -758,6 +758,20 @@ define i1 @and_cmp_ne(i8 %x) {
   ret i1 %res
 }
 
+define i1 @and_cmp_eq(i8 %x) {
+; CHECK-LABEL: and_cmp_eq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $12, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %a1 = and i8 %x, 4
+  %a2 = and i8 %x, 8
+  %c1 = icmp eq i8 %a1, 0
+  %c2 = icmp eq i8 %a2, 0
+  %res = and i1 %c1, %c2
+  ret i1 %res
+}
+
 define i1 @or_cmp_eq(i32 %x) {
 ; CHECK-LABEL: or_cmp_eq:
 ; CHECK:       # %bb.0:
@@ -769,6 +783,20 @@ define i1 @or_cmp_eq(i32 %x) {
   %a2 = and i32 %x, 32
   %c1 = icmp eq i32 %a1, 0
   %c2 = icmp eq i32 %a2, 0
+  %res = or i1 %c1, %c2
+  ret i1 %res
+}
+
+define i1 @or_cmp_ne(i32 %x) {
+; CHECK-LABEL: or_cmp_ne:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $40, %dil
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %a1 = and i32 %x, 8
+  %a2 = and i32 %x, 32
+  %c1 = icmp ne i32 %a1, 0
+  %c2 = icmp ne i32 %a2, 0
   %res = or i1 %c1, %c2
   ret i1 %res
 }

@@ -6790,8 +6790,8 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
     RL0 = RL.getOperand(0);
     LL1 = LL.getOperand(1);
     RL1 = RL.getOperand(1);
-    if (DAG.isKnownToBeAPowerOfTwo(LL1) && DAG.isKnownToBeAPowerOfTwo(RL1) &&
-        LL0 == RL0) {
+    if (LL0 == RL0 && DAG.isKnownToBeAPowerOfTwo(LL1) &&
+        DAG.isKnownToBeAPowerOfTwo(RL1)) {
       SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL1, RL1);
       SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, LL0, Or);
       return DAG.getSetCC(DL, VT, And, Or, IsAnd ? ISD::SETEQ : ISD::SETNE);
