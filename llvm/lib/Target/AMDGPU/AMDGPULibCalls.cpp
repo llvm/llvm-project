@@ -844,8 +844,12 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
       SmallVector<APFloat, 4> Values;
       Values.reserve(vecSize);
       for (int eltNo = 0; eltNo < vecSize; ++eltNo) {
-        ConstantFP *eltval =
-            cast<ConstantFP>(CV->getAggregateElement((unsigned)eltNo));
+        // A lane may be undef or poison, in which case there is nothing to
+        // look up in the table.
+        ConstantFP *eltval = dyn_cast_or_null<ConstantFP>(
+            CV->getAggregateElement((unsigned)eltNo));
+        if (!eltval)
+          return false;
         auto MatchingRow = llvm::find_if(tr, [eltval](const TableEntry &entry) {
           return eltval->isExactlyValue(entry.input);
         });
