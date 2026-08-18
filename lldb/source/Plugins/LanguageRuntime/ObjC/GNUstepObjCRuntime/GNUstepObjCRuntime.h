@@ -178,6 +178,15 @@ public:
   std::optional<uint64_t>
   GetTypeBitSize(const CompilerType &compiler_type) override;
 
+  /// The name of the selector at \p sel_addr, recovered from the symbol
+  /// clang emits for it. Empty when there is no such symbol.
+  ///
+  /// This cannot be read from memory: __objc_load overwrites a selector's
+  /// name field with a numeric dispatch index (selector_table.cc), so the
+  /// string is gone by the time a debugger sees it. No code is run in the
+  /// inferior to find it.
+  ConstString GetSelectorName(lldb::addr_t sel_addr);
+
   /// Lazily-built FunctionCaller for a utility function that resolves a
   /// method implementation via libobjc2's
   /// `IMP objc_msg_lookup(id receiver, SEL selector)`, used by the

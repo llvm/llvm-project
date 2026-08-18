@@ -1,5 +1,6 @@
 add_lldb_unittest(LanguageRuntimeObjCGNUstepTests
   GNUstepObjCClassDescriptorTest.cpp
+  GNUstepObjCDeclVendorTest.cpp
   GNUstepObjCTypeEncodingParserTest.cpp
 
   LINK_COMPONENTS

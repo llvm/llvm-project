@@ -21,6 +21,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExternalASTSource.h"
 
+#include "llvm/ADT/StringExtras.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -122,6 +124,127 @@ GNUstepObjCDeclVendor::GetDeclForISA(ObjCLanguageRuntime::ObjCISA isa) {
   return new_iface_decl;
 }
 
+void MethodTypeSplitter::Parse(llvm::StringRef types) {
+  std::string current;
+  unsigned depth = 0;
+  bool in_quotes = false;
+  for (char c : types) {
+    // A quoted string is a name, not structure: clang's extended encoding
+    // spells an object parameter `@"ClassName"` and a qualified one
+    // `@"<Protocol>"` (setEncodeClassNames, ASTContext.cpp), and a digit in
+    // either is part of the name rather than an argument-frame offset.
+    if (in_quotes) {
+      current.push_back(c);
+      if (c == '"')
+        in_quotes = false;
+      continue;
+    }
+    if (c == '"') {
+      current.push_back(c);
+      in_quotes = true;
+      continue;
+    }
+
+    const bool is_digit = llvm::isDigit(c);
+    if (depth == 0 && is_digit) {
+      // An offset: it ends the type that preceded it.
+      if (!current.empty()) {
+        m_types.push_back(current);
+        current.clear();
+      }
+      continue;
+    }
+    // Angle brackets bound a block's own signature, which the extended
+    // encoding writes inline as `@?<...>` (setEncodeBlockParameters); like an
+    // aggregate, everything inside belongs to the one type.
+    if (c == '{' || c == '(' || c == '[' || c == '<')
+      ++depth;
+    else if (c == '}' || c == ')' || c == ']' || c == '>')
+      if (depth > 0)
+        --depth;
+    current.push_back(c);
+    // A complete aggregate ends the type too, since no offset follows it
+    // until the next argument.
+    if (depth == 0 && (c == '}' || c == ')' || c == ']')) {
+      m_types.push_back(current);
+      current.clear();
+    }
+  }
+  if (!current.empty())
+    m_types.push_back(current);
+  // An unterminated quote means the encoding was truncated or corrupt. Say so
+  // rather than handing back a name that runs to the end of the buffer.
+  m_valid = !m_types.empty() && !in_quotes;
+}
+
+clang::ObjCMethodDecl *GNUstepObjCDeclVendor::BuildMethodDecl(
+    clang::ObjCInterfaceDecl *interface_decl, llvm::StringRef name,
+    llvm::StringRef types, bool is_instance_method) {
+  MethodTypeSplitter splitter(types);
+  if (!splitter.IsValid())
+    return nullptr;
+
+  ObjCLanguageRuntime::EncodingToTypeSP encoding_to_type_sp =
+      m_runtime.GetEncodingToType();
+  if (!encoding_to_type_sp)
+    return nullptr;
+
+  clang::ASTContext &ast_ctx = m_ast_ctx_sp->getASTContext();
+
+  // Method types are realized for expressions: unlike an ivar, a return type
+  // of @"NSString" is worth resolving, and recursing back into this vendor
+  // for it is safe because the method is not part of any interface yet.
+  CompilerType return_type = encoding_to_type_sp->RealizeType(
+      *m_ast_ctx_sp, splitter.GetReturnType().str().c_str(),
+      /*for_expression=*/true);
+  if (!return_type)
+    return nullptr;
+
+  // "initWithFoo:bar:" has as many pieces as colons; a zero-argument
+  // selector is a single identifier with none.
+  llvm::SmallVector<llvm::StringRef, 4> pieces;
+  name.split(pieces, ':');
+  const bool has_colons = name.contains(':');
+  if (has_colons && !pieces.empty() && pieces.back().empty())
+    pieces.pop_back();
+  if (pieces.empty())
+    return nullptr;
+
+  llvm::SmallVector<const clang::IdentifierInfo *, 4> selector_pieces;
+  for (llvm::StringRef piece : pieces)
+    selector_pieces.push_back(&ast_ctx.Idents.get(piece));
+
+  const unsigned num_selector_args = has_colons ? selector_pieces.size() : 0;
+  clang::Selector selector =
+      ast_ctx.Selectors.getSelector(num_selector_args, selector_pieces.data());
+
+  clang::ObjCMethodDecl *method_decl = clang::ObjCMethodDecl::Create(
+      ast_ctx, clang::SourceLocation(), clang::SourceLocation(), selector,
+      ClangUtil::GetQualType(return_type), /*ReturnTInfo=*/nullptr,
+      interface_decl, is_instance_method, /*isVariadic=*/false,
+      /*isPropertyAccessor=*/false, /*isSynthesizedAccessorStub=*/false,
+      /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
+      clang::ObjCImplementationControl::None,
+      /*HasRelatedResultType=*/false);
+  if (!method_decl)
+    return nullptr;
+
+  llvm::SmallVector<clang::ParmVarDecl *, 4> params;
+  for (size_t i = 0; i < splitter.GetNumArguments(); ++i) {
+    CompilerType arg_type = encoding_to_type_sp->RealizeType(
+        *m_ast_ctx_sp, splitter.GetArgumentType(i).str().c_str(),
+        /*for_expression=*/true);
+    if (!arg_type)
+      return nullptr;
+    params.push_back(clang::ParmVarDecl::Create(
+        ast_ctx, method_decl, clang::SourceLocation(), clang::SourceLocation(),
+        /*Id=*/nullptr, ClangUtil::GetQualType(arg_type), /*TInfo=*/nullptr,
+        clang::SC_None, /*DefArg=*/nullptr));
+  }
+  method_decl->setMethodParams(ast_ctx, params, {});
+  return method_decl;
+}
+
 bool GNUstepObjCDeclVendor::FinishDecl(
     clang::ObjCInterfaceDecl *interface_decl) {
   if (!interface_decl)
@@ -140,17 +263,21 @@ bool GNUstepObjCDeclVendor::FinishDecl(
   if (!interface_decl->hasExternalVisibleStorage())
     return true;
 
+  // Ask the runtime before publishing anything. Starting the definition and
+  // then failing would leave a members-less interface that the guard above
+  // makes permanent, so a class that was momentarily unreadable would stay
+  // empty for the rest of the session.
+  ObjCLanguageRuntime::ClassDescriptorSP descriptor =
+      m_runtime.GetClassDescriptorFromISA(isa);
+  if (!descriptor)
+    return false;
+
   // The definition has to be started, and the external-storage bits cleared,
   // *before* the callbacks run - otherwise a class that reaches itself
   // through its superclass chain recurses without bound.
   interface_decl->startDefinition();
   interface_decl->setHasExternalVisibleStorage(false);
   interface_decl->setHasExternalLexicalStorage(false);
-
-  ObjCLanguageRuntime::ClassDescriptorSP descriptor =
-      m_runtime.GetClassDescriptorFromISA(isa);
-  if (!descriptor)
-    return false;
 
   ObjCLanguageRuntime::EncodingToTypeSP encoding_to_type_sp =
       m_runtime.GetEncodingToType();
@@ -159,11 +286,28 @@ bool GNUstepObjCDeclVendor::FinishDecl(
   auto superclass_func = [this,
                           interface_decl](ObjCLanguageRuntime::ObjCISA super) {
     clang::ObjCInterfaceDecl *superclass_decl = GetDeclForISA(super);
-    if (!superclass_decl)
+    if (!superclass_decl || superclass_decl == interface_decl)
       return;
     // A superclass has to be complete before it can be attached, so this is
     // eager where everything else here is lazy.
     FinishDecl(superclass_decl);
+
+    // The recursion latch above stops FinishDecl re-entering, but it does not
+    // stop the *edge* being written: with A's superclass B and B's superclass
+    // A, both setSuperClass calls would still run and leave a cycle in the
+    // AST that clang then walks without bound. Reject any edge that is
+    // already reachable upwards from the proposed superclass.
+    for (const clang::ObjCInterfaceDecl *ancestor = superclass_decl; ancestor;
+         ancestor = ancestor->getSuperClass()) {
+      if (ancestor == interface_decl) {
+        LLDB_LOG(GetLog(LLDBLog::Types),
+                 "GNUstep class {0} would close a superclass cycle; leaving it "
+                 "without a superclass",
+                 interface_decl->getName());
+        return;
+      }
+    }
+
     clang::ASTContext &ast_ctx = m_ast_ctx_sp->getASTContext();
     interface_decl->setSuperClass(ast_ctx.getTrivialTypeSourceInfo(
         ast_ctx.getObjCInterfaceType(superclass_decl)));
@@ -208,8 +352,24 @@ bool GNUstepObjCDeclVendor::FinishDecl(
     return false;
   };
 
-  if (!descriptor->Describe(superclass_func, /*instance_method_func=*/nullptr,
-                            /*class_method_func=*/nullptr, ivar_func)) {
+  auto make_method_func = [this, interface_decl, log](bool is_instance_method) {
+    return [this, interface_decl, log,
+            is_instance_method](const char *name, const char *types) -> bool {
+      if (!name || !types)
+        return false;
+      if (clang::ObjCMethodDecl *method_decl =
+              BuildMethodDecl(interface_decl, name, types, is_instance_method))
+        interface_decl->addDecl(method_decl);
+      else
+        LLDB_LOG(log, "GNUstep method {0} has an unrealizable signature {1}",
+                 name, types);
+      return false;
+    };
+  };
+
+  if (!descriptor->Describe(
+          superclass_func, make_method_func(/*is_instance_method=*/true),
+          make_method_func(/*is_instance_method=*/false), ivar_func)) {
     LLDB_LOG(log, "GNUstep runtime could not describe class {0}",
              descriptor->GetClassName());
     return false;

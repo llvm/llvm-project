@@ -63,6 +63,10 @@ LLDB_PLUGIN_DEFINE(GNUstepObjCRuntime)
 // from inferior memory, so it is bounded rather than trusted.
 static constexpr uint32_t g_max_superclass_depth = 256;
 
+// A type encoding longer than this is not something a compiler produced.
+// Bounded for the same reason as the depth above.
+static constexpr size_t g_max_type_encoding_length = 1024;
+
 namespace {
 /// Registers the Objective-C selectors of a JIT'd expression module with the
 /// libobjc2 runtime.
@@ -1060,6 +1064,78 @@ GNUstepObjCRuntime::FindDispatchEntryPoint(lldb::addr_t pc) {
   return std::nullopt;
 }
 
+ConstString GNUstepObjCRuntime::GetSelectorName(lldb::addr_t sel_addr) {
+  if (!m_process || sel_addr == 0 || sel_addr == LLDB_INVALID_ADDRESS)
+    return ConstString();
+
+  // clang emits every selector as a global named
+  // ".objc_selector_<name>_<mangled types>" (CGObjCGNU.cpp). That symbol is
+  // the only place the name survives: __objc_load overwrites the selector's
+  // name field with a numeric dispatch index (selector_table.cc), so it
+  // cannot be read back from memory.
+  Address resolved;
+  if (!GetTargetRef().ResolveLoadAddress(sel_addr, resolved))
+    return ConstString();
+  ModuleSP module_sp = resolved.GetModule();
+  if (!module_sp)
+    return ConstString();
+  Symtab *symtab = module_sp->GetSymtab();
+  if (!symtab)
+    return ConstString();
+
+  static constexpr llvm::StringLiteral g_selector_prefix = ".objc_selector_";
+
+  // The first selector in a section shares its address with the section's
+  // start sentinel, so take every symbol at this address rather than
+  // whichever one an exact lookup happens to return.
+  llvm::StringRef symbol_name;
+  symtab->ForEachSymbolContainingFileAddress(
+      resolved.GetFileAddress(), [&](Symbol *symbol) -> bool {
+        llvm::StringRef name = symbol->GetName().GetStringRef();
+        if (!name.starts_with(g_selector_prefix))
+          return true; // keep looking
+        symbol_name = name;
+        return false;
+      });
+  if (symbol_name.empty())
+    return ConstString();
+
+  llvm::StringRef name = symbol_name.drop_front(g_selector_prefix.size());
+
+  // A selector name may contain both '_' and ':', so the boundary cannot be
+  // found by scanning. Subtract the suffix instead: the types half of the
+  // symbol is exactly the selector's own `types` string, mangled. That
+  // string is still readable - only the name field was overwritten.
+  const uint32_t ptr_size = m_process->GetAddressByteSize();
+  Status error;
+  const addr_t types_addr =
+      m_process->ReadPointerFromMemory(sel_addr + ptr_size, error);
+  std::string suffix("_");
+  if (error.Success() && types_addr != 0 &&
+      types_addr != LLDB_INVALID_ADDRESS) {
+    char buffer[g_max_type_encoding_length];
+    const size_t length = m_process->ReadCStringFromMemory(
+        types_addr, buffer, sizeof(buffer), error);
+    if (error.Success() && length < sizeof(buffer) - 1) {
+      // GetSymbolNameForTypeEncoding: '@' is replaced on ELF because it is
+      // reserved for symbol versioning, '=' on Windows because lld rejects
+      // it in an exported name. MinGW is isOSWindows() and not ELF, so the
+      // predicates are asked separately rather than derived from each other.
+      const llvm::Triple &triple = GetTargetRef().GetArchitecture().GetTriple();
+      std::string mangled(buffer, length);
+      if (triple.isOSBinFormatELF())
+        llvm::replace(mangled, '@', '\1');
+      if (triple.isOSWindows())
+        llvm::replace(mangled, '=', '\2');
+      suffix += mangled;
+    }
+  }
+
+  if (!name.consume_back(suffix))
+    return ConstString();
+  return ConstString(name);
+}
+
 FunctionCaller *GNUstepObjCRuntime::GetMsgLookupFunctionCaller(Thread &thread) {
   // Build (once) a utility function that resolves a method implementation by
   // calling libobjc2's objc_msg_lookup, and a FunctionCaller to invoke it.
@@ -1286,8 +1362,7 @@ DeclVendor *GNUstepObjCRuntime::GetDeclVendor() {
   return m_decl_vendor_up.get();
 }
 
-ObjCLanguageRuntime::EncodingToTypeSP
-GNUstepObjCRuntime::GetEncodingToType() {
+ObjCLanguageRuntime::EncodingToTypeSP GNUstepObjCRuntime::GetEncodingToType() {
   if (!m_encoding_to_type_sp)
     m_encoding_to_type_sp = std::make_shared<GNUstepObjCTypeEncodingParser>(
         GetTargetRef().GetArchitecture().GetTriple(), this);

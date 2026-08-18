@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GNUstepObjCClassDescriptor.h"
+#include "GNUstepObjCRuntime.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -50,6 +51,8 @@ static constexpr size_t g_max_type_encoding_length = 1024;
 // that is how the runtime walks these arrays - but a stride this large is
 // not something a compiler emitted.
 static constexpr uint64_t g_max_element_stride = 1024;
+static constexpr uint32_t g_max_methods = 8192;
+static constexpr uint32_t g_max_method_lists = 512;
 
 // An upper bound for plausible class names. A string that does not terminate
 // within this many bytes is not a class name, and stopping there keeps a
@@ -176,8 +179,8 @@ bool GNUstepObjCClassDescriptor::Describe(
     std::function<void(ObjCLanguageRuntime::ObjCISA)> const &superclass_func,
     std::function<bool(const char *, const char *)> const &instance_method_func,
     std::function<bool(const char *, const char *)> const &class_method_func,
-    std::function<bool(const char *, const char *, lldb::addr_t, uint64_t)> const
-        &ivar_func) const {
+    std::function<bool(const char *, const char *, lldb::addr_t,
+                       uint64_t)> const &ivar_func) const {
   if (!m_valid)
     return false;
 
@@ -185,6 +188,40 @@ bool GNUstepObjCClassDescriptor::Describe(
   // once the class is resolved.
   if (superclass_func && m_superclass_isa != 0)
     superclass_func(m_superclass_isa);
+
+  if (instance_method_func || class_method_func) {
+    ProcessSP process_sp = m_process_wp.lock();
+    auto *runtime = process_sp ? llvm::dyn_cast_or_null<GNUstepObjCRuntime>(
+                                     ObjCLanguageRuntime::Get(*process_sp))
+                               : nullptr;
+    // A method list read off a class object is always that object's own
+    // instance methods, whether or not the object happens to be a metaclass.
+    // Which of the caller's two callbacks that corresponds to is the caller's
+    // business - see the metaclass hop below.
+    const auto &method_func = instance_method_func;
+    if (runtime && method_func) {
+      // The same selector legitimately appears more than once: categories
+      // prepend their lists, and a category may override a method.
+      llvm::DenseSet<ConstString> seen;
+      for (const RawMethod &method : ReadMethodList()) {
+        ConstString name = runtime->GetSelectorName(method.selector);
+        if (!name || !seen.insert(name).second)
+          continue;
+        if (method_func(name.GetCString(), method.types.c_str()))
+          break;
+      }
+    }
+
+    // libobjc2 stores a class's *class* methods on its metaclass, as that
+    // metaclass's instance methods, so they are collected by asking the
+    // metaclass for its instance methods and reporting them as ours.
+    if (!m_is_meta && class_method_func) {
+      if (std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor> metaclass =
+              GetMetaclass())
+        metaclass->Describe(nullptr, /*instance_method_func=*/class_method_func,
+                            nullptr, nullptr);
+    }
+  }
 
   if (ivar_func) {
     for (const RawIvar &ivar : ReadIvarList()) {
@@ -198,6 +235,85 @@ bool GNUstepObjCClassDescriptor::Describe(
     }
   }
   return true;
+}
+
+std::vector<GNUstepObjCClassDescriptor::RawMethod>
+GNUstepObjCClassDescriptor::ReadMethodList() const {
+  std::vector<RawMethod> methods;
+  ProcessSP process_sp = m_process_wp.lock();
+  if (!process_sp || !m_valid)
+    return methods;
+
+  const ClassLayout layout = GetClassLayout(*process_sp);
+  const uint32_t ptr_size = layout.pointer_size;
+
+  Status error;
+  addr_t list_addr =
+      process_sp->ReadPointerFromMemory(m_isa + layout.methods_offset, error);
+  if (error.Fail())
+    return methods;
+
+  // struct objc_method_list { objc_method_list *next; int count; size_t size;
+  //                           objc_method methods[]; }  (method.h)
+  const uint64_t count_offset = ptr_size;
+  const uint64_t size_offset =
+      llvm::alignTo(ptr_size + sizeof(uint32_t), ptr_size);
+  const uint64_t entries_offset = size_offset + ptr_size;
+  const uint64_t min_stride = 3 * ptr_size;
+
+  // A class's own methods are followed by one list per category. The chain
+  // and its contents both come from inferior memory, so bound the number of
+  // lists, the total number of methods, and revisiting: a `next` pointing
+  // back into the chain would otherwise multiply out to millions of entries
+  // even with each list individually bounded.
+  llvm::SmallPtrSet<const void *, 16> visited;
+  for (uint32_t list = 0; list < g_max_method_lists; ++list) {
+    if (list_addr == 0 || list_addr == LLDB_INVALID_ADDRESS ||
+        list_addr % ptr_size != 0)
+      break;
+    if (!visited.insert(reinterpret_cast<const void *>(list_addr)).second)
+      break;
+    if (methods.size() >= g_max_methods)
+      break;
+
+    const int64_t count = process_sp->ReadSignedIntegerFromMemory(
+        list_addr + count_offset, sizeof(uint32_t), 0, error);
+    if (error.Fail() || count < 0 || count > g_max_methods)
+      break;
+    const uint64_t stride = process_sp->ReadUnsignedIntegerFromMemory(
+        list_addr + size_offset, ptr_size, 0, error);
+    if (error.Fail() || stride < min_stride || stride > g_max_element_stride)
+      break;
+
+    for (int64_t i = 0; i < count && methods.size() < g_max_methods; ++i) {
+      // struct objc_method { IMP imp; SEL selector; const char *types; }
+      const addr_t entry = list_addr + entries_offset + i * stride;
+      const addr_t selector =
+          process_sp->ReadPointerFromMemory(entry + ptr_size, error);
+      if (error.Fail() || selector == 0 || selector == LLDB_INVALID_ADDRESS)
+        continue;
+      const addr_t types_ptr =
+          process_sp->ReadPointerFromMemory(entry + 2 * ptr_size, error);
+      if (error.Fail())
+        continue;
+
+      RawMethod method;
+      method.selector = selector;
+      if (types_ptr != 0 && types_ptr != LLDB_INVALID_ADDRESS) {
+        char buffer[g_max_type_encoding_length];
+        const size_t length = process_sp->ReadCStringFromMemory(
+            types_ptr, buffer, sizeof(buffer), error);
+        if (error.Success() && length < sizeof(buffer) - 1)
+          method.types.assign(buffer, length);
+      }
+      methods.push_back(std::move(method));
+    }
+
+    list_addr = process_sp->ReadPointerFromMemory(list_addr, error);
+    if (error.Fail())
+      break;
+  }
+  return methods;
 }
 
 std::vector<GNUstepObjCClassDescriptor::RawIvar>

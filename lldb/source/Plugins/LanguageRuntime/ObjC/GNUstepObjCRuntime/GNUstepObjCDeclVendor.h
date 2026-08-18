@@ -14,12 +14,42 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <string>
+#include <vector>
 
 #include "clang/AST/DeclObjC.h"
 
 namespace lldb_private {
 
 class GNUstepObjCExternalASTSource;
+
+/// Splits a runtime method type encoding into its component types.
+///
+/// The encoding interleaves types with the byte offsets of the arguments in
+/// the (long obsolete) argument frame - "v16@0:8" is a void return, then
+/// `self` at 0 and `_cmd` at 8. Only the types are wanted, so the digits are
+/// dropped; digits that belong to a type rather than to an offset are kept,
+/// which is what the depth and quote tracking are for.
+///
+/// The resulting order is fixed: [0] return, [1] self, [2] _cmd, [3...]
+/// the declared parameters.
+class MethodTypeSplitter {
+public:
+  explicit MethodTypeSplitter(llvm::StringRef types) { Parse(types); }
+
+  bool IsValid() const { return m_valid && m_types.size() >= 3; }
+  llvm::StringRef GetReturnType() const { return m_types[0]; }
+  size_t GetNumArguments() const { return m_types.size() - 3; }
+  llvm::StringRef GetArgumentType(size_t idx) const { return m_types[idx + 3]; }
+
+private:
+  void Parse(llvm::StringRef types);
+
+  std::vector<std::string> m_types;
+  bool m_valid = false;
+};
 
 /// Builds Objective-C interface declarations out of libobjc2's runtime
 /// metadata, so that a class the debug info does not describe is still
@@ -52,6 +82,13 @@ public:
   bool FinishDecl(clang::ObjCInterfaceDecl *interface_decl);
 
 private:
+  /// Builds an ObjCMethodDecl from a runtime method name and type
+  /// encoding, or nullptr if the encoding cannot be realized.
+  clang::ObjCMethodDecl *
+  BuildMethodDecl(clang::ObjCInterfaceDecl *interface_decl,
+                  llvm::StringRef name, llvm::StringRef types,
+                  bool is_instance_method);
+
   /// Returns a forward declaration for \p isa, creating it if needed.
   clang::ObjCInterfaceDecl *GetDeclForISA(ObjCLanguageRuntime::ObjCISA isa);
 

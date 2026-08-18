@@ -23,6 +23,13 @@ __attribute__((objc_root_class))
 }
 @end
 
+// The extended method encoding spells an object parameter with its class
+// name, so a digit in the name lands in the middle of the type string.
+@interface SHA256 : NSObject
+@end
+@implementation SHA256
+@end
+
 @interface Hidden : NSObject {
 @public
   int _int;
@@ -30,8 +37,24 @@ __attribute__((objc_root_class))
   char _char;
   void *_ptr;
 }
+- (int)doubled:(int)value;
+- (int)plainInt;
+- (int)digest:(SHA256 *)hash;
++ (int)classAnswer;
 @end
 @implementation Hidden
+- (int)doubled:(int)value {
+  return value * 2;
+}
+- (int)plainInt {
+  return _int;
+}
+- (int)digest:(SHA256 *)hash {
+  return hash == 0 ? 5 : 6;
+}
++ (int)classAnswer {
+  return 7;
+}
 @end
 
 id MakeHidden(void) {
