@@ -1305,6 +1305,7 @@ libc_support_library(
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_iterator",
+        ":__support_cpp_type_traits",
         ":__support_libc_assert",
         ":__support_macros_config",
         ":string_memory_utils",
