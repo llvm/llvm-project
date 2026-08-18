@@ -31,7 +31,6 @@ void RTDECL(OpenMPRegisterAllocator)();
 /// registry slot (typically 1).  No-op if the descriptor is already allocated
 /// or is not allocatable.
 void RTDECL(OpenMPAllocatableSetAllocIdx)(Descriptor &descriptor, int pos);
-
 }
 
 } // namespace Fortran::runtime::omp

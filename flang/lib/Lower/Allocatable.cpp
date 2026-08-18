@@ -31,14 +31,14 @@
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Runtime/OpenMP/omp_alloc.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/pointer.h"
-#include "flang/Runtime/OpenMP/omp_alloc.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/Fortran-features.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
-#include "flang/Support/Fortran-features.h"
 #include "llvm/Support/CommandLine.h"
 
 /// By default fir memory operation fir::AllocMemOp/fir::FreeMemOp are used.
