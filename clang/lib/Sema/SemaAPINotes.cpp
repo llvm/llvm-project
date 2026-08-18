@@ -1459,7 +1459,7 @@ void Sema::ProcessAPINotes(Decl *D) {
                   *ParameterSelectorCandidates);
             }
 
-            if (!CXXMethod->isStatic()) {
+            if (CXXMethod->isImplicitObjectMemberFunction()) {
               SmallVector<api_notes::FunctionObjectSelector, 7> ObjectSelectors;
               getAPINotesObjectSelectorSubsets(
                   getAPINotesObjectSelector(CXXMethod), ObjectSelectors);

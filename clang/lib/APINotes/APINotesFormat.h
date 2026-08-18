@@ -452,6 +452,27 @@ std::optional<FunctionTableKey> getFunctionKeyImpl(
   return FunctionTableKey(ParentContextID, *NameID, std::move(Selector));
 }
 
+inline std::optional<FunctionTableKey> getFunctionKeyImpl(
+    uint32_t ParentContextID, llvm::StringRef Name,
+    const FunctionSelector &Selector,
+    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
+        GetIdentifier) {
+  if (Selector.Parameters) {
+    if (Selector.Object)
+      return getFunctionKeyImpl(
+          ParentContextID, Name,
+          llvm::ArrayRef<std::string>(*Selector.Parameters), *Selector.Object,
+          GetIdentifier);
+    return getFunctionKeyImpl(ParentContextID, Name,
+                              llvm::ArrayRef<std::string>(*Selector.Parameters),
+                              GetIdentifier);
+  }
+  if (Selector.Object)
+    return getFunctionKeyImpl(ParentContextID, Name, *Selector.Object,
+                              GetIdentifier);
+  return getFunctionKeyImpl(ParentContextID, Name, GetIdentifier);
+}
+
 } // namespace api_notes
 } // namespace clang
 

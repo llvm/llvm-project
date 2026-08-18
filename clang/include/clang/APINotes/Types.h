@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1164,7 +1165,7 @@ struct FunctionTableKey {
           static_cast<bool>(objectSelector->Const),
           objectSelector->Volatile.value_or(false),
           static_cast<bool>(objectSelector->Volatile),
-          objectSelector->Ref ? static_cast<unsigned>(*objectSelector->Ref) + 1
+          objectSelector->Ref ? llvm::to_underlying(*objectSelector->Ref) + 1
                               : 0);
     return Hash;
   }

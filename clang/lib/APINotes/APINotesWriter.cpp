@@ -137,66 +137,15 @@ class APINotesWriter::Implementation {
         .first->second;
   }
 
-  FunctionTableKey getFunctionKey(uint32_t ParentContextID, StringRef Name) {
-    std::optional<FunctionTableKey> Key =
-        getFunctionKeyImpl(ParentContextID, Name,
-                           [this](StringRef S) -> std::optional<IdentifierID> {
-                             return getIdentifier(S);
-                           });
-    assert(Key && "Writer identifier lookup should not fail");
-    return *Key;
-  }
-
-  FunctionTableKey getFunctionKey(uint32_t ParentContextID, StringRef Name,
-                                  ArrayRef<StringRef> Parameters) {
-    std::optional<FunctionTableKey> Key =
-        getFunctionKeyImpl(ParentContextID, Name, Parameters,
-                           [this](StringRef S) -> std::optional<IdentifierID> {
-                             return getIdentifier(S);
-                           });
-    assert(Key && "Writer identifier lookup should not fail");
-    return *Key;
-  }
-
   FunctionTableKey getFunctionKey(uint32_t ParentContextID, StringRef Name,
                                   const FunctionSelector &Selector) {
-    std::optional<FunctionTableKey> Key;
-    auto GetIdentifier = [this](StringRef S) -> std::optional<IdentifierID> {
-      return getIdentifier(S);
-    };
-    if (Selector.Parameters) {
-      if (Selector.Object)
-        Key = getFunctionKeyImpl(
-            ParentContextID, Name,
-            llvm::ArrayRef<std::string>(*Selector.Parameters), *Selector.Object,
-            GetIdentifier);
-      else
-        Key = getFunctionKeyImpl(
-            ParentContextID, Name,
-            llvm::ArrayRef<std::string>(*Selector.Parameters), GetIdentifier);
-    } else if (Selector.Object) {
-      Key = getFunctionKeyImpl(ParentContextID, Name, *Selector.Object,
-                               GetIdentifier);
-    } else {
-      Key = getFunctionKeyImpl(ParentContextID, Name, GetIdentifier);
-    }
+    std::optional<FunctionTableKey> Key =
+        getFunctionKeyImpl(ParentContextID, Name, Selector,
+                           [this](StringRef S) -> std::optional<IdentifierID> {
+                             return getIdentifier(S);
+                           });
     assert(Key && "Writer identifier lookup should not fail");
     return *Key;
-  }
-
-  FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
-                                  StringRef Name) {
-    uint32_t ParentContextID =
-        ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
-    return getFunctionKey(ParentContextID, Name);
-  }
-
-  FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
-                                  StringRef Name,
-                                  ArrayRef<StringRef> Parameters) {
-    uint32_t ParentContextID =
-        ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
-    return getFunctionKey(ParentContextID, Name, Parameters);
   }
 
   FunctionTableKey getFunctionKey(std::optional<Context> ParentContext,
@@ -1681,24 +1630,8 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
 
 void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
                                   const CXXMethodInfo &Info,
-                                  VersionTuple SwiftVersion) {
-  FunctionTableKey Key = Implementation->getFunctionKey(CtxID.Value, Name);
-  Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
-}
-
-void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
-                                  llvm::ArrayRef<llvm::StringRef> Parameters,
-                                  const CXXMethodInfo &Info,
-                                  VersionTuple SwiftVersion) {
-  FunctionTableKey Key =
-      Implementation->getFunctionKey(CtxID.Value, Name, Parameters);
-  Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
-}
-
-void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
-                                  const FunctionSelector &Selector,
-                                  const CXXMethodInfo &Info,
-                                  VersionTuple SwiftVersion) {
+                                  VersionTuple SwiftVersion,
+                                  const FunctionSelector &Selector) {
   FunctionTableKey Key =
       Implementation->getFunctionKey(CtxID.Value, Name, Selector);
   Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
@@ -1724,16 +1657,10 @@ void APINotesWriter::addGlobalVariable(std::optional<Context> Ctx,
 void APINotesWriter::addGlobalFunction(std::optional<Context> Ctx,
                                        llvm::StringRef Name,
                                        const GlobalFunctionInfo &Info,
-                                       VersionTuple SwiftVersion) {
-  FunctionTableKey Key = Implementation->getFunctionKey(Ctx, Name);
-  Implementation->GlobalFunctions[Key].push_back({SwiftVersion, Info});
-}
-
-void APINotesWriter::addGlobalFunction(
-    std::optional<Context> Ctx, llvm::StringRef Name,
-    llvm::ArrayRef<llvm::StringRef> Parameters, const GlobalFunctionInfo &Info,
-    VersionTuple SwiftVersion) {
-  FunctionTableKey Key = Implementation->getFunctionKey(Ctx, Name, Parameters);
+                                       VersionTuple SwiftVersion,
+                                       const FunctionSelector &Selector) {
+  assert(!Selector.Object && "Object selectors only apply to C++ methods");
+  FunctionTableKey Key = Implementation->getFunctionKey(Ctx, Name, Selector);
   Implementation->GlobalFunctions[Key].push_back({SwiftVersion, Info});
 }
 
