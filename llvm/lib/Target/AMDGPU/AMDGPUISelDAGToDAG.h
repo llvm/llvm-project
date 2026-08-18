@@ -205,7 +205,6 @@ private:
                   SDValue *Offset, bool Imm32Only = false,
                   bool *ScaleOffset = nullptr) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
-  bool SelectSMRDDwordImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectScaleOffset(SDNode *N, SDValue &Offset, bool IsSigned) const;
   bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
