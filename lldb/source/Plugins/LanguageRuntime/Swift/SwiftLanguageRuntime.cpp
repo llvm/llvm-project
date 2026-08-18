@@ -3888,9 +3888,9 @@ private:
   std::optional<lldb::addr_t> m_tls_file_addr;
 };
 
-// (anonymous namespace)::ActiveTask::Value in the Swift concurrency runtime.
+// The exported current-task thread-local in the Swift concurrency runtime.
 static constexpr llvm::StringLiteral g_cxx_thread_local_task_symbol =
-    "_ZN12_GLOBAL__N_110ActiveTask5ValueE";
+    "_swift_concurrency_currentTask";
 
 CxxThreadLocalTaskFinder::CxxThreadLocalTaskFinder(ModuleSP concurrency_module)
     : m_concurrency_module(std::move(concurrency_module)) {
