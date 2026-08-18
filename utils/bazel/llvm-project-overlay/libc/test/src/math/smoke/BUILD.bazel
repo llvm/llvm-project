@@ -1775,6 +1775,14 @@ math_test(
     hdrs = ["IsSignalingTest.h"],
 )
 
+math_test(
+    name = "issignalingf128",
+    hdrs = ["IsSignalingTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
 math_test(name = "log10f16")
 
 math_test(name = "log2f16")
