@@ -69,6 +69,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_statfs
     libc.include.sys_statvfs
     libc.include.sys_syscall
+    libc.include.sys_sysmacros
     libc.include.sys_time
     libc.include.sys_types
     libc.include.sys_ucontext

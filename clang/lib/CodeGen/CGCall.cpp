@@ -5456,6 +5456,23 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
   return Call;
 }
 
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                                   ArrayRef<llvm::Value *> Args,
+                                                   llvm::Type *RetTy,
+                                                   const llvm::Twine &Name) {
+  SmallVector<llvm::Type *> ArgTys;
+  ArgTys.reserve(Args.size());
+  for (llvm::Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
+      &CGM.getModule(), ID, RetTy, ArgTys);
+  llvm::CallInst *Call =
+      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
+  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
+    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
+  return Call;
+}
+
 /// Emits a call or invoke to the given noreturn runtime function.
 void CodeGenFunction::EmitNoreturnRuntimeCallOrInvoke(
     llvm::FunctionCallee callee, ArrayRef<llvm::Value *> args) {
