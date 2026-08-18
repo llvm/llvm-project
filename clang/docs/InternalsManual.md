@@ -3612,8 +3612,8 @@ int A = B; // expected-error {{use of undeclared identifier 'B'}}
 ```
 
 You can place as many diagnostics on one line as you wish. To make the code
-more readable, you can use a backslash to split the diagnostics into multiple
-lines.
+more readable, you can use backslashes to separate out the diagnostics into
+multiple lines.
 
 Alternatively, it is possible to specify the line on which the diagnostic
 should appear by appending `@<line>` to `expected-<type>`, for example:
