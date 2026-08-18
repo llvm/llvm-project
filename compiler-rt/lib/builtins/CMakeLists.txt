@@ -340,6 +340,12 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_TF_SOURCES trunctfdf2)
   use_libc_builtin(GENERIC_TF_SOURCES trunctfsf2)
   use_libc_builtin(x86_80_BIT_SOURCES trunctfxf2)
+  use_libc_builtin(GENERIC_TF_SOURCES fixtfsi)
+  use_libc_builtin(GENERIC_TF_SOURCES fixtfdi)
+  use_libc_builtin(GENERIC_TF_SOURCES fixtfti)
+  use_libc_builtin(GENERIC_TF_SOURCES fixunstfsi)
+  use_libc_builtin(GENERIC_TF_SOURCES fixunstfdi)
+  use_libc_builtin(GENERIC_TF_SOURCES fixunstfti)
 endif()
 
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
