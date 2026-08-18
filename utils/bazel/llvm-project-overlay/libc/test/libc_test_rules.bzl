@@ -33,7 +33,7 @@ def libc_test(
         local_defines = [],
         linkopts = [],
         c_test = False,
-        full_build = False,
+        full_build_only = False,
         target_compatible_with = [],
         tags = [],
         **kwargs):
@@ -47,7 +47,7 @@ def libc_test(
       local_defines: The list of target local_defines if any.
       linkopts: Link options for the cc_test.
       c_test: Whether this test is a C unit test (uses LibcCTest).
-      full_build: Whether the test should only be run in full-build mode.
+      full_build_only: Whether the test should only be run in full-build mode.
       target_compatible_with: Constraints the target is compatible with.
       tags: Tags for the cc_test.
       **kwargs: Attributes relevant for a cc_test.
@@ -88,7 +88,7 @@ def libc_test(
         "//conditions:default": [],
     })
 
-    if full_build:
+    if full_build_only:
         target_compatible_with = target_compatible_with + select({
             "//libc:full_build": [],
             "//conditions:default": ["@platforms//:incompatible"],
