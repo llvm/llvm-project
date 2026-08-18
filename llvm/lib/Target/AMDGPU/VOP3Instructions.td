@@ -1986,16 +1986,14 @@ def VOP_Pseudo_Scalar_F16_NoInline : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_NoInl
 // Define regular and "no inline constant" variant of a F16 pseudo
 // scalar transcendental instruction.
 multiclass VOP3PseudoScalarInst_F16<string opName> {
-  let SubtargetPredicate = HasF16PseudoScalarTransWithInlineConstants,
-      AssemblerPredicate = HasF16PseudoScalarTransWithInlineConstants,
-      TRANS = 1, isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
-    defm NAME : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16>;
-  }
+  let TRANS = 1, isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
+    let SubtargetPredicate = HasF16PseudoScalarTransWithInlineConstants in {
+      defm NAME : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16>;
+    }
 
-  let SubtargetPredicate = HasNoF16PseudoScalarTransInlineConstants,
-      AssemblerPredicate = HasNoF16PseudoScalarTransInlineConstants,
-      TRANS = 1, isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
-    defm !strconcat(NAME, "_noinline") : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16_NoInline>;
+    let SubtargetPredicate = HasNoF16PseudoScalarTransInlineConstants in {
+      defm !strconcat(NAME, "_noinline") : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16_NoInline>;
+    }
   }
 }
 

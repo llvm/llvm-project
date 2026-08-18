@@ -1236,7 +1236,8 @@ defm NoF16PseudoScalarTransInlineConstants : AMDGPUSubtargetFeature<"no-f16-pseu
 >;
 
 def HasF16PseudoScalarTransWithInlineConstants :
-  Predicate<"Subtarget->hasPseudoScalarTrans() && !Subtarget->hasNoF16PseudoScalarTransInlineConstants()">;
+  Predicate<"Subtarget->hasPseudoScalarTrans() && !Subtarget->hasNoF16PseudoScalarTransInlineConstants()">,
+  AssemblerPredicate<(all_of FeaturePseudoScalarTrans, (not FeatureNoF16PseudoScalarTransInlineConstants))>;
 
 defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",
   "Has restricted SOffset (immediate not supported)."
