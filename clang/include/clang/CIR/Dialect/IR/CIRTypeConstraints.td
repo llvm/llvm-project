@@ -342,6 +342,12 @@ def CIR_AnyIntOrVecOfIntType
     let cppFunctionName = "isIntOrVectorOfIntType";
 }
 
+def CIR_AnyIntOrVecOfIntOrBoolType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_VectorOfIntOrBoolType],
+        "integer or vector of bool or integer type"> {
+    let cppFunctionName = "isIntOrVecOfIntOrBoolType";
+}
+
 def CIR_AnySIntOrVecOfSIntType
     : AnyTypeOf<[CIR_AnySIntType, CIR_VectorOfSIntType],
         "signed integer or vector of signed integer type"> {
