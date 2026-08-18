@@ -21,6 +21,7 @@
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Lower/Support/LoopAnnotation.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -2312,6 +2313,32 @@ static bool hasEarlyReturn(Fortran::lower::pft::Evaluation &eval) {
   return hasReturnStmt;
 }
 
+/// Return the NonLabelDoStmt evaluation associated with an OpenACC loop or
+/// a DoConstruct being lowered as an acc.loop.
+static Fortran::lower::pft::Evaluation *
+getAccLoopDoStmtEval(Fortran::lower::pft::Evaluation &eval) {
+  Fortran::lower::pft::Evaluation *e = &eval;
+  if (e->isA<Fortran::parser::OpenACCConstruct>()) {
+    if (!e->hasNestedEvaluations())
+      return nullptr;
+    e = nullptr;
+    for (Fortran::lower::pft::Evaluation &nested :
+         eval.getNestedEvaluations()) {
+      if (nested.isA<Fortran::parser::DoConstruct>()) {
+        e = &nested;
+        break;
+      }
+    }
+    if (!e)
+      return nullptr;
+  }
+  if (e->isA<Fortran::parser::DoConstruct>() && e->hasNestedEvaluations())
+    return &e->getFirstNestedEvaluation();
+  if (e->isA<Fortran::parser::NonLabelDoStmt>())
+    return e;
+  return nullptr;
+}
+
 static mlir::acc::LoopOp createLoopOp(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2580,12 +2607,16 @@ static mlir::acc::LoopOp createLoopOp(
     loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), *combinedConstructs));
 
-  // TODO: retrieve directives from NonLabelDoStmt pft::Evaluation, and add them
-  // as attribute to the acc.loop as an extra attribute. It is not quite clear
-  // how useful these $dir are in acc contexts, but they could still provide
-  // more information about the loop acc codegen. They can be obtained by
-  // looking for the first lexicalSuccessor of eval that is a NonLabelDoStmt,
-  // and using the related `dirs` member.
+  // Apply `!dir$` loop directives associated with the DO statement as a
+  // discardable LLVM loop annotation attribute on the acc.loop.
+  // TODO: consider limiting to directives that are reasonable to apply
+  if (Fortran::lower::pft::Evaluation *doStmtEval =
+          getAccLoopDoStmtEval(eval)) {
+    if (mlir::LLVM::LoopAnnotationAttr la =
+            Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
+                                                  doStmtEval->dirs))
+      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
+  }
 
   return loopOp;
 }
@@ -5511,6 +5542,16 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     loopOp.setAuto_Attr(arrOfDeviceNone);
   } else {
     llvm_unreachable("Unexpected loop par mode");
+  }
+
+  // Apply `!dir$` loop directives associated with the DO statement as a
+  // discardable LLVM loop annotation attribute on the acc.loop.
+  if (Fortran::lower::pft::Evaluation *doStmtEval =
+          getAccLoopDoStmtEval(eval)) {
+    if (mlir::LLVM::LoopAnnotationAttr la =
+            Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
+                                                  doStmtEval->dirs))
+      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
   }
 
   return loopOp;
