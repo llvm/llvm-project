@@ -100,6 +100,7 @@ cpp::string describeValue(cpp::wstring_view Value) {
     S += ',';
   }
   S += cpp::to_string(Value.back());
+  S += '}';
   return S;
 #endif // LIBC_TYPES_WCHAR_T_IS_UTF32
 }
