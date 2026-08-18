@@ -5444,6 +5444,39 @@ SDValue SystemZTargetLowering::lowerPREFETCH(SDValue Op,
 SDValue
 SystemZTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
                                               SelectionDAG &DAG) const {
+  SDLoc DL(op);
+  unsigned IntNo = Op.getConstantOperandVal(1);
+  
+  // Intercept translation intrinsic
+  if (IntNo == Intrinsic::int_s390_translate) {
+    SDValue Chain = Op.getOperand(0);
+    SDValue Src   = Op.getOperand(2);
+    SDValue Tbl   = Op.getOperand(3);
+    SDValue Len   = Op.getOperand(4);
+
+    // If the input length is a static constant,
+    // create a new target node and return it
+    if(auto *ConstLen = dyn_cast<ConstantSDNode>(Len)) {
+      uint64_t Value = ConstLen->getZExtValue();
+
+      if(Value >= 1 && Value <= 256) {
+        uint64_t HardwareLen = Value - 1;
+        SDValue ImmLen = DAG.getTargetConstant(HardwareLen, DL, MVT::i32);
+
+        SmallVector<SDValue, 4> Ops;
+        Ops.push_back(Chain);
+        Ops.push_back(Src);
+        Ops.push_back(ImmLen);
+        Ops.push_back(Tbl);
+
+        return DAG.getNode(SystemZISD::TR, DL, MVT::Other, Ops);
+      }
+    }
+
+    // If the input length is variable, return the SDValue as-is
+    return SDValue();
+  }
+  
   unsigned Opcode, CCValid;
   if (isIntrinsicWithCCAndChain(Op, Opcode, CCValid)) {
     assert(Op->getNumValues() == 2 && "Expected only CC result and chain");
