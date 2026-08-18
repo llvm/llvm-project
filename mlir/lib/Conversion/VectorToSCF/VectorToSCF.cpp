@@ -567,6 +567,12 @@ static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
       xferOp.getShapedType().getElementType())
     return rewriter.notifyMatchFailure(
         xferOp, "Mismatching source and destination element types.");
+  // The lowering allocates a temporary buffer, which `memref.alloca` only
+  // allows inside an automatic allocation scope.
+  Operation *op = xferOp.getOperation();
+  if (!op->getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+    return rewriter.notifyMatchFailure(
+        xferOp, "xferOp is not inside an automatic allocation scope");
 
   return success();
 }
