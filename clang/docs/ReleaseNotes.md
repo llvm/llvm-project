@@ -441,6 +441,12 @@ features cannot lower the translation-unit ABI level;
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
 
+- Fixed a crash when an attribute such as `mode` gave an underlying type to a
+  forward-declared enum. Such an enum is complete but never acquires a
+  definition, and Clang went looking for that definition anyway. This only
+  reproduced with local submodule visibility enabled, which `-std=c++20` turns
+  on implicitly. (#GH173227)
+
 #### Bug Fixes to C++ Support
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.

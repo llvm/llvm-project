@@ -9568,12 +9568,15 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
   } else if (auto *ED = dyn_cast<EnumDecl>(D)) {
     if (auto *Pattern = ED->getTemplateInstantiationPattern())
       ED = Pattern;
-    if (OnlyNeedComplete && (ED->isFixed() || getLangOpts().MSVCCompat)) {
+    if (OnlyNeedComplete && (ED->isFixed() || getLangOpts().MSVCCompat ||
+                             !ED->getDefinition())) {
       // If the enum has a fixed underlying type, it may have been forward
       // declared. In -fms-compatibility, `enum Foo;` will also forward declare
-      // the enum and assign it the underlying type of `int`. Since we're only
-      // looking for a complete type (not a definition), any visible declaration
-      // of it will do.
+      // the enum and assign it the underlying type of `int`. An attribute such
+      // as `mode` can likewise give an underlying type to a forward
+      // declaration, which makes the enum complete while leaving it without a
+      // definition. Since we're only looking for a complete type (not a
+      // definition), any visible declaration of it will do.
       *Suggested = nullptr;
       for (auto *Redecl : ED->redecls()) {
         if (isAcceptable(Redecl, Kind))
