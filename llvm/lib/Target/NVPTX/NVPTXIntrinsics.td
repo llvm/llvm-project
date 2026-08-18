@@ -5855,14 +5855,10 @@ multiclass TCGEN05_ALLOC_INTR<string CtaGroup, Intrinsic Intr> {
     let isConvergent = true, Predicates = Pred in {
       def suffix # "_GENERIC" : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols),
           "tcgen05.alloc" # exclusive # ".cta_group::" # CtaGroup # ".sync.aligned.b32",
-          [(PatFrag<(ops node:$dst, node:$ncols),
-                    (Intr node:$dst, node:$ncols, IsExclusive),
-                    AS_match.generic> addr:$dst, B32:$ncols)]>;
+          [(IntrinsicInAS<Intr, AddrSpaceGeneric> addr:$dst, B32:$ncols, IsExclusive)]>;
       def suffix # "_SHARED" : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols),
           "tcgen05.alloc" # exclusive # ".cta_group::" # CtaGroup # ".sync.aligned.shared::cta.b32",
-          [(PatFrag<(ops node:$dst, node:$ncols),
-                    (Intr node:$dst, node:$ncols, IsExclusive),
-                    AS_match.shared> addr:$dst, B32:$ncols)]>;
+          [(IntrinsicInAS<Intr, AddrSpaceShared> addr:$dst, B32:$ncols, IsExclusive)]>;
     }
   }
 }

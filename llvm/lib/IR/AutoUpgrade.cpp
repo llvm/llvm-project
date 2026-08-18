@@ -5762,14 +5762,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::ctpop:
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0)});
     break;
-  case Intrinsic::nvvm_tcgen05_alloc_cg1:
-  case Intrinsic::nvvm_tcgen05_alloc_cg2:
-  case Intrinsic::nvvm_tcgen05_dealloc_cg1:
-  case Intrinsic::nvvm_tcgen05_dealloc_cg2:
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
-                                   Builder.getFalse()});
-    break;
   case Intrinsic::dbg_value: {
     StringRef Name = F->getName();
     Name = Name.substr(5); // Strip llvm.
@@ -6004,6 +5996,14 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg1:
+  case Intrinsic::nvvm_tcgen05_dealloc_cg2:
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
+                                   Builder.getFalse()});
+    break;
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:
