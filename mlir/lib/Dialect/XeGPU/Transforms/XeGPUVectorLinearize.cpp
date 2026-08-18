@@ -106,6 +106,23 @@ struct XeGPUVectorLinearizePass final
         return signalPassFailure();
       }
     }
+
+    // Linearization emits `vector.shuffle` ops whose two inputs have different
+    // lengths, for instance when inserting a `vector<4xbf16>` chunk into a
+    // `vector<32xbf16>` tile. MLIR permits that, but the LLVM and SPIR-V
+    // shuffle operations require both operands to have the same type, so
+    // `convert-vector-to-llvm` would otherwise scalarize each of them into one
+    // `extractelement` plus one `insertelement` per result element. Promote
+    // them to equal-size shuffles here, where they are produced, so they never
+    // reach the conversion.
+    {
+      RewritePatternSet patterns(&getContext());
+      vector::populateVectorShuffleLoweringPatterns(patterns);
+      if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+        LDBG() << "Mixed-size shuffle lowering failed.";
+        return signalPassFailure();
+      }
+    }
   }
 };
 } // namespace
