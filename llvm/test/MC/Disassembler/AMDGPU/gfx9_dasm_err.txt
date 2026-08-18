@@ -8,3 +8,17 @@
 # 7-bit scalar register encoding of the 8-bit VOP1 vdst field.
 0x00,0x05,0xf4,0x7f
 # GFX9-ERR: :[[@LINE-1]]:1: warning: invalid instruction encoding
+
+# These are v_add_f32_sdwa with a reserved value in one of the SDWA fields:
+# 7 in a 3-bit sel field and 3 in the 2-bit dst_unused field.
+0xf9,0x04,0x00,0x02,0x01,0x07,0x06,0x06
+# GFX9-ERR: :[[@LINE-1]]:1: warning: invalid instruction encoding
+
+0xf9,0x04,0x00,0x02,0x01,0x1e,0x06,0x06
+# GFX9-ERR: :[[@LINE-1]]:1: warning: invalid instruction encoding
+
+0xf9,0x04,0x00,0x02,0x01,0x06,0x07,0x06
+# GFX9-ERR: :[[@LINE-1]]:1: warning: invalid instruction encoding
+
+0xf9,0x04,0x00,0x02,0x01,0x06,0x06,0x07
+# GFX9-ERR: :[[@LINE-1]]:1: warning: invalid instruction encoding
