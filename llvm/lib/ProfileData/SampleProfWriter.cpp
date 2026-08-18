@@ -71,9 +71,10 @@ static cl::opt<bool> WriteEytzingerNameTables(
     cl::desc("Write Eytzinger 3-span layout for NameTable and parallel "
              "FuncOffsetTable"));
 
-static cl::opt<bool> ExtBinaryCompositeProf(
-    "extbinary-composite-prof", cl::init(false), cl::Hidden,
-    cl::desc("Use the composite profile format"));
+static cl::opt<bool>
+    ExtBinaryCompositeProf("extbinary-composite-prof", cl::init(false),
+                           cl::Hidden,
+                           cl::desc("Use the composite profile format"));
 
 /// Return whether the profile requires the composite ExtBinary representation.
 static bool usesCompositeProfile(const SampleProfileMap &ProfileMap) {
@@ -667,8 +668,7 @@ unsigned SampleProfileWriterExtBinaryBase::findUnwrittenEntry(SecType Type) {
 std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     SecType Type, const SampleProfileMap &ProfileMap) {
   // Composite sections require the file version that defines their encoding.
-  if ((Type == SecCompositeProfile ||
-       Type == SecCompositeFuncOffsetTable) &&
+  if ((Type == SecCompositeProfile || Type == SecCompositeFuncOffsetTable) &&
       FormatVersion < CompositeProfileVersion)
     return sampleprof_error::unsupported_version;
 
@@ -1325,7 +1325,7 @@ static bool hasNonEmptyLBRProfile(const FunctionSamples &S, bool IsNested) {
 
 std::error_code
 SampleProfileWriterBinary::writeCompositeProfile(const FunctionSamples &S,
-                                                bool IsNested) {
+                                                 bool IsNested) {
   auto &OS = *OutputStream;
   bool WriteLBRProf = hasNonEmptyLBRProfile(S, IsNested);
   // Other profile types should be added here.

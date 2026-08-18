@@ -961,7 +961,8 @@ protected:
 
   /// Read specific profile types.
   std::error_code readLBRProfile(FunctionSamples &FProfile, bool IsNested);
-  std::error_code readCompositeProfile(FunctionSamples &FProfile, bool IsNested);
+  std::error_code readCompositeProfile(FunctionSamples &FProfile,
+                                       bool IsNested);
 
   /// Read the contents of Magic number and Version number.
   std::error_code readMagicIdent();

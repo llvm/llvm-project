@@ -782,7 +782,7 @@ SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile,
 
 std::error_code
 SampleProfileReaderBinary::readCompositeProfile(FunctionSamples &FProfile,
-                                               bool IsNested) {
+                                                bool IsNested) {
   // Read the number of profile types.
   auto ProfNum = readNumber<uint64_t>();
   if (std::error_code EC = ProfNum.getError())

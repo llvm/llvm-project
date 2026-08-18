@@ -227,7 +227,8 @@ protected:
   std::error_code writeLBRProfile(const FunctionSamples &S, bool IsNested);
 
   /// Interfaces for composite profile writing.
-  std::error_code writeCompositeProfile(const FunctionSamples &S, bool IsNested);
+  std::error_code writeCompositeProfile(const FunctionSamples &S,
+                                        bool IsNested);
   /// Write one \p Type and the size-prefixed payload emitted by \p
   /// WritePayload. The callback may be invoked twice when its payload exceeds
   /// the dynamic buffer limit, so it must emit identical bytes without external
