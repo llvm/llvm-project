@@ -721,7 +721,7 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
 std::error_code
 SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile,
                                           bool IsNested) {
-  if (ProfileSecRange.IsTypified && !IsNested) {
+  if (ProfileSecRange.IsComposite && !IsNested) {
     auto NumHeadSamples = readNumber<uint64_t>();
     if (std::error_code EC = NumHeadSamples.getError())
       return EC;
@@ -781,7 +781,7 @@ SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile,
 }
 
 std::error_code
-SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
+SampleProfileReaderBinary::readCompositeProfile(FunctionSamples &FProfile,
                                                bool IsNested) {
   // Read the number of profile types.
   auto ProfNum = readNumber<uint64_t>();
@@ -796,7 +796,7 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
   // same type twice would merge absolute counters from malformed input.
   SmallSet<uint64_t, 4> SeenTypes;
 
-  // Read the specified number of typified profiles.
+  // Read the specified number of composite profiles.
   for (uint64_t I = 0; I < *ProfNum; ++I) {
     auto Type = readNumber<uint64_t>();
     if (std::error_code EC = Type.getError())
@@ -859,8 +859,8 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
 std::error_code
 SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile,
                                        bool IsNested) {
-  if (ProfileSecRange.IsTypified) {
-    if (std::error_code EC = readTypifiedProfile(FProfile, IsNested))
+  if (ProfileSecRange.IsComposite) {
+    if (std::error_code EC = readCompositeProfile(FProfile, IsNested))
       return EC;
   } else {
     if (std::error_code EC = readLBRProfile(FProfile, IsNested))
@@ -906,7 +906,7 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
                                            SampleProfileMap &Profiles) {
   Data = Start;
   ErrorOr<uint64_t> NumHeadSamples = 0;
-  if (!ProfileSecRange.IsTypified) {
+  if (!ProfileSecRange.IsComposite) {
     NumHeadSamples = readNumber<uint64_t>();
     if (std::error_code EC = NumHeadSamples.getError())
       return EC;
@@ -920,7 +920,7 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
   auto Res = Profiles.try_emplace(Hash, FContext, FunctionSamples());
   FunctionSamples &FProfile = Res.first->second;
   FProfile.setContext(FContext);
-  if (!ProfileSecRange.IsTypified)
+  if (!ProfileSecRange.IsComposite)
     FProfile.addHeadSamples(*NumHeadSamples);
 
   if (FContext.hasContext())
@@ -987,14 +987,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     break;
   }
   case SecLBRProfile:
-  case SecTypifiedProfile:
+  case SecCompositeProfile:
     // Retain the section and its encoding for subsequent on-demand reads.
-    ProfileSecRange = {Data, End, Entry.Type == SecTypifiedProfile};
+    ProfileSecRange = {Data, End, Entry.Type == SecCompositeProfile};
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
   case SecFuncOffsetTable:
-  case SecTypifiedFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     // If module is absent, we are using LLVM tools, and need to read all
     // profiles, so skip reading the function offset table.
     if (!M) {
@@ -1723,6 +1723,12 @@ SampleProfileReaderExtBinaryBase::readSecHdrTableEntry(uint64_t Idx) {
     return EC;
   Entry.Type = static_cast<SecType>(*Type);
 
+  // Reject a section whose encoding is newer than the declared file version.
+  if ((Entry.Type == SecCompositeProfile ||
+       Entry.Type == SecCompositeFuncOffsetTable) &&
+      FormatVersion < CompositeProfileVersion)
+    return sampleprof_error::unsupported_version;
+
   auto Flags = readUnencodedNumber<uint64_t>();
   if (std::error_code EC = Flags.getError())
     return EC;
@@ -1824,7 +1830,7 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("fs-discriminator,");
     break;
   case SecFuncOffsetTable:
-  case SecTypifiedFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))
       Flags.append("ordered,");
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagEytzinger))

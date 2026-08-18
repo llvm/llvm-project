@@ -1,8 +1,8 @@
 ; Verify that inspection reports multiple blocks and that the reader skips an
 ; unknown block before an LBR block without losing the known payload.
-; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/typified-multiple-blocks.proftext -o %t.single
-; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.single %t.multiple prepended-unknown
-; RUN: llvm-profdata show --sample --show-typified-info-only %t.multiple | FileCheck %s
+; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/composite-multiple-blocks.proftext -o %t.single
+; RUN: %python %S/Inputs/corrupt-composite-payload.py %t.single %t.multiple prepended-unknown
+; RUN: llvm-profdata show --sample --show-composite-info-only %t.multiple | FileCheck %s
 ; RUN: llvm-profdata merge --sample --text %t.multiple -o - | FileCheck %s --check-prefix=PROFILE --match-full-lines --strict-whitespace
 
 ; Verify that re-emitting a profile warns about the unknown block that cannot
@@ -15,7 +15,7 @@
 ; CHECK-NEXT:   Type: 127 (unknown), Payload size: 1
 ; CHECK-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
 
-; WARNING: warning: {{.*}}: unknown typified profile blocks were ignored and will not be preserved
+; WARNING: warning: {{.*}}: unknown composite profile blocks were ignored and will not be preserved
 
 ; PROFILE:foo:10:1
 ; PROFILE-NEXT: 0: 10

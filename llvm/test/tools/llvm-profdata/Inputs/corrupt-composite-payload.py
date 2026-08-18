@@ -1,7 +1,8 @@
 import argparse
 import struct
 
-TYPIFIED_PROFILE_SECTION = 33
+COMPOSITE_PROFILE_SECTION = 33
+COMPOSITE_PROFILE_VERSION = 105
 LEGACY_PROFILE_SECTION = 32
 UNKNOWN_PROFILE_TYPE = 127
 
@@ -73,8 +74,8 @@ parser.add_argument(
         "prepended-unknown",
         "duplicate-type",
         "empty-section",
-        "prepend-empty-typified",
-        "prepend-typified",
+        "prepend-empty-composite",
+        "prepend-composite",
     ),
 )
 args = parser.parse_args()
@@ -88,13 +89,13 @@ profile_offset = None
 profile_size = None
 profile_header_offset = None
 for section_header_offset, section_type, section_offset, section_size in sections:
-    if section_type == TYPIFIED_PROFILE_SECTION:
-        assert profile_offset is None, "expected exactly one typified profile section"
+    if section_type == COMPOSITE_PROFILE_SECTION:
+        assert profile_offset is None, "expected exactly one composite profile section"
         profile_offset = section_offset
         profile_size = section_size
         profile_header_offset = section_header_offset
 
-if args.modification in ("prepend-empty-typified", "prepend-typified"):
+if args.modification in ("prepend-empty-composite", "prepend-composite"):
     legacy_sections = [
         section for section in sections if section[1] == LEGACY_PROFILE_SECTION
     ]
@@ -108,35 +109,44 @@ if args.modification in ("prepend-empty-typified", "prepend-typified"):
             "<Q", data, section_header_offset + 16, section_offset + header_size
         )
 
-    typified_payload = b""
-    typified_offset = legacy_offset + header_size
-    if args.modification == "prepend-typified":
-        assert args.donor, "expected --donor for a nonempty typified section"
+    composite_payload = b""
+    composite_offset = legacy_offset + header_size
+    if args.modification == "prepend-composite":
+        assert args.donor, "expected --donor for a nonempty composite section"
         with open(args.donor, "rb") as donor_file:
             donor_data = donor_file.read()
         _, donor_sections = read_sections(donor_data)
         donor_profiles = [
             section
             for section in donor_sections
-            if section[1] == TYPIFIED_PROFILE_SECTION and section[3] != 0
+            if section[1] == COMPOSITE_PROFILE_SECTION and section[3] != 0
         ]
         assert len(donor_profiles) == 1, "expected one nonempty donor section"
         _, _, donor_offset, donor_size = donor_profiles[0]
-        typified_payload = donor_data[donor_offset : donor_offset + donor_size]
-        typified_offset = len(data) + header_size
+        composite_payload = donor_data[donor_offset : donor_offset + donor_size]
+        composite_offset = len(data) + header_size
 
-    # Place the typified section immediately before a valid legacy one to
+    # Place the composite section immediately before a valid legacy one to
     # verify that its decoding mode does not leak into the following section.
-    typified_header = struct.pack(
+    composite_header = struct.pack(
         "<QQQQ",
-        TYPIFIED_PROFILE_SECTION,
+        COMPOSITE_PROFILE_SECTION,
         0,
-        typified_offset,
-        len(typified_payload),
+        composite_offset,
+        len(composite_payload),
     )
-    data[legacy_header_offset:legacy_header_offset] = typified_header
-    data.extend(typified_payload)
+    data[legacy_header_offset:legacy_header_offset] = composite_header
+    data.extend(composite_payload)
     struct.pack_into("<Q", data, section_count_offset, section_count + 1)
+
+    # Associate the newly inserted composite section with its required file
+    # version while preserving the surrounding legacy sections.
+    _, version_offset = read_uleb(data, 0)
+    _, version_end = read_uleb(data, version_offset)
+    encoded_version = encode_uleb(COMPOSITE_PROFILE_VERSION)
+    assert len(encoded_version) == version_end - version_offset
+    data[version_offset:version_end] = encoded_version
+
     write_output(data, args.output)
     raise SystemExit
 
@@ -157,7 +167,7 @@ assert payload_offset + payload_size < profile_end
 
 
 def adjust_sections_after(insertion_offset, size_delta):
-    """Adjust section offsets and typified section size after a byte edit."""
+    """Adjust section offsets and composite section size after a byte edit."""
     if not size_delta:
         return
     for section_header_offset, _, section_offset, _ in sections:

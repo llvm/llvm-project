@@ -384,10 +384,10 @@ OPTIONS
  Show basic information about each section in the profile. This option is
  only meaningful for sample-based profile in extbinary format.
 
-.. option:: --show-typified-info-only=[true|false]
+.. option:: --show-composite-info-only=[true|false]
 
- Show the per-function typified block structure. This option is only meaningful
- for sample-based profiles in typified extbinary format.
+ Show the per-function composite block structure. This option is only meaningful
+ for sample-based profiles in composite extbinary format.
 
 .. option:: --debug-info=<path>
 

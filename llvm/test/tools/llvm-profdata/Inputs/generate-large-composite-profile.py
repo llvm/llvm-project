@@ -4,7 +4,7 @@ import argparse
 # Generate enough distinct body records to exercise multi-byte payload sizes and
 # partial buffering before the configured payload limit is exceeded.
 parser = argparse.ArgumentParser(
-    description="Generate a sample profile with a large typified LBR payload"
+    description="Generate a sample profile with a large composite LBR payload"
 )
 parser.add_argument("output")
 parser.add_argument("records", type=int)

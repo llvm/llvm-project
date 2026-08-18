@@ -221,10 +221,10 @@
 //        FUNCTION BODY
 //          A FUNCTION BODY entry describing the inlined function.
 //
-// An ExtBinary file may contain both legacy and typified profile sections.
+// An ExtBinary file may contain both legacy and composite profile sections.
 // Each section's type independently selects its function-body encoding.
 //
-// TYPIFIED FUNCTION BODY (used by SecTypifiedProfile)
+// COMPOSITE FUNCTION BODY (used by SecCompositeProfile)
 //    NAME_IDX (uint64_t)
 //        Index into the name table indicating the function name.
 //    NUM_PROFILE_TYPES (uint64_t)
@@ -250,7 +250,7 @@
 //        Number of callees inlined into this function.
 //    INLINED FUNCTION RECORDS
 //        Encoded as described above, except each nested FUNCTION BODY uses the
-//        typified representation.
+//        composite representation.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
@@ -727,7 +727,7 @@ public:
   virtual bool contains(StringRef Key) const { return false; }
   virtual bool contains(uint64_t GUID) const { return false; }
 
-  /// Read the profile and print the structure of typified profile blocks.
+  /// Read the profile and print the structure of composite profile blocks.
   std::error_code dumpProfileTypeInfo(raw_ostream &OS) {
     ProfileTypeInfoOS = &OS;
     std::error_code EC = read();
@@ -735,10 +735,10 @@ public:
     return EC;
   }
 
-  /// Return whether the input contains a typified profile section.
-  virtual bool hasTypifiedProfileSection() const { return false; }
+  /// Return whether the input contains a composite profile section.
+  virtual bool hasCompositeProfileSection() const { return false; }
 
-  /// Return whether any unknown typified profile blocks were skipped.
+  /// Return whether any unknown composite profile blocks were skipped.
   bool hasUnknownProfileTypes() const { return HasUnknownProfileTypes; }
 
   /// Return whether names in the profile are all MD5 numbers.
@@ -816,14 +816,14 @@ protected:
     const uint8_t *Start = nullptr;
     /// One-past-the-end byte of the retained section.
     const uint8_t *End = nullptr;
-    /// Whether the retained section uses typified payload encoding.
-    bool IsTypified = false;
+    /// Whether the retained section uses composite payload encoding.
+    bool IsComposite = false;
   };
   /// Profile section most recently selected for on-demand loading.
   ProfileSectionRange ProfileSecRange;
-  /// Optional stream for typified block structure; null disables the output.
+  /// Optional stream for composite block structure; null disables the output.
   raw_ostream *ProfileTypeInfoOS = nullptr;
-  /// Whether reading skipped at least one unknown typified profile block.
+  /// Whether reading skipped at least one unknown composite profile block.
   bool HasUnknownProfileTypes = false;
 
   /// Whether the profile has attribute metadata.
@@ -961,7 +961,7 @@ protected:
 
   /// Read specific profile types.
   std::error_code readLBRProfile(FunctionSamples &FProfile, bool IsNested);
-  std::error_code readTypifiedProfile(FunctionSamples &FProfile, bool IsNested);
+  std::error_code readCompositeProfile(FunctionSamples &FProfile, bool IsNested);
 
   /// Read the contents of Magic number and Version number.
   std::error_code readMagicIdent();
@@ -1217,10 +1217,10 @@ public:
   /// Get the total size of header and all sections.
   uint64_t getFileSize();
   bool dumpSectionInfo(raw_ostream &OS = dbgs()) override;
-  /// Return whether the section table contains a typified profile section.
-  bool hasTypifiedProfileSection() const override {
+  /// Return whether the section table contains a composite profile section.
+  bool hasCompositeProfileSection() const override {
     for (const auto &Entry : SecHdrTable)
-      if (Entry.Type == SecTypifiedProfile)
+      if (Entry.Type == SecCompositeProfile)
         return true;
     return false;
   }

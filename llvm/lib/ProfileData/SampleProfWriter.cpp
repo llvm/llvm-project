@@ -54,7 +54,7 @@ static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
 static cl::opt<uint64_t> ExtBinaryProfileTypeBufferLimit(
     "extbinary-profile-type-buffer-limit", cl::init(64ULL * 1024 * 1024),
     cl::Hidden,
-    cl::desc("Maximum number of typified payload bytes to retain in the "
+    cl::desc("Maximum number of composite payload bytes to retain in the "
              "dynamic buffer"));
 
 static cl::opt<uint64_t> RequestedVersion(
@@ -71,9 +71,14 @@ static cl::opt<bool> WriteEytzingerNameTables(
     cl::desc("Write Eytzinger 3-span layout for NameTable and parallel "
              "FuncOffsetTable"));
 
-static cl::opt<bool> ExtBinaryForceTypifiedProf(
-    "extbinary-force-typified-prof", cl::init(false), cl::Hidden,
-    cl::desc("Force utilization of typified profile format"));
+static cl::opt<bool> ExtBinaryCompositeProf(
+    "extbinary-composite-prof", cl::init(false), cl::Hidden,
+    cl::desc("Use the composite profile format"));
+
+/// Return whether the profile requires the composite ExtBinary representation.
+static bool usesCompositeProfile(const SampleProfileMap &ProfileMap) {
+  return ExtBinaryCompositeProf || ProfileMap.hasNonLBRProfile();
+}
 
 namespace llvm {
 namespace support {
@@ -288,7 +293,7 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   uint64_t Offset = OutputStream->tell();
   auto &Context = S.getContext();
   FuncOffsetTable[Context] = Offset - SecLBRProfileStart;
-  if (!WriteTypifiedProf)
+  if (!WriteCompositeProf)
     encodeULEB128(S.getHeadSamples(), *OutputStream);
   return writeBody(S, /*IsNested=*/false);
 }
@@ -345,7 +350,7 @@ SampleProfileWriterExtBinaryBase::writeEytzingerFuncOffsetTable(SecType Type,
 
   OutputStream->write(reinterpret_cast<const char *>(FuncOffsets.data()),
                       SpanSize * sizeof(support::ulittle32_t));
-  // Type is SecFuncOffsetTable or SecTypifiedFuncOffsetTable.
+  // Type is SecFuncOffsetTable or SecCompositeFuncOffsetTable.
   addSectionFlag(Type, SecFuncOffsetFlags::SecFlagEytzinger);
   FuncOffsetTable.clear();
   return sampleprof_error::success;
@@ -661,6 +666,12 @@ unsigned SampleProfileWriterExtBinaryBase::findUnwrittenEntry(SecType Type) {
 
 std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     SecType Type, const SampleProfileMap &ProfileMap) {
+  // Composite sections require the file version that defines their encoding.
+  if ((Type == SecCompositeProfile ||
+       Type == SecCompositeFuncOffsetTable) &&
+      FormatVersion < CompositeProfileVersion)
+    return sampleprof_error::unsupported_version;
+
   unsigned LayoutIdx = findUnwrittenEntry(Type);
   SecHdrTableEntry &Entry = SectionHdrLayout[LayoutIdx];
 
@@ -702,13 +713,13 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
       return EC;
     break;
   case SecLBRProfile:
-  case SecTypifiedProfile:
+  case SecCompositeProfile:
     SecLBRProfileStart = OutputStream->tell();
     if (std::error_code EC = writeFuncProfiles(ProfileMap))
       return EC;
     break;
   case SecFuncOffsetTable:
-  case SecTypifiedFuncOffsetTable: {
+  case SecCompositeFuncOffsetTable: {
     bool IsFlat = hasSecFlag(Entry, SecCommonFlags::SecFlagFlat);
     // An unflagged function offset table inherently indexes the primary
     // Nested symbol span.
@@ -743,8 +754,8 @@ SampleProfileWriterExtBinary::SampleProfileWriterExtBinary(
 
 std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
     const SampleProfileMap &ProfileMap) {
-  // ProfSection / FuncOffsetSection are SecLBR* or SecTypified* after
-  // configureTypifiedProfile.
+  // ProfSection / FuncOffsetSection are SecLBR* or SecComposite* after
+  // configureCompositeProfile.
   const SecType Sections[] = {
       SecProfSummary,       SecNameTable,      SecCSNameTable,  ProfSection,
       SecProfileSymbolList, FuncOffsetSection, SecFuncMetadata,
@@ -786,29 +797,31 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
   return sampleprof_error::success;
 }
 
-void SampleProfileWriterExtBinary::configureTypifiedProfile(
+void SampleProfileWriterExtBinary::configureCompositeProfile(
     const SampleProfileMap &ProfileMap) {
-  WriteTypifiedProf =
-      ExtBinaryForceTypifiedProf || ProfileMap.hasNonLBRProfile();
-  ProfSection = WriteTypifiedProf ? SecTypifiedProfile : SecLBRProfile;
+  WriteCompositeProf = usesCompositeProfile(ProfileMap);
+  ProfSection = WriteCompositeProf ? SecCompositeProfile : SecLBRProfile;
   FuncOffsetSection =
-      WriteTypifiedProf ? SecTypifiedFuncOffsetTable : SecFuncOffsetTable;
+      WriteCompositeProf ? SecCompositeFuncOffsetTable : SecFuncOffsetTable;
 
   // Change the section types in place to avoid duplicating the whole layout and
-  // its handling. Rewrite both legacy and typified entries so repeated writes
+  // its handling. Rewrite both legacy and composite entries so repeated writes
   // can switch formats without losing configured flags.
   for (auto &Entry : SectionHdrLayout) {
     if (Entry.Type == SecFuncOffsetTable ||
-        Entry.Type == SecTypifiedFuncOffsetTable)
+        Entry.Type == SecCompositeFuncOffsetTable)
       Entry.Type = FuncOffsetSection;
-    else if (Entry.Type == SecLBRProfile || Entry.Type == SecTypifiedProfile)
+    else if (Entry.Type == SecLBRProfile || Entry.Type == SecCompositeProfile)
       Entry.Type = ProfSection;
   }
 }
 
 std::error_code SampleProfileWriterExtBinary::writeSections(
     const SampleProfileMap &ProfileMap) {
-  configureTypifiedProfile(ProfileMap);
+  // Preserve section configuration at the point where the selected layout is
+  // consumed, after the base writer has emitted the validated file version.
+  configureCompositeProfile(ProfileMap);
+
   std::error_code EC;
   if (SecLayout == DefaultLayout)
     EC = writeDefaultLayout(ProfileMap);
@@ -1121,7 +1134,7 @@ std::error_code
 SampleProfileWriterBinary::writeLBRProfile(const FunctionSamples &S,
                                            bool IsNested) {
   auto &OS = *OutputStream;
-  if (WriteTypifiedProf && !IsNested)
+  if (WriteCompositeProf && !IsNested)
     encodeULEB128(S.getHeadSamples(), OS);
   encodeULEB128(S.getTotalSamples(), OS);
   encodeULEB128(S.getBodySamples().size(), OS);
@@ -1311,7 +1324,7 @@ static bool hasNonEmptyLBRProfile(const FunctionSamples &S, bool IsNested) {
 }
 
 std::error_code
-SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S,
+SampleProfileWriterBinary::writeCompositeProfile(const FunctionSamples &S,
                                                 bool IsNested) {
   auto &OS = *OutputStream;
   bool WriteLBRProf = hasNonEmptyLBRProfile(S, IsNested);
@@ -1334,8 +1347,8 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S,
     return EC;
 
   // Emit all the body samples.
-  if (WriteTypifiedProf) {
-    if (std::error_code EC = writeTypifiedProfile(S, IsNested))
+  if (WriteCompositeProf) {
+    if (std::error_code EC = writeCompositeProfile(S, IsNested))
       return EC;
   } else {
     if (std::error_code EC = writeLBRProfile(S, IsNested))
@@ -1425,9 +1438,18 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
   Writer->Format = Format;
   if (Format != SPF_Ext_Binary)
     Writer->setFormatVersion(DefaultVersion);
-  else if (formatVersionIsSupported(RequestedVersion))
-    Writer->setFormatVersion(RequestedVersion);
-  else
+  else if (formatVersionIsSupported(RequestedVersion)) {
+    // A composite request selects its required format version unless the user
+    // explicitly requested an incompatible legacy version.
+    if (ExtBinaryCompositeProf) {
+      if (RequestedVersion.getNumOccurrences() != 0 &&
+          RequestedVersion < CompositeProfileVersion)
+        return sampleprof_error::unsupported_version;
+      Writer->setFormatVersion(CompositeProfileVersion);
+    } else {
+      Writer->setFormatVersion(RequestedVersion);
+    }
+  } else
     return sampleprof_error::unsupported_version;
   return std::move(Writer);
 }

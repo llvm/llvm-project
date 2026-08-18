@@ -1,7 +1,7 @@
-; Verify that a function may have no typified blocks while its nested function
+; Verify that a function may have no composite blocks while its nested function
 ; still carries and exposes an LBR block.
-; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/typified-zero-block.proftext -o %t.prof
-; RUN: llvm-profdata show --sample --show-typified-info-only %t.prof | FileCheck %s
+; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/composite-zero-block.proftext -o %t.prof
+; RUN: llvm-profdata show --sample --show-composite-info-only %t.prof | FileCheck %s
 
 ; CHECK: Function: caller
 ; CHECK-NEXT:   Profile blocks: 0

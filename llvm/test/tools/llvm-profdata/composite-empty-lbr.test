@@ -1,6 +1,6 @@
-; Verify that typified LBR blocks preserve nonzero head and total samples when
+; Verify that composite LBR blocks preserve nonzero head and total samples when
 ; their body sample maps are empty.
-; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/sample-typified-empty-lbr.proftext -o %t.prof
+; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.prof
 ; RUN: llvm-profdata merge --sample --text %t.prof -o - | FileCheck %s --match-full-lines --strict-whitespace
 
 ; CHECK:top:42:7

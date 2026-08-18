@@ -26,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -43,31 +44,31 @@ static ::testing::AssertionResult NoError(std::error_code EC) {
 
 namespace {
 
-/// Temporarily control typified ExtBinary writing and restore the command-line
+/// Temporarily control composite ExtBinary writing and restore the command-line
 /// option when the test scope ends.
-class ScopedForceTypifiedProfile {
+class ScopedCompositeProfile {
 public:
   /// Select the requested option value for the lifetime of this scope.
-  explicit ScopedForceTypifiedProfile(bool Enabled) { set(Enabled); }
+  explicit ScopedCompositeProfile(bool Enabled) { set(Enabled); }
 
   /// Restore the default disabled state when leaving the test scope.
-  ~ScopedForceTypifiedProfile() { set(false); }
+  ~ScopedCompositeProfile() { set(false); }
 
-  /// Select whether ExtBinary writes use typified profile sections through the
+  /// Select whether ExtBinary writes use composite profile sections through the
   /// same type-checked command-line parser used by the production tool.
   void set(bool Enabled) {
-    constexpr StringLiteral OptionName = "extbinary-force-typified-prof";
+    constexpr StringLiteral OptionName = "extbinary-composite-prof";
     auto &Options = cl::getRegisteredOptions();
     auto OptionIt = Options.find(OptionName);
     if (OptionIt == Options.end())
-      report_fatal_error("typified profile option is not registered");
+      report_fatal_error("composite profile option is not registered");
 
     // Reset only the option controlled by this scope, leaving unrelated test
     // process configuration unchanged.
     cl::Option *Option = OptionIt->second;
     Option->reset();
     if (Option->addOccurrence(0, OptionName, Enabled ? "true" : "false"))
-      report_fatal_error("failed to set typified profile option");
+      report_fatal_error("failed to set composite profile option");
   }
 };
 
@@ -168,9 +169,10 @@ struct SampleProfTest : ::testing::Test {
     delete PS;
   }
 
-  // Write a minimal profile with a specific format version to an in-memory
-  // buffer.
-  ErrorOr<SmallVector<char, 128>> writeProfileToBuffer(uint64_t Version) {
+  // Write a minimal profile, optionally requesting a specific format version,
+  // to an in-memory buffer.
+  ErrorOr<SmallVector<char, 128>>
+  writeProfileToBuffer(std::optional<uint64_t> Version = std::nullopt) {
     SmallVector<char, 128> Buffer;
     std::unique_ptr<raw_ostream> OS =
         std::make_unique<raw_svector_ostream>(Buffer);
@@ -179,7 +181,8 @@ struct SampleProfTest : ::testing::Test {
     if (std::error_code EC = WriterOrErr.getError())
       return EC;
     auto Writer = std::move(WriterOrErr.get());
-    Writer->setFormatVersion(Version);
+    if (Version)
+      Writer->setFormatVersion(*Version);
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
@@ -194,6 +197,14 @@ struct SampleProfTest : ::testing::Test {
     Writer->getOutputStream().flush();
     Writer.reset();
     return Buffer;
+  }
+
+  // Replace the single-byte ExtBinary version in a complete profile.
+  void overwriteProfileVersion(MutableArrayRef<char> Buffer, uint8_t Version) {
+    unsigned MagicSize = 0;
+    decodeULEB128(reinterpret_cast<const uint8_t *>(Buffer.data()), &MagicSize);
+    ASSERT_LT(MagicSize, Buffer.size());
+    Buffer[MagicSize] = static_cast<char>(Version);
   }
 
   // Write a raw profile header (Magic + Version) directly to a buffer.
@@ -512,16 +523,17 @@ TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
 }
 
-// Verify the full ExtBinary round trip through typified profile sections.
-TEST_F(SampleProfTest, roundtrip_typified_ext_binary_profile) {
-  [[maybe_unused]] ScopedForceTypifiedProfile ForceTypified(true);
+// Verify the full ExtBinary round trip through composite profile sections.
+TEST_F(SampleProfTest, roundtrip_composite_ext_binary_profile) {
+  [[maybe_unused]] ScopedCompositeProfile Composite(true);
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
 }
 
-// Verify that reusing one ExtBinary writer for a typified profile and then a
-// legacy profile restores the legacy section types.
-TEST_F(SampleProfTest, ext_binary_writer_typified_to_legacy) {
-  ScopedForceTypifiedProfile ForceTypified(true);
+// Verify that reusing one ExtBinary writer for a composite profile and then a
+// legacy profile restores the legacy section types. The already-selected v105
+// remains a valid version for the subsequent legacy representation.
+TEST_F(SampleProfTest, ext_binary_writer_composite_to_legacy) {
+  ScopedCompositeProfile Composite(true);
 
   SmallVector<char, 128> Buffer;
   std::unique_ptr<raw_ostream> OS =
@@ -538,7 +550,7 @@ TEST_F(SampleProfTest, ext_binary_writer_typified_to_legacy) {
   SampleProfileMap Profiles;
   Profiles[FooName] = std::move(FooSamples);
 
-  auto VerifyFormat = [&](bool IsTypified) {
+  auto VerifyFormat = [&](bool IsComposite, uint64_t ExpectedVersion) {
     std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
         StringRef(Buffer.data(), Buffer.size()), "profile");
     auto FS = vfs::getRealFileSystem();
@@ -546,18 +558,19 @@ TEST_F(SampleProfTest, ext_binary_writer_typified_to_legacy) {
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     auto ProfileReader = std::move(ReaderOrErr.get());
     ASSERT_TRUE(NoError(ProfileReader->read()));
-    EXPECT_EQ(IsTypified, ProfileReader->hasTypifiedProfileSection());
+    EXPECT_EQ(IsComposite, ProfileReader->hasCompositeProfileSection());
+    EXPECT_EQ(ExpectedVersion, ProfileReader->getFormatVersion());
   };
 
   ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
   ProfileWriter->getOutputStream().flush();
-  VerifyFormat(true);
+  VerifyFormat(true, CompositeProfileVersion);
 
   Buffer.clear();
-  ForceTypified.set(false);
+  Composite.set(false);
   ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
   ProfileWriter->getOutputStream().flush();
-  VerifyFormat(false);
+  VerifyFormat(false, CompositeProfileVersion);
 }
 
 TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
@@ -590,9 +603,9 @@ TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
   cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
 }
 
-// Verify typified ExtBinary round trips when the name table uses MD5 hashes.
-TEST_F(SampleProfTest, roundtrip_typified_md5_ext_binary_profile) {
-  [[maybe_unused]] ScopedForceTypifiedProfile ForceTypified(true);
+// Verify composite ExtBinary round trips when the name table uses MD5 hashes.
+TEST_F(SampleProfTest, roundtrip_composite_md5_ext_binary_profile) {
+  [[maybe_unused]] ScopedCompositeProfile Composite(true);
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
 }
 
@@ -727,12 +740,63 @@ TEST_F(SampleProfTest, SampleProfileFormatVersion102) {
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
 }
 
-// Verify that requesting format version 105 (above latest supported) is
-// rejected by the reader.
+// Verify that requesting format version 105 results in a version 105 legacy
+// profile.
 TEST_F(SampleProfTest, SampleProfileFormatVersion105) {
-  auto Buffer = writeRawHeaderToBuffer(105);
+  auto BufferOrErr = writeProfileToBuffer(105);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+  auto Buffer = std::move(*BufferOrErr);
+
+  auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
+  ASSERT_TRUE(NoError(ReadVersionOrErr.getError()));
+  EXPECT_EQ(*ReadVersionOrErr, CompositeProfileVersion);
+}
+
+// Verify that requesting format version 106 (above latest supported) is
+// rejected by the reader.
+TEST_F(SampleProfTest, SampleProfileFormatVersion106) {
+  auto Buffer = writeRawHeaderToBuffer(106);
   auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
+}
+
+// Verify that the default composite writer selects the first compatible
+// ExtBinary version.
+TEST_F(SampleProfTest, CompositeProfileUsesVersion105) {
+  [[maybe_unused]] ScopedCompositeProfile Composite(true);
+  auto BufferOrErr = writeProfileToBuffer();
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+
+  auto ReadVersionOrErr = readVersionFromBuffer(*BufferOrErr);
+  ASSERT_TRUE(NoError(ReadVersionOrErr.getError()));
+  EXPECT_EQ(*ReadVersionOrErr, CompositeProfileVersion);
+}
+
+// Verify that the writer rejects a programmatic legacy version instead of
+// silently overriding it when composite output is required.
+TEST_F(SampleProfTest, CompositeProfileRejectsProgrammaticLegacyVersions) {
+  [[maybe_unused]] ScopedCompositeProfile Composite(true);
+
+  for (uint64_t Version : {103u, 104u}) {
+    auto BufferOrErr = writeProfileToBuffer(Version);
+    EXPECT_EQ(BufferOrErr.getError(), sampleprof_error::unsupported_version);
+  }
+}
+
+// Verify that readers reject composite sections whose header claims a legacy
+// ExtBinary version.
+TEST_F(SampleProfTest, CompositeProfileRejectsLegacyFileVersions) {
+  [[maybe_unused]] ScopedCompositeProfile Composite(true);
+  auto BufferOrErr = writeProfileToBuffer();
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+  auto Buffer = std::move(*BufferOrErr);
+
+  for (uint8_t Version : {uint8_t(103), uint8_t(104)}) {
+    overwriteProfileVersion(Buffer, Version);
+    auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
+    EXPECT_EQ(ReadVersionOrErr.getError(),
+              sampleprof_error::unsupported_version);
+  }
 }
 
 TEST_F(SampleProfTest, ProfileSymbolListMD5) {

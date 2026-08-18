@@ -469,9 +469,9 @@ static cl::opt<bool> ShowSectionInfoOnly(
              "The flag is only usable when the sample profile is in "
              "extbinary format"),
     cl::sub(ShowSubcommand));
-static cl::opt<bool> ShowTypifiedInfoOnly(
-    "show-typified-info-only", cl::init(false),
-    cl::desc("Show type IDs and payload sizes in a typified sample profile"),
+static cl::opt<bool> ShowCompositeInfoOnly(
+    "show-composite-info-only", cl::init(false),
+    cl::desc("Show type IDs and payload sizes in a composite sample profile"),
     cl::sub(ShowSubcommand));
 static cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
                                    cl::desc("Show binary ids in the profile. "),
@@ -1628,7 +1628,7 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     // Merging cannot preserve payloads that this reader does not understand,
     // so make the otherwise intentional forward-compatible skip visible.
     if (Reader->hasUnknownProfileTypes())
-      warn("unknown typified profile blocks were ignored and will not be "
+      warn("unknown composite profile blocks were ignored and will not be "
            "preserved",
            Input.Filename);
 
@@ -3249,9 +3249,9 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
 static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
     exitWithError("YAML output is not supported for sample profiles");
-  if (ShowSectionInfoOnly && ShowTypifiedInfoOnly)
+  if (ShowSectionInfoOnly && ShowCompositeInfoOnly)
     exitWithError("-show-sec-info-only and "
-                  "-show-typified-info-only cannot be used together");
+                  "-show-composite-info-only cannot be used together");
 
   using namespace sampleprof;
   LLVMContext Context;
@@ -3267,9 +3267,9 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     return 0;
   }
 
-  if (ShowTypifiedInfoOnly) {
-    if (!Reader->hasTypifiedProfileSection()) {
-      WithColor::warning() << "no typified profile section; nothing to show\n";
+  if (ShowCompositeInfoOnly) {
+    if (!Reader->hasCompositeProfileSection()) {
+      WithColor::warning() << "no composite profile section; nothing to show\n";
       return 0;
     }
     if (std::error_code EC = Reader->dumpProfileTypeInfo(OS)) {

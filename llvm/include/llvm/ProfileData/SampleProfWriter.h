@@ -226,8 +226,8 @@ protected:
   std::error_code writeBody(const FunctionSamples &S, bool IsNested);
   std::error_code writeLBRProfile(const FunctionSamples &S, bool IsNested);
 
-  /// Interfaces for typified profile writing.
-  std::error_code writeTypifiedProfile(const FunctionSamples &S, bool IsNested);
+  /// Interfaces for composite profile writing.
+  std::error_code writeCompositeProfile(const FunctionSamples &S, bool IsNested);
   /// Write one \p Type and the size-prefixed payload emitted by \p
   /// WritePayload. The callback may be invoked twice when its payload exceeds
   /// the dynamic buffer limit, so it must emit identical bytes without external
@@ -252,7 +252,7 @@ protected:
                           raw_ostream &OS);
 
   bool WriteVTableProf = false;
-  bool WriteTypifiedProf = false;
+  bool WriteCompositeProf = false;
 
 private:
   LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
@@ -388,7 +388,7 @@ protected:
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code
   writeEytzingerNameTableSection(const SampleProfileMap &ProfileMap);
-  // Type selects SecFuncOffsetTable vs SecTypifiedFuncOffsetTable for flags.
+  // Type selects SecFuncOffsetTable vs SecCompositeFuncOffsetTable for flags.
   std::error_code writeFuncOffsetTable(SecType Type, bool IsNested);
   std::error_code writeEytzingerFuncOffsetTable(SecType Type, bool IsNested);
   std::error_code writeLegacyFuncOffsetTable(SecType Type);
@@ -461,8 +461,8 @@ private:
 
   std::error_code writeSections(const SampleProfileMap &ProfileMap) override;
 
-  // Configure whether to use typified profile sections.
-  void configureTypifiedProfile(const SampleProfileMap &ProfileMap);
+  /// Select the profile representation and update its section layout as needed.
+  void configureCompositeProfile(const SampleProfileMap &ProfileMap);
 
   std::error_code writeCustomSection(SecType Type) override {
     return sampleprof_error::success;
@@ -474,7 +474,7 @@ private:
   }
 
   /// Section types for profile storage and bookkeeping (used to switch between
-  /// typified and non-typified profiles).
+  /// composite and non-composite profiles).
   SecType ProfSection = SecLBRProfile;
   SecType FuncOffsetSection = SecFuncOffsetTable;
 };
