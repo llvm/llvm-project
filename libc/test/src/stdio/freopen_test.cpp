@@ -38,10 +38,8 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST_F(LlvmLibcFreopenTest, ReopenFile) {
-  const auto FILENAME_A =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_a.test"));
-  const auto FILENAME_B =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_b.test"));
+  const auto FILENAME_A = libc_make_test_file_path("freopen_a.test");
+  const auto FILENAME_B = libc_make_test_file_path("freopen_b.test");
 
   // Step 1: Open file A and write initial content.
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME_A, "w");
@@ -79,8 +77,7 @@ TEST_F(LlvmLibcFreopenTest, ReopenFile) {
 }
 
 TEST_F(LlvmLibcFreopenTest, NullFilenameModeChange) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_null_filename.test"));
+  const auto FILENAME = libc_make_test_file_path("freopen_null_filename.test");
 
   // Step 1: Open file with write-update mode.
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
@@ -115,8 +112,8 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameModeChange) {
 }
 
 TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
-  const auto FILENAME = libc_make_test_file_path(
-      APPEND_LIBC_TEST("freopen_invalid_mode_change.test"));
+  const auto FILENAME =
+      libc_make_test_file_path("freopen_invalid_mode_change.test");
 
   // Open file read-only.
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -139,8 +136,7 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcFreopenTest, InvalidModeFailure) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_invalid_mode.test"));
+  const auto FILENAME = libc_make_test_file_path("freopen_invalid_mode.test");
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -163,10 +159,9 @@ TEST_F(LlvmLibcFreopenTest, InvalidModeFailure) {
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcFreopenTest, NonExistentFileFailure) {
-  auto EXISTING_FILE =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_existing.test"));
+  auto EXISTING_FILE = libc_make_test_file_path("freopen_existing.test");
   auto NON_EXISTENT_FILE =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_does_not_exist.test"));
+      libc_make_test_file_path("freopen_does_not_exist.test");
 
   ::FILE *file = LIBC_NAMESPACE::fopen(EXISTING_FILE, "w");
   ASSERT_FALSE(file == nullptr);
@@ -188,10 +183,8 @@ TEST_F(LlvmLibcFreopenTest, NonExistentFileFailure) {
 #endif // LIBC_TARGET_OS_IS_POSIX || LIBC_TARGET_OS_IS_LINUX
 
 TEST_F(LlvmLibcFreopenTest, FlushBeforeReopenTest) {
-  const auto FILENAME_A =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_flush_a.test"));
-  const auto FILENAME_B =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_flush_b.test"));
+  const auto FILENAME_A = libc_make_test_file_path("freopen_flush_a.test");
+  const auto FILENAME_B = libc_make_test_file_path("freopen_flush_b.test");
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME_A, "w");
   ASSERT_FALSE(file == nullptr);
@@ -216,10 +209,8 @@ TEST_F(LlvmLibcFreopenTest, FlushBeforeReopenTest) {
 }
 
 TEST_F(LlvmLibcFreopenTest, ClearFlagsTest) {
-  const auto FILENAME_A =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_flags_a.test"));
-  const auto FILENAME_B =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_flags_b.test"));
+  const auto FILENAME_A = libc_make_test_file_path("freopen_flags_a.test");
+  const auto FILENAME_B = libc_make_test_file_path("freopen_flags_b.test");
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME_A, "w");
   ASSERT_FALSE(file == nullptr);
@@ -246,8 +237,7 @@ TEST_F(LlvmLibcFreopenTest, ClearFlagsTest) {
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcFreopenTest, NullFilenameBadFdTest) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_bad_fd.test"));
+  const auto FILENAME = libc_make_test_file_path("freopen_bad_fd.test");
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
@@ -268,10 +258,8 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameBadFdTest) {
 #endif // LIBC_TARGET_OS_IS_POSIX || LIBC_TARGET_OS_IS_LINUX
 
 TEST_F(LlvmLibcFreopenTest, ResetOrientationTest) {
-  const auto FILENAME_A =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_orient_a.test"));
-  const auto FILENAME_B =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_orient_b.test"));
+  const auto FILENAME_A = libc_make_test_file_path("freopen_orient_a.test");
+  const auto FILENAME_B = libc_make_test_file_path("freopen_orient_b.test");
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME_A, "w");
   ASSERT_FALSE(file == nullptr);
@@ -289,8 +277,7 @@ TEST_F(LlvmLibcFreopenTest, ResetOrientationTest) {
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
 TEST_F(LlvmLibcFreopenTest, StdoutRedirectionTest) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_stdout.test"));
+  const auto FILENAME = libc_make_test_file_path("freopen_stdout.test");
 
   int stdout_fd = LIBC_NAMESPACE::fileno(LIBC_NAMESPACE::stdout);
   ASSERT_EQ(stdout_fd, 1);
@@ -321,8 +308,7 @@ TEST_F(LlvmLibcFreopenTest, StdoutRedirectionTest) {
 }
 
 TEST_F(LlvmLibcFreopenTest, StdoutFailureTest) {
-  auto NON_EXISTENT_FILE =
-      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_stdout_fail.test"));
+  auto NON_EXISTENT_FILE = libc_make_test_file_path("freopen_stdout_fail.test");
 
   // Attempt to freopen non-existent file on stdout.
   // This must return nullptr + ENOENT without attempting to free the static
@@ -333,19 +319,11 @@ TEST_F(LlvmLibcFreopenTest, StdoutFailureTest) {
 }
 #endif
 
-// TODO: hermetic tests are failing with this error:
-/*
-/usr/bin/x86_64-linux-gnu-ld.bfd:
-libc/test/src/stdio/libc.test.src.stdio.freopen_test.__hermetic__.__build__:
-hidden symbol
-`_ZN22__llvm_libc_23_0_0_git7testing4Test17testProcessKilledEPNS_9testutils14FunctionCallerEiPKcS6_NS0_8internal8LocationE'
-isn't defined /usr/bin/x86_64-linux-gnu-ld.bfd: final link failed: bad value
-*/
-// TEST_F(LlvmLibcFreopenTest, NullStreamFailure) {
-//   const auto FILENAME =
-//       libc_make_test_file_path(APPEND_LIBC_TEST("freopen_null_stream.test"));
-//   const char *fn = FILENAME;
+TEST_F(LlvmLibcFreopenTest, NullStreamFailure) {
+  const auto FILENAME =
+      libc_make_test_file_path("freopen_null_stream.test");
+  const char *fn = FILENAME;
 
-//   EXPECT_DEATH([=] { LIBC_NAMESPACE::freopen(fn, "r", nullptr); },
-//                WITH_SIGNAL(-1));
-// }
+  EXPECT_DEATH([=] { LIBC_NAMESPACE::freopen(fn, "r", nullptr); },
+               WITH_SIGNAL(-1));
+}
