@@ -770,6 +770,13 @@ public:
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
 
+  /// Check if return address signing hardening is enabled and uses load of
+  /// return address.
+  bool isSignReturnAddressHardenWithLoadReturnAddress() const {
+    return getSignReturnAddressHardening() ==
+           SignReturnAddressHardeningKind::LoadReturnAddress;
+  }
+
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
 
   bool hasDefaultVisibilityExportMapping() const {

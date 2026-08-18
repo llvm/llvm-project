@@ -51,7 +51,7 @@ Using Clang as a Compiler
    ControlFlowIntegrity
    LTOVisibility
    PointerAuthentication
-   ReturnAddressSigningHardening
+   ReturnAddressAuthenticationHardening
    SafeStack
    ShadowCallStack
    StructureProtection

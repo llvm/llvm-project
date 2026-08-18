@@ -79,8 +79,10 @@
 // RUN: FileCheck %s --check-prefixes=BAD-HARDEN-PROTECTION
 
 // RUN: not %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=load-return-address -mexecute-only 2>&1 | \
-// RUN: FileCheck %s --check-prefixes=RA-HARDEN-INCOMPATIBLE-EXEC-ONLY
-// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=none -mexecute-only
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-LRA-INCOMPATIBLE-EXEC-ONLY
+// RUN: %clang -target aarch64 -c %s -### -mbranch-protection=standard -mharden-pac-ret=none -mexecute-only 2>&1 | \
+// RUN: FileCheck %s --check-prefixes=RA-HARDEN-NONE-COMPATIBLE-EXEC-ONLY
+
 
 // ABSENT-RA-HARDEN-NOT: "-mharden-pac-ret"
 // NO-RA-HARDEN:         ignoring '-mharden-pac-ret' as it requires return address signing
@@ -88,7 +90,8 @@
 // RA-HARDEN-NONE:       "-mharden-pac-ret=none"
 // RA-HARDEN-LRA:        "-mharden-pac-ret=load-return-address"
 // BAD-HARDEN-PROTECTION: unsupported argument 'foo' to option '-mharden-pac-ret='
-// RA-HARDEN-INCOMPATIBLE-EXEC-ONLY: the combination of '-mharden-pac-ret=load-return-address' and '-mexecute-only' is incompatible
+// RA-HARDEN-LRA-INCOMPATIBLE-EXEC-ONLY: the combination of '-mharden-pac-ret=load-return-address' and '-mexecute-only' is incompatible
+// RA-HARDEN-NONE-COMPATIBLE-EXEC-ONLY-NOT: the combination of '-mharden-pac-ret={{.*}}' and '-mexecute-only' is incompatible
 
 // RA-OFF: "-msign-return-address=none"
 // RA-NON-LEAF: "-msign-return-address=non-leaf"

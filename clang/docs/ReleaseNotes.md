@@ -214,8 +214,8 @@ features cannot lower the translation-unit ABI level;
   address signing to be enabled and emits a load of the return address before
   returning, reducing the cache side channel used to guess pointer
   authentication codes. See
-  {doc}`Return Address Signing Hardening <ReturnAddressSigningHardening>` for
-  more information.
+  {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
+  for more information.
 
 ### Deprecated Compiler Flags
 

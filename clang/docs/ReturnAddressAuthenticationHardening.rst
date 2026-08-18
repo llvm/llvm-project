@@ -1,6 +1,6 @@
-##################################
- Return Address Signing Hardening
-##################################
+#########################################
+ Return Address Authentication Hardening
+#########################################
 
 .. contents::
    :local:
@@ -9,17 +9,17 @@
  Introduction
 **************
 
-Return Address Signing Hardening is a mitigation against the PACMAN attack,
-which aims to bypass Pointer Authentication on AArch64 targets. The hardening
-mechanism described here is specific to pointer authentication of return
-addresses.
+Return Address Authentication Hardening is a mitigation against the PACMAN
+attack, which aims to bypass Pointer Authentication on AArch64 targets. The
+hardening mechanism described here is specific to pointer authentication of
+return addresses.
 
-Return Address Signing, also known as Pointer Authentication Code (PAC-RET), is
-a feature devised to protect programs against Return Oriented Programming (ROP),
-in which attackers may hijack the return address of functions in order to direct
+Return Address Signing (or Authentication), also known as pac-ret, is a feature
+devised to protect programs against Return Oriented Programming (ROP), in which
+attackers may hijack the return address of functions in order to direct
 execution to malicious code.
 
-PAC-RET can be enabled via different command-line options:
+pac-ret can be enabled via different command-line options:
 
    -  ``-mbranch-protection=`` with ``pac-ret``, ``pac-ret+leaf`` or
       ``standard`` as value.
@@ -29,9 +29,9 @@ PAC-RET can be enabled via different command-line options:
 More information can be found in :doc:`Pointer Authentication
 <PointerAuthentication>`.
 
-Return Address Signing Hardening is a mechanism to strenghthen Return Address
-Signing against the PACMAN attack in AArch64 targets. It can be enabled with
-``-mharden-pac-ret=load-return-address``.
+Return Address Authentication Hardening is a mechanism to strenghthen Return
+Address Signing against the PACMAN attack in AArch64 targets. It can be enabled
+with ``-mharden-pac-ret=load-return-address``.
 
 ***************
  PACMAN attack
@@ -139,9 +139,9 @@ with said feature with no change in semantics:
  Command-line option
 *********************
 
-Return address signing hardening can be enabled at module level with
-``-mharden-pac-ret=load-return-address``. It requires PAC-RET to be enabled at
-module level as well.
+Return address authentication hardening can be enabled at translation unit level
+with ``-mharden-pac-ret=load-return-address``. It requires pac-ret to be enabled
+at translation unit level as well.
 
 ********************
  Function attribute
