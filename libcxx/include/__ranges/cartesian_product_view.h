@@ -364,7 +364,7 @@ private:
     auto& __it = std::get<_Np>(__current_);
     ++__it;
     if constexpr (_Np > 0) {
-      if (const auto& __v = std::get<_Np>(__parent_->__bases_); __it == ranges::end(__v)) {
+      if (auto& __v = std::get<_Np>(__parent_->__bases_); __it == ranges::end(__v)) {
         __it = ranges::begin(__v);
         __next<_Np - 1>();
       }
@@ -375,7 +375,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI constexpr void __prev() {
     auto& __it = std::get<_Np>(__current_);
     if constexpr (_Np > 0) {
-      if (const auto& __v = std::get<_Np>(__parent_->__bases_); __it == ranges::begin(__v)) {
+      if (auto& __v = std::get<_Np>(__parent_->__bases_); __it == ranges::begin(__v)) {
         __it = ranges::__cartesian_common_arg_end(__v);
         __prev<_Np - 1>();
       }
@@ -388,7 +388,7 @@ private:
     if (__x == 0)
       return;
 
-    const auto& __v    = std::get<_Np>(__parent_->__bases_);
+    auto& __v          = std::get<_Np>(__parent_->__bases_);
     auto& __it         = std::get<_Np>(__current_);
     const auto __sz    = static_cast<difference_type>(ranges::size(__v));
     const auto __first = ranges::begin(__v);
