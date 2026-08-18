@@ -1036,15 +1036,15 @@ module attributes {transform.with_named_sequence} {
 // tiled starting from the additive neutral element, and its partial results are
 // merged with an addition rather than with the subtraction itself.
 
-func.func @reduction_tile_negated_sum(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>) -> tensor<?xf32> {
+func.func @reduction_tile_negated_sum_f32_for(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>) -> tensor<?xf32> {
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
    iterator_types = ["parallel", "reduction"]}
    ins(%arg0 : tensor<?x?xf32>)
    outs(%out : tensor<?xf32>) {
-    ^bb0(%arg7: f32, %arg9: f32):
-      %1 = arith.subf %arg9, %arg7 : f32
-      linalg.yield %1 : f32
+    ^bb0(%in: f32, %acc: f32):
+      %sub = arith.subf %acc, %in : f32
+      linalg.yield %sub : f32
     } -> tensor<?xf32>
   return %red : tensor<?xf32>
 }
@@ -1058,14 +1058,16 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK-LABEL: func @reduction_tile_negated_sum
+// CHECK-LABEL: func @reduction_tile_negated_sum_f32_for
 //   CHECK-DAG:   %[[I:.*]] = arith.constant 0.000000e+00 : f32
 //       CHECK:   %[[F:.*]] = linalg.fill ins(%[[I]] : f32) outs(%{{.*}} : tensor<?x5xf32>) -> tensor<?x5xf32>
-//       CHECK:   %[[L:.*]] = scf.for {{.*}} iter_args(%{{.*}} = %[[F]]) -> (tensor<?x5xf32>) {
-//       CHECK:     linalg.generic
+//       CHECK:   %[[L:.*]] = scf.for {{.*}} iter_args(%[[ITER:.+]] = %[[F]]) -> (tensor<?x5xf32>) {
+//       CHECK:     %[[TILE:.+]] = linalg.generic
 //       CHECK:     ^bb0(%[[IN:.+]]: f32, %[[ACC:.+]]: f32):
 //       CHECK:       %[[SUB:.+]] = arith.subf %[[ACC]], %[[IN]] : f32
 //       CHECK:       linalg.yield %[[SUB]] : f32
+//       CHECK:     %[[INSERTED:.+]] = tensor.insert_slice %[[TILE]] into %[[ITER]]
+//       CHECK:     scf.yield %[[INSERTED]] : tensor<?x5xf32>
 //       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x5xf32>) outs(%{{.*}} : tensor<?xf32>) dimensions = [1]
 //       CHECK:     (%[[PARTIAL:.+]]: f32, %[[INIT:.+]]: f32) {
 //       CHECK:       %[[ADD:.+]] = arith.addf %[[PARTIAL]], %[[INIT]] : f32
@@ -1076,15 +1078,15 @@ module attributes {transform.with_named_sequence} {
 
 // Same for integers, and for the `scf.forall` tiling strategy.
 
-func.func @reduction_tile_negated_sum_int(%arg0: tensor<?x?xi32>, %out: tensor<?xi32>) -> tensor<?xi32> {
+func.func @reduction_tile_negated_sum_i32_forall(%arg0: tensor<?x?xi32>, %out: tensor<?xi32>) -> tensor<?xi32> {
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
    iterator_types = ["parallel", "reduction"]}
    ins(%arg0 : tensor<?x?xi32>)
    outs(%out : tensor<?xi32>) {
-    ^bb0(%arg7: i32, %arg9: i32):
-      %1 = arith.subi %arg9, %arg7 : i32
-      linalg.yield %1 : i32
+    ^bb0(%in: i32, %acc: i32):
+      %sub = arith.subi %acc, %in : i32
+      linalg.yield %sub : i32
     } -> tensor<?xi32>
   return %red : tensor<?xi32>
 }
@@ -1098,13 +1100,16 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK-LABEL: func @reduction_tile_negated_sum_int
+// CHECK-LABEL: func @reduction_tile_negated_sum_i32_forall
 //   CHECK-DAG:   %[[I:.*]] = arith.constant 0 : i32
 //       CHECK:   %[[F:.*]] = linalg.fill ins(%[[I]] : i32) outs(%{{.*}} : tensor<?x5xi32>) -> tensor<?x5xi32>
-//       CHECK:   %[[L:.*]] = scf.forall
+//       CHECK:   %[[L:.*]] = scf.forall {{.*}} shared_outs(%[[ITER:.+]] = %[[F]]) -> (tensor<?x5xi32>) {
+//       CHECK:     %[[TILE:.+]] = linalg.generic
 //       CHECK:     ^bb0(%[[IN:.+]]: i32, %[[ACC:.+]]: i32):
 //       CHECK:       %[[SUB:.+]] = arith.subi %[[ACC]], %[[IN]] : i32
 //       CHECK:       linalg.yield %[[SUB]] : i32
+//       CHECK:     scf.forall.in_parallel {
+//       CHECK:       tensor.parallel_insert_slice %[[TILE]] into %[[ITER]]
 //       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x5xi32>) outs(%{{.*}} : tensor<?xi32>) dimensions = [1]
 //       CHECK:     (%[[PARTIAL:.+]]: i32, %[[INIT:.+]]: i32) {
 //       CHECK:       %[[ADD:.+]] = arith.addi %[[PARTIAL]], %[[INIT]] : i32
@@ -1123,9 +1128,9 @@ module {
   func.func @fail_for_rhs_accumulator(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
     // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
     %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?xf32>) {
-    ^bb0(%in: f32, %out: f32):
-      %1 = arith.subf %in, %out : f32
-      linalg.yield %1 : f32
+    ^bb0(%in: f32, %acc: f32):
+      %sub = arith.subf %in, %acc : f32
+      linalg.yield %sub : f32
     } -> tensor<?xf32>
     return %0 : tensor<?xf32>
   }
@@ -1145,15 +1150,15 @@ module {
 // combining the partial results, matching how the other combiners are cloned
 // with their flags.
 
-func.func @reduction_tile_negated_sum_overflow_flags(%arg0: tensor<?x?xi32>, %out: tensor<?xi32>) -> tensor<?xi32> {
+func.func @reduction_tile_negated_sum_i32_overflow_flags(%arg0: tensor<?x?xi32>, %out: tensor<?xi32>) -> tensor<?xi32> {
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
    iterator_types = ["parallel", "reduction"]}
    ins(%arg0 : tensor<?x?xi32>)
    outs(%out : tensor<?xi32>) {
-    ^bb0(%arg7: i32, %arg9: i32):
-      %1 = arith.subi %arg9, %arg7 overflow<nsw, nuw> : i32
-      linalg.yield %1 : i32
+    ^bb0(%in: i32, %acc: i32):
+      %sub = arith.subi %acc, %in overflow<nsw, nuw> : i32
+      linalg.yield %sub : i32
     } -> tensor<?xi32>
   return %red : tensor<?xi32>
 }
@@ -1167,11 +1172,12 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK-LABEL: func @reduction_tile_negated_sum_overflow_flags
-//       CHECK:   linalg.generic
+// CHECK-LABEL: func @reduction_tile_negated_sum_i32_overflow_flags
+//       CHECK:   %[[TILE:.+]] = linalg.generic
 //       CHECK:   ^bb0(%[[IN:.+]]: i32, %[[ACC:.+]]: i32):
 //       CHECK:     %[[SUB:.+]] = arith.subi %[[ACC]], %[[IN]] overflow<nsw, nuw> : i32
 //       CHECK:     linalg.yield %[[SUB]] : i32
+//       CHECK:   tensor.insert_slice %[[TILE]]
 //       CHECK:   linalg.reduce
 //       CHECK:     (%[[PARTIAL:.+]]: i32, %[[INIT:.+]]: i32) {
 //       CHECK:       %[[ADD:.+]] = arith.addi %[[PARTIAL]], %[[INIT]] overflow<nsw, nuw> : i32
@@ -1183,15 +1189,15 @@ module attributes {transform.with_named_sequence} {
 // The fast-math flags and the rounding mode of the subtraction carry over to
 // the addition combining the partial results.
 
-func.func @reduction_tile_negated_sum_flags(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>) -> tensor<?xf32> {
+func.func @reduction_tile_negated_sum_f32_fastmath_rounding(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>) -> tensor<?xf32> {
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
    iterator_types = ["parallel", "reduction"]}
    ins(%arg0 : tensor<?x?xf32>)
    outs(%out : tensor<?xf32>) {
-    ^bb0(%arg7: f32, %arg9: f32):
-      %1 = arith.subf %arg9, %arg7 to_nearest_even fastmath<nnan,ninf> : f32
-      linalg.yield %1 : f32
+    ^bb0(%in: f32, %acc: f32):
+      %sub = arith.subf %acc, %in to_nearest_even fastmath<nnan,ninf> : f32
+      linalg.yield %sub : f32
     } -> tensor<?xf32>
   return %red : tensor<?xf32>
 }
@@ -1205,11 +1211,12 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK-LABEL: func @reduction_tile_negated_sum_flags
-//       CHECK:   linalg.generic
+// CHECK-LABEL: func @reduction_tile_negated_sum_f32_fastmath_rounding
+//       CHECK:   %[[TILE:.+]] = linalg.generic
 //       CHECK:   ^bb0(%[[IN:.+]]: f32, %[[ACC:.+]]: f32):
 //       CHECK:     %[[SUB:.+]] = arith.subf %[[ACC]], %[[IN]] to_nearest_even fastmath<nnan,ninf> : f32
 //       CHECK:     linalg.yield %[[SUB]] : f32
+//       CHECK:   tensor.insert_slice %[[TILE]]
 //       CHECK:   linalg.reduce
 //       CHECK:     (%[[PARTIAL:.+]]: f32, %[[INIT:.+]]: f32) {
 //       CHECK:       %[[ADD:.+]] = arith.addf %[[PARTIAL]], %[[INIT]] to_nearest_even fastmath<nnan,ninf> : f32
