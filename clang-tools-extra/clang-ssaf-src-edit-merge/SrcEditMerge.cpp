@@ -400,8 +400,7 @@ int main(int argc, const char **argv) {
 
   // Validate the command-line parameters that can be checked without
   // reading any input, so a bad -o or --sarif-conflicts-out path is rejected
-  // before the (potentially expensive) merge work below runs, rather than
-  // after it when the tool finally tries to open the file for writing.
+  // before the (potentially expensive) merge work below runs.
   if (!parentDirectoryExists(OutputFile)) {
     llvm::errs() << ToolName << ": "
                  << llvm::formatv(CannotWriteFile, OutputFile) << "\n";
