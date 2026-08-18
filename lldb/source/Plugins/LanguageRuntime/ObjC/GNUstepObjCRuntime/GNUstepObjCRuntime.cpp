@@ -14,6 +14,7 @@
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -1421,8 +1422,36 @@ GNUstepObjCRuntime::GetLanguageSpecificData(SymbolContext sc) {
   return dict_up;
 }
 
+// FIXME: This belongs in ExceptionSearchFilter::ModulePasses, which is where
+// the defect is: it asks the process for the language runtime and rejects the
+// module outright when there is not one yet, and nothing revisits those
+// modules. Target::ModulesDidLoad resolves breakpoints before it notifies
+// language runtimes, so a breakpoint set before running misses every module
+// up to the point this runtime came into existence. Fixing it there means
+// re-resolving from Target once a filter's runtime appears, which would newly
+// fire for every language - worth doing, but not from here.
+//
+// It only bites when the entry point is outside the runtime's own module,
+// which on MinGW it is: libstdc++'s __cxa_begin_catch.
+void GNUstepObjCRuntime::ResolveExceptionBreakpoints() {
+  Target &target = GetTargetRef();
+  ModuleList &modules = target.GetImages();
+  for (bool internal : {false, true}) {
+    BreakpointList &breakpoints = target.GetBreakpointList(internal);
+    for (const BreakpointSP &bp_sp : breakpoints.Breakpoints()) {
+      if (bp_sp && bp_sp->IsEnabled() && bp_sp->GetSearchFilter() &&
+          bp_sp->GetSearchFilter()->GetFilterTy() == SearchFilter::Exception)
+        bp_sp->ResolveBreakpointInModules(modules, /*send_event=*/true);
+    }
+  }
+}
+
 void GNUstepObjCRuntime::ModulesDidLoad(const ModuleList &module_list) {
   ReadObjCLibraryIfNeeded(module_list);
+  if (!m_swept_exception_breakpoints) {
+    m_swept_exception_breakpoints = true;
+    ResolveExceptionBreakpoints();
+  }
 
   // Everything cached from a symbol lookup can be invalidated by new modules:
   // classes to add to the map, dispatch entry points that may only now exist,

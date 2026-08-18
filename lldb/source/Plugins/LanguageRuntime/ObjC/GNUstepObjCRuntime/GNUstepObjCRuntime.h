@@ -250,6 +250,12 @@ protected:
   /// runtime's life.
   FunctionCaller *GetObjectDescriptionCaller(ExecutionContext &exe_ctx);
 
+  /// Re-runs every exception breakpoint's resolver, so modules loaded before
+  /// this runtime existed are considered.
+  void ResolveExceptionBreakpoints();
+
+  bool m_swept_exception_breakpoints = false;
+
   lldb::ModuleSP m_objc_module_sp;
 
   /// Utility function wrapping the -description/-UTF8String pair; owns
