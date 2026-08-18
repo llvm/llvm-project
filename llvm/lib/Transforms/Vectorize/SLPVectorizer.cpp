@@ -28298,7 +28298,7 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   if (CacheIt != StlfConflictCache.end())
     return CacheIt->second;
 
-  auto CacheAndReturn = [&](bool Result) -> bool {
+  auto CacheAndReturn = [&](const bool Result) -> bool {
     StlfConflictCache[Key] = Result;
     // No conflict at VF implies none at any smaller VF that divides VF, so seed
     // those entries too. The recency window is VF-independent (so it stays
