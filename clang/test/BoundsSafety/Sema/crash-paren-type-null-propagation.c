@@ -37,8 +37,5 @@ void paren_sized_or_null_bidi(char * __bidi_indexable __sized_by_or_null(n) (*p)
 // expected-error@+1{{array objects cannot be null; did you mean __sized_by instead?}}
 void paren_sized_or_null_indexable(char * __indexable __sized_by_or_null(n) (*p)[10], int n);
 
-// FIXME: The '__ended_by' variants hit a pre-existing crash (assert(Level <= 1)
-// in applyPtrCountedByEndedByAttr) before reaching VisitParenType, tracked by
-// rdar://184264642. They are commented out until that is fixed:
-//   void paren_ended_bidi(int * __bidi_indexable __ended_by(e) (*p)[10], int *e);
-//   void paren_ended_indexable(int * __indexable __ended_by(e) (*p)[10], int *e);
+// The '__ended_by' variants hit a pre-existing assert and are in
+// `clang/test/BoundsSafety/Sema/crash-ended-by-paren-type.c`.

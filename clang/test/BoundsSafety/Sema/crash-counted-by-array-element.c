@@ -45,8 +45,5 @@ void f_counted_or_null(int * __counted_by_or_null(n) p[5][10], int n);
 // bounds-safety-error@+1{{'__sized_by_or_null' attribute on nested pointer type is only allowed on indirect parameters}}
 void f_sized_or_null(char * __sized_by_or_null(n) p[5][10], int n);
 
-// FIXME: The '__ended_by' variant of this shape hits a pre-existing crash
-// (assert(Level <= 1) in applyPtrCountedByEndedByAttr) under
-// -fexperimental-bounds-safety-attributes, tracked by rdar://184264642. It is
-// commented out until that is fixed:
-//   void f_ended(int * __ended_by(e) p[5][10], int *e);
+// The '__ended_by' variant of this shape hits an assert and are in
+// `crash-ended-by-array-element.c`
