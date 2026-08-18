@@ -391,7 +391,7 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
     return false;
 
   MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
-  if (DefMI->isCopyLike())
+  if (!DefMI || DefMI->isCopyLike())
     return false;
   LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
   LLVM_DEBUG(dbgs() << "*** to: " << MI);

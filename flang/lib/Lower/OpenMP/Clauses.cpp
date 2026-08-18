@@ -1811,8 +1811,29 @@ UseDevicePtr make(const parser::OmpClause::UseDevicePtr &inp,
 
 UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
                     semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: uses_allocators");
+  // inp.v -> parser::OmpUsesAllocatorsClause
+  using AllocatorSpec = parser::OmpUsesAllocatorsClause::AllocatorSpec;
+
+  auto makeSpec = [&](const AllocatorSpec &spec) {
+    auto &mods = semantics::OmpGetModifiers(spec);
+    auto *memSpace = semantics::OmpGetUniqueModifier<parser::OmpMemSpace>(mods);
+    auto *traits =
+        semantics::OmpGetUniqueModifier<parser::OmpTraitsArray>(mods);
+
+    std::optional<UsesAllocators::TraitsArray> traitsArray;
+    if (traits) {
+      // Semantics has verified that the traits array is a named constant.
+      const parser::Name *name{parser::Unwrap<parser::Name>(traits->v.value())};
+      traitsArray = makeObject(DEREF(name), semaCtx);
+    }
+    return UsesAllocators::AllocatorSpec{
+        {/*MemSpace=*/maybeApplyToV(makeExprFn(semaCtx), memSpace),
+         /*TraitsArray=*/std::move(traitsArray),
+         /*Allocator=*/
+         makeExpr(std::get<parser::ScalarIntExpr>(spec.t), semaCtx)}};
+  };
+
+  return UsesAllocators{/*Allocators=*/makeList(inp.v.v, makeSpec)};
 }
 
 // Weak: empty

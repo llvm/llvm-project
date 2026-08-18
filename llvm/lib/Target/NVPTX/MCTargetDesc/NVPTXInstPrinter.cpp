@@ -29,9 +29,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-#define GET_SUBTARGETINFO_ENUM
-#include "NVPTXGenSubtargetInfo.inc"
-
 #include "NVPTXGenAsmWriter.inc"
 
 static bool hasParamSubqualifiers(const MCSubtargetInfo &STI) {

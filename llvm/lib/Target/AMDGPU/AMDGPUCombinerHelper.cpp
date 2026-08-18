@@ -428,14 +428,13 @@ void AMDGPUCombinerHelper::applyFoldFAbsFptrunc(MachineInstr &Fabs,
 // intermediate fptruncs in the apply function.
 static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
                                   Register Reg) {
-  const MachineInstr *Def = MRI.getVRegDef(Reg);
-  if (Def->getOpcode() == TargetOpcode::G_FPEXT) {
-    Register SrcReg = Def->getOperand(1).getReg();
+  Register SrcReg;
+  if (mi_match(Reg, MRI, m_GFPExt(m_Reg(SrcReg))))
     return MRI.getType(SrcReg) == LLT::float16();
-  }
 
-  if (Def->getOpcode() == TargetOpcode::G_FCONSTANT) {
-    APFloat Val = Def->getOperand(1).getFPImm()->getValueAPF();
+  const ConstantFP *FPImm;
+  if (mi_match(Reg, MRI, m_GFCst(FPImm))) {
+    APFloat Val = FPImm->getValueAPF();
     bool LosesInfo = true;
     Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
     return !LosesInfo;

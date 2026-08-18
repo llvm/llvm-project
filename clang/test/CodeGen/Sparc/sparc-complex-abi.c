@@ -534,7 +534,7 @@ _Complex double complex_double(_Complex double c) { return c; }
 // V8-NEXT:    ret { fp128, fp128 } [[TMP0]]
 //
 // V9-LABEL: define dso_local { fp128, fp128 } @complex_long_double(
-// V9-SAME: ptr noundef align 16 dead_on_return [[C:%.*]]) #[[ATTR0]] {
+// V9-SAME: ptr nofree noundef align 16 dead_on_return dereferenceable(32) [[C:%.*]]) #[[ATTR0]] {
 // V9-NEXT:  [[ENTRY:.*:]]
 // V9-NEXT:    [[RETVAL:%.*]] = alloca { fp128, fp128 }, align 16
 // V9-NEXT:    [[C_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -566,7 +566,7 @@ _Complex double complex_double(_Complex double c) { return c; }
 // COMPAT23-V8-NEXT:    ret { fp128, fp128 } [[TMP0]]
 //
 // COMPAT23-V9-LABEL: define dso_local { fp128, fp128 } @complex_long_double(
-// COMPAT23-V9-SAME: ptr noundef align 16 dead_on_return [[C:%.*]]) #[[ATTR0]] {
+// COMPAT23-V9-SAME: ptr nofree noundef align 16 dead_on_return dereferenceable(32) [[C:%.*]]) #[[ATTR0]] {
 // COMPAT23-V9-NEXT:  [[ENTRY:.*:]]
 // COMPAT23-V9-NEXT:    [[RETVAL:%.*]] = alloca { fp128, fp128 }, align 16
 // COMPAT23-V9-NEXT:    [[C_INDIRECT_ADDR:%.*]] = alloca ptr, align 8

@@ -308,14 +308,15 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
       return;
     }
 
-    if (const auto *NestedConstruct = dyn_cast<CXXConstructExpr>(E)) {
+    if (const auto *NestedConstruct = dyn_cast<CXXConstructExpr>(E);
+        NestedConstruct &&
+        NestedConstruct->getConstructor()->isConvertingConstructor(false)) {
       // If we ran into an implicit conversion constructor, can't convert.
       //
       // FIXME: The following only checks if the constructor can be used
       // implicitly, not if it actually was. Cases where the converting
       // constructor was used explicitly won't get converted.
-      if (NestedConstruct->getConstructor()->isConvertingConstructor(false))
-        return;
+      return;
     }
     if (!ASTContext::hasSameType(V->getType(), E->getType()))
       return;

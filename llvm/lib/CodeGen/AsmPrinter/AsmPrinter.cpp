@@ -3129,13 +3129,14 @@ bool AsmPrinter::doFinalization(Module &M) {
           ".note.GNU-no-split-stack", ELF::SHT_PROGBITS, 0));
   }
 
-  // If we don't have any trampolines, then we don't require stack memory
-  // to be executable. Some targets have a directive to declare this.
-  Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  bool HasTrampolineUses =
-      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
-  MCSection *S = MAI.getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
-  if (S)
+  // Emit the section that tells the linker whether stack memory has to be
+  // executable, e.g. ELF's .note.GNU-stack. It is marked executable only if
+  // the module sets the "executable-stack" flag.
+  bool ExecStack = false;
+  if (auto *Val = mdconst::dyn_extract_or_null<ConstantInt>(
+          M.getModuleFlag("executable-stack")))
+    ExecStack = !Val->isZero();
+  if (MCSection *S = MAI.getStackSection(OutContext, ExecStack))
     OutStreamer->switchSection(S);
 
   if (TM.Options.EmitAddrsig) {
@@ -3342,13 +3343,21 @@ void AsmPrinter::emitConstantPool() {
       unsigned NewOffset = alignTo(Offset, CPE.getAlign());
       OutStreamer->emitZeros(NewOffset - Offset);
 
-      Offset = NewOffset + CPE.getSizeInBytes(getDataLayout());
-
+      if (MAI.hasDotTypeDotSizeDirective())
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
       OutStreamer->emitLabel(Sym);
+
       if (CPE.isMachineConstantPoolEntry())
         emitMachineConstantPoolValue(CPE.Val.MachineCPVal);
       else
         emitGlobalConstant(getDataLayout(), CPE.Val.ConstVal);
+
+      unsigned EntrySize = CPE.getSizeInBytes(getDataLayout());
+      if (MAI.hasDotTypeDotSizeDirective())
+        OutStreamer->emitELFSize(Sym,
+                                 MCConstantExpr::create(EntrySize, OutContext));
+
+      Offset = NewOffset + EntrySize;
     }
   }
 }

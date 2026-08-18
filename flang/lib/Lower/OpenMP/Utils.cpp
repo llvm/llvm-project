@@ -1089,9 +1089,9 @@ static std::string
 getDefaultMapperID(Fortran::lower::AbstractConverter &converter,
                    fir::FirOpBuilder &firOpBuilder,
                    const semantics::DerivedTypeSpec *typeSpec) {
-  if (mlir::isa<mlir::omp::DeclareMapperOp>(
-          firOpBuilder.getRegion().getParentOp()) ||
-      !typeSpec)
+  // Nested derived-type components inside a declare mapper may use their own
+  // default mapper. Only suppress the mapper currently being built.
+  if (!typeSpec)
     return {};
 
   std::string mapperIdName =

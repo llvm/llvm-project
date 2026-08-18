@@ -228,6 +228,8 @@
 // CHECK: #map{{[0-9]*}} = affine_map<()[s0, s1] -> (0)>
 #map69 = affine_map<()[s0, s1] -> ((s0 + s1) mod (s0 + s1))>
 
+// CHECK: #[[INT64_MIN_MAP:map[0-9]*]] = affine_map<(d0) -> (d0 - 9223372036854775808)>
+
 // Single identity maps are removed.
 // CHECK: @f0(memref<2x4xi8, 1>)
 func.func private @f0(memref<2x4xi8, #map0, 1>)
@@ -448,3 +450,16 @@ func.func private @f56(memref<1x1xi8, #map56>)
 
 // CHECK: "f69"() {map = #map{{[0-9]*}}} : () -> ()
 "f69"() {map = #map69} : () -> ()
+
+// Test that affine expressions with INT64_MIN as a constant are printed
+// without signed integer overflow (printed as "d0 - 9223372036854775808")
+// and can be parsed back (round-trip). The value INT64_MIN arises when
+// affine simplification sums two large negative constants.
+#map_int64min = affine_map<(d0) -> (d0 + (-4611686018427387904) + (-4611686018427387904))>
+// CHECK: "f_int64min"() {map = #[[INT64_MIN_MAP]]} : () -> ()
+"f_int64min"() {map = #map_int64min} : () -> ()
+
+// Round-trip: parse a map already containing "d0 - 9223372036854775808".
+#map_int64min_rt = affine_map<(d0) -> (d0 - 9223372036854775808)>
+// CHECK: "f_int64min_rt"() {map = #[[INT64_MIN_MAP]]} : () -> ()
+"f_int64min_rt"() {map = #map_int64min_rt} : () -> ()
