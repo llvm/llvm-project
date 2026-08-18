@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass=prolog-epilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00 -verify-machineinstrs -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 
 # CHECK-LABEL: name: foo

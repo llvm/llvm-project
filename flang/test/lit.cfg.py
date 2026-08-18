@@ -15,22 +15,11 @@ from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
-# env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -228,6 +217,11 @@ tools = [
     ),
 ]
 
+# Some tests expect the command line to be verbatim what is specified on the
+# RUN: line.
+if not flang_extra_search_args:
+    config.available_features.add("flang-authentic-cmdline")
+
 # Flang has several unimplemented features. TODO messages are used to mark
 # and fail if these features are exercised. Some TODOs exit with a non-zero
 # exit code, but others abort the execution in assert builds.
@@ -282,3 +276,7 @@ if config.flang_runtime_f128_math_lib:
     )
 else:
     config.substitutions.append(("%f128-lib", "NONE"))
+
+# Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
+if "system-aix" in config.available_features:
+    config.environment["OBJECT_MODE"] = "64"

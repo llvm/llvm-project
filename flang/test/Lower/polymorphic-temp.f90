@@ -86,17 +86,10 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_pack(
 ! CHECK-SAME: %[[I:.*]]: !fir.class<!fir.array<20x20x!fir.type<_QMpoly_tmpTp1{a:i32}>>> {fir.bindc_name = "i"}, %[[MASK:.*]]: !fir.ref<!fir.array<20x20x!fir.logical<4>>> {fir.bindc_name = "mask"}) {
-! CHECK: %[[TMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
 ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]]
 ! CHECK: %[[MASK_DECL:.*]]:2 = hlfir.declare %[[MASK]]
-! CHECK: %[[EMBOXED_MASK:.*]] = fir.embox %[[MASK_DECL]]#0(%{{.*}}) : (!fir.ref<!fir.array<20x20x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<20x20x!fir.logical<4>>>
-! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>
-! CHECK: %[[EMBOX_RES:.*]] = fir.embox %[[ZERO]](%{{.*}}) source_box %[[I_DECL]]#1 : (!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>, !fir.shape<1>, !fir.class<!fir.array<20x20x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
-! CHECK: fir.store %[[EMBOX_RES]] to %[[TMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>
-! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[I_DECL]]#1 : (!fir.class<!fir.array<20x20x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
-! CHECK: %[[MASK_BOX_NONE:.*]] = fir.convert %[[EMBOXED_MASK]] : (!fir.box<!fir.array<20x20x!fir.logical<4>>>) -> !fir.box<none>
-! CHECK: fir.call @_FortranAPack(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %[[MASK_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+! CHECK: hlfir.pack
+! CHECK-NOT: fir.call @_FortranAPack
 
   subroutine check_rank2(r)
     class(p1), intent(in) :: r(:,:)
@@ -208,7 +201,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic2(
-! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "b"}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "a", fir.read_only}, %[[B:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>> {fir.bindc_name = "b"}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}) {
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]
 ! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]]
 ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]]
@@ -230,7 +223,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic3(
-! CHECK-SAME: %[[A:.*]]: !fir.class<none> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.class<none> {fir.bindc_name = "b"}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK-SAME: %[[A:.*]]: !fir.class<none> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.class<none> {fir.bindc_name = "b"}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}) {
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]
 ! CHECK: %[[B_DECL:.*]]:2 = hlfir.declare %[[B]]
 ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]]
@@ -247,7 +240,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic4(
-! CHECK-SAME: %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK-SAME: %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}) {
 ! CHECK: %[[V_0:[0-9]+]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic4Ea"}
 ! CHECK: %[[V_1:[0-9]+]] = fir.zero_bits !fir.heap<none>
 ! CHECK: %[[V_2:[0-9]+]] = fir.embox %[[V_1]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
@@ -274,7 +267,7 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic5(
-! CHECK-SAME: %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK-SAME: %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}) {
 ! CHECK: %[[V_0:[0-9]+]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic5Ea"}
 ! CHECK: %[[V_1:[0-9]+]] = fir.zero_bits !fir.ptr<none>
 ! CHECK: %[[V_2:[0-9]+]] = fir.embox %[[V_1]] : (!fir.ptr<none>) -> !fir.class<!fir.ptr<none>>

@@ -23,7 +23,12 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtask_depend_iterator_simpleEa"}
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_I32]] : (i32) -> i64
+! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! Iterator IV temp must be named in the compiler-generated namespace ("_QQ"
+! prefix) so it is not emitted as a bogus user local in DWARF under -g.
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]] {uniq_name = "_QQ{{.*}}.omp.iter"}
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
@@ -45,9 +50,15 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtask_depend_iterator_2d()
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
+! CHECK:   fir.store %[[IV0_I32]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
 ! CHECK:   %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
-! CHECK:   %[[IV0_I64:.*]] = fir.convert %[[IV0_I32]] : (i32) -> i64
-! CHECK:   %[[IV1_I64:.*]] = fir.convert %[[IV1_I32]] : (i32) -> i64
+! CHECK:   fir.store %[[IV1_I32]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
+! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV0_I64:.*]] = fir.convert %[[IV0_LD]] : (i32) -> i64
+! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV1_I64:.*]] = fir.convert %[[IV1_LD]] : (i32) -> i64
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c4, %c6 : (index, index) -> !fir.shape<2>
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %{{.*}}(%[[SHAPE]]) %[[IV0_I64]], %[[IV1_I64]] : (!fir.ref<!fir.array<4x6xi32>>, !fir.shape<2>, i64, i64) -> !fir.ref<i32>
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
@@ -133,12 +144,18 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtask_depend_iterator_expr_subscriptEa"}
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
+! CHECK:   fir.store %[[IV0_I32]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
 ! CHECK:   %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
+! CHECK:   fir.store %[[IV1_I32]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
+! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
-! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_I32]], %[[C1_I32]] : i32
-! CHECK:   %[[NOREASSOC:.*]] = fir.no_reassoc %[[SUB]] : i32
+! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_LD]], %[[C1_I32]] : i32
+! CHECK:   %[[NOREASSOC:.*]] = hlfir.no_reassoc %[[SUB]] : i32
 ! CHECK:   %[[MUL:.*]] = arith.muli %{{.*}}, %[[NOREASSOC]] : i32
-! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_I32]] : i32
+! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_LD]] : i32
 ! CHECK:   %[[IDX:.*]] = fir.convert %[[ADD]] : (i32) -> i64
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %[[IDX]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
@@ -233,7 +250,10 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtarget_depend_iteratorEa"}
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_I32]] : (i32) -> i64
+! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
@@ -293,7 +313,10 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtarget_enter_data_depend_iteratorEa"}
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_I32]] : (i32) -> i64
+! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
@@ -317,11 +340,17 @@ end subroutine
 ! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})  : (!fir.ref<!fir.array<16xi32>>, index) -> !fir.ref<i32>
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV0_I32:.*]] = fir.convert %[[IV0]] : (index) -> i32
+! CHECK:   fir.store %[[IV0_I32]] to %[[IV0_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV0_DECL:.*]]:2 = hlfir.declare %[[IV0_MEM]]
 ! CHECK:   %[[IV1_I32:.*]] = fir.convert %[[IV1]] : (index) -> i32
-! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_I32]], %{{.*}} : i32
-! CHECK:   %[[NOREASSOC:.*]] = fir.no_reassoc %[[SUB]] : i32
+! CHECK:   fir.store %[[IV1_I32]] to %[[IV1_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV1_DECL:.*]]:2 = hlfir.declare %[[IV1_MEM]]
+! CHECK:   %[[IV0_LD:.*]] = fir.load %[[IV0_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[SUB:.*]] = arith.subi %[[IV0_LD]], %{{.*}} : i32
+! CHECK:   %[[NOREASSOC:.*]] = hlfir.no_reassoc %[[SUB]] : i32
 ! CHECK:   %[[MUL:.*]] = arith.muli %{{.*}}, %[[NOREASSOC]] : i32
-! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_I32]] : i32
+! CHECK:   %[[IV1_LD:.*]] = fir.load %[[IV1_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[IV1_LD]] : i32
 ! CHECK:   %[[IDX:.*]] = fir.convert %[[ADD]] : (i32) -> i64
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %[[IDX]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
@@ -345,7 +374,10 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtarget_exit_data_depend_iteratorEa"}
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_I32]] : (i32) -> i64
+! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
@@ -400,7 +432,10 @@ end subroutine
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtarget_update_depend_iteratorEa"}
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[IV_I32:.*]] = fir.convert %[[IV]] : (index) -> i32
-! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_I32]] : (i32) -> i64
+! CHECK:   fir.store %[[IV_I32]] to %[[IV_MEM:.*]] : !fir.ref<i32>
+! CHECK:   %[[IV_DECL:.*]]:2 = hlfir.declare %[[IV_MEM]]
+! CHECK:   %[[IV_LD:.*]] = fir.load %[[IV_DECL]]#0 : !fir.ref<i32>
+! CHECK:   %[[IV_I64:.*]] = fir.convert %[[IV_LD]] : (i32) -> i64
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A]]#0(%[[SHAPE]]) %[[IV_I64]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr

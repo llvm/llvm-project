@@ -102,6 +102,9 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
 
+  // Only record check points if we might highlight diagnostic snippets.
+  RecordCheckPoints = getDiagnostics().getShowColors();
+
   // Default to discarding comments.
   KeepComments = false;
   KeepMacroComments = false;
@@ -155,6 +158,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
     Ident_GetExceptionInfo = Ident_GetExceptionCode = nullptr;
     Ident_AbnormalTermination = nullptr;
   }
+
+  Ident__GLIBCXX__ = getIdentifierInfo("__GLIBCXX__");
 
   // Default incremental processing to -fincremental-extensions, clients can
   // override with `enableIncrementalProcessing` if desired.
@@ -1014,7 +1019,8 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
-  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+  if (RecordCheckPoints && CurLexer &&
+      ++CheckPointCounter == CheckPointStepSize) {
     CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
     CheckPointCounter = 0;
   }
@@ -1349,35 +1355,38 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   } else if (!Result.isAtPhysicalStartOfLine())
     return false;
 
+  assert(CurPPLexer && "CurPPLexer must not be null");
+
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);
 
-  // The next token may be an angled string literal after import keyword.
-  llvm::SaveAndRestore<bool> SavedParsingFilemame(
-      CurPPLexer->ParsingFilename,
-      Result.getIdentifierInfo()->isImportKeyword());
-
-  std::optional<Token> NextTok = peekNextPPToken();
-  if (!NextTok)
-    return false;
-
-  if (NextTok->is(tok::raw_identifier))
-    LookUpIdentifierInfo(*NextTok);
-
-  if (Result.getIdentifierInfo()->isImportKeyword()) {
-    if (NextTok->isOneOf(tok::identifier, tok::less, tok::colon,
-                         tok::header_name)) {
-      Result.setKind(tok::kw_import);
-      ModuleImportLoc = Result.getLocation();
-      return true;
+  if (II->isModuleKeyword()) {
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      if (NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
+        Result.setKind(tok::kw_module);
+        ModuleDeclLoc = Result.getLocation();
+        return true;
+      }
     }
+    return false;
   }
 
-  if (Result.getIdentifierInfo()->isModuleKeyword() &&
-      NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
-    Result.setKind(tok::kw_module);
-    ModuleDeclLoc = Result.getLocation();
-    return true;
+  if (II->isImportKeyword()) {
+    llvm::SaveAndRestore<bool> SavedParsingFilename(CurPPLexer->ParsingFilename,
+                                                    true);
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      if (NextTok->isOneOf(tok::header_name, tok::identifier, tok::colon,
+                           tok::less)) {
+        Result.setKind(tok::kw_import);
+        ModuleImportLoc = Result.getLocation();
+        return true;
+      }
+    }
+    return false;
   }
 
   // Ok, it's an identifier.

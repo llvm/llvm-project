@@ -1,9 +1,9 @@
-; RUN: llvm-split -o %t_s3_ %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-max-depth=2
+; RUN: llvm-split -o %t_s3_ %s -j 3 -mtriple amdgpu-amd-amdhsa -amdgpu-module-splitting-max-depth=2
 ; RUN: llvm-dis -o - %t_s3_0 | FileCheck --check-prefix=SPLIT3-CHECK0 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t_s3_1 | FileCheck --check-prefix=SPLIT3-CHECK1 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t_s3_2 | FileCheck --check-prefix=SPLIT3-CHECK2 --implicit-check-not=define %s
 
-; RUN: llvm-split -o %t_s5_ %s -j 5 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-max-depth=2
+; RUN: llvm-split -o %t_s5_ %s -j 5 -mtriple amdgpu-amd-amdhsa -amdgpu-module-splitting-max-depth=2
 ; RUN: llvm-dis -o - %t_s5_0 | FileCheck --check-prefix=SPLIT5-CHECK0 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t_s5_1 | FileCheck --check-prefix=SPLIT5-CHECK1 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t_s5_2 | FileCheck --check-prefix=SPLIT5-CHECK2 --implicit-check-not=define %s

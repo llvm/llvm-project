@@ -121,6 +121,11 @@
 // BITALG: "-target-feature" "+avx512bitalg"
 // NO-BITALG: "-target-feature" "-avx512bitalg"
 
+// RUN: %clang --target=i386 -march=i386 -mavx512bmm %s -### 2>&1 | FileCheck -check-prefix=BMM %s
+// RUN: %clang --target=i386 -march=i386 -mno-avx512bmm %s -### 2>&1 | FileCheck -check-prefix=NO-BMM %s
+// BMM: "-target-feature" "+avx512bmm"
+// NO-BMM: "-target-feature" "-avx512bmm"
+
 // RUN: %clang --target=i386 -march=i386 -mavx512vnni %s -### 2>&1 | FileCheck -check-prefix=VNNI %s
 // RUN: %clang --target=i386 -march=i386 -mno-avx512vnni %s -### 2>&1 | FileCheck -check-prefix=NO-VNNI %s
 // VNNI: "-target-feature" "+avx512vnni"

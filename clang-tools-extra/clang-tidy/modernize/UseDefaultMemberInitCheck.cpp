@@ -27,21 +27,21 @@ static bool isExprAllowedInMemberInit(const Expr *E) {
       .Case<IntegerLiteral, FloatingLiteral, CXXBoolLiteralExpr,
             CXXNullPtrLiteralExpr, CharacterLiteral, StringLiteral>(
           [](const auto *) { return true; })
-      .Case<ImplicitValueInitExpr>([](const auto *) { return true; })
-      .Case<ParenExpr>([](const ParenExpr *PE) {
+      .Case([](const ImplicitValueInitExpr *) { return true; })
+      .Case([](const ParenExpr *PE) {
         return isExprAllowedInMemberInit(PE->getSubExpr());
       })
-      .Case<UnaryOperator>([](const UnaryOperator *UO) {
+      .Case([](const UnaryOperator *UO) {
         return isExprAllowedInMemberInit(UO->getSubExpr());
       })
-      .Case<BinaryOperator>([](const BinaryOperator *BO) {
+      .Case([](const BinaryOperator *BO) {
         return isExprAllowedInMemberInit(BO->getLHS()) &&
                isExprAllowedInMemberInit(BO->getRHS());
       })
-      .Case<CastExpr>([](const CastExpr *CE) {
+      .Case([](const CastExpr *CE) {
         return isExprAllowedInMemberInit(CE->getSubExpr());
       })
-      .Case<DeclRefExpr>([](const DeclRefExpr *DRE) {
+      .Case([](const DeclRefExpr *DRE) {
         if (const ValueDecl *D = DRE->getDecl()) {
           if (isa<EnumConstantDecl>(D))
             return true;
@@ -78,11 +78,11 @@ static const DeclRefExpr *findFirstNonVisibleDeclRef(const Stmt *S,
   if (!S)
     return nullptr;
 
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
-    if (!isVisibleFromDefaultMemberInitializer(DRE->getDecl(), Field, SM) ||
-        !isVisibleFromDefaultMemberInitializer(DRE->getFoundDecl(), Field, SM))
-      return DRE;
-  }
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(S);
+      DRE &&
+      (!isVisibleFromDefaultMemberInitializer(DRE->getDecl(), Field, SM) ||
+       !isVisibleFromDefaultMemberInitializer(DRE->getFoundDecl(), Field, SM)))
+    return DRE;
 
   for (const Stmt *Child : S->children())
     if (const auto *DRE = findFirstNonVisibleDeclRef(Child, Field, SM))
@@ -298,16 +298,17 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto Init = anyOf(
+  const auto Init = anyOf(
       initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, allowedInitExpr())),
                          initCountIs(0), hasType(arrayType()))),
       allowedInitExpr());
 
-  auto CandidateField = forField(unless(anyOf(
+  const auto CandidateField = forField(unless(anyOf(
       getLangOpts().CPlusPlus20 ? unless(anything()) : isBitField(),
       hasInClassInitializer(anything()), hasParent(recordDecl(isUnion())))));
 
-  auto DefaultInit = cxxCtorInitializer(CandidateField, withInitializer(Init));
+  const auto DefaultInit =
+      cxxCtorInitializer(CandidateField, withInitializer(Init));
   auto VisibleDefaultInit =
       cxxCtorInitializer(DefaultInit, hasOnlyVisibleReferencedDecls())
           .bind("visible-init");
@@ -368,7 +369,7 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  auto DiagDefaultMemberInitializer = [&] {
+  const auto DiagDefaultMemberInitializer = [&] {
     return diag(Field->getLocation(), "use default member initializer for %0")
            << Field;
   };
@@ -382,7 +383,7 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
     return;
   }
 
-  auto Diag = DiagDefaultMemberInitializer();
+  const auto Diag = DiagDefaultMemberInitializer();
 
   const SourceLocation FieldEnd =
       Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,

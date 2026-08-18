@@ -2195,13 +2195,17 @@ void mlir::affine::getSequentialLoops(
 }
 
 IntegerSet mlir::affine::simplifyIntegerSet(IntegerSet set) {
-  FlatAffineValueConstraints fac(set);
-  if (fac.isEmpty())
+  FailureOr<FlatAffineValueConstraints> fac =
+      FlatAffineValueConstraints::create(set);
+  // Semi-affine sets can't be flattened; return them as is.
+  if (failed(fac))
+    return set;
+  if (fac->isEmpty())
     return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
                                    set.getContext());
-  fac.removeTrivialRedundancy();
+  fac->removeTrivialRedundancy();
 
-  auto simplifiedSet = fac.getAsIntegerSet(set.getContext());
+  auto simplifiedSet = fac->getAsIntegerSet(set.getContext());
   assert(simplifiedSet && "guaranteed to succeed while roundtripping");
   return simplifiedSet;
 }

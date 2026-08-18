@@ -1719,6 +1719,9 @@ static bool hasChangeableCCImpl(Function *F) {
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
     return false;
 
+  if (!F->canChangeSignature())
+    return false;
+
   if (F->isVarArg())
     return false;
 

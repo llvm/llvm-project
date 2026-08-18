@@ -213,7 +213,7 @@ linked list."
     or SetData().
 
     Returns False when the value is not writable. An example would be a
-    variable values reconstructed from debug info via a computation or a constant.
+    variable value reconstructed from debug info via a computation or a constant.
     A True result does not guarantee a write will succeed; other
     runtime conditions may still prevent a successful write."
 ) lldb::SBValue::CanSetValue;

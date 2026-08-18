@@ -13,9 +13,11 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CMDLISTMANAGER_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CMDLISTMANAGER_H
 
+#include "L0Compat.h"
 #include "L0Context.h"
 #include "L0Defs.h"
 #include "L0Trace.h"
+#include "PluginInterface.h"
 #include <mutex>
 
 namespace llvm::omp::target::plugin {
@@ -96,6 +98,12 @@ public:
     return Plugin::success();
   }
 
+  Error appendMemoryPrefetch(const void *Ptr, size_t Size) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryPrefetch, CmdList, Ptr, Size);
+    return Plugin::success();
+  }
+
   Error appendLaunchKernel(ze_kernel_handle_t Kernel,
                            const ze_group_count_t *pLaunchFuncArgs,
                            ze_event_handle_t SignalEvent = nullptr,
@@ -120,10 +128,18 @@ public:
       const ze_group_size_t *GroupSizes, void **ArgPtrs,
       ze_event_handle_t SignalEvent = nullptr, uint32_t NumWaitEvents = 0,
       ze_event_handle_t *WaitEvents = nullptr, bool IsCooperative = false) {
+
+    if (!api_helper::canCall<zeCommandListAppendLaunchKernelWithArguments>())
+      return Plugin::error(
+          ErrorCode::UNSUPPORTED,
+          "zeCommandListAppendLaunchKernelWithArguments is not "
+          "available on this driver");
+
     ze_command_list_append_launch_kernel_param_cooperative_desc_t CoopDesc = {
         ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC, nullptr,
         static_cast<ze_bool_t>(IsCooperative)};
     std::lock_guard<std::mutex> Lock(Mtx);
+
     CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernelWithArguments, CmdList,
                       Kernel, *GroupCounts, *GroupSizes, ArgPtrs,
                       IsCooperative ? &CoopDesc : nullptr, SignalEvent,

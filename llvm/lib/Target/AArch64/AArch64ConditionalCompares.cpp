@@ -769,7 +769,7 @@ class AArch64ConditionalComparesImpl {
   const MachineBranchProbabilityInfo *MBPI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
-  MCSchedModel SchedModel;
+  const TargetSubtargetInfo *STI;
   // Does the proceeded function has Oz attribute.
   bool MinSize;
   MachineRegisterInfo *MRI;
@@ -902,7 +902,7 @@ bool AArch64ConditionalComparesImpl::shouldConvert() {
   // the cost of a misprediction.
   //
   // Set a limit on the delay we will accept.
-  unsigned DelayLimit = SchedModel.MispredictPenalty * 3 / 4;
+  unsigned DelayLimit = STI->getMispredictionPenalty() * 3 / 4;
 
   // Instruction depths can be computed for all trace instructions above CmpBB.
   unsigned HeadDepth =
@@ -953,7 +953,7 @@ bool AArch64ConditionalComparesImpl::run(MachineFunction &MF) {
 
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  SchedModel = MF.getSubtarget().getSchedModel();
+  STI = &MF.getSubtarget();
   MRI = &MF.getRegInfo();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();

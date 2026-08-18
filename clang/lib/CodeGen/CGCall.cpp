@@ -59,7 +59,12 @@ using namespace CodeGen;
 
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
-  default:
+  case CC_C:
+    // On SPIR/SPIR-V, CC_C is the AST-level default calling convention, but
+    // it still needs to lower to spir_func so IR consumers can rely on the
+    // calling convention to distinguish device functions.
+    if (Target.getTriple().isSPIROrSPIRV())
+      return llvm::CallingConv::SPIR_FUNC;
     return llvm::CallingConv::C;
   case CC_X86StdCall:
     return llvm::CallingConv::X86_StdCall;
@@ -89,8 +94,6 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_VectorCall;
   case CC_AArch64SVEPCS:
     return llvm::CallingConv::AArch64_SVE_VectorCall;
-  case CC_SpirFunction:
-    return llvm::CallingConv::SPIR_FUNC;
   case CC_DeviceKernel:
     return CGM.getTargetCodeGenInfo().getDeviceKernelCallingConv();
   case CC_PreserveMost:
@@ -168,7 +171,7 @@ CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> FTNP) {
   // variadic type.
   return arrangeLLVMFunctionInfo(FTNP->getReturnType().getUnqualifiedType(),
                                  FnInfoOpts::None, {}, FTNP->getExtInfo(), {},
-                                 RequiredArgs(0));
+                                 RequiredArgs(0), /*ABIInfoFD=*/nullptr);
 }
 
 static void addExtParameterInfosForCall(
@@ -246,7 +249,8 @@ arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
   FnInfoOpts opts =
       instanceMethod ? FnInfoOpts::IsInstanceMethod : FnInfoOpts::None;
   return CGT.arrangeLLVMFunctionInfo(resultType, opts, prefix,
-                                     FTP->getExtInfo(), paramInfos, Required);
+                                     FTP->getExtInfo(), paramInfos, Required,
+                                     /*ABIInfoFD=*/nullptr);
 }
 
 using CanQualTypeList = SmallVector<CanQualType, 16>;
@@ -357,10 +361,16 @@ CodeGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
 
   // Add the 'this' pointer.
   argTypes.push_back(DeriveThisType(RD, MD));
-
-  return ::arrangeLLVMFunctionInfo(
-      *this, /*instanceMethod=*/true, argTypes,
-      FTP->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
+  auto CanonicalFTP =
+      FTP->getCanonicalTypeUnqualified().getAs<FunctionProtoType>();
+  ExtParameterInfoList paramInfos;
+  RequiredArgs required = RequiredArgs::forPrototypePlus(
+      CanonicalFTP.getTypePtr(), argTypes.size());
+  appendParameterTypes(*this, argTypes, paramInfos, CanonicalFTP);
+  return arrangeLLVMFunctionInfo(
+      CanonicalFTP->getReturnType().getUnqualifiedType(),
+      FnInfoOpts::IsInstanceMethod, argTypes, CanonicalFTP->getExtInfo(),
+      paramInfos, required, MD);
 }
 
 /// Set calling convention for CUDA/HIP kernel.
@@ -393,7 +403,13 @@ CodeGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
     return arrangeCXXMethodType(ThisType, prototype.getTypePtr(), MD);
   }
 
-  return arrangeFreeFunctionType(prototype);
+  CanQualTypeList argTypes;
+  ExtParameterInfoList paramInfos;
+  appendParameterTypes(*this, argTypes, paramInfos, prototype);
+  return arrangeLLVMFunctionInfo(
+      prototype->getReturnType().getUnqualifiedType(), FnInfoOpts::None,
+      argTypes, prototype->getExtInfo(), paramInfos,
+      RequiredArgs::forPrototypePlus(prototype.getTypePtr(), 0), MD);
 }
 
 bool CodeGenTypes::inheritingCtorHasParams(
@@ -452,7 +468,7 @@ CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
                                ? CGM.getContext().VoidPtrTy
                                : Context.VoidTy;
   return arrangeLLVMFunctionInfo(resultType, FnInfoOpts::IsInstanceMethod,
-                                 argTypes, extInfo, paramInfos, required);
+                                 argTypes, extInfo, paramInfos, required, MD);
 }
 
 static CanQualTypeList getArgTypesForCall(ASTContext &ctx,
@@ -491,7 +507,8 @@ getExtParameterInfosForCall(const FunctionProtoType *proto, unsigned prefixArgs,
 /// given CXXConstructorDecl.
 const CGFunctionInfo &CodeGenTypes::arrangeCXXConstructorCall(
     const CallArgList &args, const CXXConstructorDecl *D, CXXCtorType CtorKind,
-    unsigned ExtraPrefixArgs, unsigned ExtraSuffixArgs, bool PassProtoArgs) {
+    unsigned ExtraPrefixArgs, unsigned ExtraSuffixArgs,
+    const FunctionDecl *ABIInfoFD, bool PassProtoArgs) {
   CanQualTypeList ArgTypes;
   for (const auto &Arg : args)
     ArgTypes.push_back(Context.getCanonicalParamType(Arg.Ty));
@@ -522,7 +539,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeCXXConstructorCall(
   }
 
   return arrangeLLVMFunctionInfo(ResultType, FnInfoOpts::IsInstanceMethod,
-                                 ArgTypes, Info, ParamInfos, Required);
+                                 ArgTypes, Info, ParamInfos, Required,
+                                 ABIInfoFD);
 }
 
 /// Arrange the argument and result information for the declaration or
@@ -551,10 +569,17 @@ CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
   if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
     return arrangeLLVMFunctionInfo(noProto->getReturnType(), FnInfoOpts::None,
                                    {}, noProto->getExtInfo(), {},
-                                   RequiredArgs::All);
+                                   RequiredArgs::All, FD);
   }
 
-  return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
+  CanQual<FunctionProtoType> FTP = FTy.castAs<FunctionProtoType>();
+  CanQualTypeList argTypes;
+  ExtParameterInfoList paramInfos;
+  appendParameterTypes(*this, argTypes, paramInfos, FTP);
+  return arrangeLLVMFunctionInfo(FTP->getReturnType().getUnqualifiedType(),
+                                 FnInfoOpts::None, argTypes, FTP->getExtInfo(),
+                                 paramInfos,
+                                 RequiredArgs::forPrototypePlus(FTP, 0), FD);
 }
 
 /// Arrange the argument and result information for the declaration or
@@ -603,7 +628,7 @@ CodeGenTypes::arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
 
   return arrangeLLVMFunctionInfo(GetReturnType(MD->getReturnType()),
                                  FnInfoOpts::None, argTys, einfo, extParamInfos,
-                                 required);
+                                 required, /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &
@@ -613,7 +638,8 @@ CodeGenTypes::arrangeUnprototypedObjCMessageSend(QualType returnType,
   FunctionType::ExtInfo einfo;
 
   return arrangeLLVMFunctionInfo(GetReturnType(returnType), FnInfoOpts::None,
-                                 argTypes, einfo, {}, RequiredArgs::All);
+                                 argTypes, einfo, {}, RequiredArgs::All,
+                                 nullptr);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
@@ -636,7 +662,7 @@ CodeGenTypes::arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD) {
   CanQual<FunctionProtoType> FTP = GetFormalType(MD);
   CanQualType ArgTys[] = {DeriveThisType(MD->getParent(), MD)};
   return arrangeLLVMFunctionInfo(Context.VoidTy, FnInfoOpts::None, ArgTys,
-                                 FTP->getExtInfo(), {}, RequiredArgs(1));
+                                 FTP->getExtInfo(), {}, RequiredArgs(1), MD);
 }
 
 const CGFunctionInfo &
@@ -656,7 +682,7 @@ CodeGenTypes::arrangeMSCtorClosure(const CXXConstructorDecl *CD,
       /*IsVariadic=*/false, /*IsCXXMethod=*/true);
   return arrangeLLVMFunctionInfo(Context.VoidTy, FnInfoOpts::IsInstanceMethod,
                                  ArgTys, FunctionType::ExtInfo(CC), {},
-                                 RequiredArgs::All);
+                                 RequiredArgs::All, /*ABIInfoFD=*/nullptr);
 }
 
 /// Arrange a call as unto a free function, except possibly with an
@@ -664,7 +690,8 @@ CodeGenTypes::arrangeMSCtorClosure(const CXXConstructorDecl *CD,
 static const CGFunctionInfo &
 arrangeFreeFunctionLikeCall(CodeGenTypes &CGT, CodeGenModule &CGM,
                             const CallArgList &args, const FunctionType *fnType,
-                            unsigned numExtraRequiredArgs, bool chainCall) {
+                            unsigned numExtraRequiredArgs, bool chainCall,
+                            const FunctionDecl *ABIInfoFD) {
   assert(args.size() >= numExtraRequiredArgs);
 
   ExtParameterInfoList paramInfos;
@@ -697,7 +724,7 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT, CodeGenModule &CGM,
   FnInfoOpts opts = chainCall ? FnInfoOpts::IsChainCall : FnInfoOpts::None;
   return CGT.arrangeLLVMFunctionInfo(GetReturnType(fnType->getReturnType()),
                                      opts, argTypes, fnType->getExtInfo(),
-                                     paramInfos, required);
+                                     paramInfos, required, ABIInfoFD);
 }
 
 /// Figure out the rules for calling a function with the given formal
@@ -705,9 +732,10 @@ arrangeFreeFunctionLikeCall(CodeGenTypes &CGT, CodeGenModule &CGM,
 /// because the function might be unprototyped, in which case it's
 /// target-dependent in crazy ways.
 const CGFunctionInfo &CodeGenTypes::arrangeFreeFunctionCall(
-    const CallArgList &args, const FunctionType *fnType, bool chainCall) {
+    const CallArgList &args, const FunctionType *fnType, bool chainCall,
+    const FunctionDecl *ABIInfoFD) {
   return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType,
-                                     chainCall ? 1 : 0, chainCall);
+                                     chainCall ? 1 : 0, chainCall, ABIInfoFD);
 }
 
 /// A block function is essentially a free function with an
@@ -715,8 +743,10 @@ const CGFunctionInfo &CodeGenTypes::arrangeFreeFunctionCall(
 const CGFunctionInfo &
 CodeGenTypes::arrangeBlockFunctionCall(const CallArgList &args,
                                        const FunctionType *fnType) {
+  // FIXME: Pass the enclosing function's ABI information so block calls use
+  // the caller's target features.
   return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType, 1,
-                                     /*chainCall=*/false);
+                                     /*chainCall=*/false, nullptr);
 }
 
 const CGFunctionInfo &
@@ -726,10 +756,11 @@ CodeGenTypes::arrangeBlockFunctionDeclaration(const FunctionProtoType *proto,
       getExtParameterInfosForCall(proto, 1, params.size());
   CanQualTypeList argTypes = getArgTypesForDeclaration(Context, params);
 
-  return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
-                                 FnInfoOpts::None, argTypes,
-                                 proto->getExtInfo(), paramInfos,
-                                 RequiredArgs::forPrototypePlus(proto, 1));
+  // FIXME: Use the block's target features when arranging its invoke function.
+  return arrangeLLVMFunctionInfo(
+      GetReturnType(proto->getReturnType()), FnInfoOpts::None, argTypes,
+      proto->getExtInfo(), paramInfos, RequiredArgs::forPrototypePlus(proto, 1),
+      /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &
@@ -740,7 +771,7 @@ CodeGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
     argTypes.push_back(Context.getCanonicalParamType(Arg.Ty));
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes, FunctionType::ExtInfo(),
-                                 /*paramInfos=*/{}, RequiredArgs::All);
+                                 /*paramInfos=*/{}, RequiredArgs::All, nullptr);
 }
 
 const CGFunctionInfo &
@@ -750,14 +781,14 @@ CodeGenTypes::arrangeBuiltinFunctionDeclaration(QualType resultType,
 
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes, FunctionType::ExtInfo(), {},
-                                 RequiredArgs::All);
+                                 RequiredArgs::All, /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeBuiltinFunctionDeclaration(
     CanQualType resultType, ArrayRef<CanQualType> argTypes) {
   return arrangeLLVMFunctionInfo(resultType, FnInfoOpts::None, argTypes,
-                                 FunctionType::ExtInfo(), {},
-                                 RequiredArgs::All);
+                                 FunctionType::ExtInfo(), {}, RequiredArgs::All,
+                                 /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
@@ -767,7 +798,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
   return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
                                  argTypes,
                                  FunctionType::ExtInfo(CC_DeviceKernel),
-                                 /*paramInfos=*/{}, RequiredArgs::All);
+                                 /*paramInfos=*/{}, RequiredArgs::All,
+                                 /*ABIInfoFD=*/nullptr);
 }
 
 /// Arrange a call to a C++ method, passing the given arguments.
@@ -776,7 +808,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeDeviceKernelCallerDeclaration(
 /// does not count `this`.
 const CGFunctionInfo &CodeGenTypes::arrangeCXXMethodCall(
     const CallArgList &args, const FunctionProtoType *proto,
-    RequiredArgs required, unsigned numPrefixArgs) {
+    RequiredArgs required, unsigned numPrefixArgs,
+    const FunctionDecl *ABIInfoFD) {
   assert(numPrefixArgs + 1 <= args.size() &&
          "Emitting a call with less args than the required prefix?");
   // Add one to account for `this`. It's a bit awkward here, but we don't count
@@ -789,19 +822,23 @@ const CGFunctionInfo &CodeGenTypes::arrangeCXXMethodCall(
   FunctionType::ExtInfo info = proto->getExtInfo();
   return arrangeLLVMFunctionInfo(GetReturnType(proto->getReturnType()),
                                  FnInfoOpts::IsInstanceMethod, argTypes, info,
-                                 paramInfos, required);
+                                 paramInfos, required, ABIInfoFD);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeNullaryFunction() {
   return arrangeLLVMFunctionInfo(getContext().VoidTy, FnInfoOpts::None, {},
-                                 FunctionType::ExtInfo(), {},
-                                 RequiredArgs::All);
+                                 FunctionType::ExtInfo(), {}, RequiredArgs::All,
+                                 /*ABIInfoFD=*/nullptr);
 }
 
 const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
-                                                const CallArgList &args) {
+                                                const CallArgList &args,
+                                                const FunctionDecl *ABIInfoFD) {
   assert(signature.arg_size() <= args.size());
-  if (signature.arg_size() == args.size())
+  unsigned X86ABIAVXLevel =
+      CGM.getABIInfo().getX86ABIAVXLevel(ABIInfoFD, signature.getExtInfo());
+  if (signature.arg_size() == args.size() &&
+      signature.getX86ABIAVXLevel() == X86ABIAVXLevel)
     return signature;
 
   ExtParameterInfoList paramInfos;
@@ -821,9 +858,13 @@ const CGFunctionInfo &CodeGenTypes::arrangeCall(const CGFunctionInfo &signature,
     opts |= FnInfoOpts::IsChainCall;
   if (signature.isDelegateCall())
     opts |= FnInfoOpts::IsDelegateCall;
-  return arrangeLLVMFunctionInfo(signature.getReturnType(), opts, argTypes,
-                                 signature.getExtInfo(), paramInfos,
-                                 signature.getRequiredArgs());
+
+  const CGFunctionInfo *newFI = findOrInsertCGFunctionInfo(
+      signature.isInstanceMethod(), signature.isChainCall(),
+      signature.isDelegateCall(), X86ABIAVXLevel, signature.getExtInfo(),
+      paramInfos, signature.getRequiredArgs(), signature.getReturnType(),
+      argTypes);
+  return *newFI;
 }
 
 namespace clang {
@@ -864,14 +905,14 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
   for (const auto &Arg : FI.arguments())
     MappedArgTypes.push_back(AbiMapper->convertType(Arg.type));
 
-  std::optional<unsigned> NumRequired;
   RequiredArgs Required = FI.getRequiredArgs();
+  llvm::abi::RequiredArgs AbiRequired = llvm::abi::RequiredArgs::All;
   if (Required.allowsOptionalArgs())
-    NumRequired = Required.getNumRequiredArgs();
+    AbiRequired = llvm::abi::RequiredArgs(Required.getNumRequiredArgs());
 
   auto AbiFI = llvm::abi::FunctionInfo::create(
       FI.getCallingConvention(), AbiMapper->convertType(FI.getReturnType()),
-      MappedArgTypes, NumRequired);
+      MappedArgTypes, AbiRequired);
 
   getLLVMABITargetInfo(AbiMapper->getTypeBuilder()).computeInfo(*AbiFI);
 
@@ -1019,7 +1060,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     CanQualType resultType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
     ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-    RequiredArgs required) {
+    RequiredArgs required, const FunctionDecl *ABIInfoFD) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
 
@@ -1031,19 +1072,36 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
       (opts & FnInfoOpts::IsChainCall) == FnInfoOpts::IsChainCall;
   bool isDelegateCall =
       (opts & FnInfoOpts::IsDelegateCall) == FnInfoOpts::IsDelegateCall;
+  unsigned X86ABIAVXLevel = CGM.getABIInfo().getX86ABIAVXLevel(ABIInfoFD, info);
+
+  const CGFunctionInfo *newFI = findOrInsertCGFunctionInfo(
+      isInstanceMethod, isChainCall, isDelegateCall, X86ABIAVXLevel, info,
+      paramInfos, required, resultType, argTypes);
+  return *newFI;
+}
+
+CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
+    bool isInstanceMethod, bool isChainCall, bool isDelegateCall,
+    unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+    RequiredArgs required, CanQualType resultType,
+    ArrayRef<CanQualType> argTypes) {
+  llvm::FoldingSetNodeID ID;
   CGFunctionInfo::Profile(ID, isInstanceMethod, isChainCall, isDelegateCall,
-                          info, paramInfos, required, resultType, argTypes);
+                          X86ABIAVXLevel, info, paramInfos, required,
+                          resultType, argTypes);
 
   void *insertPos = nullptr;
   CGFunctionInfo *FI = FunctionInfos.FindNodeOrInsertPos(ID, insertPos);
   if (FI)
-    return *FI;
+    return FI;
 
   unsigned CC = ClangCallConvToLLVMCallConv(info.getCC());
 
   // Construct the function info.  We co-allocate the ArgInfos.
   FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
-                              info, paramInfos, resultType, argTypes, required);
+                              X86ABIAVXLevel, info, paramInfos, resultType,
+                              argTypes, required);
   FunctionInfos.InsertNode(FI, insertPos);
 
   bool inserted = FunctionsBeingProcessed.insert(FI).second;
@@ -1082,16 +1140,14 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   (void)erased;
   assert(erased && "Not in set?");
 
-  return *FI;
+  return FI;
 }
 
-CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC, bool instanceMethod,
-                                       bool chainCall, bool delegateCall,
-                                       const FunctionType::ExtInfo &info,
-                                       ArrayRef<ExtParameterInfo> paramInfos,
-                                       CanQualType resultType,
-                                       ArrayRef<CanQualType> argTypes,
-                                       RequiredArgs required) {
+CGFunctionInfo *CGFunctionInfo::create(
+    unsigned llvmCC, bool instanceMethod, bool chainCall, bool delegateCall,
+    unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
+    ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
+    ArrayRef<CanQualType> argTypes, RequiredArgs required) {
   assert(paramInfos.empty() || paramInfos.size() == argTypes.size());
   assert(!required.allowsOptionalArgs() ||
          required.getNumRequiredArgs() <= argTypes.size());
@@ -1114,6 +1170,7 @@ CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC, bool instanceMethod,
   FI->Required = required;
   FI->HasRegParm = info.getHasRegParm();
   FI->RegParm = info.getRegParm();
+  FI->X86ABIAVXLevel = X86ABIAVXLevel;
   FI->ArgStruct = nullptr;
   FI->ArgStructAlign = 0;
   FI->NumArgs = argTypes.size();
@@ -3131,6 +3188,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
       break;
     case ABIArgInfo::Indirect: {
+      assert(!ParamType->isIncompleteType() &&
+             "Pass-by-value parameter has incomplete definition?");
+
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
@@ -3183,6 +3243,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // if a load to this pointer can be speculatively executed.
       assert(!Align.isZero());
       Attrs.addAlignmentAttr(Align.getQuantity());
+
+      // The `nofree` and `dereferenceable` attributes can already be inferred
+      // for `byval` arguments. We'll need to provide additional hints
+      // otherwise.
+      if (!AI.getIndirectByVal()) {
+        // Both 6.9.1 of the C standard and [basic.stc.auto] of the C++ standard
+        // require parameters to have automatic storage duration. Therefore, the
+        // underlying object of this pointer will not be freed during the
+        // function's execution.
+        Attrs.addAttribute(llvm::Attribute::NoFree);
+        Attrs.addDereferenceableAttr(
+            Context.getTypeSizeInChars(ParamType).getQuantity());
+      }
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();
@@ -6703,13 +6776,17 @@ CGCallee CGCallee::prepareConcreteCallee(CodeGenFunction &CGF) const {
 
 RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
                                   AggValueSlot Slot) {
-  VAListAddr = VE->isMicrosoftABI() ? EmitMSVAListRef(VE->getSubExpr())
-                                    : EmitVAListRef(VE->getSubExpr());
+  VAListAddr = VE->isMicrosoftABI()
+                   ? EmitMSVAListRef(VE->getSubExpr())
+                   : (VE->isZOSABI() ? EmitZOSVAListRef(VE->getSubExpr())
+                                     : EmitVAListRef(VE->getSubExpr()));
   QualType Ty = VE->getType();
   if (Ty->isVariablyModifiedType())
     EmitVariablyModifiedType(Ty);
   if (VE->isMicrosoftABI())
     return CGM.getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
+  if (VE->isZOSABI())
+    return CGM.getABIInfo().EmitZOSVAArg(*this, VAListAddr, Ty, Slot);
   return CGM.getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
 }
 

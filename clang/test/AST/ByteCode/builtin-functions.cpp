@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
-// RUN: %clang_cc1 -Wno-string-plus-int                                         -triple x86_64 %s -verify=ref,both
+// RUN: %clang_cc1 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int -Wno-stringop-overread                                         -triple x86_64 %s -verify=ref,both
 //
-// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
-// RUN: %clang_cc1 -Wno-string-plus-int                                         -triple i686 %s -verify=ref,both
+// RUN: %clang_cc1 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int -Wno-stringop-overread                                         -triple i686 %s -verify=ref,both
 //
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int                                         -triple x86_64 %s -verify=ref,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -Wno-stringop-overread                                         -triple x86_64 %s -verify=ref,both
 //
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int                                         -triple i686 %s -verify=ref,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -Wno-stringop-overread                                         -triple i686 %s -verify=ref,both
 //
-// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
-// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int                                            -verify=ref,both %s
+// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -Wno-stringop-overread -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -Wno-stringop-overread                                            -verify=ref,both %s
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define LITTLE_END 1
@@ -2121,4 +2121,9 @@ namespace SubCb {
     return 0;
   }
   static_assert(subcb2() == 0);
+}
+
+namespace ReduceMin {
+  typedef float v4f __attribute__((__vector_size__(16)));
+  static_assert(__builtin_reduce_min((v4f){1.123, 2.123, 3.123, 4.123}) == 0); // both-error {{not an integral constant expression}}
 }

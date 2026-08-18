@@ -6,84 +6,35 @@
 #
 #===--------------------------------------------------------------------===//
 
-# Extract the OS component from a target triple and map it to the
-# corresponding CMake system name.
+# Map a target triple to the corresponding CMake system name.
 #
 # Usage:
 #   get_triple_cmake_system_name(<triple> <out_var>)
 #
-# Parses the triple (arch-vendor-os[-env]) and sets <out_var> to the
-# CMake-style system name (e.g. "Darwin", "Linux", "Windows").
-# Unrecognized OS values are mapped to "Generic". This expects a
-# normalized triple.
+# Sets <out_var> to the CMake-style system name
+# (e.g. "x86_64-pc-linux-gnu" -> Linux, "arm64-apple-macos" ->
+# "Darwin"). A triple with an OS cmake does not recognize maps to
+# "Generic".
+#
+# The OS/environment -> system name data is derived from
+# llvm/include/llvm/TargetParser/TripleName.def
+
+get_filename_component(_gtcsn_llvm_dir "${CMAKE_CURRENT_LIST_DIR}/../../llvm"
+                       ABSOLUTE)
+set(_gtcsn_script "${_gtcsn_llvm_dir}/utils/get_triple_system_name.py")
 
 function(get_triple_cmake_system_name triple out_var)
-  string(REPLACE "-" ";" _components "${triple}")
-  list(LENGTH _components _len)
-  if(_len LESS 3)
-    set(${out_var} "${CMAKE_HOST_SYSTEM_NAME}" PARENT_SCOPE)
-    return()
+  execute_process(
+    COMMAND "${Python3_EXECUTABLE}" "${_gtcsn_script}" "--triple" "${triple}"
+    OUTPUT_VARIABLE _name
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _result)
+  if(NOT _result EQUAL 0)
+    message(FATAL_ERROR "Failed to derive CMake system name for '${triple}'")
   endif()
-
-  list(GET _components 1 _vendor)
-  list(GET _components 2 _os)
-  set(_env "")
-  if(_len GREATER_EQUAL 4)
-    list(GET _components 3 _env)
-  endif()
-
-  # Check the special environment components first, since it can
-  # override the usual OS mapping.
-  if("${_env}" MATCHES "^android")
-    set(${out_var} "Android" PARENT_SCOPE)
-  elseif("${_env}" MATCHES "^cygnus")
-    set(${out_var} "CYGWIN" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^darwin|^macos")
-    set(${out_var} "Darwin" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^ios")
-    set(${out_var} "iOS" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^tvos")
-    set(${out_var} "tvOS" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^watchos")
-    set(${out_var} "watchOS" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^xros|^visionos")
-    set(${out_var} "visionOS" PARENT_SCOPE)
-  elseif("${_vendor}" STREQUAL "apple")
-    # Catch-all for other Apple triples (e.g. driverkit, bridgeos).
-    set(${out_var} "Darwin" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^linux")
-    set(${out_var} "Linux" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^windows")
-    set(${out_var} "Windows" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^freebsd|^kfreebsd")
-    set(${out_var} "FreeBSD" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^netbsd")
-    set(${out_var} "NetBSD" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^openbsd")
-    set(${out_var} "OpenBSD" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^dragonfly")
-    set(${out_var} "DragonFly" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^solaris")
-    set(${out_var} "SunOS" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^aix")
-    set(${out_var} "AIX" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^fuchsia")
-    set(${out_var} "Fuchsia" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^haiku")
-    set(${out_var} "Haiku" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^emscripten")
-    set(${out_var} "Emscripten" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^wasi")
-    set(${out_var} "WASI" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^rtems")
-    set(${out_var} "RTEMS" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^zos")
-    set(${out_var} "OS390" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^hurd")
-    set(${out_var} "GNU" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^serenity")
-    set(${out_var} "SerenityOS" PARENT_SCOPE)
+  if(_name)
+    set(${out_var} "${_name}" PARENT_SCOPE)
   else()
-    set(${out_var} "Generic" PARENT_SCOPE)
+    set(${out_var} "${CMAKE_HOST_SYSTEM_NAME}" PARENT_SCOPE)
   endif()
 endfunction()

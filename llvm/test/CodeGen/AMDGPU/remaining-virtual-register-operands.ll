@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -enable-misched=0 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -enable-misched=0 -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
 
 ; Scheduler disabled to work around issue #129028
 

@@ -134,7 +134,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   }
 
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  const LibcallLoweringModuleAnalysisResult *LibcallLowering =
+  const ModuleLibcallLoweringInfo *LibcallLowering =
       MAMProxy.getCachedResult<LibcallLoweringModuleAnalysis>(*F.getParent());
 
   if (!LibcallLowering) {

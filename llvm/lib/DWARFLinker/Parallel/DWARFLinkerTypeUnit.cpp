@@ -9,6 +9,7 @@
 #include "DWARFLinkerTypeUnit.h"
 #include "DIEGenerator.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Parallel.h"
 
 using namespace llvm;
 using namespace dwarf_linker;
@@ -58,12 +59,11 @@ void TypeUnit::createDIETree(BumpPtrAllocator &Allocator) {
     uint64_t OutOffset = getDebugInfoHeaderSize();
     UnitDIE->setOffset(OutOffset);
 
-    SmallString<200> ProducerString;
-    ProducerString += "llvm DWARFLinkerParallel library version ";
+    const char *ProducerString =
+        "llvm DWARFLinkerParallel library version " LLVM_VERSION_STRING;
     DebugInfoSection.notePatchWithOffsetUpdate(
-        DebugStrPatch{
-            {OutOffset},
-            GlobalData.getStringPool().insert(ProducerString.str()).first},
+        DebugStrPatch{{OutOffset},
+                      GlobalData.getStringPool().insert(ProducerString).first},
         PatchesOffsets);
     OutOffset += DIETreeGenerator
                      .addStringPlaceholderAttribute(dwarf::DW_AT_producer,

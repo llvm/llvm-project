@@ -586,6 +586,9 @@ public:
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  RValue EmitZOSVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                      AggValueSlot Slot) const override;
 };
 
 class ZOSXPLinkTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -905,6 +908,45 @@ RValue ZOSXPLinkABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CGF.getPointerSize(),
                           /*allowHigherAlign*/ false, Slot);
+}
+
+RValue ZOSXPLinkABIInfo::EmitZOSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                      QualType ArgTy, AggValueSlot Slot) const {
+  // Assume that va_list type is correct; should be pointer
+  // to LLVM type: [2 x i8*].
+  llvm::Type *VAListTy =
+      CGF.ConvertType(getContext().getBuiltinZOSVaListType());
+  VAListAddr = VAListAddr.withElementType(VAListTy);
+  Address Curr = CGF.Builder.CreateConstArrayGEP(VAListAddr, 0, "va_list.curr");
+  Address Next = CGF.Builder.CreateConstArrayGEP(VAListAddr, 1, "va_list.next");
+
+  // Get information about the argument type.
+  auto ArgTyInfo = CGF.getContext().getTypeInfoInChars(ArgTy);
+  CharUnits ArgTySize = ArgTyInfo.Width;
+
+  llvm::Type *Ty = CGF.ConvertTypeForMem(ArgTy);
+
+  // Slot size is the same as the size of a pointer.
+  CharUnits SlotSize = CGF.getPointerSize();
+
+  // Align next and copy to curr.
+  CharUnits PtrAlign = CGF.getPointerAlign();
+  llvm::Value *OldNext = CGF.Builder.CreateLoad(Next, "arg.next");
+  Address Addr = Address(emitRoundPointerUpToAlignment(CGF, OldNext, PtrAlign),
+                         CGF.Int8Ty, PtrAlign);
+  CGF.Builder.CreateStore(Addr.emitRawPointer(CGF), Curr);
+
+  // Advance next and store.
+  Address NextPtr = CGF.Builder.CreateConstInBoundsByteGEP(
+      Addr, ArgTySize.isZero() ? SlotSize : ArgTySize, "arg.next.next");
+  CGF.Builder.CreateStore(NextPtr.emitRawPointer(CGF), Next);
+
+  // Fetch next argument.
+  if (ArgTySize < SlotSize && !isAggregateTypeForABI(ArgTy))
+    Addr = CGF.Builder.CreateConstInBoundsByteGEP(Addr, SlotSize - ArgTySize);
+
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(Addr.withElementType(Ty), ArgTy), Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

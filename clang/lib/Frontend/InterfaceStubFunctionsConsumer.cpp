@@ -11,7 +11,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/BinaryFormat/ELF.h"
 
 using namespace clang;

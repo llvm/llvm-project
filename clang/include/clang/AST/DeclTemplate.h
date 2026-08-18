@@ -19,6 +19,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/TemplateBase.h"
@@ -2457,76 +2458,78 @@ public:
 /// \code
 /// template \<typename T> class A {
 ///   friend class MyVector<T>; // not a friend template
-///   template \<typename U> friend class B; // not a friend template
+///   template \<typename U> friend class B; // friend class template
 ///   template \<typename U> friend class Foo<T>::Nested; // friend template
 /// };
 /// \endcode
-///
-/// \note This class is not currently in use.  All of the above
-/// will yield a FriendDecl, not a FriendTemplateDecl.
-class FriendTemplateDecl : public Decl {
-  virtual void anchor();
-
-public:
-  using FriendUnion = llvm::PointerUnion<NamedDecl *,TypeSourceInfo *>;
+class FriendTemplateDecl final
+    : public FriendDecl,
+      private llvm::TrailingObjects<FriendTemplateDecl,
+                                    TemplateParameterList *> {
+  void anchor() override;
 
 private:
-  // The number of template parameters;  always non-zero.
-  unsigned NumParams = 0;
+  unsigned NumTPLists = 0;
+  TemplateName Template;
 
-  // The parameter list.
-  TemplateParameterList **Params = nullptr;
+  FriendTemplateDecl(DeclContext *DC, SourceLocation Loc, FriendUnion Friend,
+                     SourceLocation FriendLoc, SourceLocation EllipsisLoc,
+                     ArrayRef<TemplateParameterList *> FriendTPLists,
+                     TemplateName Template = {})
+      : FriendDecl(Decl::FriendTemplate, DC, Loc, Friend, FriendLoc,
+                   EllipsisLoc),
+        NumTPLists(FriendTPLists.size()), Template(Template) {
+    assert(!FriendTPLists.empty());
+    llvm::copy(FriendTPLists, getTrailingObjects());
+  }
 
-  // The declaration that's a friend of this class.
-  FriendUnion Friend;
-
-  // Location of the 'friend' specifier.
-  SourceLocation FriendLoc;
-
-  FriendTemplateDecl(DeclContext *DC, SourceLocation Loc,
-                     TemplateParameterList **Params, unsigned NumParams,
-                     FriendUnion Friend, SourceLocation FriendLoc)
-      : Decl(Decl::FriendTemplate, DC, Loc), NumParams(NumParams),
-        Params(Params), Friend(Friend), FriendLoc(FriendLoc) {}
-
-  FriendTemplateDecl(EmptyShell Empty) : Decl(Decl::FriendTemplate, Empty) {}
+  FriendTemplateDecl(EmptyShell Empty, unsigned NumFriendTPLists)
+      : FriendDecl(Decl::FriendTemplate, Empty), NumTPLists(NumFriendTPLists) {
+    assert(NumFriendTPLists != 0);
+  }
 
 public:
   friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend TrailingObjects;
+
+  enum class FriendTemplateEntityKind { Type, Template, Decl };
 
   static FriendTemplateDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
-         MutableArrayRef<TemplateParameterList *> Params, FriendUnion Friend,
-         SourceLocation FriendLoc);
+         FriendUnion Friend, SourceLocation FriendLoc,
+         ArrayRef<TemplateParameterList *> FriendTPLists,
+         SourceLocation EllipsisLoc = {}, TemplateName Template = {});
 
-  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
+  static FriendTemplateDecl *
+  Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
+         TemplateName Template, SourceLocation FriendLoc,
+         ArrayRef<TemplateParameterList *> FriendTPLists,
+         SourceLocation EllipsisLoc = {});
 
-  /// If this friend declaration names a templated type (or
-  /// a dependent member type of a templated type), return that
-  /// type;  otherwise return null.
-  TypeSourceInfo *getFriendType() const {
-    return Friend.dyn_cast<TypeSourceInfo*>();
+  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                                unsigned NumFriendTPLists);
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  TemplateName getFriendTemplateName() const { return Template; }
+
+  FriendTemplateEntityKind getFriendKind() const {
+    if (getFriendType())
+      return FriendTemplateEntityKind::Type;
+    if (Template.isNull())
+      return FriendTemplateEntityKind::Decl;
+    return FriendTemplateEntityKind::Template;
   }
 
-  /// If this friend declaration names a templated function (or
-  /// a member function of a templated type), return that type;
-  /// otherwise return null.
-  NamedDecl *getFriendDecl() const {
-    return Friend.dyn_cast<NamedDecl*>();
+  NamedDecl *getFriendDecl() const override {
+    if (NamedDecl *ND = Friend.dyn_cast<NamedDecl *>())
+      return ND;
+    return Template.getAsTemplateDecl();
   }
 
-  /// Retrieves the location of the 'friend' keyword.
-  SourceLocation getFriendLoc() const {
-    return FriendLoc;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned i) const {
-    assert(i <= NumParams);
-    return Params[i];
-  }
-
-  unsigned getNumTemplateParameters() const {
-    return NumParams;
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    return ArrayRef(getTrailingObjects(), NumTPLists);
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -3332,6 +3335,129 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TemplateParamObject; }
+};
+
+/// Represents a C++26 expansion statement declaration.
+///
+/// This is a bit of a hack, since expansion statements shouldn't really be
+/// 'declarations' per se (they don't declare anything). Nevertheless, we *do*
+/// need them to be declaration *contexts*, because the DeclContext is used to
+/// compute the 'template depth' of entities enclosed therein. In particular,
+/// the 'template depth' is used to find instantiations of parameter variables.
+/// A lambda enclosed within an expansion statement cannot compute its
+/// template depth without a pointer to the enclosing expansion statement.
+///
+/// For the remainder of this comment, let 'expanding' an expansion statement
+/// refer to the process of performing template substitution on its body N
+/// times, where N is the expansion size (how this size is determined depends on
+/// the kind of expansion statement); by contrast we may sometimes 'instantiate'
+/// an expansion statement (because it happens to be in a template). This is
+/// just regular template instantiation.
+///
+/// This node contains a 'CXXExpansionStmtPattern' as well as a
+/// 'CXXExpansionStmtInstantiation'. These two members correspond to
+/// distinct representations of the expansion statement: the former is used
+/// prior to expansion and contains all the parts needed to perform expansion;
+/// the latter holds the expanded/desugared AST nodes that result from the
+/// expansion.
+///
+/// Additionally, there is a 'NonTypeTemplateParmDecl', which is a template
+/// parameter that serves as the expansion index, e.g. during the N-th
+/// expansion, it is set to 'N'. See the documentation of
+/// 'CXXExpansionStmtPattern', for more information on how this is used.
+///
+/// After expansion, the 'CXXExpansionStmtPattern' is no longer updated and left
+/// as-is; this also means that, if an already-expanded expansion statement is
+/// inside a template, and that template is then instantiated, the
+/// 'CXXExpansionStmtPattern' is *not* instantiated; only the
+/// 'CXXExpansionStmtInstantiation' is. The latter is also what's used for
+/// codegen and constant evaluation.
+///
+/// There are different kinds of expansion statements; see the comment on
+/// 'CXXExpansionStmtPattern' for more information.
+///
+/// As an example, if the user writes the following expansion statement:
+/// \verbatim
+///   std::tuple<int, int, int> a{1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// The 'CXXExpansionStmtPattern' of this particular 'CXXExpansionStmtDecl'
+/// stores, amongst other things, the declaration of the variable 'x' as well
+/// as the expansion-initializer 'a'.
+///
+/// After expansion, we end up with a 'CXXExpansionStmtInstantiation' that
+/// is *equivalent* to the AST shown below. Note that only the inner '{}' (i.e.
+/// those marked as 'Actual "CompoundStmt"' below) are actually present as
+/// 'CompoundStmt's in the AST; the outer braces that wrap everything do *not*
+/// correspond to an actual 'CompoundStmt' and are implicit in the sense that we
+/// simply push a scope when evaluating or emitting IR for a
+/// 'CXXExpansionStmtInstantiation'.
+///
+/// \verbatim
+/// { // Not actually present in the AST.
+///   auto [__u0, __u1, __u2] = a;
+///   { // Actual 'CompoundStmt'.
+///     auto x = __u0;
+///     // ...
+///   }
+///   { // Actual 'CompoundStmt'.
+///     auto x = __u1;
+///     // ...
+///   }
+///   { // Actual 'CompoundStmt'.
+///     auto x = __u2;
+///     // ...
+///   }
+/// }
+/// \endverbatim
+///
+/// See the documentation around 'CXXExpansionStmtInstantiation' for more notes
+/// as to why this node exist and how it is used.
+///
+/// \see CXXExpansionStmtPattern
+/// \see CXXExpansionStmtInstantiation
+class CXXExpansionStmtDecl : public Decl, public DeclContext {
+  CXXExpansionStmtPattern *Pattern = nullptr;
+  NonTypeTemplateParmDecl *IndexNTTP = nullptr;
+  CXXExpansionStmtInstantiation *Instantiations = nullptr;
+
+  CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
+                       NonTypeTemplateParmDecl *NTTP);
+
+public:
+  friend class ASTDeclReader;
+
+  static CXXExpansionStmtDecl *Create(ASTContext &C, DeclContext *DC,
+                                      SourceLocation Loc,
+                                      NonTypeTemplateParmDecl *NTTP);
+  static CXXExpansionStmtDecl *CreateDeserialized(ASTContext &C,
+                                                  GlobalDeclID ID);
+
+  CXXExpansionStmtPattern *getExpansionPattern() { return Pattern; }
+  const CXXExpansionStmtPattern *getExpansionPattern() const { return Pattern; }
+  void setExpansionPattern(CXXExpansionStmtPattern *S) { Pattern = S; }
+
+  CXXExpansionStmtInstantiation *getInstantiations() { return Instantiations; }
+  const CXXExpansionStmtInstantiation *getInstantiations() const {
+    return Instantiations;
+  }
+
+  void setInstantiations(CXXExpansionStmtInstantiation *S) {
+    Instantiations = S;
+  }
+
+  NonTypeTemplateParmDecl *getIndexTemplateParm() { return IndexNTTP; }
+  const NonTypeTemplateParmDecl *getIndexTemplateParm() const {
+    return IndexNTTP;
+  }
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == CXXExpansionStmt; }
 };
 
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {

@@ -60,7 +60,7 @@ static Error handleCustomErrorUP(std::unique_ptr<CustomError> CE) {
 
 static void handleCustomErrorUPVoid(std::unique_ptr<CustomError> CE) {}
 
-} // end anonymous namespace
+} // namespace
 
 // Test that a checked success value doesn't cause any issues.
 TEST(ErrorTest, CheckedSuccess) {
@@ -80,7 +80,7 @@ TEST(ErrorTest, ConsumeError) {
 }
 
 // Test that unchecked success values cause an abort.
-TEST(ErrorTest, UncheckedSuccess) {
+TEST(ErrorDeathTest, UncheckedSuccess) {
   EXPECT_DEATH(
       { Error E = Error::success(); },
       "Error must be checked prior to destruction")
@@ -88,7 +88,7 @@ TEST(ErrorTest, UncheckedSuccess) {
 }
 
 // Test that a checked but unhandled error causes an abort.
-TEST(ErrorTest, CheckedButUnhandledError) {
+TEST(ErrorDeathTest, CheckedButUnhandledError) {
   auto DropUnhandledError = []() {
     Error E = make_error<CustomError>(42);
     (void)!E;
@@ -247,7 +247,7 @@ TEST(ErrorTest, ErrorAsOutParameterChecked) {
 }
 
 // Test that ErrorAsOutParameter clears the checked flag on destruction.
-TEST(ErrorTest, ErrorAsOutParameterUnchecked) {
+TEST(ErrorDeathTest, ErrorAsOutParameterUnchecked) {
   EXPECT_DEATH(
       {
         Error E = Error::success();
@@ -328,7 +328,7 @@ TEST(ErrorTest, ExpectedWithReferenceType) {
 // Test Unchecked Expected<T> in success mode.
 // We expect this to blow up the same way Error would.
 // Test runs in debug mode only.
-TEST(ErrorTest, UncheckedExpectedInSuccessModeDestruction) {
+TEST(ErrorDeathTest, UncheckedExpectedInSuccessModeDestruction) {
   EXPECT_DEATH(
       { Expected<int> A = 7; },
       "Expected<T> must be checked before access or destruction.")
@@ -338,7 +338,7 @@ TEST(ErrorTest, UncheckedExpectedInSuccessModeDestruction) {
 // Test Unchecked Expected<T> in success mode.
 // We expect this to blow up the same way Error would.
 // Test runs in debug mode only.
-TEST(ErrorTest, UncheckedExpectedInSuccessModeAccess) {
+TEST(ErrorDeathTest, UncheckedExpectedInSuccessModeAccess) {
   EXPECT_DEATH(
       {
         Expected<int> A = 7;
@@ -351,7 +351,7 @@ TEST(ErrorTest, UncheckedExpectedInSuccessModeAccess) {
 // Test Unchecked Expected<T> in success mode.
 // We expect this to blow up the same way Error would.
 // Test runs in debug mode only.
-TEST(ErrorTest, UncheckedExpectedInSuccessModeAssignment) {
+TEST(ErrorDeathTest, UncheckedExpectedInSuccessModeAssignment) {
   EXPECT_DEATH(
       {
         Expected<int> A = 7;
@@ -395,7 +395,7 @@ TEST(ErrorTest, ExpectedIsFailureOfType) {
 // Check that an Expected instance with an error value doesn't allow access to
 // operator*.
 // Test runs in debug mode only.
-TEST(ErrorTest, AccessExpectedInFailureMode) {
+TEST(ErrorDeathTest, AccessExpectedInFailureMode) {
   Expected<int> A = make_error<CustomError>(42);
   EXPECT_DEATH(*A, "Expected<T> must be checked before access or destruction.")
       << "Incorrect Expected error value";
@@ -405,7 +405,7 @@ TEST(ErrorTest, AccessExpectedInFailureMode) {
 // Check that an Expected instance with an error triggers an abort if
 // unhandled.
 // Test runs in debug mode only.
-TEST(ErrorTest, UnhandledExpectedInFailureMode) {
+TEST(ErrorDeathTest, UnhandledExpectedInFailureMode) {
   EXPECT_DEATH(
       { Expected<int> A = make_error<CustomError>(42); },
       "Expected<T> must be checked before access or destruction.")
@@ -493,7 +493,7 @@ TEST(ErrorTest, CantFailSuccess) {
 }
 
 // Test that cantFail results in a crash if you pass it a failure value.
-TEST(ErrorTest, CantFailDeath) {
+TEST(ErrorDeathTest, CantFailDeath) {
   EXPECT_DEATH(cantFail(make_error<StringError>("foo")), "")
       << "cantFail(Error) did not cause an abort for failure value";
 

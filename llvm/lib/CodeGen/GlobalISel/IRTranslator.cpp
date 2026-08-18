@@ -1418,9 +1418,9 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   if (Regs.size() == 1) {
     auto *MMO = MF->getMachineMemOperand(
         MachinePointerInfo(LI.getPointerOperand()), Flags,
-        MRI->getType(Regs[0]), getMemOpAlign(LI), AAInfo,
-        LI.getMetadata(LLVMContext::MD_range), LI.getSyncScopeID(),
-        LI.getOrdering());
+        MRI->getType(Regs[0]), getMemOpAlign(LI),
+        MMOMetadata(AAInfo, LI.getMetadata(LLVMContext::MD_range)),
+        LI.getSyncScopeID(), LI.getOrdering());
     MIRBuilder.buildLoad(Regs[0], Base, *MMO);
     return true;
   }
@@ -1434,10 +1434,10 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i]);
     Align BaseAlign = getMemOpAlign(LI);
-    auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
-                                         commonAlignment(BaseAlign, Offsets[i]),
-                                         AAInfo, nullptr, LI.getSyncScopeID(),
-                                         LI.getOrdering());
+    auto *MMO =
+        MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
+                                 commonAlignment(BaseAlign, Offsets[i]), AAInfo,
+                                 LI.getSyncScopeID(), LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
 
@@ -1466,7 +1466,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   if (Vals.size() == 1) {
     auto *MMO = MF->getMachineMemOperand(
         MachinePointerInfo(SI.getPointerOperand()), Flags,
-        MRI->getType(Vals[0]), getMemOpAlign(SI), SI.getAAMetadata(), nullptr,
+        MRI->getType(Vals[0]), getMemOpAlign(SI), SI.getAAMetadata(),
         SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[0], Base, *MMO);
     return true;
@@ -1483,7 +1483,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
     Align BaseAlign = getMemOpAlign(SI);
     auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Vals[i]),
                                          commonAlignment(BaseAlign, Offsets[i]),
-                                         SI.getAAMetadata(), nullptr,
+                                         SI.getAAMetadata(),
                                          SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[i], Addr, *MMO);
   }
@@ -1900,6 +1900,14 @@ bool IRTranslator::translateVectorDeinterleave2Intrinsic(
   ArrayRef<Register> Res = getOrCreateVRegs(CI);
 
   LLT ResTy = MRI->getType(Res[0]);
+  if (ResTy.isScalar()) {
+    MIRBuilder.buildExtractVectorElementConstant(Res[0], Op, 0);
+    MIRBuilder.buildExtractVectorElementConstant(Res[1], Op, 1);
+
+    return true;
+  }
+
+  assert(ResTy.isVector() && "Expected vector result type");
   MIRBuilder.buildShuffleVector(Res[0], Op, Undef,
                                 createStrideMask(0, 2, ResTy.getNumElements()));
   MIRBuilder.buildShuffleVector(Res[1], Op, Undef,
@@ -2882,7 +2890,6 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     const Function &Fn = MF->getFunction();
     Fn.getContext().diagnose(
         DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
-    return false;
   }
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
@@ -2902,7 +2909,6 @@ bool IRTranslator::translateIntrinsic(
     const Function &F = MF->getFunction();
     F.getContext().diagnose(
         DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
-    return false;
   }
 
   ArrayRef<Register> ResultRegs;
@@ -2963,8 +2969,8 @@ bool IRTranslator::translateIntrinsic(
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
     }
     MIB.addMemOperand(MF->getMachineMemOperand(
-        MPI, Info.flags, MemTy, Alignment, CB.getAAMetadata(),
-        /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder));
+        MPI, Info.flags, MemTy, Alignment, CB.getAAMetadata(), Info.ssid,
+        Info.order, Info.failureOrder));
   }
 
   if (CB.isConvergent()) {
@@ -3183,8 +3189,10 @@ bool IRTranslator::translateLandingPad(const User &U,
   // If there aren't registers to copy the values into (e.g., during SjLj
   // exceptions), then don't bother.
   const Constant *PersonalityFn = MF->getFunction().getPersonalityFn();
-  if (TLI->getExceptionPointerRegister(PersonalityFn) == 0 &&
-      TLI->getExceptionSelectorRegister(PersonalityFn) == 0)
+  if (TLI->getExceptionPointerRegister(
+          TLI->getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
+      TLI->getExceptionSelectorRegister(
+          TLI->getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
     return true;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -3215,7 +3223,8 @@ bool IRTranslator::translateLandingPad(const User &U,
   assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
-  Register ExceptionReg = TLI->getExceptionPointerRegister(PersonalityFn);
+  Register ExceptionReg = TLI->getExceptionPointerRegister(
+      TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
   if (!ExceptionReg)
     return false;
 
@@ -3223,7 +3232,8 @@ bool IRTranslator::translateLandingPad(const User &U,
   ArrayRef<Register> ResRegs = getOrCreateVRegs(LP);
   MIRBuilder.buildCopy(ResRegs[0], ExceptionReg);
 
-  Register SelectorReg = TLI->getExceptionSelectorRegister(PersonalityFn);
+  Register SelectorReg = TLI->getExceptionSelectorRegister(
+      TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
   if (!SelectorReg)
     return false;
 
@@ -3589,7 +3599,7 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
       OldValRes, SuccessRes, Addr, Cmp, NewVal,
       *MF->getMachineMemOperand(
           MachinePointerInfo(I.getPointerOperand()), Flags, MRI->getType(Cmp),
-          getMemOpAlign(I), I.getAAMetadata(), nullptr, I.getSyncScopeID(),
+          getMemOpAlign(I), I.getAAMetadata(), I.getSyncScopeID(),
           I.getSuccessOrdering(), I.getFailureOrdering()));
   return true;
 }
@@ -3685,7 +3695,7 @@ bool IRTranslator::translateAtomicRMW(const User &U,
       Opcode, Res, Addr, Val,
       *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
                                 Flags, MRI->getType(Val), getMemOpAlign(I),
-                                I.getAAMetadata(), nullptr, I.getSyncScopeID(),
+                                I.getAAMetadata(), I.getSyncScopeID(),
                                 I.getOrdering()));
   return true;
 }
@@ -4140,8 +4150,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   if (TLI->useLoadStackGuardNode(*ParentBB->getBasicBlock()->getModule())) {
-    Guard =
-        MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
+    Guard = MRI->createGenericVirtualRegister(PtrMemTy);
     getStackGuard(Guard, *CurBuilder);
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
