@@ -207,6 +207,9 @@ protected:
   /// Set when new modules arrive; cleared once the ISA-to-descriptor map has
   /// been refreshed, so the symbol sweep only reruns after module changes.
   bool m_isa_map_dirty = true;
+
+  /// Guards against a sweep that resolves a class re-entering the sweep.
+  bool m_updating_isa_map = false;
 };
 
 } // namespace lldb_private

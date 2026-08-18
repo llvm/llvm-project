@@ -22,6 +22,7 @@
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -38,11 +39,13 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -773,11 +776,23 @@ void GNUstepObjCRuntime::UpdateISAToDescriptorMapIfNeeded() {
     return;
   }
 
+  // Anything reached from the sweep that resolves a class by ISA or by name
+  // lands back here, so publish the "up to date" state and take ownership of
+  // the pending list up front: a reentrant call must not restart the sweep
+  // and clear the vector the outer loop is walking.
+  if (m_updating_isa_map)
+    return;
+  llvm::SaveAndRestore<bool> updating(m_updating_isa_map, true);
+  m_isa_map_dirty = false;
+  m_isa_to_descriptor_stop_id = stop_id;
+  std::vector<ModuleSP> pending;
+  pending.swap(m_pending_modules);
+
   // The first update has to look at everything already loaded; afterwards only
   // the modules that arrived since need scanning, so a dlopen does not re-walk
   // every symbol table in the process.
   if (m_swept_all_modules) {
-    for (const ModuleSP &module_sp : m_pending_modules)
+    for (const ModuleSP &module_sp : pending)
       AddClassesFromModule(module_sp);
   } else {
     const ModuleList &images = GetTargetRef().GetImages();
@@ -787,10 +802,6 @@ void GNUstepObjCRuntime::UpdateISAToDescriptorMapIfNeeded() {
       AddClassesFromModule(images.GetModuleAtIndex(i));
     m_swept_all_modules = true;
   }
-
-  m_pending_modules.clear();
-  m_isa_map_dirty = false;
-  m_isa_to_descriptor_stop_id = stop_id;
 }
 
 bool GNUstepObjCRuntime::IsRuntimeInternalAddress(lldb::addr_t addr) {
@@ -884,7 +895,16 @@ GNUstepObjCRuntime::GetClassDescriptorFromISA(ObjCISA isa) {
       m_process->shared_from_this(), isa);
   if (!descriptor_sp->IsValid())
     return ClassDescriptorSP();
-  AddClass(isa, descriptor_sp, descriptor_sp->GetClassName().GetCString());
+  // libobjc2 gives a metaclass the same `name` as its class, so indexing one
+  // by name would let a by-name lookup (GetISA, and through it anything that
+  // resolves a class by name) hand back the metaclass: an interface whose
+  // class methods look like instance methods and which has no ivars. Cache
+  // metaclasses by ISA all the same, so they are not re-parsed on every
+  // lookup.
+  if (descriptor_sp->IsMetaclass())
+    AddClass(isa, descriptor_sp);
+  else
+    AddClass(isa, descriptor_sp, descriptor_sp->GetClassName().GetCString());
   return descriptor_sp;
 }
 

@@ -129,7 +129,28 @@ public:
   addr_t InstanceSizeOffset() const {
     return 3 * PointerSize() + 2 * LongSize();
   }
-  addr_t ClassSize() const { return 3 * PointerSize() + 6 * LongSize(); }
+
+  static addr_t AlignUp(addr_t value, uint32_t alignment) {
+    return (value + alignment - 1) & ~static_cast<addr_t>(alignment - 1);
+  }
+
+  /// `ivars` is the first field after the three `long`s, so it picks up
+  /// whatever tail padding the target's alignment requires.
+  addr_t IvarsOffset() const {
+    return AlignUp(3 * PointerSize() + 3 * LongSize(), PointerSize());
+  }
+  addr_t MethodsOffset() const { return IvarsOffset() + PointerSize(); }
+
+  /// sizeof(struct objc_class): the three leading pointers, three `long`s,
+  /// then nine pointers through `extra_data`, `abi_version` (a `long`), and
+  /// `properties`. Cross-check: `dtable` lands at libobjc2's DTABLE_OFFSET
+  /// of 64 / 56 / 32 (asmconstants.h), which DTableOffset() asserts.
+  addr_t DTableOffset() const { return IvarsOffset() + 2 * PointerSize(); }
+  addr_t ClassSize() const {
+    return AlignUp(IvarsOffset() + 9 * PointerSize() + LongSize(),
+                   PointerSize()) +
+           PointerSize();
+  }
 
   /// Lays out a class structure, returning its address.
   addr_t WriteClass(addr_t addr, addr_t metaclass, addr_t superclass,
@@ -168,6 +189,26 @@ constexpr addr_t g_super_name_addr = FakeProcess::g_base_addr + 0x480;
 /// A well-formed class parses on every data model. This is what proves the
 /// field offsets track the target's `long` size rather than its pointer size:
 /// on Windows the instance size sits four bytes earlier than on Linux.
+// libobjc2 hard-codes the offset of `dtable` per data model in
+// asmconstants.h and pins it with a _Static_assert in dtable.c, so it is the
+// one field whose position is guaranteed by the runtime itself. Checking the
+// layout helpers against it catches a wrong `long` width, which would
+// otherwise silently shift every field after the class name.
+TEST_P(GNUstepClassDescriptorTest, LayoutMatchesLibobjc2) {
+  const bool is_lp64 = PointerSize() == 8 && LongSize() == 8;
+  const bool is_llp64 = PointerSize() == 8 && LongSize() == 4;
+  const addr_t expected_dtable = is_lp64 ? 64 : (is_llp64 ? 56 : 32);
+  const addr_t expected_size = is_lp64 ? 136 : (is_llp64 ? 128 : 68);
+
+  EXPECT_EQ(DTableOffset(), expected_dtable);
+  EXPECT_EQ(ClassSize(), expected_size);
+  // The fields this descriptor actually reads, for the same three models.
+  EXPECT_EQ(InfoOffset(), is_lp64 ? 32u : (is_llp64 ? 28u : 16u));
+  EXPECT_EQ(InstanceSizeOffset(), is_lp64 ? 40u : (is_llp64 ? 32u : 20u));
+  EXPECT_EQ(IvarsOffset(), is_lp64 ? 48u : (is_llp64 ? 40u : 24u));
+  EXPECT_EQ(MethodsOffset(), is_lp64 ? 56u : (is_llp64 ? 48u : 28u));
+}
+
 TEST_P(GNUstepClassDescriptorTest, ParsesWellFormedClass) {
   FakeProcess &process = GetProcess();
   process.WriteCString(g_name_addr, "Derived");
