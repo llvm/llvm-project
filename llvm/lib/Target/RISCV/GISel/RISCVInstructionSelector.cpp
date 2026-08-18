@@ -1012,12 +1012,8 @@ bool RISCVInstructionSelector::selectIntrinsic(MachineInstr &I) const {
         }
       }
 
-      MachineInstr *AVLDef = MRI->getVRegDef(AVLReg);
-      if (AVLDef && AVLDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-        const auto *C = AVLDef->getOperand(1).getCImm();
-        if (C->getValue().isAllOnes())
-          VLMax = true;
-      }
+      if (mi_match(AVLReg, *MRI, m_AllOnes()))
+        VLMax = true;
     }
 
     if (VLMax) {
