@@ -2163,12 +2163,17 @@ bool clang::CreateHLSLAttributedResourceType(
       ResAttrs.IsArray = true;
       break;
     case attr::HLSLIsMultiSampled:
-      if (ResAttrs.IsMultiSampled) {
+      if (ResAttrs.SampleCountExpr) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
         return false;
       }
-      ResAttrs.IsMultiSampled = true;
-      ResAttrs.SampleCountExpr = SampleCountExpr;
+      // A bare [[hlsl::is_ms]] carries no count, so default it to 0, the same
+      // value Texture2DMS<T> gets from its template parameter.
+      ResAttrs.SampleCountExpr =
+          SampleCountExpr
+              ? SampleCountExpr
+              : IntegerLiteral::Create(S.Context, llvm::APInt(32, 0),
+                                       S.Context.IntTy, A->getLocation());
       break;
     case attr::HLSLIsCounter:
       if (ResAttrs.IsCounter) {
@@ -3959,7 +3964,7 @@ static bool CheckLoadMSBuiltin(Sema &S, CallExpr *TheCall) {
   // Check the multisampled texture handle.
   if (CheckResourceHandle(&S, TheCall, 0,
                           [](const HLSLAttributedResourceType *ResType) {
-                            return !ResType->getAttrs().IsMultiSampled;
+                            return !ResType->isMultiSampled();
                           }))
     return true;
 

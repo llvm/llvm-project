@@ -302,9 +302,18 @@ static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
 static BuiltinTypeDeclBuilder setupMSTextureType(CXXRecordDecl *Decl, Sema &S,
                                                  bool IsArray,
                                                  ResourceDimension Dim) {
+  ClassTemplateDecl *CTD = Decl->getDescribedClassTemplate();
+  assert(CTD && "multisampled texture must be a class template");
+
+  // Parameter 1 is the N in Texture2DMS<T, N>.
+  auto *NTTP =
+      cast<NonTypeTemplateParmDecl>(CTD->getTemplateParameters()->getParam(1));
+  Expr *SampleCountExpr =
+      S.BuildDeclRefExpr(NTTP, NTTP->getType(), VK_PRValue, SourceLocation());
+
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim,
-                        /*IsMultiSampled=*/true)
+                        SampleCountExpr)
       .addTextureLoadMSMethods(Dim, IsArray)
       .addArraySubscriptOperators(Dim, IsArray)
       // TODO: Add MS-specific GetDimensions (with a NumberOfSamples output);

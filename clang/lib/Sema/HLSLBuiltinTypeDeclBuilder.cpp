@@ -1065,8 +1065,7 @@ BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
                                          AccessSpecifier Access) {
   QualType ElementTy = getHandleElementType();
   addHandleMember(RC, ResourceDimension::Unknown, IsROV, RawBuffer,
-                  /*IsArray=*/false, ElementTy, /*IsMultiSampled=*/false,
-                  Access);
+                  /*IsArray=*/false, ElementTy, Access);
   if (HasCounter)
     addCounterHandleMember(RC, IsROV, RawBuffer, ElementTy, Access);
   return *this;
@@ -1074,9 +1073,10 @@ BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addTextureHandle(
     ResourceClass RC, bool IsROV, bool IsArray, ResourceDimension RD,
-    bool IsMultiSampled, AccessSpecifier Access) {
-  addHandleMember(RC, RD, IsROV, /*RawBuffer=*/false, IsArray,
-                  getHandleElementType(), IsMultiSampled, Access);
+    Expr *SampleCountExpr, AccessSpecifier Access) {
+  addResourceMember("__handle", RC, RD, IsROV, /*RawBuffer=*/false,
+                    /*IsCounter=*/false, IsArray, getHandleElementType(),
+                    SampleCountExpr, Access);
   return *this;
 }
 
@@ -1138,11 +1138,10 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addPrivateNestedRecord(StringRef Name) {
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, ResourceDimension RD, bool IsROV, bool RawBuffer,
-    bool IsArray, QualType ElementTy, bool IsMultiSampled,
-    AccessSpecifier Access) {
+    bool IsArray, QualType ElementTy, AccessSpecifier Access) {
   return addResourceMember("__handle", RC, RD, IsROV, RawBuffer,
                            /*IsCounter=*/false, IsArray, ElementTy,
-                           IsMultiSampled, Access);
+                           /*SampleCountExpr=*/nullptr, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
@@ -1151,13 +1150,13 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
   return addResourceMember("__counter_handle", RC, ResourceDimension::Unknown,
                            IsROV, RawBuffer, /*IsCounter=*/true,
                            /*IsArray=*/false, ElementTy,
-                           /*IsMultiSampled=*/false, Access);
+                           /*SampleCountExpr=*/nullptr, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
     StringRef MemberName, ResourceClass RC, ResourceDimension RD, bool IsROV,
     bool RawBuffer, bool IsCounter, bool IsArray, QualType ElementTy,
-    bool IsMultiSampled, AccessSpecifier Access) {
+    Expr *SampleCountExpr, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &Ctx = SemaRef.getASTContext();
@@ -1183,16 +1182,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
     Attrs.push_back(HLSLIsCounterAttr::CreateImplicit(Ctx));
   if (IsArray)
     Attrs.push_back(HLSLIsArrayAttr::CreateImplicit(Ctx));
-  Expr *SampleCountExpr = nullptr;
-  if (IsMultiSampled) {
+  if (SampleCountExpr)
     Attrs.push_back(HLSLIsMultiSampledAttr::CreateImplicit(Ctx));
-    ClassTemplateDecl *CTD = Record->getDescribedClassTemplate();
-    assert(CTD && "multisampled texture must be a class template");
-    auto *NTTP = cast<NonTypeTemplateParmDecl>(
-        CTD->getTemplateParameters()->getParam(1));
-    SampleCountExpr = SemaRef.BuildDeclRefExpr(NTTP, NTTP->getType(),
-                                               VK_PRValue, SourceLocation());
-  }
 
   if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
                                        AttributedResTy, /*LocInfo=*/nullptr,
@@ -1506,7 +1497,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
       .addHandleMember(getResourceAttrs().ResourceClass, Dim,
                        getResourceAttrs().IsROV, /*RawBuffer=*/false,
                        getResourceAttrs().IsArray, ReturnType,
-                       /*IsMultiSampled=*/false, AccessSpecifier::AS_public)
+                       AccessSpecifier::AS_public)
       .addMemberVariable("__level", IntTy, {}, AccessSpecifier::AS_public)
       .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
       .addCopyConstructor(AccessSpecifier::AS_protected)
@@ -1550,7 +1541,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
       .addHandleMember(getResourceAttrs().ResourceClass, Dim,
                        getResourceAttrs().IsROV, /*RawBuffer=*/false,
                        getResourceAttrs().IsArray, ReturnType,
-                       /*IsMultiSampled=*/false, AccessSpecifier::AS_public)
+                       AccessSpecifier::AS_public)
       .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
       .addCopyConstructor(AccessSpecifier::AS_protected)
       .addCopyAssignmentOperator(AccessSpecifier::AS_protected);

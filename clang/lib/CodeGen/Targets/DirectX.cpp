@@ -71,7 +71,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
         ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown;
     assert((!IsRawBuffer || !IsTexture) && "A resource cannot be both a raw "
                                            "buffer and a texture.");
-    bool IsMultiSampledTexture = IsTexture && ResAttrs.IsMultiSampled;
+    bool IsMultiSampledTexture = IsTexture && ResAttrs.isMultiSampled();
     llvm::StringRef TypeName = "dx.TypedBuffer";
     if (IsRawBuffer)
       TypeName = "dx.RawBuffer";
@@ -112,7 +112,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
         RK = llvm::dxil::ResourceKind::Texture1D;
         break;
       case llvm::dxil::ResourceDimension::Dim2D:
-        if (ResAttrs.IsMultiSampled)
+        if (ResAttrs.isMultiSampled())
           RK = ResAttrs.IsArray ? llvm::dxil::ResourceKind::Texture2DMSArray
                                 : llvm::dxil::ResourceKind::Texture2DMS;
         else

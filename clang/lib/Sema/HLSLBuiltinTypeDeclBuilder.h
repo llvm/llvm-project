@@ -87,7 +87,7 @@ public:
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
   addTextureHandle(ResourceClass RC, bool IsROV, bool IsArray,
-                   ResourceDimension RD, bool IsMultiSampled = false,
+                   ResourceDimension RD, Expr *SampleCountExpr = nullptr,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
   BuiltinTypeDeclBuilder &addConstantBufferConversionToType();
@@ -162,7 +162,7 @@ private:
   addResourceMember(StringRef MemberName, ResourceClass RC,
                     ResourceDimension RD, bool IsROV, bool RawBuffer,
                     bool IsCounter, bool IsArray, QualType ElementTy,
-                    bool IsMultiSampled = false,
+                    Expr *SampleCountExpr = nullptr,
                     AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addFriend(CXXRecordDecl *Friend);
   CXXRecordDecl *addPrivateNestedRecord(StringRef Name);
@@ -171,7 +171,6 @@ private:
   BuiltinTypeDeclBuilder &
   addHandleMember(ResourceClass RC, ResourceDimension RD, bool IsROV,
                   bool RawBuffer, bool IsArray, QualType ElementTy,
-                  bool IsMultiSampled = false,
                   AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
   addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,

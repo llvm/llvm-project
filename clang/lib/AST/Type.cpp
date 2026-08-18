@@ -5982,7 +5982,6 @@ void HLSLAttributedResourceType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddBoolean(Attrs.RawBuffer);
   ID.AddBoolean(Attrs.IsCounter);
   ID.AddBoolean(Attrs.IsArray);
-  ID.AddBoolean(Attrs.IsMultiSampled);
   ID.AddBoolean(Attrs.SampleCountExpr != nullptr);
   if (Attrs.SampleCountExpr)
     Attrs.SampleCountExpr->Profile(ID, Ctx, /*Canonical=*/true);

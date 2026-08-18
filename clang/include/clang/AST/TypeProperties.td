@@ -693,9 +693,6 @@ let Class = HLSLAttributedResourceType in {
   def : Property<"isArray", Bool> {
     let Read = [{ node->getAttrs().IsArray }];
   }
-  def : Property<"isMultiSampled", Bool> {
-    let Read = [{ node->getAttrs().IsMultiSampled }];
-  }
   def : Property<"sampleCountExpr", Optional<ExprRef>> {
     let Read = [{ makeOptionalFromPointer(node->getSampleCountExpr()) }];
   }
@@ -703,7 +700,7 @@ let Class = HLSLAttributedResourceType in {
     HLSLAttributedResourceType::Attributes attrs(
         static_cast<llvm::dxil::ResourceClass>(resClass),
         static_cast<llvm::dxil::ResourceDimension>(resDimension), isROV,
-        rawBuffer, isCounter, isArray, isMultiSampled,
+        rawBuffer, isCounter, isArray,
         makePointerFromOptional(sampleCountExpr));
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
