@@ -6,19 +6,19 @@
 ; their `num_vgpr` count set to the max of their local count and the module-wide
 ; max VGPR count of all non-chain functions.
 
-; DVGPR:  .set .Lgfx_func_a.num_vgpr, 40
-; DVGPR:  .set .Lgfx_func_b.num_vgpr, 80
-; DVGPR:  .set .Lfunc_with_indirect_call.num_vgpr, max(11, amdgpu.max_num_vgpr)
-; DVGPR:  .set .Lfunc_direct_only.num_vgpr, max(11, .Lgfx_func_a.num_vgpr)
-; DVGPR:  .set .Lfunc_chain_only.num_vgpr, 11
-; DVGPR:  .set amdgpu.max_num_vgpr, 80
+; DVGPR-DAG:  .set .Lgfx_func_a.num_vgpr, 40
+; DVGPR-DAG:  .set .Lgfx_func_b.num_vgpr, 80
+; DVGPR-DAG:  .set .Lfunc_with_indirect_call.num_vgpr, max(11, amdgpu.max_num_vgpr)
+; DVGPR-DAG:  .set .Lfunc_direct_only.num_vgpr, max(11, .Lgfx_func_a.num_vgpr)
+; DVGPR-DAG:  .set .Lfunc_chain_only.num_vgpr, 11
+; DVGPR-DAG:  .set amdgpu.max_num_vgpr, 80
 
-; NODVGPR:  .set .Lgfx_func_a.num_vgpr, 40
-; NODVGPR:  .set .Lgfx_func_b.num_vgpr, 80
-; NODVGPR:  .set .Lfunc_with_indirect_call.num_vgpr, max(11, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc_direct_only.num_vgpr, max(11, amdgpu.max_num_vgpr)
-; NODVGPR:  .set .Lfunc_chain_only.num_vgpr, max(11, amdgpu.max_num_vgpr)
-; NODVGPR:  .set amdgpu.max_num_vgpr, 80
+; NODVGPR-DAG:  .set .Lgfx_func_a.num_vgpr, 40
+; NODVGPR-DAG:  .set .Lgfx_func_b.num_vgpr, 80
+; NODVGPR-DAG:  .set .Lfunc_with_indirect_call.num_vgpr, max(11, amdgpu.max_num_vgpr)
+; NODVGPR-DAG:  .set .Lfunc_direct_only.num_vgpr, max(11, amdgpu.max_num_vgpr)
+; NODVGPR-DAG:  .set .Lfunc_chain_only.num_vgpr, max(11, amdgpu.max_num_vgpr)
+; NODVGPR-DAG:  .set amdgpu.max_num_vgpr, 80
 
 define amdgpu_gfx void @gfx_func_a() #0 {
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"()

@@ -8,6 +8,42 @@
 
 ; FIXME: Passing real values for workitem ID, and 0s that can be undef
 
+define void @snork() {
+; GFX9-LABEL: snork:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: snork:
+; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  ret void
+}
+
+define void @wobble() {
+; GFX9-LABEL: wobble:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: wobble:
+; GFX12:       ; %bb.0: ; %bb
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  ret void
+}
+
 define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX9-LABEL: indirect_call_known_no_special_inputs:
 ; GFX9:       ; %bb.0: ; %bb
@@ -74,46 +110,9 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; GFX12-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-NEXT:    s_endpgm
-
 bb:
   %cond = load i1, ptr addrspace(4) null
   %tmp = select i1 %cond, ptr @wobble, ptr @snork
   call void %tmp(ptr poison, i32 poison, ptr poison)
-  ret void
-}
-
-define void @wobble() {
-; GFX9-LABEL: wobble:
-; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-LABEL: wobble:
-; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
-bb:
-  ret void
-}
-
-define void @snork() {
-; GFX9-LABEL: snork:
-; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-LABEL: snork:
-; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
-bb:
   ret void
 }

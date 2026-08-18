@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa %s -o - | FileCheck -check-prefix=DEFAULT %s
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-stress-vgpr=2 %s -o - | FileCheck -check-prefix=VGPR2 %s
-# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-stress-vgpr=4 -amdgpu-stress-agpr=0 %s -o - | FileCheck -check-prefix=VGPR4-AGPR0 %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -start-before=amdgpu-isel %s -o - | FileCheck -check-prefix=DEFAULT %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -start-before=amdgpu-isel -amdgpu-stress-vgpr=2 %s -o - | FileCheck -check-prefix=VGPR2 %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -start-before=amdgpu-isel -amdgpu-stress-vgpr=4 -amdgpu-stress-agpr=0 %s -o - | FileCheck -check-prefix=VGPR4-AGPR0 %s
 
 # Test that -amdgpu-stress-vgpr and -amdgpu-stress-agpr limit register
 # availability during register allocation.
