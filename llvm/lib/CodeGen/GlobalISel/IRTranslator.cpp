@@ -4525,7 +4525,7 @@ PreservedAnalyses IRTranslatorPass::run(MachineFunction &MF,
   if (!MLLI)
     reportFatalUsageError(
         "LibcallLoweringModuleAnalysis must be available for IRTranslator");
-  bool Changed = Impl.runOnMachineFunction(
+  Impl.runOnMachineFunction(
       MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
       ShouldSkipOpts, [&]() { return &FAM.getResult<AAManager>(F); },
       [&]() { return &FAM.getResult<BranchProbabilityAnalysis>(F); },
@@ -4534,6 +4534,5 @@ PreservedAnalyses IRTranslatorPass::run(MachineFunction &MF,
       &MLLI->getLibcallLowering(Subtarget),
       &FAM.getResult<SSPLayoutAnalysis>(F));
 
-  return Changed ? getMachineFunctionPassPreservedAnalyses()
-                 : PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
 }
