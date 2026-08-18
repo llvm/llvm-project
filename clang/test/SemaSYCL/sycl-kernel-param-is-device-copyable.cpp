@@ -59,17 +59,64 @@ namespace iscopyable1 {
 // Kernel entry point template definition.
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
-void kernel_single_task(T t) {} // expected-error {{'NotTriviallyCopyable' is not device copyable}} \
-                                // expected-note {{within parameter 't' of type 'NotTriviallyCopyable' declared here}}
+void kernel_single_task(T t) {} // expected-error {{'NotTriviallyCopyable' is not device copyable (sycl::is_device_copyable) and cannot be used as a kernel parameter}}
+                                // expected-note-re@-1 2{{within parameter 't' of type '{{.*}}' declared here}}
 
 void test() {
   DefinitelyCopyable a;
-  kernel_single_task<KN<3>>(a);
+  kernel_single_task<KN<1>>(a);
 
   NotTriviallyCopyable b;
-  kernel_single_task<KN<2>>(b); // expected-note {{in instantiation of function template specialization 'iscopyable1::kernel_single_task<KN<2>, NotTriviallyCopyable>' requested here}}
+  kernel_single_task<KN<2>>(b);
+  // expected-note-re@-1 {{in instantiation of function template specialization 'iscopyable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
 
   DeviceCopyable c;
-  kernel_single_task<KN<1>>(c);
+  kernel_single_task<KN<3>>(c);
+
+
+  kernel_single_task<KN<4>>([=] { (void) a; });
+
+  kernel_single_task<KN<5>>([=] { (void) c; });
+
+  kernel_single_task<KN<6>>([=] { (void) b; });
+  // expected-error@-1 {{'NotTriviallyCopyable' is not device copyable (sycl::is_device_copyable) and cannot be used as a kernel parameter}}
+  // expected-note-re@-2 {{in instantiation of function template specialization 'iscopyable1::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  // expected-note@-3 {{within capture 'b' of lambda expression here}}
+
+  auto notCopyableLambda = [](NotTriviallyCopyable notCopyable) { (void) notCopyable; };
+  kernel_single_task<KN<7>>(notCopyableLambda);
+  kernel_single_task<KN<8>>([=](NotTriviallyCopyable NC) { notCopyableLambda(NC); });
+  // TODO this isn't firing; shouldn't this create an error
+  
 }
+
 } // namespace iscopyable1
+
+struct HasNonDeviceCopyableMember {
+  NotTriviallyCopyable member;
+};
+
+struct ExplicitlyDeviceCopyableWithMember {
+  NotTriviallyCopyable member;
+};
+template<>
+struct sycl::is_device_copyable<ExplicitlyDeviceCopyableWithMember>
+    : std::true_type {};
+
+namespace iscopyable2 {
+template<typename KNT, typename T>
+[[clang::sycl_kernel_entry_point(KNT)]]
+void kernel_single_task(T t) {} // expected-note-re {{within parameter 't' of type '{{.*}}' declared here}}
+
+void test() {
+  HasNonDeviceCopyableMember a;
+  kernel_single_task<KN<9>>([=] { (void) a; });
+  // expected-error@-1 {{'HasNonDeviceCopyableMember' is not device copyable (sycl::is_device_copyable) and cannot be used as a kernel parameter}}
+  // expected-note-re@-2 {{in instantiation of function template specialization 'iscopyable2::kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  // expected-note@-3 {{within capture 'a' of lambda expression here}}
+
+  ExplicitlyDeviceCopyableWithMember b;
+  kernel_single_task<KN<10>>([=] { (void) b; });
+}
+} // namespace iscopyable2
+

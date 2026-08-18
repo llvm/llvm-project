@@ -13584,8 +13584,9 @@ def note_sycl_kernel_launch_overload_resolution_here : Note<
 def err_sycl_entry_point_device_use : Error<
   "function %0 cannot be used in device code because it is declared with the"
   " %1 attribute">;
-def err_sycl_kernel_param_not_device_copyable : Error<
-  "%0 is not device copyable (sycl::is_device_copyable) and cannot be used as a kernel parameter">;
+def warn_sycl_kernel_param_not_device_copyable : Warning<
+  "%0 is not device copyable (sycl::is_device_copyable) and cannot be used as a kernel parameter">,
+  InGroup<SyclDeviceCopyable>, DefaultError;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
