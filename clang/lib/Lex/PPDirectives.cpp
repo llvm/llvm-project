@@ -2755,7 +2755,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     if (UsableHeaderUnit && !getLangOpts().CompilingPCH)
       Action = TrackGMFState.inGMF() ? Import : Skip;
     else
-      Action = (ModuleToImport && !getLangOpts().CompilingPCH) ? Import : Skip;
+      Action = (UsableClangHeaderModule && !getLangOpts().CompilingPCH) ? Import
+                                                                        : Skip;
   }
 
   // Check for circular inclusion of the main file.

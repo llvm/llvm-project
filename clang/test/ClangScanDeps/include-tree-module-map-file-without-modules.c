@@ -45,5 +45,6 @@ module Foo {
 void foo(void);
 
 //--- tu.c
-#include "foo.h"
+#import "foo.h"
+#import "foo.h"
 void tu(void) { foo(); }
