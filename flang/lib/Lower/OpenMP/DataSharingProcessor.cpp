@@ -165,8 +165,11 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
   bool success = [&]() -> bool {
     const auto *details =
         sym->detailsIf<Fortran::semantics::HostAssocDetails>();
-    assert(details && "No host-association found");
-    const Fortran::semantics::Symbol &hsym = details->symbol();
+    bool isImplicitFirstprivate =
+        sym->test(semantics::Symbol::Flag::OmpImplicit) &&
+        sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+    assert((details || isImplicitFirstprivate) && "No host-association found");
+    const Fortran::semantics::Symbol &hsym = details ? details->symbol() : *sym;
     mlir::Value addr = converter.getSymbolAddress(hsym);
 
     if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {

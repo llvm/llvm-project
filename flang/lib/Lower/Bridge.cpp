@@ -893,8 +893,11 @@ public:
     mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
     const auto *details = sym.detailsIf<Fortran::semantics::HostAssocDetails>();
-    assert(details && "No host-association found");
-    const Fortran::semantics::Symbol &hsym = details->symbol();
+    bool isImplicitFirstprivate =
+        sym.test(Fortran::semantics::Symbol::Flag::OmpImplicit) &&
+        sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
+    assert((details || isImplicitFirstprivate) && "No host-association found");
+    const Fortran::semantics::Symbol &hsym = details ? details->symbol() : sym;
     mlir::Type hSymType = genType(hsym.GetUltimate());
     Fortran::lower::SymbolBox hsb =
         lookupSymbol(hsym, /*symMap=*/nullptr, /*forceHlfirBase=*/true);
@@ -1071,9 +1074,12 @@ public:
                        mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr,
                        bool hostIsSource = true) override final {
     // 1) Fetch the original copy of the variable.
-    assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
-           "No host-association found");
-    const Fortran::semantics::Symbol &hsym = sym.GetUltimate();
+    const auto *details = sym.detailsIf<Fortran::semantics::HostAssocDetails>();
+    bool isImplicitFirstprivate =
+        sym.test(Fortran::semantics::Symbol::Flag::OmpImplicit) &&
+        sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
+    assert((details || isImplicitFirstprivate) && "No host-association found");
+    const Fortran::semantics::Symbol &hsym = details ? sym.GetUltimate() : sym;
     Fortran::lower::SymbolBox hsb = lookupOneLevelUpSymbol(hsym);
     assert(hsb && "Host symbol box not found");
 

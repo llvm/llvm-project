@@ -7014,14 +7014,21 @@ public:
   }
 
   void setSymbolDSA(semantics::Symbol &sym, semantics::Symbol::Flag dsa) {
+    using Symbol = semantics::Symbol;
+    setSymbolDSA(sym, Symbol::Flags{Symbol::Flag::OmpPreDetermined, dsa});
+  }
+
+  void setSymbolDSA(semantics::Symbol &sym, semantics::Symbol::Flags flags) {
     if (!llvm::any_of(savedFlags,
                       [&](const auto &entry) { return entry.first == &sym; })) {
       savedFlags.emplace_back(&sym, sym.flags());
       markedSymbols.push_back(&sym);
     }
-    using Symbol = semantics::Symbol;
-    semantics::SetSymbolDSA(sym,
-                            Symbol::Flags{Symbol::Flag::OmpPreDetermined, dsa});
+    semantics::SetSymbolDSA(sym, flags);
+  }
+
+  bool isMarked(const semantics::Symbol &sym) const {
+    return llvm::is_contained(markedSymbols, &sym);
   }
 
   llvm::ArrayRef<const semantics::Symbol *> getMarkedSymbols() const {
@@ -7056,6 +7063,15 @@ public:
   }
   template <typename T>
   void Post(const T &) {}
+
+  void Post(const parser::Name &name) {
+    if (name.symbol)
+      blockSymbols.insert(name.symbol);
+  }
+
+  llvm::SetVector<const semantics::Symbol *> takeBlockSymbols() {
+    return std::move(blockSymbols);
+  }
 
   bool Pre(const parser::OpenMPConstruct &omp) {
     llvm::omp::Directive directive = parser::omp::GetOmpDirectiveName(omp).v;
@@ -7096,16 +7112,97 @@ private:
   semantics::SemanticsContext &semaCtx;
   unsigned version;
   SymbolDSAGuard &dsaGuard;
+  llvm::SetVector<const semantics::Symbol *> blockSymbols;
   llvm::SmallPtrSet<const parser::DoConstruct *, 4> nestedAssociatedLoops;
   unsigned nestedOwnerDepth = 0;
 };
 
-static void markMetadirectiveBlockIVs(semantics::SemanticsContext &semaCtx,
-                                      lower::pft::Evaluation &eval,
-                                      unsigned version,
-                                      SymbolDSAGuard &dsaGuard) {
+static const parser::Block *
+getMetadirectiveBlock(lower::pft::Evaluation &eval) {
+  const auto *omp = eval.getIf<parser::OpenMPConstruct>();
+  if (!omp)
+    return nullptr;
+  const auto *meta =
+      std::get_if<parser::OmpDelimitedMetadirectiveDirective>(&omp->u);
+  return meta ? &std::get<parser::Block>(meta->t) : nullptr;
+}
+
+static llvm::SetVector<const semantics::Symbol *>
+markMetadirectiveBlockIVs(semantics::SemanticsContext &semaCtx,
+                          lower::pft::Evaluation &eval, unsigned version,
+                          SymbolDSAGuard &dsaGuard) {
+  const parser::Block *block = getMetadirectiveBlock(eval);
+  assert(block && "block-associated metadirective must have a block");
   MetadirectiveBlockIVMarker marker(semaCtx, version, dsaGuard);
-  eval.visit([&](const auto &node) { parser::Walk(node, marker); });
+  parser::Walk(*block, marker);
+  return marker.takeBlockSymbols();
+}
+
+/// Selected task variants are resolved after semantics, too late to create
+/// construct-local host-association symbols. Reproduce their implicit DSA rule
+/// for names referenced in the selected body.
+static bool
+hasMetadirectiveStaticStorageDuration(const semantics::Symbol &symbol) {
+  using Symbol = semantics::Symbol;
+  const Symbol &ultimate = symbol.GetUltimate();
+  return ultimate.owner().kind() == semantics::Scope::Kind::Module ||
+         ultimate.test(Symbol::Flag::InDataStmt) ||
+         ultimate.attrs().test(semantics::Attr::SAVE) ||
+         ultimate.test(Symbol::Flag::InCommonBlock);
+}
+
+static void markMetadirectiveTaskImplicitSymbols(
+    const ConstructQueue &queue,
+    const llvm::SetVector<const semantics::Symbol *> &blockSymbols,
+    SymbolDSAGuard &dsaGuard) {
+  llvm::SmallPtrSet<const semantics::Symbol *, 8> explicitDSASymbols;
+  bool hasDefaultClause = false;
+  auto addObjects = [&](const ObjectList &objects) {
+    for (const Object &object : objects)
+      if (const semantics::Symbol *symbol = object.sym())
+        explicitDSASymbols.insert(&symbol->GetUltimate());
+  };
+
+  for (const auto &item : queue) {
+    for (const Clause &ompClause : item.clauses) {
+      if (std::holds_alternative<clause::Default>(ompClause.u)) {
+        hasDefaultClause = true;
+      } else if (const auto *privateClause =
+                     std::get_if<clause::Private>(&ompClause.u)) {
+        addObjects(privateClause->v);
+      } else if (const auto *firstprivateClause =
+                     std::get_if<clause::Firstprivate>(&ompClause.u)) {
+        addObjects(firstprivateClause->v);
+      } else if (const auto *sharedClause =
+                     std::get_if<clause::Shared>(&ompClause.u)) {
+        addObjects(sharedClause->v);
+      } else if (const auto *inReductionClause =
+                     std::get_if<clause::InReduction>(&ompClause.u)) {
+        addObjects(std::get<ObjectList>(inReductionClause->t));
+      }
+    }
+  }
+
+  if (hasDefaultClause)
+    return;
+
+  using Symbol = semantics::Symbol;
+  for (const semantics::Symbol *symbol : blockSymbols) {
+    const Symbol &ultimate = symbol->GetUltimate();
+    if (!semantics::omp::IsPrivatizable(*symbol) ||
+        dsaGuard.isMarked(*symbol) || explicitDSASymbols.contains(&ultimate) ||
+        hasMetadirectiveStaticStorageDuration(ultimate) ||
+        ultimate.test(Symbol::Flag::OmpThreadprivate) ||
+        semantics::GetSymbolDSA(*symbol).test(Symbol::Flag::OmpShared))
+      continue;
+    // A name nested in another OpenMP construct can be a host-association
+    // symbol carrying that construct's predetermined DSA, such as a SIMD IV.
+    // Apply the selected task's implicit DSA to its outer association root so
+    // the nested construct keeps its own attribute.
+    dsaGuard.setSymbolDSA(const_cast<Symbol &>(ultimate),
+                          Symbol::Flags{Symbol::Flag::OmpImplicit,
+                                        Symbol::Flag::OmpFirstPrivate});
+  }
 }
 
 enum class MetadirectiveLoopIVMarking {
@@ -7390,10 +7487,17 @@ static void genMetadirective(lower::AbstractConverter &converter,
            "METADIRECTIVE with both block- and loop-associated variants");
 
     SymbolDSAGuard dsaGuard;
+    llvm::SetVector<const semantics::Symbol *> blockSymbols;
     if (consumesBody && llvm::any_of(queue, [ompVersion](const auto &item) {
           return ownsSequentialLoopIVs(item.id, ompVersion);
         }))
-      markMetadirectiveBlockIVs(semaCtx, eval, ompVersion, dsaGuard);
+      blockSymbols =
+          markMetadirectiveBlockIVs(semaCtx, eval, ompVersion, dsaGuard);
+
+    if (llvm::any_of(queue, [](const auto &item) {
+          return llvm::omp::taskGeneratingSet.test(item.id);
+        }))
+      markMetadirectiveTaskImplicitSymbols(queue, blockSymbols, dsaGuard);
 
     genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                    queue.begin());
