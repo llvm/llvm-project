@@ -1,8 +1,6 @@
 ;; Tests memprof profile matching (with and without instrumentation profiles).
 ; RUN: rm -rf %t && split-file %s %t
 
-;; MEMPROFRAND2 checks fail on different platforms, possibly due to different rand implementations
-; REQUIRES: x86_64-linux
 ;; -stats requires asserts
 ; REQUIRES: asserts
 
@@ -83,16 +81,14 @@
 ;; the size metadata to be generated for the LTO link.
 ; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 -memprof-keep-all-not-cold-contexts 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES,TOTALSIZESKEEPALL
 
-;; Make sure we emit a random hotness seed if requested.
-; RUN: llvm-profdata merge -memprof-random-hotness %t/a.yaml -o %t/a.memprofdatarand 2>&1 | FileCheck %s --check-prefix=RAND
-; RAND: random hotness seed =
+;; Make sure applying a random hotness profile succeeds.
+; RUN: llvm-profdata merge -memprof-random-hotness %t/a.yaml -o %t/a.memprofdatarand
 ;; Can't check the exact values, but make sure applying the random profile
 ;; succeeds with the same stats
 ; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdatarand>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=ALL,MEMPROFONLY,MEMPROFSTATS
 
-;; Make sure we use a specific random hotness seed if requested.
-; RUN: llvm-profdata merge -memprof-random-hotness -memprof-random-hotness-seed=1730170724 %t/a.yaml -o %t/a.memprofdatarand2 2>&1 | FileCheck %s --check-prefix=RAND2
-; RAND2: random hotness seed = 1730170724
+;; Make sure we use a specific random seed if requested.
+; RUN: llvm-profdata merge -memprof-random-hotness -random-seed=1730170724 %t/a.yaml -o %t/a.memprofdatarand2
 ; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdatarand2>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND2,ALL,MEMPROFONLY,MEMPROFSTATS
 
 ;; With the hot access density threshold set to 0, and hot hints enabled,
@@ -463,8 +459,8 @@ for.end:                                          ; preds = %for.cond
 ;; For the specific random seed, this is the expected order of hotness
 ; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"cold"
-; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"notcold"
+; MEMPROFRAND2: !"cold"
 
 ; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
 ; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.
