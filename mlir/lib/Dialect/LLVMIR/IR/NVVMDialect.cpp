@@ -671,6 +671,23 @@ LogicalResult BulkStoreOp::verify() {
   return success();
 }
 
+LogicalResult AsyncStoreGlobalOp::verify() {
+  NVVM::MemScopeKind scope = getScope();
+  bool isMmio = getMmio();
+  bool isMultimem = getMultimem();
+
+  if (scope != MemScopeKind::SYS && scope != MemScopeKind::GPU)
+    return emitOpError("scope must be either SYS or GPU");
+
+  if (isMmio && scope != MemScopeKind::SYS)
+    return emitOpError("mmio is only supported for SYS scope");
+
+  if (isMmio && isMultimem)
+    return emitOpError("multimem is not supported with mmio");
+
+  return success();
+}
+
 LogicalResult PMEventOp::verify() {
   auto eventId = getEventId();
   auto maskedEventId = getMaskedEventId();
@@ -3663,6 +3680,29 @@ DivFOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
 
   return {id,
           {mt.lookupValue(thisOp.getLhs()), mt.lookupValue(thisOp.getRhs())}};
+}
+
+mlir::NVVM::IDArgPair AsyncStoreGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  using IDArgPair = mlir::NVVM::IDArgPair;
+  auto thisOp = cast<NVVM::AsyncStoreGlobalOp>(op);
+  mlir::NVVM::MemScopeKind scope = thisOp.getScope();
+  bool isMmio = thisOp.getMmio();
+
+  llvm::Value *addr = mt.lookupValue(thisOp.getAddr());
+  llvm::Value *value = mt.lookupValue(thisOp.getValue());
+  llvm::Value *isMultimem = builder.getInt1(thisOp.getMultimem());
+
+  if (scope == MemScopeKind::SYS) {
+    return isMmio ? IDArgPair(llvm::Intrinsic::nvvm_st_async_mmio_sys,
+                              {addr, value})
+                  : IDArgPair(llvm::Intrinsic::nvvm_st_async_sys,
+                              {addr, value, isMultimem});
+  } else if (scope == MemScopeKind::GPU) {
+    return IDArgPair(llvm::Intrinsic::nvvm_st_async_gpu,
+                     {addr, value, isMultimem});
+  }
+  llvm_unreachable("unsupported scope for AsyncStoreGlobalOp");
 }
 
 mlir::NVVM::IDArgPair
