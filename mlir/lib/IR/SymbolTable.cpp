@@ -476,28 +476,16 @@ raw_ostream &mlir::operator<<(raw_ostream &os,
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
-/// Verify the symbol uses held by the types owned by `op`: its operand,
-/// result, and block-argument types, and any types nested within its
-/// attributes. `op` is the anchor used for symbol lookups. `verifiedTypes`
-/// records the types already verified within the current symbol table so that
-/// each type, which may be uniqued and shared across many positions or
-/// operations, is verified at most once. Verification fails fast on the first
-/// invalid symbol use.
+/// Verify the symbol uses held by the types owned by `op`: its operand, result,
+/// and block-argument types, and any types nested within its attributes.
+/// `walker` carries the SymbolUserTypeInterface check as a type-walk callback,
+/// anchored at the operation currently being verified, and its visited memo
+/// makes each uniqued type, which may recur across many positions and
+/// operations, verified against the enclosing symbol table at most once.
+/// Verification fails fast on the first invalid symbol use.
 static LogicalResult verifyOpTypeSymbolUses(Operation *op,
-                                            SymbolTableCollection &symbolTable,
-                                            SetVector<Type> &verifiedTypes) {
-  // Walk `type` and any nested type parameters reachable from it, verifying
-  // each not-yet-seen type and interrupting on the first failure.
-  auto verify = [&](Type type) {
-    return type.walk<WalkOrder::PreOrder>([&](Type nestedType) {
-      if (!verifiedTypes.insert(nestedType))
-        return WalkResult::advance();
-      if (auto user = dyn_cast<SymbolUserTypeInterface>(nestedType))
-        if (failed(user.verifySymbolUses(op, symbolTable)))
-          return WalkResult::interrupt();
-      return WalkResult::advance();
-    });
-  };
+                                            AttrTypeWalker &walker) {
+  auto verify = [&](Type type) { return walker.walk<WalkOrder::PreOrder>(type); };
 
   for (Type type : op->getOperandTypes())
     if (verify(type).wasInterrupted())
@@ -511,14 +499,13 @@ static LogicalResult verifyOpTypeSymbolUses(Operation *op,
         if (verify(argument.getType()).wasInterrupted())
           return failure();
 
-  // Verify types nested within the operation's attributes.
-  WalkResult attrResult =
-      op->getAttrDictionary().walk<WalkOrder::PreOrder>([&](Type type) {
-        if (verify(type).wasInterrupted())
-          return WalkResult::interrupt();
-        return WalkResult::advance();
-      });
-  return failure(attrResult.wasInterrupted());
+  // Verify types nested within the operation's attributes. Route the attribute
+  // dictionary through the same walker, and thus the same visited memo, as the
+  // type positions above, so a type recurring across positions and attributes
+  // is verified only at its first occurrence.
+  if (walker.walk<WalkOrder::PreOrder>(op->getAttrDictionary()).wasInterrupted())
+    return failure();
+  return success();
 }
 
 LogicalResult detail::verifySymbolTable(Operation *op) {
@@ -557,7 +544,24 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
   // regardless of which operation anchors the lookup, so each is verified at
   // most once across the whole scope.
   SetVector<Attribute> verifiedAttrs;
-  SetVector<Type> verifiedTypes;
+
+  // A single walker, shared across the whole scope, checks the symbol uses of
+  // every SymbolUserTypeInterface type. Its visited memo records each uniqued
+  // type and attribute once, so a subtree recurring across operand, result,
+  // block-argument, and attribute positions and across operations is walked
+  // only at its first occurrence, whose operation supplies the lookup anchor;
+  // a re-encounter returns from the memo without re-descending. Because a first
+  // occurrence descends the whole subtree pre-order and verification fails
+  // fast, skipping the re-descent verifies nothing new.
+  Operation *typeSymbolUseAnchor = nullptr;
+  AttrTypeWalker typeWalker;
+  typeWalker.addWalk([&](Type type) -> WalkResult {
+    if (auto user = dyn_cast<SymbolUserTypeInterface>(type))
+      if (failed(user.verifySymbolUses(typeSymbolUseAnchor, symbolTable)))
+        return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+
   auto verifySymbolUserFn = [&](Operation *op) -> std::optional<WalkResult> {
     if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
       if (failed(user.verifySymbolUses(symbolTable)))
@@ -570,7 +574,8 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
           return WalkResult::interrupt();
       }
     }
-    if (failed(verifyOpTypeSymbolUses(op, symbolTable, verifiedTypes)))
+    typeSymbolUseAnchor = op;
+    if (failed(verifyOpTypeSymbolUses(op, typeWalker)))
       return WalkResult::interrupt();
     return WalkResult::advance();
   };
