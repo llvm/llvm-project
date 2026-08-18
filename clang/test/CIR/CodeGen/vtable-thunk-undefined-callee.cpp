@@ -20,23 +20,21 @@ struct Derived : Middle {
 int Derived::f(int x) { return x; }
 } // namespace ConstructionVTableThunk
 
-// The Derived vtable's this-adjusting slot points at the thunk below.
-// CIR: cir.global "private" external @_ZTVN23ConstructionVTableThunk7DerivedE = #cir.vtable<{{{.*}}#cir.global_view<@_ZThn8_N23ConstructionVTableThunk7Derived1fEi> : !cir.ptr<!u8i>
+// The Middle-in-Derived construction vtable reaches Right::f through a virtual
+// thunk, and this translation unit only declares Right::f.
+// CIR: cir.global "private" constant external @_ZTCN23ConstructionVTableThunk7DerivedE0_NS_6MiddleE = #cir.vtable<{{{.*}}#cir.global_view<@_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi>
 
-// CIR-LABEL: cir.func {{.*}} @_ZThn8_N23ConstructionVTableThunk7Derived1fEi(%arg0: !cir.ptr<
-// CIR:   %[[THIS:.*]] = cir.load
-// CIR:   %[[CAST:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>
-// CIR:   %[[OFFSET:.*]] = cir.const #cir.int<-8> : !s64i
-// CIR:   %[[ADJUSTED:.*]] = cir.ptr_stride %[[CAST]], %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
-// CIR:   %[[RESULT:.*]] = cir.cast bitcast %[[ADJUSTED]] : !cir.ptr<!u8i> -> !cir.ptr<
-// CIR:   cir.call @_ZN23ConstructionVTableThunk7Derived1fEi(%[[RESULT]]
-// CIR:   cir.return
+// Emitting that thunk creates the Right::f declaration on demand.  It must
+// become a sibling of the thunk rather than nesting inside its body, so the
+// declarations are pinned to the ops immediately following the thunk.
+// CIR-LABEL: cir.func available_externally @_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi
+// CIR-NOT:     cir.func
+// CIR:         cir.call @_ZN23ConstructionVTableThunk5Right1fEi(
+// CIR:         cir.return %{{.+}} : !s32i
+// CIR-NEXT:  }
+// CIR-NEXT:  cir.func private @_ZN23ConstructionVTableThunk5Right1fEi(
+// CIR-NEXT:  cir.func private @_ZN23ConstructionVTableThunk4Base1fEi(
 
-// Right::f, materialized on demand during thunk emission, lands at module scope.
-// CIR: cir.func private @_ZN23ConstructionVTableThunk5Right1fEi
-
-// LLVM-LABEL: define {{.*}} i32 @_ZThn8_N23ConstructionVTableThunk7Derived1fEi(ptr{{.*}}, i32{{.*}})
-// LLVM:   %[[THIS:.*]] = load ptr, ptr
-// LLVM:   %[[ADJ:.*]] = getelementptr {{.*}}i8, ptr %[[THIS]], i64 -8
-// LLVM:   %[[ARG:.*]] = load i32, ptr
-// LLVM:   {{.*}}call {{.*}} i32 @_ZN23ConstructionVTableThunk7Derived1fEi(ptr{{.*}} %[[ADJ]], i32{{.*}} %[[ARG]])
+// LLVM: define available_externally noundef i32 @_ZTv0_n24_N23ConstructionVTableThunk5Right1fEi(ptr noundef %{{.+}}, i32 noundef %{{.+}})
+// LLVM:   {{(tail )?}}call noundef i32 @_ZN23ConstructionVTableThunk5Right1fEi(ptr noundef nonnull align 8 dereferenceable(8) %{{.+}}, i32 noundef %{{.+}})
+// LLVM: declare noundef i32 @_ZN23ConstructionVTableThunk5Right1fEi(ptr noundef nonnull align 8 dereferenceable(8), i32 noundef)

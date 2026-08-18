@@ -3617,20 +3617,10 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
-    // Some global emissions are triggered while emitting a function, e.g.
-    // void s() { x.method() }
-    //
-    // Be sure to insert a new function before a current one.
-    CIRGenFunction *cgf = this->curCGF;
-    if (cgf) {
-      builder.setInsertionPoint(cgf->curFn);
-    } else {
-      // No CIRGenFunction is active, but the builder's insertion point may
-      // still be inside another op (e.g. a function materialized on demand
-      // while generating a vtable thunk).  Insert at module scope so the new
-      // function is not parented under the ambient insertion point.
-      builder.setInsertionPointToEnd(theModule.getBody());
-    }
+    // Functions always belong at module scope, but the ambient insertion
+    // point may be inside another op's region, e.g. a thunk body or a
+    // global's ctor region, so it cannot be used here.
+    builder.setInsertionPointToEnd(theModule.getBody());
 
     func = cir::FuncOp::create(builder, loc, name, funcType);
 
