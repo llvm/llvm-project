@@ -661,12 +661,12 @@ namespace {
     SymbolReaper &SR;
     const Stmt *S;
     ExprEngine &Eng;
-    ProgramPoint::Kind ProgarmPointKind;
+    ProgramPoint::Kind ProgramPointKind;
 
     CheckDeadSymbolsContext(const CheckersTy &checkers, SymbolReaper &sr,
                             const Stmt *s, ExprEngine &eng,
                             ProgramPoint::Kind K)
-        : Checkers(checkers), SR(sr), S(s), Eng(eng), ProgarmPointKind(K) {}
+        : Checkers(checkers), SR(sr), S(s), Eng(eng), ProgramPointKind(K) {}
 
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
@@ -676,7 +676,7 @@ namespace {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("DeadSymbols", checkFn.Checker));
       const ProgramPoint &L = ProgramPoint::getProgramPoint(
-          S, ProgarmPointKind, Pred->getStackFrame(), checkFn.Checker);
+          S, ProgramPointKind, Pred->getStackFrame(), checkFn.Checker);
       CheckerContext C(Eng, Pred, Bldr.getFrontier(), L);
 
       // Note, do not pass the statement to the checkers without letting them
