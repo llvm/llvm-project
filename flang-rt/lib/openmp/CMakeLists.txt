@@ -6,22 +6,9 @@
 #
 #===------------------------------------------------------------------------===#
 
-# Check that Umpire exits in the directory given at CMake
-# TODO: this was disabled to get to an easier build procedure for now
-#message(STATUS "Using Umpire in directory ${FLANG_RT_UMPIRE_DIR}")
-#set(umpire_DIR ${FLANG_RT_UMPIRE_DIR})
-#find_package(umpire REQUIRED PATHS ${FLANG_RT_UMPIRE_DIR}/lib/cmake/umpire)
-
 add_flangrt_library(flang_rt.openmp STATIC SHARED
   omp_alloc.cpp
   omp_util.cpp
   INSTALL_WITH_TOOLCHAIN
 )
 
-#if (TARGET flang_rt.openmp.static)
-#  target_include_directories(flang_rt.openmp.static PRIVATE ${FLANG_RT_UMPIRE_DIR}/include)
-#endif()
-#
-#if (TARGET flang_rt.openmp.shared)
-#  target_include_directories(flang_rt.openmp.shared PRIVATE ${FLANG_RT_UMPIRE_DIR}/include)
-#endif()
