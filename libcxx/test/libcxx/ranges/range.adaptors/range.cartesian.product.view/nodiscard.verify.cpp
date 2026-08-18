@@ -63,30 +63,32 @@ void test() {
 
   // [range.cartesian.iterator]
 
-  auto iter = std::as_const(v).begin();
+  auto it   = v.begin();
+  auto c_it = std::as_const(v).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  *iter;
+  *c_it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter[0];
+  c_it[0];
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter + 0;
+  it + 0;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  0 + iter;
+  0 + it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter - 0;
+  it - 0;
 
-  // operator== and operator<=> are omitted: -Wunused-value already warns on discarded comparisons.
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter - iter;
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter - std::default_sentinel;
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::default_sentinel - iter;
+  // operator++, operator--, operator== and operator<=> are omitted:
+  // -Wunused-value already warns on discarded comparisons.
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  iter_move(iter);
+  it - it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it - std::default_sentinel;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::default_sentinel - it;
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  iter_move(c_it);
 
   // [range.cartesian.overview]
 
