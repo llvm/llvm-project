@@ -1472,6 +1472,17 @@ void CodeGenModule::Release() {
   }
 
   llvm::Triple T = Context.getTargetInfo().getTriple();
+
+  // TODO: This should probably be just generally emitted for non-empty ABI
+  // names. LoongArch actively consumes the flag, but it is excluded here.
+  // Other targets have no apparent need for the ABI name, but set a non-empty
+  // value.
+  if (StringRef ABIStr = Target.getABI();
+      !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV())) {
+    getModule().addModuleFlag(llvm::Module::Error, "target-abi",
+                              llvm::MDString::get(VMContext, ABIStr));
+  }
+
   if (T.isARM() || T.isThumb()) {
     // The minimum width of an enum in bytes
     uint32_t EnumWidth = Context.getLangOpts().ShortEnums ? 1 : 4;
@@ -1479,10 +1490,7 @@ void CodeGenModule::Release() {
   }
 
   if (T.isRISCV()) {
-    StringRef ABIStr = Target.getABI();
     llvm::LLVMContext &Ctx = TheModule.getContext();
-    getModule().addModuleFlag(llvm::Module::Error, "target-abi",
-                              llvm::MDString::get(Ctx, ABIStr));
 
     // Add the canonical ISA string as metadata so the backend can set the ELF
     // attributes correctly. We use AppendUnique so LTO will keep all of the
