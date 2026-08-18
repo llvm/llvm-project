@@ -5170,11 +5170,19 @@ private:
   // attribute. Such a result may be produced by an asynchronous kernel, so
   // consuming it in an assignment must be a synchronizing data transfer rather
   // than a plain host assignment. A whole-allocatable left-hand side is
-  // excluded: it has reallocation semantics and is performed on the host.
+  // excluded: it has reallocation semantics and is performed on the host, and
+  // so is a scalar character result: it carries its length outside of a
+  // descriptor, so a transfer would copy raw bytes instead of padding or
+  // truncating the destination.
   bool
   isCUDAFunctionResultTransfer(const Fortran::evaluate::Assignment &assign) {
     if (Fortran::evaluate::IsAllocatableDesignator(assign.lhs))
       return false;
+    if (assign.rhs.Rank() == 0)
+      if (std::optional<Fortran::evaluate::DynamicType> type{
+              assign.rhs.GetType()})
+        if (type->category() == Fortran::common::TypeCategory::Character)
+          return false;
     const Fortran::evaluate::ProcedureRef *procRef =
         Fortran::evaluate::UnwrapProcedureRef(assign.rhs);
     if (!procRef)
