@@ -416,6 +416,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
+- Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 
 #### Bug Fixes to Compiler Builtins
 

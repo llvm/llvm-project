@@ -26676,6 +26676,27 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // uzp1(nvcast(x >> k), nvcast(y >> k)) -> uzp2(nvcast(x), nvcast(y))
+  // where 'k' is 'sizeof(eltty(x))/2'.
+  if (SDValue PreCastOp0 = isNVCastToHalfWidthElements(Op0)) {
+    if (SDValue PreCastOp1 = isNVCastToHalfWidthElements(Op1)) {
+      if (PreCastOp0.getOpcode() == ISD::SRL &&
+          PreCastOp1.getOpcode() == ISD::SRL &&
+          PreCastOp0.getOperand(1) == PreCastOp1.getOperand(1)) {
+        ConstantSDNode *ShiftAmount =
+            isConstOrConstSplat(PreCastOp0.getOperand(1), /*AllowUndef=*/false,
+                                /*AllowTruncate=*/true);
+        if (ShiftAmount &&
+            ShiftAmount->getAsZExtVal() == ResVT.getScalarSizeInBits())
+          return DAG.getNode(AArch64ISD::UZP2, DL, ResVT,
+                             DAG.getNode(AArch64ISD::NVCAST, DL, ResVT,
+                                         PreCastOp0.getOperand(0)),
+                             DAG.getNode(AArch64ISD::NVCAST, DL, ResVT,
+                                         PreCastOp1.getOperand(0)));
+      }
+    }
+  }
+
   // These optimizations only work on little endian.
   if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
@@ -28427,6 +28448,9 @@ bool checkValueWidth(SDValue V, unsigned width, ISD::LoadExtType &ExtType) {
     LoadSDNode *LoadNode = cast<LoadSDNode>(V.getNode());
     if ((LoadNode->getMemoryVT() == MVT::i8 && width == 8)
        || (LoadNode->getMemoryVT() == MVT::i16 && width == 16)) {
+      if (LoadNode->getExtensionType() != ISD::SEXTLOAD &&
+          LoadNode->getExtensionType() != ISD::ZEXTLOAD)
+        return false;
       ExtType = LoadNode->getExtensionType();
       return true;
     }
