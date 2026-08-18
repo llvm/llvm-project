@@ -25,7 +25,6 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 } loc(#loc)
 
 #loc = loc("test.f90":4:18)
-#loc1 = loc("test.f90":4:18)
 
 #di_file = #llvm.di_file<"test.f90" in "">
 #di_null_type = #llvm.di_null_type
@@ -39,9 +38,13 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   file = #di_file, subprogramFlags = "Definition|MainSubprogram",
   type = #di_subroutine_type>
 
-#loc12 = loc(fused<#di_subprogram>[#loc1])
+#loc12 = loc(fused<#di_subprogram>[#loc])
 
-// CHECK: define internal void @{{.*}}omp_mapper{{.*}}_QQFmy_testmy_mapper
+// The mapper function has no debug info of its own, so none of its
+// instructions may carry a debug location belonging to another function.
+
+// CHECK-LABEL: define internal void @{{.*}}omp_mapper{{.*}}_QQFmy_testmy_mapper
 // CHECK-NOT: !dbg
-// CHECK: }
+// CHECK: ret void
+// CHECK-NEXT: }
 
