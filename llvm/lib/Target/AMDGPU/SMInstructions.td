@@ -861,9 +861,8 @@ def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
   }];
 }
 
-def SMRDImm          : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
-def SMRDDwordImm     : ComplexPattern<iPTR, 2, "SelectSMRDDwordImm">;
-def SMRDImm32        : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
+def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
+def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
 let WantsRoot = true in {
   def SMRDSgpr        : ComplexPattern<iPTR, 3, "SelectSMRDSgpr", [], [], -3>;
   def SMRDSgprImm     : ComplexPattern<iPTR, 4, "SelectSMRDSgprImm", [], []>;
@@ -891,7 +890,7 @@ multiclass SMRD_Patterns <string Instr, ValueType vt, PatFrag frag,
                           bit immci = true, string suffix = ""> {
   // 1. IMM offset
   def : GCNPat <
-    (frag (SMRDDwordImm i64:$sbase, i32:$offset)),
+    (frag (SMRDImm i64:$sbase, i32:$offset)),
     (vt (!cast<SM_Pseudo>(Instr#"_IMM"#suffix) $sbase, $offset, 0))>;
 
   // 2. 32-bit IMM offset on CI

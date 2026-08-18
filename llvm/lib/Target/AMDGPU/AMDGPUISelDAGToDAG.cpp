@@ -2636,27 +2636,6 @@ bool AMDGPUDAGToDAGISel::SelectSMRDImm(SDValue Addr, SDValue &SBase,
                     &Offset);
 }
 
-bool AMDGPUDAGToDAGISel::SelectSMRDDwordImm(SDValue Addr, SDValue &SBase,
-                                            SDValue &Offset) const {
-  if (!SelectSMRD(/* N */ nullptr, Addr, SBase, /* SOffset */ nullptr,
-                  &Offset))
-    return false;
-
-  // This selector is used for S_LOAD_DWORD* instructions. On GFX11+, their
-  // immediate byte offset must be dword aligned. If an aligned address is split
-  // into an unaligned base and a non-dword-aligned immediate (for example,
-  // 22 + 2), encoding them separately loses the carry from the low address bits.
-  // Materialize the complete address in sbase and use an immediate offset of 0.
-  auto *ConstantOffset = cast<ConstantSDNode>(Offset);
-  if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-      (ConstantOffset->getSExtValue() & 3) != 0) {
-    SBase = Expand32BitAddress(Addr);
-    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
-  }
-
-  return true;
-}
-
 bool AMDGPUDAGToDAGISel::SelectSMRDImm32(SDValue Addr, SDValue &SBase,
                                          SDValue &Offset) const {
   assert(Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS);
