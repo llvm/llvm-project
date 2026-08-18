@@ -201,6 +201,8 @@
 ---
 name: exp_f16_imm
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 15360
@@ -212,6 +214,8 @@ body: |
 ---
 name: exp_f16_literal
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 16960
@@ -223,6 +227,8 @@ body: |
 ---
 name: log_f16_imm
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 15360
@@ -234,6 +240,8 @@ body: |
 ---
 name: log_f16_literal
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 16960
@@ -245,6 +253,8 @@ body: |
 ---
 name: rcp_f16_imm
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 15360
@@ -256,6 +266,8 @@ body: |
 ---
 name: rcp_f16_literal
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 16960
@@ -267,6 +279,8 @@ body: |
 ---
 name: rsq_f16_imm
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 15360
@@ -278,6 +292,8 @@ body: |
 ---
 name: rsq_f16_literal
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 16960
@@ -289,6 +305,8 @@ body: |
 ---
 name: sqrt_f16_imm
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 15360
@@ -300,6 +318,8 @@ body: |
 ---
 name: sqrt_f16_literal
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
 body: |
   bb.0:
     %0:sgpr_32 = S_MOV_B32 16960
