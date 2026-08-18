@@ -166,6 +166,12 @@ public:
   /// explicitly, and fall back to the inherited behaviour otherwise.
   std::optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
 
+  /// Byte offset of ivar \p ivar_name within \p parent_qual_type, or
+  /// LLDB_INVALID_IVAR_OFFSET. Without this the offset comes from laying the
+  /// class out as a plain struct, which libobjc2's does not match.
+  size_t GetByteOffsetForIvar(CompilerType &parent_qual_type,
+                              const char *ivar_name) override;
+
   /// Size of an Objective-C class, in bits.
   ///
   /// The inherited implementation derives this from the ivar list, as the end

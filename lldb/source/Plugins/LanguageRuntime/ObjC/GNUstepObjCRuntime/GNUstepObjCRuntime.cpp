@@ -1319,6 +1319,29 @@ GNUstepObjCRuntime::GetClassDescriptor(ValueObject &in_value) {
   return ObjCLanguageRuntime::GetClassDescriptor(in_value);
 }
 
+size_t GNUstepObjCRuntime::GetByteOffsetForIvar(CompilerType &parent_qual_type,
+                                                const char *ivar_name) {
+  // An instance is allocated behind a reference-count word, and libobjc2
+  // aligns each ivar with that word included (objc_compute_ivar_offsets,
+  // ivar.c). An ivar needing more than pointer alignment therefore sits at a
+  // different offset than laying the class out as a plain struct would give,
+  // and only the runtime's own metadata knows which. Offsets are absolute, so
+  // a superclass's ivar needs no adjustment.
+  ClassDescriptorSP descriptor_sp =
+      GetClassDescriptorFromClassName(parent_qual_type.GetTypeName());
+  const ConstString name(ivar_name);
+  for (uint32_t depth = 0; descriptor_sp && depth < g_max_superclass_depth;
+       ++depth, descriptor_sp = descriptor_sp->GetSuperclass()) {
+    const size_t num_ivars = descriptor_sp->GetNumIVars();
+    for (size_t i = 0; i < num_ivars; ++i) {
+      const auto &ivar = descriptor_sp->GetIVarAtIndex(i);
+      if (ivar.m_name == name)
+        return ivar.m_offset;
+    }
+  }
+  return LLDB_INVALID_IVAR_OFFSET;
+}
+
 std::optional<uint64_t>
 GNUstepObjCRuntime::GetTypeBitSize(const CompilerType &compiler_type) {
   ClassDescriptorSP descriptor_sp =
