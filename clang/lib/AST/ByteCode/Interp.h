@@ -2748,8 +2748,8 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
         return false;
       }
 
-      if (LHSAddrExpr->getLabel()->getDeclContext()->getAsFunctionDecl() !=
-          RHSAddrExpr->getLabel()->getDeclContext()->getAsFunctionDecl())
+      if (LHSAddrExpr->getLabel()->getDeclContext() !=
+          RHSAddrExpr->getLabel()->getDeclContext())
         return Invalid(S, OpPC);
 
       S.Stk.push<T>(LHSAddrExpr, RHSAddrExpr);
