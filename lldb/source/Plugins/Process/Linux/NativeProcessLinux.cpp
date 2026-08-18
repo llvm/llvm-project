@@ -1614,8 +1614,10 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   }
 }
 
-Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+Status NativeProcessLinux::ReadMemory(const ProcessAddress &process_addr,
+                                      void *buf, size_t size,
                                       size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   Log *log = GetLog(POSIXLog::Memory);
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 

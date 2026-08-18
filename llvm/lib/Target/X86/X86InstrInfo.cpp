@@ -5476,7 +5476,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2.isPhysical())
     return false;
   MachineInstr *SrcRegDef = MRI->getVRegDef(SrcReg);
-  assert(SrcRegDef && "Must have a definition (SSA)");
+  if (!SrcRegDef)
+    return false;
 
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
