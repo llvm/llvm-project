@@ -609,6 +609,25 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   return Result;
 }
 
+// Check if a scalar access of AccessTy spans several elements of a
+// promoted alloca whose element type is VecEltTy, and so has to be split
+// the same way a vector access is. This happens when an object is written
+// one element at a time but read back in wider pieces, e.g. i32 stores into
+// an alloca that is later loaded as i64.
+static bool isMultiElementScalarAccess(Type *VecEltTy, Type *AccessTy,
+                                       const DataLayout &DL) {
+  if (!AccessTy->isIntegerTy() && !AccessTy->isFloatingPointTy())
+    return false;
+
+  TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
+  // Padding would leave the split pieces at the wrong offsets.
+  if (AccTS * 8 != DL.getTypeSizeInBits(AccessTy))
+    return false;
+
+  TypeSize EltTS = DL.getTypeStoreSize(VecEltTy);
+  return AccTS > EltTS && AccTS.isKnownMultipleOf(EltTS);
+}
+
 /// Promotes a single user of the alloca to a vector form.
 ///
 /// \param Inst           Instruction to be promoted.
@@ -652,8 +671,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       }
     }
 
-    // Loading a subvector.
-    if (isa<FixedVectorType>(AccessTy)) {
+    // Loading a subvector, or a scalar that spans several elements.
+    if (isa<FixedVectorType>(AccessTy) ||
+        isMultiElementScalarAccess(VecEltTy, AccessTy, DL)) {
       assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
       const unsigned NumLoadedElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumLoadedElts);
@@ -728,8 +748,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       if (CI->isNullValue() && AccessSize == VecStoreSize)
         return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
 
-    // Storing a subvector.
-    if (isa<FixedVectorType>(AccessTy)) {
+    // Storing a subvector, or a scalar that spans several elements.
+    if (isa<FixedVectorType>(AccessTy) ||
+        isMultiElementScalarAccess(VecEltTy, AccessTy, DL)) {
       assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
       const unsigned NumWrittenElts =
           AccessSize / DL.getTypeStoreSize(VecEltTy);
@@ -839,6 +860,9 @@ static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
     TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
     return AccTS.isKnownMultipleOf(VecTS);
   }
+
+  if (isMultiElementScalarAccess(VecTy->getElementType(), AccessTy, DL))
+    return true;
 
   return CastInst::isBitOrNoopPointerCastable(VecTy->getElementType(), AccessTy,
                                               DL);
