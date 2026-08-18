@@ -612,6 +612,14 @@ func.func @test_block_scaled_concat(%arg0: tensor<13x21x32x!tosa.block_scaled<BL
 
 // -----
 
+// CHECK-LABEL: test_block_scaled_dim
+func.func @test_block_scaled_dim(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) {
+  %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> !tosa.shape<1>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: test_resize_fp8
 func.func @test_resize_fp8(%arg0: tensor<1x32x32x8xf8E4M3FN>, %arg1: tensor<1x32x32x8xf8E5M2>) {
   %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
