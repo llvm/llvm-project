@@ -128,61 +128,23 @@ declare float @retFloatTakeFloatFloatNoundef(float, float noundef)
 declare void @void()
 
 define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
-; UNLIM-LABEL: @non_matching_fp1(
-; UNLIM-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
-; UNLIM-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr @void
-; UNLIM-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; UNLIM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
-; UNLIM-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; UNLIM:       2:
-; UNLIM-NEXT:    [[CALL1:%.*]] = call i32 @takeI32(i32 42)
-; UNLIM-NEXT:    br label [[TMP15:%.*]]
-; UNLIM:       3:
-; UNLIM-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
-; UNLIM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
-; UNLIM:       5:
-; UNLIM-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
-; UNLIM-NEXT:    br label [[TMP15]]
-; UNLIM:       6:
-; UNLIM-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP]], @void
-; UNLIM-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
-; UNLIM:       8:
-; UNLIM-NEXT:    [[CALL3:%.*]] = call i32 @void(i32 42)
-; UNLIM-NEXT:    br label [[TMP15]]
-; UNLIM:       9:
-; UNLIM-NEXT:    br i1 true, label [[TMP10:%.*]], label [[TMP14:%.*]]
-; UNLIM:       10:
-; UNLIM-NEXT:    [[TMP11:%.*]] = bitcast i32 42 to float
-; UNLIM-NEXT:    [[TMP12:%.*]] = call float @retFloatTakeFloat(float [[TMP11]])
-; UNLIM-NEXT:    [[TMP13:%.*]] = bitcast float [[TMP12]] to i32
-; UNLIM-NEXT:    br label [[TMP15]]
-; UNLIM:       14:
-; UNLIM-NEXT:    unreachable
-; UNLIM:       15:
-; UNLIM-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP8]] ], [ [[TMP13]], [[TMP10]] ]
-; UNLIM-NEXT:    ret i32 [[CALL_PHI]]
-;
-; LIMI2-LABEL: @non_matching_fp1(
-; LIMI2-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
-; LIMI2-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr @void
-; LIMI2-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; LIMI2-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
-; LIMI2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; LIMI2:       2:
-; LIMI2-NEXT:    [[CALL1:%.*]] = call i32 @takeI32(i32 42)
-; LIMI2-NEXT:    br label [[TMP7:%.*]]
-; LIMI2:       3:
-; LIMI2-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
-; LIMI2-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
-; LIMI2:       5:
-; LIMI2-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
-; LIMI2-NEXT:    br label [[TMP7]]
-; LIMI2:       6:
-; LIMI2-NEXT:    [[CALL3:%.*]] = call i32 [[FP]](i32 42), !callees [[META0:![0-9]+]]
-; LIMI2-NEXT:    br label [[TMP7]]
-; LIMI2:       7:
-; LIMI2-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP6]] ]
-; LIMI2-NEXT:    ret i32 [[CALL_PHI]]
+; UPTO2-LABEL: @non_matching_fp1(
+; UPTO2-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
+; UPTO2-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr @void
+; UPTO2-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; UPTO2-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @retFloatTakeFloat
+; UPTO2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP6:%.*]]
+; UPTO2:       2:
+; UPTO2-NEXT:    [[TMP3:%.*]] = bitcast i32 42 to float
+; UPTO2-NEXT:    [[TMP4:%.*]] = call float @retFloatTakeFloat(float [[TMP3]])
+; UPTO2-NEXT:    [[TMP5:%.*]] = bitcast float [[TMP4]] to i32
+; UPTO2-NEXT:    br label [[TMP7:%.*]]
+; UPTO2:       6:
+; UPTO2-NEXT:    [[CALL1:%.*]] = call i32 [[FP]](i32 42), !callees [[META0:![0-9]+]]
+; UPTO2-NEXT:    br label [[TMP7]]
+; UPTO2:       7:
+; UPTO2-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[TMP5]], [[TMP2]] ], [ [[CALL1]], [[TMP6]] ]
+; UPTO2-NEXT:    ret i32 [[CALL_PHI]]
 ;
 ; LIMI0-LABEL: @non_matching_fp1(
 ; LIMI0-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
@@ -199,53 +161,12 @@ define i32 @non_matching_fp1(i1 %c1, i1 %c2, i1 %c) {
 }
 
 define i32 @non_matching_fp1_noundef(i1 %c1, i1 %c2, i1 %c) {
-; UNLIM-LABEL: @non_matching_fp1_noundef(
-; UNLIM-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
-; UNLIM-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloatFloatNoundef, ptr @void
-; UNLIM-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; UNLIM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
-; UNLIM-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; UNLIM:       2:
-; UNLIM-NEXT:    [[CALL1:%.*]] = call i32 @takeI32(i32 42)
-; UNLIM-NEXT:    br label [[TMP9:%.*]]
-; UNLIM:       3:
-; UNLIM-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
-; UNLIM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
-; UNLIM:       5:
-; UNLIM-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
-; UNLIM-NEXT:    br label [[TMP9]]
-; UNLIM:       6:
-; UNLIM-NEXT:    br i1 true, label [[TMP7:%.*]], label [[TMP8:%.*]]
-; UNLIM:       7:
-; UNLIM-NEXT:    [[CALL3:%.*]] = call i32 @void(i32 42)
-; UNLIM-NEXT:    br label [[TMP9]]
-; UNLIM:       8:
-; UNLIM-NEXT:    unreachable
-; UNLIM:       9:
-; UNLIM-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP7]] ]
-; UNLIM-NEXT:    ret i32 [[CALL_PHI]]
-;
-; LIMI2-LABEL: @non_matching_fp1_noundef(
-; LIMI2-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
-; LIMI2-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloatFloatNoundef, ptr @void
-; LIMI2-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; LIMI2-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
-; LIMI2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; LIMI2:       2:
-; LIMI2-NEXT:    [[CALL1:%.*]] = call i32 @takeI32(i32 42)
-; LIMI2-NEXT:    br label [[TMP7:%.*]]
-; LIMI2:       3:
-; LIMI2-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
-; LIMI2-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
-; LIMI2:       5:
-; LIMI2-NEXT:    [[CALL2:%.*]] = call i32 @retI32(i32 42)
-; LIMI2-NEXT:    br label [[TMP7]]
-; LIMI2:       6:
-; LIMI2-NEXT:    [[CALL3:%.*]] = call i32 [[FP]](i32 42), !callees [[META1:![0-9]+]]
-; LIMI2-NEXT:    br label [[TMP7]]
-; LIMI2:       7:
-; LIMI2-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP6]] ]
-; LIMI2-NEXT:    ret i32 [[CALL_PHI]]
+; UPTO2-LABEL: @non_matching_fp1_noundef(
+; UPTO2-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
+; UPTO2-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloatFloatNoundef, ptr @void
+; UPTO2-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; UPTO2-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42), !callees [[META0]]
+; UPTO2-NEXT:    ret i32 [[CALL]]
 ;
 ; LIMI0-LABEL: @non_matching_fp1_noundef(
 ; LIMI0-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
@@ -262,108 +183,38 @@ define i32 @non_matching_fp1_noundef(i1 %c1, i1 %c2, i1 %c) {
 }
 
 define void @non_matching_fp2(i1 %c1, i1 %c2, i1 %c, ptr %unknown) {
-; OUNLM-LABEL: @non_matching_fp2(
-; OUNLM-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
-; OUNLM-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr [[UNKNOWN:%.*]]
-; OUNLM-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; OUNLM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
-; OUNLM-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; OUNLM:       2:
-; OUNLM-NEXT:    call void @takeI32()
-; OUNLM-NEXT:    br label [[TMP10:%.*]]
-; OUNLM:       3:
-; OUNLM-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
-; OUNLM-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
-; OUNLM:       5:
-; OUNLM-NEXT:    call void @retI32()
-; OUNLM-NEXT:    br label [[TMP10]]
-; OUNLM:       6:
-; OUNLM-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP]], @retFloatTakeFloat
-; OUNLM-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
-; OUNLM:       8:
-; OUNLM-NEXT:    call void @retFloatTakeFloat()
-; OUNLM-NEXT:    br label [[TMP10]]
-; OUNLM:       9:
-; OUNLM-NEXT:    call void [[FP]]()
-; OUNLM-NEXT:    br label [[TMP10]]
-; OUNLM:       10:
-; OUNLM-NEXT:    ret void
-;
-; LIMI2-LABEL: @non_matching_fp2(
-; LIMI2-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
-; LIMI2-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr [[UNKNOWN:%.*]]
-; LIMI2-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; LIMI2-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
-; LIMI2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; LIMI2:       2:
-; LIMI2-NEXT:    call void @takeI32()
-; LIMI2-NEXT:    br label [[TMP7:%.*]]
-; LIMI2:       3:
-; LIMI2-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
-; LIMI2-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
-; LIMI2:       5:
-; LIMI2-NEXT:    call void @retI32()
-; LIMI2-NEXT:    br label [[TMP7]]
-; LIMI2:       6:
-; LIMI2-NEXT:    call void [[FP]]()
-; LIMI2-NEXT:    br label [[TMP7]]
-; LIMI2:       7:
-; LIMI2-NEXT:    ret void
-;
-; LIMI0-LABEL: @non_matching_fp2(
-; LIMI0-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
-; LIMI0-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr [[UNKNOWN:%.*]]
-; LIMI0-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; LIMI0-NEXT:    call void [[FP]]()
-; LIMI0-NEXT:    ret void
+; OWRDL-LABEL: @non_matching_fp2(
+; OWRDL-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
+; OWRDL-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr [[UNKNOWN:%.*]]
+; OWRDL-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
+; OWRDL-NEXT:    call void [[FP]]()
+; OWRDL-NEXT:    ret void
 ;
 ; CWRLD-LABEL: @non_matching_fp2(
 ; CWRLD-NEXT:    [[FP1:%.*]] = select i1 [[C1:%.*]], ptr @retI32, ptr @takeI32
 ; CWRLD-NEXT:    [[FP2:%.*]] = select i1 [[C2:%.*]], ptr @retFloatTakeFloat, ptr [[UNKNOWN:%.*]]
 ; CWRLD-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr [[FP1]], ptr [[FP2]]
-; CWRLD-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @takeI32
+; CWRLD-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @func3
 ; CWRLD-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
 ; CWRLD:       2:
-; CWRLD-NEXT:    call void @takeI32()
+; CWRLD-NEXT:    call void @func3()
 ; CWRLD-NEXT:    br label [[TMP21:%.*]]
 ; CWRLD:       3:
-; CWRLD-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @retI32
+; CWRLD-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @func4
 ; CWRLD-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
 ; CWRLD:       5:
-; CWRLD-NEXT:    call void @retI32()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       6:
-; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP]], @func3
-; CWRLD-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
-; CWRLD:       8:
-; CWRLD-NEXT:    call void @func3()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       9:
-; CWRLD-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[FP]], @func4
-; CWRLD-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
-; CWRLD:       11:
 ; CWRLD-NEXT:    call void @func4()
 ; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       12:
-; CWRLD-NEXT:    [[TMP13:%.*]] = icmp eq ptr [[FP]], @retFloatTakeFloat
-; CWRLD-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]]
-; CWRLD:       14:
-; CWRLD-NEXT:    call void @retFloatTakeFloat()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       15:
-; CWRLD-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[FP]], @retFloatTakeFloatFloatNoundef
-; CWRLD-NEXT:    br i1 [[TMP16]], label [[TMP17:%.*]], label [[TMP18:%.*]]
-; CWRLD:       17:
-; CWRLD-NEXT:    call void @retFloatTakeFloatFloatNoundef()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       18:
-; CWRLD-NEXT:    br i1 true, label [[TMP19:%.*]], label [[TMP20:%.*]]
-; CWRLD:       19:
+; CWRLD:       6:
+; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP]], @void
+; CWRLD-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
+; CWRLD:       8:
 ; CWRLD-NEXT:    call void @void()
 ; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       20:
-; CWRLD-NEXT:    unreachable
-; CWRLD:       21:
+; CWRLD:       9:
+; CWRLD-NEXT:    call void [[FP]](), !callees [[META1:![0-9]+]]
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       10:
 ; CWRLD-NEXT:    ret void
 ;
   %fp1 = select i1 %c1, ptr @retI32, ptr @takeI32
@@ -374,87 +225,25 @@ define void @non_matching_fp2(i1 %c1, i1 %c2, i1 %c, ptr %unknown) {
 }
 
 define i32 @non_matching_unknown(i1 %c, ptr %fn) {
-; OUNLM-LABEL: @non_matching_unknown(
-; OUNLM-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr @retI32, ptr [[FN:%.*]]
-; OUNLM-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @retI32
-; OUNLM-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; OUNLM:       2:
-; OUNLM-NEXT:    [[CALL1:%.*]] = call i32 @retI32(i32 42)
-; OUNLM-NEXT:    br label [[TMP4:%.*]]
-; OUNLM:       3:
-; OUNLM-NEXT:    [[CALL2:%.*]] = call i32 [[FP]](i32 42)
-; OUNLM-NEXT:    br label [[TMP4]]
-; OUNLM:       4:
-; OUNLM-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP3]] ]
-; OUNLM-NEXT:    ret i32 [[CALL_PHI]]
-;
-; LIMI2-LABEL: @non_matching_unknown(
-; LIMI2-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr @retI32, ptr [[FN:%.*]]
-; LIMI2-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @retI32
-; LIMI2-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; LIMI2:       2:
-; LIMI2-NEXT:    [[CALL1:%.*]] = call i32 @retI32(i32 42)
-; LIMI2-NEXT:    br label [[TMP4:%.*]]
-; LIMI2:       3:
-; LIMI2-NEXT:    [[CALL2:%.*]] = call i32 [[FP]](i32 42)
-; LIMI2-NEXT:    br label [[TMP4]]
-; LIMI2:       4:
-; LIMI2-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP3]] ]
-; LIMI2-NEXT:    ret i32 [[CALL_PHI]]
-;
-; LIMI0-LABEL: @non_matching_unknown(
-; LIMI0-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr @retI32, ptr [[FN:%.*]]
-; LIMI0-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42)
-; LIMI0-NEXT:    ret i32 [[CALL]]
+; OWRDL-LABEL: @non_matching_unknown(
+; OWRDL-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr @retI32, ptr [[FN:%.*]]
+; OWRDL-NEXT:    [[CALL:%.*]] = call i32 [[FP]](i32 42)
+; OWRDL-NEXT:    ret i32 [[CALL]]
 ;
 ; CWRLD-LABEL: @non_matching_unknown(
 ; CWRLD-NEXT:    [[FP:%.*]] = select i1 [[C:%.*]], ptr @retI32, ptr [[FN:%.*]]
-; CWRLD-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @func3
-; CWRLD-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; CWRLD:       2:
-; CWRLD-NEXT:    [[CALL1:%.*]] = call i32 @func3(i32 42)
-; CWRLD-NEXT:    br label [[TMP24:%.*]]
-; CWRLD:       3:
-; CWRLD-NEXT:    [[TMP4:%.*]] = icmp eq ptr [[FP]], @func4
-; CWRLD-NEXT:    br i1 [[TMP4]], label [[TMP5:%.*]], label [[TMP6:%.*]]
-; CWRLD:       5:
-; CWRLD-NEXT:    [[CALL2:%.*]] = call i32 @func4(i32 42)
-; CWRLD-NEXT:    br label [[TMP24]]
-; CWRLD:       6:
-; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP]], @retI32
-; CWRLD-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
-; CWRLD:       8:
-; CWRLD-NEXT:    [[CALL3:%.*]] = call i32 @retI32(i32 42)
-; CWRLD-NEXT:    br label [[TMP24]]
-; CWRLD:       9:
-; CWRLD-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[FP]], @takeI32
-; CWRLD-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
-; CWRLD:       11:
-; CWRLD-NEXT:    [[CALL4:%.*]] = call i32 @takeI32(i32 42)
-; CWRLD-NEXT:    br label [[TMP24]]
-; CWRLD:       12:
 ; CWRLD-NEXT:    [[TMP13:%.*]] = icmp eq ptr [[FP]], @retFloatTakeFloat
 ; CWRLD-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP18:%.*]]
-; CWRLD:       14:
+; CWRLD:       2:
 ; CWRLD-NEXT:    [[TMP15:%.*]] = bitcast i32 42 to float
 ; CWRLD-NEXT:    [[TMP16:%.*]] = call float @retFloatTakeFloat(float [[TMP15]])
 ; CWRLD-NEXT:    [[TMP17:%.*]] = bitcast float [[TMP16]] to i32
+; CWRLD-NEXT:    br label [[TMP24:%.*]]
+; CWRLD:       6:
+; CWRLD-NEXT:    [[CALL1:%.*]] = call i32 [[FP]](i32 42), !callees [[META2:![0-9]+]]
 ; CWRLD-NEXT:    br label [[TMP24]]
-; CWRLD:       18:
-; CWRLD-NEXT:    [[TMP19:%.*]] = icmp eq ptr [[FP]], @retFloatTakeFloatFloatNoundef
-; CWRLD-NEXT:    br i1 [[TMP19]], label [[TMP20:%.*]], label [[TMP21:%.*]]
-; CWRLD:       20:
-; CWRLD-NEXT:    [[CALL5:%.*]] = call i32 @retFloatTakeFloatFloatNoundef(i32 42)
-; CWRLD-NEXT:    br label [[TMP24]]
-; CWRLD:       21:
-; CWRLD-NEXT:    br i1 true, label [[TMP22:%.*]], label [[TMP23:%.*]]
-; CWRLD:       22:
-; CWRLD-NEXT:    [[CALL6:%.*]] = call i32 @void(i32 42)
-; CWRLD-NEXT:    br label [[TMP24]]
-; CWRLD:       23:
-; CWRLD-NEXT:    unreachable
-; CWRLD:       24:
-; CWRLD-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[CALL1]], [[TMP2]] ], [ [[CALL2]], [[TMP5]] ], [ [[CALL3]], [[TMP8]] ], [ [[CALL4]], [[TMP11]] ], [ [[TMP17]], [[TMP14]] ], [ [[CALL5]], [[TMP20]] ], [ [[CALL6]], [[TMP22]] ]
+; CWRLD:       7:
+; CWRLD-NEXT:    [[CALL_PHI:%.*]] = phi i32 [ [[TMP17]], [[TMP14]] ], [ [[CALL1]], [[TMP18]] ]
 ; CWRLD-NEXT:    ret i32 [[CALL_PHI]]
 ;
   %fp = select i1 %c, ptr @retI32, ptr %fn
@@ -501,37 +290,15 @@ define void @broker(ptr %unknown) !callback !0 {
 ; CWRLD-NEXT:    call void @func4()
 ; CWRLD-NEXT:    br label [[TMP21]]
 ; CWRLD:       6:
-; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[UNKNOWN]], @retI32
+; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[UNKNOWN]], @void
 ; CWRLD-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
 ; CWRLD:       8:
-; CWRLD-NEXT:    call void @retI32()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       9:
-; CWRLD-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[UNKNOWN]], @takeI32
-; CWRLD-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
-; CWRLD:       11:
-; CWRLD-NEXT:    call void @takeI32()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       12:
-; CWRLD-NEXT:    [[TMP13:%.*]] = icmp eq ptr [[UNKNOWN]], @retFloatTakeFloat
-; CWRLD-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]]
-; CWRLD:       14:
-; CWRLD-NEXT:    call void @retFloatTakeFloat()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       15:
-; CWRLD-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[UNKNOWN]], @retFloatTakeFloatFloatNoundef
-; CWRLD-NEXT:    br i1 [[TMP16]], label [[TMP17:%.*]], label [[TMP18:%.*]]
-; CWRLD:       17:
-; CWRLD-NEXT:    call void @retFloatTakeFloatFloatNoundef()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       18:
-; CWRLD-NEXT:    br i1 true, label [[TMP19:%.*]], label [[TMP20:%.*]]
-; CWRLD:       19:
 ; CWRLD-NEXT:    call void @void()
 ; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       20:
-; CWRLD-NEXT:    unreachable
-; CWRLD:       21:
+; CWRLD:       9:
+; CWRLD-NEXT:    call void [[UNKNOWN]](), !callees [[META5:![0-9]+]]
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       10:
 ; CWRLD-NEXT:    ret void
 ;
   call void %unknown()
@@ -576,20 +343,25 @@ define void @func7(ptr %unknown) {
 
 ; Check there's no crash if something that isn't a function appears in !callees
 define void @undef_in_callees() {
-; UNLIM-LABEL: @undef_in_callees(
-; UNLIM-NEXT:  cond.end.i:
-; UNLIM-NEXT:    call void poison(ptr poison, i32 poison, ptr poison), !callees [[META2:![0-9]+]]
-; UNLIM-NEXT:    ret void
+; OUNLM-LABEL: @undef_in_callees(
+; OUNLM-NEXT:  cond.end.i:
+; OUNLM-NEXT:    call void poison(ptr poison, i32 poison, ptr poison), !callees [[META3:![0-9]+]]
+; OUNLM-NEXT:    ret void
 ;
 ; LIMI2-LABEL: @undef_in_callees(
 ; LIMI2-NEXT:  cond.end.i:
-; LIMI2-NEXT:    call void poison(ptr poison, i32 poison, ptr poison), !callees [[META4:![0-9]+]]
+; LIMI2-NEXT:    call void poison(ptr poison, i32 poison, ptr poison), !callees [[META3:![0-9]+]]
 ; LIMI2-NEXT:    ret void
 ;
 ; LIMI0-LABEL: @undef_in_callees(
 ; LIMI0-NEXT:  cond.end.i:
 ; LIMI0-NEXT:    call void poison(ptr poison, i32 poison, ptr poison), !callees [[META6:![0-9]+]]
 ; LIMI0-NEXT:    ret void
+;
+; CWRLD-LABEL: @undef_in_callees(
+; CWRLD-NEXT:  cond.end.i:
+; CWRLD-NEXT:    call void poison(ptr poison, i32 poison, ptr poison), !callees [[META6:![0-9]+]]
+; CWRLD-NEXT:    ret void
 ;
 cond.end.i:
   call void poison(ptr poison, i32 poison, ptr poison), !callees !3
@@ -617,37 +389,15 @@ define void @as_cast(ptr %arg) {
 ; CWRLD-NEXT:    tail call void @func4()
 ; CWRLD-NEXT:    br label [[TMP21]]
 ; CWRLD:       6:
-; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP_AS0]], @retI32
+; CWRLD-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[FP_AS0]], @void
 ; CWRLD-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]]
 ; CWRLD:       8:
-; CWRLD-NEXT:    call void @retI32()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       9:
-; CWRLD-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[FP_AS0]], @takeI32
-; CWRLD-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]]
-; CWRLD:       11:
-; CWRLD-NEXT:    call void @takeI32()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       12:
-; CWRLD-NEXT:    [[TMP13:%.*]] = icmp eq ptr [[FP_AS0]], @retFloatTakeFloat
-; CWRLD-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]]
-; CWRLD:       14:
-; CWRLD-NEXT:    call void @retFloatTakeFloat()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       15:
-; CWRLD-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[FP_AS0]], @retFloatTakeFloatFloatNoundef
-; CWRLD-NEXT:    br i1 [[TMP16]], label [[TMP17:%.*]], label [[TMP18:%.*]]
-; CWRLD:       17:
-; CWRLD-NEXT:    call void @retFloatTakeFloatFloatNoundef()
-; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       18:
-; CWRLD-NEXT:    br i1 true, label [[TMP19:%.*]], label [[TMP20:%.*]]
-; CWRLD:       19:
 ; CWRLD-NEXT:    tail call void @void()
 ; CWRLD-NEXT:    br label [[TMP21]]
-; CWRLD:       20:
-; CWRLD-NEXT:    unreachable
-; CWRLD:       21:
+; CWRLD:       9:
+; CWRLD-NEXT:    tail call addrspace(1) void [[FP]](), !callees [[META5]]
+; CWRLD-NEXT:    br label [[TMP21]]
+; CWRLD:       10:
 ; CWRLD-NEXT:    ret void
 ;
   %fp = load ptr addrspace(1), ptr %arg, align 8
@@ -697,15 +447,15 @@ define void @as_cast(ptr %arg) {
 ;.
 ; CWRLD: attributes #[[ATTR0:[0-9]+]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; OUNLM: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
-; OUNLM: [[META1]] = !{i64 0, i1 false}
-; OUNLM: [[META2]] = distinct !{ptr poison, ptr null}
+; OUNLM: [[META0]] = !{ptr @takeI32, ptr @retI32, ptr @void}
+; OUNLM: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
+; OUNLM: [[META2]] = !{i64 0, i1 false}
+; OUNLM: [[META3]] = distinct !{ptr poison, ptr null}
 ;.
-; LIMI2: [[META0]] = !{ptr @void, ptr @retFloatTakeFloat}
-; LIMI2: [[META1]] = !{ptr @void}
-; LIMI2: [[META2:![0-9]+]] = !{[[META3:![0-9]+]]}
-; LIMI2: [[META3]] = !{i64 0, i1 false}
-; LIMI2: [[META4]] = distinct !{ptr poison, ptr null}
+; LIMI2: [[META0]] = !{ptr @takeI32, ptr @retI32, ptr @void}
+; LIMI2: [[META1:![0-9]+]] = !{[[META2:![0-9]+]]}
+; LIMI2: [[META2]] = !{i64 0, i1 false}
+; LIMI2: [[META3]] = distinct !{ptr poison, ptr null}
 ;.
 ; LIMI0: [[META0]] = !{ptr @func4, ptr @internal_good}
 ; LIMI0: [[META1]] = !{ptr @func3, ptr @func4}
@@ -715,9 +465,14 @@ define void @as_cast(ptr %arg) {
 ; LIMI0: [[META5]] = !{i64 0, i1 false}
 ; LIMI0: [[META6]] = distinct !{ptr poison, ptr null}
 ;.
-; CWRLD: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
-; CWRLD: [[META1]] = !{i64 0, i1 false}
-; CWRLD: [[META2]] = distinct !{ptr poison, ptr null}
+; CWRLD: [[META0]] = !{ptr @takeI32, ptr @retI32, ptr @void}
+; CWRLD: [[META1]] = !{ptr @takeI32, ptr @retI32, ptr @retFloatTakeFloat, ptr @retFloatTakeFloatFloatNoundef}
+; CWRLD: [[META2]] = !{ptr @func3, ptr @func4, ptr @retI32, ptr @takeI32, ptr @retFloatTakeFloatFloatNoundef, ptr @void}
+; CWRLD: [[META3:![0-9]+]] = !{[[META4:![0-9]+]]}
+; CWRLD: [[META4]] = !{i64 0, i1 false}
+; CWRLD: [[META5]] = !{ptr @retI32, ptr @takeI32, ptr @retFloatTakeFloat, ptr @retFloatTakeFloatFloatNoundef}
+; CWRLD: [[META6]] = distinct !{ptr poison, ptr null}
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT: {{.*}}
+; UNLIM: {{.*}}
