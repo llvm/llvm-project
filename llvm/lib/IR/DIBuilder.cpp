@@ -1063,7 +1063,7 @@ DISubprogram *DIBuilder::createFunction(
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
 
   DISubprogram *Node = nullptr;
-  // Look up ODR definition if requested.
+  // Look up ODR declaration if requested.
   if (!IsDefinition && VMContext.isODRUniquingDebugTypes())
     Node = VMContext.getDebugTypeODRUniquer()->getODRSubprogramDecl(
         Context, LinkageName, Ty, TParams.get());
@@ -1111,7 +1111,7 @@ DISubprogram *DIBuilder::createMethod(
   bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
 
   DISubprogram *SP = nullptr;
-  // Look up ODR definition if requested.
+  // Look up ODR declaration if requested.
   if (!IsDefinition && VMContext.isODRUniquingDebugTypes())
     SP = VMContext.getDebugTypeODRUniquer()->getODRSubprogramDecl(
         Context, LinkageName, Ty, TParams.get());
