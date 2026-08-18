@@ -18,6 +18,7 @@ set(NVPTXCodeGen_sources
   NVPTXAsmPrinter.cpp
   NVPTXAssignValidGlobalNames.cpp
   NVPTXAtomicLower.cpp
+  NVPTXCodeGenPassBuilder.cpp
   NVPTXCtorDtorLowering.cpp
   NVPTXDwarfDebug.cpp
   NVPTXForwardParams.cpp

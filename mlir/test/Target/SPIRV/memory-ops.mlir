@@ -40,6 +40,17 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
 // -----
 
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.func @inbounds_access_chain(%arg0 : !spirv.ptr<!spirv.array<4xf32>, Function>, %arg1 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.InBoundsAccessChain {{%.*}}[{{%.*}}] : !spirv.ptr<!spirv.array<4 x f32>, Function>
+    %0 = spirv.InBoundsAccessChain %arg0[%arg1] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32 -> !spirv.ptr<f32, Function>
+    %1 = spirv.Load "Function" %0 : f32
+    spirv.Return
+  }
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], [SPV_KHR_storage_buffer_storage_class]> {
   spirv.func @load_store_zero_rank_float(%arg0: !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0]), Block>, StorageBuffer>, %arg1: !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0]), Block>, StorageBuffer>) "None" {
     // CHECK: [[LOAD_PTR:%.*]] = spirv.AccessChain {{%.*}}[{{%.*}}, {{%.*}}] : !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0]), Block>, StorageBuffer>
@@ -122,4 +133,3 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], []> {
     spirv.Return
   }
 }
-

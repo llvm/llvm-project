@@ -241,6 +241,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
+    libc.src.stdlib.realpath
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
@@ -1579,10 +1580,6 @@ if(LLVM_LIBC_FULL_BUILD)
 endif()
 
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  list(APPEND TARGET_LIBC_ENTRYPOINTS
-    libc.src.stdlib.realpath
-  )
-
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # net/if.h entrypoints
