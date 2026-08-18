@@ -20,6 +20,18 @@
 ! TASK: %[[TASK_VALUE:.*]] = fir.load %[[TASK_ELEMENT]]
 ! TASK: arith.addi %[[TASK_VALUE]]
 
+! TASK-LABEL: func.func @_QPtask_rank_two_full_section
+! TASK: omp.taskgroup task_reduction(byref @add_reduction_byref_box_4x4xi32 {{.*}} -> %[[RANK_TWO_TASKGROUP_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<4x4xi32>>>)
+! TASK: %[[RANK_TWO_TASKGROUP_DECL:.*]]:2 = hlfir.declare %[[RANK_TWO_TASKGROUP_ARG]]
+! TASK: omp.task in_reduction(byref @add_reduction_byref_box_4x4xi32 %[[RANK_TWO_TASKGROUP_DECL]]#0 -> %[[RANK_TWO_TASK_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<4x4xi32>>>)
+! TASK: %[[RANK_TWO_TASK_DECL:.*]]:2 = hlfir.declare %[[RANK_TWO_TASK_ARG]]
+! TASK: %[[RANK_TWO_TASK_BOX:.*]] = fir.load %[[RANK_TWO_TASK_DECL]]#0
+! TASK: %[[RANK_TWO_TASK_SECTION:.*]] = hlfir.designate %[[RANK_TWO_TASK_BOX]]
+! TASK: hlfir.elemental
+! TASK: %[[RANK_TWO_TASK_ELEMENT:.*]] = hlfir.designate %[[RANK_TWO_TASK_SECTION]]
+! TASK: %[[RANK_TWO_TASK_VALUE:.*]] = fir.load %[[RANK_TWO_TASK_ELEMENT]]
+! TASK: arith.addi %[[RANK_TWO_TASK_VALUE]]
+
 ! TASK-DEFAULT-LABEL: func.func @_QPtask_default_firstprivate_full_section
 ! TASK-DEFAULT: omp.task in_reduction(byref @add_reduction_byref_box_4xi32 {{.*}} -> %[[FIRSTPRIVATE_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<4xi32>>>)
 ! TASK-DEFAULT: %[[FIRSTPRIVATE_DECL:.*]]:2 = hlfir.declare %[[FIRSTPRIVATE_ARG]]
@@ -76,6 +88,15 @@ subroutine task_full_section(a)
   !$omp taskgroup task_reduction(+: a(:))
   !$omp task in_reduction(+: a(:))
   a(:) = a(:) + 1
+  !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+subroutine task_rank_two_full_section(a)
+  integer :: a(-2:1, -1:2)
+  !$omp taskgroup task_reduction(+: a(:, :))
+  !$omp task in_reduction(+: a(:, :))
+  a(:, :) = a(:, :) + 1
   !$omp end task
   !$omp end taskgroup
 end subroutine

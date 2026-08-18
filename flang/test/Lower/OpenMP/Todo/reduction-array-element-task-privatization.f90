@@ -7,6 +7,8 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-reduction.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-REDUCTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-section.f90 2>&1 | FileCheck %s --check-prefix=TASK-SECTION
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-section.f90 2>&1 | FileCheck %s --check-prefix=TASK-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-rank-two-section.f90 2>&1 | FileCheck %s --check-prefix=TASK-RANK-TWO-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-rank-two-section.f90 2>&1 | FileCheck %s --check-prefix=TASK-RANK-TWO-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-in-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SECTION
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-in-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-reduction-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-REDUCTION-SECTION
@@ -30,6 +32,7 @@
 ! TASKLOOP-IN: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element or section whose base array is privatized
 ! TASKLOOP-REDUCTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
 ! TASK-SECTION: not yet implemented: TASK construct with IN_REDUCTION of an array element or section whose base array is privatized
+! TASK-RANK-TWO-SECTION: not yet implemented: TASK construct with IN_REDUCTION of an array element or section whose base array is privatized
 ! TASKLOOP-IN-SECTION: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element or section whose base array is privatized
 ! TASKLOOP-REDUCTION-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
 ! EAGER-TASKLOOP-IN: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element or section whose base array is privatized
@@ -54,6 +57,16 @@ subroutine task_reduction_section(a)
   !$omp taskgroup task_reduction(+: a(2:3))
   !$omp task in_reduction(+: a(2:3))
   a(2:3) = a(2:3) + 1
+  !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+!--- task-rank-two-section.f90
+subroutine task_reduction_rank_two_section(a)
+  integer :: a(4, 4)
+  !$omp taskgroup task_reduction(+: a(:, 2))
+  !$omp task in_reduction(+: a(:, 2))
+  a(:, 2) = a(:, 2) + 1
   !$omp end task
   !$omp end taskgroup
 end subroutine
