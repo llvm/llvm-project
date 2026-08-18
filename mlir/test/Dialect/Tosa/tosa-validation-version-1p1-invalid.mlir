@@ -25,3 +25,10 @@ func.func @test_avg_pool2d_adaptive_non_const_output_zp(%arg0: tensor<1x32x32x8x
        (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
   return %0 : tensor<1x32x32x8xf32>
 }
+
+// -----
+
+module {
+  // expected-error@+1 {{'tosa.variable' op is not profile-aligned: element type 'f64' is not legal}}
+  tosa.variable @dynamic_var : tensor<2x?xf64>
+}

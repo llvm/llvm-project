@@ -224,6 +224,35 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
     if (isa<math::ErfOp>(op))
       return replaceOp(ErfOp{}, ElementwiseKind::erf);
 
+    // The following ops only have the category (elementwise) form, but no
+    // linalg.* named op equivalent.
+    if (emitCategoryOp) {
+      if (isa<math::SinOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::sin);
+      if (isa<math::CosOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::cos);
+      if (isa<math::TanOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::tan);
+      if (isa<math::AcosOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::acos);
+      if (isa<math::AcoshOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::acosh);
+      if (isa<math::AsinOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::asin);
+      if (isa<math::AsinhOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::asinh);
+      if (isa<math::AtanOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::atan);
+      if (isa<math::AtanhOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::atanh);
+      if (isa<math::Log10Op>(op))
+        return replaceOp(nullptr, ElementwiseKind::log10);
+      if (isa<math::Log1pOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::log1p);
+      if (isa<math::Log2Op>(op))
+        return replaceOp(nullptr, ElementwiseKind::log2);
+    }
+
     // At this point, we exhaustively checked the available unary named ops. The
     // 1-input generic op might be representable as a `linalg.elementwise` that
     // broadcasts a scalar operand. But if we can't emit the category op or
@@ -450,6 +479,20 @@ static FailureOr<LinalgOp> specializeLinalgMmt4D(RewriterBase &rewriter,
                                            namedOpMaps);
 }
 
+static bool isSupportedContractionPair(Operation *first, Operation *second) {
+  if (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second))
+    return true;
+  if (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second))
+    return true;
+  if (isa<complex::MulOp>(first) && isa<complex::AddOp>(second))
+    return true;
+  if (isa<arith::AndIOp>(first) && isa<arith::OrIOp>(second) &&
+      first->getResult(0).getType().isInteger(1))
+    return true;
+
+  return false;
+}
+
 // Converts linalg.generic to named linalg.*matmul* where possible.
 static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
                                                         GenericOp genericOp,
@@ -463,15 +506,12 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
     return failure();
 
-  // Only mul+add contraction is supported.
-  // Currently, there is no way to control the contraction body type in named
-  // and category ops which all default to mul+add only.
-  if (!mlir::linalg::detail::isContractionBody(
-          *genericOp.getBlock(), [](Operation *first, Operation *second) {
-            return (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
-                   (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
-                   (isa<complex::MulOp>(first) && isa<complex::AddOp>(second));
-          }))
+  // Only contractions that can be represented by named linalg ops are
+  // eligible for specialization:
+  //   - mul + add    (floating-point, integer, complex)
+  //   - and + or     (bool)
+  if (!mlir::linalg::detail::isContractionBody(*genericOp.getBlock(),
+                                               isSupportedContractionPair))
     return failure();
 
   // Determine the cast type for the named matmul op, or bail out if casts

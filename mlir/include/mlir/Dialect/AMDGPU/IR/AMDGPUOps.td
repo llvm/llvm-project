@@ -910,13 +910,13 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
 
 def AMDGPU_SchedBarrierOp :
   AMDGPU_Op<"sched_barrier">,
-  Arguments<(ins  AMDGPU_SchedBarrierOpOptAttr:$opts)>
+  Arguments<(ins ROCDL_SchedGroupMaskAttr:$opts)>
   {
   let summary = "Barrier that limits the backend scheduler of instruction movement";
   let description = [{
     `amdgpu.sched_barrier` serves as a barrier that could be
     configured to restrict movements of instructions through it as
-    defined by sched_barrier_opts.
+    defined by the ROCDL scheduling group mask enum.
   }];
   let assemblyFormat = [{
     `allow` `=` $opts attr-dict
@@ -1027,8 +1027,8 @@ def AMDGPU_MFMAOp :
                    MFMAOutTypes:$destC,
                    DefaultValuedAttr<I32Attr, "0">:$cbsz,
                    DefaultValuedAttr<I32Attr, "0">:$abid,
-                   DefaultValuedAttr<AMDGPU_MFMAPermBAttr,
-                    "::mlir::amdgpu::MFMAPermB::none">:$blgp,
+                   DefaultValuedAttr<ROCDL_MFMAPermBAttr,
+                    "::mlir::ROCDL::MFMAPermB::none">:$blgp,
                    UnitAttr:$reducePrecision,
                    UnitAttr:$negateA,
                    UnitAttr:$negateB,

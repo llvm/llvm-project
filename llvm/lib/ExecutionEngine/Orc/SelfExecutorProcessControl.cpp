@@ -12,6 +12,7 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -41,10 +42,12 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
 
   this->TargetTriple = std::move(TargetTriple);
   this->PageSize = PageSize;
-  this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
-               ExecutorAddr::fromPtr(this)};
 
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
+
+  BootstrapSymbols[rt::DispatchName] =
+      ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager);
+  BootstrapSymbols[rt::DispatchCtxName] = ExecutorAddr::fromPtr(this);
 
 #ifdef __APPLE__
   // FIXME: Don't add an UnwindInfoManager by default -- it's redundant when
@@ -80,18 +83,6 @@ SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) {
   using MainTy = int (*)(int, char *[]);
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
-}
-
-Expected<int32_t>
-SelfExecutorProcessControl::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  using VoidTy = int (*)();
-  return orc::runAsVoidFunction(VoidFnAddr.toPtr<VoidTy>());
-}
-
-Expected<int32_t>
-SelfExecutorProcessControl::runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) {
-  using IntTy = int (*)(int);
-  return orc::runAsIntFunction(IntFnAddr.toPtr<IntTy>(), Arg);
 }
 
 void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
@@ -178,8 +169,7 @@ void SelfExecutorProcessControl::InProcessDylibManager::lookupSymbolsAsync(
     if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
       R.emplace_back();
     else
-      R.emplace_back(ExecutorSymbolDef(ExecutorAddr::fromPtr(Addr),
-                                       JITSymbolFlags::Exported));
+      R.emplace_back(ExecutorAddr::fromPtr(Addr));
   }
   Complete(std::move(R));
 }

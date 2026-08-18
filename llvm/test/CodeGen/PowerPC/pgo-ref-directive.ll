@@ -83,7 +83,7 @@ entry:
 }
 ; There will be two __llvm_prf_cnts .csects, one to represent the actual csect 
 ; that holds @__profc_main, and one generated to hold the .ref directives. In 
-; XCOFF, a csect can be defined in pieces, so this is is legal assembly.
+; XCOFF, a csect can be defined in pieces, so this is legal assembly.
 ;
 ; NOVNDS:      .csect __llvm_prf_cnts[RW],3
 ; NOVNDS:      .csect __llvm_prf_cnts[RW],3

@@ -10,7 +10,7 @@ define i1 @test1(float %x) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 780)
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], /* (inf norm) */ i32 780)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -131,7 +131,7 @@ define i1 @test5(double %x, i1 %cond) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X]], i32 408)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X]], /* (sub norm) */ i32 408)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF_END]] ]
@@ -183,13 +183,13 @@ land.end:
 define i1 @test7(float %x) {
 ; CHECK-LABEL: define i1 @test7(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[COND:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 345)
+; CHECK-NEXT:    [[COND:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], /* (snan pzero nsub norm) */ i32 345)
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[RET1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 328)
+; CHECK-NEXT:    [[RET1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], /* (pzero norm) */ i32 328)
 ; CHECK-NEXT:    ret i1 [[RET1]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 128)
+; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], /* (psub) */ i32 128)
 ; CHECK-NEXT:    ret i1 [[RET2]]
 ;
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 345)
@@ -212,7 +212,7 @@ define i1 @test8(float %x) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 59)
+; CHECK-NEXT:    [[RET2:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], /* (nan nzero nsub nnorm) */ i32 59)
 ; CHECK-NEXT:    ret i1 [[RET2]]
 ;
   %abs = call float @llvm.fabs.f32(float %x)
@@ -297,7 +297,7 @@ define i1 @test12_or(float %x, i1 %cond2) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 780)
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], /* (inf norm) */ i32 780)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -324,7 +324,7 @@ define i1 @test1_no_dominating(float %x, i1 %c) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], i32 783)
+; CHECK-NEXT:    [[RET:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X]], /* (nan inf norm) */ i32 783)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry0:
@@ -492,7 +492,7 @@ define i1 @pr118257_is_fpclass(half %v0, half %v1) {
 ; CHECK-SAME: half [[V0:%.*]], half [[V1:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp une half [[V1]], 0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.is.fpclass.f16(half [[V0]], i32 35)
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.is.fpclass.f16(half [[V0]], /* (nan nzero) */ i32 35)
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.else:

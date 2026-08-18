@@ -476,6 +476,8 @@ public:
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
+  ModuleSpecList GetSeparateDebugInfoFiles();
+
   void PreloadSymbols();
 
   void SetSymbolFileFileSpec(const FileSpec &file);
@@ -1114,9 +1116,13 @@ protected:
                                      /// is used by the ObjectFile and
                                      /// ObjectFile instances for the debug info
 
+  /// Guards the lazy construction of m_sections_up.
+  mutable std::recursive_mutex m_sections_mutex;
+
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symfile{false};
   std::atomic<bool> m_did_set_uuid{false};
+  std::atomic<bool> m_did_preload_symbols{false};
   mutable bool m_file_has_changed : 1,
       m_first_file_changed_log : 1; /// See if the module was modified after it
                                     /// was initially opened.

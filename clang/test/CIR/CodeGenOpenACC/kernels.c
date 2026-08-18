@@ -2,7 +2,7 @@
 
 void acc_kernels(int cond) {
   // CHECK: cir.func{{.*}} @acc_kernels(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
+  // CHECK-NEXT: %[[COND:.*]] = cir.alloca "cond" {{.*}} init : !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 #pragma acc kernels
   {}
@@ -109,7 +109,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_workers(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_workers(%[[CONV_CAST]] : si32) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -117,9 +117,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_workers(cond) device_type(nvidia) num_workers(2u)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !u32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !u32i to ui32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !u32i -> ui32
   // CHECK-NEXT: acc.kernels num_workers(%[[CONV_CAST]] : si32, %[[TWO_CAST]] : ui32 [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -127,11 +127,11 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_workers(cond) device_type(nvidia, host) num_workers(2) device_type(radeon) num_workers(3)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_workers(%[[CONV_CAST]] : si32, %[[TWO_CAST]] : si32 [#acc.device_type<nvidia>], %[[TWO_CAST]] : si32 [#acc.device_type<host>], %[[THREE_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -139,11 +139,11 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_workers(cond) device_type(nvidia) num_workers(2) device_type(radeon, multicore) num_workers(3)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_workers(%[[CONV_CAST]] : si32, %[[TWO_CAST]] : si32 [#acc.device_type<nvidia>], %[[THREE_CAST]] : si32 [#acc.device_type<radeon>], %[[THREE_CAST]] : si32 [#acc.device_type<multicore>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -151,9 +151,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels device_type(nvidia) num_workers(2) device_type(radeon) num_workers(3)
   {}
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_workers(%[[TWO_CAST]] : si32 [#acc.device_type<nvidia>], %[[THREE_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -161,7 +161,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels vector_length(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels vector_length(%[[CONV_CAST]] : si32) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -169,9 +169,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels vector_length(cond) device_type(nvidia) vector_length(2u)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !u32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !u32i to ui32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !u32i -> ui32
   // CHECK-NEXT: acc.kernels vector_length(%[[CONV_CAST]] : si32, %[[TWO_CAST]] : ui32 [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -179,11 +179,11 @@ void acc_kernels(int cond) {
 #pragma acc kernels vector_length(cond) device_type(nvidia, host) vector_length(2) device_type(radeon) vector_length(3)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels vector_length(%[[CONV_CAST]] : si32, %[[TWO_CAST]] : si32 [#acc.device_type<nvidia>], %[[TWO_CAST]] : si32 [#acc.device_type<host>], %[[THREE_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -191,11 +191,11 @@ void acc_kernels(int cond) {
 #pragma acc kernels vector_length(cond) device_type(nvidia) vector_length(2) device_type(radeon, multicore) vector_length(3)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels vector_length(%[[CONV_CAST]] : si32, %[[TWO_CAST]] : si32 [#acc.device_type<nvidia>], %[[THREE_CAST]] : si32 [#acc.device_type<radeon>], %[[THREE_CAST]] : si32 [#acc.device_type<multicore>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -203,9 +203,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels device_type(nvidia) vector_length(2) device_type(radeon) vector_length(3)
   {}
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels vector_length(%[[TWO_CAST]] : si32 [#acc.device_type<nvidia>], %[[THREE_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -219,7 +219,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels async(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels async(%[[CONV_CAST]] : si32) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -233,9 +233,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels async(3) device_type(nvidia, radeon) async(cond)
   {}
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels async(%[[THREE_CAST]] : si32, %[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -243,7 +243,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels async device_type(nvidia, radeon) async(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels async([#acc.device_type<none>], %[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -251,7 +251,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels async(3) device_type(nvidia, radeon) async
   {}
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels async([#acc.device_type<nvidia>, #acc.device_type<radeon>], %[[THREE_CAST]] : si32) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -259,7 +259,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_gangs(1)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_gangs({%[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -267,7 +267,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_gangs(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_gangs({%[[CONV_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -275,9 +275,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_gangs(1) device_type(radeon) num_gangs(cond)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_gangs({%[[ONE_CAST]] : si32}, {%[[CONV_CAST]] : si32} [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -285,9 +285,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_gangs(1) device_type(radeon) num_gangs(6)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[SIX_LITERAL:.*]] = cir.const #cir.int<6> : !s32i
-  // CHECK-NEXT: %[[SIX_CAST:.*]] = builtin.unrealized_conversion_cast %[[SIX_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[SIX_CAST:.*]] = cir.builtin_int_cast %[[SIX_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_gangs({%[[ONE_CAST]] : si32}, {%[[SIX_CAST]] : si32} [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -295,9 +295,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels num_gangs(cond) device_type(radeon, nvidia) num_gangs(4)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[FOUR_LITERAL:.*]] = cir.const #cir.int<4> : !s32i
-  // CHECK-NEXT: %[[FOUR_CAST:.*]] = builtin.unrealized_conversion_cast %[[FOUR_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[FOUR_CAST:.*]] = cir.builtin_int_cast %[[FOUR_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels num_gangs({%[[CONV_CAST]] : si32}, {%[[FOUR_CAST]] : si32} [#acc.device_type<radeon>], {%[[FOUR_CAST]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -317,7 +317,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait(1) device_type(nvidia) wait
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait([#acc.device_type<nvidia>], {%[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -325,7 +325,7 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait device_type(nvidia) wait(1)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait([#acc.device_type<none>], {%[[ONE_CAST]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -333,9 +333,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait(1) device_type(nvidia) wait(1)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL2:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST2:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL2]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST2:.*]] = cir.builtin_int_cast %[[ONE_LITERAL2]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait({%[[ONE_CAST]] : si32}, {%[[ONE_CAST2]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -343,9 +343,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait(devnum: cond : 1)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -353,13 +353,13 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait(devnum: cond : 1) device_type(nvidia) wait(devnum: cond : 1)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST2:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST2:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST2:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST2:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}, {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -367,11 +367,11 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait(devnum: cond : 1, 2)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32, %[[TWO_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -379,17 +379,17 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait(devnum: cond : 1, 2) device_type(nvidia, radeon) wait(devnum: cond : 1, 2)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST2:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST2:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST2:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST2:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST2:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST2:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32, %[[TWO_CAST]] : si32}, {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32, %[[TWO_CAST2]] : si32} [#acc.device_type<nvidia>], {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32, %[[TWO_CAST2]] : si32} [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -397,9 +397,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait(cond,  1)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait({%[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -407,9 +407,9 @@ void acc_kernels(int cond) {
 #pragma acc kernels wait(queues: cond,  1) device_type(radeon)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.kernels wait({%[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
@@ -419,8 +419,8 @@ void acc_kernels(int cond) {
 
 void acc_kernels_data_clauses(int *arg1, int *arg2) {
   // CHECK: cir.func{{.*}} @acc_kernels_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
-  // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
+  // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca "arg1" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca "arg2" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG2_PARAM]], %[[ARG2]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 

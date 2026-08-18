@@ -23,8 +23,6 @@ let cppNamespace = "::cir" in {
   // that's useful for handling indirect calls and other details.
   def CIRCallOpInterface
       : OpInterface<"CIRCallOpInterface", [CallOpInterface]> {
-    // Currently we don't have any methods defined in CIRCallOpInterface. We'll
-    // add more methods as the upstreaming proceeds.
     let methods = [
       InterfaceMethod<
           "Return the operand at index 'i', accounts for indirect call or "
@@ -35,10 +33,36 @@ let cppNamespace = "::cir" in {
           "Return the number of operands, accounts for indirect call or "
           "exception info",
           "unsigned", "getNumArgOperands", (ins)>,
+      InterfaceMethod<
+          "Return whether the callee is a value resolved at run time rather "
+          "than a symbol named by the op",
+          "bool", "isIndirect", (ins)>,
+      InterfaceMethod<
+          "Return the callee pointer of an indirect call.  Only valid when "
+          "isIndirect() is true",
+          "mlir::Value", "getIndirectCall", (ins)>,
       InterfaceMethod<"Return whether the callee is nothrow",
                       "bool", "getNothrow", (ins)>,
       InterfaceMethod<"Return the side effects of the call operation",
                       "cir::SideEffect", "getSideEffect", (ins)>,
+      InterfaceMethod<[{"Set the inline-kind of a call operation"}],
+                      "void", "setInlineKind", 
+                      (ins "std::optional<cir::InlineKind>":$kind), [{}], 
+                      /*defaultImplementation=*/[{
+                        $_op.setInlineKind(kind);
+                      }]>,
+      InterfaceMethod<[{"Get the inline-kind of a call operation"}],
+                      "std::optional<cir::InlineKind>", "getInlineKind", 
+                      (ins), [{}], 
+                      /*defaultImplementation=*/[{
+                        $_op.getInlineKind();
+                      }]>,
+      InterfaceMethod<[{"Get the inline-kind attribute name"}], 
+                      "mlir::StringAttr", "getInlineKindAttrName",
+                      (ins), [{}],
+                      /*defaultImplementation=*/[{
+                        $_op.getInlineKindAttrName();
+                      }]>,
     ];
   }
 
@@ -211,6 +235,47 @@ let cppNamespace = "::cir" in {
     }];
   }
 
+  def CIR_FPEnvConstrainedOpInterface
+      : OpInterface<"FPEnvConstrainedOpInterface"> {
+    let description = [{
+      Interface for floating-point operations that carry an optional
+      `#cir.fenv` attribute. It provides effective values for each field,
+      substituting the floating-point environment defaults for absent fields.
+    }];
+
+    let methods = [
+      InterfaceMethod<
+        "Return the `#cir.fenv` attribute, or a null attribute if absent.",
+        "cir::FenvAttr", "getFenvAttr", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getFenvAttr();
+        }]>,
+      InterfaceMethod<
+        "Return the effective dynamic rounding mode.",
+        "cir::FPDynamicRoundingMode", "getFenvDynamicRoundingMode", (ins),
+        [{}], /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getDynamicRoundingModeOrDefault()
+                      : cir::FenvAttr::getDefaultDynamicRoundingMode();
+        }]>,
+      InterfaceMethod<
+        "Return the effective floating-point exception mode.",
+        "cir::FPExceptionMode", "getFenvExceptionMode", (ins), [{}],
+        /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getExceptionModeOrDefault()
+                      : cir::FenvAttr::getDefaultExceptionMode();
+        }]>,
+      InterfaceMethod<
+        "Return the effective strict-exception flag.",
+        "bool", "getFenvStrictExcept", (ins), [{}],
+        /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getStrictExceptOrDefault() : false;
+        }]>,
+    ];
+  }
+
   def CIR_BinaryOpInterface : OpInterface<"BinaryOpInterface"> {
     let description = [{
       Common interface for CIR binary arithmetic and logic operations.
@@ -254,6 +319,26 @@ let cppNamespace = "::cir" in {
         "mlir::Value", "getResult", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getResult();
+        }]>,
+    ];
+  }
+
+  def CIR_StdOpInterface : OpInterface<"StdOpInterface"> {
+    let description = [{
+      Interface for raised standard library ops, exposing the original callee
+      so LoweringPrepare can rebuild the call generically.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the original callee symbol reference.",
+        "mlir::FlatSymbolRefAttr", "getOriginalFnAttr", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getOriginalFnAttr();
+        }]>,
+      InterfaceMethod<"Return the name of the original_fn attribute.",
+        "mlir::StringAttr", "getOriginalFnAttrName", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getOriginalFnAttrName();
         }]>,
     ];
   }

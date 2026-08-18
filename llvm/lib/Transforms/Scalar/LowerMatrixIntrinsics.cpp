@@ -1721,7 +1721,15 @@ public:
       Value *Arg;
       if (match(Op, m_Intrinsic<Intrinsic::matrix_column_major_load>(
                         m_Value(Arg)))) {
-        auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
+        auto *MatLoad = cast<IntrinsicInst>(Op);
+        bool IsVolatile = cast<ConstantInt>(MatLoad->getArgOperand(2))->isOne();
+        // Preserve the volatile flag and alignment of the original load.
+        Align Alignment = getAlignForIndex(
+            0, MatLoad->getArgOperand(1),
+            cast<FixedVectorType>(Op->getType())->getElementType(),
+            MatLoad->getParamAlign(0));
+        auto *NewLoad = Builder.CreateAlignedLoad(Op->getType(), Arg, Alignment,
+                                                  IsVolatile);
         Op->replaceAllUsesWith(NewLoad);
         eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(Op));
         return;
@@ -2389,17 +2397,23 @@ public:
     Builder.SetInsertPoint(BlockIP);
     MatrixTy PhiM = getMatrix(Inst, SI, Builder);
 
+    // Cache the reshaped columns per incoming block, so that a block listed
+    // more than once contributes identical incoming values to the new PHIs.
+    SmallDenseMap<BasicBlock *, MatrixTy> ReshapedIncoming;
     for (auto [IncomingV, IncomingB] :
          llvm::zip_equal(Inst->incoming_values(), Inst->blocks())) {
       // getMatrix() may insert some instructions to help with reshaping. The
-      // safest place for those is at the top of the block after the rest of the
-      // PHI's. Even better, if we can put it in the incoming block.
-      Builder.SetInsertPoint(BlockIP);
+      // safest place for those is just before the terminator of the incoming
+      // block. If there's a valid insert point before the def, even better.
+      Builder.SetInsertPoint(IncomingB->getTerminator());
       if (auto *IncomingInst = dyn_cast<Instruction>(IncomingV))
         if (auto MaybeIP = IncomingInst->getInsertionPointAfterDef())
           Builder.SetInsertPoint(*MaybeIP);
 
-      MatrixTy OpM = getMatrix(IncomingV, SI, Builder);
+      auto [It, Inserted] = ReshapedIncoming.try_emplace(IncomingB);
+      if (Inserted)
+        It->second = getMatrix(IncomingV, SI, Builder);
+      const MatrixTy &OpM = It->second;
 
       for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
         PHINode *NewPHI = cast<PHINode>(PhiM.getVector(VI));

@@ -113,6 +113,9 @@ module iso_c_binding
 
   ! gfortran extensions
   integer, parameter, public :: &
+    c_float16 = 2, &
+    c_float16_complex = c_float16
+  integer, parameter, public :: &
     c_float128 = 16, &
     c_float128_complex = c_float128
   integer, parameter, public :: &

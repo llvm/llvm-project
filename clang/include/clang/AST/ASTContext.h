@@ -70,9 +70,6 @@ struct ScalableVecTyKey {
 // Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
 // as a key in DenseMap.
 template <> struct DenseMapInfo<ScalableVecTyKey> {
-  static inline ScalableVecTyKey getEmptyKey() {
-    return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
-  }
   static unsigned getHashValue(const ScalableVecTyKey &Val) {
     return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
                         Val.NumElts, Val.NumFields);
@@ -291,7 +288,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
-  mutable llvm::FoldingSet<AttributedType> AttributedTypes;
+  mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
+      AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
@@ -441,6 +439,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl = nullptr;
 
+  /// The typedef for the predefined \c __builtin_zos_va_list type.
+  mutable TypedefDecl *BuiltinZOSVaListDecl = nullptr;
+
   /// The typedef for the predefined \c id type.
   mutable TypedefDecl *ObjCIdDecl = nullptr;
 
@@ -515,6 +516,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   FunctionDecl *cudaGetParameterBufferDecl = nullptr;
   /// Declaration for the CUDA cudaLaunchDevice function.
   FunctionDecl *cudaLaunchDeviceDecl = nullptr;
+
+  llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
+      CtorClosureDefaultArgs;
 
   /// Keeps track of all declaration attributes.
   ///
@@ -692,6 +696,12 @@ private:
   using ParameterIndexTable = llvm::DenseMap<const VarDecl *, unsigned>;
   ParameterIndexTable ParamIndices;
 
+  /// Map from numbering information for lambdas to the corresponding lambdas.
+  /// This is intentionally not serialized, and is instead reconstructed as we
+  /// read each lambda.
+  llvm::DenseMap<std::pair<const Decl *, unsigned>, CXXRecordDecl *>
+      LambdaDeclarationsForMerging;
+
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
@@ -700,6 +710,15 @@ public:
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
+
+  // Returns a reference to the first lambda declaration with a given index in a
+  // given context. Used to merge lambdas in the case where the same lambda is
+  // redefined in multiple modules.
+  CXXRecordDecl *&getLambdaDeclarationSlotForMerging(const Decl *ContextDecl,
+                                                     int IndexInContext) {
+    return LambdaDeclarationsForMerging[{ContextDecl->getCanonicalDecl(),
+                                         IndexInContext}];
+  }
 
   /// Examines a given type, and returns whether the type itself
   /// is address discriminated, or any transitively embedded types
@@ -947,6 +966,9 @@ public:
   QualType getIntTypeForBitwidth(unsigned DestWidth,
                                  unsigned Signed) const;
 
+  QualType getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                      unsigned Signed) const;
+
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
@@ -1146,6 +1168,11 @@ public:
 
   /// Erase the attributes corresponding to the given declaration.
   void eraseDeclAttrs(const Decl *D);
+
+  ArrayRef<CXXDefaultArgExpr *>
+  getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
+  void setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                 ArrayRef<CXXDefaultArgExpr *> Args);
 
   /// Get all ExplicitInstantiationDecls for a given specialization.
   ArrayRef<ExplicitInstantiationDecl *>
@@ -1372,6 +1399,8 @@ public:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/SPIRVTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1502,9 +1531,9 @@ public:
   QualType removeAddrSpaceQualType(QualType T) const;
 
   /// Return the "other" discriminator used for the pointer auth schema used for
-  /// vtable pointers in instances of the requested type.
-  uint16_t
-  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+  /// vtable pointers using the given discriminator type.
+  uint16_t getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                    bool IsVTTEntry);
 
   /// Return the "other" type-specific discriminator for the given type.
   uint16_t getPointerAuthTypeDiscriminator(QualType T);
@@ -1628,6 +1657,12 @@ public:
   getCountAttributedType(QualType T, Expr *CountExpr, bool CountInBytes,
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
+  /// Return a placeholder type for a late-parsed type attribute.
+  /// This type wraps another type and holds the LateParsedAttribute
+  /// that will be parsed later.
+  QualType getLateParsedAttrType(QualType Wrapped,
+                                 LateParsedTypeAttribute *LateParsedAttr) const;
 
   /// Return the uniqued reference to a type adjusted from the original
   /// type to a new type.
@@ -1861,7 +1896,22 @@ public:
 
   QualType adjustStringLiteralBaseType(QualType StrLTy) const;
 
+  // Represents an inclusive-first/exclusive last bit-offset into a type.
+  struct BitInterval {
+    // [First, Last)
+    uint64_t First;
+    uint64_t Last;
+  };
+
+  // Calculate and get the 'padding intervals' inside of a type. Note: calls to
+  // this potentially invalidate all ArrayRef objects, so effort must be made to
+  // copy the data if necessary.
+  llvm::ArrayRef<BitInterval> getPaddingIntervals(QualType Ty) const;
+
 private:
+  mutable llvm::DenseMap<QualType, llvm::SmallVector<BitInterval>>
+      PaddingIntervalCache;
+
   /// Return a normal function type with a typed argument list.
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
                                    const FunctionProtoType::ExtProtoInfo &EPI,
@@ -1977,7 +2027,7 @@ public:
                              QualType equivalentType) const;
 
   QualType getAttributedType(NullabilityKind nullability, QualType modifiedType,
-                             QualType equivalentType);
+                             QualType equivalentType) const;
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped) const;
@@ -2520,6 +2570,17 @@ public:
     if (!MSTypeInfoTagDecl)
       MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
     return MSTypeInfoTagDecl;
+  }
+
+  /// Retrieve the C type declaration corresponding to the predefined
+  /// \c __builtin_zos_va_list type.
+  TypedefDecl *getBuiltinZOSVaListDecl() const;
+
+  /// Retrieve the type of the \c __builtin_zos_va_list type.
+  QualType getBuiltinZOSVaListType() const {
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getBuiltinZOSVaListDecl());
   }
 
   /// Return whether a declaration to a builtin is allowed to be
@@ -4004,8 +4065,6 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
   return Value;
 }
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
-  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
-
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
     return Val.ComputeHash();
   }

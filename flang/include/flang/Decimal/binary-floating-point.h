@@ -16,10 +16,8 @@
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/freestanding-tools.h"
-#include <cinttypes>
 #include <climits>
 #include <cstring>
-#include <type_traits>
 
 namespace Fortran::decimal {
 

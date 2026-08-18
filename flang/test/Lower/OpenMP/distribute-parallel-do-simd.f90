@@ -112,7 +112,7 @@ implicit none
 integer :: x_min,x_max,y_min,y_max
 integer :: i,j
 
-! CHECK:           omp.target {{.*}} {
+! CHECK:           omp.target kernel_type(spmd) {{.*}} {
 ! CHECK:             %[[X_MAX_MAPPED:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}x_max"}
 ! CHECK:             omp.teams {
 ! CHECK:               omp.parallel {
@@ -149,4 +149,17 @@ integer :: i,j
     do j=y_min,y_max
     enddo
   enddo
+end subroutine
+
+! CHECK-LABEL:   func.func @_QPtarget_teams_distribute_parallel_do_simd_linear
+subroutine target_teams_distribute_parallel_do_simd_linear()
+  implicit none
+  integer :: iv
+
+  ! CHECK: omp.target
+  ! CHECK: %[[IV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtarget_teams_distribute_parallel_do_simd_linearEiv"}
+  ! CHECK: omp.simd private(@_QFtarget_teams_distribute_parallel_do_simd_linearEiv_private_i32 %[[IV]]#0 -> %{{.*}} : !fir.ref<i32>)
+  !$omp target teams distribute parallel do simd
+  do iv = 1, 10
+  end do
 end subroutine

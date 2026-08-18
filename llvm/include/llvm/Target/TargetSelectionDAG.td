@@ -175,6 +175,13 @@ def SDIsFPClassOp : SDTypeProfile<1, 2, [   // is_fpclass
 def SDTIntToFPOp : SDTypeProfile<1, 1, [    // [su]int_to_fp
   SDTCisFP<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
+def SDTConvertFromArbitraryFPOp : SDTypeProfile<1, 2, [
+  SDTCisFP<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisSameNumEltsAs<0, 1>
+]>;
+def SDTConvertToArbitraryFPOp : SDTypeProfile<1, 4, [
+  SDTCisInt<0>, SDTCisFP<1>, SDTCisInt<2>, SDTCisInt<3>, SDTCisInt<4>,
+  SDTCisSameNumEltsAs<0, 1>
+]>;
 def SDTFPToIntOp : SDTypeProfile<1, 1, [    // fp_to_[su]int
   SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
@@ -346,7 +353,7 @@ def SDTFPAtomic2 : SDTypeProfile<1, 2, [
 ]>;
 
 def SDTAtomicStore : SDTypeProfile<0, 2, [
-  SDTCisInt<0>, SDTCisPtrTy<1>
+  SDTCisPtrTy<1>
 ]>;
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisPtrTy<1>
@@ -408,6 +415,9 @@ def fpimm      : SDNode<"ISD::ConstantFP", SDTFPLeaf  , [], "ConstantFPSDNode">;
 def vt         : SDNode<"ISD::VALUETYPE" , SDTOther   , [], "VTSDNode">;
 def bb         : SDNode<"ISD::BasicBlock", SDTOther   , [], "BasicBlockSDNode">;
 def cond       : SDNode<"ISD::CONDCODE"  , SDTOther   , [], "CondCodeSDNode">;
+def poison     : SDNode<"ISD::POISON"    , SDTUNDEF   , []>;
+// `undef` is the ISD::UNDEF node, but in isel patterns it matches
+// either ISD::UNDEF or ISD::POISON
 def undef      : SDNode<"ISD::UNDEF"     , SDTUNDEF   , []>;
 def vscale     : SDNode<"ISD::VSCALE"    , SDTIntUnaryOp, []>;
 def globaladdr : SDNode<"ISD::GlobalAddress",         SDTPtrLeaf, [],
@@ -480,6 +490,8 @@ def clmul      : SDNode<"ISD::CLMUL"     , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def clmulr     : SDNode<"ISD::CLMULR"    , SDTIntBinOp, [SDNPCommutative]>;
 def clmulh     : SDNode<"ISD::CLMULH"    , SDTIntBinOp, [SDNPCommutative]>;
+def pext       : SDNode<"ISD::PEXT"      , SDTIntBinOp>;
+def pdep       : SDNode<"ISD::PDEP"      , SDTIntBinOp>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,
@@ -596,6 +608,9 @@ def fminimumnum   : SDNode<"ISD::FMINIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fmaximumnum   : SDNode<"ISD::FMAXIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
+// Pseudo fmin/fmax are neither commutative nor associative.
+def pseudo_fmin : SDNode<"ISD::PSEUDO_FMIN", SDTFPBinOp>;
+def pseudo_fmax : SDNode<"ISD::PSEUDO_FMAX", SDTFPBinOp>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
 def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
 def fneg       : SDNode<"ISD::FNEG"       , SDTFPUnaryOp>;
@@ -638,12 +653,14 @@ def is_fpclass : SDNode<"ISD::IS_FPCLASS" , SDIsFPClassOp>;
 
 def sint_to_fp : SDNode<"ISD::SINT_TO_FP" , SDTIntToFPOp>;
 def uint_to_fp : SDNode<"ISD::UINT_TO_FP" , SDTIntToFPOp>;
+def convert_from_arbitrary_fp : SDNode<"ISD::CONVERT_FROM_ARBITRARY_FP",
+                                        SDTConvertFromArbitraryFPOp>;
+def convert_to_arbitrary_fp : SDNode<"ISD::CONVERT_TO_ARBITRARY_FP",
+                                      SDTConvertToArbitraryFPOp>;
 def fp_to_sint : SDNode<"ISD::FP_TO_SINT" , SDTFPToIntOp>;
 def fp_to_uint : SDNode<"ISD::FP_TO_UINT" , SDTFPToIntOp>;
 def fp_to_sint_sat : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntSatOp>;
 def fp_to_uint_sat : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntSatOp>;
-def fp_to_sint_sat_gi : SDNode<"ISD::FP_TO_SINT_SAT" , SDTFPToIntOp>;
-def fp_to_uint_sat_gi : SDNode<"ISD::FP_TO_UINT_SAT" , SDTFPToIntOp>;
 def f16_to_fp  : SDNode<"ISD::FP16_TO_FP" , SDTIntToFPOp>;
 def fp_to_f16  : SDNode<"ISD::FP_TO_FP16" , SDTFPToIntOp>;
 def bf16_to_fp  : SDNode<"ISD::BF16_TO_FP" , SDTIntToFPOp>;
@@ -725,6 +742,10 @@ def strict_fminimum   : SDNode<"ISD::STRICT_FMINIMUM",
 def strict_fmaximum   : SDNode<"ISD::STRICT_FMAXIMUM",
                                SDTFPBinOp, [SDNPHasChain,
                                             SDNPCommutative, SDNPAssociative]>;
+def strict_pseudo_fmin : SDNode<"ISD::STRICT_PSEUDO_FMIN", SDTFPBinOp,
+                                [SDNPHasChain]>;
+def strict_pseudo_fmax : SDNode<"ISD::STRICT_PSEUDO_FMAX", SDTFPBinOp,
+                                [SDNPHasChain]>;
 def strict_fpround    : SDNode<"ISD::STRICT_FP_ROUND",
                                SDTFPRoundOp, [SDNPHasChain]>;
 def strict_fpextend   : SDNode<"ISD::STRICT_FP_EXTEND",
@@ -921,6 +942,13 @@ def get_active_lane_mask
           SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>,
           []>;
 
+def vector_match
+    : SDNode<"ISD::VECTOR_MATCH",
+             SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>,
+                                  SDTCisVec<3>, SDTCisSameNumEltsAs<0, 1>,
+                                  SDTCisSameAs<0, 3>]>,
+             []>;
+
 // Nodes for intrinsics, you should use the intrinsic itself and let tblgen use
 // these internally.  Don't reference these directly.
 def intrinsic_void : SDNode<"ISD::INTRINSIC_VOID",
@@ -1016,6 +1044,10 @@ class SDNodeXForm<SDNode opc, code xformFunction> {
 
 // The default transform does not change the matched node.
 def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
+
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Fragments.
@@ -1259,6 +1291,16 @@ class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
 // `Imm` in the snippet is the value sign-extended to `int64_t`.
 class TImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
   SDNode ImmNode = timm> : ImmLeaf<vt, pred, xform, ImmNode>;
+
+// llvm.convert.{from,to}.arbitrary.fp format-selector predicates.
+// Only OCP formats are matched here; FNUZ formats use the generic expansion.
+def Float8E4M3FN : TImmLeaf<i32, [{ return Imm == APFloatBase::S_Float8E4M3FN; }]>;
+def Float8E5M2 : TImmLeaf<i32, [{ return Imm == APFloatBase::S_Float8E5M2; }]>;
+
+// llvm.convert.to.arbitrary.fp rounding-mode and saturation selectors.
+def NearestTiesToEven : TImmLeaf<i32,
+    [{ return Imm == static_cast<int>(RoundingMode::NearestTiesToEven); }]>;
+def FPNoSaturation : TImmLeaf<i32, [{ return Imm == 0; }]>;
 
 // An ImmLeaf where the `Imm` in the C++ predicate is an `APInt`.
 //
@@ -1904,6 +1946,12 @@ def any_fmaximum   : PatFrags<(ops node:$lhs, node:$rhs),
 def any_fminimum   : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fminimum node:$lhs, node:$rhs),
                                (fminimum node:$lhs, node:$rhs)]>;
+def any_pseudo_fmax : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_pseudo_fmax node:$lhs, node:$rhs),
+                               (pseudo_fmax node:$lhs, node:$rhs)]>;
+def any_pseudo_fmin : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(strict_pseudo_fmin node:$lhs, node:$rhs),
+                               (pseudo_fmin node:$lhs, node:$rhs)]>;
 def any_fpround    : PatFrags<(ops node:$src),
                               [(strict_fpround node:$src),
                                (fpround node:$src)]>;

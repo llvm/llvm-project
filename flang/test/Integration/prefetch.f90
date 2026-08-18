@@ -13,6 +13,7 @@
 !===============================================================================
 
 subroutine test_prefetch_01()
+    ! LLVM: {{.*}} = alloca i32, i64 1, align 4
     ! LLVM: %[[VAR_J:.*]] = alloca i32, i64 1, align 4
     ! LLVM: %[[VAR_I:.*]] = alloca i32, i64 1, align 4
     ! LLVM: %[[VAR_A:.*]] = alloca [256 x i32], i64 1, align 4

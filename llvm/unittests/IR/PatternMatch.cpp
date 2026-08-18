@@ -2758,6 +2758,29 @@ TEST_F(PatternMatchTest, ShiftOrSelf) {
   EXPECT_EQ(ShAmtC, 0U);
 }
 
+TEST_F(PatternMatchTest, SpecificType) {
+  Type *I32 = IRB.getInt32Ty();
+  Type *I64 = IRB.getInt64Ty();
+  Value *X = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(2));
+  Value *Y = IRB.CreateZExt(X, I64);
+
+  EXPECT_TRUE(match(X, m_SpecificType(I32)));
+  EXPECT_FALSE(match(X, m_SpecificType(I64)));
+
+  Value *Bound = nullptr;
+  EXPECT_TRUE(match(X, m_SpecificType(I32, Bound)));
+  EXPECT_EQ(X, Bound);
+  Bound = nullptr;
+  EXPECT_FALSE(match(X, m_SpecificType(I64, Bound)));
+
+  Bound = nullptr;
+  EXPECT_TRUE(match(Y, m_ZExt(m_SpecificType(I32, Bound))));
+  EXPECT_EQ(X, Bound);
+
+  EXPECT_TRUE(match(X, m_SpecificType(I32, m_Add(m_Value(), m_Value()))));
+  EXPECT_FALSE(match(X, m_SpecificType(I64, m_Add(m_Value(), m_Value()))));
+}
+
 TEST_F(PatternMatchTest, CommutativeDeferredIntrinsicMatch) {
   Value *X = ConstantFP::get(IRB.getDoubleTy(), 1.0);
   Value *Y = ConstantFP::get(IRB.getDoubleTy(), 2.0);

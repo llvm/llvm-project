@@ -346,14 +346,14 @@ static bool wasRegionOfInterestModifiedAt(const SubRegion *RegionOfInterest,
 // Implementation of BugReporterVisitor.
 //===----------------------------------------------------------------------===//
 
-PathDiagnosticPieceRef BugReporterVisitor::getEndPath(BugReporterContext &,
-                                                      const ExplodedNode *,
-                                                      PathSensitiveBugReport &) {
+PathDiagnosticPieceRef
+BugReporterVisitor::getEndPath(const ExplodedNode *, BugReporterContext &,
+                               PathSensitiveBugReport &) {
   return nullptr;
 }
 
-void BugReporterVisitor::finalizeVisitor(BugReporterContext &,
-                                         const ExplodedNode *,
+void BugReporterVisitor::finalizeVisitor(const ExplodedNode *,
+                                         BugReporterContext &,
                                          PathSensitiveBugReport &) {}
 
 PathDiagnosticPieceRef
@@ -1115,7 +1115,7 @@ public:
     llvm_unreachable("Invalid visit mode!");
   }
 
-  void finalizeVisitor(BugReporterContext &, const ExplodedNode *,
+  void finalizeVisitor(const ExplodedNode *, BugReporterContext &,
                        PathSensitiveBugReport &BR) override {
     if (EnableNullFPSuppression && ShouldInvalidate)
       BR.markInvalid(ReturnVisitor::getTag(), CalleeSF);
@@ -1273,27 +1273,15 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
     SI.Origin->printPretty(OS);
 
   } else if (SI.StoreKind == StoreInfo::Initialization) {
-    // We don't need to check here, all these conditions were
-    // checked by StoreSiteFinder, when it figured out that it is
-    // initialization.
-    const auto *DS =
-        cast<DeclStmt>(SI.StoreSite->getLocationAs<PostStmt>()->getStmt());
-
-    if (SI.Value.isUndef()) {
-      if (isa<VarRegion>(SI.Dest)) {
-        const auto *VD = cast<VarDecl>(DS->getSingleDecl());
-
-        if (VD->getInit()) {
-          OS << (HasPrefix ? "initialized" : "Initializing")
-             << " to a garbage value";
-        } else {
-          OS << (HasPrefix ? "declared" : "Declaring")
-             << " without an initial value";
-        }
+    if (const auto *VR = dyn_cast<VarRegion>(SI.Dest)) {
+      const VarDecl *VD = VR->getDecl();
+      if (!VD->getInit() && !VD->hasGlobalStorage()) {
+        OS << (HasPrefix ? "declared" : "Declared")
+           << " without an initial value";
+        return;
       }
-    } else {
-      OS << (HasPrefix ? "initialized" : "Initialized") << " here";
     }
+    OS << (HasPrefix ? "initialized" : "Initialized") << " here";
   }
 }
 
@@ -3264,7 +3252,7 @@ bool ConditionBRVisitor::isPieceMessageGeneric(
 //===----------------------------------------------------------------------===//
 
 void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
-    BugReporterContext &BRC, const ExplodedNode *N,
+    const ExplodedNode *N, BugReporterContext &BRC,
     PathSensitiveBugReport &BR) {
   // Here we suppress false positives coming from system headers. This list is
   // based on known issues.
@@ -3304,8 +3292,8 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
         }
       }
 
-      for (const auto *SF = N->getStackFrame(); SF; SF = SF->getParent()) {
-        const auto *MD = dyn_cast<CXXMethodDecl>(SF->getDecl());
+      for (const StackFrame &SF : N->stackframes()) {
+        const auto *MD = dyn_cast<CXXMethodDecl>(SF.getDecl());
         if (!MD)
           continue;
 

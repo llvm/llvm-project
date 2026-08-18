@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Debug.h"
 
@@ -142,8 +141,20 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       mlir::LLVM::DIExpressionAttr::get(context, ops);
   ops.clear();
 
-  mlir::LLVM::DITypeAttr elemTy =
-      convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
+  // For a descriptor-based array of characters with non-constant (assumed or
+  // deferred) length, the length of each element is stored in the descriptor.
+  // We generate a string length expression that reads it from there. The data
+  // location of the elements is provided by the enclosing array so we do not
+  // generate a string location expression for the element type itself.
+  mlir::LLVM::DITypeAttr elemTy;
+  if (auto charTy =
+          mlir::dyn_cast_if_present<fir::CharacterType>(seqTy.getEleTy());
+      charTy && !charTy.hasConstantLen())
+    elemTy = convertCharacterType(charTy, fileAttr, scope, declOp,
+                                  /*hasDescriptor=*/true,
+                                  /*genStringLocation=*/false);
+  else
+    elemTy = convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
 
   // Assumed-rank arrays
   if (seqTy.hasUnknownShape()) {
@@ -213,8 +224,11 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     mlir::Attribute lowerAttr = nullptr;
     // If declaration has a lower bound, use it.
     if (declOp && declOp.getShift().size() > index) {
-      if (std::optional<std::int64_t> optint =
-              getIntIfConstant(declOp.getShift()[index]))
+      std::optional<llvm::APInt> constant =
+          getIntIfConstant(declOp.getShift()[index]);
+      std::optional<std::int64_t> optint =
+          constant ? constant->trySExtValue() : std::nullopt;
+      if (optint)
         lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, *optint));
       else
         lowerAttr = generateArtificialVariable(
@@ -534,8 +548,11 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     // bound. As an optimization, we don't create a lower bound when shift is a
     // constant 1 as that is the default.
     if (declOp && declOp.getShift().size() > index) {
-      if (std::optional<std::int64_t> optint =
-              getIntIfConstant(declOp.getShift()[index])) {
+      std::optional<llvm::APInt> constant =
+          getIntIfConstant(declOp.getShift()[index]);
+      std::optional<std::int64_t> optint =
+          constant ? constant->trySExtValue() : std::nullopt;
+      if (optint) {
         if (*optint != 1)
           lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, *optint));
       } else
@@ -612,7 +629,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     fir::CharacterType charTy, mlir::LLVM::DIFileAttr fileAttr,
     mlir::LLVM::DIScopeAttr scope, fir::cg::XDeclareOp declOp,
-    bool hasDescriptor) {
+    bool hasDescriptor, bool genStringLocation) {
   mlir::MLIRContext *context = module.getContext();
 
   // DWARF 5 says the following about the character encoding in 5.1.1.2.
@@ -638,9 +655,14 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     lenExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
-    addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_deref, {});
-    locExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+    // When the character is an element of a descriptor-based array, the data
+    // location is provided by the enclosing array type and a string location
+    // expression must not be generated for the element itself.
+    if (genStringLocation) {
+      addOp(llvm::dwarf::DW_OP_push_object_address, {});
+      addOp(llvm::dwarf::DW_OP_deref, {});
+      locExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+    }
   } else if (charTy.hasConstantLen()) {
     sizeInBits =
         charTy.getLen() * kindMapping.getCharacterBitsize(charTy.getFKind());

@@ -54,6 +54,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -160,8 +161,10 @@ class MIRVocabulary {
   LLVM_ABI unsigned
   getCommonOperandIndex(MachineOperand::MachineOperandType OperandType) const;
 
-  /// Get index for a register machine operand
-  LLVM_ABI unsigned getRegisterOperandIndex(Register Reg) const;
+  /// Get index for a register machine operand. Returns std::nullopt if Reg
+  /// belongs to no register class, which is a valid outcome for some target
+  /// physical registers.
+  LLVM_ABI std::optional<unsigned> getRegisterOperandIndex(Register Reg) const;
 
   // Accessors for operand types
   const Embedding &
@@ -184,10 +187,14 @@ class MIRVocabulary {
     if (Reg.isStack())
       return ZeroEmbedding;
 
-    unsigned LocalIndex = getRegisterOperandIndex(Reg);
+    // Registers that belong to no register class have no vocabulary entry;
+    // treat them like the other unmapped cases above.
+    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg);
+    if (!LocalIndex)
+      return ZeroEmbedding;
     auto SectionID =
         Reg.isPhysical() ? Section::PhyRegisters : Section::VirtRegisters;
-    return Storage[static_cast<unsigned>(SectionID)][LocalIndex];
+    return Storage[static_cast<unsigned>(SectionID)][*LocalIndex];
   }
 
   /// Get entity ID (flat index) for a common operand type
@@ -203,24 +210,25 @@ class MIRVocabulary {
     if (!Reg.isValid() || Reg.isStack())
       return Layout
           .VirtRegBase; // Return VirtRegBase for invalid/stack registers
-    unsigned LocalIndex = getRegisterOperandIndex(Reg);
+    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg);
+    // Registers without a register class share the invalid/stack fallback.
+    if (!LocalIndex)
+      return Layout.VirtRegBase;
     size_t BaseOffset =
         Reg.isPhysical() ? Layout.PhyRegBase : Layout.VirtRegBase;
-    return BaseOffset + LocalIndex;
+    return BaseOffset + *LocalIndex;
   }
 
 public:
   /// Static method for extracting base opcode names (public for testing)
-  LLVM_ABI_FOR_TEST static std::string
-  extractBaseOpcodeName(StringRef InstrName);
+  LLVM_ABI static std::string extractBaseOpcodeName(StringRef InstrName);
 
   /// Get indices from opcode or operand names. These are public for testing.
   /// String based lookups are inefficient and should be avoided in general.
-  LLVM_ABI_FOR_TEST unsigned
-  getCanonicalIndexForBaseName(StringRef BaseName) const;
-  LLVM_ABI_FOR_TEST unsigned
+  LLVM_ABI unsigned getCanonicalIndexForBaseName(StringRef BaseName) const;
+  LLVM_ABI unsigned
   getCanonicalIndexForOperandName(StringRef OperandName) const;
-  LLVM_ABI_FOR_TEST unsigned
+  LLVM_ABI unsigned
   getCanonicalIndexForRegisterClass(StringRef RegName,
                                     bool IsPhysical = true) const;
 
@@ -266,7 +274,7 @@ public:
   MIRVocabulary() = delete;
 
   /// Factory method to create MIRVocabulary from vocabulary map
-  LLVM_ABI_FOR_TEST static Expected<MIRVocabulary>
+  LLVM_ABI static Expected<MIRVocabulary>
   create(VocabMap &&OpcMap, VocabMap &&CommonOperandsMap, VocabMap &&PhyRegMap,
          VocabMap &&VirtRegMap, const TargetInstrInfo &TII,
          const TargetRegisterInfo &TRI, const MachineRegisterInfo &MRI);

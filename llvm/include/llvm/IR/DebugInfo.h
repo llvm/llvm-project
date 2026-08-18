@@ -124,6 +124,7 @@ public:
 
 private:
   void processCompileUnit(DICompileUnit *CU);
+  void processGlobalVariableExpression(DIGlobalVariableExpression *GVE);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
   void processVariable(DIVariable *DV);
@@ -260,11 +261,6 @@ struct VarRecord {
 } // namespace at
 
 template <> struct DenseMapInfo<at::VarRecord> {
-  static inline at::VarRecord getEmptyKey() {
-    return at::VarRecord(DenseMapInfo<DILocalVariable *>::getEmptyKey(),
-                         DenseMapInfo<DILocation *>::getEmptyKey());
-  }
-
   static unsigned getHashValue(const at::VarRecord &Var) {
     return hash_combine(Var.Var, Var.DL);
   }

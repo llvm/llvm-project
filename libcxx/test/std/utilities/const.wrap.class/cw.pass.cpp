@@ -10,12 +10,13 @@
 
 // constant_wrapper
 
-//   template<cw-fixed-value X>
+//   template<auto X>
 //    constexpr auto cw = constant_wrapper<X>{};
 
 #include <cassert>
 #include <concepts>
 #include <utility>
+#include <cstddef>
 
 struct S {
   int value;
@@ -41,23 +42,12 @@ constexpr bool test() {
 
   {
     // array constant
-    constexpr int arr[] = {1, 2, 3};
+    constexpr static int arr[] = {1, 2, 3};
     // gcc complains that cw_val is unused
     [[maybe_unused]] std::same_as<const std::constant_wrapper<arr>> decltype(auto) cw_val = std::cw<arr>;
     static_assert(cw_val[0] == 1);
     static_assert(cw_val[1] == 2);
     static_assert(cw_val[2] == 3);
-  }
-
-  {
-    // string literals
-    [[maybe_unused]] std::same_as<const std::constant_wrapper<"hello">> decltype(auto) cw_val = std::cw<"hello">;
-    static_assert(cw_val[0] == 'h');
-    static_assert(cw_val[1] == 'e');
-    static_assert(cw_val[2] == 'l');
-    static_assert(cw_val[3] == 'l');
-    static_assert(cw_val[4] == 'o');
-    static_assert(cw_val[5] == '\0');
   }
 
   return true;

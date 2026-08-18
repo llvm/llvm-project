@@ -13,33 +13,41 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
-#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/Passes.h"
 
+#ifdef CLANG_INCLUDE_TESTS
+namespace cir::test {
+void registerTestCIRAliasAnalysisPass();
+} // namespace cir::test
+#endif
+
 struct CIRToLLVMPipelineOptions
-    : public mlir::PassPipelineOptions<CIRToLLVMPipelineOptions> {};
+    : public mlir::PassPipelineOptions<CIRToLLVMPipelineOptions> {
+  Option<bool> enableOpenMP{
+      *this, "enable-openmp",
+      llvm::cl::desc("Add OpenMP-specific CIR-to-LLVM lowering passes"),
+      llvm::cl::init(false)};
+};
 
 int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
   mlir::DialectRegistry registry;
-  registry.insert<mlir::BuiltinDialect, cir::CIRDialect,
-                  mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect,
-                  mlir::DLTIDialect, mlir::omp::OpenMPDialect>();
-  cir::omp::registerOpenMPExtensions(registry);
+  cir::registerAllDialects(registry);
+
+#ifdef CLANG_INCLUDE_TESTS
+  cir::test::registerTestCIRAliasAnalysisPass();
+#endif
+  registry.insert<mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createCIRCanonicalizePass();
@@ -51,7 +59,7 @@ int main(int argc, char **argv) {
   mlir::PassPipelineRegistration<CIRToLLVMPipelineOptions> pipeline(
       "cir-to-llvm", "",
       [](mlir::OpPassManager &pm, const CIRToLLVMPipelineOptions &options) {
-        cir::direct::populateCIRToLLVMPasses(pm);
+        cir::direct::populateCIRToLLVMPasses(pm, options.enableOpenMP);
       });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
@@ -72,6 +80,10 @@ int main(int argc, char **argv) {
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createCXXABILoweringPass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createIdiomRecognizerPass();
   });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {

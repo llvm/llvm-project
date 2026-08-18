@@ -217,10 +217,6 @@ struct AACacheLoc {
 };
 
 template <> struct DenseMapInfo<AACacheLoc> {
-  static inline AACacheLoc getEmptyKey() {
-    return {DenseMapInfo<AACacheLoc::PtrTy>::getEmptyKey(),
-            DenseMapInfo<LocationSize>::getEmptyKey()};
-  }
   static unsigned getHashValue(const AACacheLoc &Val) {
     return DenseMapInfo<AACacheLoc::PtrTy>::getHashValue(Val.Ptr) ^
            DenseMapInfo<LocationSize>::getHashValue(Val.Size);
@@ -1120,7 +1116,8 @@ struct ExternalAAWrapperPass : ImmutablePass {
 /// function, and the AAResults object to populate. This should be used when
 /// setting up a custom pass pipeline to inject a hook into the AA results.
 LLVM_ABI ImmutablePass *createExternalAAWrapperPass(
-    std::function<void(Pass &, Function &, AAResults &)> Callback);
+    std::function<void(Pass &, Function &, AAResults &)> Callback,
+    bool RunEarly = false);
 
 } // end namespace llvm
 

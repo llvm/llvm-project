@@ -144,6 +144,13 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
     // None of these decls require codegen support.
     return;
 
+  case Decl::CXXExpansionStmt: {
+    const auto *ESD = cast<CXXExpansionStmtDecl>(&D);
+    assert(ESD->getInstantiations() && "expansion statement not expanded?");
+    EmitStmt(ESD->getInstantiations());
+    return;
+  }
+
   case Decl::NamespaceAlias:
     if (CGDebugInfo *DI = getDebugInfo())
         DI->EmitNamespaceAlias(cast<NamespaceAliasDecl>(D));
@@ -1172,7 +1179,7 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     GV->setAlignment(Align.getAsAlign());
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CacheEntry = GV;
-  } else if (CacheEntry->getAlignment() < uint64_t(Align.getQuantity())) {
+  } else if (CacheEntry->getAlign().valueOrOne() < Align.getAsAlign()) {
     CacheEntry->setAlignment(Align.getAsAlign());
   }
 
@@ -2724,8 +2731,9 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
     if (UseIndirectDebugAddress) {
       auto PtrTy = getContext().getPointerType(Ty);
-      AllocaPtr = CreateMemTemp(PtrTy, getContext().getTypeAlignInChars(PtrTy),
-                                D.getName() + ".indirect_addr");
+      AllocaPtr = CreateMemTempWithoutCast(
+          PtrTy, getContext().getTypeAlignInChars(PtrTy),
+          D.getName() + ".indirect_addr");
       EmitStoreOfScalar(V, AllocaPtr, /* Volatile */ false, PtrTy);
     }
 
@@ -2762,7 +2770,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       DeclPtr = OpenMPLocalAddr;
       AllocaPtr = DeclPtr;
     } else {
-      // Otherwise, create a temporary to hold the value.
+      // Otherwise, create a casted temporary to hold the value.
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
                               D.getName() + ".addr", &AllocaPtr);
     }

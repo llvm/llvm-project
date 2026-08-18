@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV5TemplIiE = internal constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr null, ptr @_ZN5TemplIiED1Ev, ptr @_ZN5TemplIiED0Ev, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
+// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr null, ptr @_ZN5TemplIiED1Ev, ptr @_ZN5TemplIiED0Ev, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
 
 struct B1 { 
   virtual ~B1(); 

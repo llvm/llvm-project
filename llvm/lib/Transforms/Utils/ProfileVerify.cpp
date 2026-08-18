@@ -116,11 +116,11 @@ bool ProfileInjector::inject() {
   // as cold (we do want some explicit information in the spirit of what this
   // verifier wants to achieve - make dropping / corrupting MD_prof
   // unit-testable)
-  if (!F.getEntryCount(/*AllowSynthetic=*/true))
+  if (!F.getEntryCount())
     F.setEntryCount(DefaultFunctionEntryCount);
   // If there is an entry count that's 0, then don't bother injecting. We won't
   // verify these either.
-  if (F.getEntryCount(/*AllowSynthetic=*/true)->getCount() == 0)
+  if (*F.getEntryCount() == 0)
     return false;
   bool Changed = false;
   // Cycle through the weights list. If we didn't, tests with more than (say)
@@ -241,14 +241,14 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
   if (IgnoreList.contains(&F))
     return PreservedAnalyses::all();
 
-  const auto EntryCount = F.getEntryCount(/*AllowSynthetic=*/true);
+  const auto EntryCount = F.getEntryCount();
   if (!EntryCount) {
     auto *MD = F.getMetadata(LLVMContext::MD_prof);
     if (!MD || !isExplicitlyUnknownProfileMetadata(*MD)) {
       emitProfileError("function entry count missing (set to 0 if cold)", F);
       return PreservedAnalyses::all();
     }
-  } else if (EntryCount->getCount() == 0) {
+  } else if (*EntryCount == 0) {
     return PreservedAnalyses::all();
   }
   for (const auto &BB : F) {

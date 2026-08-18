@@ -12,7 +12,7 @@ void test(void *p) {
 }
 
 // CIR:     cir.func{{.*}} @_Z4testPv
-// CIR-NEXT:    %[[P:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["p", init] {alignment = 8 : i64}
+// CIR-NEXT:    %[[P:.*]] = cir.alloca "p" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT:    cir.store %arg0, %[[P]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT:    %[[P1:.*]] = cir.load align(8) %[[P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR-NEXT:    %[[P2:.*]] = cir.cast bitcast %[[P1]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
@@ -20,7 +20,7 @@ void test(void *p) {
 // CIR-NEXT:    cir.store align(4) %[[P3]], %[[P2]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM:    define{{.*}} void @_Z4testPv(ptr{{.*}} %[[ARG:.*]])
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
+// LLVM-NEXT:   %[[P:.*]] = alloca ptr, align 8
 // LLVM-NEXT:   store ptr %[[ARG]], ptr %[[P]], align 8
 // LLVM-NEXT:   %[[P1:.*]] = load ptr, ptr %[[P]], align 8
 // LLVM-NEXT:   store i32 0, ptr %[[P1]], align 4
@@ -37,7 +37,7 @@ void test(void *p) {
 void test_complex(void *p) { new (p) int _Complex(); }
 
 // CIR: cir.func{{.*}} @_Z12test_complexPv
-// CIR:   %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["p", init]
+// CIR:   %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
 // CIR:   cir.store %[[ARG_0:.*]], %[[P_ADDR:.*]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:   %[[TMP_P:.*]] = cir.load {{.*}} %[[P_ADDR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %[[P_COMPLEX:.*]] = cir.cast bitcast %[[TMP_P:.*]] : !cir.ptr<!void> -> !cir.ptr<!cir.complex<!s32i>>

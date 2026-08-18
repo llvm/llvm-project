@@ -1,7 +1,9 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+
 program p
   type t
     integer :: x
+    integer, allocatable :: y(:)
   end type
 
   type(t), pointer :: ptr

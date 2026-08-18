@@ -6,7 +6,8 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; SVE2_128: .LCPI0_0:
+; SVE2_128-LABEL: .type .LCPI0_0,@object
+; SVE2_128-NEXT:        .LCPI0_0:
 ; SVE2_128-NEXT:        .byte   0                               // 0x0
 ; SVE2_128-NEXT:        .byte   7                               // 0x7
 ; SVE2_128-NEXT:        .byte   2                               // 0x2
@@ -17,6 +18,14 @@ target triple = "aarch64-unknown-linux-gnu"
 ; SVE2_128-NEXT:        .byte   7                               // 0x7
 ; SVE2_128-NEXT:        .byte   255                             // 0xff
 ; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .size .LCPI0_0, 16
+
 define <8 x i8> @shuffle_index_indices_from_op1(ptr %a, ptr %b) {
 ; SVE2_128-LABEL: shuffle_index_indices_from_op1:
 ; SVE2_128:       // %bb.0:
@@ -61,7 +70,8 @@ define <8 x i8> @shuffle_index_indices_from_op1(ptr %a, ptr %b) {
   ret <8 x i8> %1
 }
 
-; SVE2_128: .LCPI1_0:
+; SVE2_128-LABEL: .type .LCPI1_0,@object
+; SVE2_128-NEXT:        .LCPI1_0:
 ; SVE2_128-NEXT:        .byte   0                               // 0x0
 ; SVE2_128-NEXT:        .byte   1                               // 0x1
 ; SVE2_128-NEXT:        .byte   1                               // 0x1
@@ -72,6 +82,13 @@ define <8 x i8> @shuffle_index_indices_from_op1(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:        .byte   7                               // 0x7
 ; SVE2_128-NEXT:        .byte   255                             // 0xff
 ; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128-NEXT:        .size .LCPI1_0, 16
 define <8 x i8> @shuffle_index_indices_from_op2(ptr %a, ptr %b) {
 ; SVE2_128-LABEL: shuffle_index_indices_from_op2:
 ; SVE2_128:       // %bb.0:
@@ -116,7 +133,8 @@ define <8 x i8> @shuffle_index_indices_from_op2(ptr %a, ptr %b) {
   ret <8 x i8> %1
 }
 
-; SVE2_128: .LCPI2_0:
+; SVE2_128-LABEL: .type .LCPI2_0,@object
+; SVE2_128-NEXT:        .LCPI2_0:
 ; SVE2_128-NEXT:        .byte   1                               // 0x1
 ; SVE2_128-NEXT:        .byte   17                              // 0x11
 ; SVE2_128-NEXT:        .byte   18                              // 0x12
@@ -127,6 +145,7 @@ define <8 x i8> @shuffle_index_indices_from_op2(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:        .byte   23                              // 0x17
 ; SVE2_128-NEXT:        .byte   255                             // 0xff
 ; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128: .size .LCPI2_0, 16
 define <8 x i8> @shuffle_index_indices_from_both_ops(ptr %a, ptr %b) {
 ; SVE2_128-LABEL: shuffle_index_indices_from_both_ops:
 ; SVE2_128:       // %bb.0:
@@ -206,7 +225,8 @@ define <8 x i8> @shuffle_index_indices_from_both_ops(ptr %a, ptr %b) {
   ret <8 x i8> %1
 }
 
-; SVE2_128: .LCPI3_0:
+; SVE2_128-LABEL: .type .LCPI3_0,@object
+; SVE2_128-NEXT:        .LCPI3_0:
 ; SVE2_128-NEXT:        .byte   1                               // 0x1
 ; SVE2_128-NEXT:        .byte   17                              // 0x11
 ; SVE2_128-NEXT:        .byte   18                              // 0x12
@@ -217,6 +237,7 @@ define <8 x i8> @shuffle_index_indices_from_both_ops(ptr %a, ptr %b) {
 ; SVE2_128-NEXT:        .byte   0                               // 0x0
 ; SVE2_128-NEXT:        .byte   255                             // 0xff
 ; SVE2_128-NEXT:        .byte   255                             // 0xff
+; SVE2_128: .size .LCPI3_0, 16
 define <8 x i8> @shuffle_index_poison_value(ptr %a, ptr %b) {
 ; SVE2_128-LABEL: shuffle_index_poison_value:
 ; SVE2_128:       // %bb.0:
@@ -362,7 +383,8 @@ define <8 x i8> @negative_test_shuffle_index_size_op_both_maxhw(ptr %a, ptr %b) 
   ret <8 x i8> %1
 }
 
-; CHECK: .LCPI6_0:
+; CHECK-LABEL: .type .LCPI6_0,@object
+; CHECK-NEXT:        .LCPI6_0:
 ; CHECK-NEXT:        .byte   0                               // 0x0
 ; CHECK-NEXT:        .byte   7                               // 0x7
 ; CHECK-NEXT:        .byte   2                               // 0x2
@@ -373,6 +395,7 @@ define <8 x i8> @negative_test_shuffle_index_size_op_both_maxhw(ptr %a, ptr %b) 
 ; CHECK-NEXT:        .byte   7                               // 0x7
 ; CHECK-NEXT:        .byte   255                             // 0xff
 ; CHECK-NEXT:        .byte   255                             // 0xff
+; CHECK: .size .LCPI6_0, 256
 define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"="+sve2" vscale_range(16,16) {
 ; CHECK-LABEL: shuffle_index_size_op1_maxhw:
 ; CHECK:       // %bb.0:
@@ -389,7 +412,8 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
   ret <8 x i8> %1
 }
 
-; SVE2_128: .LCPI7_0:
+; SVE2_128-LABEL: .type .LCPI7_0,@object
+; SVE2_128-NEXT:        .LCPI7_0:
 ; SVE2_128-NEXT:        .hword  1                               // 0x1
 ; SVE2_128-NEXT:        .hword  9                               // 0x9
 ; SVE2_128-NEXT:        .hword  10                              // 0xa
@@ -398,8 +422,10 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; SVE2_128-NEXT:        .hword  12                              // 0xc
 ; SVE2_128-NEXT:        .hword  14                              // 0xe
 ; SVE2_128-NEXT:        .hword  15                              // 0xf
+; SVE2_128-NEXT:        .size .LCPI7_0, 16
 
-; SVE2_128_NOMAX: .LCPI7_0:
+; SVE2_128_NOMAX-LABEL: .type .LCPI7_0,@object
+; SVE2_128_NOMAX-NEXT:        .LCPI7_0:
 ; SVE2_128_NOMAX-NEXT:        .hword  0                               // 0x0
 ; SVE2_128_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_128_NOMAX-NEXT:        .hword  1                               // 0x1
@@ -408,7 +434,10 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; SVE2_128_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_128_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_128_NOMAX-NEXT:        .hword  1                               // 0x1
-; SVE2_128_NOMAX-NEXT:.LCPI7_1:
+; SVE2_128_NOMAX-NEXT:        .size .LCPI7_0, 16
+
+; SVE2_128_NOMAX-LABEL: .type .LCPI7_1,@object
+; SVE2_128_NOMAX-NEXT:        .LCPI7_1:
 ; SVE2_128_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_128_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_128_NOMAX-NEXT:        .hword  2                               // 0x2
@@ -417,8 +446,10 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; SVE2_128_NOMAX-NEXT:        .hword  4                               // 0x4
 ; SVE2_128_NOMAX-NEXT:        .hword  6                               // 0x6
 ; SVE2_128_NOMAX-NEXT:        .hword  7                               // 0x7
+; SVE2_128_NOMAX-NEXT:        .size .LCPI7_1, 16
 
-; SVE2_NOMIN_NOMAX: .LCPI7_0:
+; SVE2_NOMIN_NOMAX-LABEL: .type .LCPI7_0,@object
+; SVE2_NOMIN_NOMAX-NEXT:        .LCPI7_0:
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  0                               // 0x0
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  1                               // 0x1
@@ -427,7 +458,10 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  1                               // 0x1
-; SVE2_NOMIN_NOMAX-NEXT:.LCPI7_1:
+; SVE2_NOMIN_NOMAX-NEXT:        .size .LCPI7_0, 16
+
+; SVE2_NOMIN_NOMAX-LABEL: .type .LCPI7_1,@object
+; SVE2_NOMIN_NOMAX-NEXT:        .LCPI7_1:
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  2                               // 0x2
@@ -436,8 +470,10 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  4                               // 0x4
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  6                               // 0x6
 ; SVE2_NOMIN_NOMAX-NEXT:        .hword  7                               // 0x7
+; SVE2_NOMIN_NOMAX-NEXT:        .size .LCPI7_1, 16
 
-; SVE2_MIN_256_NOMAX: .LCPI7_0:
+; SVE2_MIN_256_NOMAX-LABEL: .type .LCPI7_0,@object
+; SVE2_MIN_256_NOMAX-NEXT:        .LCPI7_0:
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  0                               // 0x0
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  1                               // 0x1
@@ -454,7 +490,10 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  0                               // 0x0
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  0                               // 0x0
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  0                               // 0x0
-; SVE2_MIN_256_NOMAX-NEXT:.LCPI7_1:
+; SVE2_MIN_256_NOMAX-NEXT:        .size .LCPI7_0, 32
+
+; SVE2_MIN_256_NOMAX-LABEL: .type .LCPI7_1,@object
+; SVE2_MIN_256_NOMAX-NEXT:        .LCPI7_1:
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  1                               // 0x1
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  2                               // 0x2
@@ -471,6 +510,7 @@ define <8 x i8> @shuffle_index_size_op1_maxhw(ptr %a, ptr %b) "target-features"=
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  65535                           // 0xffff
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  65535                           // 0xffff
 ; SVE2_MIN_256_NOMAX-NEXT:        .hword  65535                           // 0xffff
+; SVE2_MIN_256_NOMAX-NEXT:        .size .LCPI7_1, 32
 define <8 x i16> @shuffle_index_indices_from_both_ops_i16(ptr %a, ptr %b) {
 ; SVE2_128-LABEL: shuffle_index_indices_from_both_ops_i16:
 ; SVE2_128:       // %bb.0:

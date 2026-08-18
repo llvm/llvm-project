@@ -21,6 +21,7 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/BitmaskEnum.h"
 #include "clang/CodeGen/ModuleLinker.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/IR/Value.h"
@@ -411,27 +412,8 @@ enum class FnInfoOpts {
   IsInstanceMethod = 1 << 0,
   IsChainCall = 1 << 1,
   IsDelegateCall = 1 << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/IsDelegateCall)
 };
-
-inline FnInfoOpts operator|(FnInfoOpts A, FnInfoOpts B) {
-  return static_cast<FnInfoOpts>(llvm::to_underlying(A) |
-                                 llvm::to_underlying(B));
-}
-
-inline FnInfoOpts operator&(FnInfoOpts A, FnInfoOpts B) {
-  return static_cast<FnInfoOpts>(llvm::to_underlying(A) &
-                                 llvm::to_underlying(B));
-}
-
-inline FnInfoOpts &operator|=(FnInfoOpts &A, FnInfoOpts B) {
-  A = A | B;
-  return A;
-}
-
-inline FnInfoOpts &operator&=(FnInfoOpts &A, FnInfoOpts B) {
-  A = A & B;
-  return A;
-}
 
 struct DisableDebugLocationUpdates {
   CodeGenFunction &CGF;

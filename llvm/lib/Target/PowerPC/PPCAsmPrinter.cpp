@@ -124,7 +124,6 @@ template <>
 struct DenseMapInfo<std::pair<const MCSymbol *, PPCMCExpr::Specifier>> {
   using TOCKey = std::pair<const MCSymbol *, PPCMCExpr::Specifier>;
 
-  static inline TOCKey getEmptyKey() { return {nullptr, PPC::S_None}; }
   static unsigned getHashValue(const TOCKey &PairVal) {
     return detail::combineHashValue(
         DenseMapInfo<const MCSymbol *>::getHashValue(PairVal.first),
@@ -1769,25 +1768,32 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
 }
 
 void PPCLinuxAsmPrinter::emitGNUAttributes(Module &M) {
-  // Emit float ABI into GNU attribute
-  Metadata *MD = M.getModuleFlag("float-abi");
-  MDString *FloatABI = dyn_cast_or_null<MDString>(MD);
-  if (!FloatABI)
+  // Emit long double format into GNU attribute
+  MDString *LongDoubleType =
+      cast_or_null<MDString>(M.getModuleFlag("long-double-type"));
+  if (!LongDoubleType)
     return;
-  StringRef flt = FloatABI->getString();
+
   // TODO: Support emitting soft-fp and hard double/single attributes.
-  if (flt == "doubledouble")
+  switch (*parseLongDoubleFormat(LongDoubleType->getString())) {
+  case LongDoubleFormat::PPCDoubleDouble:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_IBM128);
-  else if (flt == "ieeequad")
+    break;
+  case LongDoubleFormat::IEEEquad:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_IEEE128);
-  else if (flt == "ieeedouble")
+    break;
+  case LongDoubleFormat::IEEEdouble:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_64);
+    break;
+  default:
+    break;
+  }
 }
 
 void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -1902,7 +1908,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     //
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
-    OutStreamer->emitCodeAlignment(Align(8), &getSubtargetInfo());
+    OutStreamer->emitCodeAlignment(Align(8), getSubtargetInfo());
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     OutStreamer->emitLabel(BeginOfSled);
     EmitToStreamer(*OutStreamer, RetInst);

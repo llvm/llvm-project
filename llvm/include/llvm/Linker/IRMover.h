@@ -38,7 +38,6 @@ class IRMover {
       LLVM_ABI bool operator==(const KeyTy &that) const;
       LLVM_ABI bool operator!=(const KeyTy &that) const;
     };
-    LLVM_ABI static StructType *getEmptyKey();
     LLVM_ABI static unsigned getHashValue(const KeyTy &Key);
     LLVM_ABI static unsigned getHashValue(const StructType *ST);
     LLVM_ABI static bool isEqual(const KeyTy &LHS, const StructType *RHS);

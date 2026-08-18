@@ -34,4 +34,4 @@ spec_benchmarks &= no_fortran
 
 for benchmark in spec_benchmarks:
     print(f'#--- {benchmark}.sh.test')
-    print(f'RUN: %{{python}} %{{libcxx-dir}}/utils/run-spec-benchmark --spec-dir %{{spec_dir}} --temp-dir %{{temp}} --benchmark {benchmark} --clean -- %{{cxx}} %{{compile_flags}} %{{flags}} %{{link_flags}}')
+    print(f'RUN: %{{python}} %{{libcxx-dir}}/utils/run-spec-benchmark --spec-dir %{{spec_dir}} --temp-dir %{{temp}} --benchmark {benchmark} --output %{{temp}}/results.lnt --clean -- %{{cxx}} %{{compile_flags}} %{{flags}} %{{link_flags}}')

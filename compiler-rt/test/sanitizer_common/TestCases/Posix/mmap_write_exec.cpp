@@ -7,6 +7,8 @@
 // TODO: Fix option on Android, it hangs there for unknown reasons.
 // XFAIL: android
 
+// UNSUPPORTED: rtsan
+
 #if defined(__APPLE__)
 #include <Availability.h>
 #endif

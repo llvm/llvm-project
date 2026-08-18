@@ -119,8 +119,7 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : NoTrappingFPMath(true), NoSignedZerosFPMath(false),
-        EnableAIXExtendedAltivecABI(false),
+      : NoTrappingFPMath(true), EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -133,11 +132,11 @@ public:
         EmitStackSizeSection(false), EnableMachineOutliner(false),
         EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
-        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
-        EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-        DebugStrictDwarf(false), Hotpatch(false),
+        EnableDefaultMachineVerifier(true), EmitAddrsig(false),
+        BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
+        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(true) {}
@@ -159,12 +158,6 @@ public:
   /// -enable-no-trapping-fp-math is specified on the command line. This
   /// specifies that there are no trap handlers to handle exceptions.
   unsigned NoTrappingFPMath : 1;
-
-  /// NoSignedZerosFPMath - This flag is enabled when the
-  /// -enable-no-signed-zeros-fp-math is specified on the command line. This
-  /// specifies that optimizations are allowed to treat the sign of a zero
-  /// argument or result as insignificant.
-  unsigned NoSignedZerosFPMath : 1;
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
@@ -279,6 +272,10 @@ public:
 
   /// Set if the target supports default outlining behaviour.
   unsigned SupportsDefaultOutlining : 1;
+
+  /// Enable Machine verifier at the end of default codegen pipelines. (Only
+  /// used with NPM)
+  unsigned EnableDefaultMachineVerifier : 1;
 
   /// Emit address-significance table.
   unsigned EmitAddrsig : 1;

@@ -142,14 +142,6 @@ static std::unique_ptr<T> valueOrNull(llvm::ErrorOr<std::unique_ptr<T>> Val) {
   return std::move(*Val);
 }
 
-template <class T>
-static bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {
-  if (!Val)
-    return false;
-  Output = std::move(*Val);
-  return true;
-}
-
 /// Get a source buffer for \p MainFilePath, handling all file-to-file
 /// and file-to-buffer remappings inside \p Invocation.
 static std::unique_ptr<llvm::MemoryBuffer>
@@ -1687,6 +1679,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST(new ASTUnit(false));
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
+  *AST->CodeGenOpts = CI->getCodeGenOpts();
   AST->DiagOpts = DiagOpts;
   AST->Diagnostics = Diags;
   AST->OnlyLocalDecls = OnlyLocalDecls;

@@ -20,6 +20,7 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
     lldbCore
     lldbTarget
     lldbPluginDynamicLoaderPosixDYLD
+    lldbPluginObjectFilePlaceholder
     lldbPluginObjectFileELF
     lldbPluginProcessUtility
   )

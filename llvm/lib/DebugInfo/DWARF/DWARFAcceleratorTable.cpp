@@ -57,7 +57,7 @@ Error AppleAcceleratorTable::extract() {
   FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
 
   // Check that we can read all the hashes and offsets from the
-  // section (see SourceLevelDebugging.rst for the structure of the index).
+  // section (see SourceLevelDebugging.md for the structure of the index).
   if (!AccelSection.isValidOffset(getIthBucketBase(Hdr.BucketCount - 1)))
     return createStringError(
         errc::illegal_byte_sequence,
@@ -510,10 +510,6 @@ static DWARFDebugNames::Abbrev sentinelAbbrev() {
 
 static bool isSentinel(const DWARFDebugNames::Abbrev &Abbr) {
   return Abbr.Code == 0;
-}
-
-DWARFDebugNames::Abbrev DWARFDebugNames::AbbrevMapInfo::getEmptyKey() {
-  return sentinelAbbrev();
 }
 
 Expected<DWARFDebugNames::AttributeEncoding>

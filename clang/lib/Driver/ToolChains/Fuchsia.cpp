@@ -139,9 +139,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO())
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -331,9 +330,9 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 }
 
 std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,
-                                                 llvm::StringRef BoundArch,
+                                                 BoundArch BA,
                                                  types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, BoundArch, InputType));
+  llvm::Triple Triple(ComputeLLVMTriple(Args, BA, InputType));
   return Triple.str();
 }
 
@@ -367,7 +366,7 @@ ToolChain::CXXStdlibType Fuchsia::GetCXXStdlibType(const ArgList &Args) const {
 }
 
 void Fuchsia::addClangTargetOptions(const ArgList &DriverArgs,
-                                    ArgStringList &CC1Args,
+                                    ArgStringList &CC1Args, BoundArch BA,
                                     Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
@@ -474,10 +473,9 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 SanitizerMask
-Fuchsia::getSupportedSanitizers(StringRef BoundArch,
+Fuchsia::getSupportedSanitizers(BoundArch BA,
                                 Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::HWAddress;
   Res |= SanitizerKind::PointerCompare;

@@ -369,6 +369,8 @@ static const StringMap<MachineInfo> TargetMap{
     {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
     // SystemZ
     {"elf64-s390", {ELF::EM_S390, true, false}},
+    // AMDGPU
+    {"elf64-amdgpu", {ELF::EM_AMDGPU, true, true}},
 };
 
 static Expected<TargetInfo>
@@ -945,6 +947,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "invalid or unsupported --compress-sections format: %s",
           A->getValue());
     }
+    if (Type != DebugCompressionType::None) {
+      if (const char *Reason =
+              compression::getReasonIfUnsupported(compression::formatFor(Type)))
+        return createStringError(errc::invalid_argument, Reason);
+    }
 
     auto &P = Config.compressSections.emplace_back();
     P.second = Type;
@@ -1482,7 +1489,8 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         errc::invalid_argument,
         "llvm-install-name-tool expects a single input file");
   Config.InputFilename = Positional[0];
-  Config.OutputFilename = Positional[0];
+  Config.OutputFilename =
+      InputArgs.getLastArgValue(INSTALL_NAME_TOOL_output, Positional[0]);
 
   Expected<OwningBinary<Binary>> BinaryOrErr =
       createBinary(Config.InputFilename);

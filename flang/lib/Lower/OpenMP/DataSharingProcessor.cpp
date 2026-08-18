@@ -29,8 +29,6 @@
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
-#include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include <variant>
 
@@ -220,7 +218,10 @@ void DataSharingProcessor::copyFirstPrivateSymbol(
 
 void DataSharingProcessor::copyLastPrivateSymbol(
     const semantics::Symbol *sym, mlir::OpBuilder::InsertPoint *lastPrivIP) {
-  if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
+  // Conditional-lastprivate symbols use their own guarded copy-back (from the
+  // reduction accumulator), not the standard "last iteration wins" copy-back.
+  if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
+      !conditionalLastPrivatizedSymbols.contains(sym))
     converter.copyHostAssociateVar(*sym, lastPrivIP, /*hostIsSource=*/false);
 }
 
@@ -273,19 +274,51 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
                                  explicitlyPrivatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
-      lastprivateModifierNotSupported(*lastPrivateClause,
-                                      converter.getCurrentLocation());
+      auto &modifier = std::get<
+          std::optional<omp::clause::Lastprivate::LastprivateModifier>>(
+          lastPrivateClause->t);
+
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
-      collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
+      if (modifier) {
+        assert(*modifier ==
+                   omp::clause::Lastprivate::LastprivateModifier::Conditional &&
+               "unsupported lastprivate modifier");
+        // The conditional modifier was added in OpenMP 5.0.  In earlier
+        // versions semantics only warns and ignores it, so fall back to a
+        // regular lastprivate here to keep lowering consistent and avoid the
+        // conditional path for entities it cannot handle (e.g. characters).
+        if (semaCtx.langOptions().OpenMPVersion >= 50) {
+          collectOmpObjectListSymbol(objects, conditionalLastPrivatizedSymbols);
+        } else {
+          collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
+        }
+      } else {
+        collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
+      }
     }
   }
 
   // TODO For common blocks, add the underlying objects within the block. Doing
   // so, we won't need to explicitly handle block objects (or forget to do
   // so).
+  // A conditional-lastprivate symbol is bound directly to the reduction struct
+  // (not privatized) UNLESS the construct opts into the private-copy lowering
+  // (conditionalLpUsesPrivateCopy, set by worksharing loops).  In that mode it
+  // gets an ordinary private copy -- the "working" value that in-loop reads see
+  // and that carries the execution-order value across iterations -- with the
+  // reduction struct acting as the conditional-last accumulator, and the
+  // standard lastprivate copy-back suppressed (see copyLastPrivateSymbol /
+  // insertLastPrivateCompare) in favor of the conditional copy-back.
   for (auto *sym : explicitlyPrivatizedSymbols)
-    if (!isException(sym))
+    if (!isException(sym) && (conditionalLpUsesPrivateCopy ||
+                              !conditionalLastPrivatizedSymbols.contains(sym)))
       allPrivatizedSymbols.insert(sym);
+  if (conditionalLpUsesPrivateCopy)
+    for (auto *sym : conditionalLastPrivatizedSymbols)
+      if (!isException(sym))
+        allPrivatizedSymbols.insert(sym);
+  // (A firstprivate + conditional-lastprivate symbol appears in both lists;
+  // allPrivatizedSymbols is a SetVector, so it is inserted only once.)
 }
 
 bool DataSharingProcessor::needBarrier() {
@@ -329,7 +362,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
         for (const auto &mem : commonDet->objects())
           if (mem->test(semantics::Symbol::Flag::OmpLastPrivate))
             return true;
-      } else if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
+      } else if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
+                 !conditionalLastPrivatizedSymbols.contains(sym))
         return true;
     }
 
@@ -492,6 +526,17 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   }
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
+    // Linear symbols are privatized by OpenMP IRBuilder, except when they are
+    // enclosed within TARGET.
+    mlir::Operation *currentOp =
+        firOpBuilder.getInsertionBlock()->getParentOp();
+    bool inTarget =
+        currentOp && (mlir::isa<mlir::omp::TargetOp>(currentOp) ||
+                      currentOp->getParentOfType<mlir::omp::TargetOp>());
+
+    if (sym->test(semantics::Symbol::Flag::OmpLinear) && !inTarget)
+      return false;
+
     if (collectImplicit) {
       // If we're a combined construct with a target region, implicit
       // firstprivate captures, should only belong to the target region
@@ -533,9 +578,6 @@ void DataSharingProcessor::collectPrivatizedSymbols(
 
   for (const auto *sym : allSymbols) {
     if (semantics::omp::IsPrivatizable(*sym) &&
-        // Linear symbols are privatized by OpenMP IRBuilder. See comments
-        // in collectSymbolsForPrivatization() for more details.
-        !sym->test(semantics::Symbol::Flag::OmpLinear) &&
         !symbolsInNestedRegions.contains(sym) &&
         !explicitlyPrivatizedSymbols.contains(sym) &&
         shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
@@ -702,7 +744,8 @@ void DataSharingProcessor::privatizeSymbol(
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
-      mightHaveReadHostSym, symToPrivatize, clauseOps, dir);
+      mightHaveReadHostSym, symToPrivatize, clauseOps, dir,
+      forceHeapAllocationForPrivateDynamicArrays);
 }
 } // namespace omp
 } // namespace lower

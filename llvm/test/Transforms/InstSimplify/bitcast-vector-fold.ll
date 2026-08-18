@@ -412,7 +412,7 @@ define <3 x i32> @bitcast_constexpr_3i32_4i24_n1255uu() {
 ; LE-NEXT:    ret <3 x i32> <i32 -1, i32 0, i32 undef>
 ;
 ; BE-LABEL: @bitcast_constexpr_3i32_4i24_n1255uu(
-; BE-NEXT:    ret <3 x i32> <i32 -256, i32 0, i32 undef>
+; BE-NEXT:    ret <3 x i32> <i32 -256, i32 16711680, i32 undef>
 ;
   %cast = bitcast <4 x i24><i24 -1, i24 255, i24 undef, i24 undef> to <3 x i32>
   ret <3 x i32> %cast

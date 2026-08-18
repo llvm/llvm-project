@@ -308,15 +308,17 @@ struct DecodedUnwindInfoV3 {
 
 /// Return the register name for a 5-bit AMD64 integer register number.
 /// Covers 0-15 (RAX-R15) and 16-31 (R16-R31 for APX).
-StringRef getRegisterNameV3(unsigned Reg);
+LLVM_ABI StringRef getRegisterNameV3(unsigned Reg);
 
 /// Decode one WOD from the pool at the given byte offset.
 /// Returns an error on malformed data.
-Expected<DecodedWOD> decodeWOD(ArrayRef<uint8_t> Pool, unsigned Offset);
+LLVM_ABI Expected<DecodedWOD> decodeWOD(ArrayRef<uint8_t> Pool,
+                                        unsigned Offset);
 
 /// Parse a V3 UNWIND_INFO from raw bytes.
 /// Returns an error on malformed data.
-Expected<DecodedUnwindInfoV3> decodeUnwindInfoV3(ArrayRef<uint8_t> Data);
+LLVM_ABI Expected<DecodedUnwindInfoV3>
+decodeUnwindInfoV3(ArrayRef<uint8_t> Data);
 
 } // End of namespace Win64EH
 } // End of namespace llvm

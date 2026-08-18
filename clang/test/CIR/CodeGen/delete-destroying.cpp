@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -mconstructor-aliases -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -mconstructor-aliases -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
@@ -37,8 +39,8 @@ void test_destroying_delete(S *s) {
 // responsible for destroying the object itself.
 
 // CIR: cir.func {{.*}} @_Z22test_destroying_deleteP1S(%[[ARG:.*]]: !cir.ptr<!rec_S> {{.*}})
-// CIR:   %[[S_ADDR:.*]] = cir.alloca !cir.ptr<!rec_S>, {{.*}} ["s", init]
-// CIR:   %[[TAG_ADDR:.*]] = cir.alloca !rec_std3A3Adestroying_delete_t, {{.*}} ["destroying.delete.tag"]
+// CIR:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:   %[[TAG_ADDR:.*]] = cir.alloca "destroying.delete.tag" {{.*}} : !cir.ptr<!rec_std3A3Adestroying_delete_t{{.*}}>
 // CIR:   cir.store %[[ARG]], %[[S_ADDR]]
 // CIR:   %[[S:.*]] = cir.load{{.*}} %[[S_ADDR]]
 // CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_S>
@@ -96,7 +98,7 @@ void test_virtual_destroying_delete(V *v) {
 }
 
 // CIR: cir.func {{.*}} @_Z30test_virtual_destroying_deleteP1V(%[[ARG:.*]]: !cir.ptr<!rec_V> {{.*}})
-// CIR:   %[[V_ADDR:.*]] = cir.alloca !cir.ptr<!rec_V>, {{.*}} ["v", init]
+// CIR:   %[[V_ADDR:.*]] = cir.alloca "v" {{.*}} init : !cir.ptr<!cir.ptr<!rec_V>>
 // CIR:   cir.store %[[ARG]], %[[V_ADDR]]
 // CIR:   %[[V:.*]] = cir.load{{.*}} %[[V_ADDR]]
 // CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_V>

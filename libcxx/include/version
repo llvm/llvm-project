@@ -64,7 +64,7 @@ __cpp_lib_common_reference                              202302L <type_traits>
 __cpp_lib_common_reference_wrapper                      202302L <functional>
 __cpp_lib_complex_udls                                  201309L <complex>
 __cpp_lib_concepts                                      202207L <concepts>
-__cpp_lib_constant_wrapper                              202603L <utility>
+__cpp_lib_constant_wrapper                              202606L <utility>
 __cpp_lib_constexpr_algorithms                          202306L <algorithm> <utility>
                                                         201806L // C++20
 __cpp_lib_constexpr_bitset                              202207L <bitset>
@@ -84,6 +84,7 @@ __cpp_lib_constexpr_memory                              202202L <memory>
 __cpp_lib_constexpr_new                                 202406L <new>
 __cpp_lib_constexpr_numeric                             201911L <numeric>
 __cpp_lib_constexpr_queue                               202502L <queue>
+__cpp_lib_constexpr_set                                 202502L <set>
 __cpp_lib_constexpr_string                              201907L <string>
 __cpp_lib_constexpr_string_view                         201811L <string_view>
 __cpp_lib_constexpr_tuple                               201811L <tuple>
@@ -130,7 +131,7 @@ __cpp_lib_freestanding_optional                         202311L <optional>
 __cpp_lib_freestanding_string_view                      202311L <string_view>
 __cpp_lib_freestanding_variant                          202311L <variant>
 __cpp_lib_fstream_native_handle                         202306L <fstream>
-__cpp_lib_function_ref                                  202306L <functional>
+__cpp_lib_function_ref                                  202603L <functional>
 __cpp_lib_gcd_lcm                                       201606L <numeric>
 __cpp_lib_generate_random                               202403L <random>
 __cpp_lib_generic_associative_lookup                    201304L <map> <set>
@@ -140,6 +141,7 @@ __cpp_lib_has_unique_object_representations             201606L <type_traits>
 __cpp_lib_hazard_pointer                                202306L <hazard_pointer>
 __cpp_lib_hypot                                         201603L <cmath>
 __cpp_lib_incomplete_container_elements                 201505L <forward_list> <list> <vector>
+__cpp_lib_initializer_list                              202511L <initializer_list>
 __cpp_lib_inplace_vector                                202406L <inplace_vector>
 __cpp_lib_int_pow2                                      202002L <bit>
 __cpp_lib_integer_comparison_functions                  202002L <utility>
@@ -224,7 +226,8 @@ __cpp_lib_ranges_stride                                 202207L <ranges>
 __cpp_lib_ranges_to_container                           202202L <ranges>
 __cpp_lib_ranges_zip                                    202110L <ranges> <tuple> <utility>
 __cpp_lib_ratio                                         202306L <ratio>
-__cpp_lib_raw_memory_algorithms                         201606L <memory>
+__cpp_lib_raw_memory_algorithms                         202411L <memory>
+                                                        201606L // C++17
 __cpp_lib_rcu                                           202306L <rcu>
 __cpp_lib_reference_from_temporary                      202202L <type_traits>
 __cpp_lib_reference_wrapper                             202403L <functional>
@@ -285,6 +288,7 @@ __cpp_lib_uncaught_exceptions                           201411L <exception>
 __cpp_lib_unordered_map_try_emplace                     201411L <unordered_map>
 __cpp_lib_unreachable                                   202202L <utility>
 __cpp_lib_unwrap_ref                                    201811L <functional>
+__cpp_lib_valarray                                      202511L <valarray>
 __cpp_lib_variant                                       202306L <variant>
                                                         202106L // C++20
                                                         202102L // C++17
@@ -308,6 +312,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_complex_udls                         201309L
 # define __cpp_lib_exchange_function                    201304L
 # define __cpp_lib_generic_associative_lookup           201304L
+# define __cpp_lib_initializer_list                     202511L
 # define __cpp_lib_integer_sequence                     201304L
 # define __cpp_lib_integral_constant_callable           201304L
 # define __cpp_lib_is_final                             201402L
@@ -328,6 +333,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_transparent_operators                201210L
 # define __cpp_lib_tuple_element_t                      201402L
 # define __cpp_lib_tuples_by_type                       201304L
+# define __cpp_lib_valarray                             202511L
 #endif
 
 #if _LIBCPP_STD_VER >= 17
@@ -556,13 +562,13 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #if _LIBCPP_STD_VER >= 26
 # define __cpp_lib_aligned_accessor                     202411L
 // # define __cpp_lib_associative_heterogeneous_insertion  202306L
-// # define __cpp_lib_atomic_min_max                       202403L
+# define __cpp_lib_atomic_min_max                       202403L
 # undef  __cpp_lib_atomic_ref
 # define __cpp_lib_atomic_ref                           202603L
 # undef  __cpp_lib_bind_front
 # define __cpp_lib_bind_front                           202306L
 # define __cpp_lib_bitset                               202306L
-# define __cpp_lib_constant_wrapper                     202603L
+# define __cpp_lib_constant_wrapper                     202606L
 # undef  __cpp_lib_constexpr_algorithms
 # define __cpp_lib_constexpr_algorithms                 202306L
 # define __cpp_lib_constexpr_flat_map                   202502L
@@ -574,6 +580,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_constexpr_new                      202406L
 # endif
 # define __cpp_lib_constexpr_queue                      202502L
+# define __cpp_lib_constexpr_set                        202502L
 # define __cpp_lib_constrained_equality                 202411L
 // # define __cpp_lib_copyable_function                    202306L
 // # define __cpp_lib_debugging                            202311L
@@ -590,7 +597,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # if _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 #   define __cpp_lib_fstream_native_handle              202306L
 # endif
-// # define __cpp_lib_function_ref                         202306L
+# define __cpp_lib_function_ref                         202603L
 // # define __cpp_lib_generate_random                      202403L
 // # define __cpp_lib_hazard_pointer                       202306L
 // # define __cpp_lib_inplace_vector                       202406L
@@ -619,18 +626,20 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_ranges_concat                        202403L
 # define __cpp_lib_ranges_indices                       202506L
 # define __cpp_lib_ratio                                202306L
+# undef  __cpp_lib_raw_memory_algorithms
+# define __cpp_lib_raw_memory_algorithms                202411L
 // # define __cpp_lib_rcu                                  202306L
 # define __cpp_lib_reference_wrapper                    202403L
 # define __cpp_lib_saturation_arithmetic                202603L
 // # define __cpp_lib_senders                              202406L
-// # define __cpp_lib_smart_ptr_owner_equality             202306L
+# define __cpp_lib_smart_ptr_owner_equality             202306L
 # define __cpp_lib_span_at                              202311L
 # define __cpp_lib_sstream_from_string_view             202306L
 # define __cpp_lib_string_subview                       202506L
 # undef  __cpp_lib_string_view
 # define __cpp_lib_string_view                          202403L
 // # define __cpp_lib_submdspan                            202306L
-// # define __cpp_lib_text_encoding                        202306L
+# define __cpp_lib_text_encoding                        202306L
 # undef  __cpp_lib_to_chars
 // # define __cpp_lib_to_chars                             202306L
 // # define __cpp_lib_to_string                            202306L

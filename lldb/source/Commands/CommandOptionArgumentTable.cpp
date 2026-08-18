@@ -297,7 +297,7 @@ llvm::StringRef arch_helper() {
     StringList archs;
 
     ArchSpec::ListSupportedArchNames(archs);
-    g_archs_help.Printf("These are the supported architecture names:\n");
+    g_archs_help.PutCString("These are the supported architecture names:\n");
     archs.Join("\n", g_archs_help);
   }
   return g_archs_help.GetString();

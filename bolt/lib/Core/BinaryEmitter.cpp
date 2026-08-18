@@ -33,10 +33,6 @@ using namespace bolt;
 namespace opts {
 
 extern cl::opt<JumpTableSupportLevel> JumpTables;
-extern cl::opt<bool> PreserveBlocksAlignment;
-
-cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
-                          cl::cat(BoltOptCategory));
 
 static cl::list<std::string>
 BreakFunctionNames("break-funcs",
@@ -67,12 +63,6 @@ static cl::opt<bool> MarkFuncs(
 static cl::opt<bool> PrintJumpTables("print-jump-tables",
                                      cl::desc("print jump tables"), cl::Hidden,
                                      cl::cat(BoltCategory));
-
-static cl::opt<bool>
-X86AlignBranchBoundaryHotOnly("x86-align-branch-boundary-hot-only",
-  cl::desc("only apply branch boundary alignment in hot code"),
-  cl::init(true),
-  cl::cat(BoltOptCategory));
 
 size_t padFunction(std::map<std::string, size_t> &FunctionPadding,
                    const cl::list<std::string> &Spec,
@@ -214,7 +204,7 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   if (RuntimeLibrary *RtLibrary = BC.getRuntimeLibrary())
     RtLibrary->emitBinary(BC, Streamer);
 
-  BC.getTextSection()->setAlignment(Align(opts::AlignText));
+  BC.getTextSection()->setAlignment(Align(BC.AlignText));
 
   emitFunctions();
 
@@ -246,7 +236,7 @@ void BinaryEmitter::emitFunctions() {
       bool Emitted = false;
 
       // Turn off Intel JCC Erratum mitigation for cold code if requested
-      if (HasProfile && opts::X86AlignBranchBoundaryHotOnly &&
+      if (HasProfile && BC.X86AlignBranchBoundaryHotOnly &&
           !Function->hasValidProfile())
         Streamer.setAllowAutoPadding(false);
 
@@ -254,7 +244,7 @@ void BinaryEmitter::emitFunctions() {
       Emitted |= emitFunction(*Function, Layout.getMainFragment());
 
       if (Function->isSplit()) {
-        if (opts::X86AlignBranchBoundaryHotOnly)
+        if (BC.X86AlignBranchBoundaryHotOnly)
           Streamer.setAllowAutoPadding(false);
 
         assert((Layout.fragment_size() == 1 || Function->isSimple()) &&
@@ -317,16 +307,16 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     // Set section alignment to at least maximum possible object alignment.
     // We need this to support LongJmp and other passes that calculates
     // tentative layout.
-    Section->ensureMinAlignment(Align(opts::AlignFunctions));
+    Section->ensureMinAlignment(Align(BC.AlignFunctions));
 
-    Streamer.emitCodeAlignment(Function.getMinAlign(), &*BC.STI);
+    Streamer.emitCodeAlignment(Function.getMinAlign(), *BC.STI);
     uint16_t MaxAlignBytes = FF.isSplitFragment()
                                  ? Function.getMaxColdAlignmentBytes()
                                  : Function.getMaxAlignmentBytes();
     if (MaxAlignBytes > 0)
-      Streamer.emitCodeAlignment(Function.getAlign(), &*BC.STI, MaxAlignBytes);
+      Streamer.emitCodeAlignment(Function.getAlign(), *BC.STI, MaxAlignBytes);
   } else {
-    Streamer.emitCodeAlignment(Function.getAlign(), &*BC.STI);
+    Streamer.emitCodeAlignment(Function.getAlign(), *BC.STI);
   }
 
   if (size_t Padding = opts::padFunctionBefore(Function)) {
@@ -457,9 +447,9 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
   for (BinaryBasicBlock *const BB : FF) {
-    if ((opts::AlignBlocks || opts::PreserveBlocksAlignment) &&
+    if ((BC.AlignBlocks || BC.PreserveBlocksAlignment) &&
         BB->getAlignment() > 1)
-      Streamer.emitCodeAlignment(BB->getAlign(), &*BC.STI,
+      Streamer.emitCodeAlignment(BB->getAlign(), *BC.STI,
                                  BB->getAlignmentMaxBytes());
     Streamer.emitLabel(BB->getLabel());
     if (!EmitCodeOnly) {
@@ -491,8 +481,10 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
 
         // Prepare to tag this location with a label if we need to keep track of
-        // the location of calls/returns for BOLT address translation maps
-        if (BF.requiresAddressTranslation() && BC.MIB->getOffset(Instr)) {
+        // an instruction's output address to augment the IO address map (BAT,
+        // SDT/probe address translation, or --update-debug-sections DWARF range
+        // updates).
+        if (BF.requiresPreciseAddressMap() && BC.MIB->getOffset(Instr)) {
           const uint32_t Offset = *BC.MIB->getOffset(Instr);
           if (!InstrLabel)
             InstrLabel = BC.Ctx->createTempSymbol();
@@ -537,7 +529,7 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
   const uint16_t Alignment = OnBehalfOf
                                  ? OnBehalfOf->getConstantIslandAlignment()
                                  : BF.getConstantIslandAlignment();
-  Streamer.emitCodeAlignment(Align(Alignment), &*BC.STI);
+  Streamer.emitCodeAlignment(Align(Alignment), *BC.STI);
 
   if (!OnBehalfOf) {
     if (!EmitColdPart)

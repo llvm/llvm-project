@@ -114,6 +114,23 @@ DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
   return llvm::MDNode::get(llvmCtx, llvmElements);
 }
 
+llvm::MDTuple *
+DebugTranslation::getRetainedNodesOrNull(ArrayRef<Attribute> retainedNodes) {
+  if (retainedNodes.empty())
+    return nullptr;
+  SmallVector<llvm::Metadata *> llvmElements = llvm::map_to_vector(
+      retainedNodes, [&](Attribute attr) -> llvm::Metadata * {
+        if (auto GVE = dyn_cast<DIGlobalVariableExpressionAttr>(attr))
+          return translateGlobalVariableExpression(GVE);
+
+        auto diAttr = dyn_cast<DINodeAttr>(attr);
+        if (!diAttr)
+          llvm_unreachable("unknown retained node kind");
+        return translate(diAttr);
+      });
+  return llvm::MDNode::get(llvmCtx, llvmElements);
+}
+
 llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
   return llvm::DIBasicType::get(
       llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
@@ -121,11 +138,18 @@ llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
       /*AlignInBits=*/0, attr.getEncoding(), llvm::DINode::FlagZero);
 }
 
+static llvm::DISourceLanguageName getSourceLanguage(DICompileUnitAttr attr) {
+  // DISourceLanguageName represents "no source-language dialect" as 0; the
+  // LLVM IR printer omits the `dialect:` field for that value.
+  return llvm::DISourceLanguageName(
+      static_cast<uint16_t>(attr.getSourceLanguage()),
+      static_cast<uint16_t>(attr.getSourceLanguageDialect()));
+}
+
 llvm::TempDICompileUnit
 DebugTranslation::translateTemporaryImpl(DICompileUnitAttr attr) {
   return llvm::DICompileUnit::getTemporary(
-      llvmCtx,
-      static_cast<llvm::DISourceLanguageName>(attr.getSourceLanguage()),
+      llvmCtx, getSourceLanguage(attr),
       /*File=*/nullptr, "", attr.getIsOptimized(),
       /*Flags=*/"", /*RuntimeVersion=*/0,
       /*splitDebugFileName=*/"",
@@ -149,7 +173,7 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
 
   llvm::DIBuilder builder(llvmModule);
   llvm::DICompileUnit *cu = builder.createCompileUnit(
-      attr.getSourceLanguage(), translate(attr.getFile()),
+      getSourceLanguage(attr), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
       /*Flags=*/"", /*RV=*/0,
@@ -400,7 +424,7 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       compileUnit, /*TemplateParams=*/nullptr, /*Declaration=*/nullptr,
-      getMDTupleOrNull(attr.getRetainedNodes()), nullptr,
+      getRetainedNodesOrNull(attr.getRetainedNodes()), nullptr,
       getMDTupleOrNull(attr.getAnnotations()));
   if (attr.getId())
     distinctAttrToNode.try_emplace(attr.getId(), node);

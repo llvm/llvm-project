@@ -88,14 +88,6 @@ public:
                        Data.size())),
         IsLittleEndian(IsLittleEndian) {}
 
-  // TODO: Delete.
-  DataExtractor(StringRef Data, bool IsLittleEndian, uint8_t)
-      : DataExtractor(Data, IsLittleEndian) {}
-
-  // TODO: Delete.
-  DataExtractor(ArrayRef<uint8_t> Data, bool IsLittleEndian, uint8_t)
-      : DataExtractor(Data, IsLittleEndian) {}
-
   /// Get the data pointed to by this extractor.
   StringRef getData() const { return Data; }
   /// Get the endianness for this extractor.

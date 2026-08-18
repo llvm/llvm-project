@@ -333,6 +333,19 @@ uint64_t TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
 }
 
 //===----------------------------------------------------------------------===//
+// TestSymbolUserType
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TestSymbolUserType::verifySymbolUses(Operation *op,
+                                     SymbolTableCollection &symbolTable) const {
+  if (!symbolTable.lookupNearestSymbolFrom<SymbolOpInterface>(op, getSymbol()))
+    return op->emitOpError()
+           << "'" << getSymbol() << "' does not reference a valid symbol";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Dynamic Types
 //===----------------------------------------------------------------------===//
 
@@ -560,17 +573,9 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
   return ::mlir::OpAsmDialectInterface::AliasResult::FinalAlias;
 }
 
-::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
-TestTensorType::getBufferType(
-    const ::mlir::bufferization::BufferizationOptions &,
-    ::llvm::function_ref<::mlir::InFlightDiagnostic()>) {
-  return cast<bufferization::BufferLikeType>(
-      TestMemrefType::get(getContext(), getShape(), getElementType(), nullptr));
-}
-
 ::mlir::LogicalResult TestTensorType::verifyCompatibleBufferType(
     ::mlir::bufferization::BufferLikeType bufferType,
-    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
   if (auto testMemref = dyn_cast<TestMemrefType>(bufferType)) {
     const bool valid = getShape() == testMemref.getShape() &&
                        getElementType() == testMemref.getElementType();

@@ -24,6 +24,7 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRMaskableOpInterface
   MLIRMaskingOpInterface
   MLIRMemRefDialect
+  MLIRMemRefUtils
   MLIRSideEffectInterfaces
   MLIRTensorDialect
   MLIRUBDialect

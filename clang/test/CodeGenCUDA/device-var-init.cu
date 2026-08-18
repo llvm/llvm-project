@@ -9,7 +9,7 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=HOST %s
 
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu -fcuda-is-device -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=DEVICE,AMDGCN %s
 
 #ifdef __clang__

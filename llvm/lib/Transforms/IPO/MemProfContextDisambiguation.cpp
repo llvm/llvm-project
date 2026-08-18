@@ -49,7 +49,6 @@
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include <deque>
 #include <sstream>
-#include <unordered_map>
 #include <vector>
 using namespace llvm;
 using namespace llvm::memprof;
@@ -207,7 +206,7 @@ static cl::opt<bool> AllowRecursiveContexts(
 // Set the minimum absolute count threshold for allowing inlining of indirect
 // calls promoted during cloning.
 static cl::opt<unsigned> MemProfICPNoInlineThreshold(
-    "memprof-icp-noinline-threshold", cl::init(2), cl::Hidden,
+    "memprof-icp-noinline-threshold", cl::init(0), cl::Hidden,
     cl::desc("Minimum absolute count for promoted target to be inlinable"));
 
 namespace llvm {
@@ -1103,8 +1102,8 @@ private:
   // frames that we discover while building the graph.
   // It maps from the summary of the function making the tail call, to a map
   // of callee ValueInfo to corresponding synthesized callsite info.
-  std::unordered_map<FunctionSummary *,
-                     std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
+  DenseMap<FunctionSummary *,
+           std::map<ValueInfo, std::unique_ptr<CallsiteInfo>>>
       FunctionCalleesToSynthesizedCallsiteInfos;
 };
 } // namespace
@@ -2525,7 +2524,11 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
   // must be sorted.
   std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
-  for (auto &I : Index) {
+  // Sort by GUID for deterministic graph construction order.
+  // TODO: This sort has a measurable cost on the thin link when memprof is
+  // enabled. Investigate gating it behind an option that is only enabled for
+  // tests that check internal state.
+  for (const auto &I : Index.sortedGlobalValueSummariesRange()) {
     auto VI = Index.getValueInfo(I);
     if (GUIDsToSkip.contains(VI.getGUID()))
       continue;
@@ -3377,7 +3380,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
         // This is only emitted if the context size info is not present.
         std::string Msg =
             "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
-            " is " + getAllocTypeString(Node->AllocTypes) + " after cloning";
+            " context is " + getAllocTypeString(Node->AllocTypes) +
+            " after cloning";
         if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
           Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                  " due to cold byte percent";
@@ -6208,8 +6212,8 @@ void MemProfContextDisambiguation::performICP(
     auto *CB = Info.CB;
     auto CallsiteIndex = Info.CallsiteInfoStartIndex;
     auto TotalCount = Info.TotalCount;
-    unsigned NumPromoted = 0;
     unsigned NumClones = 0;
+    SmallVector<InstrProfValueData, 8> RemainingCandidates;
 
     for (auto &Candidate : Info.CandidateProfileData) {
       auto &StackNode = AllCallsites[CallsiteIndex++];
@@ -6238,6 +6242,7 @@ void MemProfContextDisambiguation::performICP(
         // FIXME: See if we can use the new declaration importing support to
         // at least get the declarations imported for this case. Hot indirect
         // targets should have been imported normally, however.
+        RemainingCandidates.push_back(Candidate);
         continue;
       }
 
@@ -6251,6 +6256,7 @@ void MemProfContextDisambiguation::performICP(
                  << " with count of " << ore::NV("TotalCount", TotalCount)
                  << ": " << Reason;
         });
+        RemainingCandidates.push_back(Candidate);
         continue;
       }
 
@@ -6304,10 +6310,9 @@ void MemProfContextDisambiguation::performICP(
 
       // Update TotalCount (all clones should get same count above)
       TotalCount -= Candidate.Count;
-      NumPromoted++;
     }
     // Adjust the MD.prof metadata for all clones, now that we have the new
-    // TotalCount and the number promoted.
+    // TotalCount and the remaining candidates.
     CallBase *CBClone = CB;
     for (unsigned J = 0; J < NumClones; J++) {
       // If the VMap is empty, this clone was a duplicate of another and was
@@ -6322,9 +6327,8 @@ void MemProfContextDisambiguation::performICP(
       // If all promoted, we don't need the MD.prof metadata.
       // Otherwise we need update with the un-promoted records back.
       if (TotalCount != 0)
-        annotateValueSite(
-            M, *CBClone, ArrayRef(Info.CandidateProfileData).slice(NumPromoted),
-            TotalCount, IPVK_IndirectCallTarget, Info.NumCandidates);
+        annotateValueSite(M, *CBClone, RemainingCandidates, TotalCount,
+                          IPVK_IndirectCallTarget, Info.NumCandidates);
     }
   }
 }

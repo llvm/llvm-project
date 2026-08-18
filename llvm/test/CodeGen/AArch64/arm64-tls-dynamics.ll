@@ -177,3 +177,6 @@ define i32 @test_localdynamic_deduplicate() {
 
 ; CHECK: ret
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 0}

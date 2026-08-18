@@ -33,6 +33,7 @@ PROJECT_DEPENDENCIES = {
     "lld": {"llvm"},
     "mlir": {"llvm"},
     "polly": {"llvm"},
+    "offload": {"clang", "lld", "flang"},
 }
 
 # This mapping describes the additional projects that should be tested when a
@@ -67,7 +68,6 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
-        "openmp",
     },
 }
 
@@ -75,6 +75,7 @@ DEPENDENTS_TO_TEST = {
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
 DEPENDENT_RUNTIMES_TO_BUILD = {
+    "flang": {"openmp"},
     "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
 }
 
@@ -89,7 +90,9 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
-    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc"},
+    "openmp": {"openmp"},
+    "offload": {"offload", "openmp"},
+    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc", "openmp", "offload"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
@@ -98,7 +101,6 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
 }
 
 EXCLUDE_LINUX = {
-    "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 
 # Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS.
@@ -116,6 +118,7 @@ EXCLUDE_WINDOWS = {
     "libcxxabi",
     "libunwind",
     "flang-rt",
+    "offload",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -123,20 +126,31 @@ EXCLUDE_WINDOWS = {
 # enabled on changes to dependencies.
 EXCLUDE_DEPENDENTS_WINDOWS = {
     "flang",
+    # TODO: Re-enable once Windows CI timings allow it (daemonized testing).
+    "lldb",
 }
 
 EXCLUDE_MAC = {
     "bolt",
-    "compiler-rt",
+    "CIR",  # Depends on mlir, which is excluded below.
     "cross-project-tests",
     "flang",
+    "flang-rt",
     "libc",
-    "lldb",
+    "mlir",
     "openmp",
     "polly",
     "libcxx",
     "libcxxabi",
     "libunwind",
+    "offload",
+}
+
+# These projects are still built on the self-hosted macOS runners, but their
+# tests are temporarily skipped there.
+EXCLUDE_CHECK_TARGETS_MAC = {
+    "lldb",
+    "libclc",
 }
 
 PROJECT_CHECK_TARGETS = {
@@ -148,7 +162,7 @@ PROJECT_CHECK_TARGETS = {
     "libunwind": "check-unwind",
     "lldb": "check-lldb",
     "llvm": "check-llvm",
-    "clang": "check-clang",
+    "clang": "check-clang check-clang-python",
     "CIR": "check-clang-cir",
     "bolt": "check-bolt",
     "lld": "check-lld",
@@ -157,9 +171,10 @@ PROJECT_CHECK_TARGETS = {
     "libc": "check-libc",
     "libclc": "check-libclc",
     "mlir": "check-mlir",
-    "openmp": "check-openmp",
+    "openmp": "openmp",  # Run only build in pre-merge
     "polly": "check-polly",
     "lit": "check-lit",
+    "offload": "offload",  # Run only build in pre-merge
 }
 
 RUNTIMES = {
@@ -170,6 +185,8 @@ RUNTIMES = {
     "libc",
     "flang-rt",
     "libclc",
+    "openmp",
+    "offload",
 }
 
 # Meta projects are projects that need explicit handling but do not reside
@@ -194,21 +211,6 @@ SKIP_BUILD_PROJECTS = ["CIR", "lit", "libc-shared"]
 
 # Projects that should not run any tests. These need to be metaprojects.
 SKIP_PROJECTS = ["docs", "gn"]
-
-# Overrides for PROJECT_CHECK_TARGETS on a per-platform basis. If a platform
-# has an entry for a given project here, its value is used as the ninja
-# target(s) instead of the default check target. This is intended for cases
-# where a project can be built but its tests are not yet stable on that
-# platform, so we still want a compile-time signal.
-PROJECT_CHECK_TARGETS_OVERRIDE = {
-    "Windows": {
-        # TODO(issues/132800): LLDB tests need environment setup on Windows.
-        # In the meantime, at least compile lldb and lldb-dap to catch
-        # breakage.
-        "lldb": "lldb lldb-dap",
-    },
-}
-
 
 def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
     projects_with_dependents = set(projects)
@@ -267,11 +269,10 @@ def _compute_project_check_targets(
     projects_to_test: Set[str], platform: str
 ) -> Set[str]:
     check_targets = set()
-    platform_overrides = PROJECT_CHECK_TARGETS_OVERRIDE.get(platform, {})
     for project_to_test in projects_to_test:
-        if project_to_test in platform_overrides:
-            check_targets.add(platform_overrides[project_to_test])
-        elif project_to_test in PROJECT_CHECK_TARGETS:
+        if platform == "Darwin" and project_to_test in EXCLUDE_CHECK_TARGETS_MAC:
+            continue
+        if project_to_test in PROJECT_CHECK_TARGETS:
             check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
     return check_targets
 

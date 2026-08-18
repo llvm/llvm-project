@@ -433,6 +433,15 @@
 # RUN: yaml2obj %s -o %t -DABI_VERSION=2 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1153
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=2 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1153 -DFLAG_VALUE=0x58
 
+# RUN: yaml2obj %s -o %t -DABI_VERSION=0 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1154
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=0 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1154 -DFLAG_VALUE=0x57
+
+# RUN: yaml2obj %s -o %t -DABI_VERSION=1 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1154
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=1 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1154 -DFLAG_VALUE=0x57
+
+# RUN: yaml2obj %s -o %t -DABI_VERSION=2 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1154
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=2 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1154 -DFLAG_VALUE=0x57
+
 # RUN: yaml2obj %s -o %t -DABI_VERSION=0 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1170
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=0 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1170 -DFLAG_VALUE=0x5D
 
@@ -459,6 +468,9 @@
 
 # RUN: yaml2obj %s -o %t -DABI_VERSION=2 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1172
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=2 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1172 -DFLAG_VALUE=0x5C
+
+# RUN: yaml2obj %s -o %t -DABI_VERSION=4 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=4 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC -DFLAG_VALUE=0x62
 
 # RUN: yaml2obj %s -o %t -DABI_VERSION=0 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1200
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=0 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1200 -DFLAG_VALUE=0x48
@@ -511,6 +523,9 @@
 # RUN: yaml2obj %s -o %t -DABI_VERSION=2 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1310
 # RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=2 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX1310 -DFLAG_VALUE=0x50
 
+# RUN: yaml2obj %s -o %t -DABI_VERSION=4 -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=ALL,KNOWN-ABI-VERSION,SINGLE-FLAG --match-full-lines -DABI_VERSION=4 -DFILE=%t -DFLAG_NAME=EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC -DFLAG_VALUE=0x63
+
 --- !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -523,7 +538,7 @@ FileHeader:
 
 # ALL:                      File: [[FILE]]
 # ALL-NEXT:                 Format: elf64-amdgpu
-# ALL-NEXT:                 Arch: amdgcn
+# ALL-NEXT:                 Arch: amdgpu
 # ALL-NEXT:                 AddressSize: 64bit
 # ALL-NEXT:                 LoadName: <Not found>
 # ALL-NEXT:                 ElfHeader {

@@ -169,6 +169,7 @@ typedef enum _ze_structure_type_t {
   ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT = 0x1000f,
   ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC = 0x00020036,
   ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 0x00020001,
+  ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC = 0x00020014,
   ZE_STRUCTURE_TYPE_FORCE_UINT32 = 0x7fffffff
 } ze_structure_type_t;
 
@@ -285,6 +286,14 @@ typedef enum _ze_event_pool_flag_t {
   ZE_EVENT_POOL_FLAG_KERNEL_MAPPED_TIMESTAMP = ZE_BIT(3),
   ZE_EVENT_POOL_FLAG_FORCE_UINT32 = 0x7fffffff
 } ze_event_pool_flag_t;
+
+/* Counter-based event pool flags */
+typedef uint32_t ze_event_pool_counter_based_exp_flags_t;
+typedef enum _ze_event_pool_counter_based_exp_flag_t {
+  ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE = ZE_BIT(0),
+  ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_NON_IMMEDIATE = ZE_BIT(1),
+  ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_FORCE_UINT32 = 0x7fffffff
+} ze_event_pool_counter_based_exp_flag_t;
 
 /* Event scope flags */
 typedef uint32_t ze_event_scope_flags_t;
@@ -600,6 +609,13 @@ typedef struct _ze_event_pool_desc_t {
   uint32_t count;
 } ze_event_pool_desc_t;
 
+/* Counter-based event pool descriptor */
+typedef struct _ze_event_pool_counter_based_exp_desc_t {
+  ze_structure_type_t stype;
+  const void *pNext;
+  ze_event_pool_counter_based_exp_flags_t flags;
+} ze_event_pool_counter_based_exp_desc_t;
+
 /* Event descriptor */
 typedef struct _ze_event_desc_t {
   ze_structure_type_t stype;
@@ -862,6 +878,15 @@ ZE_APIEXPORT ze_result_t ZE_APICALL
 zeEventHostSynchronize(ze_event_handle_t hEvent, uint64_t timeout);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeEventQueryKernelTimestamp(
     ze_event_handle_t hEvent, ze_kernel_timestamp_result_t *dstptr);
+ZE_APIEXPORT ze_result_t ZE_APICALL
+zeEventQueryStatus(ze_event_handle_t hEvent);
+
+/* Event append functions on command lists */
+ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendSignalEvent(
+    ze_command_list_handle_t hCommandList, ze_event_handle_t hEvent);
+ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendWaitOnEvents(
+    ze_command_list_handle_t hCommandList, uint32_t numEvents,
+    ze_event_handle_t *phEvents);
 
 /* Fence functions */
 ZE_APIEXPORT ze_result_t ZE_APICALL

@@ -575,6 +575,12 @@ public:
   /// Convert the given ASCII string to uppercase.
   [[nodiscard]] LLVM_ABI std::string upper() const;
 
+  /// Returns this StringRef or a default value if this StringRef is empty.
+  [[nodiscard]] constexpr StringRef nonEmptyOr(llvm::StringRef Str) const {
+    assert(!Str.empty() && "nonEmptyOr should not have an empty default!");
+    return empty() ? Str : *this;
+  }
+
   /// @}
   /// @name Substring Operations
   /// @{
@@ -951,18 +957,9 @@ inline uint64_t xxh3_64bits(StringRef data) {
 
 // Provide DenseMapInfo for StringRefs.
 template <> struct DenseMapInfo<StringRef, void> {
-  static inline StringRef getEmptyKey() {
-    return StringRef(reinterpret_cast<const char *>(~static_cast<uintptr_t>(0)),
-                     0);
-  }
-
   LLVM_ABI static unsigned getHashValue(StringRef Val);
 
-  static bool isEqual(StringRef LHS, StringRef RHS) {
-    if (RHS.data() == getEmptyKey().data())
-      return LHS.data() == getEmptyKey().data();
-    return LHS == RHS;
-  }
+  static bool isEqual(StringRef LHS, StringRef RHS) { return LHS == RHS; }
 };
 
 } // end namespace llvm

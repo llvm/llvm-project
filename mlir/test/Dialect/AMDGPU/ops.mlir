@@ -551,10 +551,12 @@ func.func @lds_barrier() {
 
 // CHECK-LABEL: func @sched_barrier
 func.func @sched_barrier() {
-  // CHECK: amdgpu.sched_barrier allow = <none>
-  amdgpu.sched_barrier allow = <none>
-  // CHECK: amdgpu.sched_barrier allow = <valu|all_vmem>
-  amdgpu.sched_barrier allow = <valu|all_vmem>
+  // CHECK: amdgpu.sched_barrier allow = none
+  amdgpu.sched_barrier allow = none
+  // CHECK: amdgpu.sched_barrier allow = valu|all_vmem
+  amdgpu.sched_barrier allow = valu|all_vmem
+  // CHECK: amdgpu.sched_barrier allow = all
+  amdgpu.sched_barrier allow = all
   func.return
 }
 

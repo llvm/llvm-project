@@ -30,9 +30,6 @@ namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
-  bool isFPConstrained = false;
-  llvm::fp::ExceptionBehavior defaultConstrainedExcept = llvm::fp::ebStrict;
-  llvm::RoundingMode defaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
@@ -82,24 +79,17 @@ public:
   }
 
   mlir::Attribute getConstRecordOrZeroAttr(mlir::ArrayAttr arrayAttr,
-                                           bool packed = false,
-                                           bool padded = false,
-                                           mlir::Type type = {});
+                                           cir::RecordType recordTy);
 
-  cir::ConstRecordAttr getAnonConstRecord(mlir::ArrayAttr arrayAttr,
-                                          bool packed = false,
-                                          bool padded = false,
-                                          mlir::Type ty = {}) {
-    llvm::SmallVector<mlir::Type, 4> members;
+  cir::ConstRecordAttr getAnonConstRecord(mlir::ArrayAttr arrayAttr) {
+    llvm::SmallVector<mlir::Type> members;
     for (auto &f : arrayAttr) {
       auto ta = mlir::cast<mlir::TypedAttr>(f);
       members.push_back(ta.getType());
     }
 
-    if (!ty)
-      ty = getAnonRecordTy(members, packed, padded);
-
-    auto sTy = mlir::cast<cir::RecordType>(ty);
+    auto sTy = getAnonRecordTy(members, /*packed=*/false,
+                               cir::RecordType::getAllDataKinds(members));
     return cir::ConstRecordAttr::get(sTy, arrayAttr);
   }
 
@@ -118,43 +108,6 @@ public:
     }
 
     return baseName + "." + std::to_string(recordNames[baseName]++);
-  }
-
-  //
-  // Floating point specific helpers
-  // -------------------------------
-  //
-
-  /// Enable/Disable use of constrained floating point math. When enabled the
-  /// CreateF<op>() calls instead create constrained floating point intrinsic
-  /// calls. Fast math flags are unaffected by this setting.
-  void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
-
-  /// Query for the use of constrained floating point math
-  bool getIsFPConstrained() const { return isFPConstrained; }
-
-  /// Set the exception handling to be used with constrained floating point
-  void setDefaultConstrainedExcept(llvm::fp::ExceptionBehavior newExcept) {
-    assert(llvm::convertExceptionBehaviorToStr(newExcept) &&
-           "Garbage strict exception behavior!");
-    defaultConstrainedExcept = newExcept;
-  }
-
-  /// Get the exception handling used with constrained floating point
-  llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() const {
-    return defaultConstrainedExcept;
-  }
-
-  /// Set the rounding mode handling to be used with constrained floating point
-  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
-    assert(llvm::convertRoundingModeToStr(newRounding) &&
-           "Garbage strict rounding mode!");
-    defaultConstrainedRounding = newRounding;
-  }
-
-  /// Get the rounding mode handling used with constrained floating point
-  llvm::RoundingMode getDefaultConstrainedRounding() const {
-    return defaultConstrainedRounding;
   }
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
@@ -194,34 +147,27 @@ public:
   ///
   /// If a record already exists and is complete, but the client tries to fetch
   /// it with a different set of attributes, this method will crash.
-  cir::RecordType getCompleteNamedRecordType(llvm::ArrayRef<mlir::Type> members,
-                                             bool packed, bool padded,
-                                             llvm::StringRef name) {
+  cir::RecordType getCompleteNamedRecordType(
+      llvm::ArrayRef<mlir::Type> members, bool packed, llvm::StringRef name,
+      llvm::ArrayRef<cir::RecordMemberKind> memberKinds) {
     const auto nameAttr = getStringAttr(name);
     assert(!cir::MissingFeatures::astRecordDeclAttr());
 
-    // Create or get the struct type (named anonymous struct helper — always
-    // struct, never class or union at this call site).
+    // Always a struct at this call site, never a class or a union.
     auto type = cir::StructType::get(getContext(), members, nameAttr, packed,
-                                     padded, /*is_class=*/false);
+                                     /*is_class=*/false, memberKinds);
 
     // If we found an existing type, verify that either it is incomplete or
     // it matches the requested attributes.
     assert(!type.isIncomplete() ||
-           (type.getMembers() == members && type.getPacked() == packed &&
-            type.getPadded() == padded));
+           (type.getMembers() == members && type.getPacked() == packed));
 
     // Complete an incomplete record or ensure the existing complete record
     // matches the requested attributes.
-    type.complete(members, packed, padded);
+    type.complete(members, packed, memberKinds);
 
     return type;
   }
-
-  cir::RecordType getCompleteRecordType(mlir::ArrayAttr fields,
-                                        bool packed = false,
-                                        bool padded = false,
-                                        llvm::StringRef name = "");
 
   /// Get an incomplete CIR record type. If we have a complete record
   /// declaration, we may create an incomplete type and then add the
@@ -239,6 +185,16 @@ public:
   // Operation creation helpers
   // --------------------------
   //
+  using CIRBaseBuilderTy::createCopy;
+  cir::CopyOp createCopy(Address dst, Address src, bool isVolatile = false,
+                         bool skipTailPadding = false) {
+    cir::CopyOp op = createCopy(dst.getPointer(), src.getPointer(), isVolatile,
+                                skipTailPadding);
+    op.setDstAlignment(dst.getAlignment().getQuantity());
+    op.setSrcAlignment(src.getAlignment().getQuantity());
+    return op;
+  }
+
   cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
                              mlir::Value src, mlir::Value len) {
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
@@ -264,8 +220,8 @@ public:
   // ---------------------------
 
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
-                                        unsigned memberIndex) {
-    return cir::DataMemberAttr::get(ty, memberIndex);
+                                        llvm::ArrayRef<int32_t> path) {
+    return cir::DataMemberAttr::get(ty, path);
   }
 
   cir::DataMemberAttr getNullDataMemberAttr(cir::DataMemberType ty) {
@@ -433,11 +389,12 @@ public:
   cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
 
   /// Get a CIR anonymous struct type.
-  cir::StructType getAnonRecordTy(llvm::ArrayRef<mlir::Type> members,
-                                  bool packed = false, bool padded = false) {
+  cir::StructType
+  getAnonRecordTy(llvm::ArrayRef<mlir::Type> members, bool packed,
+                  llvm::ArrayRef<cir::RecordMemberKind> memberKinds) {
     assert(!cir::MissingFeatures::astRecordDeclAttr());
-    return cir::StructType::get(getContext(), members, packed, padded,
-                                /*is_class=*/false);
+    return cir::StructType::get(getContext(), members, packed,
+                                /*is_class=*/false, memberKinds);
   }
 
   //===--------------------------------------------------------------------===//
@@ -467,61 +424,17 @@ public:
   //===--------------------------------------------------------------------===//
   // UnaryOp creation helpers
   //===--------------------------------------------------------------------===//
-  mlir::Value createNeg(mlir::Value value, bool nsw = false) {
+  mlir::Value createNeg(mlir::Location loc, mlir::Value value,
+                        bool nsw = false) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return createMinus(value.getLoc(), value, nsw);
+      return createMinus(loc, value, nsw);
     }
 
     llvm_unreachable("negation for the given type is NYI");
-  }
-
-  mlir::Value createFNeg(mlir::Value value) {
-    assert(mlir::isa<cir::FPTypeInterface>(value.getType()) &&
-           "Non-fp input type!");
-
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return createMinus(value.getLoc(), value);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // BinaryOp creation helpers
-  //===--------------------------------------------------------------------===//
-  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::SubOp::create(*this, loc, lhs, rhs);
-  }
-
-  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::AddOp::create(*this, loc, lhs, rhs);
-  }
-
-  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::MulOp::create(*this, loc, lhs, rhs);
-  }
-  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::DivOp::create(*this, loc, lhs, rhs);
   }
 
   //===--------------------------------------------------------------------===//
@@ -531,10 +444,9 @@ public:
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
   // operations.
   mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
-    assert(!cir::MissingFeatures::fpConstraints());
-
     return cir::CastOp::create(*this, v.getLoc(), destType,
-                               cir::CastKind::floating, v);
+                               cir::CastKind::floating, v,
+                               getConstrainedFPAttr());
   }
 
   mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
@@ -605,6 +517,13 @@ public:
   //===--------------------------------------------------------------------===//
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
                                    cir::FPClassTest flags) {
+    // FPClassTest occupies bits 0-9 (fcAllFlags).  Sema rejects an
+    // out-of-range __builtin_isfpclass mask, so any extra bit here is an
+    // internal error; assert and mask it off so lowering stays well-formed.
+    uint32_t raw = static_cast<uint32_t>(flags);
+    uint32_t all = static_cast<uint32_t>(cir::FPClassTest::All);
+    assert((raw & ~all) == 0 && "FPClassTest mask has bits outside 0-9");
+    flags = static_cast<cir::FPClassTest>(raw & all);
     return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
@@ -621,12 +540,14 @@ public:
   }
 
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
-                         bool isVolatile = false) {
+                         bool isVolatile = false, bool isNontemporal = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
-                               isVolatile, /*alignment=*/align,
+                               isVolatile, isNontemporal,
+                               /*alignment=*/align,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
@@ -636,9 +557,11 @@ public:
     uint64_t alignment = align ? align->value() : 0;
     mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
-                               /*isVolatile=*/false, alignAttr,
+                               /*isVolatile=*/false, /*isNontemporal=*/false,
+                               alignAttr,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp
@@ -648,14 +571,14 @@ public:
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
-                           bool isVolatile = false,
+                           bool isVolatile = false, bool isNontemporal = false,
                            mlir::IntegerAttr align = {},
                            cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
     if (!align)
       align = getAlignmentAttr(dst.getAlignment());
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), isVolatile,
-                                         align, scope, order);
+                                         isNontemporal, align, scope, order);
   }
 
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
@@ -685,6 +608,29 @@ public:
   Address createComplexImagPtr(mlir::Location loc, Address addr) {
     return Address{createComplexImagPtr(loc, addr.getPointer()),
                    addr.getAlignment()};
+  }
+
+  using CIRBaseBuilderTy::createGetMember;
+  Address createGetMember(mlir::Location loc, Address base,
+                          llvm::StringRef name, unsigned index) {
+    auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
+
+    assert(index < recordTy.getMembers().size() &&
+           "member index out of bounds");
+    mlir::Type memberTy = recordTy.getMembers()[index];
+    mlir::Type memberPtrTy = getPointerTo(memberTy);
+
+    auto moduleOp =
+        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+    mlir::DataLayout layout(moduleOp);
+    auto memberOffset =
+        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+
+    mlir::Value memberPtr =
+        createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);
+    return Address(memberPtr, memberTy,
+                   base.getAlignment().alignmentAtOffset(memberOffset),
+                   base.isKnownNonNull());
   }
 
   cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,

@@ -150,6 +150,8 @@ static llvm::ManagedStatic<IndexErrorCategory> Category;
 static std::string getLangDescription(const LangOptions &LO) {
   if (!LO.CPlusPlus)
     return "non-C++";
+  if (LO.CPlusPlus29)
+    return "C++29";
   if (LO.CPlusPlus26)
     return "C++26";
   if (LO.CPlusPlus23)
@@ -257,7 +259,7 @@ static bool hasBodyOrInit(const FunctionDecl *D, const FunctionDecl *&DefD) {
 static bool hasBodyOrInit(const VarDecl *D, const VarDecl *&DefD) {
   return D->getAnyInitializer(DefD);
 }
-template <typename T> static bool hasBodyOrInit(const T *D) {
+template <typename T> [[maybe_unused]] static bool hasBodyOrInit(const T *D) {
   const T *Unused;
   return hasBodyOrInit(D, Unused);
 }

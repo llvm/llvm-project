@@ -13,8 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
 
-#include "L0Defs.h"
-#include "L0Trace.h"
+#include "L0Event.h"
 #include "PluginInterface.h"
 
 #include <mutex>
@@ -26,6 +25,7 @@
 namespace llvm::omp::target::plugin {
 
 class L0DeviceTy;
+class LevelZeroPluginContextTy;
 struct L0LaunchEnvTy;
 
 /// Abstract queue that supports asynchronous command submission.
@@ -37,16 +37,24 @@ protected:
   L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
   bool CreateQueueInOrder;
+  /// Plugin-owned context this queue belongs to (never null on an active
+  /// queue).
+  LevelZeroPluginContextTy *UserCtx = nullptr;
 
 public:
   L0QueueTy(L0DeviceTy &Device, bool IsInorder = true)
       : Device(Device), CreateQueueInOrder(IsInorder) {}
   virtual ~L0QueueTy() {}
 
+  L0DeviceTy &getDevice() const { return Device; }
+
+  LevelZeroPluginContextTy *getUserCtx() const { return UserCtx; }
+  void setUserCtx(LevelZeroPluginContextTy *Ctx) { UserCtx = Ctx; }
+
   /// Clear data.
   void reset() { resetImpl(); }
 
-  Error init();
+  Error init(ze_context_handle_t UserZeCtx);
   Error deinit();
   Error synchronize() { return synchronizeImpl(); }
   Expected<bool> hasPendingWork() { return hasPendingWorkImpl(); }
@@ -68,9 +76,16 @@ public:
     return dataSubmitImpl(TgtPtr, HstPtr, Size);
   }
 
+  // Enqueue a memory fill command. Supports arbitrary pattern sizes, including
+  // non-power-of-two sizes, by falling back to a less performant software fill
+  // if necessary.
   Error memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
-                   size_t Size) {
-    return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
+                   size_t Size);
+
+  Error memoryPrefetch(const void *Ptr, size_t Size) {
+    if (Size == 0)
+      return Plugin::success();
+    return memoryPrefetchImpl(Ptr, Size);
   }
 
   Error dispatchLaunchKernel(ze_kernel_handle_t Kernel, L0LaunchEnvTy &KEnv,
@@ -81,7 +96,36 @@ public:
     return launchKernelImpl(Kernel, KEnv);
   }
 
+  Error hostCall(void (*Callback)(void *), void *UserData) {
+    return hostCallImpl(Callback, UserData);
+  }
+
   Error dataFence() { return dataFenceImpl(); }
+
+  Error appendSignalEvent(L0EventTy *Event) {
+    return appendSignalEventImpl(Event->getZeEvent());
+  }
+  Error appendWaitOnEvent(L0EventTy *Event) {
+    if (Event->getQueue() == this)
+      return Plugin::success();
+    return appendWaitOnEventImpl(Event->getZeEvent());
+  }
+  Error synchronizeEvent(L0EventTy *Event) {
+    if (hasPendingMemoryCopies())
+      if (auto Err = synchronize())
+        return Err;
+    return Event->synchronize();
+  }
+  Expected<bool> isEventComplete(L0EventTy *Event) {
+    if (hasPendingMemoryCopies()) {
+      auto PendingWorkOrErr = hasPendingWork();
+      if (!PendingWorkOrErr)
+        return PendingWorkOrErr.takeError();
+      if (*PendingWorkOrErr)
+        return false;
+    }
+    return Event->isComplete();
+  }
 
   virtual Error initImpl() { return Plugin::success(); }
   virtual Error deinitImpl() { return Plugin::success(); }
@@ -89,6 +133,7 @@ public:
 
   virtual Error synchronizeImpl() = 0;
   virtual Expected<bool> hasPendingWorkImpl() = 0;
+  virtual bool hasPendingMemoryCopies() { return false; }
   virtual Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) = 0;
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                                  int64_t Size) {
@@ -99,12 +144,33 @@ public:
   }
   virtual Error launchKernelImpl(ze_kernel_handle_t Kernel,
                                  L0LaunchEnvTy &KEnv) = 0;
+  virtual Error hostCallImpl(void (*Callback)(void *), void *UserData) = 0;
 
   virtual Error memoryFillImpl(void *Ptr, const void *Pattern,
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
+  virtual Error memoryPrefetchImpl(const void *Ptr, size_t Size) {
+    return CmdList->appendMemoryPrefetch(Ptr, Size);
+  }
   virtual Error dataFenceImpl() = 0;
+
+  virtual Error appendSignalEventImpl(ze_event_handle_t Event) {
+    return CmdList->appendSignalEvent(Event);
+  }
+  virtual Error appendWaitOnEventImpl(ze_event_handle_t Event) {
+    return CmdList->appendWaitOnEvent(Event);
+  }
+
+private:
+  /// Fallback fill for host-accessible target memory: replicate the pattern
+  /// directly on the host with std::copy_n.
+  Error memoryFillHostImpl(void *Ptr, const void *Pattern, size_t PatternSize,
+                           size_t Size);
+  /// Fallback fill for non-host-accessible target memory: seed the pattern
+  /// once and grow the filled region via device copies, doubling each time.
+  Error memoryFillReplicateImpl(void *Ptr, const void *Pattern,
+                                size_t PatternSize, size_t Size);
 };
 
 class L0AsyncQueueTy : public L0QueueTy {
@@ -143,12 +209,16 @@ public:
   void resetImpl() override;
   Error synchronizeImpl() override;
   Expected<bool> hasPendingWorkImpl() override;
+  bool hasPendingMemoryCopies() override {
+    return !H2MList.empty() || !USM2MList.empty();
+  }
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                          int64_t Size) override;
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
                        size_t Size) override;
   Error dataFenceImpl() override;
@@ -167,6 +237,7 @@ public:
   Error synchronizeImpl() override;
   std::tuple<size_t, ze_event_handle_t *> getMemCopyEvents() override;
   std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents() override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error dataFenceImpl() override { return Plugin::success(); }
 };
 
@@ -185,6 +256,7 @@ public:
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error dataFenceImpl() override { return Plugin::success(); }
 };
 
@@ -203,21 +275,20 @@ public:
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
 };
 
 /// Simple cache for queue objects.
 class L0QueueCacheTy {
-  L0DeviceTy &Device;
-  llvm::SmallVector<L0QueueTy *> Queues;
+  LevelZeroPluginContextTy &UserCtx;
+  llvm::DenseMap<L0DeviceTy *, llvm::SmallVector<L0QueueTy *>> Queues;
   std::mutex Mtx;
-  CommandModeTy CachedCmdMode = CommandModeTy::InOrder;
 
 public:
-  L0QueueCacheTy(L0DeviceTy &Device) : Device(Device) {}
-  Expected<L0QueueTy *> getQueue();
+  L0QueueCacheTy(LevelZeroPluginContextTy &Ctx) : UserCtx(Ctx) {}
+  Expected<L0QueueTy *> getQueue(L0DeviceTy &Device);
   void releaseQueue(L0QueueTy *Queue);
   Error deinit();
-  void setCommandMode(CommandModeTy CmdMode) { CachedCmdMode = CmdMode; }
 };
 
 } // namespace llvm::omp::target::plugin

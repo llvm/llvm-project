@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Basic/AtomicLineLogger.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
@@ -25,6 +26,7 @@ llvm::MemoryBuffer &
 InMemoryModuleCache::addPCM(llvm::StringRef Filename,
                             std::unique_ptr<llvm::MemoryBuffer> Buffer,
                             off_t Size, time_t ModTime) {
+  Logger.log() << "pcm_add: " << Filename;
   auto Insertion = PCMs.insert(
       std::make_pair(Filename, PCM(std::move(Buffer), Size, ModTime)));
   assert(Insertion.second && "Already has a PCM");
@@ -35,6 +37,7 @@ llvm::MemoryBuffer &
 InMemoryModuleCache::addBuiltPCM(llvm::StringRef Filename,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
                                  off_t Size, time_t ModTime) {
+  Logger.log() << "pcm_add_built: " << Filename;
   auto &PCM = PCMs[Filename];
   assert(!PCM.IsFinal && "Trying to override finalized PCM?");
   assert(!PCM.Buffer && "Trying to override tentative PCM?");
@@ -48,6 +51,7 @@ InMemoryModuleCache::addBuiltPCM(llvm::StringRef Filename,
 llvm::MemoryBuffer *InMemoryModuleCache::lookupPCM(llvm::StringRef Filename,
                                                    off_t &Size,
                                                    time_t &ModTime) const {
+  Logger.log() << "pcm_read_cached: " << Filename;
   auto I = PCMs.find(Filename);
   if (I == PCMs.end())
     return nullptr;
@@ -71,14 +75,19 @@ bool InMemoryModuleCache::tryToDropPCM(llvm::StringRef Filename) {
   auto &PCM = I->second;
   assert(PCM.Buffer && "PCM to remove is scheduled to be built...");
 
-  if (PCM.IsFinal)
+  if (PCM.IsFinal) {
+    Logger.log() << "pcm_not_dropped: " << Filename;
     return true;
+  }
 
+  Logger.log() << "pcm_dropped: " << Filename;
   PCM.Buffer.reset();
   return false;
 }
 
 void InMemoryModuleCache::finalizePCM(llvm::StringRef Filename) {
+  Logger.log() << "pcm_finalized: " << Filename;
+
   auto I = PCMs.find(Filename);
   assert(I != PCMs.end() && "PCM to finalize is unknown...");
 

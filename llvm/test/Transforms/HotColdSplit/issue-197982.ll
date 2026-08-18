@@ -7,7 +7,7 @@
 
 declare void @ext()
 
-define void @ctor(ptr %this) !prof !14 {
+define void @ctor(ptr %this) cold !prof !14 {
 ; CHECK-LABEL: define void @ctor(
 ; CHECK-SAME: ptr [[THIS:%.*]]) #[[ATTR0:[0-9]+]] !prof [[PROF14:![0-9]+]] {
 ; CHECK-NEXT:    tail call void @ext()
@@ -35,7 +35,7 @@ define void @writeAsOperandInternal(ptr %WriterCtx, i1 %cond) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[CODEREPL:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[CODEREPL]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @writeAsOperandInternal.cold.1() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @writeAsOperandInternal.cold.1() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[S_SROA_0_0:%.*]] = phi ptr [ [[TMP0]], %[[CODEREPL]] ], [ @g, %[[ENTRY]] ]

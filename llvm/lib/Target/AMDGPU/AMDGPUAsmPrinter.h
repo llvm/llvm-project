@@ -104,6 +104,9 @@ private:
   void validateMCResourceInfo(Function &F);
 
 public:
+  std::function<const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo *(
+      MachineFunction &)>
+      GetResourceUsage;
   explicit AMDGPUAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer);
 
@@ -159,6 +162,25 @@ protected:
   std::vector<std::string> DisasmLines, HexLines;
   size_t DisasmLineMaxLen;
   bool IsTargetStreamerInitialized;
+};
+
+class AMDGPUAsmPrinterBeginPass
+    : public RequiredPassInfoMixin<AMDGPUAsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class AMDGPUAsmPrinterPass
+    : public RequiredPassInfoMixin<AMDGPUAsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AMDGPUAsmPrinterEndPass
+    : public RequiredPassInfoMixin<AMDGPUAsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // end namespace llvm

@@ -13,12 +13,12 @@
 #ifndef LLVM_ANALYSIS_DOTGRAPHTRAITSPASS_H
 #define LLVM_ANALYSIS_DOTGRAPHTRAITSPASS_H
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
-#include <unordered_set>
 
-static std::unordered_set<std::string> nameObj;
+static llvm::StringSet<> nameObj;
 
 namespace llvm {
 

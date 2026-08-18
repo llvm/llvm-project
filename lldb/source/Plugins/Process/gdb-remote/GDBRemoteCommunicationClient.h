@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/GDBRemote.h"
@@ -127,10 +128,17 @@ public:
   /// \param[in] data_len
   ///     The number of bytes available at \a data.
   ///
+  /// \param[in] interrupt_timeout
+  ///     If the inferior is running, how long to wait for a `\x03` BREAK
+  ///     to interrupt it before giving up. Pass zero only when the caller knows
+  ///     the inferior is stopped.
+  ///
   /// \return
   ///     Zero if the attach was successful, or an error indicating
   ///     an error code.
-  int SendStdinNotification(const char *data, size_t data_len);
+  int SendStdinNotification(
+      const char *data, size_t data_len,
+      std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));
 
   /// Sets the path to use for stdin/out/err for a process
   /// that will be launched with the 'A' packet.
@@ -143,6 +151,9 @@ public:
   int SetSTDIN(const FileSpec &file_spec);
   int SetSTDOUT(const FileSpec &file_spec);
   int SetSTDERR(const FileSpec &file_spec);
+
+  /// Send the dimensions of the user's stdio terminal window to the server.
+  int SetSTDIOWindowSize(uint16_t cols, uint16_t rows);
 
   /// Sets the disable ASLR flag to \a enable for a process that will
   /// be launched with the 'A' packet.
@@ -345,6 +356,26 @@ public:
   bool GetMultiMemReadSupported();
 
   bool GetMultiBreakpointSupported();
+
+  bool GetAcceleratorPluginsSupported();
+
+  /// Send the "jAcceleratorPluginInitialize" packet and return the actions
+  /// requested by each accelerator plugin installed in lldb-server. The packet
+  /// is only sent if the lldb-server advertised accelerator plugin support via
+  /// "accelerator-plugins+" in its qSupported response; otherwise (and when no
+  /// plugin returns actions) this returns an empty vector. Errors are returned
+  /// for the caller to report.
+  llvm::Expected<std::vector<AcceleratorActions>>
+  GetAcceleratorInitializeActions();
+
+  /// Send the "jAcceleratorPluginBreakpointHit" packet to notify the
+  /// accelerator plugin that one of its requested breakpoints was hit, and
+  /// return the plugin's response. This is only used when the lldb-server
+  /// advertised accelerator plugin support via "accelerator-plugins+" in its
+  /// qSupported response, since the breakpoints that trigger it are only set in
+  /// that case. Errors are returned for the caller to report.
+  llvm::Expected<AcceleratorBreakpointHitResponse>
+  AcceleratorBreakpointHit(const AcceleratorBreakpointHitArgs &args);
 
   LazyBool SupportsAllocDeallocMemory() // const
   {
@@ -582,6 +613,7 @@ protected:
   LazyBool m_supports_reverse_step = eLazyBoolCalculate;
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
   LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
+  LazyBool m_supports_accelerator_plugins = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

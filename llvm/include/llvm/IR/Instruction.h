@@ -54,9 +54,6 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
-  LLVM_ABI LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                           "BasicBlock::iterator")
-      InsertPosition(Instruction *InsertBefore);
   LLVM_ABI InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
   operator InstListType::iterator() const { return InsertAt; }
@@ -498,6 +495,11 @@ public:
   /// empty, all meta data will be copied.
   LLVM_ABI void copyMetadata(const Instruction &SrcInst,
                              ArrayRef<unsigned> WL = ArrayRef<unsigned>());
+
+  /// Copy debug, profile, and memprof metadata from \p SrcInst to this
+  /// instruction without copying alias-analysis or type-dependent metadata.
+  /// TODO: Include additional metadata in the future if appropriate.
+  LLVM_ABI void copyProfileAndDebugMetadata(const Instruction &SrcInst);
 
   /// Erase all metadata that matches the predicate.
   LLVM_ABI void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
@@ -1020,7 +1022,7 @@ public:
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *BB);
 
   LLVM_ABI iterator_range<const_succ_iterator> successors() const LLVM_READONLY;
-  LLVM_ABI iterator_range<succ_iterator> successors() {
+  iterator_range<succ_iterator> successors() {
     auto Ops = static_cast<const Instruction *>(this)->successors();
     Use *Begin = const_cast<Use *>(Ops.begin().getUse());
     Use *End = const_cast<Use *>(Ops.end().getUse());

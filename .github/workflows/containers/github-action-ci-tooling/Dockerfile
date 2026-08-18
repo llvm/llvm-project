@@ -19,8 +19,13 @@ RUN apt-get update && \
         LLVM-${LLVM_VERSION}-Linux-X64/bin/git-clang-format && \
     rm llvm.tar.xz
 
+FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS minimal
+# Create a new user with id 1001 as that is the user id that
+# Github Actions uses to perform the checkout action.
+RUN useradd gha -u 1001 -m -s /bin/bash
 
-FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS base
+
+FROM minimal AS base
 ENV LLVM_SYSROOT=/opt/llvm
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
@@ -38,9 +43,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create a new user with id 1001 as that is the user id that
-# Github Actions uses to perform the checkout action.
-RUN useradd gha -u 1001 -m -s /bin/bash
 RUN adduser gha sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 # Don't set USER gha right away because we still need to install packages
@@ -113,3 +115,67 @@ RUN apt-get update && \
     universal-ctags && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+FROM minimal AS ci-container-github-automation
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3-git \
+    python3-github && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+USER gha
+
+ADD github-automation.py /usr/local/bin/
+
+FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS ids-builder
+ARG LLVM_VERSION_MAJOR
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget gpg python3 python3-pip git cmake
+
+RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /etc/apt/keyrings/llvm.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_VERSION_MAJOR} main" | tee /etc/apt/sources.list.d/llvm.list && \
+    apt-get update && \
+    apt-get install -y clang-${LLVM_VERSION_MAJOR} lld-${LLVM_VERSION_MAJOR} ninja-build libclang-${LLVM_VERSION_MAJOR}-dev
+
+COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
+RUN pip install --require-hashes -r requirements_formatting.txt --break-system-packages && \
+    rm requirements_formatting.txt
+
+RUN git clone https://github.com/compnerd/ids && cd ids && \
+    git checkout 6d9b77c89107743159fccaea109e8feb81959844
+
+RUN cd ids && \
+    cmake -B ./build \
+      -S .\
+      -D CMAKE_BUILD_TYPE=Release \
+      -D CMAKE_C_COMPILER=clang-${LLVM_VERSION_MAJOR} \
+      -D CMAKE_CXX_COMPILER=clang++-${LLVM_VERSION_MAJOR} \
+      -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
+      -D LLVM_DIR=/usr/lib/llvm-${LLVM_VERSION_MAJOR}/lib/cmake/llvm/ \
+      -D Clang_DIR=/usr/lib/llvm-${LLVM_VERSION_MAJOR}/lib/cmake/clang/ \
+      -D FILECHECK_EXECUTABLE=$(which FileCheck-${LLVM_VERSION_MAJOR}) \
+      -D LIT_EXECUTABLE=$(which lit) \
+      -G Ninja && \
+    ninja -C ./build
+
+FROM ci-container-build-tools AS ci-container-ids-checks
+ARG LLVM_VERSION_MAJOR
+
+COPY llvm/utils/git/requirements.txt requirements.txt
+RUN pip install --require-hashes -r requirements.txt --break-system-packages && \
+    rm requirements.txt
+
+RUN apt-get update && \
+    apt-get install -y libz3-4 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=ids-builder /ids/build/bin/idt \
+                        /usr/bin/idt
+# Copy over the LLVM SO since getting ids to statically link against the distro
+# provided libLLVM is difficult for now.
+# TODO(boomanaiden154): Get static linking working and remove this.
+COPY --from=ids-builder /usr/lib/llvm-${LLVM_VERSION_MAJOR}/lib/libLLVM.so.${LLVM_VERSION_MAJOR}.1 \
+                        /usr/lib/libLLVM.so.${LLVM_VERSION_MAJOR}.1

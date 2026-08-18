@@ -89,11 +89,14 @@ func.func @do_not_inline(%arg0: i32, %arg1: i32, %arg2 : i32) -> i32 {
 }
 
 // CPP-DEFAULT:      float parentheses_for_low_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DEFAULT-NEXT:   return (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
+// CPP-DEFAULT-NEXT:   float [[VAL_4:v[0-9]+]] = (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
+// CPP-DEFAULT-NEXT:   return [[VAL_4]];
 // CPP-DEFAULT-NEXT: }
 
 // CPP-DECLTOP:      float parentheses_for_low_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DECLTOP-NEXT:   return (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
+// CPP-DECLTOP-NEXT:   float [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
+// CPP-DECLTOP-NEXT:   return [[VAL_4]];
 // CPP-DECLTOP-NEXT: }
 
 func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) -> f32 {
@@ -104,6 +107,41 @@ func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) ->
     emitc.yield %d : f32
   }
   return %e : f32
+}
+
+// CPP-DEFAULT:      float inline_cast_pure(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   return (float) [[VAL_1]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      float inline_cast_pure(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   return (float) [[VAL_1]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @inline_cast_pure(%arg0: i32) -> f32 {
+  %0 = emitc.expression %arg0 : (i32) -> f32 {
+    %1 = cast %arg0 {pure} : i32 to f32
+    yield %1 : f32
+  }
+  return %0 : f32
+}
+
+// CPP-DEFAULT:      float do_not_inline_cast_without_pure(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   float [[VAL_2:v[0-9]+]] = (float) [[VAL_1]];
+// CPP-DEFAULT-NEXT:   return [[VAL_2]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      float do_not_inline_cast_without_pure(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   float [[VAL_2:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_2]] = (float) [[VAL_1]];
+// CPP-DECLTOP-NEXT:   return [[VAL_2]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @do_not_inline_cast_without_pure(%arg0: i32) -> f32 {
+  %0 = emitc.expression %arg0 : (i32) -> f32 {
+    %1 = cast %arg0 : i32 to f32
+    yield %1 : f32
+  }
+  return %0 : f32
 }
 
 // CPP-DEFAULT:      int32_t parentheses_for_same_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
@@ -312,44 +350,6 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
   }
   %v_load = emitc.load %v : !emitc.lvalue<i32>
   return %v_load : i32
-}
-
-// CPP-DEFAULT:      int32_t expression_with_dereference_apply(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
-// CPP-DEFAULT-NEXT:   return *([[VAL_2]] - [[VAL_1]]);
-// CPP-DEFAULT-NEXT: }
-
-// CPP-DECLTOP:      int32_t expression_with_dereference_apply(int32_t [[VAL_1:v[0-9]+]], int32_t* [[VAL_2]]) {
-// CPP-DECLTOP-NEXT:   return *([[VAL_2]] - [[VAL_1]]);
-// CPP-DECLTOP-NEXT: }
-emitc.func @expression_with_dereference_apply(%arg1: i32, %arg2: !emitc.ptr<i32>) -> i32 {
-  %c = emitc.expression %arg1, %arg2 : (i32, !emitc.ptr<i32>) -> i32 {
-    %e = emitc.sub %arg2, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
-    %d = emitc.apply "*"(%e) : (!emitc.ptr<i32>) -> i32
-    emitc.yield %d : i32
-  }
-  return %c : i32
-}
-
-// CPP-DEFAULT:      bool expression_with_address_taken_apply(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
-// CPP-DEFAULT-NEXT:   int32_t [[VAL_4:v[0-9]+]] = 42;
-// CPP-DEFAULT-NEXT:   return &[[VAL_4]] - [[VAL_2]] < [[VAL_3]];
-// CPP-DEFAULT-NEXT: }
-
-// CPP-DECLTOP:      bool expression_with_address_taken_apply(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
-// CPP-DECLTOP-NEXT:   int32_t [[VAL_4:v[0-9]+]];
-// CPP-DECLTOP-NEXT:   [[VAL_4]] = 42;
-// CPP-DECLTOP-NEXT:   return &[[VAL_4]] - [[VAL_2]] < [[VAL_3]];
-// CPP-DECLTOP-NEXT: }
-
-func.func @expression_with_address_taken_apply(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
-  %a = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
-  %c = emitc.expression %arg1, %arg2, %a : (i32, !emitc.ptr<i32>, !emitc.lvalue<i32>) -> i1 {
-    %d = emitc.apply "&"(%a) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-    %e = emitc.sub %d, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
-    %f = emitc.cmp lt, %e, %arg2 : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> i1
-    emitc.yield %f : i1
-  }
-  return %c : i1
 }
 
 // CPP-DEFAULT:      bool expression_with_address_taken(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t* [[VAL_3]]) {
