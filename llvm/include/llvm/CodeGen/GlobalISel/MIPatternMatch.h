@@ -190,6 +190,23 @@ m_GFCstOrSplat(std::optional<FPValueAndVReg> &FPValReg) {
   return GFCstOrSplatGFCstMatch(FPValReg);
 }
 
+/// Matches an FP constant whose value satisfies the given predicate.
+template <typename Pred> struct GFCstPredMatch {
+  Pred P;
+  GFCstPredMatch(Pred P) : P(P) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    if (const ConstantFP *FPImm = getConstantFPVRegVal(Reg, MRI))
+      return P(FPImm->getValueAPF());
+    return false;
+  }
+};
+template <typename Pred> GFCstPredMatch(Pred) -> GFCstPredMatch<Pred>;
+
+/// Matches a floating-point positive zero.
+inline auto m_PosZeroFP() {
+  return GFCstPredMatch([](const APFloat &V) { return V.isPosZero(); });
+}
+
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
   APInt RequestedVal;
@@ -596,6 +613,50 @@ inline GInstrBind<GBuildVector> m_GBuildVector(GBuildVector *&Inst) {
 inline GInstrBind<GConcatVectors> m_GConcatVectors(GConcatVectors *&Inst) {
   return Inst;
 }
+
+/// Matches a G_SHUFFLE_VECTOR, binding its two source operands and its mask.
+template <typename Src1Ty, typename Src2Ty> struct ShuffleVectorMatch {
+  Src1Ty Src1;
+  Src2Ty Src2;
+  ArrayRef<int> &Mask;
+
+  ShuffleVectorMatch(const Src1Ty &Src1, const Src2Ty &Src2,
+                     ArrayRef<int> &Mask)
+      : Src1(Src1), Src2(Src2), Mask(Mask) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (!mi_match(Reg, MRI, m_MInstr(TmpMI)))
+      return false;
+    auto *Shuf = dyn_cast<GShuffleVector>(TmpMI);
+    if (!Shuf || !Src1.match(MRI, Shuf->getSrc1Reg()) ||
+        !Src2.match(MRI, Shuf->getSrc2Reg()))
+      return false;
+    Mask = Shuf->getMask();
+    return true;
+  }
+};
+
+template <typename Src1Ty, typename Src2Ty>
+inline ShuffleVectorMatch<Src1Ty, Src2Ty>
+m_GShuffleVector(const Src1Ty &Src1, const Src2Ty &Src2, ArrayRef<int> &Mask) {
+  return ShuffleVectorMatch<Src1Ty, Src2Ty>(Src1, Src2, Mask);
+}
+
+/// Matches a G_FRAME_INDEX, binding its frame index.
+struct GFrameIndexMatch {
+  int &FI;
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    MachineInstr *TmpMI;
+    if (mi_match(Reg, MRI, m_MInstr(TmpMI)) &&
+        TmpMI->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+      FI = TmpMI->getOperand(1).getIndex();
+      return true;
+    }
+    return false;
+  }
+};
+
+inline GFrameIndexMatch m_GFrameIndex(int &FI) { return {FI}; }
 
 // Helper for matching G_FCONSTANT
 inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
