@@ -4214,8 +4214,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   if (HaveClangModules)
     Args.AddLastArg(CmdArgs, options::OPT_fmodules_user_build_path);
 
-  // Pass through all -fmodules-ignore-macro arguments.
   Args.AddAllArgs(CmdArgs, options::OPT_fmodules_ignore_macro);
+  Args.AddAllArgs(CmdArgs, options::OPT_fmodules_ignore_search_path);
   Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_interval);
   Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_after);
 
