@@ -1584,17 +1584,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     const APFloat *ConstSrc2 = nullptr;
 
     SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&II);
-    auto IsNeverFPClass = [&](Value *Op, FPClassTest Mask) {
-      return computeKnownFPClass(Op, II.getFastMathFlags(), Mask, SQ)
-          .isKnownNever(Mask);
-    };
-    auto IsNeverNaN = [&](Value *Op) { return IsNeverFPClass(Op, fcNan); };
+    FastMathFlags FMF = II.getFastMathFlags();
 
     // Nan rows take precedence over infinity rows: only fold an infinity
     // constant to min/max when neither other operand can be nan.
     auto IsFoldableConst = [&](const APFloat *C, Value *OtherA, Value *OtherB) {
-      return C->isNaN() ||
-             (C->isInfinity() && IsNeverNaN(OtherA) && IsNeverNaN(OtherB));
+      return C->isNaN() || (C->isInfinity() &&
+                            (FMF.noNaNs() || isKnownNeverNaN(OtherA, SQ)) &&
+                            (FMF.noNaNs() || isKnownNeverNaN(OtherB, SQ)));
     };
 
     if ((match(Src0, m_APFloat(ConstSrc0)) &&
@@ -1684,7 +1681,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (fpenvIEEEMode(II) == KnownIEEEMode::Off)
         return true;
       return llvm::all_of(std::array{Src0, Src1, Src2}, [&](Value *Op) {
-        return IsNeverFPClass(Op, fcSNan);
+        return FMF.noNaNs() ||
+               computeKnownFPClass(Op, fcSNan, SQ).isKnownNever(fcSNan);
       });
     };
 
