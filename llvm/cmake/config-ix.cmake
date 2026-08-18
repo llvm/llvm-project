@@ -631,8 +631,21 @@ if( MSVC )
     "If set, argument to clang-cl's /winsysroot")
 
   find_package(DIASDK)
+
+  # An SDK that happens to sit in a Visual Studio installation is not by itself
+  # a request to use it: LLVM loads msdia140.dll by name at run time, and a
+  # developer environment does not put it on PATH, so enabling DIA on the
+  # strength of the environment alone yields a PDB reader that cannot start.
+  # Enable it by default only where the SDK was pointed at deliberately; it can
+  # always be asked for with -DLLVM_ENABLE_DIA_SDK=ON.
+  if(DIASDK_FOUND AND NOT DIASDK_LOCATION_INFERRED)
+    set(LLVM_ENABLE_DIA_SDK_DEFAULT ON)
+  else()
+    set(LLVM_ENABLE_DIA_SDK_DEFAULT OFF)
+  endif()
+
   option(LLVM_ENABLE_DIA_SDK "Use MSVC DIA SDK for debugging if available."
-                             ${DIASDK_FOUND})
+                             ${LLVM_ENABLE_DIA_SDK_DEFAULT})
 
   if(LLVM_ENABLE_DIA_SDK AND NOT DIASDK_FOUND)
     message(FATAL_ERROR "DIA SDK not found. If you have both VS 2012 and 2013 installed, you may need to uninstall the former and re-install the latter afterwards.")

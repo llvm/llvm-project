@@ -520,7 +520,10 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 **LLVM_ENABLE_DIA_SDK**:BOOL
 
 :   Enable building with MSVC DIA SDK for PDB debugging support. Available only
-    with MSVC. Defaults to ON.
+    with MSVC. Defaults to ON when the SDK is found at a location given by
+    `LLVM_WINSYSROOT` or `MSVC_DIA_SDK_DIR`, and to OFF when it is only found
+    through the `VSINSTALLDIR` environment variable, since using it also
+    requires `msdia140.dll` to be loadable at run time.
 
 **LLVM_ENABLE_DOXYGEN**:BOOL
 

@@ -9,6 +9,8 @@
 #   DIASDK_FOUND
 #   DIASDK_INCLUDE_DIR
 #   DIASDK_LIBRARIES
+#   DIASDK_LOCATION_INFERRED, true if the SDK was located from the environment
+#     rather than from LLVM_WINSYSROOT or MSVC_DIA_SDK_DIR
 #
 # Additionally, the following import target will be defined:
 #   DIASDK::Diaguids
@@ -18,15 +20,20 @@ if(NOT WIN32)
   return()
 endif()
 
+set(DIASDK_LOCATION_INFERRED FALSE)
+
 if(LLVM_WINSYSROOT)
   set(MSVC_DIA_SDK_DIR "${LLVM_WINSYSROOT}/DIA SDK" CACHE PATH
       "Path to the DIA SDK")
-elseif($ENV{VSINSTALLDIR})
-  set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
-      "Path to the DIA SDK")
 elseif(NOT DEFINED MSVC_DIA_SDK_DIR)
-  message(STATUS "MSVC_DIA_SDK_DIR not set, and could not be inferred. DIA SDK "
-                 "may not be found.")
+  if(DEFINED ENV{VSINSTALLDIR})
+    set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
+        "Path to the DIA SDK")
+    set(DIASDK_LOCATION_INFERRED TRUE)
+  else()
+    message(STATUS "MSVC_DIA_SDK_DIR not set, and could not be inferred. DIA "
+                   "SDK may not be found.")
+  endif()
 endif()
 
 find_path(DIASDK_INCLUDE_DIR
