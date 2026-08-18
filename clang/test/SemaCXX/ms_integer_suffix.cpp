@@ -28,7 +28,14 @@ namespace gh212504 {
   static_assert(12345678901i32 == -539222987, "");
   static_assert(12345678901ui32 == 3755744309, "");
   static_assert(18446744073709551615i8, "");
-  static_assert(18446744073709551616i8 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
   static_assert(18446744073709551615ui32, "");
+
+  static_assert(18446744073709551616i8 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
+  static_assert(18446744073709551616i16 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
+  static_assert(18446744073709551616i32 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
+  static_assert(18446744073709551616i64 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
+  static_assert(18446744073709551616ui8 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
+  static_assert(18446744073709551616ui16 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
   static_assert(18446744073709551616ui32 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
+  static_assert(18446744073709551616ui64 == 0, ""); // expected-error {{integer literal is too large to be represented in any integer type}}
 }
