@@ -61,6 +61,13 @@ if(zstd_FOUND)
         INTERFACE_INCLUDE_DIRECTORIES "${zstd_INCLUDE_DIR}"
         IMPORTED_LOCATION "${zstd_STATIC_LIBRARY}")
   endif()
+  if(TARGET zstd::libzstd_shared)
+    add_library(zstd::libzstd INTERFACE IMPORTED)
+    target_link_libraries(zstd::libzstd INTERFACE zstd::libzstd_shared)
+  else()
+    add_library(zstd::libzstd INTERFACE IMPORTED)
+    target_link_libraries(zstd::libzstd INTERFACE zstd::libzstd_static)
+  endif()
 endif()
 
 unset(zstd_STATIC_LIBRARY_SUFFIX)
