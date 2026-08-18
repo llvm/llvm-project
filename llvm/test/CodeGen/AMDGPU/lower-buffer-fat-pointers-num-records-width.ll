@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=amdgpu-lower-buffer-fat-pointers -mtriple=amdgpu9.00-- -mattr=+unaligned-access-mode < %s | FileCheck %s --check-prefixes=CHECK,RECORDS32
 ; RUN: opt -S -passes=amdgpu-lower-buffer-fat-pointers -mtriple=amdgpu12.50-- -mattr=+unaligned-access-mode < %s | FileCheck %s --check-prefixes=CHECK,RECORDS45
 ;; alignment reasons instead.
-; RUN: opt -S -passes=amdgpu-lower-buffer-fat-pointers -mtriple=amdgcn-- -mattr=+unaligned-access-mode,+unaligned-buffer-access < %s | FileCheck %s --check-prefixes=CHECK,UNKNOWN
+; RUN: opt -S -passes=amdgpu-lower-buffer-fat-pointers -mtriple=amdgpu-- -mattr=+unaligned-access-mode,+unaligned-buffer-access < %s | FileCheck %s --check-prefixes=CHECK,UNKNOWN
 
 ; Ensure that "this isn't out of bounds" tests work correctly even when
 ; when size manipulation is needed.
