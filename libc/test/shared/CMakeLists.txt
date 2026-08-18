@@ -858,24 +858,33 @@ add_fp_unittest(
     libc.src.__support.builtins.fixunstfdi
     libc.src.__support.builtins.fixunstfsi
     libc.src.__support.builtins.fixunstfti
+    libc.src.__support.builtins.fixunsxfdi
+    libc.src.__support.builtins.fixunsxfsi
+    libc.src.__support.builtins.fixunsxfti
+    libc.src.__support.builtins.fixxfdi
+    libc.src.__support.builtins.fixxfti
     libc.src.__support.builtins.floatdidf
     libc.src.__support.builtins.floatdisf
     libc.src.__support.builtins.floatditf
+    libc.src.__support.builtins.floatdixf
     libc.src.__support.builtins.floatsidf
     libc.src.__support.builtins.floatsisf
     libc.src.__support.builtins.floatsitf
     libc.src.__support.builtins.floattidf
     libc.src.__support.builtins.floattisf
     libc.src.__support.builtins.floattitf
+    libc.src.__support.builtins.floattixf
     libc.src.__support.builtins.floatundidf
     libc.src.__support.builtins.floatundisf
     libc.src.__support.builtins.floatunditf
+    libc.src.__support.builtins.floatundixf
     libc.src.__support.builtins.floatunsidf
     libc.src.__support.builtins.floatunsisf
     libc.src.__support.builtins.floatunsitf
     libc.src.__support.builtins.floatuntidf
     libc.src.__support.builtins.floatuntisf
     libc.src.__support.builtins.floatuntitf
+    libc.src.__support.builtins.floatuntixf
     libc.src.__support.builtins.gedf2
     libc.src.__support.builtins.gesf2
     libc.src.__support.builtins.getf2

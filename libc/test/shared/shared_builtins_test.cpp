@@ -97,6 +97,29 @@ TEST(LlvmLibcSharedBuiltinsTest, QuadToUIntConversion) {
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+TEST(LlvmLibcSharedBuiltinsTest, X86Float80ToIntConversion) {
+  EXPECT_EQ(int64_t(12), shared::fixxfdi(12.5L));
+#ifdef LIBC_TYPES_HAS_INT128
+  EXPECT_EQ(static_cast<__int128_t>(12), shared::fixxfti(12.5L));
+#endif // LIBC_TYPES_HAS_INT128
+}
+
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+TEST(LlvmLibcSharedBuiltinsTest, X86Float80ToUIntConversion) {
+  EXPECT_EQ(uint64_t(12), shared::fixunsxfdi(12.5L));
+  EXPECT_EQ(uint32_t(12), shared::fixunsxfsi(12.5L));
+#ifdef LIBC_TYPES_HAS_INT128
+  EXPECT_EQ(static_cast<__uint128_t>(12), shared::fixunsxfti(12.5L));
+#endif // LIBC_TYPES_HAS_INT128
+}
+
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
 TEST(LlvmLibcSharedBuiltinsTest, IntToDoubleConversion) {
   EXPECT_FP_EQ(12.0, shared::floatdidf(int64_t(12)));
   EXPECT_FP_EQ(12.0, shared::floatsidf(int32_t(12)));
@@ -153,6 +176,28 @@ TEST(LlvmLibcSharedBuiltinsTest, UIntToQuadConversion) {
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+TEST(LlvmLibcSharedBuiltinsTest, IntToX86Float80Conversion) {
+  EXPECT_FP_EQ(12.0L, shared::floatdixf(int64_t(12)));
+#ifdef LIBC_TYPES_HAS_INT128
+  EXPECT_FP_EQ(12.0L, shared::floattixf(static_cast<__int128_t>(12)));
+#endif // LIBC_TYPES_HAS_INT128
+}
+
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+TEST(LlvmLibcSharedBuiltinsTest, UIntToX86Float80Conversion) {
+  EXPECT_FP_EQ(12.0L, shared::floatundixf(uint64_t(12)));
+#ifdef LIBC_TYPES_HAS_INT128
+  EXPECT_FP_EQ(12.0L, shared::floatuntixf(static_cast<__uint128_t>(12)));
+#endif // LIBC_TYPES_HAS_INT128
+}
+
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 TEST(LlvmLibcSharedBuiltinsTest, ExtendConversion) {
   EXPECT_FP_EQ(1.5, shared::extendsfdf2(1.5f));
