@@ -397,6 +397,11 @@ private:
 // The implementation of this function is provided by the platform_file
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
+// Reopens a file stream.
+// Note: On failure, `reopenfile` will place the file stream in an invalid state
+// (closing the underlying file descriptor) but will not deallocate the `File`
+// object itself, ensuring static streams like stdin/stdout/stderr are
+// preserved.
 int reopenfile(File *f, const char *path, const char *mode);
 
 // The platform_file library should implement it if it relevant for that

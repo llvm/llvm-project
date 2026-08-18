@@ -194,6 +194,10 @@ int get_fileno(File *f) {
   return lf->get_fd();
 }
 
+// Assumes `f` is already locked by caller.
+// Note: On failure, `reopenfile_unlocked` places the stream in an invalid state
+// (closing the underlying file descriptor) but does not deallocate the `File`
+// structure.
 int reopenfile_unlocked(File *f, const char *path, const char *mode) {
   f->flush_unlocked();
 
@@ -238,6 +242,7 @@ int reopenfile_unlocked(File *f, const char *path, const char *mode) {
     if (old_fd >= 0) {
       auto dup_result = linux_syscalls::dup2(new_fd.value(), old_fd);
       if (!dup_result) {
+        linux_syscalls::close(new_fd.value());
         f->reset_stream_state(modeflags);
         return dup_result.error();
       }
@@ -311,14 +316,15 @@ int reopenfile_unlocked(File *f, const char *path, const char *mode) {
   return 0;
 }
 
+// Reopens a file stream.
+// Note: On failure, `reopenfile` places the stream in an invalid state (closing
+// the underlying file descriptor) but does not deallocate the `File` structure,
+// ensuring global static streams (such as stdin, stdout, and stderr) are not
+// freed.
 int reopenfile(File *f, const char *path, const char *mode) {
   f->lock();
   int ret = reopenfile_unlocked(f, path, mode);
   f->unlock();
-
-  if (ret != 0) {
-    f->close();
-  }
 
   return ret;
 }

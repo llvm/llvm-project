@@ -127,17 +127,14 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameInvalidModeChange) {
   ASSERT_FALSE(file == nullptr);
 
   // Attempt incompatible mode change (r to w with filename == nullptr).
-  // This failing freopen deallocates the stream.
   ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "w", file),
               Fails(EBADF, static_cast<void *>(nullptr)));
 
-  file = LIBC_NAMESPACE::fopen(FILENAME, "r");
-  ASSERT_FALSE(file == nullptr);
-
   // Attempt incompatible mode change (r to w+ with filename == nullptr).
-  // This failing freopen also deallocates the stream.
   ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "w+", file),
               Fails(EBADF, static_cast<void *>(nullptr)));
+
+  ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
 }
 
 #if defined(LIBC_TARGET_OS_IS_POSIX) || defined(LIBC_TARGET_OS_IS_LINUX)
@@ -155,9 +152,12 @@ TEST_F(LlvmLibcFreopenTest, InvalidModeFailure) {
               Fails(EINVAL, static_cast<void *>(nullptr)));
 
   // Per POSIX spec, original stream fd was closed on filename != nullptr
-  // freopen attempt, and the stream object was deallocated.
+  // freopen attempt.
   ASSERT_EQ(LIBC_NAMESPACE::fcntl(old_fd, F_GETFL), -1);
   ASSERT_ERRNO_EQ(EBADF);
+
+  // Clean up stream object to avoid memory leaks.
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Fails(EBADF, EOF));
 }
 #endif
 
@@ -178,10 +178,12 @@ TEST_F(LlvmLibcFreopenTest, NonExistentFileFailure) {
   ASSERT_THAT(LIBC_NAMESPACE::freopen(NON_EXISTENT_FILE, "r", file),
               Fails(ENOENT, static_cast<void *>(nullptr)));
 
-  // Per POSIX spec: The original stream fd is closed even if open fails,
-  // and the stream object is deallocated.
+  // Per POSIX spec: The original stream fd is closed even if open fails.
   ASSERT_EQ(LIBC_NAMESPACE::fcntl(old_fd, F_GETFL), -1);
   ASSERT_ERRNO_EQ(EBADF);
+
+  // Clean up stream object to avoid memory leaks.
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Fails(EBADF, EOF));
 }
 #endif // LIBC_TARGET_OS_IS_POSIX || LIBC_TARGET_OS_IS_LINUX
 
@@ -259,6 +261,9 @@ TEST_F(LlvmLibcFreopenTest, NullFilenameBadFdTest) {
   // EBADF
   ASSERT_THAT(LIBC_NAMESPACE::freopen(nullptr, "a", file),
               Fails(EBADF, static_cast<void *>(nullptr)));
+
+  // Clean up stream object to avoid memory leaks.
+  ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Fails(EBADF, EOF));
 }
 #endif // LIBC_TARGET_OS_IS_POSIX || LIBC_TARGET_OS_IS_LINUX
 
@@ -313,6 +318,18 @@ TEST_F(LlvmLibcFreopenTest, StdoutRedirectionTest) {
             sizeof(MSG) - 1);
   ASSERT_STREQ(read_buf, MSG);
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);
+}
+
+TEST_F(LlvmLibcFreopenTest, StdoutFailureTest) {
+  auto NON_EXISTENT_FILE =
+      libc_make_test_file_path(APPEND_LIBC_TEST("freopen_stdout_fail.test"));
+
+  // Attempt to freopen non-existent file on stdout.
+  // This must return nullptr + ENOENT without attempting to free the static
+  // stdout object.
+  ASSERT_THAT(
+      LIBC_NAMESPACE::freopen(NON_EXISTENT_FILE, "r", LIBC_NAMESPACE::stdout),
+      Fails(ENOENT, static_cast<void *>(nullptr)));
 }
 #endif
 
